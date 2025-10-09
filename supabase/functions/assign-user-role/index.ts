@@ -11,7 +11,7 @@ interface SignupRequest {
   email: string;
   password: string;
   name: string;
-  role: 'doctor' | 'pharmacy';
+  role: 'admin' | 'doctor' | 'pharmacy' | 'topline' | 'downline';
   roleData: {
     // Doctor fields
     licenseNumber?: string;
@@ -23,6 +23,13 @@ interface SignupRequest {
     // Pharmacy fields
     contactEmail?: string;
     statesServiced?: string[];
+    // Downline fields
+    linkedToplineId?: string;
+  };
+  contractFile?: {
+    name: string;
+    data: string; // base64
+    mimeType: string;
   };
 }
 
@@ -70,11 +77,13 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-    } else {
-      return new Response(
-        JSON.stringify({ error: 'Invalid role. Only doctor and pharmacy are allowed for public signup' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    } else if (signupData.role === 'downline') {
+      if (!signupData.roleData.linkedToplineId) {
+        return new Response(
+          JSON.stringify({ error: 'Downline reps must be linked to a Topline rep' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Create user using admin API
@@ -118,10 +127,42 @@ serve(async (req) => {
 
     console.log('Role assigned:', signupData.role);
 
+    // Upload contract if provided
+    let contractUrl = null;
+    if (signupData.contractFile) {
+      const buffer = Uint8Array.from(atob(signupData.contractFile.data), c => c.charCodeAt(0));
+      const fileName = `${userId}/${Date.now()}_${signupData.contractFile.name}`;
+      
+      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        .from('contracts')
+        .upload(fileName, buffer, {
+          contentType: signupData.contractFile.mimeType,
+          upsert: false
+        });
+
+      if (!uploadError && uploadData) {
+        const { data: urlData } = supabaseAdmin.storage
+          .from('contracts')
+          .getPublicUrl(uploadData.path);
+        contractUrl = urlData.publicUrl;
+
+        // Create document record
+        await supabaseAdmin.from('documents').insert({
+          user_id: userId,
+          document_type: 'contract',
+          storage_path: uploadData.path,
+          file_name: signupData.contractFile.name,
+          mime_type: signupData.contractFile.mimeType,
+          verified: false
+        });
+      }
+    }
+
     // Update profile with role-specific data
     const profileUpdate: any = {
       name: signupData.name,
-      email: signupData.email
+      email: signupData.email,
+      contract_url: contractUrl
     };
 
     if (signupData.role === 'doctor') {
@@ -133,6 +174,15 @@ serve(async (req) => {
       profileUpdate.address = signupData.roleData.address;
     } else if (signupData.role === 'pharmacy') {
       profileUpdate.email = signupData.roleData.contactEmail;
+      profileUpdate.address = signupData.roleData.address;
+    } else if (signupData.role === 'downline') {
+      profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
+      profileUpdate.company = signupData.roleData.company;
+      profileUpdate.phone = signupData.roleData.phone;
+      profileUpdate.address = signupData.roleData.address;
+    } else if (signupData.role === 'topline') {
+      profileUpdate.company = signupData.roleData.company;
+      profileUpdate.phone = signupData.roleData.phone;
       profileUpdate.address = signupData.roleData.address;
     }
 

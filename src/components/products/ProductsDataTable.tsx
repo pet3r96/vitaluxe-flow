@@ -1,0 +1,167 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Search, Eye, Edit } from "lucide-react";
+import { ProductDialog } from "./ProductDialog";
+import { toast } from "sonner";
+
+export const ProductsDataTable = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const { data: products, isLoading, refetch } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const toggleProductStatus = async (productId: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from("products")
+      .update({ active: !currentStatus })
+      .eq("id", productId);
+
+    if (!error) {
+      toast.success(`Product ${!currentStatus ? "activated" : "deactivated"}`);
+      refetch();
+    } else {
+      toast.error("Failed to update product status");
+    }
+  };
+
+  const filteredProducts = products?.filter((product) =>
+    product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.dosage?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button
+          onClick={() => {
+            setSelectedProduct(null);
+            setIsEditing(false);
+            setDialogOpen(true);
+          }}
+        >
+          Add Product
+        </Button>
+      </div>
+
+      <div className="rounded-md border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Image</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Dosage</TableHead>
+              <TableHead>Base Price</TableHead>
+              <TableHead>Topline Price</TableHead>
+              <TableHead>Downline Price</TableHead>
+              <TableHead>Retail Price</TableHead>
+              <TableHead>Active</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : filteredProducts?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                  No products found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredProducts?.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="h-12 w-12 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded bg-muted flex items-center justify-center text-xs">
+                        No image
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.dosage || "-"}</TableCell>
+                  <TableCell>${product.base_price}</TableCell>
+                  <TableCell>${product.topline_price || "-"}</TableCell>
+                  <TableCell>${product.downline_price || "-"}</TableCell>
+                  <TableCell>${product.retail_price || "-"}</TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={product.active}
+                      onCheckedChange={() => toggleProductStatus(product.id, product.active)}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setIsEditing(true);
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <ProductDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        product={isEditing ? selectedProduct : null}
+        onSuccess={() => refetch()}
+      />
+    </div>
+  );
+};
