@@ -27,14 +27,8 @@ export const PatientsDataTable = () => {
     queryKey: ["patients", effectiveRole, user?.id],
     queryFn: async () => {
       const query = supabase
-        .from("patients" as any)
-        .select(`
-          *,
-          profiles!patients_provider_id_fkey (
-            name,
-            email
-          )
-        `)
+        .from("patients")
+        .select(`*`)
         .order("created_at", { ascending: false });
 
       // If user is a provider (doctor), only show their patients
@@ -51,7 +45,7 @@ export const PatientsDataTable = () => {
   });
 
   const filteredPatients = patients?.filter(patient =>
-    patient.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+    patient.name?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
   const handleAddPatient = () => {
@@ -91,9 +85,9 @@ export const PatientsDataTable = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Date of Birth</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
               <TableHead>Address</TableHead>
-              <TableHead>Last Visit</TableHead>
               {isAdmin && <TableHead>Provider</TableHead>}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -114,16 +108,14 @@ export const PatientsDataTable = () => {
             ) : (
               filteredPatients.map((patient) => (
                 <TableRow key={patient.id}>
-                  <TableCell className="font-medium">{patient.full_name}</TableCell>
-                  <TableCell>
-                    {patient.dob ? format(new Date(patient.dob), "MMM dd, yyyy") : "-"}
-                  </TableCell>
+                  <TableCell className="font-medium">{patient.name}</TableCell>
+                  <TableCell>{patient.email || "-"}</TableCell>
+                  <TableCell>{patient.phone || "-"}</TableCell>
                   <TableCell className="max-w-xs truncate">{patient.address || "-"}</TableCell>
-                  <TableCell>
-                    {patient.last_visit_date ? format(new Date(patient.last_visit_date), "MMM dd, yyyy") : "-"}
-                  </TableCell>
                   {isAdmin && (
-                    <TableCell>{patient.profiles?.name || "-"}</TableCell>
+                    <TableCell>
+                      {patient.provider_id ? `Provider ID: ${patient.provider_id.slice(0, 8)}...` : "-"}
+                    </TableCell>
                   )}
                   <TableCell className="text-right">
                     {!isAdmin && (
