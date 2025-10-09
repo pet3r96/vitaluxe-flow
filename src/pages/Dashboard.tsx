@@ -1,36 +1,98 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Package, ShoppingCart, Users, DollarSign } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
 
+  const { data: ordersCount, isLoading: ordersLoading } = useQuery({
+    queryKey: ["dashboard-orders-count", userRole, user?.id],
+    queryFn: async () => {
+      let query = supabase.from("orders").select("*", { count: "exact", head: true });
+      
+      if (userRole === "doctor") {
+        query = query.eq("doctor_id", user?.id);
+      }
+      
+      const { count } = await query;
+      return count || 0;
+    },
+  });
+
+  const { data: productsCount, isLoading: productsLoading } = useQuery({
+    queryKey: ["dashboard-products-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("products")
+        .select("*", { count: "exact", head: true })
+        .eq("active", true);
+      return count || 0;
+    },
+  });
+
+  const { data: usersCount, isLoading: usersLoading } = useQuery({
+    queryKey: ["dashboard-users-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("active", true);
+      return count || 0;
+    },
+    enabled: userRole === "admin",
+  });
+
+  const { data: revenue, isLoading: revenueLoading } = useQuery({
+    queryKey: ["dashboard-revenue", userRole, user?.id],
+    queryFn: async () => {
+      let query = supabase.from("orders").select("total_amount");
+      
+      if (userRole === "doctor") {
+        query = query.eq("doctor_id", user?.id);
+      }
+      
+      query = query.eq("status", "completed");
+      
+      const { data } = await query;
+      const total = data?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
+      return total;
+    },
+  });
+
   const stats = [
     {
       title: "Total Orders",
-      value: "0",
+      value: ordersLoading ? "..." : ordersCount?.toString() || "0",
       icon: ShoppingCart,
-      description: "Orders this month",
+      description: userRole === "doctor" ? "Your orders" : "All orders",
+      isLoading: ordersLoading,
     },
     {
       title: "Products",
-      value: "0",
+      value: productsLoading ? "..." : productsCount?.toString() || "0",
       icon: Package,
       description: "Active products",
+      isLoading: productsLoading,
     },
     {
       title: "Users",
-      value: "0",
+      value: usersLoading ? "..." : usersCount?.toString() || "0",
       icon: Users,
       description: "Active accounts",
+      isLoading: usersLoading,
+      hidden: userRole !== "admin",
     },
     {
       title: "Revenue",
-      value: "$0",
+      value: revenueLoading ? "..." : `$${revenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: "Total revenue",
+      description: userRole === "doctor" ? "Your revenue" : "Total revenue",
+      isLoading: revenueLoading,
     },
-  ];
+  ].filter(stat => !stat.hidden);
 
   return (
     <div className="space-y-8">
@@ -58,9 +120,13 @@ const Dashboard = () => {
             <h3 className="text-sm font-medium text-muted-foreground">
               {stat.title}
             </h3>
-            <p className="text-3xl font-bold text-foreground mt-2">
-              {stat.value}
-            </p>
+            {stat.isLoading ? (
+              <Skeleton className="h-9 w-20 mt-2" />
+            ) : (
+              <p className="text-3xl font-bold text-foreground mt-2">
+                {stat.value}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground mt-1">
               {stat.description}
             </p>
