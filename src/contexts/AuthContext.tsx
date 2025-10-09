@@ -91,8 +91,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         (payload) => {
           if (payload.new.active === false && payload.old.active === true) {
             toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
-            setTimeout(() => {
-              signOut();
+            setTimeout(async () => {
+              await supabase.auth.signOut();
+              setUserRole(null);
+              setImpersonatedRole(null);
+              sessionStorage.removeItem('vitaluxe_impersonation');
+              navigate("/auth");
             }, 3000);
           }
         }
@@ -102,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, navigate]);
 
   const fetchUserRole = async (userId: string) => {
     try {
