@@ -97,12 +97,16 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
         roleData.address = formData.address;
       }
 
+      // Get current admin user for parent_id
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase.functions.invoke("assign-user-role", {
         body: {
           email: formData.email,
           password: formData.password,
           name: formData.name,
           role,
+          parentId: user?.id, // Set current admin as parent
           roleData,
           contractFile: contractFileData,
         },

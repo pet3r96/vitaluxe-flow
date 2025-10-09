@@ -12,6 +12,7 @@ interface SignupRequest {
   password: string;
   name: string;
   role: 'admin' | 'doctor' | 'pharmacy' | 'topline' | 'downline';
+  parentId?: string;
   roleData: {
     // Doctor fields
     licenseNumber?: string;
@@ -107,25 +108,34 @@ serve(async (req) => {
     const userId = authData.user.id;
     console.log('User created:', userId);
 
-    // Insert role into user_roles table
-    const { error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .insert({
-        user_id: userId,
-        role: signupData.role
-      });
+    // Determine parent_id
+    const parentId = signupData.parentId || 
+      (signupData.role === 'downline' ? signupData.roleData.linkedToplineId : null);
 
-    if (roleError) {
-      console.error('Role assignment error:', roleError);
-      // Clean up: delete the user if role assignment fails
+    // Use atomic function to create user with role
+    const { data: creationResult, error: creationError } = await supabaseAdmin.rpc(
+      'create_user_with_role',
+      {
+        p_user_id: userId,
+        p_name: signupData.name,
+        p_email: signupData.email,
+        p_role: signupData.role,
+        p_parent_id: parentId,
+        p_role_data: signupData.roleData
+      }
+    );
+
+    if (creationError || !creationResult?.success) {
+      console.error('User creation error:', creationError || creationResult?.error);
+      // Clean up: delete the auth user if profile/role creation fails
       await supabaseAdmin.auth.admin.deleteUser(userId);
       return new Response(
-        JSON.stringify({ error: 'Failed to assign role. Please try again.' }),
+        JSON.stringify({ error: creationResult?.error || 'Failed to create user profile and role' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Role assigned:', signupData.role);
+    console.log('User profile and role created:', signupData.role);
 
     // Upload contract if provided
     let contractUrl = null;
@@ -158,10 +168,8 @@ serve(async (req) => {
       }
     }
 
-    // Update profile with role-specific data
+    // Update profile with additional role-specific data (contract, etc.)
     const profileUpdate: any = {
-      name: signupData.name,
-      email: signupData.email,
       contract_url: contractUrl
     };
 
@@ -171,9 +179,6 @@ serve(async (req) => {
       profileUpdate.dea = signupData.roleData.dea;
       profileUpdate.company = signupData.roleData.company;
       profileUpdate.phone = signupData.roleData.phone;
-      profileUpdate.address = signupData.roleData.address;
-    } else if (signupData.role === 'pharmacy') {
-      profileUpdate.email = signupData.roleData.contactEmail;
       profileUpdate.address = signupData.roleData.address;
     } else if (signupData.role === 'downline') {
       profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
@@ -186,38 +191,16 @@ serve(async (req) => {
       profileUpdate.address = signupData.roleData.address;
     }
 
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .update(profileUpdate)
-      .eq('id', userId);
+    // Only update if there are additional fields
+    if (Object.keys(profileUpdate).length > 1 || contractUrl) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', userId);
 
-    if (profileError) {
-      console.error('Profile update error:', profileError);
-      // Don't fail the signup, just log the error
-      console.warn('Profile update failed but user was created successfully');
-    }
-
-    // If pharmacy, create pharmacy record
-    if (signupData.role === 'pharmacy') {
-      const { error: pharmacyError } = await supabaseAdmin
-        .from('pharmacies')
-        .insert({
-          user_id: userId,
-          name: signupData.name,
-          contact_email: signupData.roleData.contactEmail,
-          address: signupData.roleData.address,
-          states_serviced: signupData.roleData.statesServiced,
-          active: true
-        });
-
-      if (pharmacyError) {
-        console.error('Pharmacy creation error:', pharmacyError);
-        // Clean up: delete the user if pharmacy creation fails
-        await supabaseAdmin.auth.admin.deleteUser(userId);
-        return new Response(
-          JSON.stringify({ error: 'Failed to create pharmacy record. Please try again.' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        console.warn('Profile additional data update failed but user was created successfully');
       }
     }
 

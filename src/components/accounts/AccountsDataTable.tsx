@@ -37,7 +37,8 @@ export const AccountsDataTable = () => {
         .from("profiles")
         .select(`
           *,
-          user_roles(role)
+          user_roles(role),
+          parent:profiles!parent_id(id, name, email)
         `)
         .order("created_at", { ascending: false });
 
@@ -117,8 +118,8 @@ export const AccountsDataTable = () => {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Parent</TableHead>
               <TableHead>Company</TableHead>
-              <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -143,11 +144,17 @@ export const AccountsDataTable = () => {
                   <TableCell>{account.email}</TableCell>
                   <TableCell>
                     <Badge className={getRoleBadgeColor(account.user_roles?.[0]?.role)}>
-                      {account.user_roles?.[0]?.role}
+                      {account.user_roles?.[0]?.role || "No role"}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    {account.parent ? (
+                      <span className="text-sm">{account.parent.name}</span>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
                   <TableCell>{account.company || "-"}</TableCell>
-                  <TableCell>{account.phone || "-"}</TableCell>
                   <TableCell>
                     <Badge variant={account.active ? "default" : "secondary"}>
                       {account.active ? "Active" : "Inactive"}

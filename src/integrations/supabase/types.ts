@@ -500,6 +500,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          parent_id: string | null
           priority_map: Json | null
           states_serviced: string[] | null
           updated_at: string | null
@@ -512,6 +513,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          parent_id?: string | null
           priority_map?: Json | null
           states_serviced?: string[] | null
           updated_at?: string | null
@@ -524,12 +526,20 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          parent_id?: string | null
           priority_map?: Json | null
           states_serviced?: string[] | null
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pharmacies_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pharmacies_user_id_fkey"
             columns: ["user_id"]
@@ -598,6 +608,7 @@ export type Database = {
           linked_topline_id: string | null
           name: string
           npi: string | null
+          parent_id: string | null
           phone: string | null
           updated_at: string | null
         }
@@ -614,6 +625,7 @@ export type Database = {
           linked_topline_id?: string | null
           name: string
           npi?: string | null
+          parent_id?: string | null
           phone?: string | null
           updated_at?: string | null
         }
@@ -630,6 +642,7 @@ export type Database = {
           linked_topline_id?: string | null
           name?: string
           npi?: string | null
+          parent_id?: string | null
           phone?: string | null
           updated_at?: string | null
         }
@@ -637,6 +650,13 @@ export type Database = {
           {
             foreignKeyName: "profiles_linked_topline_id_fkey"
             columns: ["linked_topline_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_parent_id_fkey"
+            columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -740,6 +760,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_user_with_role: {
+        Args: {
+          p_email: string
+          p_name: string
+          p_parent_id?: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_role_data?: Json
+          p_user_id: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
