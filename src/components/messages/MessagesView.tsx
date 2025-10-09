@@ -16,6 +16,7 @@ export const MessagesView = () => {
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [newThreadSubject, setNewThreadSubject] = useState("");
+  const [newThreadMessage, setNewThreadMessage] = useState("");
   const [showNewThread, setShowNewThread] = useState(false);
   const [resolvedFilter, setResolvedFilter] = useState<"all" | "unresolved" | "resolved">("unresolved");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -127,7 +128,10 @@ export const MessagesView = () => {
   };
 
   const createThread = async () => {
-    if (!newThreadSubject.trim()) return;
+    if (!newThreadSubject.trim() || !newThreadMessage.trim()) {
+      toast.error("Please enter both subject and message");
+      return;
+    }
 
     const { data: thread, error: threadError } = await supabase
       .from("message_threads")
@@ -136,15 +140,22 @@ export const MessagesView = () => {
       .single();
 
     if (threadError) {
-      toast.error("Failed to create support ticket");
+      toast.error("Failed to create support ticket: " + threadError.message);
+      console.error("Thread creation error:", threadError);
       return;
     }
 
     // Get ALL admin user IDs
-    const { data: adminUsers } = await supabase
+    const { data: adminUsers, error: adminError } = await supabase
       .from("user_roles")
       .select("user_id")
       .eq("role", "admin");
+
+    if (adminError) {
+      toast.error("Failed to fetch admins");
+      console.error("Admin fetch error:", adminError);
+      return;
+    }
 
     if (adminUsers && adminUsers.length > 0) {
       // Add participants: creator + ALL admins
@@ -156,11 +167,35 @@ export const MessagesView = () => {
         }))
       ];
       
-      await supabase.from("thread_participants").insert(participants);
+      const { error: participantsError } = await supabase
+        .from("thread_participants")
+        .insert(participants);
+
+      if (participantsError) {
+        toast.error("Failed to add participants");
+        console.error("Participants error:", participantsError);
+        return;
+      }
+    }
+
+    // Create the first message
+    const { error: messageError } = await supabase
+      .from("messages")
+      .insert([{
+        thread_id: thread.id,
+        sender_id: user?.id,
+        body: newThreadMessage,
+      }]);
+
+    if (messageError) {
+      toast.error("Failed to send initial message");
+      console.error("Message error:", messageError);
+      return;
     }
 
     setShowNewThread(false);
     setNewThreadSubject("");
+    setNewThreadMessage("");
     setSelectedThread(thread.id);
     refetchThreads();
     toast.success("Support ticket created successfully");
@@ -235,6 +270,14 @@ export const MessagesView = () => {
               placeholder="Ticket subject..."
               value={newThreadSubject}
               onChange={(e) => setNewThreadSubject(e.target.value)}
+              maxLength={200}
+            />
+            <Textarea
+              placeholder="Describe your issue..."
+              value={newThreadMessage}
+              onChange={(e) => setNewThreadMessage(e.target.value)}
+              rows={4}
+              maxLength={2000}
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={createThread}>
@@ -246,6 +289,7 @@ export const MessagesView = () => {
                 onClick={() => {
                   setShowNewThread(false);
                   setNewThreadSubject("");
+                  setNewThreadMessage("");
                 }}
               >
                 Cancel
