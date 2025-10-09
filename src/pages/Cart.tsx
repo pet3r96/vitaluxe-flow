@@ -6,15 +6,15 @@ import { ShoppingCart, Trash2, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Cart() {
-  const { user } = useAuth();
+  const { effectiveUserId } = useAuth();
 
   const { data: cart, isLoading } = useQuery({
-    queryKey: ["cart", user?.id],
+    queryKey: ["cart", effectiveUserId],
     queryFn: async () => {
       const { data: cartData, error: cartError } = await supabase
         .from("cart")
         .select("id")
-        .eq("doctor_id", user?.id)
+        .eq("doctor_id", effectiveUserId)
         .maybeSingle();
 
       if (cartError) throw cartError;
@@ -33,7 +33,7 @@ export default function Cart() {
 
       return { id: cartData.id, lines: lines || [] };
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveUserId,
   });
 
   if (isLoading) {
