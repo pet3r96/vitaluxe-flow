@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,11 +17,31 @@ export const MessagesView = () => {
   const [newMessage, setNewMessage] = useState("");
   const [newThreadSubject, setNewThreadSubject] = useState("");
   const [showNewThread, setShowNewThread] = useState(false);
+  const [resolvedFilter, setResolvedFilter] = useState<"all" | "unresolved" | "resolved">("unresolved");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user?.id) return;
+      
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      
+      setIsAdmin(!!data);
+    };
+    
+    checkAdminStatus();
+  }, [user?.id]);
 
   const { data: threads, refetch: refetchThreads } = useQuery({
-    queryKey: ["message-threads"],
+    queryKey: ["message-threads", resolvedFilter, isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("message_threads")
         .select(`
           *,
@@ -29,8 +50,39 @@ export const MessagesView = () => {
         .eq("thread_participants.user_id", user?.id)
         .order("updated_at", { ascending: false });
 
+      // Apply filter
+      if (resolvedFilter === "resolved") {
+        query = query.eq("resolved", true);
+      } else if (resolvedFilter === "unresolved") {
+        query = query.eq("resolved", false);
+      }
+
+      const { data: threadsData, error } = await query;
       if (error) throw error;
-      return data;
+
+      // Fetch creator and resolver names
+      if (threadsData && threadsData.length > 0) {
+        const creatorIds = [...new Set(threadsData.map(t => t.created_by).filter(Boolean))];
+        const resolverIds = [...new Set(threadsData.map(t => t.resolved_by).filter(Boolean))];
+        const allUserIds = [...new Set([...creatorIds, ...resolverIds])];
+
+        if (allUserIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, name, email")
+            .in("id", allUserIds);
+
+          const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+          return threadsData.map(thread => ({
+            ...thread,
+            creator: thread.created_by ? profileMap.get(thread.created_by) : null,
+            resolver: thread.resolved_by ? profileMap.get(thread.resolved_by) : null,
+          }));
+        }
+      }
+
+      return threadsData || [];
     },
   });
 
@@ -79,57 +131,114 @@ export const MessagesView = () => {
 
     const { data: thread, error: threadError } = await supabase
       .from("message_threads")
-      .insert([{ subject: newThreadSubject }])
+      .insert([{ subject: newThreadSubject, created_by: user?.id }])
       .select()
       .single();
 
     if (threadError) {
-      toast.error("Failed to create thread");
+      toast.error("Failed to create support ticket");
       return;
     }
 
-    // Get admin user ID
+    // Get ALL admin user IDs
     const { data: adminUsers } = await supabase
       .from("user_roles")
       .select("user_id")
-      .eq("role", "admin")
-      .limit(1)
-      .single();
+      .eq("role", "admin");
 
-    if (adminUsers) {
-      // Add participants
-      await supabase.from("thread_participants").insert([
+    if (adminUsers && adminUsers.length > 0) {
+      // Add participants: creator + ALL admins
+      const participants = [
         { thread_id: thread.id, user_id: user?.id },
-        { thread_id: thread.id, user_id: adminUsers.user_id },
-      ]);
+        ...adminUsers.map(admin => ({ 
+          thread_id: thread.id, 
+          user_id: admin.user_id 
+        }))
+      ];
+      
+      await supabase.from("thread_participants").insert(participants);
     }
 
     setShowNewThread(false);
     setNewThreadSubject("");
+    setSelectedThread(thread.id);
     refetchThreads();
-    toast.success("Thread created successfully");
+    toast.success("Support ticket created successfully");
   };
+
+  const markAsResolved = async (threadId: string) => {
+    const { error } = await supabase
+      .from("message_threads")
+      .update({ 
+        resolved: true, 
+        resolved_by: user?.id,
+        resolved_at: new Date().toISOString() 
+      })
+      .eq("id", threadId);
+    
+    if (error) {
+      toast.error("Failed to mark as resolved");
+    } else {
+      toast.success("Ticket marked as resolved");
+      refetchThreads();
+    }
+  };
+
+  const reopenThread = async (threadId: string) => {
+    const { error } = await supabase
+      .from("message_threads")
+      .update({ 
+        resolved: false, 
+        resolved_by: null,
+        resolved_at: null 
+      })
+      .eq("id", threadId);
+    
+    if (error) {
+      toast.error("Failed to reopen ticket");
+    } else {
+      toast.success("Ticket reopened");
+      refetchThreads();
+    }
+  };
+
+  const currentThread = threads?.find(t => t.id === selectedThread);
 
   return (
     <div className="grid grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
       <Card className="col-span-1 p-4 flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Threads</h2>
+          <h2 className="text-lg font-semibold">
+            {isAdmin ? "All Tickets" : "My Tickets"}
+          </h2>
           <Button size="sm" onClick={() => setShowNewThread(true)}>
-            New Thread
+            New Support Ticket
           </Button>
+        </div>
+
+        <div className="mb-4">
+          <Select value={resolvedFilter} onValueChange={(value: any) => setResolvedFilter(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter tickets" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tickets</SelectItem>
+              <SelectItem value="unresolved">Unresolved</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {showNewThread && (
           <div className="mb-4 p-3 border border-border rounded-md space-y-2">
             <Input
-              placeholder="Thread subject..."
+              placeholder="Ticket subject..."
               value={newThreadSubject}
               onChange={(e) => setNewThreadSubject(e.target.value)}
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={createThread}>
-                Create
+                Create Ticket
               </Button>
               <Button
                 size="sm"
@@ -157,9 +266,22 @@ export const MessagesView = () => {
               }`}
             >
               <div className="flex items-start gap-2">
-                <MessageCircle className="h-4 w-4 mt-1" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{thread.subject}</p>
+                <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium truncate flex-1">{thread.subject}</p>
+                    <Badge 
+                      variant={thread.resolved ? "secondary" : "default"}
+                      className="flex-shrink-0"
+                    >
+                      {thread.resolved ? "Resolved" : "Open"}
+                    </Badge>
+                  </div>
+                  {isAdmin && thread.created_by && (thread as any).creator && (
+                    <p className="text-xs opacity-70">
+                      By: {(thread as any).creator.name}
+                    </p>
+                  )}
                   <p className="text-xs opacity-70">
                     {new Date(thread.updated_at).toLocaleDateString()}
                   </p>
@@ -173,6 +295,40 @@ export const MessagesView = () => {
       <Card className="col-span-2 p-4 flex flex-col">
         {selectedThread ? (
           <>
+            <div className="border-b border-border pb-4 mb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">{currentThread?.subject}</h3>
+                  {currentThread?.resolved && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Resolved by {(currentThread as any).resolver?.name || "Admin"} on{" "}
+                      {new Date(currentThread.resolved_at).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+                {isAdmin && (
+                  <div className="flex gap-2">
+                    {!currentThread?.resolved ? (
+                      <Button 
+                        size="sm" 
+                        onClick={() => markAsResolved(selectedThread)}
+                      >
+                        Mark as Resolved
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => reopenThread(selectedThread)}
+                      >
+                        Reopen Ticket
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
               {messages?.map((message) => (
                 <div
@@ -192,27 +348,35 @@ export const MessagesView = () => {
               ))}
             </div>
 
-            <div className="flex gap-2">
-              <Textarea
-                placeholder="Type your message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                rows={3}
-              />
-              <Button onClick={sendMessage} size="icon">
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            {!currentThread?.resolved ? (
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Type your message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  rows={3}
+                />
+                <Button onClick={sendMessage} size="icon">
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="p-3 bg-muted rounded-md text-center">
+                <p className="text-sm text-muted-foreground">
+                  This ticket is resolved. {isAdmin ? "Reopen it" : "Contact an admin"} to continue the conversation.
+                </p>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground">
-            Select a thread to view messages
+            Select a ticket to view messages
           </div>
         )}
       </Card>
