@@ -1,6 +1,9 @@
-import { Card } from "@/components/ui/card";
+import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Reports = () => {
+  const { canImpersonate } = useAuth();
+
   return (
     <div className="space-y-6">
       <div>
@@ -10,11 +13,7 @@ const Reports = () => {
         </p>
       </div>
 
-      <Card className="p-6 bg-card border-border shadow-gold">
-        <p className="text-muted-foreground">
-          No reports available yet.
-        </p>
-      </Card>
+      {canImpersonate && <ImpersonationLogsView />}
     </div>
   );
 };

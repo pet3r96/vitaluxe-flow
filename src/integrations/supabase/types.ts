@@ -200,6 +200,51 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_logs: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          id: string
+          impersonator_email: string
+          impersonator_id: string
+          ip_address: string | null
+          session_id: string | null
+          start_time: string
+          target_role: string
+          target_user_email: string
+          target_user_id: string
+          target_user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          impersonator_email: string
+          impersonator_id: string
+          ip_address?: string | null
+          session_id?: string | null
+          start_time?: string
+          target_role: string
+          target_user_email: string
+          target_user_id: string
+          target_user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          impersonator_email?: string
+          impersonator_id?: string
+          ip_address?: string | null
+          session_id?: string | null
+          start_time?: string
+          target_role?: string
+          target_user_email?: string
+          target_user_id?: string
+          target_user_name?: string | null
+        }
+        Relationships: []
+      }
       message_threads: {
         Row: {
           created_at: string | null

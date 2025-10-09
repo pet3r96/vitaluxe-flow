@@ -24,7 +24,7 @@ const roleConfig = {
 };
 
 export function RoleImpersonationDropdown() {
-  const { actualRole, effectiveRole, impersonatedUserName, isImpersonating, setImpersonation } = useAuth();
+  const { canImpersonate, effectiveRole, impersonatedUserName, isImpersonating, setImpersonation } = useAuth();
 
   // Fetch users grouped by role
   const { data: usersByRole } = useQuery({
@@ -62,10 +62,11 @@ export function RoleImpersonationDropdown() {
 
       return grouped;
     },
-    enabled: actualRole === 'admin',
+    enabled: canImpersonate,
   });
 
-  if (actualRole !== 'admin') return null;
+  // Only show for the authorized admin
+  if (!canImpersonate) return null;
 
   const CurrentIcon = effectiveRole ? roleConfig[effectiveRole as keyof typeof roleConfig]?.icon || Shield : Shield;
   const currentLabel = impersonatedUserName 
@@ -128,7 +129,7 @@ export function RoleImpersonationDropdown() {
                   {users.map((user) => (
                     <DropdownMenuItem
                       key={user.id}
-                      onClick={() => setImpersonation(role, user.id, user.name)}
+                      onClick={() => setImpersonation(role, user.id, user.name, user.email)}
                       className="gap-2 cursor-pointer"
                     >
                       <span className="flex-1 truncate">

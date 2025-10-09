@@ -16,7 +16,8 @@ interface AuthContextType {
   isImpersonating: boolean;
   effectiveRole: string | null;
   effectiveUserId: string | null;
-  setImpersonation: (role: string | null, userId?: string | null, userName?: string | null) => void;
+  canImpersonate: boolean;
+  setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (
@@ -29,6 +30,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
+const AUTHORIZED_IMPERSONATOR_EMAIL = 'admin@vitaluxeservice.com';
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -38,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [impersonatedRole, setImpersonatedRole] = useState<string | null>(null);
   const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null);
   const [impersonatedUserName, setImpersonatedUserName] = useState<string | null>(null);
+  const [currentLogId, setCurrentLogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -45,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isImpersonating = impersonatedRole !== null;
   const effectiveRole = impersonatedRole || userRole;
   const effectiveUserId = impersonatedUserId || user?.id || null;
+  const canImpersonate = userRole === 'admin' && user?.email === AUTHORIZED_IMPERSONATOR_EMAIL;
 
   useEffect(() => {
     // Set up auth state listener
@@ -63,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setImpersonatedRole(null);
           setImpersonatedUserId(null);
           setImpersonatedUserName(null);
+          setCurrentLogId(null);
           sessionStorage.removeItem('vitaluxe_impersonation');
         }
       }
@@ -100,11 +106,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (payload.new.active === false && payload.old.active === true) {
             toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
             setTimeout(async () => {
+              // End impersonation log if active
+              const storedImpersonation = sessionStorage.getItem('vitaluxe_impersonation');
+              if (storedImpersonation) {
+                try {
+                  const { logId } = JSON.parse(storedImpersonation);
+                  if (logId) {
+                    await supabase
+                      .from('impersonation_logs')
+                      .update({ end_time: new Date().toISOString() })
+                      .eq('id', logId);
+                  }
+                } catch (e) {
+                  console.error('Error ending impersonation log on deactivation:', e);
+                }
+              }
+              
               await supabase.auth.signOut();
               setUserRole(null);
               setImpersonatedRole(null);
               setImpersonatedUserId(null);
               setImpersonatedUserName(null);
+              setCurrentLogId(null);
               sessionStorage.removeItem('vitaluxe_impersonation');
               navigate("/auth");
             }, 3000);
@@ -130,17 +153,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const role = data?.role ?? null;
       setUserRole(role);
 
-      // Restore impersonation from sessionStorage if admin
+      // Restore impersonation from sessionStorage if authorized admin
       if (role === 'admin') {
-        const stored = sessionStorage.getItem('vitaluxe_impersonation');
-        if (stored) {
-          try {
-            const { role: impRole, userId, userName } = JSON.parse(stored);
-            setImpersonatedRole(impRole);
-            setImpersonatedUserId(userId || null);
-            setImpersonatedUserName(userName || null);
-          } catch (e) {
-            sessionStorage.removeItem('vitaluxe_impersonation');
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user?.email === AUTHORIZED_IMPERSONATOR_EMAIL) {
+          const stored = sessionStorage.getItem('vitaluxe_impersonation');
+          if (stored) {
+            try {
+              const { role: impRole, userId, userName, logId } = JSON.parse(stored);
+              setImpersonatedRole(impRole);
+              setImpersonatedUserId(userId || null);
+              setImpersonatedUserName(userName || null);
+              setCurrentLogId(logId || null);
+            } catch (e) {
+              sessionStorage.removeItem('vitaluxe_impersonation');
+            }
           }
         }
       }
@@ -224,37 +251,119 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const setImpersonation = (role: string | null, userId?: string | null, userName?: string | null) => {
-    if (userRole !== 'admin') return;
+  const setImpersonation = async (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => {
+    // Only allow the specific admin to impersonate
+    if (!canImpersonate) {
+      toast.error("You are not authorized to use impersonation");
+      return;
+    }
+    
+    // If ending impersonation, update the log
+    if (!role && currentLogId) {
+      try {
+        await supabase
+          .from('impersonation_logs')
+          .update({ end_time: new Date().toISOString() })
+          .eq('id', currentLogId);
+        setCurrentLogId(null);
+      } catch (error) {
+        console.error('Error updating impersonation log:', error);
+      }
+    }
+    
+    // If starting impersonation, create a log
+    if (role && userId) {
+      try {
+        const { data: logData, error: logError } = await supabase
+          .from('impersonation_logs')
+          .insert({
+            impersonator_email: user?.email || '',
+            impersonator_id: user?.id || '',
+            target_user_id: userId,
+            target_user_email: targetEmail || '',
+            target_user_name: userName || '',
+            target_role: role,
+            session_id: session?.access_token?.substring(0, 20) || '',
+          })
+          .select('id')
+          .single();
+
+        if (logError) {
+          console.error('Error creating impersonation log:', logError);
+          toast.error("Failed to log impersonation session");
+          return;
+        }
+
+        if (logData) {
+          setCurrentLogId(logData.id);
+          sessionStorage.setItem('vitaluxe_impersonation', JSON.stringify({ 
+            role, 
+            userId: userId || null, 
+            userName: userName || null,
+            logId: logData.id,
+            timestamp: Date.now() 
+          }));
+        }
+      } catch (error) {
+        console.error('Error logging impersonation:', error);
+        toast.error("Failed to start impersonation session");
+        return;
+      }
+    } else {
+      sessionStorage.removeItem('vitaluxe_impersonation');
+    }
     
     setImpersonatedRole(role);
     setImpersonatedUserId(userId || null);
     setImpersonatedUserName(userName || null);
+    
     if (role) {
-      sessionStorage.setItem('vitaluxe_impersonation', JSON.stringify({ 
-        role, 
-        userId: userId || null, 
-        userName: userName || null,
-        timestamp: Date.now() 
-      }));
+      toast.success(`Now viewing as ${userName || role}`);
     } else {
-      sessionStorage.removeItem('vitaluxe_impersonation');
+      toast.success("Returned to your Admin account");
     }
   };
 
-  const clearImpersonation = () => {
+  const clearImpersonation = async () => {
+    // Update the log before clearing
+    if (currentLogId) {
+      try {
+        await supabase
+          .from('impersonation_logs')
+          .update({ end_time: new Date().toISOString() })
+          .eq('id', currentLogId);
+      } catch (error) {
+        console.error('Error updating impersonation log:', error);
+      }
+    }
+    
     setImpersonatedRole(null);
     setImpersonatedUserId(null);
     setImpersonatedUserName(null);
+    setCurrentLogId(null);
     sessionStorage.removeItem('vitaluxe_impersonation');
+    toast.success("Returned to your Admin account");
   };
 
   const signOut = async () => {
+    // End impersonation log if active
+    if (currentLogId) {
+      try {
+        await supabase
+          .from('impersonation_logs')
+          .update({ end_time: new Date().toISOString() })
+          .eq('id', currentLogId);
+      } catch (error) {
+        console.error('Error updating impersonation log on signout:', error);
+      }
+    }
+    
     await supabase.auth.signOut();
     setUserRole(null);
     setImpersonatedRole(null);
     setImpersonatedUserId(null);
     setImpersonatedUserName(null);
+    setCurrentLogId(null);
     sessionStorage.removeItem('vitaluxe_impersonation');
     navigate("/auth");
   };
@@ -272,6 +381,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isImpersonating,
       effectiveRole,
       effectiveUserId,
+      canImpersonate,
       setImpersonation,
       clearImpersonation,
       signIn, 
