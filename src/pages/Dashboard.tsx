@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Dashboard component with real-time stats
 const Dashboard = () => {
   const { user, userRole } = useAuth();
 
