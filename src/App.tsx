@@ -12,6 +12,7 @@ import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonation
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
+import Providers from "./pages/Providers";
 import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import Messages from "./pages/Messages";
@@ -49,6 +50,7 @@ const App = () => (
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/dashboard" element={<Dashboard />} />
                           <Route path="/accounts" element={<Accounts />} />
+                          <Route path="/providers" element={<Providers />} />
                           <Route path="/products" element={<Products />} />
                           <Route path="/orders" element={<Orders />} />
                           <Route path="/messages" element={<Messages />} />

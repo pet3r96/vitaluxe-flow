@@ -9,6 +9,7 @@ import {
   FileText,
   MessageSquare,
   LogOut,
+  Stethoscope,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ const menuItems = {
   admin: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Accounts", url: "/accounts", icon: Users },
+    { title: "Providers", url: "/providers", icon: Stethoscope },
     { title: "Products", url: "/products", icon: Package },
     { title: "Pharmacies", url: "/pharmacies", icon: Building2 },
     { title: "Orders", url: "/orders", icon: ShoppingCart },

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
@@ -73,6 +74,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Real-time monitoring for account status changes
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('profile-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.new.active === false && payload.old.active === true) {
+            toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
+            setTimeout(() => {
+              signOut();
+            }, 3000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const fetchUserRole = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -105,16 +136,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (!error) {
-        navigate("/dashboard");
+      if (error) return { error };
+
+      // Check if account is active before allowing login
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('active')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error checking account status:", profileError);
+        await supabase.auth.signOut();
+        return { error: { message: "Unable to verify account status" } };
       }
-      
-      return { error };
+
+      if (!profile?.active) {
+        await supabase.auth.signOut();
+        return { 
+          error: { 
+            message: "🚫 Your account has been disabled. Please contact support at support@vitaluxe.com" 
+          } 
+        };
+      }
+
+      navigate("/dashboard");
+      return { error: null };
     } catch (error: any) {
       return { error };
     }

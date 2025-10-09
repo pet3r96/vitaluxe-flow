@@ -1,0 +1,252 @@
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Loader2, Upload } from "lucide-react";
+
+interface AddProviderDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProviderDialogProps) => {
+  const [loading, setLoading] = useState(false);
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    npi: "",
+    licenseNumber: "",
+    dea: "",
+    company: "",
+    phone: "",
+    address: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Upload contract if provided
+      let contractFileData = null;
+      if (contractFile) {
+        const base64 = await fileToBase64(contractFile);
+        contractFileData = {
+          name: contractFile.name,
+          data: base64.split(",")[1],
+          mimeType: contractFile.type,
+        };
+      }
+
+      // Call edge function with hardcoded 'doctor' role
+      const { data, error } = await supabase.functions.invoke("assign-user-role", {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+          role: "doctor", // HARDCODED
+          roleData: {
+            npi: formData.npi,
+            licenseNumber: formData.licenseNumber,
+            dea: formData.dea,
+            company: formData.company,
+            phone: formData.phone,
+            address: formData.address,
+          },
+          contractFile: contractFileData,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("✅ Provider account created successfully");
+      onSuccess();
+      onOpenChange(false);
+      resetForm();
+    } catch (error: any) {
+      toast.error(`❌ ${error.message || "Failed to create provider account"}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const resetForm = () => {
+    setContractFile(null);
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      npi: "",
+      licenseNumber: "",
+      dea: "",
+      company: "",
+      phone: "",
+      address: "",
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add New Provider</DialogTitle>
+          <DialogDescription>
+            Create a new doctor account by filling out the form below
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+                minLength={6}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="npi">NPI *</Label>
+              <Input
+                id="npi"
+                value={formData.npi}
+                onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
+                required
+                placeholder="10-digit number"
+                maxLength={10}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="licenseNumber">License Number *</Label>
+              <Input
+                id="licenseNumber"
+                value={formData.licenseNumber}
+                onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dea">DEA Number</Label>
+              <Input
+                id="dea"
+                value={formData.dea}
+                onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company">Company/Practice *</Label>
+              <Input
+                id="company"
+                value={formData.company}
+                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              placeholder="Street, City, State, ZIP"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="contract">Contract Document</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="contract"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => setContractFile(e.target.files?.[0] || null)}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById("contract")?.click()}
+                className="w-full"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {contractFile ? contractFile.name : "Upload Contract"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create Provider
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
