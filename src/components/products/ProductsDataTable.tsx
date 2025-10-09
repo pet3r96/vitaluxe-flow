@@ -184,9 +184,10 @@ export const ProductsDataTable = () => {
               <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Dosage</TableHead>
-              <TableHead>Base Price</TableHead>
-              <TableHead>Topline Price</TableHead>
-              <TableHead>Downline Price</TableHead>
+              {isAdmin && <TableHead>Base Price</TableHead>}
+              {isAdmin && <TableHead>Topline Price</TableHead>}
+              {isAdmin && <TableHead>Downline Price</TableHead>}
+              {isProvider && <TableHead>Your Price</TableHead>}
               <TableHead>Retail Price</TableHead>
               <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -195,13 +196,13 @@ export const ProductsDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={isAdmin ? 9 : 6} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredProducts?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={isAdmin ? 9 : 6} className="text-center text-muted-foreground">
                   No products found
                 </TableCell>
               </TableRow>
@@ -223,9 +224,10 @@ export const ProductsDataTable = () => {
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.dosage || "-"}</TableCell>
-                  <TableCell>${product.base_price}</TableCell>
-                  <TableCell>${product.topline_price || "-"}</TableCell>
-                  <TableCell>${product.downline_price || "-"}</TableCell>
+                  {isAdmin && <TableCell>${product.base_price}</TableCell>}
+                  {isAdmin && <TableCell>${product.topline_price || "-"}</TableCell>}
+                  {isAdmin && <TableCell>${product.downline_price || "-"}</TableCell>}
+                  {isProvider && <TableCell className="font-semibold text-primary">${product.base_price}</TableCell>}
                   <TableCell>${product.retail_price || "-"}</TableCell>
                   <TableCell>
                     <Switch
