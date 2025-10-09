@@ -1,12 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Trash2, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function Cart() {
   const { effectiveUserId } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -35,6 +40,104 @@ export default function Cart() {
     },
     enabled: !!effectiveUserId,
   });
+
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      if (!cart?.id || !cart.lines || cart.lines.length === 0) {
+        throw new Error("Cart is empty");
+      }
+
+      // Calculate total
+      const totalAmount = (cart.lines as any[]).reduce<number>(
+        (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
+        0
+      );
+
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          doctor_id: effectiveUserId,
+          total_amount: totalAmount,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order lines from cart lines
+      const orderLines = cart.lines.map((line: any) => ({
+        order_id: order.id,
+        product_id: line.product_id,
+        quantity: line.quantity || 1,
+        price: line.price_snapshot,
+        patient_id: line.patient_id,
+        patient_name: line.patient_name,
+        patient_email: line.patient_email,
+        patient_phone: line.patient_phone,
+        patient_address: line.patient_address,
+        prescription_url: line.prescription_url,
+        status: "pending" as const,
+      }));
+
+      const { error: linesError } = await supabase
+        .from("order_lines")
+        .insert(orderLines);
+
+      if (linesError) throw linesError;
+
+      // Clear cart lines
+      const { error: deleteError } = await supabase
+        .from("cart_lines")
+        .delete()
+        .eq("cart_id", cart.id);
+
+      if (deleteError) throw deleteError;
+
+      return order;
+    },
+    onSuccess: (order) => {
+      toast({
+        title: "Order Placed Successfully! 🎉",
+        description: `Order #${order.id.slice(0, 8)} has been created. You can view it under "My Orders".`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      navigate("/orders");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Checkout Failed",
+        description: error.message || "Failed to place order. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: async (lineId: string) => {
+      const { error } = await supabase
+        .from("cart_lines")
+        .delete()
+        .eq("id", lineId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Item Removed",
+        description: "Item has been removed from your cart.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+  });
+
+  const calculateTotal = () => {
+    return (cartLines as any[]).reduce<number>(
+      (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
+      0
+    );
+  };
 
   if (isLoading) {
     return (
@@ -97,7 +200,13 @@ export default function Cart() {
                   <p className="text-xl font-bold text-primary">
                     ${line.price_snapshot?.toFixed(2)}
                   </p>
-                  <Button variant="ghost" size="sm" className="mt-2 text-destructive">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-2 text-destructive"
+                    onClick={() => removeMutation.mutate(line.id)}
+                    disabled={removeMutation.isPending}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -109,14 +218,28 @@ export default function Cart() {
             <CardHeader>
               <CardTitle>Cart Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between text-lg font-semibold">
-                <span>Total Items:</span>
-                <span>{cartLines.length}</span>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Items:</span>
+                  <span className="font-medium">{cartLines.length}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                  <span>Total Amount:</span>
+                  <span className="text-primary">${calculateTotal().toFixed(2)}</span>
+                </div>
               </div>
-              <Button className="w-full" size="lg">
-                Proceed to Checkout
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={() => checkoutMutation.mutate()}
+                disabled={checkoutMutation.isPending}
+              >
+                {checkoutMutation.isPending ? "Processing..." : "Place Test Order"}
               </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Test mode: Order will be created immediately without payment
+              </p>
             </CardContent>
           </Card>
         </div>
