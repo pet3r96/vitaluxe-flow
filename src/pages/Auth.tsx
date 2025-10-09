@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import logo from "@/assets/vitaluxe-logo.png";
+import logo from "@/assets/vitaluxe-services-logo.png";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -145,12 +145,9 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md p-8 bg-card border-border shadow-gold">
         <div className="flex flex-center justify-center mb-8">
-          <img src={logo} alt="Vitaluxe Services" className="h-20 w-auto" />
+          <img src={logo} alt="Vitaluxe Services" className="h-32 w-auto" />
         </div>
         
-        <h1 className="text-3xl font-bold text-center mb-2 gold-text-gradient">
-          Welcome to Vitaluxe CRM
-        </h1>
         <p className="text-center text-muted-foreground mb-8">
           {isLogin ? "Sign in to your account" : "Create your account"}
         </p>
