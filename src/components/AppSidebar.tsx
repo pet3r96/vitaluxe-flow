@@ -31,6 +31,7 @@ const menuItems = {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Accounts", url: "/accounts", icon: Users },
     { title: "Providers", url: "/providers", icon: Stethoscope },
+    { title: "Patients", url: "/patients", icon: Users },
     { title: "Products", url: "/products", icon: Package },
     { title: "Pharmacies", url: "/pharmacies", icon: Building2 },
     { title: "Orders", url: "/orders", icon: ShoppingCart },
@@ -39,6 +40,7 @@ const menuItems = {
   ],
   doctor: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Patients", url: "/patients", icon: Users },
     { title: "Products", url: "/products", icon: Package },
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
     { title: "My Orders", url: "/orders", icon: FileText },

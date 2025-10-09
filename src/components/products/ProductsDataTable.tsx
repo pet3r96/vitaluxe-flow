@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Table,
   TableBody,
@@ -13,15 +14,22 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Search, Eye, Edit } from "lucide-react";
+import { Search, Eye, Edit, ShoppingCart } from "lucide-react";
 import { ProductDialog } from "./ProductDialog";
+import { PatientSelectionDialog } from "./PatientSelectionDialog";
 import { toast } from "sonner";
 
 export const ProductsDataTable = () => {
+  const { effectiveRole, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
+  const [productForCart, setProductForCart] = useState<any>(null);
+
+  const isAdmin = effectiveRole === "admin";
+  const isProvider = effectiveRole === "doctor";
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -55,6 +63,49 @@ export const ProductsDataTable = () => {
     product.dosage?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleAddToCart = async (patientId: string, quantity: number) => {
+    if (!user || !productForCart) return;
+
+    try {
+      // Get or create cart
+      let { data: cart } = await supabase
+        .from("cart")
+        .select("id")
+        .eq("doctor_id", user.id)
+        .single();
+
+      if (!cart) {
+        const { data: newCart, error: cartError } = await supabase
+          .from("cart")
+          .insert({ doctor_id: user.id })
+          .select("id")
+          .single();
+
+        if (cartError) throw cartError;
+        cart = newCart;
+      }
+
+      // Add item to cart with patient_id
+      const { error } = await supabase
+        .from("cart_lines" as any)
+        .insert({
+          cart_id: cart.id,
+          product_id: productForCart.id,
+          patient_id: patientId,
+          quantity: quantity,
+          price: productForCart.base_price,
+          destination_state: "IL", // Default state, can be updated
+        });
+
+      if (error) throw error;
+
+      toast.success("Product added to cart");
+    } catch (error: any) {
+      console.error("Error adding to cart:", error);
+      toast.error(error.message || "Failed to add product to cart");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -67,15 +118,18 @@ export const ProductsDataTable = () => {
             className="pl-9"
           />
         </div>
-        <Button
-          onClick={() => {
-            setSelectedProduct(null);
-            setIsEditing(false);
-            setDialogOpen(true);
-          }}
-        >
-          Add Product
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={() => {
+              setSelectedProduct(null);
+              setIsEditing(false);
+              setDialogOpen(true);
+            }}
+          >
+            Add Product
+          </Button>
+        )}
+        {isProvider && <Badge variant="secondary">Read Only</Badge>}
       </div>
 
       <div className="rounded-md border border-border bg-card">
@@ -132,21 +186,37 @@ export const ProductsDataTable = () => {
                     <Switch
                       checked={product.active}
                       onCheckedChange={() => toggleProductStatus(product.id, product.active)}
+                      disabled={!isAdmin}
                     />
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setIsEditing(true);
-                          setDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      {isProvider && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            setProductForCart(product);
+                            setPatientDialogOpen(true);
+                          }}
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-1" />
+                          Add to Cart
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setIsEditing(true);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -161,6 +231,13 @@ export const ProductsDataTable = () => {
         onOpenChange={setDialogOpen}
         product={isEditing ? selectedProduct : null}
         onSuccess={() => refetch()}
+      />
+
+      <PatientSelectionDialog
+        open={patientDialogOpen}
+        onOpenChange={setPatientDialogOpen}
+        product={productForCart}
+        onAddToCart={handleAddToCart}
       />
     </div>
   );
