@@ -30,6 +30,7 @@ export function RoleImpersonationDropdown() {
   const { data: usersByRole } = useQuery({
     queryKey: ["users-by-role"],
     queryFn: async () => {
+      // 1) Base fetch: get users by role via user_roles + profiles (for doctor/topline/downline)
       const { data, error } = await supabase
         .from("user_roles")
         .select(`
@@ -59,6 +60,24 @@ export function RoleImpersonationDropdown() {
           });
         }
       });
+
+      // 2) Ensure pharmacies appear even if user_roles join misses them
+      //    Use pharmacies table (public SELECT allowed) and map to user info
+      const { data: pharmaciesData, error: pharmaciesError } = await supabase
+        .from("pharmacies")
+        .select("user_id, name, contact_email, active")
+        .eq("active", true)
+        .not("user_id", "is", null);
+
+      if (!pharmaciesError && pharmaciesData) {
+        grouped.pharmacy = pharmaciesData
+          .filter((ph: any) => !!ph.user_id)
+          .map((ph: any) => ({
+            id: ph.user_id as string,
+            name: ph.name as string,
+            email: ph.contact_email as string,
+          }));
+      }
 
       return grouped;
     },
