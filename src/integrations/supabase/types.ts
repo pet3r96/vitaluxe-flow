@@ -145,6 +145,51 @@ export type Database = {
           },
         ]
       }
+      documents: {
+        Row: {
+          document_type: string
+          file_name: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          notes: string | null
+          storage_path: string
+          uploaded_at: string
+          user_id: string
+          verified: boolean | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          document_type: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          storage_path: string
+          uploaded_at?: string
+          user_id: string
+          verified?: boolean | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          document_type?: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          storage_path?: string
+          uploaded_at?: string
+          user_id?: string
+          verified?: boolean | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       message_threads: {
         Row: {
           created_at: string | null
@@ -405,6 +450,7 @@ export type Database = {
           active: boolean | null
           address: string | null
           company: string | null
+          contract_url: string | null
           created_at: string | null
           dea: string | null
           email: string
@@ -420,6 +466,7 @@ export type Database = {
           active?: boolean | null
           address?: string | null
           company?: string | null
+          contract_url?: string | null
           created_at?: string | null
           dea?: string | null
           email: string
@@ -435,6 +482,7 @@ export type Database = {
           active?: boolean | null
           address?: string | null
           company?: string | null
+          contract_url?: string | null
           created_at?: string | null
           dea?: string | null
           email?: string
@@ -455,6 +503,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      statuses: {
+        Row: {
+          active: boolean | null
+          applicable_roles: string[]
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          order_position: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          applicable_roles?: string[]
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          order_position?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          applicable_roles?: string[]
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          order_position?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       thread_participants: {
         Row: {
