@@ -202,6 +202,7 @@ serve(async (req) => {
       const { error: pharmacyError } = await supabaseAdmin
         .from('pharmacies')
         .insert({
+          user_id: userId,
           name: signupData.name,
           contact_email: signupData.roleData.contactEmail,
           address: signupData.roleData.address,
@@ -211,7 +212,12 @@ serve(async (req) => {
 
       if (pharmacyError) {
         console.error('Pharmacy creation error:', pharmacyError);
-        console.warn('Pharmacy record creation failed but user was created successfully');
+        // Clean up: delete the user if pharmacy creation fails
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create pharmacy record. Please try again.' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 

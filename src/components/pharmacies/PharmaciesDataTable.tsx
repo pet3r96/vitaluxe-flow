@@ -27,7 +27,15 @@ export const PharmaciesDataTable = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pharmacies")
-        .select("*")
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            name,
+            email,
+            active
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

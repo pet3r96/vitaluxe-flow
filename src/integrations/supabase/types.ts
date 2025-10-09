@@ -503,6 +503,7 @@ export type Database = {
           priority_map: Json | null
           states_serviced: string[] | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           active?: boolean | null
@@ -514,6 +515,7 @@ export type Database = {
           priority_map?: Json | null
           states_serviced?: string[] | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           active?: boolean | null
@@ -525,8 +527,17 @@ export type Database = {
           priority_map?: Json | null
           states_serviced?: string[] | null
           updated_at?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pharmacies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
