@@ -106,7 +106,8 @@ export const OrdersDataTable = () => {
             <TableRow>
               <TableHead>Order ID</TableHead>
               <TableHead>Doctor</TableHead>
-              <TableHead>Fulfillment</TableHead>
+              <TableHead>Patient Name</TableHead>
+              <TableHead>Fulfillment Type</TableHead>
               <TableHead>Products</TableHead>
               <TableHead>Total Amount</TableHead>
               <TableHead>Status</TableHead>
@@ -117,54 +118,73 @@ export const OrdersDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">
+                <TableCell colSpan={9} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredOrders?.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">
-                    #{order.id.slice(0, 8)}
-                  </TableCell>
-                  <TableCell>{order.profiles?.name || "N/A"}</TableCell>
-                  <TableCell>
-                    <Badge variant={order.ship_to === 'practice' ? 'secondary' : 'outline'}>
-                      {order.ship_to === 'practice' ? '🏢 Practice' : '👤 Patient'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {order.order_lines?.length || 0} item(s)
-                  </TableCell>
-                  <TableCell>${order.total_amount}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(order.status)}>
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setDetailsOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              filteredOrders?.map((order) => {
+                const firstOrderLine = order.order_lines?.[0];
+                const patientId = firstOrderLine?.patient_id;
+                const patientName = firstOrderLine?.patient_name || "N/A";
+                
+                return (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">
+                      #{order.id.slice(0, 8)}
+                    </TableCell>
+                    <TableCell>{order.profiles?.name || "N/A"}</TableCell>
+                    <TableCell>
+                      {order.ship_to === 'practice' || !patientId ? (
+                        <span className="text-muted-foreground">{patientName}</span>
+                      ) : (
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-primary font-normal"
+                          onClick={() => window.location.href = `/patients?patient=${patientId}`}
+                        >
+                          {patientName}
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={order.ship_to === 'practice' ? 'secondary' : 'outline'}>
+                        {order.ship_to === 'practice' ? '🏢 Practice' : '👤 Patient'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {order.order_lines?.length || 0} item(s)
+                    </TableCell>
+                    <TableCell>${order.total_amount}</TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setDetailsOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
