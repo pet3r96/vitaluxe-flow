@@ -39,7 +39,8 @@ export const AccountsDataTable = () => {
         .select(`
           *,
           user_roles(role),
-          parent:profiles!parent_id(id, name, email)
+          parent:profiles!parent_id(id, name, email),
+          linked_topline:profiles!linked_topline_id(id, name, email)
         `)
         .order("created_at", { ascending: false });
 
@@ -152,7 +153,9 @@ export const AccountsDataTable = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {account.parent ? (
+                    {account.user_roles?.[0]?.role === 'downline' && account.linked_topline ? (
+                      <span className="text-sm">{account.linked_topline.name}</span>
+                    ) : account.parent ? (
                       <span className="text-sm">{account.parent.name}</span>
                     ) : (
                       "-"
