@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 export default function Cart() {
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -53,11 +53,11 @@ export default function Cart() {
         0
       );
 
-      // Create order
+      // Create order using actual authenticated user ID (not impersonated user)
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
-          doctor_id: effectiveUserId,
+          doctor_id: user?.id,
           total_amount: totalAmount,
           status: "pending",
         })
