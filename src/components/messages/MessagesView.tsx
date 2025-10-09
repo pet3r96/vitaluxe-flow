@@ -158,14 +158,14 @@ export const MessagesView = () => {
     }
 
     if (adminUsers && adminUsers.length > 0) {
-      // Add participants: creator + ALL admins
-      const participants = [
-        { thread_id: thread.id, user_id: user?.id },
-        ...adminUsers.map(admin => ({ 
-          thread_id: thread.id, 
-          user_id: admin.user_id 
-        }))
-      ];
+      // Add participants: creator + ALL admins (avoiding duplicates)
+      const participantIds = new Set([user?.id]);
+      adminUsers.forEach(admin => participantIds.add(admin.user_id));
+      
+      const participants = Array.from(participantIds).map(userId => ({
+        thread_id: thread.id,
+        user_id: userId
+      }));
       
       const { error: participantsError } = await supabase
         .from("thread_participants")
