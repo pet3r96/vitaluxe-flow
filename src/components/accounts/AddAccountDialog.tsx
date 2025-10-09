@@ -18,8 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AddAccountDialogProps {
   open: boolean;
@@ -31,6 +34,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<string>("");
   const [contractFile, setContractFile] = useState<File | null>(null);
+  const [toplineComboboxOpen, setToplineComboboxOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -50,11 +54,24 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
     queryKey: ["topline-reps"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, name, email")
-        .eq("user_roles.role", "topline");
+        .from("user_roles")
+        .select(`
+          user_id,
+          role,
+          profiles!inner(id, name, email, active)
+        `)
+        .eq("role", "topline")
+        .eq("profiles.active", true)
+        .order("profiles.name", { ascending: true });
+
       if (error) throw error;
-      return data;
+      
+      // Transform the data structure
+      return data?.map((item: any) => ({
+        id: item.profiles.id,
+        name: item.profiles.name,
+        email: item.profiles.email,
+      })) || [];
     },
     enabled: role === "downline",
   });
@@ -137,6 +154,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
   const resetForm = () => {
     setRole("");
     setContractFile(null);
+    setToplineComboboxOpen(false);
     setFormData({
       name: "",
       email: "",
@@ -260,22 +278,54 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
           {role === "downline" && (
             <div className="space-y-2">
               <Label htmlFor="linkedToplineId">Parent Topline Rep *</Label>
-              <Select
-                value={formData.linkedToplineId}
-                onValueChange={(value) => setFormData({ ...formData, linkedToplineId: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select topline rep" />
-                </SelectTrigger>
-                <SelectContent>
-                  {toplineReps?.map((rep) => (
-                    <SelectItem key={rep.id} value={rep.id}>
-                      {rep.name} ({rep.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={toplineComboboxOpen} onOpenChange={setToplineComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={toplineComboboxOpen}
+                    className="w-full justify-between"
+                  >
+                    {formData.linkedToplineId
+                      ? toplineReps?.find((rep) => rep.id === formData.linkedToplineId)?.name
+                      : "Select topline rep..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search topline reps..." />
+                    <CommandList>
+                      <CommandEmpty>No topline rep found.</CommandEmpty>
+                      <CommandGroup>
+                        {toplineReps?.map((rep) => (
+                          <CommandItem
+                            key={rep.id}
+                            value={rep.name}
+                            onSelect={() => {
+                              setFormData({ ...formData, linkedToplineId: rep.id });
+                              setToplineComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.linkedToplineId === rep.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{rep.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {rep.email}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
