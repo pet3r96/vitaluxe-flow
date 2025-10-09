@@ -11,9 +11,12 @@ interface AuthContextType {
   loading: boolean;
   actualRole: string | null;
   impersonatedRole: string | null;
+  impersonatedUserId: string | null;
+  impersonatedUserName: string | null;
   isImpersonating: boolean;
   effectiveRole: string | null;
-  setImpersonation: (role: string | null) => void;
+  effectiveUserId: string | null;
+  setImpersonation: (role: string | null, userId?: string | null, userName?: string | null) => void;
   clearImpersonation: () => void;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (
@@ -33,12 +36,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [impersonatedRole, setImpersonatedRole] = useState<string | null>(null);
+  const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null);
+  const [impersonatedUserName, setImpersonatedUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const actualRole = userRole;
   const isImpersonating = impersonatedRole !== null;
   const effectiveRole = impersonatedRole || userRole;
+  const effectiveUserId = impersonatedUserId || user?.id || null;
 
   useEffect(() => {
     // Set up auth state listener
@@ -55,6 +61,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setUserRole(null);
           setImpersonatedRole(null);
+          setImpersonatedUserId(null);
+          setImpersonatedUserName(null);
           sessionStorage.removeItem('vitaluxe_impersonation');
         }
       }
@@ -95,6 +103,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               await supabase.auth.signOut();
               setUserRole(null);
               setImpersonatedRole(null);
+              setImpersonatedUserId(null);
+              setImpersonatedUserName(null);
               sessionStorage.removeItem('vitaluxe_impersonation');
               navigate("/auth");
             }, 3000);
@@ -125,8 +135,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const stored = sessionStorage.getItem('vitaluxe_impersonation');
         if (stored) {
           try {
-            const { role: impRole } = JSON.parse(stored);
+            const { role: impRole, userId, userName } = JSON.parse(stored);
             setImpersonatedRole(impRole);
+            setImpersonatedUserId(userId || null);
+            setImpersonatedUserName(userName || null);
           } catch (e) {
             sessionStorage.removeItem('vitaluxe_impersonation');
           }
@@ -212,12 +224,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const setImpersonation = (role: string | null) => {
+  const setImpersonation = (role: string | null, userId?: string | null, userName?: string | null) => {
     if (userRole !== 'admin') return;
     
     setImpersonatedRole(role);
+    setImpersonatedUserId(userId || null);
+    setImpersonatedUserName(userName || null);
     if (role) {
-      sessionStorage.setItem('vitaluxe_impersonation', JSON.stringify({ role, timestamp: Date.now() }));
+      sessionStorage.setItem('vitaluxe_impersonation', JSON.stringify({ 
+        role, 
+        userId: userId || null, 
+        userName: userName || null,
+        timestamp: Date.now() 
+      }));
     } else {
       sessionStorage.removeItem('vitaluxe_impersonation');
     }
@@ -225,6 +244,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const clearImpersonation = () => {
     setImpersonatedRole(null);
+    setImpersonatedUserId(null);
+    setImpersonatedUserName(null);
     sessionStorage.removeItem('vitaluxe_impersonation');
   };
 
@@ -232,6 +253,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setUserRole(null);
     setImpersonatedRole(null);
+    setImpersonatedUserId(null);
+    setImpersonatedUserName(null);
     sessionStorage.removeItem('vitaluxe_impersonation');
     navigate("/auth");
   };
@@ -244,8 +267,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loading, 
       actualRole,
       impersonatedRole,
+      impersonatedUserId,
+      impersonatedUserName,
       isImpersonating,
       effectiveRole,
+      effectiveUserId,
       setImpersonation,
       clearImpersonation,
       signIn, 

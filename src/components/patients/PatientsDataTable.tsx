@@ -18,13 +18,13 @@ import { PatientDialog } from "./PatientDialog";
 import { format } from "date-fns";
 
 export const PatientsDataTable = () => {
-  const { effectiveRole, user } = useAuth();
+  const { effectiveRole, effectiveUserId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: patients, isLoading, refetch } = useQuery<any[]>({
-    queryKey: ["patients", effectiveRole, user?.id],
+    queryKey: ["patients", effectiveRole, effectiveUserId],
     queryFn: async () => {
       let patientsQuery = supabase
         .from("patients")
@@ -32,8 +32,8 @@ export const PatientsDataTable = () => {
         .order("created_at", { ascending: false });
 
       // If user is a provider (doctor), only show their patients
-      if (effectiveRole === "doctor" && user) {
-        patientsQuery = patientsQuery.eq("provider_id", user.id);
+      if (effectiveRole === "doctor" && effectiveUserId) {
+        patientsQuery = patientsQuery.eq("provider_id", effectiveUserId);
       }
 
       const { data: patientsData, error: patientsError } = await patientsQuery;

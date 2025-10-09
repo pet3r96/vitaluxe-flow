@@ -6,9 +6,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { UserCog, Shield, Stethoscope, Building2, Users, TrendingUp, Check } from "lucide-react";
+import { UserCog, Shield, Stethoscope, Building2, Users, TrendingUp, Check, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const roleConfig = {
   admin: { label: "Admin", icon: Shield },
@@ -19,12 +24,53 @@ const roleConfig = {
 };
 
 export function RoleImpersonationDropdown() {
-  const { actualRole, effectiveRole, isImpersonating, setImpersonation } = useAuth();
+  const { actualRole, effectiveRole, impersonatedUserName, isImpersonating, setImpersonation } = useAuth();
+
+  // Fetch users grouped by role
+  const { data: usersByRole } = useQuery({
+    queryKey: ["users-by-role"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select(`
+          user_id,
+          role,
+          profiles!inner(id, name, email, active)
+        `)
+        .eq("profiles.active", true)
+        .in("role", ["doctor", "pharmacy", "topline", "downline"]);
+
+      if (error) throw error;
+
+      // Group users by role
+      const grouped: Record<string, Array<{ id: string; name: string; email: string }>> = {
+        doctor: [],
+        pharmacy: [],
+        topline: [],
+        downline: [],
+      };
+
+      data?.forEach((item: any) => {
+        if (item.profiles && grouped[item.role]) {
+          grouped[item.role].push({
+            id: item.profiles.id,
+            name: item.profiles.name,
+            email: item.profiles.email,
+          });
+        }
+      });
+
+      return grouped;
+    },
+    enabled: actualRole === 'admin',
+  });
 
   if (actualRole !== 'admin') return null;
 
   const CurrentIcon = effectiveRole ? roleConfig[effectiveRole as keyof typeof roleConfig]?.icon || Shield : Shield;
-  const currentLabel = effectiveRole ? roleConfig[effectiveRole as keyof typeof roleConfig]?.label || 'Admin' : 'Admin';
+  const currentLabel = impersonatedUserName 
+    ? `${roleConfig[effectiveRole as keyof typeof roleConfig]?.label || 'Admin'}: ${impersonatedUserName}`
+    : effectiveRole ? roleConfig[effectiveRole as keyof typeof roleConfig]?.label || 'Admin' : 'Admin';
 
   return (
     <DropdownMenu>
@@ -42,21 +88,64 @@ export function RoleImpersonationDropdown() {
           Switch Role View
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {Object.entries(roleConfig).map(([role, config]) => {
-          const Icon = config.icon;
-          const isActive = effectiveRole === role;
-          return (
-            <DropdownMenuItem
-              key={role}
-              onClick={() => setImpersonation(role === 'admin' ? null : role)}
-              className="gap-2 cursor-pointer"
-            >
-              <Icon className="h-4 w-4" />
-              <span className="flex-1">{config.label}</span>
-              {isActive && <Check className="h-4 w-4 text-primary" />}
-            </DropdownMenuItem>
-          );
-        })}
+        <DropdownMenuItem
+          onClick={() => setImpersonation(null)}
+          className="gap-2 cursor-pointer"
+        >
+          <Shield className="h-4 w-4" />
+          <span className="flex-1">Admin</span>
+          {effectiveRole === 'admin' && <Check className="h-4 w-4 text-primary" />}
+        </DropdownMenuItem>
+        
+        {Object.entries(roleConfig)
+          .filter(([role]) => role !== 'admin')
+          .map(([role, config]) => {
+            const Icon = config.icon;
+            const users = usersByRole?.[role] || [];
+            
+            if (users.length === 0) {
+              return (
+                <DropdownMenuItem
+                  key={role}
+                  disabled
+                  className="gap-2 opacity-50"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="flex-1">{config.label}</span>
+                  <span className="text-xs text-muted-foreground">(No users)</span>
+                </DropdownMenuItem>
+              );
+            }
+
+            return (
+              <DropdownMenuSub key={role}>
+                <DropdownMenuSubTrigger className="gap-2">
+                  <Icon className="h-4 w-4" />
+                  <span className="flex-1">{config.label}</span>
+                  <ChevronRight className="h-4 w-4" />
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-56 max-h-[300px] overflow-y-auto">
+                  {users.map((user) => (
+                    <DropdownMenuItem
+                      key={user.id}
+                      onClick={() => setImpersonation(role, user.id, user.name)}
+                      className="gap-2 cursor-pointer"
+                    >
+                      <span className="flex-1 truncate">
+                        {user.name}
+                        <span className="block text-xs text-muted-foreground truncate">
+                          {user.email}
+                        </span>
+                      </span>
+                      {effectiveRole === role && impersonatedUserName === user.name && (
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            );
+          })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

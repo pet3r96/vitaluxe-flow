@@ -10,9 +10,13 @@ const roleLabels: Record<string, string> = {
 };
 
 export function ImpersonationBanner() {
-  const { isImpersonating, impersonatedRole, clearImpersonation } = useAuth();
+  const { isImpersonating, impersonatedRole, impersonatedUserName, clearImpersonation } = useAuth();
 
   if (!isImpersonating || !impersonatedRole) return null;
+
+  const displayName = impersonatedUserName 
+    ? `${roleLabels[impersonatedRole] || impersonatedRole} - ${impersonatedUserName}`
+    : roleLabels[impersonatedRole] || impersonatedRole;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-primary/90 to-accent/90 text-primary-foreground shadow-gold animate-in slide-in-from-top">
@@ -20,7 +24,7 @@ export function ImpersonationBanner() {
         <div className="flex items-center gap-2">
           <Eye className="h-4 w-4" />
           <span className="text-sm font-medium">
-            Viewing as <strong>{roleLabels[impersonatedRole] || impersonatedRole}</strong> • You are still authenticated as Admin
+            Viewing as <strong>{displayName}</strong> • You are still authenticated as Admin
           </span>
         </div>
         <Button
