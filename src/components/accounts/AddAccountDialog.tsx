@@ -54,24 +54,20 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
     queryKey: ["topline-reps"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("user_roles")
+        .from("profiles")
         .select(`
-          user_id,
-          role,
-          profiles!inner(id, name, email, active)
+          id,
+          name,
+          email,
+          user_roles!inner(role)
         `)
-        .eq("role", "topline")
-        .eq("profiles.active", true)
-        .order("profiles.name", { ascending: true });
+        .eq("user_roles.role", "topline")
+        .eq("active", true)
+        .order("name", { ascending: true });
 
       if (error) throw error;
       
-      // Transform the data structure
-      return data?.map((item: any) => ({
-        id: item.profiles.id,
-        name: item.profiles.name,
-        email: item.profiles.email,
-      })) || [];
+      return data || [];
     },
     enabled: role === "downline",
   });
