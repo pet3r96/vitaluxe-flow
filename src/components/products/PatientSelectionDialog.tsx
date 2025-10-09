@@ -50,7 +50,7 @@ export const PatientSelectionDialog = ({
         .from("patients" as any)
         .select("*")
         .eq("provider_id", user.id)
-        .order("full_name");
+        .order("name");
 
       if (error) throw error;
       return data as any[] || [];
@@ -138,7 +138,7 @@ export const PatientSelectionDialog = ({
                   className="justify-between"
                 >
                   {selectedPatient
-                    ? `${selectedPatient.full_name} ${selectedPatient.dob ? `(DOB: ${format(new Date(selectedPatient.dob), "MM/dd/yyyy")})` : ""}`
+                    ? `${selectedPatient.name} ${selectedPatient.birth_date ? `(DOB: ${format(new Date(selectedPatient.birth_date), "MM/dd/yyyy")})` : ""}`
                     : "Select patient..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -152,7 +152,7 @@ export const PatientSelectionDialog = ({
                       {patients?.map((patient) => (
                         <CommandItem
                           key={patient.id}
-                          value={patient.full_name}
+                          value={patient.name}
                           onSelect={() => {
                             setSelectedPatientId(patient.id);
                             setComboboxOpen(false);
@@ -165,10 +165,10 @@ export const PatientSelectionDialog = ({
                             )}
                           />
                           <div className="flex flex-col">
-                            <span>{patient.full_name}</span>
-                            {patient.dob && (
+                            <span>{patient.name}</span>
+                            {patient.birth_date && (
                               <span className="text-xs text-muted-foreground">
-                                DOB: {format(new Date(patient.dob), "MM/dd/yyyy")}
+                                DOB: {format(new Date(patient.birth_date), "MM/dd/yyyy")}
                               </span>
                             )}
                           </div>

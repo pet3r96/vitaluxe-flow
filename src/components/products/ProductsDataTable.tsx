@@ -130,15 +130,26 @@ export const ProductsDataTable = () => {
         cart = newCart;
       }
 
-      // Add item to cart with patient_id
+      // Get patient details
+      const { data: patient } = await supabase
+        .from("patients")
+        .select("name, email, phone, address")
+        .eq("id", patientId)
+        .single();
+
+      // Add item to cart with patient info
       const { error } = await supabase
         .from("cart_lines" as any)
         .insert({
           cart_id: cart.id,
           product_id: productForCart.id,
           patient_id: patientId,
+          patient_name: patient?.name || "Unknown",
+          patient_email: patient?.email,
+          patient_phone: patient?.phone,
+          patient_address: patient?.address,
           quantity: quantity,
-          price: productForCart.base_price,
+          price_snapshot: productForCart.base_price,
           destination_state: "IL", // Default state, can be updated
         });
 
