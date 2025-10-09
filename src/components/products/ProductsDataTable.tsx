@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsDataTable = () => {
-  const { effectiveRole, user } = useAuth();
+  const { effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -109,20 +109,20 @@ export const ProductsDataTable = () => {
   );
 
   const handleAddToCart = async (patientId: string, quantity: number) => {
-    if (!user || !productForCart) return;
+    if (!effectiveUserId || !productForCart) return;
 
     try {
       // Get or create cart
       let { data: cart } = await supabase
         .from("cart")
         .select("id")
-        .eq("doctor_id", user.id)
+        .eq("doctor_id", effectiveUserId)
         .single();
 
       if (!cart) {
         const { data: newCart, error: cartError } = await supabase
           .from("cart")
-          .insert({ doctor_id: user.id })
+          .insert({ doctor_id: effectiveUserId })
           .select("id")
           .single();
 

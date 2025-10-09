@@ -35,27 +35,27 @@ export const PatientSelectionDialog = ({
   product,
   onAddToCart,
 }: PatientSelectionDialogProps) => {
-  const { user } = useAuth();
+  const { effectiveUserId } = useAuth();
   const navigate = useNavigate();
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
   const { data: patients, isLoading } = useQuery({
-    queryKey: ["patients", user?.id],
+    queryKey: ["patients", effectiveUserId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       
       const { data, error } = await supabase
         .from("patients" as any)
         .select("*")
-        .eq("provider_id", user.id)
+        .eq("provider_id", effectiveUserId)
         .order("name");
 
       if (error) throw error;
       return data as any[] || [];
     },
-    enabled: open && !!user,
+    enabled: open && !!effectiveUserId,
   });
 
   useEffect(() => {
