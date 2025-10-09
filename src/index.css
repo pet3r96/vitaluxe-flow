@@ -15,7 +15,7 @@ All colors MUST be HSL.
     /* Lighter background for main content area */
     --main-content-bg: 0 0% 11%;
 
-    --card: 0 0% 8%;
+    --card: 0 0% 13%;
     --card-foreground: 45 52% 88%;
 
     --popover: 0 0% 6%;
