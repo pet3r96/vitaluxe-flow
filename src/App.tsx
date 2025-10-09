@@ -7,6 +7,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ImpersonationBanner } from "./components/layout/ImpersonationBanner";
+import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonationDropdown";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
@@ -32,10 +34,14 @@ const App = () => (
               path="/*"
               element={
                 <ProtectedRoute>
+                  <ImpersonationBanner />
                   <SidebarProvider>
                     <div className="flex min-h-screen w-full bg-background">
                       <AppSidebar />
                       <main className="flex-1 p-8 bg-[hsl(var(--main-content-bg))]">
+                        <div className="mb-6 flex justify-end">
+                          <RoleImpersonationDropdown />
+                        </div>
                         <Routes>
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/dashboard" element={<Dashboard />} />

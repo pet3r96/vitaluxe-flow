@@ -8,6 +8,12 @@ interface AuthContextType {
   session: Session | null;
   userRole: string | null;
   loading: boolean;
+  actualRole: string | null;
+  impersonatedRole: string | null;
+  isImpersonating: boolean;
+  effectiveRole: string | null;
+  setImpersonation: (role: string | null) => void;
+  clearImpersonation: () => void;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (
     email: string, 
@@ -25,8 +31,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [impersonatedRole, setImpersonatedRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  const actualRole = userRole;
+  const isImpersonating = impersonatedRole !== null;
+  const effectiveRole = impersonatedRole || userRole;
 
   useEffect(() => {
     // Set up auth state listener
@@ -42,6 +53,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }, 0);
         } else {
           setUserRole(null);
+          setImpersonatedRole(null);
+          sessionStorage.removeItem('vitaluxe_impersonation');
         }
       }
     );
@@ -69,7 +82,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .maybeSingle();
 
       if (error) throw error;
-      setUserRole(data?.role ?? null);
+      const role = data?.role ?? null;
+      setUserRole(role);
+
+      // Restore impersonation from sessionStorage if admin
+      if (role === 'admin') {
+        const stored = sessionStorage.getItem('vitaluxe_impersonation');
+        if (stored) {
+          try {
+            const { role: impRole } = JSON.parse(stored);
+            setImpersonatedRole(impRole);
+          } catch (e) {
+            sessionStorage.removeItem('vitaluxe_impersonation');
+          }
+        }
+      }
     } catch (error) {
       console.error("Error fetching user role:", error);
       setUserRole(null);
@@ -129,14 +156,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const setImpersonation = (role: string | null) => {
+    if (userRole !== 'admin') return;
+    
+    setImpersonatedRole(role);
+    if (role) {
+      sessionStorage.setItem('vitaluxe_impersonation', JSON.stringify({ role, timestamp: Date.now() }));
+    } else {
+      sessionStorage.removeItem('vitaluxe_impersonation');
+    }
+  };
+
+  const clearImpersonation = () => {
+    setImpersonatedRole(null);
+    sessionStorage.removeItem('vitaluxe_impersonation');
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUserRole(null);
+    setImpersonatedRole(null);
+    sessionStorage.removeItem('vitaluxe_impersonation');
     navigate("/auth");
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, userRole, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      userRole, 
+      loading, 
+      actualRole,
+      impersonatedRole,
+      isImpersonating,
+      effectiveRole,
+      setImpersonation,
+      clearImpersonation,
+      signIn, 
+      signUp, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );

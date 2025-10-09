@@ -61,11 +61,11 @@ const menuItems = {
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { userRole, signOut } = useAuth();
+  const { effectiveRole, isImpersonating, signOut } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
 
-  const items = userRole ? menuItems[userRole as keyof typeof menuItems] || [] : [];
+  const items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
   const isCollapsed = state === "collapsed";
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -89,7 +89,7 @@ export function AppSidebar() {
         <SidebarGroup>
           {!isCollapsed && (
             <SidebarGroupLabel className="text-primary font-semibold">
-              Main Menu
+              {isImpersonating ? "Impersonated View" : "Main Menu"}
             </SidebarGroupLabel>
           )}
 
