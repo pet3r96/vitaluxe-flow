@@ -1,0 +1,243 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    // Get the requesting user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify admin access
+    const { data: adminUser, error: adminError } = await supabaseAdmin
+      .from('profiles')
+      .select('email')
+      .eq('id', user.id)
+      .single();
+
+    if (adminError || adminUser?.email !== 'admin@vitaluxeservice.com') {
+      return new Response(
+        JSON.stringify({ error: 'Access denied. Only admin@vitaluxeservice.com can run sync.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Starting data sync...');
+
+    let addedProfiles = 0;
+    let addedRoles = 0;
+    let repairedPharmacies = 0;
+    let repairedProviders = 0;
+    let repairedToplines = 0;
+    let repairedDownlines = 0;
+    const errors: string[] = [];
+
+    // Step 1: Scan pharmacies for missing profiles/roles
+    const { data: pharmacies } = await supabaseAdmin
+      .from('pharmacies')
+      .select('*');
+
+    if (pharmacies) {
+      for (const pharmacy of pharmacies) {
+        try {
+          // Check if profile exists
+          if (pharmacy.user_id) {
+            const { data: profile } = await supabaseAdmin
+              .from('profiles')
+              .select('id')
+              .eq('id', pharmacy.user_id)
+              .maybeSingle();
+
+            if (!profile) {
+              // Create missing profile
+              const { error: profileError } = await supabaseAdmin
+                .from('profiles')
+                .insert({
+                  id: pharmacy.user_id,
+                  name: pharmacy.name,
+                  email: pharmacy.contact_email,
+                  parent_id: pharmacy.parent_id || user.id,
+                  active: pharmacy.active
+                });
+
+              if (!profileError) {
+                addedProfiles++;
+              } else {
+                errors.push(`Failed to create profile for pharmacy ${pharmacy.name}: ${profileError.message}`);
+              }
+            }
+
+            // Check if user_role exists
+            const { data: role } = await supabaseAdmin
+              .from('user_roles')
+              .select('id')
+              .eq('user_id', pharmacy.user_id)
+              .eq('role', 'pharmacy')
+              .maybeSingle();
+
+            if (!role) {
+              const { error: roleError } = await supabaseAdmin
+                .from('user_roles')
+                .insert({
+                  user_id: pharmacy.user_id,
+                  role: 'pharmacy'
+                });
+
+              if (!roleError) {
+                addedRoles++;
+              } else {
+                errors.push(`Failed to create role for pharmacy ${pharmacy.name}: ${roleError.message}`);
+              }
+            }
+
+            repairedPharmacies++;
+          }
+        } catch (error: any) {
+          errors.push(`Error processing pharmacy ${pharmacy.name}: ${error.message}`);
+        }
+      }
+    }
+
+    // Step 2: Check all profiles for missing user_roles
+    const { data: profiles } = await supabaseAdmin
+      .from('profiles')
+      .select(`
+        id,
+        name,
+        email,
+        user_roles(role)
+      `);
+
+    if (profiles) {
+      for (const profile of profiles) {
+        try {
+          if (!profile.user_roles || profile.user_roles.length === 0) {
+            // Try to determine role from related tables
+            const { data: pharmacy } = await supabaseAdmin
+              .from('pharmacies')
+              .select('id')
+              .eq('user_id', profile.id)
+              .maybeSingle();
+
+            if (pharmacy) {
+              const { error: roleError } = await supabaseAdmin
+                .from('user_roles')
+                .insert({
+                  user_id: profile.id,
+                  role: 'pharmacy'
+                });
+
+              if (!roleError) {
+                addedRoles++;
+                repairedPharmacies++;
+              }
+            } else {
+              // Default to admin if no role can be determined
+              console.log(`Profile ${profile.name} has no role - skipping`);
+            }
+          }
+        } catch (error: any) {
+          errors.push(`Error checking roles for profile ${profile.name}: ${error.message}`);
+        }
+      }
+    }
+
+    // Step 3: Fix missing parent_id relationships
+    const { data: pharmaciesWithoutParent } = await supabaseAdmin
+      .from('pharmacies')
+      .select('id, user_id, name')
+      .is('parent_id', null);
+
+    if (pharmaciesWithoutParent) {
+      for (const pharmacy of pharmaciesWithoutParent) {
+        const { error } = await supabaseAdmin
+          .from('pharmacies')
+          .update({ parent_id: user.id })
+          .eq('id', pharmacy.id);
+
+        if (error) {
+          errors.push(`Failed to set parent for pharmacy ${pharmacy.name}: ${error.message}`);
+        }
+      }
+    }
+
+    const totalRepaired = addedProfiles + addedRoles + repairedPharmacies;
+
+    // Log the sync event
+    const summary = {
+      addedProfiles,
+      addedRoles,
+      repairedPharmacies,
+      repairedProviders,
+      repairedToplines,
+      repairedDownlines,
+      totalRepaired,
+      errors: errors.length > 0 ? errors : null
+    };
+
+    await supabaseAdmin
+      .from('sync_logs')
+      .insert({
+        admin_id: user.id,
+        added_profiles: addedProfiles,
+        added_roles: addedRoles,
+        repaired_pharmacies: repairedPharmacies,
+        repaired_providers: repairedProviders,
+        repaired_toplines: repairedToplines,
+        repaired_downlines: repairedDownlines,
+        total_repaired: totalRepaired,
+        summary
+      });
+
+    console.log('Data sync completed', summary);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        summary
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    console.error('Unexpected error in sync-user-data:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});

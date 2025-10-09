@@ -22,6 +22,7 @@ import {
 import { Search, Edit, Eye, Power, PowerOff } from "lucide-react";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AccountDetailsDialog } from "./AccountDetailsDialog";
+import { DataSyncButton } from "./DataSyncButton";
 
 export const AccountsDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,9 +107,12 @@ export const AccountsDataTable = () => {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          Add Account
-        </Button>
+        <div className="flex items-center gap-2">
+          <DataSyncButton onSyncComplete={() => refetch()} />
+          <Button onClick={() => setAddDialogOpen(true)}>
+            Add Account
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-md border border-border bg-card">

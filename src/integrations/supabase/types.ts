@@ -696,6 +696,59 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_logs: {
+        Row: {
+          added_profiles: number
+          added_roles: number
+          admin_id: string | null
+          created_at: string
+          executed_at: string
+          id: string
+          repaired_downlines: number
+          repaired_pharmacies: number
+          repaired_providers: number
+          repaired_toplines: number
+          summary: Json
+          total_repaired: number
+        }
+        Insert: {
+          added_profiles?: number
+          added_roles?: number
+          admin_id?: string | null
+          created_at?: string
+          executed_at?: string
+          id?: string
+          repaired_downlines?: number
+          repaired_pharmacies?: number
+          repaired_providers?: number
+          repaired_toplines?: number
+          summary?: Json
+          total_repaired?: number
+        }
+        Update: {
+          added_profiles?: number
+          added_roles?: number
+          admin_id?: string | null
+          created_at?: string
+          executed_at?: string
+          id?: string
+          repaired_downlines?: number
+          repaired_pharmacies?: number
+          repaired_providers?: number
+          repaired_toplines?: number
+          summary?: Json
+          total_repaired?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       thread_participants: {
         Row: {
           id: string
