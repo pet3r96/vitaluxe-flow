@@ -77,57 +77,85 @@ serve(async (req) => {
         try {
           // Case A: Pharmacy has no user_id (manually created in database)
           if (!pharmacy.user_id) {
-            console.log(`Found orphaned pharmacy: ${pharmacy.name} - creating user profile`);
+            console.log(`Found orphaned pharmacy: ${pharmacy.name} - creating complete user account`);
             
-            // Generate a new UUID for the user
-            const { data: newProfile, error: createProfileError } = await supabaseAdmin
-              .from('profiles')
-              .insert({
-                name: pharmacy.name,
+            try {
+              // Step 1: Create auth user
+              const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
                 email: pharmacy.contact_email,
-                parent_id: pharmacy.parent_id || user.id,
-                active: pharmacy.active !== false
-              })
-              .select()
-              .single();
-
-            if (createProfileError || !newProfile) {
-              errors.push(`Failed to create profile for orphaned pharmacy ${pharmacy.name}: ${createProfileError?.message}`);
-              continue;
-            }
-
-            addedProfiles++;
-
-            // Create user_role for the new profile
-            const { error: roleError } = await supabaseAdmin
-              .from('user_roles')
-              .insert({
-                user_id: newProfile.id,
-                role: 'pharmacy'
+                email_confirm: true,
+                password: crypto.randomUUID(), // Auto-generated secure password
+                user_metadata: {
+                  name: pharmacy.name,
+                  role: 'pharmacy'
+                }
               });
 
-            if (roleError) {
-              errors.push(`Failed to create role for pharmacy ${pharmacy.name}: ${roleError.message}`);
-            } else {
-              addedRoles++;
+              if (authError || !authUser.user) {
+                errors.push(`Failed to create auth user for pharmacy ${pharmacy.name}: ${authError?.message}`);
+                continue;
+              }
+
+              // Step 2: Create profile (will be created by handle_new_user trigger, but ensure it's there)
+              const { data: profile, error: profileError } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('id', authUser.user.id)
+                .maybeSingle();
+
+              if (!profile) {
+                // Manually create if trigger didn't fire
+                const { error: createError } = await supabaseAdmin
+                  .from('profiles')
+                  .insert({
+                    id: authUser.user.id,
+                    name: pharmacy.name,
+                    email: pharmacy.contact_email,
+                    parent_id: pharmacy.parent_id || user.id,
+                    active: true
+                  });
+
+                if (createError) {
+                  errors.push(`Failed to create profile for pharmacy ${pharmacy.name}: ${createError.message}`);
+                  continue;
+                }
+                addedProfiles++;
+              }
+
+              // Step 3: Create user role
+              const { error: roleError } = await supabaseAdmin
+                .from('user_roles')
+                .insert({
+                  user_id: authUser.user.id,
+                  role: 'pharmacy'
+                });
+
+              if (roleError) {
+                errors.push(`Failed to create role for pharmacy ${pharmacy.name}: ${roleError.message}`);
+              } else {
+                addedRoles++;
+              }
+
+              // Step 4: Link pharmacy to the new user
+              const { error: updateError } = await supabaseAdmin
+                .from('pharmacies')
+                .update({ 
+                  user_id: authUser.user.id,
+                  parent_id: pharmacy.parent_id || user.id
+                })
+                .eq('id', pharmacy.id);
+
+              if (updateError) {
+                errors.push(`Failed to link pharmacy ${pharmacy.name} to user: ${updateError.message}`);
+              } else {
+                orphanedPharmaciesConverted++;
+                repairedPharmacies++;
+                console.log(`Successfully converted orphaned pharmacy: ${pharmacy.name}`);
+              }
+            } catch (err: any) {
+              errors.push(`Error processing orphaned pharmacy ${pharmacy.name}: ${err.message}`);
             }
-
-            // Link the pharmacy to the new profile
-            const { error: updatePharmacyError } = await supabaseAdmin
-              .from('pharmacies')
-              .update({ 
-                user_id: newProfile.id,
-                parent_id: pharmacy.parent_id || user.id
-              })
-              .eq('id', pharmacy.id);
-
-            if (updatePharmacyError) {
-              errors.push(`Failed to link pharmacy ${pharmacy.name} to profile: ${updatePharmacyError.message}`);
-            } else {
-              orphanedPharmaciesConverted++;
-              repairedPharmacies++;
-            }
-
+            
             continue;
           }
 
