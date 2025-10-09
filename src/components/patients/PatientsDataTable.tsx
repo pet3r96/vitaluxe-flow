@@ -26,20 +26,24 @@ export const PatientsDataTable = () => {
   const { data: patients, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["patients", effectiveRole, user?.id],
     queryFn: async () => {
-      const query = supabase
+      let query = supabase
         .from("patients")
-        .select(`*`)
+        .select(`
+          *,
+          provider:profiles!patients_provider_id_fkey(name, email)
+        `)
         .order("created_at", { ascending: false });
 
       // If user is a provider (doctor), only show their patients
       if (effectiveRole === "doctor" && user) {
-        const { data, error } = await query.eq("provider_id", user.id);
-        if (error) throw error;
-        return data || [];
+        query = query.eq("provider_id", user.id);
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching patients:", error);
+        throw error;
+      }
       return data || [];
     },
   });
@@ -114,7 +118,7 @@ export const PatientsDataTable = () => {
                   <TableCell className="max-w-xs truncate">{patient.address || "-"}</TableCell>
                   {isAdmin && (
                     <TableCell>
-                      {patient.provider_id ? `Provider ID: ${patient.provider_id.slice(0, 8)}...` : "-"}
+                      {patient.provider?.name || "-"}
                     </TableCell>
                   )}
                   <TableCell className="text-right">
