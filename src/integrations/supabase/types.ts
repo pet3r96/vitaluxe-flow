@@ -417,6 +417,8 @@ export type Database = {
           created_at: string | null
           doctor_id: string
           id: string
+          practice_address: string | null
+          ship_to: string | null
           status: string | null
           stripe_payment_id: string | null
           total_amount: number
@@ -426,6 +428,8 @@ export type Database = {
           created_at?: string | null
           doctor_id: string
           id?: string
+          practice_address?: string | null
+          ship_to?: string | null
           status?: string | null
           stripe_payment_id?: string | null
           total_amount: number
@@ -435,6 +439,8 @@ export type Database = {
           created_at?: string | null
           doctor_id?: string
           id?: string
+          practice_address?: string | null
+          ship_to?: string | null
           status?: string | null
           stripe_payment_id?: string | null
           total_amount?: number
@@ -610,6 +616,8 @@ export type Database = {
           npi: string | null
           parent_id: string | null
           phone: string | null
+          shipping_address: string | null
+          shipping_preference: string | null
           updated_at: string | null
         }
         Insert: {
@@ -627,6 +635,8 @@ export type Database = {
           npi?: string | null
           parent_id?: string | null
           phone?: string | null
+          shipping_address?: string | null
+          shipping_preference?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -644,6 +654,8 @@ export type Database = {
           npi?: string | null
           parent_id?: string | null
           phone?: string | null
+          shipping_address?: string | null
+          shipping_preference?: string | null
           updated_at?: string | null
         }
         Relationships: [

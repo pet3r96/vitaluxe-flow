@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Trash2, Package } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ShoppingCart, Trash2, Package, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +15,7 @@ export default function Cart() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [shipToPractice, setShipToPractice] = useState(false);
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -41,10 +45,40 @@ export default function Cart() {
     enabled: !!effectiveUserId,
   });
 
+  const { data: providerProfile } = useQuery({
+    queryKey: ["provider-shipping", effectiveUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("shipping_address, name")
+        .eq("id", effectiveUserId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!effectiveUserId && shipToPractice,
+  });
+
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       if (!cart?.id || !cart.lines || cart.lines.length === 0) {
         throw new Error("Cart is empty");
+      }
+
+      // Validate practice order requirements
+      if (shipToPractice && !providerProfile?.shipping_address) {
+        throw new Error("Please set your practice shipping address in your profile before placing practice orders");
+      }
+
+      // Validate patient order requirements
+      if (!shipToPractice) {
+        const hasPatientInfo = (cart.lines as any[]).every(
+          (line) => line.patient_name && line.patient_id
+        );
+        if (!hasPatientInfo) {
+          throw new Error("All items must have patient information for patient orders");
+        }
       }
 
       // Calculate total
@@ -54,7 +88,6 @@ export default function Cart() {
       );
 
       // Determine the doctor the order should be attributed to
-      // If impersonating, use the effective user's ID; otherwise use the authenticated user's ID
       const doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
 
       const { data: order, error: orderError } = await supabase
@@ -63,6 +96,8 @@ export default function Cart() {
           doctor_id: doctorIdForOrder,
           total_amount: totalAmount,
           status: "pending",
+          ship_to: shipToPractice ? "practice" : "patient",
+          practice_address: shipToPractice ? providerProfile?.shipping_address : null,
         })
         .select()
         .single();
@@ -75,11 +110,11 @@ export default function Cart() {
         product_id: line.product_id,
         quantity: line.quantity || 1,
         price: line.price_snapshot,
-        patient_id: line.patient_id,
-        patient_name: line.patient_name,
-        patient_email: line.patient_email,
-        patient_phone: line.patient_phone,
-        patient_address: line.patient_address,
+        patient_id: shipToPractice ? null : line.patient_id,
+        patient_name: shipToPractice ? "Practice Order" : line.patient_name,
+        patient_email: shipToPractice ? null : line.patient_email,
+        patient_phone: shipToPractice ? null : line.patient_phone,
+        patient_address: shipToPractice ? null : line.patient_address,
         prescription_url: line.prescription_url,
         status: "pending" as const,
       }));
@@ -177,6 +212,40 @@ export default function Cart() {
         </Card>
       ) : (
         <div className="space-y-4">
+          <Card className="bg-muted/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="ship-to-practice"
+                      checked={shipToPractice}
+                      onCheckedChange={setShipToPractice}
+                    />
+                    <Label htmlFor="ship-to-practice" className="text-base font-semibold cursor-pointer">
+                      Ship to Practice / Med Spa — No Patient
+                    </Label>
+                  </div>
+                  {shipToPractice && (
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground ml-7">
+                      <Building2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">This order will ship directly to your practice address on file:</p>
+                        {providerProfile?.shipping_address ? (
+                          <p className="mt-1">{providerProfile.shipping_address}</p>
+                        ) : (
+                          <p className="mt-1 text-destructive">
+                            ⚠️ No practice address set. Please update your profile in Messages → My Profile.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {cartLines.map((line: any) => (
             <Card key={line.id}>
               <CardContent className="flex items-center gap-4 p-6">

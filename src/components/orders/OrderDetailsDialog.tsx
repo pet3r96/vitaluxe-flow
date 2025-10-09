@@ -46,10 +46,19 @@ export const OrderDetailsDialog = ({
               <Badge>{order.status}</Badge>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Payment ID</p>
-              <p className="font-medium text-xs">{order.stripe_payment_id || "N/A"}</p>
+              <p className="text-sm text-muted-foreground">Fulfillment Type</p>
+              <Badge variant={order.ship_to === 'practice' ? 'secondary' : 'default'}>
+                {order.ship_to === 'practice' ? '🏢 Practice Order' : '👤 Patient Order'}
+              </Badge>
             </div>
           </div>
+
+          {order.ship_to === 'practice' && order.practice_address && (
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm font-medium mb-1">Practice Shipping Address</p>
+              <p className="text-sm text-muted-foreground">{order.practice_address}</p>
+            </div>
+          )}
 
           <div>
             <h3 className="text-lg font-semibold mb-4">Order Lines</h3>
@@ -75,33 +84,35 @@ export const OrderDetailsDialog = ({
                     </div>
                   </div>
                   
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-sm text-muted-foreground mb-2">Patient Information</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Name</p>
-                        <p className="text-sm font-medium">{line.patient_name}</p>
+                  {order.ship_to === 'patient' && (
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-sm text-muted-foreground mb-2">Patient Information</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Name</p>
+                          <p className="text-sm font-medium">{line.patient_name}</p>
+                        </div>
+                        {line.patient_email && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Email</p>
+                            <p className="text-sm">{line.patient_email}</p>
+                          </div>
+                        )}
+                        {line.patient_phone && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Phone</p>
+                            <p className="text-sm">{line.patient_phone}</p>
+                          </div>
+                        )}
+                        {line.patient_address && (
+                          <div className="col-span-2">
+                            <p className="text-xs text-muted-foreground">Address</p>
+                            <p className="text-sm">{line.patient_address}</p>
+                          </div>
+                        )}
                       </div>
-                      {line.patient_email && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Email</p>
-                          <p className="text-sm">{line.patient_email}</p>
-                        </div>
-                      )}
-                      {line.patient_phone && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Phone</p>
-                          <p className="text-sm">{line.patient_phone}</p>
-                        </div>
-                      )}
-                      {line.patient_address && (
-                        <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground">Address</p>
-                          <p className="text-sm">{line.patient_address}</p>
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  )}
 
                   {line.prescription_url && (
                     <div className="pt-2">

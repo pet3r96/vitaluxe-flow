@@ -1,16 +1,46 @@
 import { MessagesView } from "@/components/messages/MessagesView";
+import { ProviderProfileForm } from "@/components/profile/ProviderProfileForm";
+import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessageCircle, User } from "lucide-react";
 
 const Messages = () => {
+  const { userRole } = useAuth();
+  const isProvider = userRole === "doctor";
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Support Tickets</h1>
+        <h1 className="text-3xl font-bold text-foreground">Messages & Profile</h1>
         <p className="text-muted-foreground mt-2">
-          Create and manage support requests with administrators
+          Manage your support tickets and professional information
         </p>
       </div>
 
-      <MessagesView />
+      <Tabs defaultValue="inbox" className="w-full">
+        <TabsList>
+          <TabsTrigger value="inbox">
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Inbox / Conversations
+          </TabsTrigger>
+          {isProvider && (
+            <TabsTrigger value="profile">
+              <User className="h-4 w-4 mr-2" />
+              My Profile
+            </TabsTrigger>
+          )}
+        </TabsList>
+        
+        <TabsContent value="inbox" className="mt-6">
+          <MessagesView />
+        </TabsContent>
+        
+        {isProvider && (
+          <TabsContent value="profile" className="mt-6">
+            <ProviderProfileForm />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 };

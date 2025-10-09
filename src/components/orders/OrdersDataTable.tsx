@@ -106,6 +106,7 @@ export const OrdersDataTable = () => {
             <TableRow>
               <TableHead>Order ID</TableHead>
               <TableHead>Doctor</TableHead>
+              <TableHead>Fulfillment</TableHead>
               <TableHead>Products</TableHead>
               <TableHead>Total Amount</TableHead>
               <TableHead>Status</TableHead>
@@ -116,13 +117,13 @@ export const OrdersDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
+                <TableCell colSpan={8} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
@@ -133,6 +134,11 @@ export const OrdersDataTable = () => {
                     #{order.id.slice(0, 8)}
                   </TableCell>
                   <TableCell>{order.profiles?.name || "N/A"}</TableCell>
+                  <TableCell>
+                    <Badge variant={order.ship_to === 'practice' ? 'secondary' : 'outline'}>
+                      {order.ship_to === 'practice' ? '🏢 Practice' : '👤 Patient'}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     {order.order_lines?.length || 0} item(s)
                   </TableCell>
