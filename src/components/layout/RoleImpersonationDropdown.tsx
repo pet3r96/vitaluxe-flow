@@ -123,7 +123,6 @@ export function RoleImpersonationDropdown() {
                 <DropdownMenuSubTrigger className="gap-2">
                   <Icon className="h-4 w-4" />
                   <span className="flex-1">{config.label}</span>
-                  <ChevronRight className="h-4 w-4" />
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-56 max-h-[300px] overflow-y-auto">
                   {users.map((user) => (
