@@ -9,7 +9,13 @@ interface AuthContextType {
   userRole: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
+  signUp: (
+    email: string, 
+    password: string, 
+    name: string, 
+    role: string, 
+    roleData: any
+  ) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -87,24 +93,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (
+    email: string, 
+    password: string, 
+    name: string, 
+    role: string, 
+    roleData: any
+  ) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            name: name,
-          }
-        }
+      // Call the edge function to handle user creation and role assignment
+      const { data, error } = await supabase.functions.invoke('assign-user-role', {
+        body: {
+          email,
+          password,
+          name,
+          role,
+          roleData,
+        },
       });
-      
-      return { error };
+
+      if (error) {
+        console.error('Edge function error:', error);
+        return { error: { message: error.message } };
+      }
+
+      if (data?.error) {
+        console.error('Signup error:', data.error);
+        return { error: { message: data.error } };
+      }
+
+      return { error: null };
     } catch (error: any) {
-      return { error };
+      console.error('Unexpected signup error:', error);
+      return { error: { message: error.message || 'An unexpected error occurred' } };
     }
   };
 
