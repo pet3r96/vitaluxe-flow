@@ -51,6 +51,7 @@ export type Database = {
           id: string
           patient_address: string | null
           patient_email: string | null
+          patient_id: string | null
           patient_name: string
           patient_phone: string | null
           prescription_url: string | null
@@ -65,6 +66,7 @@ export type Database = {
           id?: string
           patient_address?: string | null
           patient_email?: string | null
+          patient_id?: string | null
           patient_name: string
           patient_phone?: string | null
           prescription_url?: string | null
@@ -79,6 +81,7 @@ export type Database = {
           id?: string
           patient_address?: string | null
           patient_email?: string | null
+          patient_id?: string | null
           patient_name?: string
           patient_phone?: string | null
           prescription_url?: string | null
@@ -92,6 +95,13 @@ export type Database = {
             columns: ["cart_id"]
             isOneToOne: false
             referencedRelation: "cart"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
           {
@@ -258,6 +268,7 @@ export type Database = {
           order_id: string
           patient_address: string | null
           patient_email: string | null
+          patient_id: string | null
           patient_name: string
           patient_phone: string | null
           prescription_url: string | null
@@ -275,6 +286,7 @@ export type Database = {
           order_id: string
           patient_address?: string | null
           patient_email?: string | null
+          patient_id?: string | null
           patient_name: string
           patient_phone?: string | null
           prescription_url?: string | null
@@ -292,6 +304,7 @@ export type Database = {
           order_id?: string
           patient_address?: string | null
           patient_email?: string | null
+          patient_id?: string | null
           patient_name?: string
           patient_phone?: string | null
           prescription_url?: string | null
@@ -315,6 +328,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
           {
@@ -363,6 +383,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      patients: {
+        Row: {
+          address: string | null
+          allergies: string | null
+          birth_date: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          allergies?: string | null
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          allergies?: string | null
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       pharmacies: {
         Row: {
