@@ -213,9 +213,14 @@ export const MessagesView = () => {
     
     if (error) {
       toast.error("Failed to mark as resolved");
+      console.error("Mark resolved error:", error);
     } else {
       toast.success("Ticket marked as resolved");
-      refetchThreads();
+      // Clear selection if on unresolved filter
+      if (resolvedFilter === "unresolved") {
+        setSelectedThread(null);
+      }
+      await refetchThreads();
     }
   };
 
@@ -231,9 +236,14 @@ export const MessagesView = () => {
     
     if (error) {
       toast.error("Failed to reopen ticket");
+      console.error("Reopen error:", error);
     } else {
       toast.success("Ticket reopened");
-      refetchThreads();
+      // Clear selection if on resolved filter
+      if (resolvedFilter === "resolved") {
+        setSelectedThread(null);
+      }
+      await refetchThreads();
     }
   };
 
