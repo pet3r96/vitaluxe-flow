@@ -691,6 +691,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_thread_participant: {
+        Args: { _thread_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "doctor" | "pharmacy" | "topline" | "downline"
