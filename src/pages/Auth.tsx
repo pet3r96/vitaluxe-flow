@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import logo from "@/assets/vitaluxe-services-logo.png";
+import logo from "@/assets/vitaluxe-logo.png";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
