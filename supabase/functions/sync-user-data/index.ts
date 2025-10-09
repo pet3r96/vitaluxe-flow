@@ -64,9 +64,10 @@ serve(async (req) => {
     let repairedProviders = 0;
     let repairedToplines = 0;
     let repairedDownlines = 0;
+    let orphanedPharmaciesConverted = 0;
     const errors: string[] = [];
 
-    // Step 1: Scan pharmacies for missing profiles/roles
+    // Step 1: Scan pharmacies for missing profiles/roles OR orphaned entries
     const { data: pharmacies } = await supabaseAdmin
       .from('pharmacies')
       .select('*');
@@ -74,7 +75,63 @@ serve(async (req) => {
     if (pharmacies) {
       for (const pharmacy of pharmacies) {
         try {
-          // Check if profile exists
+          // Case A: Pharmacy has no user_id (manually created in database)
+          if (!pharmacy.user_id) {
+            console.log(`Found orphaned pharmacy: ${pharmacy.name} - creating user profile`);
+            
+            // Generate a new UUID for the user
+            const { data: newProfile, error: createProfileError } = await supabaseAdmin
+              .from('profiles')
+              .insert({
+                name: pharmacy.name,
+                email: pharmacy.contact_email,
+                parent_id: pharmacy.parent_id || user.id,
+                active: pharmacy.active !== false
+              })
+              .select()
+              .single();
+
+            if (createProfileError || !newProfile) {
+              errors.push(`Failed to create profile for orphaned pharmacy ${pharmacy.name}: ${createProfileError?.message}`);
+              continue;
+            }
+
+            addedProfiles++;
+
+            // Create user_role for the new profile
+            const { error: roleError } = await supabaseAdmin
+              .from('user_roles')
+              .insert({
+                user_id: newProfile.id,
+                role: 'pharmacy'
+              });
+
+            if (roleError) {
+              errors.push(`Failed to create role for pharmacy ${pharmacy.name}: ${roleError.message}`);
+            } else {
+              addedRoles++;
+            }
+
+            // Link the pharmacy to the new profile
+            const { error: updatePharmacyError } = await supabaseAdmin
+              .from('pharmacies')
+              .update({ 
+                user_id: newProfile.id,
+                parent_id: pharmacy.parent_id || user.id
+              })
+              .eq('id', pharmacy.id);
+
+            if (updatePharmacyError) {
+              errors.push(`Failed to link pharmacy ${pharmacy.name} to profile: ${updatePharmacyError.message}`);
+            } else {
+              orphanedPharmaciesConverted++;
+              repairedPharmacies++;
+            }
+
+            continue;
+          }
+
+          // Case B: Pharmacy has user_id - check if profile exists
           if (pharmacy.user_id) {
             const { data: profile } = await supabaseAdmin
               .from('profiles')
@@ -205,6 +262,7 @@ serve(async (req) => {
       repairedProviders,
       repairedToplines,
       repairedDownlines,
+      orphanedPharmaciesConverted,
       totalRepaired,
       errors: errors.length > 0 ? errors : null
     };
@@ -219,6 +277,7 @@ serve(async (req) => {
         repaired_providers: repairedProviders,
         repaired_toplines: repairedToplines,
         repaired_downlines: repairedDownlines,
+        orphaned_pharmacies_converted: orphanedPharmaciesConverted,
         total_repaired: totalRepaired,
         summary
       });

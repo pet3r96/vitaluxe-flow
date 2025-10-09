@@ -101,6 +101,12 @@ export const DataSyncButton = ({ onSyncComplete }: DataSyncButtonProps) => {
                   <span className="text-muted-foreground">Pharmacies fixed:</span>
                   <span className="font-semibold">{syncResults.repairedPharmacies}</span>
                 </div>
+                {syncResults.orphanedPharmaciesConverted > 0 && (
+                  <div className="flex justify-between p-3 bg-primary/10 rounded-md border border-primary/20">
+                    <span className="text-muted-foreground font-semibold">Orphaned → Converted:</span>
+                    <span className="font-bold text-primary">{syncResults.orphanedPharmaciesConverted}</span>
+                  </div>
+                )}
                 <div className="flex justify-between p-3 bg-muted rounded-md">
                   <span className="text-muted-foreground">Providers fixed:</span>
                   <span className="font-semibold">{syncResults.repairedProviders}</span>

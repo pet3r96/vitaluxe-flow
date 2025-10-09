@@ -704,6 +704,7 @@ export type Database = {
           created_at: string
           executed_at: string
           id: string
+          orphaned_pharmacies_converted: number
           repaired_downlines: number
           repaired_pharmacies: number
           repaired_providers: number
@@ -718,6 +719,7 @@ export type Database = {
           created_at?: string
           executed_at?: string
           id?: string
+          orphaned_pharmacies_converted?: number
           repaired_downlines?: number
           repaired_pharmacies?: number
           repaired_providers?: number
@@ -732,6 +734,7 @@ export type Database = {
           created_at?: string
           executed_at?: string
           id?: string
+          orphaned_pharmacies_converted?: number
           repaired_downlines?: number
           repaired_pharmacies?: number
           repaired_providers?: number
