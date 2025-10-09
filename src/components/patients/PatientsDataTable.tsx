@@ -26,25 +26,42 @@ export const PatientsDataTable = () => {
   const { data: patients, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["patients", effectiveRole, user?.id],
     queryFn: async () => {
-      let query = supabase
+      let patientsQuery = supabase
         .from("patients")
-        .select(`
-          *,
-          provider:profiles!patients_provider_id_fkey(name, email)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       // If user is a provider (doctor), only show their patients
       if (effectiveRole === "doctor" && user) {
-        query = query.eq("provider_id", user.id);
+        patientsQuery = patientsQuery.eq("provider_id", user.id);
       }
 
-      const { data, error } = await query;
-      if (error) {
-        console.error("Error fetching patients:", error);
-        throw error;
+      const { data: patientsData, error: patientsError } = await patientsQuery;
+      if (patientsError) {
+        console.error("Error fetching patients:", patientsError);
+        throw patientsError;
       }
-      return data || [];
+
+      // Fetch provider details for all patients
+      if (patientsData && patientsData.length > 0) {
+        const providerIds = [...new Set(patientsData.map(p => p.provider_id).filter(Boolean))];
+        
+        if (providerIds.length > 0) {
+          const { data: providersData } = await supabase
+            .from("profiles")
+            .select("id, name, email")
+            .in("id", providerIds);
+
+          // Map provider data to patients
+          const providersMap = new Map(providersData?.map(p => [p.id, p]) || []);
+          return patientsData.map(patient => ({
+            ...patient,
+            provider: providersMap.get(patient.provider_id)
+          }));
+        }
+      }
+
+      return patientsData || [];
     },
   });
 
