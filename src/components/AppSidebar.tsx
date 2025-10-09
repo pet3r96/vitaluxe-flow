@@ -23,7 +23,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/vitaluxe-logo.png";
+import logo from "@/assets/vitaluxe-logo-dark-bg.png";
 
 const menuItems = {
   admin: [
