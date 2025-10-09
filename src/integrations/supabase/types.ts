@@ -264,6 +264,7 @@ export type Database = {
         Row: {
           assigned_pharmacy_id: string | null
           created_at: string | null
+          delivered_at: string | null
           id: string
           order_id: string
           patient_address: string | null
@@ -273,8 +274,10 @@ export type Database = {
           patient_phone: string | null
           prescription_url: string | null
           price: number
+          processing_at: string | null
           product_id: string
           quantity: number | null
+          shipped_at: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           tracking_number: string | null
           updated_at: string | null
@@ -282,6 +285,7 @@ export type Database = {
         Insert: {
           assigned_pharmacy_id?: string | null
           created_at?: string | null
+          delivered_at?: string | null
           id?: string
           order_id: string
           patient_address?: string | null
@@ -291,8 +295,10 @@ export type Database = {
           patient_phone?: string | null
           prescription_url?: string | null
           price: number
+          processing_at?: string | null
           product_id: string
           quantity?: number | null
+          shipped_at?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           tracking_number?: string | null
           updated_at?: string | null
@@ -300,6 +306,7 @@ export type Database = {
         Update: {
           assigned_pharmacy_id?: string | null
           created_at?: string | null
+          delivered_at?: string | null
           id?: string
           order_id?: string
           patient_address?: string | null
@@ -309,8 +316,10 @@ export type Database = {
           patient_phone?: string | null
           prescription_url?: string | null
           price?: number
+          processing_at?: string | null
           product_id?: string
           quantity?: number | null
+          shipped_at?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           tracking_number?: string | null
           updated_at?: string | null
@@ -395,6 +404,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          provider_id: string | null
           updated_at: string
         }
         Insert: {
@@ -407,6 +417,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          provider_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -419,6 +430,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          provider_id?: string | null
           updated_at?: string
         }
         Relationships: []
