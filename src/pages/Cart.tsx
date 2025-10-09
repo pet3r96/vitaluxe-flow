@@ -53,11 +53,14 @@ export default function Cart() {
         0
       );
 
-      // Create order using actual authenticated user ID (not impersonated user)
+      // Determine the doctor the order should be attributed to
+      // If impersonating, use the effective user's ID; otherwise use the authenticated user's ID
+      const doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
-          doctor_id: user?.id,
+          doctor_id: doctorIdForOrder,
           total_amount: totalAmount,
           status: "pending",
         })
