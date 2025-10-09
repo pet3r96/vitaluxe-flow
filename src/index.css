@@ -11,6 +11,9 @@ All colors MUST be HSL.
     /* Vitaluxe Gold-on-Black Theme */
     --background: 0 0% 4.3%;
     --foreground: 45 52% 88%;
+    
+    /* Lighter background for main content area */
+    --main-content-bg: 0 0% 11%;
 
     --card: 0 0% 8%;
     --card-foreground: 45 52% 88%;

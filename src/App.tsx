@@ -35,7 +35,7 @@ const App = () => (
                   <SidebarProvider>
                     <div className="flex min-h-screen w-full bg-background">
                       <AppSidebar />
-                      <main className="flex-1 p-8">
+                      <main className="flex-1 p-8 bg-[hsl(var(--main-content-bg))]">
                         <Routes>
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/dashboard" element={<Dashboard />} />
