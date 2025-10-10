@@ -42,7 +42,7 @@ export const ProductsDataTable = () => {
   const [productToDelete, setProductToDelete] = useState<any>(null);
 
   const isAdmin = effectiveRole === "admin";
-  const isProvider = effectiveRole === "doctor";
+  const isProvider = effectiveRole === "provider" || effectiveRole === "doctor";
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
