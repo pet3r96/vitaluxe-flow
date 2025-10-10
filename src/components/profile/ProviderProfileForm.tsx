@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,48 +16,27 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
-import { AddressInput } from "@/components/ui/address-input";
 
-const profileFormSchema = z.object({
-  name: z.string().min(1, "Practice name is required").max(100),
+const providerFormSchema = z.object({
+  full_name: z.string().min(1, "Full name is required").max(100),
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
-  address: z.object({
-    street: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    zip: z.string().optional(),
-  }).optional(),
-  practice_npi: z.string().optional(),
+  npi: z.string().optional(),
   dea: z.string().optional(),
   license_number: z.string().optional(),
-  shipping_address: z.object({
-    street: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    zip: z.string().optional(),
-  }).optional(),
 });
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+type ProviderFormValues = z.infer<typeof providerFormSchema>;
 
-export const PracticeProfileForm = () => {
+export const ProviderProfileForm = () => {
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ["practice-profile", effectiveUserId],
+    queryKey: ["provider-profile", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -72,60 +50,29 @@ export const PracticeProfileForm = () => {
     enabled: !!effectiveUserId,
   });
 
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+  const form = useForm<ProviderFormValues>({
+    resolver: zodResolver(providerFormSchema),
     values: profile ? {
-      name: profile.name || "",
+      full_name: profile.full_name || "",
       email: profile.email || "",
       phone: profile.phone || "",
-      address: {
-        street: profile.address_street || "",
-        city: profile.address_city || "",
-        state: profile.address_state || "",
-        zip: profile.address_zip || "",
-      },
-      practice_npi: profile.practice_npi || "",
+      npi: profile.npi || "",
       dea: profile.dea || "",
       license_number: profile.license_number || "",
-      shipping_address: {
-        street: profile.shipping_address_street || "",
-        city: profile.shipping_address_city || "",
-        state: profile.shipping_address_state || "",
-        zip: profile.shipping_address_zip || "",
-      },
     } : undefined,
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (values: ProfileFormValues & { 
-      address?: any;
-      shipping_address?: any;
-    }) => {
+    mutationFn: async (values: ProviderFormValues) => {
       const { error } = await supabase
         .from("profiles")
         .update({
-          name: values.name,
+          full_name: values.full_name,
           email: values.email,
           phone: values.phone,
-          address_street: values.address?.street,
-          address_city: values.address?.city,
-          address_state: values.address?.state,
-          address_zip: values.address?.zip,
-          address_formatted: values.address?.formatted,
-          address_verification_status: values.address?.status || 'unverified',
-          address_verified_at: values.address?.verified_at,
-          address_verification_source: values.address?.source,
-          practice_npi: values.practice_npi,
+          npi: values.npi,
           dea: values.dea,
           license_number: values.license_number,
-          shipping_address_street: values.shipping_address?.street,
-          shipping_address_city: values.shipping_address?.city,
-          shipping_address_state: values.shipping_address?.state,
-          shipping_address_zip: values.shipping_address?.zip,
-          shipping_address_formatted: values.shipping_address?.formatted,
-          shipping_address_verification_status: values.shipping_address?.status || 'unverified',
-          shipping_address_verified_at: values.shipping_address?.verified_at,
-          shipping_address_verification_source: values.shipping_address?.source,
         })
         .eq("id", effectiveUserId);
 
@@ -134,9 +81,9 @@ export const PracticeProfileForm = () => {
     onSuccess: () => {
       toast({
         title: "Profile Updated",
-        description: "Your profile information has been saved successfully.",
+        description: "Your provider information has been saved successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["practice-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["provider-profile"] });
     },
     onError: (error: any) => {
       toast({
@@ -147,7 +94,7 @@ export const PracticeProfileForm = () => {
     },
   });
 
-  const onSubmit = (values: ProfileFormValues) => {
+  const onSubmit = (values: ProviderFormValues) => {
     updateMutation.mutate(values);
   };
 
@@ -162,9 +109,9 @@ export const PracticeProfileForm = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Practice Profile</CardTitle>
+        <CardTitle>Provider Profile</CardTitle>
         <CardDescription>
-          Manage your practice information and shipping preferences
+          Manage your professional credentials and contact information
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -172,15 +119,15 @@ export const PracticeProfileForm = () => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="name"
+              name="full_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Practice Name</FormLabel>
+                  <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Smith Medical Practice" {...field} />
+                    <Input placeholder="Dr. Sarah Johnson" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Your practice or clinic name
+                    Your full name as it appears on your medical license
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -192,12 +139,12 @@ export const PracticeProfileForm = () => {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contact Email</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="practice@example.com" {...field} />
+                    <Input placeholder="doctor@example.com" {...field} disabled />
                   </FormControl>
                   <FormDescription>
-                    Primary contact email for your practice
+                    Your professional email address
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -209,12 +156,12 @@ export const PracticeProfileForm = () => {
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Practice Phone Number</FormLabel>
+                  <FormLabel>Phone Number</FormLabel>
                   <FormControl>
                     <Input placeholder="(555) 123-4567" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Main phone number for your practice
+                    Your direct contact number
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -223,35 +170,15 @@ export const PracticeProfileForm = () => {
 
             <FormField
               control={form.control}
-              name="address"
+              name="npi"
               render={({ field }) => (
                 <FormItem>
-                  <FormControl>
-                    <AddressInput
-                      label="Practice Address"
-                      value={field.value || {}}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Physical location of your practice
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="practice_npi"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Practice NPI Number</FormLabel>
+                  <FormLabel>Provider NPI Number</FormLabel>
                   <FormControl>
                     <Input placeholder="1234567890" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Your practice or organization's National Provider Identifier
+                    Your personal National Provider Identifier
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -263,12 +190,12 @@ export const PracticeProfileForm = () => {
               name="dea"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Practice DEA Number</FormLabel>
+                  <FormLabel>DEA Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="AB1234567" {...field} />
+                    <Input placeholder="BJ1234567" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Practice's Drug Enforcement Administration registration
+                    Your Drug Enforcement Administration registration number
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -280,39 +207,19 @@ export const PracticeProfileForm = () => {
               name="license_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Practice License Number</FormLabel>
+                  <FormLabel>Medical License Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="MED123456" {...field} />
+                    <Input placeholder="ML-38383920" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Your practice or business license number
+                    Your state medical license number
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="shipping_address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <AddressInput
-                      label="Practice Shipping Address"
-                      value={field.value || {}}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-            <FormDescription>
-              This address will be used when you order for your practice/med spa
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <Button
+            <Button
               type="submit" 
               disabled={updateMutation.isPending}
               className="w-full sm:w-auto"
