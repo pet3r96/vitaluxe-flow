@@ -26,7 +26,7 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
   
   // Track initial values
   const initialTrackingNumber = orderLine.tracking_number || "";
-  const initialCarrier = orderLine.shipping_carrier || "other";
+  const initialCarrier = orderLine.shipping_carrier || "fedex";
   const initialStatus = orderLine.status || "pending";
   
   const [trackingNumber, setTrackingNumber] = useState(initialTrackingNumber);
@@ -131,8 +131,6 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
               <SelectItem value="fedex">FedEx</SelectItem>
               <SelectItem value="ups">UPS</SelectItem>
               <SelectItem value="usps">USPS</SelectItem>
-              <SelectItem value="dhl">DHL</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
         </div>
