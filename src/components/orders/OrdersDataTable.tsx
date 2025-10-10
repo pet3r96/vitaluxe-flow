@@ -24,15 +24,19 @@ import {
 import { OrderDetailsDialog } from "./OrderDetailsDialog";
 
 export const OrdersDataTable = () => {
-  const { effectiveRole, effectiveUserId } = useAuth();
+  const { effectiveRole, effectiveUserId, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const { data: orders, isLoading, refetch } = useQuery({
-    queryKey: ["orders", effectiveRole, effectiveUserId],
+    queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
     queryFn: async () => {
+      console.log('OrdersDataTable - effectiveRole:', effectiveRole);
+      console.log('OrdersDataTable - effectiveUserId:', effectiveUserId);
+      console.log('OrdersDataTable - auth.uid:', user?.id);
+
       // Special handling for pharmacy users - fetch from order_lines
       if (effectiveRole === "pharmacy") {
         const { data: pharmacyData } = await supabase
@@ -97,6 +101,11 @@ export const OrdersDataTable = () => {
           ),
           profiles:doctor_id(name)
         `);
+
+      // For doctor role, explicitly filter by doctor_id (defense in depth with RLS)
+      if (effectiveRole === "doctor") {
+        query = query.eq("doctor_id", effectiveUserId);
+      }
 
       // Filter by provider if role is provider
       if (effectiveRole === "provider") {
@@ -194,6 +203,9 @@ export const OrdersDataTable = () => {
 
   // Set up real-time subscription for order updates
   useEffect(() => {
+    // Don't set up subscription if no effective user
+    if (!effectiveUserId) return;
+    
     const channel = supabase
       .channel('order-updates')
       .on(
@@ -201,9 +213,11 @@ export const OrdersDataTable = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'orders'
+          table: 'orders',
+          filter: effectiveRole === 'doctor' ? `doctor_id=eq.${effectiveUserId}` : undefined
         },
         () => {
+          console.log('Order update detected, refetching...');
           refetch();
         }
       )
@@ -215,6 +229,7 @@ export const OrdersDataTable = () => {
           table: 'order_lines'
         },
         () => {
+          console.log('Order line update detected, refetching...');
           refetch();
         }
       )
@@ -223,7 +238,7 @@ export const OrdersDataTable = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [effectiveUserId, effectiveRole, refetch]);
 
   const filteredOrders = orders?.filter((order) => {
     const matchesSearch =
