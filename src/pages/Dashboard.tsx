@@ -44,6 +44,27 @@ const Dashboard = () => {
           const uniqueOrderIds = [...new Set(providerOrderLines?.map(ol => ol.order_id) || [])];
           count = uniqueOrderIds.length;
         }
+      } else if (effectiveRole === "pharmacy") {
+        // Get pharmacy ID first
+        const { data: pharmacyData } = await supabase
+          .from("pharmacies")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .maybeSingle();
+        
+        if (pharmacyData) {
+          // Count distinct orders that have at least one order_line assigned to this pharmacy
+          const { data: orderLines } = await supabase
+            .from("order_lines")
+            .select("order_id")
+            .eq("assigned_pharmacy_id", pharmacyData.id);
+          
+          // Get unique order IDs (since one order can have multiple lines)
+          const uniqueOrderIds = [...new Set(orderLines?.map(ol => ol.order_id) || [])];
+          count = uniqueOrderIds.length;
+        } else {
+          count = 0; // No pharmacy found for this user
+        }
       } else {
         const result: any = await (supabase as any)
           .from("orders")
