@@ -194,11 +194,13 @@ export const PatientSelectionDialog = ({
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
+        const { data: urlData, error: urlError } = await supabase.storage
           .from("prescriptions")
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 31536000); // 1 year expiry
 
-        prescriptionUrl = urlData.publicUrl;
+        if (urlError) throw urlError;
+
+        prescriptionUrl = urlData.signedUrl;
         toast.success("Prescription uploaded successfully");
       } catch (error: any) {
         toast.error(error.message || "Failed to upload prescription");

@@ -254,15 +254,17 @@ export default function OrderConfirmation() {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("prescriptions")
-        .getPublicUrl(fileName);
+    const { data: urlData, error: urlError } = await supabase.storage
+      .from("prescriptions")
+      .createSignedUrl(fileName, 31536000); // 1 year expiry
 
-      // Update cart line with prescription URL
-      const { error: updateError } = await supabase
-        .from("cart_lines")
-        .update({ prescription_url: urlData.publicUrl })
-        .eq("id", lineId);
+    if (urlError) throw urlError;
+
+    // Update cart line with prescription URL
+    const { error: updateError } = await supabase
+      .from("cart_lines")
+      .update({ prescription_url: urlData.signedUrl })
+      .eq("id", lineId);
 
       if (updateError) throw updateError;
 
