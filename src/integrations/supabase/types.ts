@@ -335,6 +335,9 @@ export type Database = {
           product_id: string
           quantity: number | null
           shipped_at: string | null
+          shipping_carrier:
+            | Database["public"]["Enums"]["shipping_carrier"]
+            | null
           status: Database["public"]["Enums"]["order_status"] | null
           tracking_number: string | null
           updated_at: string | null
@@ -356,6 +359,9 @@ export type Database = {
           product_id: string
           quantity?: number | null
           shipped_at?: string | null
+          shipping_carrier?:
+            | Database["public"]["Enums"]["shipping_carrier"]
+            | null
           status?: Database["public"]["Enums"]["order_status"] | null
           tracking_number?: string | null
           updated_at?: string | null
@@ -377,6 +383,9 @@ export type Database = {
           product_id?: string
           quantity?: number | null
           shipped_at?: string | null
+          shipping_carrier?:
+            | Database["public"]["Enums"]["shipping_carrier"]
+            | null
           status?: Database["public"]["Enums"]["order_status"] | null
           tracking_number?: string | null
           updated_at?: string | null
@@ -821,6 +830,66 @@ export type Database = {
           },
         ]
       }
+      shipping_audit_logs: {
+        Row: {
+          change_description: string | null
+          created_at: string
+          id: string
+          new_carrier: Database["public"]["Enums"]["shipping_carrier"] | null
+          new_status: Database["public"]["Enums"]["order_status"] | null
+          new_tracking_number: string | null
+          old_carrier: Database["public"]["Enums"]["shipping_carrier"] | null
+          old_status: Database["public"]["Enums"]["order_status"] | null
+          old_tracking_number: string | null
+          order_line_id: string
+          updated_by: string
+          updated_by_role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          change_description?: string | null
+          created_at?: string
+          id?: string
+          new_carrier?: Database["public"]["Enums"]["shipping_carrier"] | null
+          new_status?: Database["public"]["Enums"]["order_status"] | null
+          new_tracking_number?: string | null
+          old_carrier?: Database["public"]["Enums"]["shipping_carrier"] | null
+          old_status?: Database["public"]["Enums"]["order_status"] | null
+          old_tracking_number?: string | null
+          order_line_id: string
+          updated_by: string
+          updated_by_role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          change_description?: string | null
+          created_at?: string
+          id?: string
+          new_carrier?: Database["public"]["Enums"]["shipping_carrier"] | null
+          new_status?: Database["public"]["Enums"]["order_status"] | null
+          new_tracking_number?: string | null
+          old_carrier?: Database["public"]["Enums"]["shipping_carrier"] | null
+          old_status?: Database["public"]["Enums"]["order_status"] | null
+          old_tracking_number?: string | null
+          order_line_id?: string
+          updated_by?: string
+          updated_by_role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_audit_logs_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipping_audit_logs_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       statuses: {
         Row: {
           active: boolean | null
@@ -1005,6 +1074,7 @@ export type Database = {
         | "shipped"
         | "denied"
         | "change_requested"
+      shipping_carrier: "fedex" | "ups" | "usps" | "dhl" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1140,6 +1210,7 @@ export const Constants = {
         "denied",
         "change_requested",
       ],
+      shipping_carrier: ["fedex", "ups", "usps", "dhl", "other"],
     },
   },
 } as const

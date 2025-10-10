@@ -109,6 +109,7 @@ export const OrdersDataTable = () => {
               <TableHead>Patient Name</TableHead>
               <TableHead>Fulfillment Type</TableHead>
               <TableHead>Products</TableHead>
+              <TableHead>Carrier</TableHead>
               <TableHead>Total Amount</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
@@ -118,13 +119,13 @@ export const OrdersDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
@@ -160,6 +161,9 @@ export const OrdersDataTable = () => {
                     </TableCell>
                     <TableCell>
                       {order.order_lines?.length || 0} item(s)
+                    </TableCell>
+                    <TableCell className="capitalize">
+                      {order.order_lines?.[0]?.shipping_carrier || "-"}
                     </TableCell>
                     <TableCell>${order.total_amount}</TableCell>
                     <TableCell>

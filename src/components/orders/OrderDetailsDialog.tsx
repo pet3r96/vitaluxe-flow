@@ -8,6 +8,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
+import { ShippingInfoForm } from "./ShippingInfoForm";
+import { ShippingAuditLog } from "./ShippingAuditLog";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -20,6 +22,7 @@ export const OrderDetailsDialog = ({
   open,
   onOpenChange,
   order,
+  onSuccess,
 }: OrderDetailsDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,15 +128,13 @@ export const OrderDetailsDialog = ({
                     </div>
                   )}
 
-                  {line.tracking_number && (
-                    <div className="pt-2">
-                      <p className="text-sm text-muted-foreground">Tracking Number</p>
-                      <p className="text-sm font-medium">{line.tracking_number}</p>
-                    </div>
-                  )}
-
                   <div className="pt-2">
                     <Badge>{line.status}</Badge>
+                  </div>
+
+                  <div className="pt-2">
+                    <ShippingInfoForm orderLine={line} onSuccess={onSuccess} />
+                    <ShippingAuditLog orderLineId={line.id} />
                   </div>
                 </div>
               ))}
