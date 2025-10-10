@@ -264,7 +264,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="retail_price">Provider Price</Label>
+              <Label htmlFor="retail_price">Practice Price</Label>
               <Input
                 id="retail_price"
                 type="number"
@@ -273,7 +273,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                 onChange={(e) => setFormData({ ...formData, retail_price: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">
-                Price shown to providers/practices at checkout
+                Price shown to practices at checkout
               </p>
             </div>
           </div>

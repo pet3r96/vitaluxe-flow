@@ -219,8 +219,8 @@ export const ProductsDataTable = () => {
               {isAdmin && <TableHead>Base Price</TableHead>}
               {isAdmin && <TableHead>Topline Price</TableHead>}
               {isAdmin && <TableHead>Downline Price</TableHead>}
-              {isAdmin && <TableHead>Provider Price</TableHead>}
-              {isProvider && <TableHead>Provider Price</TableHead>}
+              {isAdmin && <TableHead>Practice Price</TableHead>}
+              {isProvider && <TableHead>Practice Price</TableHead>}
               <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
