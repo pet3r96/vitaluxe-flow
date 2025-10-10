@@ -208,14 +208,12 @@ export const RepPracticesDataTable = () => {
       if (error) throw error;
 
       const totalOrders = orders?.length || 0;
-      const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
       const activePractices = practices?.filter(p => p.active).length || 0;
 
       return {
         totalPractices: practices?.length || 0,
         activePractices,
         totalOrders,
-        totalRevenue,
       };
     },
     enabled: !!practices && practices.length > 0,
@@ -248,7 +246,7 @@ export const RepPracticesDataTable = () => {
   return (
     <div className="space-y-4">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-foreground">{stats?.totalPractices || 0}</div>
@@ -265,14 +263,6 @@ export const RepPracticesDataTable = () => {
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-foreground">{stats?.totalOrders || 0}</div>
             <p className="text-sm text-muted-foreground">Total Orders</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-primary">
-              ${(stats?.totalRevenue || 0).toLocaleString()}
-            </div>
-            <p className="text-sm text-muted-foreground">Total Revenue</p>
           </CardContent>
         </Card>
       </div>
