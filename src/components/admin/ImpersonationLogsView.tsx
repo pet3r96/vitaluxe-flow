@@ -16,10 +16,11 @@ import { Shield, Clock, User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function ImpersonationLogsView() {
-  const { canImpersonate, user } = useAuth();
+  const { userRole, isImpersonating, effectiveUserId, user } = useAuth();
+  const isAdminNotImpersonating = userRole === 'admin' && !isImpersonating;
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ["impersonation-logs", user?.id],
+    queryKey: ["impersonation-logs", isAdminNotImpersonating ? "admin" : effectiveUserId],
     queryFn: async () => {
       let query = supabase
         .from("impersonation_logs")
@@ -27,16 +28,16 @@ export function ImpersonationLogsView() {
         .order("start_time", { ascending: false })
         .limit(100);
       
-      // Non-admin users only see logs where they were impersonated
-      if (!canImpersonate && user?.id) {
-        query = query.eq("target_user_id", user.id);
+      // Non-admin users and admins who are impersonating only see logs where they were the target
+      if (!isAdminNotImpersonating && effectiveUserId) {
+        query = query.eq("target_user_id", effectiveUserId);
       }
 
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const calculateDuration = (startTime: string, endTime: string | null) => {
@@ -54,10 +55,10 @@ export function ImpersonationLogsView() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5" />
-          {canImpersonate ? "Impersonation Logs" : "Account Access History"}
+          {isAdminNotImpersonating ? "Impersonation Logs" : "Account Access History"}
         </CardTitle>
         <CardDescription>
-          {canImpersonate 
+          {isAdminNotImpersonating 
             ? "Complete audit trail of all impersonation sessions"
             : "Sessions where your account was accessed by administrators"}
         </CardDescription>
@@ -74,8 +75,8 @@ export function ImpersonationLogsView() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {canImpersonate && <TableHead>Impersonated User</TableHead>}
-                  {canImpersonate && <TableHead>Role</TableHead>}
+                  {isAdminNotImpersonating && <TableHead>Impersonated User</TableHead>}
+                  {isAdminNotImpersonating && <TableHead>Role</TableHead>}
                   <TableHead>Start Time</TableHead>
                   <TableHead>End Time</TableHead>
                   <TableHead>Duration</TableHead>
@@ -85,7 +86,7 @@ export function ImpersonationLogsView() {
               <TableBody>
                 {logs.map((log) => (
                   <TableRow key={log.id}>
-                    {canImpersonate && (
+                    {isAdminNotImpersonating && (
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium flex items-center gap-1">
@@ -98,7 +99,7 @@ export function ImpersonationLogsView() {
                         </div>
                       </TableCell>
                     )}
-                    {canImpersonate && (
+                    {isAdminNotImpersonating && (
                       <TableCell>
                         <Badge variant="outline" className="capitalize">
                           {log.target_role}
@@ -141,7 +142,7 @@ export function ImpersonationLogsView() {
           <div className="text-center py-8 text-muted-foreground">
             <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>
-              {canImpersonate 
+              {isAdminNotImpersonating 
                 ? "No impersonation sessions recorded yet"
                 : "Your account has not been accessed by administrators"}
             </p>
