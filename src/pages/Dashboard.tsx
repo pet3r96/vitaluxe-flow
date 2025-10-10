@@ -78,13 +78,34 @@ const Dashboard = () => {
   });
 
   const { data: productsCount, isLoading: productsLoading } = useQuery({
-    queryKey: ["dashboard-products-count"],
+    queryKey: ["dashboard-products-count", effectiveRole, effectiveUserId],
     queryFn: async () => {
-      const { count } = await supabase
-        .from("products")
-        .select("*", { count: "exact", head: true })
-        .eq("active", true);
-      return count || 0;
+      if (effectiveRole === "pharmacy") {
+        // Get pharmacy ID first
+        const { data: pharmacyData } = await supabase
+          .from("pharmacies")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .maybeSingle();
+        
+        if (pharmacyData) {
+          // Count products assigned to this pharmacy through product_pharmacies
+          const { count } = await supabase
+            .from("product_pharmacies")
+            .select("*", { count: "exact", head: true })
+            .eq("pharmacy_id", pharmacyData.id);
+          
+          return count || 0;
+        }
+        return 0;
+      } else {
+        // Admin, doctor, provider - show all active products
+        const { count } = await supabase
+          .from("products")
+          .select("*", { count: "exact", head: true })
+          .eq("active", true);
+        return count || 0;
+      }
     },
   });
 
