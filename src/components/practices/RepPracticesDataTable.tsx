@@ -30,7 +30,30 @@ export const RepPracticesDataTable = () => {
       if (!user?.id) return [];
 
       if (effectiveRole === "topline") {
-        // Topline: Get practices where linked_topline_id = auth.uid()
+        // Step 1: Find the topline's rep record
+        const { data: toplineRepData, error: toplineRepError } = await supabase
+          .from("reps")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("role", "topline")
+          .maybeSingle();
+
+        if (toplineRepError) throw toplineRepError;
+        if (!toplineRepData) return [];
+
+        // Step 2: Get user_ids of all downlines assigned to this topline
+        const { data: downlineReps, error: downlineError } = await supabase
+          .from("reps")
+          .select("user_id")
+          .eq("assigned_topline_id", toplineRepData.id)
+          .eq("role", "downline");
+
+        if (downlineError) throw downlineError;
+
+        // Step 3: Build list of user_ids to check (topline + all their downlines)
+        const userIdsToCheck = [user.id, ...(downlineReps?.map(r => r.user_id) || [])];
+
+        // Step 4: Get practices where linked_topline_id matches any of these user_ids
         const { data, error } = await supabase
           .from("profiles")
           .select(`
@@ -38,13 +61,13 @@ export const RepPracticesDataTable = () => {
             user_roles!inner(role)
           `)
           .eq("user_roles.role", "doctor")
-          .eq("linked_topline_id", user.id)
+          .in("linked_topline_id", userIdsToCheck)
           .eq("active", true)
           .order("created_at", { ascending: false });
 
         if (error) throw error;
 
-        // Filter out providers
+        // Step 5: Filter out providers
         const { data: providerIds, error: providersError } = await supabase
           .from("providers")
           .select("user_id");
