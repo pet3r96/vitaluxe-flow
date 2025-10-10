@@ -23,29 +23,105 @@ const RepDashboard = () => {
     enabled: !!user?.id && (userRole === 'topline' || userRole === 'downline'),
   });
 
-  // Get practice count
+  // Get practice count (only for toplines)
   const { data: practiceCount } = useQuery({
-    queryKey: ["rep-practice-count", repData?.id, userRole],
+    queryKey: ["rep-practice-count", repData?.id, user?.id, userRole],
     queryFn: async () => {
-      if (!repData?.id) return 0;
-      
-      let query = supabase
-        .from("rep_practice_links")
-        .select("*", { count: 'exact', head: true });
+      if (!repData?.id || !user?.id) return 0;
       
       if (userRole === 'topline') {
-        // Topline sees their practices + downline practices
-        query = query.or(`rep_id.eq.${repData.id},assigned_topline_id.eq.${repData.id}`);
-      } else {
-        // Downline sees only their practices
-        query = query.eq("rep_id", repData.id);
+        // Get all downlines assigned to this topline
+        const { data: downlines, error: downlinesError } = await supabase
+          .from("reps")
+          .select("user_id")
+          .eq("assigned_topline_id", repData.id)
+          .eq("role", "downline");
+        
+        if (downlinesError) throw downlinesError;
+        
+        // Get user_ids of all downlines + topline's own user_id
+        const networkUserIds = [user.id, ...(downlines?.map(d => d.user_id) || [])];
+        
+        // Count practices linked to anyone in the network
+        const { count, error } = await supabase
+          .from("profiles")
+          .select("*", { count: 'exact', head: true })
+          .in("linked_topline_id", networkUserIds)
+          .eq("active", true);
+        
+        if (error) throw error;
+        return count || 0;
       }
       
-      const { count, error } = await query;
-      if (error) throw error;
-      return count || 0;
+      // Downlines don't show practice count
+      return 0;
     },
-    enabled: !!repData?.id,
+    enabled: !!repData?.id && !!user?.id && userRole === 'topline',
+  });
+
+  // Get order count
+  const { data: orderCount } = useQuery({
+    queryKey: ["rep-order-count", repData?.id, user?.id, userRole],
+    queryFn: async () => {
+      if (!repData?.id || !user?.id) return 0;
+      
+      if (userRole === 'topline') {
+        // Get all downlines assigned to this topline
+        const { data: downlines, error: downlinesError } = await supabase
+          .from("reps")
+          .select("user_id")
+          .eq("assigned_topline_id", repData.id)
+          .eq("role", "downline");
+        
+        if (downlinesError) throw downlinesError;
+        
+        // Get user_ids of all downlines + topline's own user_id
+        const networkUserIds = [user.id, ...(downlines?.map(d => d.user_id) || [])];
+        
+        // Get all practices in the network
+        const { data: practices, error: practicesError } = await supabase
+          .from("profiles")
+          .select("id")
+          .in("linked_topline_id", networkUserIds)
+          .eq("active", true);
+        
+        if (practicesError) throw practicesError;
+        
+        const practiceIds = practices?.map(p => p.id) || [];
+        if (practiceIds.length === 0) return 0;
+        
+        // Count orders from these practices
+        const { count, error } = await supabase
+          .from("orders")
+          .select("*", { count: 'exact', head: true })
+          .in("doctor_id", practiceIds);
+        
+        if (error) throw error;
+        return count || 0;
+      } else {
+        // Downlines: get practices linked to this downline
+        const { data: practices, error: practicesError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("linked_topline_id", user.id)
+          .eq("active", true);
+        
+        if (practicesError) throw practicesError;
+        
+        const practiceIds = practices?.map(p => p.id) || [];
+        if (practiceIds.length === 0) return 0;
+        
+        // Count orders from these practices
+        const { count, error } = await supabase
+          .from("orders")
+          .select("*", { count: 'exact', head: true })
+          .in("doctor_id", practiceIds);
+        
+        if (error) throw error;
+        return count || 0;
+      }
+    },
+    enabled: !!repData?.id && !!user?.id,
   });
 
   // Get downline count (only for toplines)
@@ -109,19 +185,38 @@ const RepDashboard = () => {
     enabled: !!repData?.id,
   });
 
-  const stats = [
+  const stats = userRole === 'topline' ? [
     {
       title: "My Practices",
       value: practiceCount || 0,
       icon: Users,
-      description: userRole === 'topline' ? "Including downline practices" : "Your assigned practices",
+      description: "Including downline practices",
     },
-    ...(userRole === 'topline' ? [{
+    {
       title: "My Downlines",
       value: downlineCount || 0,
       icon: TrendingUp,
       description: "Active downline reps",
-    }] : []),
+    },
+    {
+      title: "Total Orders",
+      value: orderCount || 0,
+      icon: Package,
+      description: "Orders from all practices",
+    },
+    {
+      title: "Total Profit",
+      value: `$${profitStats?.totalProfit?.toFixed(2) || '0.00'}`,
+      icon: DollarSign,
+      description: "All-time earnings",
+    },
+  ] : [
+    {
+      title: "Total Orders",
+      value: orderCount || 0,
+      icon: Package,
+      description: "Orders from your practices",
+    },
     {
       title: "Total Profit",
       value: `$${profitStats?.totalProfit?.toFixed(2) || '0.00'}`,
