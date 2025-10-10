@@ -123,7 +123,11 @@ export const OrdersDataTable = () => {
         line.patient_name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    const shippingStatuses = order.order_lines?.map((line: any) => line.status) || [];
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "denied" && shippingStatuses.includes("denied")) ||
+      order.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -165,6 +169,7 @@ export const OrdersDataTable = () => {
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
             <SelectItem value="shipped">Shipped</SelectItem>
+            <SelectItem value="denied">Denied</SelectItem>
             <SelectItem value="delivered">Delivered</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
