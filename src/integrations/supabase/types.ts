@@ -609,6 +609,7 @@ export type Database = {
           created_at: string | null
           dea: string | null
           email: string
+          full_name: string | null
           id: string
           license_number: string | null
           linked_topline_id: string | null
@@ -628,6 +629,7 @@ export type Database = {
           created_at?: string | null
           dea?: string | null
           email: string
+          full_name?: string | null
           id: string
           license_number?: string | null
           linked_topline_id?: string | null
@@ -647,6 +649,7 @@ export type Database = {
           created_at?: string | null
           dea?: string | null
           email?: string
+          full_name?: string | null
           id?: string
           license_number?: string | null
           linked_topline_id?: string | null
@@ -669,6 +672,53 @@ export type Database = {
           {
             foreignKeyName: "profiles_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_payment_methods: {
+        Row: {
+          account_mask: string | null
+          account_name: string | null
+          bank_name: string | null
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          plaid_access_token: string
+          plaid_account_id: string
+          provider_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_mask?: string | null
+          account_name?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          plaid_access_token: string
+          plaid_account_id: string
+          provider_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_mask?: string | null
+          account_name?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          plaid_access_token?: string
+          plaid_account_id?: string
+          provider_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_payment_methods_provider_id_fkey"
+            columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
