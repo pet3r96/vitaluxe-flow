@@ -88,7 +88,7 @@ export const AccountDetailsDialog = ({
   useEffect(() => {
     if (open && account) {
       if (isDownline) {
-        setSelectedParentId(account.linked_topline_id || "");
+        setSelectedParentId(account.linked_topline_id || "none");
       }
     }
   }, [open, account, isDownline]);
@@ -101,7 +101,7 @@ export const AccountDetailsDialog = ({
       const updates: any = {};
 
       if (isDownline) {
-        updates.linked_topline_id = selectedParentId || null;
+        updates.linked_topline_id = selectedParentId === "none" ? null : selectedParentId;
 
         // Also update the reps table
         const { data: repData } = await supabase
@@ -113,7 +113,7 @@ export const AccountDetailsDialog = ({
         if (repData) {
           // Get topline rep id from user_id
           let toplineRepId = null;
-          if (selectedParentId) {
+          if (selectedParentId && selectedParentId !== "none") {
             const { data: toplineData } = await supabase
               .from("reps")
               .select("id")
@@ -173,12 +173,12 @@ export const AccountDetailsDialog = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setIsEditing(false);
-                  if (isDownline) {
-                    setSelectedParentId(account.linked_topline_id || "");
-                  }
-                }}
+              onClick={() => {
+                setIsEditing(false);
+                if (isDownline) {
+                  setSelectedParentId(account.linked_topline_id || "none");
+                }
+              }}
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
@@ -261,7 +261,7 @@ export const AccountDetailsDialog = ({
                       <SelectValue placeholder="Select parent..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {potentialParents?.map((parent) => (
                         <SelectItem key={parent.id} value={parent.id}>
                           {parent.name} ({parent.email})
@@ -308,7 +308,7 @@ export const AccountDetailsDialog = ({
               onClick={() => {
                 setIsEditing(false);
                 if (isDownline) {
-                  setSelectedParentId(account.linked_topline_id || "");
+                  setSelectedParentId(account.linked_topline_id || "none");
                 }
               }}
             >
