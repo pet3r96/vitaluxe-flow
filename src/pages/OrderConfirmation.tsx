@@ -349,9 +349,7 @@ export default function OrderConfirmation() {
                 htmlFor="medical-attestation"
                 className="text-sm font-medium leading-relaxed cursor-pointer"
               >
-                I agree that all order(s) are medically necessary. In addition, I have advised the 
-                patient(s) of any side effects and have seen the patient in person and reviewed 
-                their medical record to avoid adverse medical effects.
+                I agree to all of the above.
               </Label>
             </div>
           </div>
