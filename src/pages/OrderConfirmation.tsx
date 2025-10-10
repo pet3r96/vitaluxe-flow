@@ -7,11 +7,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 
 export default function OrderConfirmation() {
   const { effectiveUserId, user } = useAuth();
@@ -19,6 +20,9 @@ export default function OrderConfirmation() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [agreed, setAgreed] = useState(false);
+  const [uploadingPrescriptions, setUploadingPrescriptions] = useState<Record<string, boolean>>({});
+  const [prescriptionFiles, setPrescriptionFiles] = useState<Record<string, File>>({});
+  const [prescriptionPreviews, setPrescriptionPreviews] = useState<Record<string, string>>({});
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -237,6 +241,97 @@ export default function OrderConfirmation() {
     },
   });
 
+  const handlePrescriptionUpload = async (lineId: string, file: File) => {
+    setUploadingPrescriptions(prev => ({ ...prev, [lineId]: true }));
+    
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${effectiveUserId}/${Date.now()}_${Math.random()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("prescriptions")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("prescriptions")
+        .getPublicUrl(fileName);
+
+      // Update cart line with prescription URL
+      const { error: updateError } = await supabase
+        .from("cart_lines")
+        .update({ prescription_url: urlData.publicUrl })
+        .eq("id", lineId);
+
+      if (updateError) throw updateError;
+
+      // Refetch cart data to update UI
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+      
+      toast({
+        title: "Prescription Uploaded",
+        description: "The prescription has been uploaded successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload prescription",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingPrescriptions(prev => ({ ...prev, [lineId]: false }));
+      setPrescriptionFiles(prev => {
+        const newFiles = { ...prev };
+        delete newFiles[lineId];
+        return newFiles;
+      });
+    }
+  };
+
+  const handlePrescriptionChange = (lineId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please upload a PDF or PNG file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "File size must be less than 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setPrescriptionFiles(prev => ({ ...prev, [lineId]: file }));
+      
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPrescriptionPreviews(prev => ({ ...prev, [lineId]: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setPrescriptionPreviews(prev => {
+          const newPreviews = { ...prev };
+          delete newPreviews[lineId];
+          return newPreviews;
+        });
+      }
+      
+      // Auto-upload the file
+      handlePrescriptionUpload(lineId, file);
+    }
+  };
+
   const calculateTotal = () => {
     return (cart?.lines || []).reduce<number>(
       (sum, line: any) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
@@ -309,17 +404,85 @@ export default function OrderConfirmation() {
                     )}
                   </div>
                   {line.product?.requires_prescription && (
-                    <div className="mt-2 flex items-center gap-2 text-sm">
+                    <div className="mt-2 space-y-2">
                       {line.prescription_url ? (
                         <Badge variant="default" className="bg-green-600">
                           <FileCheck className="h-3 w-3 mr-1" />
                           Prescription Uploaded
                         </Badge>
                       ) : (
-                        <Badge variant="destructive">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          Missing Prescription
-                        </Badge>
+                        <div className="space-y-2">
+                          <Badge variant="destructive">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Missing Prescription
+                          </Badge>
+                          
+                          {/* Upload Interface */}
+                          {prescriptionFiles[line.id] || uploadingPrescriptions[line.id] ? (
+                            <div className="relative p-2 border rounded-md bg-background text-sm">
+                              <div className="flex items-center gap-2">
+                                {uploadingPrescriptions[line.id] ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>Uploading prescription...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    {prescriptionPreviews[line.id] ? (
+                                      <img
+                                        src={prescriptionPreviews[line.id]}
+                                        alt="Prescription preview"
+                                        className="h-12 w-12 object-cover rounded"
+                                      />
+                                    ) : (
+                                      <FileText className="h-4 w-4" />
+                                    )}
+                                    <span className="flex-1 truncate">{prescriptionFiles[line.id]?.name}</span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setPrescriptionFiles(prev => {
+                                          const newFiles = { ...prev };
+                                          delete newFiles[line.id];
+                                          return newFiles;
+                                        });
+                                        setPrescriptionPreviews(prev => {
+                                          const newPreviews = { ...prev };
+                                          delete newPreviews[line.id];
+                                          return newPreviews;
+                                        });
+                                      }}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <Input
+                                id={`prescription-upload-${line.id}`}
+                                type="file"
+                                accept=".pdf,.png,.jpg,.jpeg"
+                                onChange={(e) => handlePrescriptionChange(line.id, e)}
+                                className="hidden"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => document.getElementById(`prescription-upload-${line.id}`)?.click()}
+                                className="w-full border-orange-300 hover:bg-orange-50"
+                              >
+                                <Upload className="h-4 w-4 mr-2" />
+                                Upload Prescription
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

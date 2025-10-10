@@ -115,7 +115,7 @@ export const ProductsDataTable = () => {
     product.dosage?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddToCart = async (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string) => {
+  const handleAddToCart = async (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string, prescriptionUrl: string | null = null) => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
@@ -153,6 +153,7 @@ export const ProductsDataTable = () => {
             quantity: quantity,
             price_snapshot: productForCart.retail_price || productForCart.base_price,
             destination_state: "XX", // Placeholder for practice orders
+            prescription_url: prescriptionUrl,
           });
 
         if (error) throw error;
@@ -178,6 +179,7 @@ export const ProductsDataTable = () => {
             quantity: quantity,
             price_snapshot: productForCart.retail_price || productForCart.base_price,
             destination_state: "IL", // Default state, can be updated
+            prescription_url: prescriptionUrl,
           });
 
         if (error) throw error;
