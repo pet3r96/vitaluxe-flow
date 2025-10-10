@@ -7,23 +7,23 @@ import { Users, Mail, Phone, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function MyDownlines() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
 
   // Get topline rep ID
   const { data: toplineRep } = useQuery({
-    queryKey: ["topline-rep", user?.id],
+    queryKey: ["topline-rep", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")
         .select("*")
-        .eq("user_id", user?.id)
+        .eq("user_id", effectiveUserId)
         .eq("role", "topline")
         .single();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveUserId,
   });
 
   // Get downlines assigned to this topline
