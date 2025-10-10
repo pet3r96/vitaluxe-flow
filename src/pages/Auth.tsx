@@ -200,18 +200,6 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="company">Company / Practice</Label>
-                    <Input
-                      id="company"
-                      type="text"
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      placeholder="Practice Name"
-                      className="bg-input border-border text-foreground"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="practiceNpi">Practice NPI</Label>
                     <Input
                       id="practiceNpi"
