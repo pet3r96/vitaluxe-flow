@@ -14,6 +14,25 @@ interface UpdateShippingRequest {
   changeDescription?: string;
 }
 
+// Normalize status values to match database enum
+const normalizeStatus = (status?: string): string | undefined => {
+  if (!status) return undefined;
+  const lower = status.toLowerCase();
+  
+  // Map synonyms to our enum values
+  if (lower === 'processing' || lower === 'fulfilling' || lower === 'in_progress') {
+    return 'filled';
+  }
+  
+  // Valid enum values
+  const validStatuses = ['pending', 'filled', 'shipped', 'denied', 'change_requested'];
+  if (validStatuses.includes(lower)) {
+    return lower;
+  }
+  
+  return undefined; // unsupported
+};
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -65,6 +84,15 @@ serve(async (req: Request) => {
 
     const { orderLineId, trackingNumber, carrier, status, changeDescription }: UpdateShippingRequest = await req.json();
 
+    console.log('Incoming payload:', { orderLineId, trackingNumber, carrier, status });
+
+    // Normalize status
+    const normalizedStatus = normalizeStatus(status);
+    if (status && !normalizedStatus) {
+      console.error('Unsupported status value:', status);
+      throw new Error(`Unsupported status value: "${status}". Allowed values: pending, filled, shipped, denied, change_requested`);
+    }
+
     // Get current order line data
     const { data: currentLine, error: fetchError } = await supabase
       .from('order_lines')
@@ -74,19 +102,37 @@ serve(async (req: Request) => {
 
     if (fetchError) throw fetchError;
 
-    // Prepare update object
+    // Prepare update object - only include changed fields
     const updateData: any = {};
-    if (trackingNumber !== undefined) updateData.tracking_number = trackingNumber;
-    if (carrier !== undefined) updateData.shipping_carrier = carrier;
-    if (status !== undefined) {
-      updateData.status = status;
+    
+    if (trackingNumber !== undefined && trackingNumber !== currentLine.tracking_number) {
+      updateData.tracking_number = trackingNumber;
+    }
+    
+    if (carrier !== undefined && carrier !== currentLine.shipping_carrier) {
+      updateData.shipping_carrier = carrier;
+    }
+    
+    if (normalizedStatus && normalizedStatus !== currentLine.status) {
+      updateData.status = normalizedStatus;
       // Update timestamps based on status
-      if (status === 'shipped' && currentLine.status !== 'shipped') {
+      if (normalizedStatus === 'shipped' && currentLine.status !== 'shipped') {
         updateData.shipped_at = new Date().toISOString();
       }
-      if (status === 'filled' && currentLine.status !== 'filled') {
+      if (normalizedStatus === 'filled' && currentLine.status !== 'filled') {
         updateData.processing_at = new Date().toISOString();
       }
+    }
+
+    console.log('Update data:', updateData);
+
+    // If nothing changed, return success without updating
+    if (Object.keys(updateData).length === 0) {
+      console.log('No changes detected, skipping update');
+      return new Response(
+        JSON.stringify({ success: true, message: 'No changes detected' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Update order line
@@ -109,7 +155,7 @@ serve(async (req: Request) => {
         old_carrier: currentLine.shipping_carrier,
         new_carrier: carrier,
         old_status: currentLine.status,
-        new_status: status,
+        new_status: normalizedStatus || currentLine.status,
         change_description: changeDescription || 'Shipping information updated',
       });
 

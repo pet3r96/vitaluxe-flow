@@ -24,21 +24,36 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
   const { effectiveRole } = useAuth();
   const canEdit = effectiveRole === 'admin' || effectiveRole === 'pharmacy';
   
-  const [trackingNumber, setTrackingNumber] = useState(orderLine.tracking_number || "");
-  const [carrier, setCarrier] = useState(orderLine.shipping_carrier || "other");
-  const [status, setStatus] = useState(orderLine.status || "pending");
+  // Track initial values
+  const initialTrackingNumber = orderLine.tracking_number || "";
+  const initialCarrier = orderLine.shipping_carrier || "other";
+  const initialStatus = orderLine.status || "pending";
+  
+  const [trackingNumber, setTrackingNumber] = useState(initialTrackingNumber);
+  const [carrier, setCarrier] = useState(initialCarrier);
+  const [status, setStatus] = useState(initialStatus);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase.functions.invoke('update-shipping-info', {
-        body: {
-          orderLineId: orderLine.id,
-          trackingNumber,
-          carrier,
-          status,
-        },
+      // Only send fields that have changed
+      const payload: any = { orderLineId: orderLine.id };
+      
+      if (trackingNumber !== initialTrackingNumber) {
+        payload.trackingNumber = trackingNumber;
+      }
+      
+      if (carrier !== initialCarrier) {
+        payload.carrier = carrier;
+      }
+      
+      if (status !== initialStatus) {
+        payload.status = status;
+      }
+
+      const { data, error } = await supabase.functions.invoke('update-shipping-info', {
+        body: payload,
       });
 
       if (error) throw error;
