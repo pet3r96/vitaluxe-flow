@@ -32,7 +32,11 @@ export default function Cart() {
         .select(`
           *,
           product:products(name, dosage, image_url),
-          provider:providers(prescriber_name)
+          provider:providers(
+            id,
+            user_id,
+            profiles!inner(name, npi, dea)
+          )
         `)
         .eq("cart_id", cartData.id);
 
@@ -121,9 +125,9 @@ export default function Cart() {
                   <p className="text-sm mt-2">
                     <span className="font-medium">Patient:</span> {line.patient_name}
                   </p>
-                  {line.provider && (
+                  {line.provider?.profiles && (
                     <p className="text-sm">
-                      <span className="font-medium">Provider:</span> {line.provider.prescriber_name}
+                      <span className="font-medium">Provider:</span> {line.provider.profiles.name}
                     </p>
                   )}
                   <p className="text-sm">
