@@ -3,19 +3,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 interface AddProviderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  practiceId?: string;
 }
 
-export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProviderDialogProps) => {
-  const { effectiveUserId } = useAuth();
+export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }: AddProviderDialogProps) => {
+  const { effectiveUserId, effectiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [selectedPractice, setSelectedPractice] = useState(practiceId || "");
   const [formData, setFormData] = useState({
     fullName: "",
     prescriberName: "",
@@ -25,6 +29,33 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
     dea: "",
     licenseNumber: "",
     phone: "",
+  });
+
+  const { data: practices } = useQuery({
+    queryKey: ["practices"],
+    queryFn: async () => {
+      // First get all doctor user IDs
+      const { data: doctorRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "doctor");
+      
+      if (rolesError) throw rolesError;
+      
+      const doctorIds = doctorRoles?.map(r => r.user_id) || [];
+      
+      if (doctorIds.length === 0) return [];
+      
+      // Then get their profiles
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, name, company, email")
+        .in("id", doctorIds);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: effectiveRole === "admin" && !practiceId
   });
 
   const resetForm = () => {
@@ -42,6 +73,13 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const targetPracticeId = practiceId || selectedPractice || effectiveUserId;
+    if (!targetPracticeId) {
+      toast.error("Please select a practice");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -54,7 +92,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
           prescriberName: formData.prescriberName,
           role: 'provider',
           roleData: {
-            practiceId: effectiveUserId,
+            practiceId: targetPracticeId,
             npi: formData.npi,
             dea: formData.dea,
             licenseNumber: formData.licenseNumber,
@@ -85,6 +123,24 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
           <DialogTitle>Add New Provider</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {effectiveRole === "admin" && !practiceId && (
+            <div className="space-y-2">
+              <Label htmlFor="practice">Practice *</Label>
+              <Select value={selectedPractice} onValueChange={setSelectedPractice} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a practice" />
+                </SelectTrigger>
+                <SelectContent>
+                  {practices?.map((practice) => (
+                    <SelectItem key={practice.id} value={practice.id}>
+                      {practice.name || practice.company}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name *</Label>

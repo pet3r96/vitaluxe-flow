@@ -253,20 +253,29 @@ serve(async (req) => {
 
     // If provider role, create provider record
     if (signupData.role === 'provider') {
-      const { error: providerError } = await supabaseAdmin
-        .from('providers')
-        .insert({
-          id: userId,
-          practice_id: signupData.roleData.practiceId,
+      // First update the profile with provider-specific data
+      const { error: profileUpdateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
           full_name: signupData.fullName,
-          prescriber_name: signupData.prescriberName,
-          email: signupData.email,
           npi: signupData.roleData.npi,
           dea: signupData.roleData.dea,
           license_number: signupData.roleData.licenseNumber,
-          phone: signupData.roleData.phone,
-          active: true,
-          created_by: signupData.roleData.practiceId
+          phone: signupData.roleData.phone
+        })
+        .eq('id', userId);
+
+      if (profileUpdateError) {
+        console.error('Provider profile update error:', profileUpdateError);
+      }
+
+      // Then create the provider record (linking provider to practice)
+      const { error: providerError } = await supabaseAdmin
+        .from('providers')
+        .insert({
+          user_id: userId,
+          practice_id: signupData.roleData.practiceId,
+          active: true
         });
 
       if (providerError) {
@@ -284,17 +293,9 @@ serve(async (req) => {
       const { error: providerError } = await supabaseAdmin
         .from('providers')
         .insert({
-          id: userId,
+          user_id: userId,
           practice_id: userId,
-          full_name: signupData.fullName || signupData.name,
-          prescriber_name: signupData.prescriberName || signupData.name,
-          email: signupData.email,
-          npi: signupData.roleData.npi,
-          dea: signupData.roleData.dea,
-          license_number: signupData.roleData.licenseNumber,
-          phone: signupData.roleData.phone,
-          active: true,
-          created_by: userId
+          active: true
         });
 
       if (providerError) {

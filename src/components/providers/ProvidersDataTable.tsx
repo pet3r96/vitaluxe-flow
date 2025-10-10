@@ -27,17 +27,39 @@ export const ProvidersDataTable = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   const { data: providers, isLoading, refetch } = useQuery({
-    queryKey: ["providers", effectiveUserId],
+    queryKey: ["providers", effectiveUserId, effectiveRole],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("providers" as any)
-        .select("*")
-        .eq("practice_id", effectiveUserId)
+        .select(`
+          *,
+          profiles:user_id (
+            name,
+            email,
+            npi,
+            dea,
+            license_number,
+            phone,
+            full_name
+          ),
+          practice:practice_id (
+            name,
+            company,
+            email
+          )
+        `)
         .order("created_at", { ascending: false });
+      
+      // If doctor role, only show their own providers
+      if (effectiveRole === "doctor") {
+        query = query.eq("practice_id", effectiveUserId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return (data || []) as any[];
     },
-    enabled: !!effectiveUserId && effectiveRole === "doctor"
+    enabled: !!effectiveUserId
   });
 
   const toggleStatus = async (providerId: string, currentStatus: boolean) => {
@@ -54,10 +76,11 @@ export const ProvidersDataTable = () => {
   };
 
   const filteredProviders = providers?.filter((provider) =>
-    provider.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    provider.prescriber_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    provider.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    provider.npi?.includes(searchQuery)
+    provider.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    provider.profiles?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    provider.profiles?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    provider.profiles?.npi?.includes(searchQuery) ||
+    provider.practice?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading) {
@@ -87,7 +110,7 @@ export const ProvidersDataTable = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Full Name</TableHead>
-              <TableHead>Prescriber Name</TableHead>
+              <TableHead>Practice</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Provider NPI #</TableHead>
               <TableHead>Provider DEA #</TableHead>
@@ -100,12 +123,12 @@ export const ProvidersDataTable = () => {
             {filteredProviders && filteredProviders.length > 0 ? (
               filteredProviders.map((provider) => (
                 <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.full_name}</TableCell>
-                  <TableCell>{provider.prescriber_name}</TableCell>
-                  <TableCell>{provider.email}</TableCell>
-                  <TableCell>{provider.npi}</TableCell>
-                  <TableCell>{provider.dea || "N/A"}</TableCell>
-                  <TableCell>{provider.license_number}</TableCell>
+                  <TableCell className="font-medium">{provider.profiles?.full_name || provider.profiles?.name}</TableCell>
+                  <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
+                  <TableCell>{provider.profiles?.email}</TableCell>
+                  <TableCell>{provider.profiles?.npi}</TableCell>
+                  <TableCell>{provider.profiles?.dea || "N/A"}</TableCell>
+                  <TableCell>{provider.profiles?.license_number}</TableCell>
                   <TableCell>
                     <Badge variant={provider.active ? "default" : "secondary"}>
                       {provider.active ? "Active" : "Inactive"}
