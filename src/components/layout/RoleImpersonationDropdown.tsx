@@ -31,18 +31,26 @@ export function RoleImpersonationDropdown() {
   const { data: usersByRole } = useQuery({
     queryKey: ["users-by-role"],
     queryFn: async () => {
-      // 1) Base fetch: get users by role via user_roles + profiles (for doctor/topline/downline)
-      const { data, error } = await supabase
+      // Fetch all active profiles first
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, name, email, active")
+        .eq("active", true);
+
+      if (profilesError) throw profilesError;
+
+      // Fetch all user roles
+      const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
-        .select(`
-          user_id,
-          role,
-          profiles!inner(id, name, email, active)
-        `)
-        .eq("profiles.active", true)
+        .select("user_id, role")
         .in("role", ["doctor", "provider", "pharmacy", "topline", "downline"]);
 
-      if (error) throw error;
+      if (rolesError) throw rolesError;
+
+      // Create a map of user_id to profile
+      const profileMap = new Map(
+        (profilesData || []).map(p => [p.id, p])
+      );
 
       // Group users by role
       const grouped: Record<string, Array<{ id: string; name: string; email: string }>> = {
@@ -53,18 +61,18 @@ export function RoleImpersonationDropdown() {
         downline: [],
       };
 
-      data?.forEach((item: any) => {
-        if (item.profiles && grouped[item.role]) {
-          grouped[item.role].push({
-            id: item.profiles.id,
-            name: item.profiles.name,
-            email: item.profiles.email,
+      rolesData?.forEach((roleItem: any) => {
+        const profile = profileMap.get(roleItem.user_id);
+        if (profile && grouped[roleItem.role]) {
+          grouped[roleItem.role].push({
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
           });
         }
       });
 
-      // 2) Ensure pharmacies appear even if user_roles join misses them
-      //    Use pharmacies table (public SELECT allowed) and map to user info
+      // Ensure pharmacies appear (keep existing pharmacy logic)
       const { data: pharmaciesData, error: pharmaciesError } = await supabase
         .from("pharmacies")
         .select("user_id, name, contact_email, active")
