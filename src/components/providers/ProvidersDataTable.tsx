@@ -82,16 +82,18 @@ export const ProvidersDataTable = () => {
   });
 
   const toggleStatus = async (providerId: string, currentStatus: boolean) => {
-    const { error } = await supabase.functions.invoke('manage-provider-status', {
+    const { data, error } = await supabase.functions.invoke('manage-provider-status', {
       body: { providerId, active: !currentStatus }
     });
-    
-    if (error) {
-      toast.error("Failed to update provider status");
-    } else {
-      toast.success(currentStatus ? "Provider deactivated" : "Provider activated");
-      refetch();
+
+    const serverMessage = (error as any)?.message || (typeof data === 'object' && (data as any)?.error);
+    if (error || serverMessage) {
+      toast.error(serverMessage || 'Failed to update provider status');
+      return;
     }
+
+    toast.success(currentStatus ? 'Provider deactivated' : 'Provider activated');
+    refetch();
   };
 
   const filteredProviders = providers?.filter((provider) =>

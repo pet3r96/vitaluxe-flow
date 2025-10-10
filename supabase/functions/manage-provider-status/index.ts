@@ -101,25 +101,18 @@ serve(async (req) => {
       throw updateError;
     }
     
-    // Use admin client to ban/unban the provider's auth account using the correct user_id
-    if (!active) {
-      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(
-        providerData.user_id, // Use the auth user ID, not the provider table ID
-        { ban_duration: 'indefinite' }
+    // Update the provider's profile active status using admin client
+    const { error: profileUpdateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ active, updated_at: new Date().toISOString() })
+      .eq('id', providerData.user_id);
+
+    if (profileUpdateError) {
+      console.error('Failed to update provider profile status:', profileUpdateError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to update provider profile status' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-      if (banError) {
-        console.error('Failed to ban user:', banError);
-        throw new Error('Failed to deactivate provider account');
-      }
-    } else {
-      const { error: unbanError } = await supabaseAdmin.auth.admin.updateUserById(
-        providerData.user_id, // Use the auth user ID, not the provider table ID
-        { ban_duration: 'none' }
-      );
-      if (unbanError) {
-        console.error('Failed to unban user:', unbanError);
-        throw new Error('Failed to activate provider account');
-      }
     }
     
     return new Response(
