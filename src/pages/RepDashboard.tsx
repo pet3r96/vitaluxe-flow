@@ -75,8 +75,8 @@ const RepDashboard = () => {
         
         if (downlinesError) throw downlinesError;
         
-        // Get user_ids of all downlines + topline's own user_id
-        const networkUserIds = [user.id, ...(downlines?.map(d => d.user_id) || [])];
+        const downlineUserIds = downlines?.map(d => d.user_id) || [];
+        const networkUserIds = [user.id, ...downlineUserIds];
         
         // Get all practices in the network
         const { data: practices, error: practicesError } = await supabase
@@ -87,10 +87,14 @@ const RepDashboard = () => {
         
         if (practicesError) throw practicesError;
         
-        const practiceIds = practices?.map(p => p.id) || [];
+        // Filter OUT downline profiles themselves (they don't place orders, their sub-practices do)
+        const practiceIds = practices
+          ?.filter(p => !downlineUserIds.includes(p.id))
+          .map(p => p.id) || [];
+        
         if (practiceIds.length === 0) return 0;
         
-        // Count orders from these practices
+        // Count orders from actual practices
         const { count, error } = await supabase
           .from("orders")
           .select("*", { count: 'exact', head: true })
@@ -108,7 +112,11 @@ const RepDashboard = () => {
         
         if (practicesError) throw practicesError;
         
-        const practiceIds = practices?.map(p => p.id) || [];
+        // Filter out the downline's own profile if it's in there
+        const practiceIds = practices
+          ?.filter(p => p.id !== user.id)
+          .map(p => p.id) || [];
+        
         if (practiceIds.length === 0) return 0;
         
         // Count orders from these practices
