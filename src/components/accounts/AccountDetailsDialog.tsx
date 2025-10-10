@@ -61,21 +61,23 @@ export const AccountDetailsDialog = ({
       if (!isRep) return [];
 
       if (isDownline) {
-        // Downlines can be assigned to topline reps
+        // Query profiles instead of reps - matches AddAccountDialog pattern
         const { data: toplines } = await supabase
-          .from("reps")
+          .from("profiles")
           .select(`
             id,
-            user_id,
-            profiles!reps_user_id_fkey(id, name, email)
+            name,
+            email,
+            user_roles!inner(role)
           `)
-          .eq("role", "topline")
-          .eq("active", true);
+          .eq("user_roles.role", "topline")
+          .eq("active", true)
+          .order("name", { ascending: true });
         
         return toplines?.map(t => ({
-          id: t.user_id,
-          name: t.profiles?.name,
-          email: t.profiles?.email,
+          id: t.id,  // This is user_id, matching profiles.linked_topline_id
+          name: t.name,
+          email: t.email,
         })) || [];
       }
 
