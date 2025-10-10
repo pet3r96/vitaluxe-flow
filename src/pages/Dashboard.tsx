@@ -46,8 +46,25 @@ const Dashboard = () => {
     enabled: effectiveRole === "admin",
   });
 
-  const { data: revenue, isLoading: revenueLoading } = useQuery({
-    queryKey: ["dashboard-revenue", effectiveRole, effectiveUserId],
+  const { data: pendingRevenue, isLoading: pendingRevenueLoading } = useQuery({
+    queryKey: ["dashboard-pending-revenue", effectiveRole, effectiveUserId],
+    queryFn: async () => {
+      let query = supabase.from("orders").select("total_amount");
+      
+      if (effectiveRole === "doctor") {
+        query = query.eq("doctor_id", effectiveUserId);
+      }
+      
+      query = query.eq("status", "pending");
+      
+      const { data } = await query;
+      const total = data?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
+      return total;
+    },
+  });
+
+  const { data: collectedRevenue, isLoading: collectedRevenueLoading } = useQuery({
+    queryKey: ["dashboard-collected-revenue", effectiveRole, effectiveUserId],
     queryFn: async () => {
       let query = supabase.from("orders").select("total_amount");
       
@@ -87,11 +104,18 @@ const Dashboard = () => {
       hidden: effectiveRole !== "admin",
     },
     {
-      title: "Revenue",
-      value: revenueLoading ? "..." : `$${revenue?.toFixed(2) || "0.00"}`,
+      title: "Pending Revenue",
+      value: pendingRevenueLoading ? "..." : `$${pendingRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Your revenue" : "Total revenue",
-      isLoading: revenueLoading,
+      description: effectiveRole === "doctor" ? "Your pending revenue" : "Pending orders revenue",
+      isLoading: pendingRevenueLoading,
+    },
+    {
+      title: "Collected Revenue",
+      value: collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`,
+      icon: DollarSign,
+      description: effectiveRole === "doctor" ? "Your collected revenue" : "Completed orders revenue",
+      isLoading: collectedRevenueLoading,
     },
   ].filter(stat => !stat.hidden);
 
