@@ -11,12 +11,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, AlertCircle, Info } from "lucide-react";
+import { Check, ChevronsUpDown, AlertCircle, Info, Upload, X, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -418,6 +419,77 @@ export const PatientSelectionDialog = ({
                 onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
               />
             </div>
+
+            {/* Prescription Upload Section - Only show if product requires prescription */}
+            {product?.requires_prescription && (
+              <div className="space-y-3 p-4 border-2 border-orange-300 rounded-lg bg-orange-50/50">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <Label className="text-base font-semibold text-orange-900">
+                      Prescription Required *
+                    </Label>
+                    <p className="text-sm text-orange-700 mt-1">
+                      This product requires a valid prescription. Please upload a PDF or PNG file (max 10MB).
+                    </p>
+                  </div>
+                </div>
+                
+                {prescriptionFile ? (
+                  <div className="relative p-3 border rounded-md bg-white">
+                    <div className="flex items-center gap-3">
+                      {prescriptionPreview ? (
+                        <img
+                          src={prescriptionPreview}
+                          alt="Prescription preview"
+                          className="h-16 w-16 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
+                          <FileText className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{prescriptionFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(prescriptionFile.size / 1024).toFixed(2)} KB
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setPrescriptionFile(null);
+                          setPrescriptionPreview("");
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      id="prescription-upload"
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={handlePrescriptionChange}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById("prescription-upload")?.click()}
+                      className="w-full border-orange-300 hover:bg-orange-50"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Prescription (PDF or PNG)
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -425,8 +497,18 @@ export const PatientSelectionDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleAddToCart}>
-            {shipTo === 'practice' ? 'Add to Practice Order' : 'Add to Cart'}
+          <Button 
+            onClick={handleAddToCart}
+            disabled={uploadingPrescription || (product?.requires_prescription && !prescriptionFile)}
+          >
+            {uploadingPrescription ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              shipTo === 'practice' ? 'Add to Practice Order' : 'Add to Cart'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
