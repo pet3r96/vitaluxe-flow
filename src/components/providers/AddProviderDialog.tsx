@@ -43,6 +43,18 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
     setLoading(true);
 
     try {
+      // Check if email already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .ilike('email', formData.email)
+        .single();
+
+      if (existingProfile) {
+        toast.error("User already exists in the system. Please use a different email address.");
+        setLoading(false);
+        return;
+      }
       // Upload contract if provided
       let contractFileData = null;
       if (contractFile) {

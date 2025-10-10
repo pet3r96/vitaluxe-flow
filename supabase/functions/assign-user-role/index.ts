@@ -87,6 +87,28 @@ serve(async (req) => {
       }
     }
 
+    // Check if user with this email already exists
+    const { data: existingUsers, error: checkError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (checkError) {
+      console.error('Error checking existing users:', checkError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to validate email address' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const emailExists = existingUsers.users.some(
+      user => user.email?.toLowerCase() === signupData.email.toLowerCase()
+    );
+
+    if (emailExists) {
+      return new Response(
+        JSON.stringify({ error: 'User already exists in the system. Please use a different email address.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create user using admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: signupData.email,

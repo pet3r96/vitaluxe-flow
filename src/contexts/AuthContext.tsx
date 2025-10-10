@@ -223,6 +223,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     roleData: any
   ) => {
     try {
+      // Check if email already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .ilike('email', email)
+        .single();
+
+      if (existingProfile) {
+        return { error: { message: 'User already exists in the system. Please use a different email address.' } };
+      }
+
       // Call the edge function to handle user creation and role assignment
       const { data, error } = await supabase.functions.invoke('assign-user-role', {
         body: {

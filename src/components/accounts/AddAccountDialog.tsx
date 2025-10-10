@@ -77,6 +77,18 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
     setLoading(true);
 
     try {
+      // Check if email already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .ilike('email', formData.email)
+        .single();
+
+      if (existingProfile) {
+        toast.error("User already exists in the system. Please use a different email address.");
+        setLoading(false);
+        return;
+      }
       let contractFileData = null;
       if (contractFile) {
         const base64 = await fileToBase64(contractFile);
