@@ -141,7 +141,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">Practice Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -174,19 +174,19 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="npi">NPI *</Label>
+              <Label htmlFor="npi">Practice NPI # *</Label>
               <Input
                 id="npi"
                 value={formData.npi}
                 onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
                 required
-                placeholder="10-digit number"
+                placeholder="10-digit practice NPI"
                 maxLength={10}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="licenseNumber">License Number *</Label>
+              <Label htmlFor="licenseNumber">Practice License # *</Label>
               <Input
                 id="licenseNumber"
                 value={formData.licenseNumber}
@@ -196,7 +196,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dea">DEA Number</Label>
+              <Label htmlFor="dea">Practice DEA #</Label>
               <Input
                 id="dea"
                 value={formData.dea}
