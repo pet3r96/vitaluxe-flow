@@ -41,7 +41,25 @@ export const OrderDetailsDialog = ({
     const now = new Date();
     const hoursPassed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
     
-    return effectiveUserId === order.doctor_id && hoursPassed < 1;
+    if (hoursPassed >= 1) return false;
+    
+    // Direct order creator can cancel
+    if (effectiveUserId === order.doctor_id) {
+      return true;
+    }
+    
+    // Practice owner can cancel orders created by their providers
+    if (effectiveRole === 'doctor') {
+      const isMyProvidersOrder = order.order_lines?.some((line: any) => 
+        line.providers?.practice_id === effectiveUserId
+      );
+      
+      if (isMyProvidersOrder) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   return (
@@ -70,6 +88,7 @@ export const OrderDetailsDialog = ({
             orderId={order.id}
             initialNotes={order.report_notes}
             doctorId={order.doctor_id}
+            practiceId={order.order_lines?.[0]?.providers?.practice_id}
             onSuccess={onSuccess}
           />
 

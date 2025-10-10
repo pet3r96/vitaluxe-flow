@@ -39,7 +39,11 @@ export const OrdersDataTable = () => {
           *,
           order_lines(*,
             products(name),
-            pharmacies:assigned_pharmacy_id(name)
+            pharmacies:assigned_pharmacy_id(name),
+            providers!order_lines_provider_id_fkey(
+              id,
+              practice_id
+            )
           ),
           profiles:doctor_id(name)
         `);

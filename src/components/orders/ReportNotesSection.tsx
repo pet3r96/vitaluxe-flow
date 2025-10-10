@@ -11,6 +11,7 @@ interface ReportNotesSectionProps {
   orderId: string;
   initialNotes: string | null;
   doctorId: string;
+  practiceId?: string;
   onSuccess: () => void;
 }
 
@@ -18,6 +19,7 @@ export const ReportNotesSection = ({
   orderId,
   initialNotes,
   doctorId,
+  practiceId,
   onSuccess,
 }: ReportNotesSectionProps) => {
   const [notes, setNotes] = useState(initialNotes || "");
@@ -26,7 +28,10 @@ export const ReportNotesSection = ({
   const { toast } = useToast();
   const { effectiveRole, effectiveUserId } = useAuth();
 
-  const canEdit = effectiveRole === 'admin' || effectiveUserId === doctorId;
+  const canEdit = 
+    effectiveRole === 'admin' || 
+    effectiveUserId === doctorId ||
+    (effectiveRole === 'doctor' && effectiveUserId === practiceId);
 
   const handleSave = async () => {
     setIsSaving(true);
