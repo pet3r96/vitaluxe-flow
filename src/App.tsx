@@ -27,6 +27,10 @@ import MedSpas from "./pages/MedSpas";
 import Profile from "./pages/Profile";
 import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
+import RepDashboard from "./pages/RepDashboard";
+import MyDownlines from "./pages/MyDownlines";
+import RepProfitReports from "./pages/RepProfitReports";
+import { DashboardRouter } from "./components/DashboardRouter";
 
 const queryClient = new QueryClient();
 
@@ -52,8 +56,8 @@ const App = () => (
                           <RoleImpersonationDropdown />
                         </div>
                         <Routes>
-                          <Route path="/" element={<Dashboard />} />
-                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/" element={<DashboardRouter />} />
+                          <Route path="/dashboard" element={<DashboardRouter />} />
                           <Route path="/accounts" element={<Accounts />} />
                           <Route path="/practices" element={<Practices />} />
                           <Route path="/patients" element={<Patients />} />
@@ -65,10 +69,11 @@ const App = () => (
                           <Route path="/reports" element={<Reports />} />
                           <Route path="/cart" element={<Cart />} />
                           <Route path="/order-confirmation" element={<OrderConfirmation />} />
-                          <Route path="/downlines" element={<Downlines />} />
+                          <Route path="/downlines" element={<MyDownlines />} />
                           <Route path="/med-spas" element={<MedSpas />} />
                           <Route path="/profile" element={<Profile />} />
                           <Route path="/admin-settings" element={<AdminSettings />} />
+                          <Route path="/rep-reports" element={<RepProfitReports />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </main>

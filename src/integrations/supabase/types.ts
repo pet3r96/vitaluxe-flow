@@ -522,6 +522,86 @@ export type Database = {
           },
         ]
       }
+      order_profits: {
+        Row: {
+          admin_profit: number | null
+          base_price: number
+          created_at: string | null
+          downline_id: string | null
+          downline_price: number | null
+          downline_profit: number | null
+          id: string
+          order_id: string
+          order_line_id: string
+          practice_price: number
+          quantity: number
+          topline_id: string | null
+          topline_price: number | null
+          topline_profit: number | null
+        }
+        Insert: {
+          admin_profit?: number | null
+          base_price: number
+          created_at?: string | null
+          downline_id?: string | null
+          downline_price?: number | null
+          downline_profit?: number | null
+          id?: string
+          order_id: string
+          order_line_id: string
+          practice_price: number
+          quantity?: number
+          topline_id?: string | null
+          topline_price?: number | null
+          topline_profit?: number | null
+        }
+        Update: {
+          admin_profit?: number | null
+          base_price?: number
+          created_at?: string | null
+          downline_id?: string | null
+          downline_price?: number | null
+          downline_profit?: number | null
+          id?: string
+          order_id?: string
+          order_line_id?: string
+          practice_price?: number
+          quantity?: number
+          topline_id?: string | null
+          topline_price?: number | null
+          topline_profit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_profits_downline_id_fkey"
+            columns: ["downline_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_profits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_profits_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_profits_topline_id_fkey"
+            columns: ["topline_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           cancellation_reason: string | null
@@ -814,6 +894,47 @@ export type Database = {
           },
         ]
       }
+      product_pricing_tiers: {
+        Row: {
+          base_price: number
+          created_at: string | null
+          downline_price: number
+          id: string
+          practice_price: number
+          product_id: string
+          topline_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          base_price: number
+          created_at?: string | null
+          downline_price: number
+          id?: string
+          practice_price: number
+          product_id: string
+          topline_price: number
+          updated_at?: string | null
+        }
+        Update: {
+          base_price?: number
+          created_at?: string | null
+          downline_price?: number
+          id?: string
+          practice_price?: number
+          product_id?: string
+          topline_price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_pricing_tiers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean | null
@@ -1032,6 +1153,97 @@ export type Database = {
             foreignKeyName: "providers_practice_id_fkey"
             columns: ["practice_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rep_practice_links: {
+        Row: {
+          assigned_topline_id: string | null
+          created_at: string | null
+          id: string
+          practice_id: string
+          rep_id: string
+        }
+        Insert: {
+          assigned_topline_id?: string | null
+          created_at?: string | null
+          id?: string
+          practice_id: string
+          rep_id: string
+        }
+        Update: {
+          assigned_topline_id?: string | null
+          created_at?: string | null
+          id?: string
+          practice_id?: string
+          rep_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_practice_links_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_practice_links_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_practice_links_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reps: {
+        Row: {
+          active: boolean | null
+          assigned_topline_id: string | null
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          assigned_topline_id?: string | null
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean | null
+          assigned_topline_id?: string | null
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

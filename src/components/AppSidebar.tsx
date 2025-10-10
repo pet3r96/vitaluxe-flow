@@ -69,13 +69,20 @@ const menuItems = {
   ],
   topline: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Products", url: "/products", icon: Package },
     { title: "My Downlines", url: "/downlines", icon: Users },
-    { title: "Reports", url: "/reports", icon: FileText },
+    { title: "Orders", url: "/orders", icon: ShoppingCart },
+    { title: "Reports", url: "/rep-reports", icon: FileText },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "Profile", url: "/profile", icon: UserCircle },
   ],
   downline: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Med Spas", url: "/med-spas", icon: Building2 },
-    { title: "Reports", url: "/reports", icon: FileText },
+    { title: "Products", url: "/products", icon: Package },
+    { title: "Orders", url: "/orders", icon: ShoppingCart },
+    { title: "Reports", url: "/rep-reports", icon: FileText },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "Profile", url: "/profile", icon: UserCircle },
   ],
 };
 

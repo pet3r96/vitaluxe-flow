@@ -4,6 +4,7 @@ import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView"
 import { OrphanedPharmacyFixer } from "@/components/admin/OrphanedPharmacyFixer";
 import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
+import { RepsManagement } from "@/components/admin/RepsManagement";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, MapPin, Activity, Building2, Users, Wrench } from "lucide-react";
 
@@ -26,6 +27,10 @@ const AdminSettings = () => {
           <TabsTrigger value="providers" className="gap-2">
             <Users className="h-4 w-4" />
             Providers
+          </TabsTrigger>
+          <TabsTrigger value="reps" className="gap-2">
+            <Users className="h-4 w-4" />
+            Representatives
           </TabsTrigger>
           <TabsTrigger value="addresses" className="gap-2">
             <MapPin className="h-4 w-4" />
@@ -69,6 +74,20 @@ const AdminSettings = () => {
             </CardHeader>
             <CardContent>
               <ProvidersDataTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reps" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Representatives Management</CardTitle>
+              <CardDescription>
+                Manage topline and downline sales representatives
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RepsManagement />
             </CardContent>
           </Card>
         </TabsContent>
