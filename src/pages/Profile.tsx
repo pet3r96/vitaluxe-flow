@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PracticeProfileForm } from "@/components/profile/PracticeProfileForm";
 import { ProviderProfileForm } from "@/components/profile/ProviderProfileForm";
+import { RepProfileForm } from "@/components/profile/RepProfileForm";
 import { BankAccountsSection } from "@/components/profile/BankAccountsSection";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,9 @@ const Profile = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const [isProvider, setIsProvider] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  
+  const isRep = effectiveRole === "topline" || effectiveRole === "downline";
+  const allowedRoles = ["doctor", "topline", "downline"];
 
   useEffect(() => {
     const checkProviderStatus = async () => {
@@ -31,7 +35,7 @@ const Profile = () => {
     checkProviderStatus();
   }, [effectiveUserId, effectiveRole]);
 
-  if (effectiveRole !== "doctor") {
+  if (!allowedRoles.includes(effectiveRole)) {
     return (
       <div className="space-y-6">
         <div>
@@ -55,14 +59,18 @@ const Profile = () => {
       <div>
         <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
         <p className="text-muted-foreground mt-2">
-          {isProvider 
-            ? "Your Professional Credentials & Contact Information" 
-            : "Practice Information, Shipping & Bank Account Details"}
+          {isRep 
+            ? "Your Contact Information & Account Settings"
+            : isProvider 
+              ? "Your Professional Credentials & Contact Information" 
+              : "Practice Information, Shipping & Bank Account Details"}
         </p>
       </div>
 
       <div className="space-y-6">
-        {isProvider ? (
+        {isRep ? (
+          <RepProfileForm />
+        ) : isProvider ? (
           <ProviderProfileForm />
         ) : (
           <>
