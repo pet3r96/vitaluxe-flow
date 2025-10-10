@@ -17,6 +17,7 @@ interface AuthContextType {
   effectiveRole: string | null;
   effectiveUserId: string | null;
   canImpersonate: boolean;
+  isProviderAccount: boolean;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -46,6 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [practiceParentId, setPracticeParentId] = useState<string | null>(null);
   const [currentLogId, setCurrentLogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isProviderAccount, setIsProviderAccount] = useState(false);
   const navigate = useNavigate();
 
   const actualRole = userRole;
@@ -90,6 +92,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Check if current user is a provider account
+  useEffect(() => {
+    const checkProviderStatus = async () => {
+      if (!effectiveUserId) {
+        setIsProviderAccount(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('providers')
+          .select('id')
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+
+        setIsProviderAccount(!error && data !== null);
+      } catch (error) {
+        console.error('Error checking provider status:', error);
+        setIsProviderAccount(false);
+      }
+    };
+
+    checkProviderStatus();
+  }, [effectiveUserId]);
 
   // Real-time monitoring for account status changes
   useEffect(() => {
@@ -161,7 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: providerData } = await supabase
           .from('providers' as any)
           .select('practice_id')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .single();
         
         if (providerData) {
@@ -413,6 +440,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       effectiveRole,
       effectiveUserId,
       canImpersonate,
+      isProviderAccount,
       setImpersonation,
       clearImpersonation,
       signIn, 

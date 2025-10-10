@@ -81,11 +81,17 @@ const menuItems = {
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { effectiveRole, isImpersonating, signOut } = useAuth();
+  const { effectiveRole, isImpersonating, isProviderAccount, signOut } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
 
-  const items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
+  let items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
+  
+  // Hide "Providers" tab for provider accounts
+  if (effectiveRole === 'doctor' && isProviderAccount) {
+    items = items.filter(item => item.title !== "Providers");
+  }
+  
   const isCollapsed = state === "collapsed";
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
