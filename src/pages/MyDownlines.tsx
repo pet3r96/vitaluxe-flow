@@ -10,15 +10,16 @@ export default function MyDownlines() {
   const { user, effectiveUserId } = useAuth();
 
   // Get topline rep ID
-  const { data: toplineRep } = useQuery({
+  const { data: toplineRep, isLoading: isToplineLoading } = useQuery({
     queryKey: ["topline-rep", effectiveUserId],
     queryFn: async () => {
+      if (!effectiveUserId) return null;
       const { data, error } = await supabase
         .from("reps")
         .select("*")
         .eq("user_id", effectiveUserId)
         .eq("role", "topline")
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -26,13 +27,14 @@ export default function MyDownlines() {
     enabled: !!effectiveUserId,
   });
 
-  // Get downlines assigned to this topline
-  const { data: downlines, isLoading } = useQuery({
-    queryKey: ["my-downlines", toplineRep?.id],
+  // Get downlines assigned to this topline (supports both assignment and profile linkage)
+  const { data: downlines, isLoading: isDownlinesLoading } = useQuery({
+    queryKey: ["my-downlines", toplineRep?.id, effectiveUserId],
     queryFn: async () => {
       if (!toplineRep?.id) return [];
-      
-      const { data, error } = await supabase
+
+      // 1) Downlines via reps.assigned_topline_id
+      const { data: repsByAssigned, error: err1 } = await supabase
         .from("reps")
         .select(`
           *,
@@ -46,9 +48,43 @@ export default function MyDownlines() {
         `)
         .eq("assigned_topline_id", toplineRep.id)
         .eq("active", true);
-      
-      if (error) throw error;
-      return data;
+      if (err1) throw err1;
+
+      // 2) Downlines via profiles.linked_topline_id (fallback if sync didn't set assigned_topline_id)
+      const { data: profilesByLink, error: err2 } = await supabase
+        .from("profiles")
+        .select("id, name, email, phone, company")
+        .eq("linked_topline_id", effectiveUserId)
+        .eq("active", true);
+      if (err2) throw err2;
+
+      let repsByUsers: any[] = [];
+      const userIds = (profilesByLink || []).map((p: any) => p.id);
+      if (userIds.length > 0) {
+        const { data: repsViaUsers, error: err3 } = await supabase
+          .from("reps")
+          .select(`
+            *,
+            profiles:user_id (
+              id,
+              name,
+              email,
+              phone,
+              company
+            )
+          `)
+          .in("user_id", userIds)
+          .eq("role", "downline")
+          .eq("active", true);
+        if (err3) throw err3;
+        repsByUsers = repsViaUsers || [];
+      }
+
+      // Merge and dedupe by rep id
+      const merged = new Map<string, any>();
+      (repsByAssigned || []).forEach((r: any) => merged.set(r.id, r));
+      (repsByUsers || []).forEach((r: any) => merged.set(r.id, r));
+      return Array.from(merged.values());
     },
     enabled: !!toplineRep?.id,
   });
@@ -77,10 +113,18 @@ export default function MyDownlines() {
     enabled: !!toplineRep?.id,
   });
 
-  if (isLoading) {
+  if (isToplineLoading || isDownlinesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-muted-foreground">Loading downlines...</div>
+      </div>
+    );
+  }
+
+  if (!toplineRep) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-muted-foreground">No topline representative record found for this user.</div>
       </div>
     );
   }
