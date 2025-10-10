@@ -27,7 +27,8 @@ export const PracticesDataTable = () => {
   const { data: practices, isLoading, refetch } = useQuery({
     queryKey: ["practices"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get all doctor role users
+      const { data: allDoctors, error: doctorsError } = await supabase
         .from("profiles")
         .select(`
           *,
@@ -36,8 +37,39 @@ export const PracticesDataTable = () => {
         .eq("user_roles.role", "doctor")
         .order("created_at", { ascending: false });
 
+      if (doctorsError) throw doctorsError;
+
+      // Then get all provider user_ids
+      const { data: providerIds, error: providersError } = await supabase
+        .from("providers")
+        .select("user_id");
+
+      if (providersError) throw providersError;
+
+      // Filter out providers, keeping only practices
+      const providerUserIds = new Set(providerIds?.map(p => p.user_id) || []);
+      const practicesOnly = allDoctors?.filter(doc => !providerUserIds.has(doc.id)) || [];
+
+      return practicesOnly;
+    },
+  });
+
+  const { data: providerCounts } = useQuery({
+    queryKey: ["provider-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("providers")
+        .select("practice_id");
+
       if (error) throw error;
-      return data;
+
+      // Count providers per practice
+      const counts: Record<string, number> = {};
+      data?.forEach(provider => {
+        counts[provider.practice_id] = (counts[provider.practice_id] || 0) + 1;
+      });
+
+      return counts;
     },
   });
 
@@ -166,6 +198,7 @@ export const PracticesDataTable = () => {
               <TableHead>License #</TableHead>
               <TableHead>Company/Practice</TableHead>
               <TableHead>Phone</TableHead>
+              <TableHead>Providers</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -173,13 +206,13 @@ export const PracticesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">
+                <TableCell colSpan={9} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPractices?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   No practices found
                 </TableCell>
               </TableRow>
@@ -196,6 +229,9 @@ export const PracticesDataTable = () => {
                   </TableCell>
                   <TableCell>{practice.company || "-"}</TableCell>
                   <TableCell>{practice.phone || "-"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{providerCounts?.[practice.id] || 0}</Badge>
+                  </TableCell>
                   <TableCell>
                     <Badge variant={practice.active ? "default" : "secondary"}>
                       {practice.active ? "Active" : "Inactive"}

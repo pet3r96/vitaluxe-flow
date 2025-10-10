@@ -64,6 +64,41 @@ export const PracticeDetailsDialog = ({
     enabled: !!provider?.id && open,
   });
 
+  const { data: providers } = useQuery({
+    queryKey: ["practice-providers", provider?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("providers")
+        .select(`
+          id,
+          active,
+          created_at,
+          user_id
+        `)
+        .eq("practice_id", provider.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      // Fetch profile details for each provider
+      const userIds = data.map(p => p.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, name, full_name, email, npi, dea, license_number, phone")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Merge provider data with profile data
+      return data.map(provider => ({
+        ...provider,
+        profile: profiles?.find(p => p.id === provider.user_id) || null
+      }));
+    },
+    enabled: !!provider?.id && open,
+  });
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
@@ -201,6 +236,46 @@ export const PracticeDetailsDialog = ({
                   <p className="text-sm text-muted-foreground">Avg Order Value</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Providers */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Providers</span>
+                <Badge variant="outline">{providers?.length || 0} Total</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {providers && providers.length > 0 ? (
+                <div className="space-y-3">
+                  {providers.map((prov) => (
+                    <div key={prov.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                      <div className="flex-1">
+                        <p className="font-medium">{prov.profile?.full_name || prov.profile?.name}</p>
+                        <p className="text-sm text-muted-foreground">{prov.profile?.email}</p>
+                        <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
+                          {prov.profile?.npi && <span>NPI: {prov.profile.npi}</span>}
+                          {prov.profile?.license_number && <span>License: {prov.profile.license_number}</span>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={prov.active ? "default" : "secondary"}>
+                          {prov.active ? "Active" : "Inactive"}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Added {new Date(prov.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No providers assigned to this practice yet
+                </p>
+              )}
             </CardContent>
           </Card>
 
