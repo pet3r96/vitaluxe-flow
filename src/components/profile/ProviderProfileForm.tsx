@@ -45,9 +45,6 @@ const profileFormSchema = z.object({
     state: z.string().optional(),
     zip: z.string().optional(),
   }).optional(),
-  shipping_preference: z.enum(["office", "patient_drop"], {
-    required_error: "Please select a shipping preference",
-  }),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -90,7 +87,6 @@ export const ProviderProfileForm = () => {
         state: profile.shipping_address_state || "",
         zip: profile.shipping_address_zip || "",
       },
-      shipping_preference: (profile.shipping_preference as "office" | "patient_drop") || "patient_drop",
     } : undefined,
   });
 
@@ -121,7 +117,6 @@ export const ProviderProfileForm = () => {
           shipping_address_verification_status: values.shipping_address?.status || 'unverified',
           shipping_address_verified_at: values.shipping_address?.verified_at,
           shipping_address_verification_source: values.shipping_address?.source,
-          shipping_preference: values.shipping_preference,
         })
         .eq("id", effectiveUserId);
 
@@ -240,43 +235,15 @@ export const ProviderProfileForm = () => {
                       onChange={field.onChange}
                     />
                   </FormControl>
-                  <FormDescription>
-                    This address will be used when you order for your practice/med spa
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormDescription>
+              This address will be used when you order for your practice/med spa
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-            <FormField
-              control={form.control}
-              name="shipping_preference"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Shipping Preference</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select shipping preference" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="patient_drop">Ship to Patient</SelectItem>
-                      <SelectItem value="office">Ship to Practice/Office</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Choose where orders should be shipped by default
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button 
+      <Button
               type="submit" 
               disabled={updateMutation.isPending}
               className="w-full sm:w-auto"
