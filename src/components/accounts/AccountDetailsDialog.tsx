@@ -1,13 +1,26 @@
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { ExternalLink, Edit2, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface AccountDetailsDialogProps {
   open: boolean;
@@ -20,7 +33,12 @@ export const AccountDetailsDialog = ({
   open,
   onOpenChange,
   account,
+  onSuccess,
 }: AccountDetailsDialogProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedParentId, setSelectedParentId] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+
   const getDisplayRole = (account: any): string => {
     const baseRole = account.user_roles?.[0]?.role;
     
@@ -31,12 +49,142 @@ export const AccountDetailsDialog = ({
     return baseRole || 'No role';
   };
 
+  const role = account?.user_roles?.[0]?.role;
+  const isDownline = role === 'downline';
+  const isTopline = role === 'topline';
+  const isRep = isDownline || isTopline;
+
+  // Fetch potential parent options based on role
+  const { data: potentialParents } = useQuery({
+    queryKey: ["potential-parents", role],
+    queryFn: async () => {
+      if (!isRep) return [];
+
+      if (isDownline) {
+        // Downlines can be assigned to topline reps
+        const { data: toplines } = await supabase
+          .from("reps")
+          .select(`
+            id,
+            user_id,
+            profiles!reps_user_id_fkey(id, name, email)
+          `)
+          .eq("role", "topline")
+          .eq("active", true);
+        
+        return toplines?.map(t => ({
+          id: t.user_id,
+          name: t.profiles?.name,
+          email: t.profiles?.email,
+        })) || [];
+      }
+
+      return [];
+    },
+    enabled: isRep && open,
+  });
+
+  // Set initial parent value when dialog opens
+  useEffect(() => {
+    if (open && account) {
+      if (isDownline) {
+        setSelectedParentId(account.linked_topline_id || "");
+      }
+    }
+  }, [open, account, isDownline]);
+
+  const handleSave = async () => {
+    if (!account) return;
+
+    setIsSaving(true);
+    try {
+      const updates: any = {};
+
+      if (isDownline) {
+        updates.linked_topline_id = selectedParentId || null;
+
+        // Also update the reps table
+        const { data: repData } = await supabase
+          .from("reps")
+          .select("id")
+          .eq("user_id", account.id)
+          .maybeSingle();
+
+        if (repData) {
+          // Get topline rep id from user_id
+          let toplineRepId = null;
+          if (selectedParentId) {
+            const { data: toplineData } = await supabase
+              .from("reps")
+              .select("id")
+              .eq("user_id", selectedParentId)
+              .maybeSingle();
+            toplineRepId = toplineData?.id;
+          }
+
+          await supabase
+            .from("reps")
+            .update({ assigned_topline_id: toplineRepId })
+            .eq("id", repData.id);
+        }
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", account.id);
+
+      if (error) throw error;
+
+      toast.success("Account updated successfully");
+      setIsEditing(false);
+      onSuccess();
+    } catch (error: any) {
+      console.error("Error updating account:", error);
+      toast.error(error.message || "Failed to update account");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => {
+      if (!open) setIsEditing(false);
+      onOpenChange(open);
+    }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Account Details</DialogTitle>
-          <DialogDescription>View and manage account information</DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Account Details</DialogTitle>
+              <DialogDescription>View and manage account information</DialogDescription>
+            </div>
+            {isRep && !isEditing && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit Parent
+              </Button>
+            )}
+            {isEditing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsEditing(false);
+                  if (isDownline) {
+                    setSelectedParentId(account.linked_topline_id || "");
+                  }
+                }}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -97,6 +245,49 @@ export const AccountDetailsDialog = ({
             )}
           </div>
 
+          {/* Parent/Topline Assignment Section for Reps */}
+          {isRep && (
+            <div className="border-t pt-4">
+              <Label className="text-sm font-medium">
+                {isDownline ? "Assigned Topline" : "Parent Company"}
+              </Label>
+              {isEditing ? (
+                <div className="mt-2">
+                  <Select
+                    value={selectedParentId}
+                    onValueChange={setSelectedParentId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select parent..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {potentialParents?.map((parent) => (
+                        <SelectItem key={parent.id} value={parent.id}>
+                          {parent.name} ({parent.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="mt-2">
+                  {isDownline && account.linked_topline ? (
+                    <p className="text-sm font-medium">
+                      {account.linked_topline.name} ({account.linked_topline.email})
+                    </p>
+                  ) : account.parent ? (
+                    <p className="text-sm font-medium">
+                      {account.parent.name} ({account.parent.email})
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Not assigned</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {account.contract_url && (
             <div>
               <p className="text-sm text-muted-foreground mb-2">Contract</p>
@@ -109,6 +300,25 @@ export const AccountDetailsDialog = ({
             </div>
           )}
         </div>
+
+        {isEditing && (
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditing(false);
+                if (isDownline) {
+                  setSelectedParentId(account.linked_topline_id || "");
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
