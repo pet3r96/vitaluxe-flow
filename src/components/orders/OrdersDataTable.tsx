@@ -33,6 +33,56 @@ export const OrdersDataTable = () => {
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId],
     queryFn: async () => {
+      // Special handling for pharmacy users - fetch from order_lines
+      if (effectiveRole === "pharmacy") {
+        const { data: pharmacyData } = await supabase
+          .from("pharmacies")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .maybeSingle();
+        
+        if (!pharmacyData) {
+          return []; // Pharmacy not found
+        }
+
+        const { data: orderLinesData, error: orderLinesError } = await supabase
+          .from("order_lines")
+          .select(`
+            *,
+            products(name),
+            pharmacies:assigned_pharmacy_id(name),
+            providers!order_lines_provider_id_fkey(
+              id,
+              practice_id
+            ),
+            orders!inner(
+              *,
+              profiles:doctor_id(name)
+            )
+          `)
+          .eq("assigned_pharmacy_id", pharmacyData.id)
+          .order("created_at", { ascending: false });
+
+        if (orderLinesError) throw orderLinesError;
+
+        // Transform data to match expected format - group order_lines by order
+        const ordersMap = new Map();
+        orderLinesData?.forEach((line) => {
+          const orderId = line.orders.id;
+          if (!ordersMap.has(orderId)) {
+            ordersMap.set(orderId, {
+              ...line.orders,
+              order_lines: []
+            });
+          }
+          // Remove the nested orders object from the line before adding to array
+          const { orders: _, ...lineWithoutOrders } = line;
+          ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
+        });
+        
+        return Array.from(ordersMap.values());
+      }
+
       let query = supabase
         .from("orders")
         .select(`
@@ -215,8 +265,8 @@ export const OrdersDataTable = () => {
                 // Aggregate shipping status from order lines
                 const shippingStatuses = order.order_lines?.map((line: any) => line.status) || [];
                 const uniqueStatuses = [...new Set(shippingStatuses)];
-                const shippingStatus = uniqueStatuses.length === 1 
-                  ? uniqueStatuses[0] 
+                const shippingStatus: string = uniqueStatuses.length === 1 
+                  ? (uniqueStatuses[0] as string)
                   : uniqueStatuses.length > 1 
                     ? "mixed" 
                     : "pending";
