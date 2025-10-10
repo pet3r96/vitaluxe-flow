@@ -153,7 +153,6 @@ export const ProductsDataTable = () => {
             quantity: quantity,
             price_snapshot: productForCart.retail_price || productForCart.base_price,
             destination_state: "XX", // Placeholder for practice orders
-            assigned_pharmacy_id: productForCart.pharmacy_id || null,
           });
 
         if (error) throw error;
@@ -179,7 +178,6 @@ export const ProductsDataTable = () => {
             quantity: quantity,
             price_snapshot: productForCart.retail_price || productForCart.base_price,
             destination_state: "IL", // Default state, can be updated
-            assigned_pharmacy_id: productForCart.pharmacy_id || null,
           });
 
         if (error) throw error;
