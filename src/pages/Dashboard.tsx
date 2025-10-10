@@ -139,6 +139,32 @@ const Dashboard = () => {
           return total;
         }
         return 0;
+      } else if (effectiveRole === "pharmacy") {
+        // Get pharmacy ID first
+        const { data: pharmacyData } = await supabase
+          .from("pharmacies")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .maybeSingle();
+        
+        if (pharmacyData) {
+          // Sum order line prices where pharmacy is assigned and order is pending
+          const { data: orderLines } = await supabase
+            .from("order_lines")
+            .select(`
+              price,
+              quantity,
+              orders!inner(status)
+            `)
+            .eq("assigned_pharmacy_id", pharmacyData.id)
+            .eq("orders.status", "pending");
+          
+          // Calculate total from order lines (price * quantity)
+          const total = orderLines?.reduce((sum: number, line: any) => 
+            sum + (Number(line.price || 0) * Number(line.quantity || 1)), 0) || 0;
+          return total;
+        }
+        return 0;
       } else {
         const result: any = await (supabase as any)
           .from("orders")
@@ -184,6 +210,32 @@ const Dashboard = () => {
               orders!inner(status)
             `)
             .eq("provider_id", providerData.id)
+            .eq("orders.status", "completed");
+          
+          // Calculate total from order lines (price * quantity)
+          const total = orderLines?.reduce((sum: number, line: any) => 
+            sum + (Number(line.price || 0) * Number(line.quantity || 1)), 0) || 0;
+          return total;
+        }
+        return 0;
+      } else if (effectiveRole === "pharmacy") {
+        // Get pharmacy ID first
+        const { data: pharmacyData } = await supabase
+          .from("pharmacies")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .maybeSingle();
+        
+        if (pharmacyData) {
+          // Sum order line prices where pharmacy is assigned and order is completed
+          const { data: orderLines } = await supabase
+            .from("order_lines")
+            .select(`
+              price,
+              quantity,
+              orders!inner(status)
+            `)
+            .eq("assigned_pharmacy_id", pharmacyData.id)
             .eq("orders.status", "completed");
           
           // Calculate total from order lines (price * quantity)
