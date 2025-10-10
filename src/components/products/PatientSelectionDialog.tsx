@@ -51,7 +51,7 @@ export const PatientSelectionDialog = ({
       const { data, error } = await supabase
         .from("patients" as any)
         .select("*")
-        .eq("provider_id", effectiveUserId)
+        .eq("practice_id", effectiveUserId)
         .order("name");
 
       if (error) throw error;
