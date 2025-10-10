@@ -11,6 +11,8 @@ import {
   LogOut,
   Stethoscope,
   UserCircle,
+  Settings,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +40,7 @@ const menuItems = {
     { title: "Orders", url: "/orders", icon: ShoppingCart },
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "Admin Settings", url: "/admin-settings", icon: ShieldCheck },
   ],
   doctor: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },

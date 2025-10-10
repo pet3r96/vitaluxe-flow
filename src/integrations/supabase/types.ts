@@ -506,10 +506,12 @@ export type Database = {
           cancelled_by: string | null
           created_at: string | null
           doctor_id: string
+          formatted_shipping_address: string | null
           id: string
           practice_address: string | null
           report_notes: string | null
           ship_to: string | null
+          shipping_verification_status: string | null
           status: string | null
           stripe_payment_id: string | null
           total_amount: number
@@ -521,10 +523,12 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string | null
           doctor_id: string
+          formatted_shipping_address?: string | null
           id?: string
           practice_address?: string | null
           report_notes?: string | null
           ship_to?: string | null
+          shipping_verification_status?: string | null
           status?: string | null
           stripe_payment_id?: string | null
           total_amount: number
@@ -536,10 +540,12 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string | null
           doctor_id?: string
+          formatted_shipping_address?: string | null
           id?: string
           practice_address?: string | null
           report_notes?: string | null
           ship_to?: string | null
+          shipping_verification_status?: string | null
           status?: string | null
           stripe_payment_id?: string | null
           total_amount?: number
@@ -1158,6 +1164,15 @@ export type Database = {
       is_thread_participant: {
         Args: { _thread_id: string; _user_id: string }
         Returns: boolean
+      }
+      log_audit_event: {
+        Args: {
+          p_action_type: string
+          p_details?: Json
+          p_entity_id?: string
+          p_entity_type?: string
+        }
+        Returns: string
       }
     }
     Enums: {
