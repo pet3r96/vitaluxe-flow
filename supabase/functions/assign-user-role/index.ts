@@ -250,6 +250,64 @@ serve(async (req) => {
       }
     }
 
+    // If topline or downline role, create rep record
+    if (signupData.role === 'topline') {
+      const { error: repError } = await supabaseAdmin
+        .from('reps')
+        .insert({
+          user_id: userId,
+          role: 'topline',
+          assigned_topline_id: null, // Toplines don't have an assigned topline
+          active: true
+        });
+
+      if (repError) {
+        console.error('Rep creation error:', repError);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create rep record' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (signupData.role === 'downline') {
+      // First, get the topline's reps.id (not user_id!)
+      const { data: toplineRep, error: toplineError } = await supabaseAdmin
+        .from('reps')
+        .select('id')
+        .eq('user_id', signupData.roleData.linkedToplineId)
+        .maybeSingle();
+
+      if (toplineError || !toplineRep) {
+        console.error('Topline rep lookup error:', toplineError);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: 'Invalid topline rep assignment' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Create the downline rep record
+      const { error: repError } = await supabaseAdmin
+        .from('reps')
+        .insert({
+          user_id: userId,
+          role: 'downline',
+          assigned_topline_id: toplineRep.id, // Use topline's reps.id
+          active: true
+        });
+
+      if (repError) {
+        console.error('Rep creation error:', repError);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create rep record' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // If provider role, create provider record
     if (signupData.role === 'provider') {
       // First update the profile with provider-specific data
