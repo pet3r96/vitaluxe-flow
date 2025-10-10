@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Search, Edit } from "lucide-react";
+import { Search, Edit, UserPlus, AlertCircle } from "lucide-react";
 import { PharmacyDialog } from "./PharmacyDialog";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ export const PharmaciesDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPharmacy, setSelectedPharmacy] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [fixingPharmacyId, setFixingPharmacyId] = useState<string | null>(null);
 
   const { data: pharmacies, isLoading, refetch } = useQuery({
     queryKey: ["pharmacies"],
@@ -57,6 +58,38 @@ export const PharmaciesDataTable = () => {
     }
   };
 
+  const createAccountForPharmacy = async (pharmacyId: string, pharmacyName: string, contactEmail: string) => {
+    setFixingPharmacyId(pharmacyId);
+    try {
+      const { data, error } = await supabase.functions.invoke('fix-orphaned-pharmacy', {
+        body: { pharmacyId }
+      });
+
+      if (error) throw error;
+
+      const result = data?.results?.[0];
+      if (result?.success) {
+        toast.success(
+          `Account created for ${pharmacyName}!`,
+          {
+            description: `Temporary password: ${result.tempPassword || 'Check console'}`,
+            duration: 10000,
+          }
+        );
+        refetch();
+      } else {
+        throw new Error(result?.error || 'Failed to create account');
+      }
+    } catch (error: any) {
+      console.error('Error creating account:', error);
+      toast.error(`Failed to create account for ${pharmacyName}`, {
+        description: error.message,
+      });
+    } finally {
+      setFixingPharmacyId(null);
+    }
+  };
+
   const filteredPharmacies = pharmacies?.filter((pharmacy) =>
     pharmacy.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     pharmacy.contact_email?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -90,6 +123,7 @@ export const PharmaciesDataTable = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Contact Email</TableHead>
+              <TableHead>Account Status</TableHead>
               <TableHead>States Serviced</TableHead>
               <TableHead>Priority Map</TableHead>
               <TableHead>Active</TableHead>
@@ -99,13 +133,13 @@ export const PharmaciesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={7} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPharmacies?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No pharmacies found
                 </TableCell>
               </TableRow>
@@ -114,6 +148,18 @@ export const PharmaciesDataTable = () => {
                 <TableRow key={pharmacy.id}>
                   <TableCell className="font-medium">{pharmacy.name}</TableCell>
                   <TableCell>{pharmacy.contact_email}</TableCell>
+                  <TableCell>
+                    {!pharmacy.user_id ? (
+                      <Badge variant="destructive" className="gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        No Account
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        Active
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {pharmacy.states_serviced && pharmacy.states_serviced.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
@@ -159,16 +205,35 @@ export const PharmaciesDataTable = () => {
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedPharmacy(pharmacy);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      {!pharmacy.user_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => createAccountForPharmacy(pharmacy.id, pharmacy.name, pharmacy.contact_email)}
+                          disabled={fixingPharmacyId === pharmacy.id}
+                        >
+                          {fixingPharmacyId === pharmacy.id ? (
+                            <>Creating...</>
+                          ) : (
+                            <>
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Create Account
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPharmacy(pharmacy);
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

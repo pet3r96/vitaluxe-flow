@@ -106,6 +106,9 @@ serve(async (req) => {
   }
 
   try {
+    // Parse request body to check for specific pharmacyId
+    const { pharmacyId } = await req.json().catch(() => ({}));
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -144,12 +147,20 @@ serve(async (req) => {
 
     console.log('Admin user authenticated, searching for orphaned pharmacies...');
 
-    // Find all orphaned pharmacies
-    const { data: orphanedPharmacies, error: queryError } = await supabaseAdmin
+    // Build query for orphaned pharmacies
+    let query = supabaseAdmin
       .from('pharmacies')
       .select('*')
       .is('user_id', null)
       .eq('active', true);
+
+    // If pharmacyId is provided, filter to that specific pharmacy
+    if (pharmacyId) {
+      console.log(`Filtering to specific pharmacy: ${pharmacyId}`);
+      query = query.eq('id', pharmacyId);
+    }
+
+    const { data: orphanedPharmacies, error: queryError } = await query;
 
     if (queryError) {
       console.error('Query error:', queryError);
@@ -160,11 +171,15 @@ serve(async (req) => {
     }
 
     if (!orphanedPharmacies || orphanedPharmacies.length === 0) {
-      console.log('No orphaned pharmacies found');
+      const message = pharmacyId 
+        ? 'Pharmacy not found or already has an account' 
+        : 'No orphaned pharmacies found';
+      console.log(message);
       return new Response(
         JSON.stringify({ 
-          message: 'No orphaned pharmacies found',
+          message,
           fixed: 0,
+          total: 0,
           results: []
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
