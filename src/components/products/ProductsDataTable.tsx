@@ -108,7 +108,7 @@ export const ProductsDataTable = () => {
     product.dosage?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddToCart = async (patientId: string | null, quantity: number, shipToPractice: boolean) => {
+  const handleAddToCart = async (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string) => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
@@ -138,6 +138,7 @@ export const ProductsDataTable = () => {
             cart_id: cart.id,
             product_id: productForCart.id,
             patient_id: null,
+            provider_id: providerId,
             patient_name: "Practice Order",
             patient_email: null,
             patient_phone: null,
@@ -162,6 +163,7 @@ export const ProductsDataTable = () => {
             cart_id: cart.id,
             product_id: productForCart.id,
             patient_id: patientId,
+            provider_id: providerId,
             patient_name: patient?.name || "Unknown",
             patient_email: patient?.email,
             patient_phone: patient?.phone,

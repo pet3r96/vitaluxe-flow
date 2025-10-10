@@ -27,7 +27,7 @@ interface PatientSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: any;
-  onAddToCart: (patientId: string | null, quantity: number, shipToPractice: boolean) => void;
+  onAddToCart: (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string) => void;
 }
 
 export const PatientSelectionDialog = ({
@@ -36,10 +36,11 @@ export const PatientSelectionDialog = ({
   product,
   onAddToCart,
 }: PatientSelectionDialogProps) => {
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   const navigate = useNavigate();
   const [shipTo, setShipTo] = useState<'patient' | 'practice'>('patient');
   const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
@@ -60,15 +61,54 @@ export const PatientSelectionDialog = ({
     enabled: open && !!effectiveUserId,
   });
 
+  // Fetch active providers for practice or provider themselves
+  const { data: providers } = useQuery({
+    queryKey: ["practice-providers", effectiveUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("providers" as any)
+        .select("*")
+        .eq("practice_id", effectiveUserId)
+        .eq("active", true)
+        .order("prescriber_name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!effectiveUserId && effectiveRole === "doctor"
+  });
+
+  // Auto-select if only one provider
+  useEffect(() => {
+    if (providers && providers.length === 1 && !selectedProviderId) {
+      setSelectedProviderId(providers[0].id);
+    }
+  }, [providers, selectedProviderId]);
+
+  // If user is a provider, use their own ID
+  useEffect(() => {
+    if (effectiveRole === "provider" && effectiveUserId) {
+      setSelectedProviderId(effectiveUserId);
+    }
+  }, [effectiveRole, effectiveUserId]);
+
   useEffect(() => {
     if (!open) {
       setShipTo('patient');
       setSelectedPatientId("");
       setQuantity(1);
+      if (effectiveRole === "doctor") {
+        setSelectedProviderId(null);
+      }
     }
-  }, [open]);
+  }, [open, effectiveRole]);
 
   const handleAddToCart = () => {
+    // Validate provider selection
+    if (!selectedProviderId) {
+      toast.error("Please select a provider");
+      return;
+    }
+
     if (shipTo === 'patient' && !selectedPatientId) {
       toast.error("Please select a patient");
       return;
@@ -83,13 +123,49 @@ export const PatientSelectionDialog = ({
     onAddToCart(
       isPracticeOrder ? null : selectedPatientId, 
       quantity,
-      isPracticeOrder
+      isPracticeOrder,
+      selectedProviderId
     );
     onOpenChange(false);
   };
 
   const selectedPatient = patients?.find(p => p.id === selectedPatientId);
   const showNoPatientWarning = shipTo === 'patient' && (!patients || patients.length === 0);
+  const noActiveProviders = effectiveRole === "doctor" && providers && providers.length === 0;
+
+  if (noActiveProviders) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>No Active Providers</DialogTitle>
+            <DialogDescription>
+              You need at least one active provider to place orders.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please add a provider from the Providers page before placing an order.
+            </AlertDescription>
+          </Alert>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              onOpenChange(false);
+              navigate("/providers");
+            }}>
+              Go to Providers
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (showNoPatientWarning) {
     return (
@@ -136,6 +212,31 @@ export const PatientSelectionDialog = ({
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          {/* Provider Selection for Practices */}
+          {effectiveRole === "doctor" && providers && providers.length > 0 && (
+            <div className="grid gap-3 pb-4 border-b">
+              <Label className="text-base font-semibold">Select Provider *</Label>
+              {providers.length === 1 ? (
+                <div className="p-3 border rounded-md bg-muted">
+                  <p className="text-sm font-medium">{providers[0].prescriber_name}</p>
+                  <p className="text-xs text-muted-foreground">Provider NPI: {providers[0].npi}</p>
+                </div>
+              ) : (
+                <RadioGroup value={selectedProviderId || ""} onValueChange={setSelectedProviderId}>
+                  {providers.map((provider: any) => (
+                    <div key={provider.id} className="flex items-center space-x-2 p-2 border rounded-md">
+                      <RadioGroupItem value={provider.id} id={provider.id} />
+                      <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
+                        <span className="font-medium">{provider.prescriber_name}</span>
+                        <span className="text-xs text-muted-foreground ml-2">NPI: {provider.npi}</span>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-3">
             <Label>Where would you like this shipped?</Label>
             <RadioGroup value={shipTo} onValueChange={(value) => setShipTo(value as 'patient' | 'practice')}>

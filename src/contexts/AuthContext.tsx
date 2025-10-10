@@ -25,7 +25,9 @@ interface AuthContextType {
     password: string, 
     name: string, 
     role: string, 
-    roleData: any
+    roleData: any,
+    fullName?: string,
+    prescriberName?: string
   ) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -41,6 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [impersonatedRole, setImpersonatedRole] = useState<string | null>(null);
   const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null);
   const [impersonatedUserName, setImpersonatedUserName] = useState<string | null>(null);
+  const [practiceParentId, setPracticeParentId] = useState<string | null>(null);
   const [currentLogId, setCurrentLogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -153,6 +156,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const role = data?.role ?? null;
       setUserRole(role);
 
+      // If provider role, fetch practice_id
+      if (role === 'provider') {
+        const { data: providerData } = await supabase
+          .from('providers')
+          .select('practice_id')
+          .eq('id', userId)
+          .single();
+        
+        if (providerData) {
+          setPracticeParentId(providerData.practice_id);
+        }
+      }
+
       // Restore impersonation from sessionStorage if authorized admin
       if (role === 'admin') {
         const { data: userData } = await supabase.auth.getUser();
@@ -220,7 +236,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string, 
     name: string, 
     role: string, 
-    roleData: any
+    roleData: any,
+    fullName?: string,
+    prescriberName?: string
   ) => {
     try {
       // Check if email already exists
@@ -240,6 +258,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email,
           password,
           name,
+          fullName,
+          prescriberName,
           role,
           roleData,
         },

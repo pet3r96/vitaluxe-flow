@@ -16,6 +16,8 @@ const Dashboard = () => {
       
       if (effectiveRole === "doctor") {
         query = query.eq("doctor_id", effectiveUserId);
+      } else if (effectiveRole === "provider") {
+        query = query.eq("provider_id", effectiveUserId);
       }
       
       const { count } = await query;
@@ -53,6 +55,8 @@ const Dashboard = () => {
       
       if (effectiveRole === "doctor") {
         query = query.eq("doctor_id", effectiveUserId);
+      } else if (effectiveRole === "provider") {
+        query = query.eq("provider_id", effectiveUserId);
       }
       
       query = query.eq("status", "pending");
@@ -70,6 +74,8 @@ const Dashboard = () => {
       
       if (effectiveRole === "doctor") {
         query = query.eq("doctor_id", effectiveUserId);
+      } else if (effectiveRole === "provider") {
+        query = query.eq("provider_id", effectiveUserId);
       }
       
       query = query.eq("status", "completed");
@@ -85,7 +91,7 @@ const Dashboard = () => {
       title: "Total Orders",
       value: ordersLoading ? "..." : ordersCount?.toString() || "0",
       icon: ShoppingCart,
-      description: effectiveRole === "doctor" ? "Your orders" : "All orders",
+      description: effectiveRole === "doctor" ? "Your practice orders" : effectiveRole === "provider" ? "Your orders" : "All orders",
       isLoading: ordersLoading,
     },
     {
@@ -107,14 +113,14 @@ const Dashboard = () => {
       title: "Pending Revenue",
       value: pendingRevenueLoading ? "..." : `$${pendingRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Your pending revenue" : "Pending orders revenue",
+      description: effectiveRole === "doctor" ? "Practice pending revenue" : effectiveRole === "provider" ? "Your pending revenue" : "Pending orders revenue",
       isLoading: pendingRevenueLoading,
     },
     {
       title: "Collected Revenue",
       value: collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Your collected revenue" : "Completed orders revenue",
+      description: effectiveRole === "doctor" ? "Practice collected revenue" : effectiveRole === "provider" ? "Your collected revenue" : "Completed orders revenue",
       isLoading: collectedRevenueLoading,
     },
   ].filter(stat => !stat.hidden);

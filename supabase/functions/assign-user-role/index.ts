@@ -11,7 +11,9 @@ interface SignupRequest {
   email: string;
   password: string;
   name: string;
-  role: 'admin' | 'doctor' | 'pharmacy' | 'topline' | 'downline';
+  fullName?: string;
+  prescriberName?: string;
+  role: 'admin' | 'doctor' | 'pharmacy' | 'topline' | 'downline' | 'provider';
   parentId?: string;
   roleData: {
     // Doctor fields
@@ -27,6 +29,8 @@ interface SignupRequest {
     statesServiced?: string[];
     // Downline fields
     linkedToplineId?: string;
+    // Provider fields
+    practiceId?: string;
   };
   contractFile?: {
     name: string;
@@ -83,6 +87,25 @@ serve(async (req) => {
       if (!signupData.roleData.linkedToplineId) {
         return new Response(
           JSON.stringify({ error: 'Downline reps must be linked to a Topline rep' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else if (signupData.role === 'provider') {
+      if (!signupData.roleData.practiceId) {
+        return new Response(
+          JSON.stringify({ error: 'Providers must be linked to a practice' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!signupData.roleData.licenseNumber || !signupData.roleData.npi) {
+        return new Response(
+          JSON.stringify({ error: 'Providers must provide License Number and NPI' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!signupData.fullName || !signupData.prescriberName) {
+        return new Response(
+          JSON.stringify({ error: 'Providers must provide Full Name and Prescriber Name' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -225,6 +248,70 @@ serve(async (req) => {
       if (profileError) {
         console.error('Profile update error:', profileError);
         console.warn('Profile additional data update failed but user was created successfully');
+      }
+    }
+
+    // If provider role, create provider record
+    if (signupData.role === 'provider') {
+      const { error: providerError } = await supabaseAdmin
+        .from('providers')
+        .insert({
+          id: userId,
+          practice_id: signupData.roleData.practiceId,
+          full_name: signupData.fullName,
+          prescriber_name: signupData.prescriberName,
+          email: signupData.email,
+          npi: signupData.roleData.npi,
+          dea: signupData.roleData.dea,
+          license_number: signupData.roleData.licenseNumber,
+          phone: signupData.roleData.phone,
+          active: true,
+          created_by: signupData.roleData.practiceId
+        });
+
+      if (providerError) {
+        console.error('Provider creation error:', providerError);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create provider record' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // If doctor role, create default provider record
+    if (signupData.role === 'doctor') {
+      const { error: providerError } = await supabaseAdmin
+        .from('providers')
+        .insert({
+          id: userId,
+          practice_id: userId,
+          full_name: signupData.fullName || signupData.name,
+          prescriber_name: signupData.prescriberName || signupData.name,
+          email: signupData.email,
+          npi: signupData.roleData.npi,
+          dea: signupData.roleData.dea,
+          license_number: signupData.roleData.licenseNumber,
+          phone: signupData.roleData.phone,
+          active: true,
+          created_by: userId
+        });
+
+      if (providerError) {
+        console.error('Default provider creation error:', providerError);
+        console.warn('Failed to create default provider but practice account created');
+      }
+      
+      // Add provider role as well
+      const { error: providerRoleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'provider'
+        });
+        
+      if (providerRoleError) {
+        console.error('Provider role assignment error:', providerRoleError);
       }
     }
 

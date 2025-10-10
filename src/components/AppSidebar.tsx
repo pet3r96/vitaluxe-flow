@@ -13,6 +13,7 @@ import {
   UserCircle,
   Settings,
   ShieldCheck,
+  UserCog,
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,10 +46,19 @@ const menuItems = {
   doctor: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Patients", url: "/patients", icon: Users },
+    { title: "Providers", url: "/providers", icon: UserCog },
     { title: "Products", url: "/products", icon: Package },
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
     { title: "My Orders", url: "/orders", icon: FileText },
     { title: "My Profile", url: "/profile", icon: UserCircle },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
+  ],
+  provider: [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Patients", url: "/patients", icon: Users },
+    { title: "Products", url: "/products", icon: Package },
+    { title: "My Cart", url: "/cart", icon: ShoppingCart },
+    { title: "My Orders", url: "/orders", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
   ],
   pharmacy: [

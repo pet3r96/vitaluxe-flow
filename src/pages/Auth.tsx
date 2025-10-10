@@ -20,6 +20,8 @@ const Auth = () => {
   const { toast } = useToast();
 
   // Doctor-specific fields
+  const [providerFullName, setProviderFullName] = useState("");
+  const [prescriberName, setPrescriberName] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [npi, setNpi] = useState("");
   const [practiceNpi, setPracticeNpi] = useState("");
@@ -68,10 +70,10 @@ const Auth = () => {
     // Validate role-specific fields for signup
     if (!isLogin) {
       if (role === "doctor") {
-        if (!licenseNumber || !npi) {
+        if (!providerFullName || !prescriberName || !licenseNumber || !npi) {
           toast({
             title: "Error",
-            description: "Please provide License Number and NPI",
+            description: "Please provide Provider Full Name, Prescriber Name, License Number and NPI",
             variant: "destructive",
           });
           setLoading(false);
@@ -117,7 +119,7 @@ const Auth = () => {
               statesServiced,
             };
 
-        const { error } = await signUp(email, password, name, role, roleData);
+        const { error } = await signUp(email, password, name, role, roleData, providerFullName, prescriberName);
         if (error) {
           toast({
             title: "Error",
@@ -158,13 +160,13 @@ const Auth = () => {
           {!isLogin && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Practice Name</Label>
                 <Input
                   id="name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Acme Medical Spa"
                   className="bg-input border-border text-foreground"
                   required
                 />
@@ -191,26 +193,52 @@ const Auth = () => {
               {role === "doctor" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="licenseNumber">License Number *</Label>
+                    <Label htmlFor="providerFullName">Provider Full Name *</Label>
                     <Input
-                      id="licenseNumber"
+                      id="providerFullName"
                       type="text"
-                      value={licenseNumber}
-                      onChange={(e) => setLicenseNumber(e.target.value)}
-                      placeholder="License Number"
+                      value={providerFullName}
+                      onChange={(e) => setProviderFullName(e.target.value)}
+                      placeholder="Dr. John Doe"
                       className="bg-input border-border text-foreground"
                       required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="npi">NPI *</Label>
+                    <Label htmlFor="prescriberName">Prescriber Name *</Label>
+                    <Input
+                      id="prescriberName"
+                      type="text"
+                      value={prescriberName}
+                      onChange={(e) => setPrescriberName(e.target.value)}
+                      placeholder="Name as it appears on prescriptions"
+                      className="bg-input border-border text-foreground"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="licenseNumber">License Number *</Label>
+                    <Input
+                      id="licenseNumber"
+                      type="text"
+                      value={licenseNumber}
+                      onChange={(e) => setLicenseNumber(e.target.value)}
+                      placeholder="Medical License Number"
+                      className="bg-input border-border text-foreground"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="npi">Provider NPI # *</Label>
                     <Input
                       id="npi"
                       type="text"
                       value={npi}
                       onChange={(e) => setNpi(e.target.value)}
-                      placeholder="Your National Provider Identifier"
+                      placeholder="10-digit NPI number"
                       className="bg-input border-border text-foreground"
                       required
                     />
@@ -229,13 +257,13 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="dea">DEA</Label>
+                    <Label htmlFor="dea">Provider DEA #</Label>
                     <Input
                       id="dea"
                       type="text"
                       value={dea}
                       onChange={(e) => setDea(e.target.value)}
-                      placeholder="DEA Number"
+                      placeholder="DEA Number (optional)"
                       className="bg-input border-border text-foreground"
                     />
                   </div>
