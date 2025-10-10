@@ -56,6 +56,22 @@ serve(async (req) => {
     
     const { providerId, active }: StatusRequest = await req.json();
     
+    // Fetch the provider to get the user_id and verify ownership
+    const { data: providerData, error: fetchError } = await supabaseClient
+      .from('providers')
+      .select('user_id, practice_id')
+      .eq('id', providerId)
+      .eq('practice_id', user.id) // Verify ownership
+      .single();
+
+    if (fetchError || !providerData) {
+      console.error('Provider fetch error:', fetchError);
+      return new Response(
+        JSON.stringify({ error: 'Provider not found or access denied' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Update provider status - RLS ensures practice owns this provider
     const { error: updateError } = await supabaseClient
       .from('providers')
@@ -68,15 +84,25 @@ serve(async (req) => {
       throw updateError;
     }
     
-    // Use admin client to ban/unban the provider's auth account
+    // Use admin client to ban/unban the provider's auth account using the correct user_id
     if (!active) {
-      await supabaseAdmin.auth.admin.updateUserById(providerId, {
-        ban_duration: 'indefinite'
-      });
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(
+        providerData.user_id, // Use the auth user ID, not the provider table ID
+        { ban_duration: 'indefinite' }
+      );
+      if (banError) {
+        console.error('Failed to ban user:', banError);
+        throw new Error('Failed to deactivate provider account');
+      }
     } else {
-      await supabaseAdmin.auth.admin.updateUserById(providerId, {
-        ban_duration: 'none'
-      });
+      const { error: unbanError } = await supabaseAdmin.auth.admin.updateUserById(
+        providerData.user_id, // Use the auth user ID, not the provider table ID
+        { ban_duration: 'none' }
+      );
+      if (unbanError) {
+        console.error('Failed to unban user:', unbanError);
+        throw new Error('Failed to activate provider account');
+      }
     }
     
     return new Response(
