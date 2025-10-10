@@ -31,26 +31,28 @@ export default function MyDownlines() {
   const { data: downlines, isLoading: isDownlinesLoading } = useQuery({
     queryKey: ["my-downlines", toplineRep?.id, effectiveUserId],
     queryFn: async () => {
-      if (!toplineRep?.id) return [];
+      // Fetch assigned downlines if toplineRep exists
+      let repsByAssigned: any[] = [];
+      if (toplineRep?.id) {
+        const { data, error } = await supabase
+          .from("reps")
+          .select(`
+            *,
+            profiles:user_id (
+              id,
+              name,
+              email,
+              phone,
+              company
+            )
+          `)
+          .eq("assigned_topline_id", toplineRep.id)
+          .eq("active", true);
+        if (error) throw error;
+        repsByAssigned = data || [];
+      }
 
-      // 1) Downlines via reps.assigned_topline_id
-      const { data: repsByAssigned, error: err1 } = await supabase
-        .from("reps")
-        .select(`
-          *,
-          profiles:user_id (
-            id,
-            name,
-            email,
-            phone,
-            company
-          )
-        `)
-        .eq("assigned_topline_id", toplineRep.id)
-        .eq("active", true);
-      if (err1) throw err1;
-
-      // 2) Downlines via profiles.linked_topline_id (fallback if sync didn't set assigned_topline_id)
+      // Always fetch via profiles.linked_topline_id for fallback
       const { data: profilesByLink, error: err2 } = await supabase
         .from("profiles")
         .select("id, name, email, phone, company")
@@ -86,7 +88,7 @@ export default function MyDownlines() {
       (repsByUsers || []).forEach((r: any) => merged.set(r.id, r));
       return Array.from(merged.values());
     },
-    enabled: !!toplineRep?.id,
+    enabled: !!effectiveUserId,
   });
 
   // Get practice count for each downline
@@ -121,13 +123,6 @@ export default function MyDownlines() {
     );
   }
 
-  if (!toplineRep) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-muted-foreground">No topline representative record found for this user.</div>
-      </div>
-    );
-  }
 
   const downlineList = downlines || [];
 
