@@ -7,27 +7,27 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
 const RepProfitReports = () => {
-  const { user, userRole } = useAuth();
+  const { effectiveRole, effectiveUserId } = useAuth();
 
   // Get rep ID
   const { data: repData } = useQuery({
-    queryKey: ["rep-data", user?.id],
+    queryKey: ["rep-data", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")
         .select("*")
-        .eq("user_id", user?.id)
+        .eq("user_id", effectiveUserId)
         .single();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveUserId,
   });
 
   // Get profit details
   const { data: profitDetails, isLoading } = useQuery({
-    queryKey: ["rep-profit-details", repData?.id, userRole],
+    queryKey: ["rep-profit-details", repData?.id, effectiveRole],
     queryFn: async () => {
       if (!repData?.id) return [];
       
@@ -44,7 +44,7 @@ const RepProfitReports = () => {
           )
         `);
       
-      if (userRole === 'topline') {
+      if (effectiveRole === 'topline') {
         query = query.eq("topline_id", repData.id);
       } else {
         query = query.eq("downline_id", repData.id);
@@ -58,19 +58,19 @@ const RepProfitReports = () => {
   });
 
   const totalProfit = profitDetails?.reduce((sum, item) => {
-    const profit = userRole === 'topline' ? item.topline_profit : item.downline_profit;
+    const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
     return sum + (parseFloat(profit?.toString() || '0'));
   }, 0) || 0;
 
   const pendingProfit = profitDetails?.filter(item => item.orders?.status === 'pending' || item.orders?.status === 'processing')
     .reduce((sum, item) => {
-      const profit = userRole === 'topline' ? item.topline_profit : item.downline_profit;
+      const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
       return sum + (parseFloat(profit?.toString() || '0'));
     }, 0) || 0;
 
   const collectedProfit = profitDetails?.filter(item => item.orders?.status === 'shipped' || item.orders?.status === 'delivered')
     .reduce((sum, item) => {
-      const profit = userRole === 'topline' ? item.topline_profit : item.downline_profit;
+      const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
       return sum + (parseFloat(profit?.toString() || '0'));
     }, 0) || 0;
 
@@ -145,7 +145,7 @@ const RepProfitReports = () => {
                 </TableRow>
               ) : (
                 profitDetails?.map((profit: any) => {
-                  const myProfit = userRole === 'topline' ? profit.topline_profit : profit.downline_profit;
+                  const myProfit = effectiveRole === 'topline' ? profit.topline_profit : profit.downline_profit;
                   return (
                     <TableRow key={profit.id}>
                       <TableCell>
