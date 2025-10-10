@@ -21,6 +21,17 @@ export const AccountDetailsDialog = ({
   onOpenChange,
   account,
 }: AccountDetailsDialogProps) => {
+  const getDisplayRole = (account: any): string => {
+    const baseRole = account.user_roles?.[0]?.role;
+    
+    if (baseRole === 'doctor') {
+      const isProvider = account.providers && account.providers.length > 0;
+      return isProvider ? 'provider' : 'practice';
+    }
+    
+    return baseRole || 'No role';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -41,7 +52,7 @@ export const AccountDetailsDialog = ({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Role</p>
-              <Badge>{account.user_roles?.[0]?.role}</Badge>
+              <Badge>{getDisplayRole(account)}</Badge>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Status</p>

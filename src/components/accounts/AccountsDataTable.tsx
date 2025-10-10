@@ -40,7 +40,8 @@ export const AccountsDataTable = () => {
           *,
           user_roles(role),
           parent:profiles!parent_id(id, name, email),
-          linked_topline:profiles!linked_topline_id(id, name, email)
+          linked_topline:profiles!linked_topline_id(id, name, email),
+          providers!user_id(id, practice_id)
         `)
         .order("created_at", { ascending: false });
 
@@ -48,6 +49,17 @@ export const AccountsDataTable = () => {
       return data;
     },
   });
+
+  const getDisplayRole = (account: any): string => {
+    const baseRole = account.user_roles?.[0]?.role;
+    
+    if (baseRole === 'doctor') {
+      const isProvider = account.providers && account.providers.length > 0;
+      return isProvider ? 'provider' : 'practice';
+    }
+    
+    return baseRole || 'No role';
+  };
 
   const toggleAccountStatus = async (accountId: string, currentStatus: boolean) => {
     const { error } = await supabase
@@ -65,7 +77,8 @@ export const AccountsDataTable = () => {
       account.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.company?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesRole = roleFilter === "all" || account.user_roles?.[0]?.role === roleFilter;
+    const displayRole = getDisplayRole(account);
+    const matchesRole = roleFilter === "all" || displayRole === roleFilter;
     
     return matchesSearch && matchesRole;
   });
@@ -73,7 +86,8 @@ export const AccountsDataTable = () => {
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
       admin: "bg-accent text-accent-foreground",
-      doctor: "bg-primary text-primary-foreground",
+      practice: "bg-primary text-primary-foreground",
+      provider: "bg-primary/80 text-primary-foreground",
       pharmacy: "bg-secondary text-secondary-foreground",
       topline: "bg-muted text-muted-foreground",
       downline: "bg-card text-card-foreground",
@@ -101,7 +115,8 @@ export const AccountsDataTable = () => {
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="doctor">Doctor</SelectItem>
+              <SelectItem value="practice">Practice</SelectItem>
+              <SelectItem value="provider">Provider</SelectItem>
               <SelectItem value="pharmacy">Pharmacy</SelectItem>
               <SelectItem value="topline">Topline Rep</SelectItem>
               <SelectItem value="downline">Downline Rep</SelectItem>
@@ -148,8 +163,8 @@ export const AccountsDataTable = () => {
                   <TableCell className="font-medium">{account.name}</TableCell>
                   <TableCell>{account.email}</TableCell>
                   <TableCell>
-                    <Badge className={getRoleBadgeColor(account.user_roles?.[0]?.role)}>
-                      {account.user_roles?.[0]?.role || "No role"}
+                    <Badge className={getRoleBadgeColor(getDisplayRole(account))}>
+                      {getDisplayRole(account)}
                     </Badge>
                   </TableCell>
                   <TableCell>
