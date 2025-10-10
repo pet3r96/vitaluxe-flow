@@ -24,6 +24,7 @@ interface EnrichedDownline {
   company: string | null;
   active: boolean;
   practiceCount: number;
+  orderCount: number;
 }
 
 export function DownlinesDataTable() {
@@ -66,10 +67,30 @@ export function DownlinesDataTable() {
         }
       });
 
-      // Enrich downlines with practice counts
+      // Get order counts for each downline's practices
+      const practiceIds = practices?.map(p => p.id) || [];
+      const { data: orders, error: ordersError } = await supabase
+        .from("orders")
+        .select("doctor_id, id")
+        .in("doctor_id", practiceIds);
+
+      if (ordersError) throw ordersError;
+
+      // Create order counts map per downline
+      const orderCountsMap: Record<string, number> = {};
+      orders?.forEach((order) => {
+        const practice = practices?.find(p => p.id === order.doctor_id);
+        if (practice && practice.linked_topline_id) {
+          const downlineId = practice.linked_topline_id;
+          orderCountsMap[downlineId] = (orderCountsMap[downlineId] || 0) + 1;
+        }
+      });
+
+      // Enrich downlines with practice counts and order counts
       const enrichedDownlines: EnrichedDownline[] = downlinesData.map((downline) => ({
         ...downline,
         practiceCount: practiceCountsMap[downline.id] || 0,
+        orderCount: orderCountsMap[downline.id] || 0,
       }));
 
       return enrichedDownlines;
@@ -125,6 +146,7 @@ export function DownlinesDataTable() {
               <TableHead>Phone</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Practices</TableHead>
+              <TableHead>Orders</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -139,6 +161,9 @@ export function DownlinesDataTable() {
                   <TableCell>{downline.company || "—"}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{downline.practiceCount}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{downline.orderCount}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={downline.active ? "default" : "secondary"}>
@@ -159,7 +184,7 @@ export function DownlinesDataTable() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   {searchQuery ? "No downlines found matching your search" : "No downlines assigned yet"}
                 </TableCell>
               </TableRow>
@@ -168,7 +193,7 @@ export function DownlinesDataTable() {
         </Table>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="rounded-lg border bg-card p-4">
           <div className="text-sm text-muted-foreground">Total Downlines</div>
           <div className="text-2xl font-bold text-primary">{downlines?.length || 0}</div>
@@ -176,6 +201,12 @@ export function DownlinesDataTable() {
         <div className="rounded-lg border bg-card p-4">
           <div className="text-sm text-muted-foreground">Total Practices</div>
           <div className="text-2xl font-bold text-primary">{totalPractices}</div>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <div className="text-sm text-muted-foreground">Total Orders</div>
+          <div className="text-2xl font-bold text-primary">
+            {downlines?.reduce((sum, d) => sum + d.orderCount, 0) || 0}
+          </div>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="text-sm text-muted-foreground">Active Downlines</div>
