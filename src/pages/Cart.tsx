@@ -3,8 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { ShoppingCart, Trash2, Package, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +13,6 @@ export default function Cart() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [shipToPractice, setShipToPractice] = useState(false);
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -45,6 +42,11 @@ export default function Cart() {
     enabled: !!effectiveUserId,
   });
 
+  // Determine if this is a practice order based on cart contents
+  const hasPracticeOrder = (cart?.lines || []).some(
+    (line: any) => line.patient_name === "Practice Order"
+  );
+
   const { data: providerProfile } = useQuery({
     queryKey: ["provider-shipping", effectiveUserId],
     queryFn: async () => {
@@ -57,7 +59,7 @@ export default function Cart() {
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId && shipToPractice,
+    enabled: !!effectiveUserId && hasPracticeOrder,
   });
 
   const checkoutMutation = useMutation({
@@ -67,12 +69,12 @@ export default function Cart() {
       }
 
       // Validate practice order requirements
-      if (shipToPractice && !providerProfile?.shipping_address) {
+      if (hasPracticeOrder && !providerProfile?.shipping_address) {
         throw new Error("Please set your practice shipping address in your profile before placing practice orders");
       }
 
       // Validate patient order requirements
-      if (!shipToPractice) {
+      if (!hasPracticeOrder) {
         const hasPatientInfo = (cart.lines as any[]).every(
           (line) => line.patient_name && line.patient_id
         );
@@ -96,25 +98,25 @@ export default function Cart() {
           doctor_id: doctorIdForOrder,
           total_amount: totalAmount,
           status: "pending",
-          ship_to: shipToPractice ? "practice" : "patient",
-          practice_address: shipToPractice ? providerProfile?.shipping_address : null,
+          ship_to: hasPracticeOrder ? "practice" : "patient",
+          practice_address: hasPracticeOrder ? providerProfile?.shipping_address : null,
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
 
-      // Create order lines from cart lines
+      // Create order lines from cart lines (use data as already set in cart)
       const orderLines = cart.lines.map((line: any) => ({
         order_id: order.id,
         product_id: line.product_id,
         quantity: line.quantity || 1,
         price: line.price_snapshot,
-        patient_id: shipToPractice ? null : line.patient_id,
-        patient_name: shipToPractice ? "Practice Order" : line.patient_name,
-        patient_email: shipToPractice ? null : line.patient_email,
-        patient_phone: shipToPractice ? null : line.patient_phone,
-        patient_address: shipToPractice ? null : line.patient_address,
+        patient_id: line.patient_id,
+        patient_name: line.patient_name,
+        patient_email: line.patient_email,
+        patient_phone: line.patient_phone,
+        patient_address: line.patient_address,
         prescription_url: line.prescription_url,
         status: "pending" as const,
       }));
@@ -212,39 +214,26 @@ export default function Cart() {
         </Card>
       ) : (
         <div className="space-y-4">
-          <Card className="bg-muted/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="ship-to-practice"
-                      checked={shipToPractice}
-                      onCheckedChange={setShipToPractice}
-                    />
-                    <Label htmlFor="ship-to-practice" className="text-base font-semibold cursor-pointer">
-                      Ship to Practice / Med Spa — No Patient
-                    </Label>
+          {hasPracticeOrder && (
+            <Card className="bg-muted/50 border-primary/20">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-2 text-sm">
+                  <Building2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-base mb-1">Practice Order</p>
+                    <p className="text-muted-foreground">This order will ship directly to your practice address:</p>
+                    {providerProfile?.shipping_address ? (
+                      <p className="mt-2 font-medium">{providerProfile.shipping_address}</p>
+                    ) : (
+                      <p className="mt-2 text-destructive font-medium">
+                        ⚠️ No practice address set. Please update your profile before checkout.
+                      </p>
+                    )}
                   </div>
-                  {shipToPractice && (
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground ml-7">
-                      <Building2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium">This order will ship directly to your practice address on file:</p>
-                        {providerProfile?.shipping_address ? (
-                          <p className="mt-1">{providerProfile.shipping_address}</p>
-                        ) : (
-                          <p className="mt-1 text-destructive">
-                            ⚠️ No practice address set. Please update your profile in Messages → My Profile.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {cartLines.map((line: any) => (
             <Card key={line.id}>
