@@ -179,6 +179,74 @@ export const PatientSelectionDialog = ({
       return;
     }
 
+    // Determine destination state
+    let destinationState = '';
+    if (shipTo === 'patient') {
+      const selectedPatient = patients?.find(p => p.id === selectedPatientId);
+      if (selectedPatient?.address_state) {
+        destinationState = selectedPatient.address_state;
+      } else if (selectedPatient?.address_formatted) {
+        // Extract from formatted address
+        const stateMatch = selectedPatient.address_formatted.match(/,\s*([A-Z]{2})\s+\d{5}/);
+        destinationState = stateMatch ? stateMatch[1] : '';
+      }
+    } else {
+      // Practice order - get from provider profile
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("shipping_address_state, shipping_address_formatted")
+        .eq("id", effectiveUserId)
+        .maybeSingle();
+      
+      if (profileData?.shipping_address_state) {
+        destinationState = profileData.shipping_address_state;
+      } else if (profileData?.shipping_address_formatted) {
+        const stateMatch = profileData.shipping_address_formatted.match(/,\s*([A-Z]{2})\s+\d{5}/);
+        destinationState = stateMatch ? stateMatch[1] : '';
+      }
+    }
+
+    // Validate destination state exists
+    if (!destinationState) {
+      toast.error("Unable to determine destination state. Please ensure patient/practice address is complete.");
+      return;
+    }
+
+    // Check pharmacy availability
+    try {
+      const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+        'route-order-to-pharmacy',
+        {
+          body: {
+            product_id: product.id,
+            destination_state: destinationState
+          }
+        }
+      );
+      
+      if (routingError) {
+        console.error('Pharmacy routing check failed:', routingError);
+        toast.error("Unable to verify pharmacy availability. Please try again.");
+        return;
+      }
+      
+      // If no pharmacy found, block cart addition
+      if (!routingResult?.pharmacy_id) {
+        toast.error(
+          `Please contact your representative or create a support ticket. It appears that there is no pharmacy available for this product in ${destinationState}.`,
+          { duration: 8000 }
+        );
+        return;
+      }
+      
+      // Log success for debugging
+      console.log(`Pharmacy available: ${routingResult.reason}`);
+    } catch (error) {
+      console.error('Pharmacy availability check failed:', error);
+      toast.error("Unable to verify pharmacy availability. Please try again.");
+      return;
+    }
+
     const isPracticeOrder = shipTo === 'practice';
     
     let prescriptionUrl = null;

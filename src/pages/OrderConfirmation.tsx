@@ -176,7 +176,11 @@ export default function OrderConfirmation() {
                 assignedPharmacyId = routingResult.pharmacy_id;
                 console.log(`Routed to pharmacy: ${routingResult.reason}`);
               } else {
-                console.warn(`No pharmacy found for product ${line.product_id}: ${routingResult?.reason}`);
+                // Pharmacy routing failed - this should have been caught at add-to-cart
+                const productName = line.product?.name || 'Unknown product';
+                throw new Error(
+                  `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
+                );
               }
             } catch (error) {
               console.error('Pharmacy routing failed:', error);
@@ -251,7 +255,11 @@ export default function OrderConfirmation() {
                 assignedPharmacyId = routingResult.pharmacy_id;
                 console.log(`Routed to pharmacy: ${routingResult.reason}`);
               } else {
-                console.warn(`No pharmacy found for product ${line.product_id}: ${routingResult?.reason}`);
+                // Pharmacy routing failed - this should have been caught at add-to-cart
+                const productName = line.product?.name || 'Unknown product';
+                throw new Error(
+                  `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
+                );
               }
             } catch (error) {
               console.error('Pharmacy routing failed:', error);
