@@ -22,6 +22,7 @@ const Auth = () => {
   // Doctor-specific fields
   const [licenseNumber, setLicenseNumber] = useState("");
   const [npi, setNpi] = useState("");
+  const [practiceNpi, setPracticeNpi] = useState("");
   const [dea, setDea] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
@@ -104,6 +105,7 @@ const Auth = () => {
           ? {
               licenseNumber,
               npi,
+              practiceNpi,
               dea,
               company,
               phone,
@@ -208,9 +210,21 @@ const Auth = () => {
                       type="text"
                       value={npi}
                       onChange={(e) => setNpi(e.target.value)}
-                      placeholder="National Provider Identifier"
+                      placeholder="Your National Provider Identifier"
                       className="bg-input border-border text-foreground"
                       required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="practiceNpi">Practice NPI</Label>
+                    <Input
+                      id="practiceNpi"
+                      type="text"
+                      value={practiceNpi}
+                      onChange={(e) => setPracticeNpi(e.target.value)}
+                      placeholder="Your practice or organization's NPI"
+                      className="bg-input border-border text-foreground"
                     />
                   </div>
 

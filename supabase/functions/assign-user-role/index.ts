@@ -17,6 +17,7 @@ interface SignupRequest {
     // Doctor fields
     licenseNumber?: string;
     npi?: string;
+    practiceNpi?: string;
     dea?: string;
     company?: string;
     phone?: string;
@@ -198,6 +199,7 @@ serve(async (req) => {
     if (signupData.role === 'doctor') {
       profileUpdate.license_number = signupData.roleData.licenseNumber;
       profileUpdate.npi = signupData.roleData.npi;
+      profileUpdate.practice_npi = signupData.roleData.practiceNpi;
       profileUpdate.dea = signupData.roleData.dea;
       profileUpdate.company = signupData.roleData.company;
       profileUpdate.phone = signupData.roleData.phone;

@@ -40,6 +40,7 @@ const profileFormSchema = z.object({
     zip: z.string().optional(),
   }).optional(),
   npi: z.string().optional(),
+  practice_npi: z.string().optional(),
   dea: z.string().optional(),
   license_number: z.string().optional(),
   shipping_address: z.object({
@@ -85,6 +86,7 @@ export const ProviderProfileForm = () => {
         zip: profile.address_zip || "",
       },
       npi: profile.npi || "",
+      practice_npi: profile.practice_npi || "",
       dea: profile.dea || "",
       license_number: profile.license_number || "",
       shipping_address: {
@@ -116,6 +118,7 @@ export const ProviderProfileForm = () => {
           address_verified_at: values.address?.verified_at,
           address_verification_source: values.address?.source,
           npi: values.npi,
+          practice_npi: values.practice_npi,
           dea: values.dea,
           license_number: values.license_number,
           shipping_address_street: values.shipping_address?.street,
@@ -239,7 +242,24 @@ export const ProviderProfileForm = () => {
                     <Input placeholder="1234567890" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Your National Provider Identifier
+                    Your personal National Provider Identifier
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="practice_npi"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Practice NPI Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="1234567890" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Your practice or organization's National Provider Identifier
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

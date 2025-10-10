@@ -778,6 +778,7 @@ export type Database = {
           npi: string | null
           parent_id: string | null
           phone: string | null
+          practice_npi: string | null
           shipping_address: string | null
           shipping_address_city: string | null
           shipping_address_formatted: string | null
@@ -814,6 +815,7 @@ export type Database = {
           npi?: string | null
           parent_id?: string | null
           phone?: string | null
+          practice_npi?: string | null
           shipping_address?: string | null
           shipping_address_city?: string | null
           shipping_address_formatted?: string | null
@@ -850,6 +852,7 @@ export type Database = {
           npi?: string | null
           parent_id?: string | null
           phone?: string | null
+          practice_npi?: string | null
           shipping_address?: string | null
           shipping_address_city?: string | null
           shipping_address_formatted?: string | null
