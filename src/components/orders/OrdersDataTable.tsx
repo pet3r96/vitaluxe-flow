@@ -126,6 +126,66 @@ export const OrdersDataTable = () => {
         }
       }
 
+      // Filter by downline rep if role is downline
+      if (effectiveRole === "downline") {
+        // Get all practices assigned to this downline rep
+        const { data: assignedPractices } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("linked_topline_id", effectiveUserId)
+          .eq("active", true);
+        
+        const practiceIds = assignedPractices?.map(p => p.id) || [];
+        
+        if (practiceIds.length === 0) {
+          return []; // No practices assigned, no orders
+        }
+        
+        query = query.in("doctor_id", practiceIds);
+      }
+
+      // Filter by topline rep if role is topline
+      if (effectiveRole === "topline") {
+        // Get this topline's rep record
+        const { data: toplineRep } = await supabase
+          .from("reps")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .eq("role", "topline")
+          .maybeSingle();
+        
+        if (!toplineRep) {
+          return []; // Topline rep record not found
+        }
+
+        // Get all downline reps under this topline
+        const { data: downlineReps } = await supabase
+          .from("reps")
+          .select("user_id")
+          .eq("assigned_topline_id", toplineRep.id)
+          .eq("active", true);
+        
+        const downlineUserIds = downlineReps?.map(r => r.user_id) || [];
+        
+        // Combine topline user_id + all downline user_ids
+        const repUserIds = [effectiveUserId, ...downlineUserIds];
+        
+        // Get all practices assigned to this topline OR their downlines
+        const { data: assignedPractices } = await supabase
+          .from("profiles")
+          .select("id")
+          .in("linked_topline_id", repUserIds)
+          .eq("active", true);
+        
+        const practiceIds = assignedPractices?.map(p => p.id) || [];
+        
+        if (practiceIds.length === 0) {
+          return []; // No practices assigned, no orders
+        }
+        
+        query = query.in("doctor_id", practiceIds);
+      }
+
       const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
