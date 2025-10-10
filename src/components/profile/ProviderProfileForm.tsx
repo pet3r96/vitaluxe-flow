@@ -39,6 +39,8 @@ const profileFormSchema = z.object({
     zip: z.string().optional(),
   }).optional(),
   npi: z.string().optional(),
+  dea: z.string().optional(),
+  license_number: z.string().optional(),
   shipping_address: z.object({
     street: z.string().optional(),
     city: z.string().optional(),
@@ -81,6 +83,8 @@ export const ProviderProfileForm = () => {
         zip: profile.address_zip || "",
       },
       npi: profile.npi || "",
+      dea: profile.dea || "",
+      license_number: profile.license_number || "",
       shipping_address: {
         street: profile.shipping_address_street || "",
         city: profile.shipping_address_city || "",
@@ -109,6 +113,8 @@ export const ProviderProfileForm = () => {
           address_verified_at: values.address?.verified_at,
           address_verification_source: values.address?.source,
           npi: values.npi,
+          dea: values.dea,
+          license_number: values.license_number,
           shipping_address_street: values.shipping_address?.street,
           shipping_address_city: values.shipping_address?.city,
           shipping_address_state: values.shipping_address?.state,
@@ -217,6 +223,40 @@ export const ProviderProfileForm = () => {
                   </FormControl>
                   <FormDescription>
                     Your National Provider Identifier
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="dea"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>DEA Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="AB1234567" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Your Drug Enforcement Administration number
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="license_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>License Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="MED123456" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Your medical license number
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
