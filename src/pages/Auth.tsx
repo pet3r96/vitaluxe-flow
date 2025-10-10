@@ -192,6 +192,68 @@ const Auth = () => {
 
               {role === "doctor" && (
                 <>
+                  {/* Practice Information Section */}
+                  <div className="pt-4 pb-2">
+                    <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">
+                      Practice Information
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Company / Practice</Label>
+                    <Input
+                      id="company"
+                      type="text"
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      placeholder="Practice Name"
+                      className="bg-input border-border text-foreground"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="practiceNpi">Practice NPI</Label>
+                    <Input
+                      id="practiceNpi"
+                      type="text"
+                      value={practiceNpi}
+                      onChange={(e) => setPracticeNpi(e.target.value)}
+                      placeholder="Your practice or organization's NPI"
+                      className="bg-input border-border text-foreground"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(555) 123-4567"
+                      className="bg-input border-border text-foreground"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      type="text"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Practice Address"
+                      className="bg-input border-border text-foreground"
+                    />
+                  </div>
+
+                  {/* Provider Information Section */}
+                  <div className="pt-4 pb-2">
+                    <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">
+                      Provider Information
+                    </h3>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="providerFullName">Provider Full Name *</Label>
                     <Input
@@ -245,18 +307,6 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="practiceNpi">Practice NPI</Label>
-                    <Input
-                      id="practiceNpi"
-                      type="text"
-                      value={practiceNpi}
-                      onChange={(e) => setPracticeNpi(e.target.value)}
-                      placeholder="Your practice or organization's NPI"
-                      className="bg-input border-border text-foreground"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="dea">Provider DEA #</Label>
                     <Input
                       id="dea"
@@ -264,42 +314,6 @@ const Auth = () => {
                       value={dea}
                       onChange={(e) => setDea(e.target.value)}
                       placeholder="DEA Number (optional)"
-                      className="bg-input border-border text-foreground"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company / Practice</Label>
-                    <Input
-                      id="company"
-                      type="text"
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      placeholder="Practice Name"
-                      className="bg-input border-border text-foreground"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="(555) 123-4567"
-                      className="bg-input border-border text-foreground"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Practice Address"
                       className="bg-input border-border text-foreground"
                     />
                   </div>
