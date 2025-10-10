@@ -52,7 +52,7 @@ export default function Cart() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("shipping_address, name")
+        .select("shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_formatted, name")
         .eq("id", effectiveUserId)
         .single();
 
@@ -77,7 +77,12 @@ export default function Cart() {
       );
 
       // Validate practice order requirements
-      if (practiceLines.length > 0 && !providerProfile?.shipping_address) {
+      const hasShippingAddress = providerProfile?.shipping_address_street && 
+                                 providerProfile?.shipping_address_city && 
+                                 providerProfile?.shipping_address_state && 
+                                 providerProfile?.shipping_address_zip;
+      
+      if (practiceLines.length > 0 && !hasShippingAddress) {
         throw new Error("Please set your practice shipping address in your profile before placing practice orders");
       }
 
@@ -103,6 +108,10 @@ export default function Cart() {
           0
         );
 
+        // Format the practice address
+        const practiceAddress = providerProfile?.shipping_address_formatted || 
+          `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
+
         const { data: practiceOrder, error: practiceOrderError } = await supabase
           .from("orders")
           .insert({
@@ -110,7 +119,7 @@ export default function Cart() {
             total_amount: practiceTotal,
             status: "pending",
             ship_to: "practice",
-            practice_address: providerProfile?.shipping_address,
+            practice_address: practiceAddress,
           })
           .select()
           .single();
