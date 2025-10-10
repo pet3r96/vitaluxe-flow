@@ -77,8 +77,9 @@ export const PracticeDetailsDialog = ({
   const isAdmin = userRole === "admin";
 
   // Fetch all topline and downline reps
-  const { data: allReps } = useQuery({
-    queryKey: ["all-reps"],
+  // Fetch topline reps
+  const { data: toplineReps } = useQuery({
+    queryKey: ["topline-reps-for-practices"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -88,7 +89,7 @@ export const PracticeDetailsDialog = ({
           email,
           user_roles!inner(role)
         `)
-        .in("user_roles.role", ["topline", "downline"])
+        .eq("user_roles.role", "topline")
         .eq("active", true)
         .order("name", { ascending: true });
       
@@ -97,6 +98,33 @@ export const PracticeDetailsDialog = ({
     },
     enabled: open && isAdmin,
   });
+
+  // Fetch downline reps
+  const { data: downlineReps } = useQuery({
+    queryKey: ["downline-reps-for-practices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          email,
+          user_roles!inner(role)
+        `)
+        .eq("user_roles.role", "downline")
+        .eq("active", true)
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && isAdmin,
+  });
+
+  // Combine both arrays and sort by name
+  const allReps = [...(toplineReps || []), ...(downlineReps || [])].sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
 
   // Fetch current assigned rep
   const { data: assignedRep } = useQuery({

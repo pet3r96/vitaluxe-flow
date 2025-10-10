@@ -62,8 +62,9 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
   });
 
   // Fetch all topline and downline reps
-  const { data: allReps } = useQuery({
-    queryKey: ["all-reps"],
+  // Fetch topline reps
+  const { data: toplineReps } = useQuery({
+    queryKey: ["topline-reps-for-practices"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -73,7 +74,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
           email,
           user_roles!inner(role)
         `)
-        .in("user_roles.role", ["topline", "downline"])
+        .eq("user_roles.role", "topline")
         .eq("active", true)
         .order("name", { ascending: true });
       
@@ -82,6 +83,33 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
     },
     enabled: open,
   });
+
+  // Fetch downline reps
+  const { data: downlineReps } = useQuery({
+    queryKey: ["downline-reps-for-practices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          email,
+          user_roles!inner(role)
+        `)
+        .eq("user_roles.role", "downline")
+        .eq("active", true)
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open,
+  });
+
+  // Combine both arrays and sort by name
+  const allReps = [...(toplineReps || []), ...(downlineReps || [])].sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
