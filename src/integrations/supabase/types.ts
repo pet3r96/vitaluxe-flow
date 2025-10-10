@@ -421,6 +421,7 @@ export type Database = {
           price: number
           processing_at: string | null
           product_id: string
+          provider_id: string | null
           quantity: number | null
           shipped_at: string | null
           shipping_carrier:
@@ -445,6 +446,7 @@ export type Database = {
           price: number
           processing_at?: string | null
           product_id: string
+          provider_id?: string | null
           quantity?: number | null
           shipped_at?: string | null
           shipping_carrier?:
@@ -469,6 +471,7 @@ export type Database = {
           price?: number
           processing_at?: string | null
           product_id?: string
+          provider_id?: string | null
           quantity?: number | null
           shipped_at?: string | null
           shipping_carrier?:
@@ -505,6 +508,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_lines_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
             referencedColumns: ["id"]
           },
         ]

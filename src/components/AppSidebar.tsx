@@ -59,6 +59,7 @@ const menuItems = {
     { title: "Products", url: "/products", icon: Package },
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
     { title: "My Orders", url: "/orders", icon: FileText },
+    { title: "My Profile", url: "/profile", icon: UserCircle },
     { title: "Messages", url: "/messages", icon: MessageSquare },
   ],
   pharmacy: [

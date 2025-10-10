@@ -139,6 +139,7 @@ export default function OrderConfirmation() {
           patient_phone: line.patient_phone,
           patient_address: line.patient_address,
           prescription_url: line.prescription_url,
+          provider_id: line.provider_id,
           status: "pending" as const,
         }));
 
@@ -181,6 +182,7 @@ export default function OrderConfirmation() {
           patient_phone: line.patient_phone,
           patient_address: line.patient_address,
           prescription_url: line.prescription_url,
+          provider_id: line.provider_id,
           status: "pending" as const,
         }));
 

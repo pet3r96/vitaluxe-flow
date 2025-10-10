@@ -22,12 +22,28 @@ const Dashboard = () => {
           .eq("doctor_id", effectiveUserId);
         count = result.count || 0;
       } else if (effectiveRole === "provider" as any) {
-        const result: any = await (supabase as any)
-          .from("orders")
-          .select("*", { count: "exact", head: true })
-          .neq("status", "cancelled")
-          .eq("provider_id", effectiveUserId);
-        count = result.count || 0;
+        // Count distinct orders that have at least one order_line by this provider
+        const { data: orderLines } = await supabase
+          .from("order_lines")
+          .select("order_id");
+        
+        // Filter by provider from providers table
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .single();
+        
+        if (providerData) {
+          const { data: providerOrderLines } = await supabase
+            .from("order_lines")
+            .select("order_id")
+            .eq("provider_id", providerData.id);
+          
+          // Get unique order IDs
+          const uniqueOrderIds = [...new Set(providerOrderLines?.map(ol => ol.order_id) || [])];
+          count = uniqueOrderIds.length;
+        }
       } else {
         const result: any = await (supabase as any)
           .from("orders")
@@ -77,13 +93,31 @@ const Dashboard = () => {
           .eq("status", "pending");
         data = result.data;
       } else if (effectiveRole === "provider" as any) {
-        const result: any = await (supabase as any)
-          .from("orders")
-          .select("total_amount")
-          .neq("status", "cancelled")
-          .eq("provider_id", effectiveUserId)
-          .eq("status", "pending");
-        data = result.data;
+        // Get provider id first
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .single();
+        
+        if (providerData) {
+          // Sum order line prices where provider prescribed and order is pending
+          const { data: orderLines } = await supabase
+            .from("order_lines")
+            .select(`
+              price,
+              quantity,
+              orders!inner(status)
+            `)
+            .eq("provider_id", providerData.id)
+            .eq("orders.status", "pending");
+          
+          // Calculate total from order lines (price * quantity)
+          const total = orderLines?.reduce((sum: number, line: any) => 
+            sum + (Number(line.price || 0) * Number(line.quantity || 1)), 0) || 0;
+          return total;
+        }
+        return 0;
       } else {
         const result: any = await (supabase as any)
           .from("orders")
@@ -112,13 +146,31 @@ const Dashboard = () => {
           .eq("status", "completed");
         data = result.data;
       } else if (effectiveRole === "provider" as any) {
-        const result: any = await (supabase as any)
-          .from("orders")
-          .select("total_amount")
-          .neq("status", "cancelled")
-          .eq("provider_id", effectiveUserId)
-          .eq("status", "completed");
-        data = result.data;
+        // Get provider id first
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .single();
+        
+        if (providerData) {
+          // Sum order line prices where provider prescribed and order is completed
+          const { data: orderLines } = await supabase
+            .from("order_lines")
+            .select(`
+              price,
+              quantity,
+              orders!inner(status)
+            `)
+            .eq("provider_id", providerData.id)
+            .eq("orders.status", "completed");
+          
+          // Calculate total from order lines (price * quantity)
+          const total = orderLines?.reduce((sum: number, line: any) => 
+            sum + (Number(line.price || 0) * Number(line.quantity || 1)), 0) || 0;
+          return total;
+        }
+        return 0;
       } else {
         const result: any = await (supabase as any)
           .from("orders")

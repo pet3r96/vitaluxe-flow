@@ -24,16 +24,16 @@ import {
 import { OrderDetailsDialog } from "./OrderDetailsDialog";
 
 export const OrdersDataTable = () => {
-  const { effectiveRole } = useAuth();
+  const { effectiveRole, effectiveUserId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const { data: orders, isLoading, refetch } = useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", effectiveRole, effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("orders")
         .select(`
           *,
@@ -42,8 +42,37 @@ export const OrdersDataTable = () => {
             pharmacies:assigned_pharmacy_id(name)
           ),
           profiles:doctor_id(name)
-        `)
-        .order("created_at", { ascending: false });
+        `);
+
+      // Filter by provider if role is provider
+      if (effectiveRole === "provider") {
+        // Get provider id first
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .maybeSingle();
+        
+        if (providerData) {
+          // Get all order IDs that have at least one line by this provider
+          const { data: providerOrderLines } = await supabase
+            .from("order_lines")
+            .select("order_id")
+            .eq("provider_id", providerData.id);
+          
+          const orderIds = providerOrderLines?.map(ol => ol.order_id) || [];
+          
+          if (orderIds.length === 0) {
+            return []; // No orders for this provider
+          }
+          
+          query = query.in("id", orderIds);
+        } else {
+          return []; // Provider not found
+        }
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
