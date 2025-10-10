@@ -31,6 +31,7 @@ import { AddressInput } from "@/components/ui/address-input";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Full name is required").max(100),
+  email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
   address: z.object({
     street: z.string().optional(),
@@ -75,6 +76,7 @@ export const ProviderProfileForm = () => {
     resolver: zodResolver(profileFormSchema),
     values: profile ? {
       name: profile.name || "",
+      email: profile.email || "",
       phone: profile.phone || "",
       address: {
         street: profile.address_street || "",
@@ -103,6 +105,7 @@ export const ProviderProfileForm = () => {
         .from("profiles")
         .update({
           name: values.name,
+          email: values.email,
           phone: values.phone,
           address_street: values.address?.street,
           address_city: values.address?.city,
@@ -175,6 +178,20 @@ export const ProviderProfileForm = () => {
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Dr. John Smith" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="doctor@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
