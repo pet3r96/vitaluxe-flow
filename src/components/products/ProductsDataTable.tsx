@@ -43,6 +43,9 @@ export const ProductsDataTable = () => {
 
   const isAdmin = effectiveRole === "admin";
   const isProvider = effectiveRole === "provider" || effectiveRole === "doctor";
+  const isToplineRep = effectiveRole === "topline";
+  const isDownlineRep = effectiveRole === "downline";
+  const isRep = isToplineRep || isDownlineRep;
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -219,7 +222,7 @@ export const ProductsDataTable = () => {
             Add Product
           </Button>
         )}
-        {isProvider && <Badge variant="secondary">Read Only</Badge>}
+        {(isProvider || isRep) && <Badge variant="secondary">Read Only</Badge>}
       </div>
 
       <div className="rounded-md border border-border bg-card">
@@ -233,6 +236,10 @@ export const ProductsDataTable = () => {
               {isAdmin && <TableHead>Topline Price</TableHead>}
               {isAdmin && <TableHead>Downline Price</TableHead>}
               {isAdmin && <TableHead>Practice Price</TableHead>}
+              {isToplineRep && <TableHead>Topline Price</TableHead>}
+              {isToplineRep && <TableHead>Practice Price</TableHead>}
+              {isDownlineRep && <TableHead>Downline Price</TableHead>}
+              {isDownlineRep && <TableHead>Practice Price</TableHead>}
               {isProvider && <TableHead>Practice Price</TableHead>}
               {isAdmin && <TableHead>Pharmacy</TableHead>}
               {isAdmin && <TableHead>Rx Required</TableHead>}
@@ -243,13 +250,13 @@ export const ProductsDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 9 : 6} className="text-center">
+                <TableCell colSpan={isAdmin ? 9 : isRep ? 5 : 6} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredProducts?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 9 : 6} className="text-center text-muted-foreground">
+                <TableCell colSpan={isAdmin ? 9 : isRep ? 5 : 6} className="text-center text-muted-foreground">
                   No products found
                 </TableCell>
               </TableRow>
@@ -275,6 +282,26 @@ export const ProductsDataTable = () => {
                   {isAdmin && <TableCell>${product.topline_price || "-"}</TableCell>}
                   {isAdmin && <TableCell>${product.downline_price || "-"}</TableCell>}
                   {isAdmin && <TableCell>${product.retail_price || "-"}</TableCell>}
+                  {isToplineRep && (
+                    <TableCell className="font-semibold text-primary">
+                      ${product.topline_price || "-"}
+                    </TableCell>
+                  )}
+                  {isToplineRep && (
+                    <TableCell>
+                      ${product.retail_price || "-"}
+                    </TableCell>
+                  )}
+                  {isDownlineRep && (
+                    <TableCell className="font-semibold text-primary">
+                      ${product.downline_price || "-"}
+                    </TableCell>
+                  )}
+                  {isDownlineRep && (
+                    <TableCell>
+                      ${product.retail_price || "-"}
+                    </TableCell>
+                  )}
                   {isProvider && <TableCell className="font-semibold text-primary">${product.retail_price || product.base_price}</TableCell>}
                   {isAdmin && (
                     <TableCell>
