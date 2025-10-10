@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, KeyRound } from "lucide-react";
 import { AddressInput } from "@/components/ui/address-input";
 
 const profileFormSchema = z.object({
@@ -56,6 +56,7 @@ export const PracticeProfileForm = () => {
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["practice-profile", effectiveUserId],
@@ -151,6 +152,32 @@ export const PracticeProfileForm = () => {
     updateMutation.mutate(values);
   };
 
+  const handleResetPassword = async () => {
+    if (!profile?.email) return;
+    
+    setIsResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for instructions to reset your password.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send password reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -160,7 +187,8 @@ export const PracticeProfileForm = () => {
   }
 
   return (
-    <Card>
+    <div className="space-y-6">
+      <Card>
       <CardHeader>
         <CardTitle>Practice Profile</CardTitle>
         <CardDescription>
@@ -333,5 +361,29 @@ export const PracticeProfileForm = () => {
         </Form>
       </CardContent>
     </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Account Security</CardTitle>
+        <CardDescription>
+          Manage your password and account security settings
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          variant="outline"
+          onClick={handleResetPassword}
+          disabled={isResettingPassword}
+        >
+          {isResettingPassword ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <KeyRound className="mr-2 h-4 w-4" />
+          )}
+          Reset Password
+        </Button>
+      </CardContent>
+    </Card>
+    </div>
   );
 };

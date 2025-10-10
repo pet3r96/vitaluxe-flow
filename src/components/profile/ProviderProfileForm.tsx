@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, KeyRound } from "lucide-react";
 
 const providerFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required").max(100),
@@ -34,6 +35,7 @@ export const ProviderProfileForm = () => {
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["provider-profile", effectiveUserId],
@@ -98,6 +100,32 @@ export const ProviderProfileForm = () => {
     updateMutation.mutate(values);
   };
 
+  const handleResetPassword = async () => {
+    if (!profile?.email) return;
+    
+    setIsResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for instructions to reset your password.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send password reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -107,7 +135,8 @@ export const ProviderProfileForm = () => {
   }
 
   return (
-    <Card>
+    <div className="space-y-6">
+      <Card>
       <CardHeader>
         <CardTitle>Provider Profile</CardTitle>
         <CardDescription>
@@ -240,5 +269,29 @@ export const ProviderProfileForm = () => {
         </Form>
       </CardContent>
     </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Account Security</CardTitle>
+        <CardDescription>
+          Manage your password and account security settings
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          variant="outline"
+          onClick={handleResetPassword}
+          disabled={isResettingPassword}
+        >
+          {isResettingPassword ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <KeyRound className="mr-2 h-4 w-4" />
+          )}
+          Reset Password
+        </Button>
+      </CardContent>
+    </Card>
+    </div>
   );
 };
