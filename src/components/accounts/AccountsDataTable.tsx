@@ -54,13 +54,31 @@ export const AccountsDataTable = () => {
 
       if (providersError) throw providersError;
 
+      // Fetch all active topline profiles for reliable parent display
+      const { data: toplinesData } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          email,
+          user_roles!inner(role)
+        `)
+        .eq("user_roles.role", "topline")
+        .eq("active", true);
+
       // Create a Set of provider user_ids for quick lookup
       const providerUserIds = new Set(providersData?.map(p => p.user_id) || []);
 
-      // Enrich profiles data with provider information
+      // Create a map of toplines for quick lookup by user_id
+      const toplineMap = new Map(
+        (toplinesData || []).map(t => [t.id, { id: t.id, name: t.name, email: t.email }])
+      );
+
+      // Enrich profiles data with provider information and computed topline display
       const enrichedData = profilesData?.map(profile => ({
         ...profile,
-        isProvider: providerUserIds.has(profile.id)
+        isProvider: providerUserIds.has(profile.id),
+        linked_topline_display: profile.linked_topline_id ? toplineMap.get(profile.linked_topline_id) : null,
       }));
 
       return enrichedData;
@@ -184,8 +202,14 @@ export const AccountsDataTable = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {account.user_roles?.[0]?.role === 'downline' && account.linked_topline ? (
-                      <span className="text-sm">{account.linked_topline.name}</span>
+                    {account.user_roles?.[0]?.role === 'downline' ? (
+                      account.linked_topline_display?.name ? (
+                        <span className="text-sm">{account.linked_topline_display.name}</span>
+                      ) : account.linked_topline?.name ? (
+                        <span className="text-sm">{account.linked_topline.name}</span>
+                      ) : (
+                        "-"
+                      )
                     ) : account.parent ? (
                       <span className="text-sm">{account.parent.name}</span>
                     ) : (
