@@ -27,7 +27,7 @@ interface PatientSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: any;
-  onAddToCart: (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string) => void;
+  onAddToCart: (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string, prescriptionUrl?: string | null) => void;
 }
 
 export const PatientSelectionDialog = ({
