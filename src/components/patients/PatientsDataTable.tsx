@@ -26,6 +26,7 @@ export const PatientsDataTable = () => {
   const { data: patients, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["patients", effectiveRole, effectivePracticeId],
     queryFn: async () => {
+      console.debug('Patients query params', { effectiveRole, effectivePracticeId });
       let patientsQuery = supabase
         .from("patients")
         .select("*")
@@ -41,6 +42,8 @@ export const PatientsDataTable = () => {
         console.error("Error fetching patients:", patientsError);
         throw patientsError;
       }
+
+      console.debug('Patients fetched', patientsData?.length || 0);
 
       // Fetch practice details for all patients
       if (patientsData && patientsData.length > 0) {
@@ -63,6 +66,7 @@ export const PatientsDataTable = () => {
 
       return patientsData || [];
     },
+    enabled: effectiveRole === "admin" || effectiveRole === "doctor" || (effectiveRole === "provider" && !!effectivePracticeId),
   });
 
   const filteredPatients = patients?.filter(patient =>

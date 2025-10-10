@@ -124,14 +124,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .from('providers')
             .select('practice_id')
             .eq('user_id', effectiveUserId)
-            .maybeSingle();
+            .limit(1)
+            .single();
 
           if (!error && data) {
             setEffectivePracticeId(data.practice_id);
             setIsProviderAccount(true);
+            console.debug('Auth: effectivePracticeId set for provider', data.practice_id);
           } else {
             setEffectivePracticeId(null);
             setIsProviderAccount(false);
+            if (error) console.debug('Auth: provider practice lookup error', error);
           }
         } else {
           // Admin or other roles
