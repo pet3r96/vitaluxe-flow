@@ -40,29 +40,39 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is a practice (role='doctor')
+    // Check if user is a practice or admin
     const { data: roleData } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single();
     
-    if (roleData?.role !== 'doctor') {
+    const role = roleData?.role;
+    const isDoctor = role === 'doctor';
+    const isAdmin = role === 'admin';
+    
+    if (!isDoctor && !isAdmin) {
       return new Response(
-        JSON.stringify({ error: 'Only practices can manage provider status' }),
+        JSON.stringify({ error: 'Only practices or admins can manage provider status' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
     const { providerId, active }: StatusRequest = await req.json();
     
-    // Fetch the provider to get the user_id and verify ownership
-    const { data: providerData, error: fetchError } = await supabaseClient
+    // Fetch the provider to get the user_id
+    // For doctors: enforce practice ownership
+    // For admins: allow access to any provider
+    let providerQuery = supabaseClient
       .from('providers')
       .select('user_id, practice_id')
-      .eq('id', providerId)
-      .eq('practice_id', user.id) // Verify ownership
-      .single();
+      .eq('id', providerId);
+    
+    if (isDoctor) {
+      providerQuery = providerQuery.eq('practice_id', user.id);
+    }
+    
+    const { data: providerData, error: fetchError } = await providerQuery.single();
 
     if (fetchError || !providerData) {
       console.error('Provider fetch error:', fetchError);
@@ -72,12 +82,19 @@ serve(async (req) => {
       );
     }
     
-    // Update provider status - RLS ensures practice owns this provider
-    const { error: updateError } = await supabaseClient
+    // Update provider status
+    // For doctors: enforce practice ownership in update
+    // For admins: allow update to any provider
+    let updateQuery = supabaseClient
       .from('providers')
       .update({ active, updated_at: new Date().toISOString() })
-      .eq('id', providerId)
-      .eq('practice_id', user.id); // Double-check ownership
+      .eq('id', providerId);
+    
+    if (isDoctor) {
+      updateQuery = updateQuery.eq('practice_id', user.id);
+    }
+    
+    const { error: updateError } = await updateQuery;
     
     if (updateError) {
       console.error('Provider update error:', updateError);
