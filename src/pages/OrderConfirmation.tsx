@@ -14,6 +14,14 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 
+// Helper function to extract state from address string
+const extractStateFromAddress = (address: string): string => {
+  if (!address) return '';
+  // Extract state from address string (e.g., "123 Main St, City, CA 12345" -> "CA")
+  const stateMatch = address.match(/,\s*([A-Z]{2})\s+\d{5}/);
+  return stateMatch ? stateMatch[1] : '';
+};
+
 export default function OrderConfirmation() {
   const { effectiveUserId, user } = useAuth();
   const { toast } = useToast();
@@ -146,21 +154,52 @@ export default function OrderConfirmation() {
 
         if (practiceOrderError) throw practiceOrderError;
 
-        const practiceOrderLines = practiceLines.map((line: any) => ({
-          order_id: practiceOrder.id,
-          product_id: line.product_id,
-          quantity: line.quantity || 1,
-          price: line.price_snapshot,
-          patient_id: line.patient_id,
-          patient_name: line.patient_name,
-          patient_email: line.patient_email,
-          patient_phone: line.patient_phone,
-          patient_address: line.patient_address,
-          prescription_url: line.prescription_url,
-          provider_id: line.provider_id,
-          assigned_pharmacy_id: line.assigned_pharmacy_id,
-          status: "pending" as const,
-        }));
+        // Route each line to appropriate pharmacy
+        const practiceOrderLines = await Promise.all(
+          practiceLines.map(async (line: any) => {
+            let assignedPharmacyId = null;
+            const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
+            
+            // Call routing function
+            try {
+              const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+                'route-order-to-pharmacy',
+                {
+                  body: {
+                    product_id: line.product_id,
+                    destination_state: destinationState
+                  }
+                }
+              );
+              
+              if (!routingError && routingResult?.pharmacy_id) {
+                assignedPharmacyId = routingResult.pharmacy_id;
+                console.log(`Routed to pharmacy: ${routingResult.reason}`);
+              } else {
+                console.warn(`No pharmacy found for product ${line.product_id}: ${routingResult?.reason}`);
+              }
+            } catch (error) {
+              console.error('Pharmacy routing failed:', error);
+            }
+            
+            return {
+              order_id: practiceOrder.id,
+              product_id: line.product_id,
+              quantity: line.quantity || 1,
+              price: line.price_snapshot,
+              patient_id: line.patient_id,
+              patient_name: line.patient_name,
+              patient_email: line.patient_email,
+              patient_phone: line.patient_phone,
+              patient_address: line.patient_address,
+              prescription_url: line.prescription_url,
+              provider_id: line.provider_id,
+              assigned_pharmacy_id: assignedPharmacyId,
+              destination_state: destinationState,
+              status: "pending" as const,
+            };
+          })
+        );
 
         const { error: practiceLinesError } = await supabase
           .from("order_lines")
@@ -190,21 +229,52 @@ export default function OrderConfirmation() {
 
         if (patientOrderError) throw patientOrderError;
 
-        const patientOrderLines = patientLines.map((line: any) => ({
-          order_id: patientOrder.id,
-          product_id: line.product_id,
-          quantity: line.quantity || 1,
-          price: line.price_snapshot,
-          patient_id: line.patient_id,
-          patient_name: line.patient_name,
-          patient_email: line.patient_email,
-          patient_phone: line.patient_phone,
-          patient_address: line.patient_address,
-          prescription_url: line.prescription_url,
-          provider_id: line.provider_id,
-          assigned_pharmacy_id: line.assigned_pharmacy_id,
-          status: "pending" as const,
-        }));
+        // Route each line to appropriate pharmacy
+        const patientOrderLines = await Promise.all(
+          patientLines.map(async (line: any) => {
+            let assignedPharmacyId = null;
+            const destinationState = extractStateFromAddress(line.patient_address);
+            
+            // Call routing function
+            try {
+              const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+                'route-order-to-pharmacy',
+                {
+                  body: {
+                    product_id: line.product_id,
+                    destination_state: destinationState
+                  }
+                }
+              );
+              
+              if (!routingError && routingResult?.pharmacy_id) {
+                assignedPharmacyId = routingResult.pharmacy_id;
+                console.log(`Routed to pharmacy: ${routingResult.reason}`);
+              } else {
+                console.warn(`No pharmacy found for product ${line.product_id}: ${routingResult?.reason}`);
+              }
+            } catch (error) {
+              console.error('Pharmacy routing failed:', error);
+            }
+            
+            return {
+              order_id: patientOrder.id,
+              product_id: line.product_id,
+              quantity: line.quantity || 1,
+              price: line.price_snapshot,
+              patient_id: line.patient_id,
+              patient_name: line.patient_name,
+              patient_email: line.patient_email,
+              patient_phone: line.patient_phone,
+              patient_address: line.patient_address,
+              prescription_url: line.prescription_url,
+              provider_id: line.provider_id,
+              assigned_pharmacy_id: assignedPharmacyId,
+              destination_state: destinationState,
+              status: "pending" as const,
+            };
+          })
+        );
 
         const { error: patientLinesError } = await supabase
           .from("order_lines")

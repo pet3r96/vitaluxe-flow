@@ -410,6 +410,7 @@ export type Database = {
           assigned_pharmacy_id: string | null
           created_at: string | null
           delivered_at: string | null
+          destination_state: string | null
           id: string
           order_id: string
           patient_address: string | null
@@ -435,6 +436,7 @@ export type Database = {
           assigned_pharmacy_id?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          destination_state?: string | null
           id?: string
           order_id: string
           patient_address?: string | null
@@ -460,6 +462,7 @@ export type Database = {
           assigned_pharmacy_id?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          destination_state?: string | null
           id?: string
           order_id?: string
           patient_address?: string | null
