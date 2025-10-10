@@ -67,12 +67,29 @@ export const PatientSelectionDialog = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("providers" as any)
-        .select("*")
+        .select(`
+          id,
+          user_id,
+          active,
+          profiles!inner(
+            id,
+            name,
+            npi,
+            dea
+          )
+        `)
         .eq("practice_id", effectiveUserId)
         .eq("active", true)
-        .order("prescriber_name");
+        .order("created_at", { ascending: false });
+      
       if (error) throw error;
-      return (data || []) as any[];
+      return (data || []).map((p: any) => ({
+        id: p.id,
+        user_id: p.user_id,
+        prescriber_name: p.profiles.name,
+        npi: p.profiles.npi,
+        dea: p.profiles.dea
+      }));
     },
     enabled: open && !!effectiveUserId && effectiveRole === "doctor"
   });
