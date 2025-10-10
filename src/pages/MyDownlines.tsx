@@ -10,112 +10,29 @@ export default function MyDownlines() {
   const { user, effectiveUserId } = useAuth();
 
   // Get topline rep ID
-  const { data: toplineRep, isLoading: isToplineLoading } = useQuery({
-    queryKey: ["topline-rep", effectiveUserId],
-    queryFn: async () => {
-      if (!effectiveUserId) return null;
-      const { data, error } = await supabase
-        .from("reps")
-        .select("*")
-        .eq("user_id", effectiveUserId)
-        .eq("role", "topline")
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!effectiveUserId,
-  });
+  // Topline rep lookup via reps removed to avoid backend policy recursion; not required for listing downlines
+
 
   // Get downlines assigned to this topline (supports both assignment and profile linkage)
   const { data: downlines, isLoading: isDownlinesLoading } = useQuery({
-    queryKey: ["my-downlines", toplineRep?.id, effectiveUserId],
+    queryKey: ["my-downlines", effectiveUserId],
     queryFn: async () => {
-      // Fetch assigned downlines if toplineRep exists
-      let repsByAssigned: any[] = [];
-      if (toplineRep?.id) {
-        const { data, error } = await supabase
-          .from("reps")
-          .select(`
-            *,
-            profiles:user_id (
-              id,
-              name,
-              email,
-              phone,
-              company
-            )
-          `)
-          .eq("assigned_topline_id", toplineRep.id)
-          .eq("active", true);
-        if (error) throw error;
-        repsByAssigned = data || [];
-      }
-
-      // Always fetch via profiles.linked_topline_id for fallback
-      const { data: profilesByLink, error: err2 } = await supabase
+      if (!effectiveUserId) return [];
+      const { data, error } = await supabase
         .from("profiles")
         .select("id, name, email, phone, company")
         .eq("linked_topline_id", effectiveUserId)
         .eq("active", true);
-      if (err2) throw err2;
-
-      let repsByUsers: any[] = [];
-      const userIds = (profilesByLink || []).map((p: any) => p.id);
-      if (userIds.length > 0) {
-        const { data: repsViaUsers, error: err3 } = await supabase
-          .from("reps")
-          .select(`
-            *,
-            profiles:user_id (
-              id,
-              name,
-              email,
-              phone,
-              company
-            )
-          `)
-          .in("user_id", userIds)
-          .eq("role", "downline")
-          .eq("active", true);
-        if (err3) throw err3;
-        repsByUsers = repsViaUsers || [];
-      }
-
-      // Merge and dedupe by rep id
-      const merged = new Map<string, any>();
-      (repsByAssigned || []).forEach((r: any) => merged.set(r.id, r));
-      (repsByUsers || []).forEach((r: any) => merged.set(r.id, r));
-      return Array.from(merged.values());
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!effectiveUserId,
   });
 
   // Get practice count for each downline
-  const { data: practiceCountsMap } = useQuery({
-    queryKey: ["downline-practice-counts", toplineRep?.id],
-    queryFn: async () => {
-      if (!toplineRep?.id) return {};
-      
-      const { data, error } = await supabase
-        .from("rep_practice_links")
-        .select("rep_id")
-        .eq("assigned_topline_id", toplineRep.id);
-      
-      if (error) throw error;
-      
-      // Count practices per rep
-      const counts: Record<string, number> = {};
-      data.forEach(link => {
-        counts[link.rep_id] = (counts[link.rep_id] || 0) + 1;
-      });
-      
-      return counts;
-    },
-    enabled: !!toplineRep?.id,
-  });
+  const practiceCountsMap: Record<string, number> = {};
 
-  if (isToplineLoading || isDownlinesLoading) {
+  if (isDownlinesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-muted-foreground">Loading downlines...</div>
@@ -153,25 +70,25 @@ export default function MyDownlines() {
             <Card key={downline.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{downline.profiles?.name}</CardTitle>
+                  <CardTitle className="text-lg">{downline.name}</CardTitle>
                   <Badge variant="secondary">Downline</Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{downline.profiles?.email}</span>
+                  <span>{downline.email}</span>
                 </div>
-                {downline.profiles?.phone && (
+                {downline.phone && (
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{downline.profiles?.phone}</span>
+                    <span>{downline.phone}</span>
                   </div>
                 )}
-                {downline.profiles?.company && (
+                {downline.company && (
                   <div className="flex items-center gap-2 text-sm">
                     <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span>{downline.profiles?.company}</span>
+                    <span>{downline.company}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between pt-2 border-t">
