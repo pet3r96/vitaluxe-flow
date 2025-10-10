@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { X, Eye } from "lucide-react";
 
 const roleLabels: Record<string, string> = {
-  doctor: "Doctor",
+  doctor: "Practice",
   pharmacy: "Pharmacy",
   topline: "Topline Rep",
   downline: "Downline Rep",

@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const roleConfig = {
   admin: { label: "Admin", icon: Shield },
-  doctor: { label: "Doctor", icon: Stethoscope },
+  doctor: { label: "Practice", icon: Building2 },
   provider: { label: "Provider", icon: Users },
   pharmacy: { label: "Pharmacy", icon: Building2 },
   topline: { label: "Topline Rep", icon: TrendingUp },
