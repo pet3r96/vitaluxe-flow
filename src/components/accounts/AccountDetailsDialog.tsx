@@ -25,8 +25,7 @@ export const AccountDetailsDialog = ({
     const baseRole = account.user_roles?.[0]?.role;
     
     if (baseRole === 'doctor') {
-      const isProvider = account.providers && account.providers.length > 0;
-      return isProvider ? 'provider' : 'practice';
+      return account.isProvider ? 'provider' : 'practice';
     }
     
     return baseRole || 'No role';

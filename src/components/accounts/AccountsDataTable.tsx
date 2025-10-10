@@ -34,19 +34,36 @@ export const AccountsDataTable = () => {
   const { data: accounts, isLoading, refetch } = useQuery({
     queryKey: ["accounts", roleFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get all profiles with their roles
+      const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select(`
           *,
           user_roles(role),
           parent:profiles!parent_id(id, name, email),
-          linked_topline:profiles!linked_topline_id(id, name, email),
-          providers!user_id(id, practice_id)
+          linked_topline:profiles!linked_topline_id(id, name, email)
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (profilesError) throw profilesError;
+
+      // Then, get all providers to identify which user_ids are providers
+      const { data: providersData, error: providersError } = await supabase
+        .from("providers")
+        .select("user_id, practice_id, id");
+
+      if (providersError) throw providersError;
+
+      // Create a Set of provider user_ids for quick lookup
+      const providerUserIds = new Set(providersData?.map(p => p.user_id) || []);
+
+      // Enrich profiles data with provider information
+      const enrichedData = profilesData?.map(profile => ({
+        ...profile,
+        isProvider: providerUserIds.has(profile.id)
+      }));
+
+      return enrichedData;
     },
   });
 
@@ -54,8 +71,7 @@ export const AccountsDataTable = () => {
     const baseRole = account.user_roles?.[0]?.role;
     
     if (baseRole === 'doctor') {
-      const isProvider = account.providers && account.providers.length > 0;
-      return isProvider ? 'provider' : 'practice';
+      return account.isProvider ? 'provider' : 'practice';
     }
     
     return baseRole || 'No role';
