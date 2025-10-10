@@ -5,31 +5,31 @@ import { DollarSign, Users, Package, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const RepDashboard = () => {
-  const { user, userRole } = useAuth();
+  const { user, effectiveRole, effectiveUserId } = useAuth();
 
   // Get rep ID
   const { data: repData } = useQuery({
-    queryKey: ["rep-data", user?.id],
+    queryKey: ["rep-data", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")
         .select("*")
-        .eq("user_id", user?.id)
+        .eq("user_id", effectiveUserId)
         .single();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && (userRole === 'topline' || userRole === 'downline'),
+    enabled: !!effectiveUserId && (effectiveRole === 'topline' || effectiveRole === 'downline'),
   });
 
   // Get practice count (only for toplines)
   const { data: practiceCount } = useQuery({
-    queryKey: ["rep-practice-count", repData?.id, user?.id, userRole],
+    queryKey: ["rep-practice-count", repData?.id, effectiveUserId, effectiveRole],
     queryFn: async () => {
-      if (!repData?.id || !user?.id) return 0;
+      if (!repData?.id || !effectiveUserId) return 0;
       
-      if (userRole === 'topline') {
+      if (effectiveRole === 'topline') {
         // Get all downlines assigned to this topline
         const { data: downlines, error: downlinesError } = await supabase
           .from("reps")
@@ -40,7 +40,7 @@ const RepDashboard = () => {
         if (downlinesError) throw downlinesError;
         
         // Get user_ids of all downlines + topline's own user_id
-        const networkUserIds = [user.id, ...(downlines?.map(d => d.user_id) || [])];
+        const networkUserIds = [effectiveUserId, ...(downlines?.map(d => d.user_id) || [])];
         
         // Count practices linked to anyone in the network
         const { count, error } = await supabase
@@ -56,16 +56,16 @@ const RepDashboard = () => {
       // Downlines don't show practice count
       return 0;
     },
-    enabled: !!repData?.id && !!user?.id && userRole === 'topline',
+    enabled: !!repData?.id && !!effectiveUserId && effectiveRole === 'topline',
   });
 
   // Get order count
   const { data: orderCount } = useQuery({
-    queryKey: ["rep-order-count", repData?.id, user?.id, userRole],
+    queryKey: ["rep-order-count", repData?.id, effectiveUserId, effectiveRole],
     queryFn: async () => {
-      if (!repData?.id || !user?.id) return 0;
+      if (!repData?.id || !effectiveUserId) return 0;
       
-      if (userRole === 'topline') {
+      if (effectiveRole === 'topline') {
         // Get all downlines assigned to this topline
         const { data: downlines, error: downlinesError } = await supabase
           .from("reps")
@@ -76,7 +76,7 @@ const RepDashboard = () => {
         if (downlinesError) throw downlinesError;
         
         const downlineUserIds = downlines?.map(d => d.user_id) || [];
-        const networkUserIds = [user.id, ...downlineUserIds];
+        const networkUserIds = [effectiveUserId, ...downlineUserIds];
         
         // Get all practices in the network
         const { data: practices, error: practicesError } = await supabase
@@ -107,14 +107,14 @@ const RepDashboard = () => {
         const { data: practices, error: practicesError } = await supabase
           .from("profiles")
           .select("id")
-          .eq("linked_topline_id", user.id)
+          .eq("linked_topline_id", effectiveUserId)
           .eq("active", true);
         
         if (practicesError) throw practicesError;
         
         // Filter out the downline's own profile if it's in there
         const practiceIds = practices
-          ?.filter(p => p.id !== user.id)
+          ?.filter(p => p.id !== effectiveUserId)
           .map(p => p.id) || [];
         
         if (practiceIds.length === 0) return 0;
@@ -129,7 +129,7 @@ const RepDashboard = () => {
         return count || 0;
       }
     },
-    enabled: !!repData?.id && !!user?.id,
+    enabled: !!repData?.id && !!effectiveUserId,
   });
 
   // Get downline count (only for toplines)
@@ -147,12 +147,12 @@ const RepDashboard = () => {
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!repData?.id && userRole === 'topline',
+    enabled: !!repData?.id && effectiveRole === 'topline',
   });
 
   // Get profit stats
   const { data: profitStats } = useQuery({
-    queryKey: ["rep-profit-stats", repData?.id, userRole],
+    queryKey: ["rep-profit-stats", repData?.id, effectiveRole],
     queryFn: async () => {
       if (!repData?.id) return null;
       
@@ -160,7 +160,7 @@ const RepDashboard = () => {
         .from("order_profits")
         .select("*");
       
-      if (userRole === 'topline') {
+      if (effectiveRole === 'topline') {
         query = query.eq("topline_id", repData.id);
       } else {
         query = query.eq("downline_id", repData.id);
@@ -170,7 +170,7 @@ const RepDashboard = () => {
       if (error) throw error;
       
       const totalProfit = data.reduce((sum, item) => {
-        const profit = userRole === 'topline' ? item.topline_profit : item.downline_profit;
+        const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
         return sum + (parseFloat(profit?.toString() || '0'));
       }, 0);
       
@@ -180,7 +180,7 @@ const RepDashboard = () => {
           return true; // Placeholder
         })
         .reduce((sum, item) => {
-          const profit = userRole === 'topline' ? item.topline_profit : item.downline_profit;
+          const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
           return sum + (parseFloat(profit?.toString() || '0'));
         }, 0);
       
@@ -193,7 +193,7 @@ const RepDashboard = () => {
     enabled: !!repData?.id,
   });
 
-  const stats = userRole === 'topline' ? [
+  const stats = effectiveRole === 'topline' ? [
     {
       title: "My Practices",
       value: practiceCount || 0,
@@ -243,7 +243,7 @@ const RepDashboard = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">
-          {userRole === 'topline' ? 'Topline' : 'Downline'} Dashboard
+          {effectiveRole === 'topline' ? 'Topline' : 'Downline'} Dashboard
         </h1>
         <p className="text-muted-foreground mt-2">
           Overview of your network and performance
