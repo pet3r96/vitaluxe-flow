@@ -98,10 +98,12 @@ export const OrderDetailsDialog = ({
               <p className="text-sm text-muted-foreground">Doctor</p>
               <p className="font-medium">{order.profiles?.name || "N/A"}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Amount</p>
-              <p className="font-medium">${order.total_amount}</p>
-            </div>
+            {effectiveRole !== "pharmacy" && (
+              <div>
+                <p className="text-sm text-muted-foreground">Total Amount</p>
+                <p className="font-medium">${order.total_amount}</p>
+              </div>
+            )}
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <Badge>{order.status}</Badge>
@@ -135,10 +137,12 @@ export const OrderDetailsDialog = ({
                       <p className="text-sm text-muted-foreground">Quantity</p>
                       <p className="font-medium">{line.quantity}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Price</p>
-                      <p className="font-medium">${line.price}</p>
-                    </div>
+                    {effectiveRole !== "pharmacy" && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Price</p>
+                        <p className="font-medium">${line.price}</p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm text-muted-foreground">Pharmacy</p>
                       <p className="font-medium">{line.pharmacies?.name || "Unassigned"}</p>

@@ -308,6 +308,7 @@ const Dashboard = () => {
       icon: DollarSign,
       description: effectiveRole === "doctor" ? "Practice pending revenue" : (effectiveRole as any) === "provider" ? "Your pending revenue" : "Pending orders revenue",
       isLoading: pendingRevenueLoading,
+      hidden: effectiveRole === "pharmacy",
     },
     {
       title: "Collected Revenue",
@@ -315,6 +316,7 @@ const Dashboard = () => {
       icon: DollarSign,
       description: effectiveRole === "doctor" ? "Practice collected revenue" : (effectiveRole as any) === "provider" ? "Your collected revenue" : "Completed orders revenue",
       isLoading: collectedRevenueLoading,
+      hidden: effectiveRole === "pharmacy",
     },
   ].filter(stat => !stat.hidden);
 

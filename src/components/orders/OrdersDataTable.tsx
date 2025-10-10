@@ -237,7 +237,7 @@ export const OrdersDataTable = () => {
               <TableHead>Products</TableHead>
               <TableHead>Shipping Status</TableHead>
               <TableHead>Carrier</TableHead>
-              <TableHead>Total Amount</TableHead>
+              {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
               <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -246,13 +246,13 @@ export const OrdersDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
@@ -306,7 +306,7 @@ export const OrdersDataTable = () => {
                     <TableCell className="capitalize">
                       {order.order_lines?.[0]?.shipping_carrier || "-"}
                     </TableCell>
-                    <TableCell>${order.total_amount}</TableCell>
+                    {effectiveRole !== "pharmacy" && <TableCell>${order.total_amount}</TableCell>}
                     <TableCell>
                       <Badge className={getStatusColor(order.status)}>
                         {order.status}
