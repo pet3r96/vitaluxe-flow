@@ -430,6 +430,7 @@ export type Database = {
           doctor_id: string
           id: string
           practice_address: string | null
+          report_notes: string | null
           ship_to: string | null
           status: string | null
           stripe_payment_id: string | null
@@ -444,6 +445,7 @@ export type Database = {
           doctor_id: string
           id?: string
           practice_address?: string | null
+          report_notes?: string | null
           ship_to?: string | null
           status?: string | null
           stripe_payment_id?: string | null
@@ -458,6 +460,7 @@ export type Database = {
           doctor_id?: string
           id?: string
           practice_address?: string | null
+          report_notes?: string | null
           ship_to?: string | null
           status?: string | null
           stripe_payment_id?: string | null

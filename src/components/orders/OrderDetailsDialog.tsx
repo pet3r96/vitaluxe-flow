@@ -12,6 +12,7 @@ import { ExternalLink, XCircle } from "lucide-react";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
 import { CancelOrderDialog } from "./CancelOrderDialog";
+import { ReportNotesSection } from "./ReportNotesSection";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface OrderDetailsDialogProps {
@@ -65,6 +66,13 @@ export const OrderDetailsDialog = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          <ReportNotesSection
+            orderId={order.id}
+            initialNotes={order.report_notes}
+            doctorId={order.doctor_id}
+            onSuccess={onSuccess}
+          />
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Doctor</p>
