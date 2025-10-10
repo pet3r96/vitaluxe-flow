@@ -214,27 +214,6 @@ export default function Cart() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {hasPracticeOrder && (
-            <Card className="bg-muted/50 border-primary/20">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-2 text-sm">
-                  <Building2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-base mb-1">Practice Order</p>
-                    <p className="text-muted-foreground">This order will ship directly to your practice address:</p>
-                    {providerProfile?.shipping_address ? (
-                      <p className="mt-2 font-medium">{providerProfile.shipping_address}</p>
-                    ) : (
-                      <p className="mt-2 text-destructive font-medium">
-                        ⚠️ No practice address set. Please update your profile before checkout.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {cartLines.map((line: any) => (
             <Card key={line.id}>
               <CardContent className="flex items-center gap-4 p-6">
