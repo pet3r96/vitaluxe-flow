@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageCircle, User } from "lucide-react";
 
 const Messages = () => {
-  const { userRole } = useAuth();
-  const isProvider = userRole === "doctor";
+  const { effectiveRole } = useAuth();
+  const isProvider = effectiveRole === "doctor";
 
   return (
     <div className="space-y-6">

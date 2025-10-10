@@ -24,7 +24,7 @@ import {
 import { OrderDetailsDialog } from "./OrderDetailsDialog";
 
 export const OrdersDataTable = () => {
-  const { userRole } = useAuth();
+  const { effectiveRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);

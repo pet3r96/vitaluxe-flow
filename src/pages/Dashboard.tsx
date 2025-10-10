@@ -7,15 +7,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Dashboard component with real-time stats
 const Dashboard = () => {
-  const { user, userRole } = useAuth();
+  const { user, effectiveRole, effectiveUserId } = useAuth();
 
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
-    queryKey: ["dashboard-orders-count", userRole, user?.id],
+    queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
     queryFn: async () => {
       let query = supabase.from("orders").select("*", { count: "exact", head: true });
       
-      if (userRole === "doctor") {
-        query = query.eq("doctor_id", user?.id);
+      if (effectiveRole === "doctor") {
+        query = query.eq("doctor_id", effectiveUserId);
       }
       
       const { count } = await query;
@@ -43,16 +43,16 @@ const Dashboard = () => {
         .eq("active", true);
       return count || 0;
     },
-    enabled: userRole === "admin",
+    enabled: effectiveRole === "admin",
   });
 
   const { data: revenue, isLoading: revenueLoading } = useQuery({
-    queryKey: ["dashboard-revenue", userRole, user?.id],
+    queryKey: ["dashboard-revenue", effectiveRole, effectiveUserId],
     queryFn: async () => {
       let query = supabase.from("orders").select("total_amount");
       
-      if (userRole === "doctor") {
-        query = query.eq("doctor_id", user?.id);
+      if (effectiveRole === "doctor") {
+        query = query.eq("doctor_id", effectiveUserId);
       }
       
       query = query.eq("status", "completed");
@@ -68,7 +68,7 @@ const Dashboard = () => {
       title: "Total Orders",
       value: ordersLoading ? "..." : ordersCount?.toString() || "0",
       icon: ShoppingCart,
-      description: userRole === "doctor" ? "Your orders" : "All orders",
+      description: effectiveRole === "doctor" ? "Your orders" : "All orders",
       isLoading: ordersLoading,
     },
     {
@@ -84,13 +84,13 @@ const Dashboard = () => {
       icon: Users,
       description: "Active accounts",
       isLoading: usersLoading,
-      hidden: userRole !== "admin",
+      hidden: effectiveRole !== "admin",
     },
     {
       title: "Revenue",
       value: revenueLoading ? "..." : `$${revenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: userRole === "doctor" ? "Your revenue" : "Total revenue",
+      description: effectiveRole === "doctor" ? "Your revenue" : "Total revenue",
       isLoading: revenueLoading,
     },
   ].filter(stat => !stat.hidden);
@@ -102,9 +102,9 @@ const Dashboard = () => {
         <p className="text-muted-foreground mt-2">
           Welcome back, {user?.email}
         </p>
-        {userRole && (
+        {effectiveRole && (
           <p className="text-sm text-primary mt-1 capitalize">
-            Role: {userRole}
+            Role: {effectiveRole}
           </p>
         )}
       </div>

@@ -3,8 +3,8 @@ import { BankAccountsSection } from "@/components/profile/BankAccountsSection";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Profile = () => {
-  const { userRole } = useAuth();
-  const isProvider = userRole === "doctor";
+  const { effectiveRole } = useAuth();
+  const isProvider = effectiveRole === "doctor";
 
   if (!isProvider) {
     return (
