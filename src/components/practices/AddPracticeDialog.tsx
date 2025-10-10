@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +12,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AddressInput } from "@/components/ui/address-input";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AddPracticeDialogProps {
   open: boolean;
@@ -23,6 +38,7 @@ interface AddPracticeDialogProps {
 export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPracticeDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
+  const [repComboboxOpen, setRepComboboxOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -42,6 +58,29 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
     prescriberDea: "",
     prescriberLicense: "",
     prescriberPhone: "",
+    selectedRepId: "",
+  });
+
+  // Fetch all topline and downline reps
+  const { data: allReps } = useQuery({
+    queryKey: ["all-reps"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          email,
+          user_roles!inner(role)
+        `)
+        .in("user_roles.role", ["topline", "downline"])
+        .eq("active", true)
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,6 +128,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
             address_city: formData.address_city,
             address_state: formData.address_state,
             address_zip: formData.address_zip,
+            linkedToplineId: formData.selectedRepId || undefined,
           },
           prescriberData: {
             fullName: formData.prescriberFullName,
@@ -145,6 +185,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
       prescriberDea: "",
       prescriberLicense: "",
       prescriberPhone: "",
+      selectedRepId: "",
     });
   };
 
@@ -264,6 +305,71 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
               });
             }}
           />
+
+          <div className="space-y-2">
+            <Label htmlFor="assignedRep">Assigned Representative (Optional)</Label>
+            <p className="text-sm text-muted-foreground">
+              Assign a topline or downline rep to this practice. Leave blank if managed directly by admin.
+            </p>
+            <Popover open={repComboboxOpen} onOpenChange={setRepComboboxOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={repComboboxOpen}
+                  className="w-full justify-between"
+                >
+                  {formData.selectedRepId
+                    ? allReps?.find((rep) => rep.id === formData.selectedRepId)?.name
+                    : "Select representative (optional)..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search reps by name or email..." />
+                  <CommandList>
+                    <CommandEmpty>No representative found.</CommandEmpty>
+                    <CommandGroup>
+                      {allReps?.map((rep) => (
+                        <CommandItem
+                          key={rep.id}
+                          value={`${rep.name} ${rep.email}`}
+                          onSelect={() => {
+                            setFormData({ ...formData, selectedRepId: rep.id });
+                            setRepComboboxOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.selectedRepId === rep.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span>{rep.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {rep.email} • {rep.user_roles[0].role}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {formData.selectedRepId && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setFormData({ ...formData, selectedRepId: "" })}
+              >
+                Clear selection
+              </Button>
+            )}
+          </div>
 
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold">Default Prescriber Information</h3>

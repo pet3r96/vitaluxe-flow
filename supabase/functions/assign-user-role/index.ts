@@ -239,6 +239,7 @@ serve(async (req) => {
       profileUpdate.company = signupData.roleData.company;
       profileUpdate.phone = signupData.roleData.phone;
       profileUpdate.address = signupData.roleData.address;
+      profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
     } else if (signupData.role === 'downline') {
       profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
       profileUpdate.company = signupData.roleData.company;

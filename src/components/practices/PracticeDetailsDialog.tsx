@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,9 +10,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { ExternalLink, Copy } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ExternalLink, Copy, Pencil, Check, ChevronsUpDown, X } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface PracticeDetailsDialogProps {
   open: boolean;
@@ -24,7 +40,131 @@ export const PracticeDetailsDialog = ({
   open,
   onOpenChange,
   provider,
+  onSuccess,
 }: PracticeDetailsDialogProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [repComboboxOpen, setRepComboboxOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    company: "",
+    phone: "",
+    address: "",
+    npi: "",
+    license_number: "",
+    dea: "",
+    selectedRepId: "",
+  });
+
+  // Check if current user is admin
+  const { data: userRole } = useQuery({
+    queryKey: ["user-role"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      
+      return data?.role;
+    },
+  });
+
+  const isAdmin = userRole === "admin";
+
+  // Fetch all topline and downline reps
+  const { data: allReps } = useQuery({
+    queryKey: ["all-reps"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          email,
+          user_roles!inner(role)
+        `)
+        .in("user_roles.role", ["topline", "downline"])
+        .eq("active", true)
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && isAdmin,
+  });
+
+  // Fetch current assigned rep
+  const { data: assignedRep } = useQuery({
+    queryKey: ["practice-assigned-rep", provider?.id],
+    queryFn: async () => {
+      if (!provider?.linked_topline_id) return null;
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          email,
+          user_roles!inner(role)
+        `)
+        .eq("id", provider.linked_topline_id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!provider?.linked_topline_id && open,
+  });
+
+  // Initialize form data when provider changes
+  useEffect(() => {
+    if (provider) {
+      setFormData({
+        name: provider.name || "",
+        email: provider.email || "",
+        company: provider.company || "",
+        phone: provider.phone || "",
+        address: provider.address || "",
+        npi: provider.npi || "",
+        license_number: provider.license_number || "",
+        dea: provider.dea || "",
+        selectedRepId: provider.linked_topline_id || "",
+      });
+    }
+  }, [provider]);
+
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          name: formData.name,
+          company: formData.company,
+          phone: formData.phone,
+          address: formData.address,
+          npi: formData.npi,
+          license_number: formData.license_number,
+          dea: formData.dea,
+          linked_topline_id: formData.selectedRepId || null,
+        })
+        .eq("id", provider.id);
+
+      if (error) throw error;
+
+      toast.success("Practice updated successfully");
+      setIsEditing(false);
+      onSuccess();
+    } catch (error) {
+      toast.error("Failed to update practice");
+      console.error(error);
+    }
+  };
+
   const { data: orders } = useQuery({
     queryKey: ["practice-orders", provider?.id],
     queryFn: async () => {
@@ -112,9 +252,29 @@ export const PracticeDetailsDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Practice Details</span>
-            <Badge variant={provider.active ? "default" : "secondary"}>
-              {provider.active ? "Active" : "Inactive"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={provider.active ? "default" : "secondary"}>
+                {provider.active ? "Active" : "Inactive"}
+              </Badge>
+              {isAdmin && !isEditing && (
+                <Button size="sm" onClick={() => setIsEditing(true)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              {isAdmin && isEditing && (
+                <>
+                  <Button size="sm" onClick={handleSave}>
+                    <Check className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -128,7 +288,14 @@ export const PracticeDetailsDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Name</p>
-                  <p className="font-medium">{provider.name}</p>
+                  {isEditing ? (
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  ) : (
+                    <p className="font-medium">{provider.name}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
@@ -139,6 +306,64 @@ export const PracticeDetailsDialog = ({
                   <p className="font-medium">
                     {new Date(provider.created_at).toLocaleDateString()}
                   </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Assigned Representative</p>
+                  {isEditing ? (
+                    <Popover open={repComboboxOpen} onOpenChange={setRepComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          size="sm"
+                          aria-expanded={repComboboxOpen}
+                          className="w-full justify-between"
+                        >
+                          {formData.selectedRepId
+                            ? allReps?.find((rep) => rep.id === formData.selectedRepId)?.name
+                            : "Select rep..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search reps..." />
+                          <CommandList>
+                            <CommandEmpty>No representative found.</CommandEmpty>
+                            <CommandGroup>
+                              {allReps?.map((rep) => (
+                                <CommandItem
+                                  key={rep.id}
+                                  value={`${rep.name} ${rep.email}`}
+                                  onSelect={() => {
+                                    setFormData({ ...formData, selectedRepId: rep.id });
+                                    setRepComboboxOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.selectedRepId === rep.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{rep.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {rep.email} • {rep.user_roles[0].role}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <p className="font-medium">
+                      {assignedRep ? `${assignedRep.name} (${assignedRep.user_roles[0].role})` : "None (Admin managed)"}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -153,37 +378,58 @@ export const PracticeDetailsDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">NPI Number</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono font-medium">{provider.npi || "-"}</p>
-                    {provider.npi && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(provider.npi, "NPI")}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
+                  {isEditing ? (
+                    <Input
+                      value={formData.npi}
+                      onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono font-medium">{provider.npi || "-"}</p>
+                      {provider.npi && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(provider.npi, "NPI")}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">License Number</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono font-medium">{provider.license_number || "-"}</p>
-                    {provider.license_number && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(provider.license_number, "License")}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
+                  {isEditing ? (
+                    <Input
+                      value={formData.license_number}
+                      onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono font-medium">{provider.license_number || "-"}</p>
+                      {provider.license_number && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(provider.license_number, "License")}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">DEA Number</p>
-                  <p className="font-mono font-medium">{provider.dea || "-"}</p>
+                  {isEditing ? (
+                    <Input
+                      value={formData.dea}
+                      onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
+                    />
+                  ) : (
+                    <p className="font-mono font-medium">{provider.dea || "-"}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -198,15 +444,36 @@ export const PracticeDetailsDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Company/Practice</p>
-                  <p className="font-medium">{provider.company || "-"}</p>
+                  {isEditing ? (
+                    <Input
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    />
+                  ) : (
+                    <p className="font-medium">{provider.company || "-"}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{provider.phone || "-"}</p>
+                  {isEditing ? (
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    />
+                  ) : (
+                    <p className="font-medium">{provider.phone || "-"}</p>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Address</p>
-                  <p className="font-medium">{provider.address || "-"}</p>
+                  {isEditing ? (
+                    <Input
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    />
+                  ) : (
+                    <p className="font-medium">{provider.address || "-"}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
