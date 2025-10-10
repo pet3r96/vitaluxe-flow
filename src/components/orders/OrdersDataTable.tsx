@@ -65,11 +65,15 @@ export const OrdersDataTable = () => {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: "bg-muted text-muted-foreground",
+      filled: "bg-primary text-primary-foreground",
       processing: "bg-primary text-primary-foreground",
       shipped: "bg-secondary text-secondary-foreground",
       delivered: "bg-accent text-accent-foreground",
+      denied: "bg-destructive text-destructive-foreground",
       canceled: "bg-destructive text-destructive-foreground",
       cancelled: "bg-destructive text-destructive-foreground",
+      change_requested: "bg-amber-500 text-white",
+      mixed: "bg-gradient-to-r from-primary to-secondary text-white",
     };
     return colors[status] || "bg-muted";
   };
@@ -110,6 +114,7 @@ export const OrdersDataTable = () => {
               <TableHead>Patient Name</TableHead>
               <TableHead>Fulfillment Type</TableHead>
               <TableHead>Products</TableHead>
+              <TableHead>Shipping Status</TableHead>
               <TableHead>Carrier</TableHead>
               <TableHead>Total Amount</TableHead>
               <TableHead>Status</TableHead>
@@ -135,6 +140,15 @@ export const OrdersDataTable = () => {
                 const firstOrderLine = order.order_lines?.[0];
                 const patientId = firstOrderLine?.patient_id;
                 const patientName = firstOrderLine?.patient_name || "N/A";
+                
+                // Aggregate shipping status from order lines
+                const shippingStatuses = order.order_lines?.map((line: any) => line.status) || [];
+                const uniqueStatuses = [...new Set(shippingStatuses)];
+                const shippingStatus = uniqueStatuses.length === 1 
+                  ? uniqueStatuses[0] 
+                  : uniqueStatuses.length > 1 
+                    ? "mixed" 
+                    : "pending";
                 
                 return (
                   <TableRow key={order.id}>
@@ -162,6 +176,11 @@ export const OrdersDataTable = () => {
                     </TableCell>
                     <TableCell>
                       {order.order_lines?.length || 0} item(s)
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(shippingStatus)}>
+                        {shippingStatus === "mixed" ? "Mixed Status" : shippingStatus}
+                      </Badge>
                     </TableCell>
                     <TableCell className="capitalize">
                       {order.order_lines?.[0]?.shipping_carrier || "-"}
