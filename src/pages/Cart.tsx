@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Trash2, Package, Building2 } from "lucide-react";
+import { ShoppingCart, Trash2, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -40,187 +40,6 @@ export default function Cart() {
       return { id: cartData.id, lines: lines || [] };
     },
     enabled: !!effectiveUserId,
-  });
-
-  // Determine if this is a practice order based on cart contents
-  const hasPracticeOrder = (cart?.lines || []).some(
-    (line: any) => line.patient_name === "Practice Order"
-  );
-
-  const { data: providerProfile } = useQuery({
-    queryKey: ["provider-shipping", effectiveUserId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_formatted, name")
-        .eq("id", effectiveUserId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!effectiveUserId && hasPracticeOrder,
-  });
-
-  const checkoutMutation = useMutation({
-    mutationFn: async () => {
-      if (!cart?.id || !cart.lines || cart.lines.length === 0) {
-        throw new Error("Cart is empty");
-      }
-
-      // Group cart lines by order type
-      const practiceLines = (cart.lines as any[]).filter(
-        (line) => line.patient_name === "Practice Order"
-      );
-      const patientLines = (cart.lines as any[]).filter(
-        (line) => line.patient_name !== "Practice Order"
-      );
-
-      // Validate practice order requirements
-      const hasShippingAddress = providerProfile?.shipping_address_street && 
-                                 providerProfile?.shipping_address_city && 
-                                 providerProfile?.shipping_address_state && 
-                                 providerProfile?.shipping_address_zip;
-      
-      if (practiceLines.length > 0 && !hasShippingAddress) {
-        throw new Error("Please set your practice shipping address in your profile before placing practice orders");
-      }
-
-      // Validate patient order requirements
-      if (patientLines.length > 0) {
-        const hasPatientInfo = patientLines.every(
-          (line) => line.patient_name && line.patient_id
-        );
-        if (!hasPatientInfo) {
-          throw new Error("All items must have patient information for patient orders");
-        }
-      }
-
-      // Determine the doctor the order should be attributed to
-      const doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
-
-      const createdOrders = [];
-
-      // Create practice order if needed
-      if (practiceLines.length > 0) {
-        const practiceTotal = practiceLines.reduce<number>(
-          (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
-          0
-        );
-
-        // Format the practice address
-        const practiceAddress = providerProfile?.shipping_address_formatted || 
-          `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
-
-        const { data: practiceOrder, error: practiceOrderError } = await supabase
-          .from("orders")
-          .insert({
-            doctor_id: doctorIdForOrder,
-            total_amount: practiceTotal,
-            status: "pending",
-            ship_to: "practice",
-            practice_address: practiceAddress,
-          })
-          .select()
-          .single();
-
-        if (practiceOrderError) throw practiceOrderError;
-
-        // Create practice order lines
-        const practiceOrderLines = practiceLines.map((line: any) => ({
-          order_id: practiceOrder.id,
-          product_id: line.product_id,
-          quantity: line.quantity || 1,
-          price: line.price_snapshot,
-          patient_id: line.patient_id,
-          patient_name: line.patient_name,
-          patient_email: line.patient_email,
-          patient_phone: line.patient_phone,
-          patient_address: line.patient_address,
-          prescription_url: line.prescription_url,
-          status: "pending" as const,
-        }));
-
-        const { error: practiceLinesError } = await supabase
-          .from("order_lines")
-          .insert(practiceOrderLines);
-
-        if (practiceLinesError) throw practiceLinesError;
-
-        createdOrders.push(practiceOrder);
-      }
-
-      // Create patient order if needed
-      if (patientLines.length > 0) {
-        const patientTotal = patientLines.reduce<number>(
-          (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
-          0
-        );
-
-        const { data: patientOrder, error: patientOrderError } = await supabase
-          .from("orders")
-          .insert({
-            doctor_id: doctorIdForOrder,
-            total_amount: patientTotal,
-            status: "pending",
-            ship_to: "patient",
-            practice_address: null,
-          })
-          .select()
-          .single();
-
-        if (patientOrderError) throw patientOrderError;
-
-        // Create patient order lines
-        const patientOrderLines = patientLines.map((line: any) => ({
-          order_id: patientOrder.id,
-          product_id: line.product_id,
-          quantity: line.quantity || 1,
-          price: line.price_snapshot,
-          patient_id: line.patient_id,
-          patient_name: line.patient_name,
-          patient_email: line.patient_email,
-          patient_phone: line.patient_phone,
-          patient_address: line.patient_address,
-          prescription_url: line.prescription_url,
-          status: "pending" as const,
-        }));
-
-        const { error: patientLinesError } = await supabase
-          .from("order_lines")
-          .insert(patientOrderLines);
-
-        if (patientLinesError) throw patientLinesError;
-
-        createdOrders.push(patientOrder);
-      }
-
-      // Clear cart lines
-      const { error: deleteError } = await supabase
-        .from("cart_lines")
-        .delete()
-        .eq("cart_id", cart.id);
-
-      if (deleteError) throw deleteError;
-
-      return createdOrders;
-    },
-    onSuccess: (orders) => {
-      const orderCount = orders.length;
-      toast({
-        title: "Order Placed Successfully! 🎉",
-        description: `${orderCount} order${orderCount > 1 ? 's' : ''} created. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      navigate("/orders");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Checkout Failed",
-        description: error.message || "Failed to place order. Please try again.",
-        variant: "destructive",
-      });
-    },
   });
 
   const removeMutation = useMutation({
@@ -341,13 +160,12 @@ export default function Cart() {
               <Button 
                 className="w-full" 
                 size="lg"
-                onClick={() => checkoutMutation.mutate()}
-                disabled={checkoutMutation.isPending}
+                onClick={() => navigate("/order-confirmation")}
               >
-                {checkoutMutation.isPending ? "Processing..." : "Place Test Order"}
+                Proceed to Confirmation
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                Test mode: Order will be created immediately without payment
+                Review and confirm your order on the next page
               </p>
             </CardContent>
           </Card>

@@ -20,6 +20,7 @@ import Messages from "./pages/Messages";
 import Pharmacies from "./pages/Pharmacies";
 import Reports from "./pages/Reports";
 import Cart from "./pages/Cart";
+import OrderConfirmation from "./pages/OrderConfirmation";
 import Downlines from "./pages/Downlines";
 import MedSpas from "./pages/MedSpas";
 import Profile from "./pages/Profile";
@@ -61,6 +62,7 @@ const App = () => (
                           <Route path="/pharmacies" element={<Pharmacies />} />
                           <Route path="/reports" element={<Reports />} />
                           <Route path="/cart" element={<Cart />} />
+                          <Route path="/order-confirmation" element={<OrderConfirmation />} />
                           <Route path="/downlines" element={<Downlines />} />
                           <Route path="/med-spas" element={<MedSpas />} />
                           <Route path="/profile" element={<Profile />} />
