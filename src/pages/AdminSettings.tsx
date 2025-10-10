@@ -1,10 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddressVerificationPanel } from "@/components/admin/AddressVerificationPanel";
 import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView";
+import { OrphanedPharmacyFixer } from "@/components/admin/OrphanedPharmacyFixer";
 import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, MapPin, Activity, Building2, Users } from "lucide-react";
+import { Shield, MapPin, Activity, Building2, Users, Wrench } from "lucide-react";
 
 const AdminSettings = () => {
   return (
@@ -33,6 +34,10 @@ const AdminSettings = () => {
           <TabsTrigger value="impersonation" className="gap-2">
             <Shield className="h-4 w-4" />
             Impersonation Logs
+          </TabsTrigger>
+          <TabsTrigger value="utilities" className="gap-2">
+            <Wrench className="h-4 w-4" />
+            Utilities
           </TabsTrigger>
           <TabsTrigger value="audit" className="gap-2">
             <Activity className="h-4 w-4" />
@@ -94,6 +99,10 @@ const AdminSettings = () => {
               <ImpersonationLogsView />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="utilities" className="space-y-4">
+          <OrphanedPharmacyFixer />
         </TabsContent>
 
         <TabsContent value="audit" className="space-y-4">

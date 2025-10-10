@@ -9,6 +9,9 @@ verify_jwt = true
 [functions.cancel-order]
 verify_jwt = true
 
+[functions.fix-orphaned-pharmacy]
+verify_jwt = true
+
 [functions.manage-provider-status]
 verify_jwt = true
 

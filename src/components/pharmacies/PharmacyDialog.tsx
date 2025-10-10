@@ -71,42 +71,91 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
     }));
   };
 
+  const generateSecurePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array).map(x => chars[x % chars.length]).join('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (formData.states_serviced.length === 0) {
+      toast.error("Please select at least one state that this pharmacy services");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const pharmacyData = {
-        name: formData.name,
-        contact_email: formData.contact_email,
-        address_street: formData.address_street || null,
-        address_city: formData.address_city || null,
-        address_state: formData.address_state || null,
-        address_zip: formData.address_zip || null,
-        states_serviced: formData.states_serviced,
-        priority_map: formData.priority_map,
-        active: true,
-      };
-
       if (pharmacy) {
+        // Update existing pharmacy
+        const pharmacyData = {
+          name: formData.name,
+          contact_email: formData.contact_email,
+          address_street: formData.address_street,
+          address_city: formData.address_city,
+          address_state: formData.address_state,
+          address_zip: formData.address_zip,
+          address: `${formData.address_street}, ${formData.address_city}, ${formData.address_state} ${formData.address_zip}`.trim(),
+          states_serviced: formData.states_serviced,
+          priority_map: formData.priority_map,
+        };
+
         const { error } = await supabase
           .from("pharmacies")
           .update(pharmacyData)
           .eq("id", pharmacy.id);
 
         if (error) throw error;
+
         toast.success("Pharmacy updated successfully");
       } else {
-        const { error } = await supabase.from("pharmacies").insert([pharmacyData]);
+        // Create new pharmacy with complete user account
+        const tempPassword = generateSecurePassword();
+
+        const { data, error } = await supabase.functions.invoke('assign-user-role', {
+          body: {
+            email: formData.contact_email,
+            password: tempPassword,
+            name: formData.name,
+            role: 'pharmacy',
+            roleData: {
+              contactEmail: formData.contact_email,
+              statesServiced: formData.states_serviced,
+              address: `${formData.address_street}, ${formData.address_city}, ${formData.address_state} ${formData.address_zip}`.trim()
+            }
+          }
+        });
 
         if (error) throw error;
-        toast.success("Pharmacy created successfully");
+
+        // Update the pharmacy record with additional fields
+        const { error: updateError } = await supabase
+          .from("pharmacies")
+          .update({
+            address_street: formData.address_street,
+            address_city: formData.address_city,
+            address_state: formData.address_state,
+            address_zip: formData.address_zip,
+            priority_map: formData.priority_map,
+          })
+          .eq('contact_email', formData.contact_email)
+          .eq('active', true);
+
+        if (updateError) throw updateError;
+
+        toast.success(`Pharmacy created! Temporary password: ${tempPassword}`, {
+          duration: 10000,
+        });
       }
 
       onSuccess();
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
+      console.error("Error saving pharmacy:", error);
       toast.error(error.message || "Failed to save pharmacy");
     } finally {
       setLoading(false);
