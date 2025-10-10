@@ -1466,6 +1466,14 @@ export type Database = {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
       }
+      can_downline_view_practice: {
+        Args: { _downline_user_id: string; _practice_id: string }
+        Returns: boolean
+      }
+      can_topline_view_practice: {
+        Args: { _practice_id: string; _topline_user_id: string }
+        Returns: boolean
+      }
       create_user_with_role: {
         Args: {
           p_email: string
