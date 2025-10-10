@@ -22,6 +22,7 @@ import Reports from "./pages/Reports";
 import Cart from "./pages/Cart";
 import Downlines from "./pages/Downlines";
 import MedSpas from "./pages/MedSpas";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ const App = () => (
                           <Route path="/cart" element={<Cart />} />
                           <Route path="/downlines" element={<Downlines />} />
                           <Route path="/med-spas" element={<MedSpas />} />
+                          <Route path="/profile" element={<Profile />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </main>
