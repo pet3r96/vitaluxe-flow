@@ -1,0 +1,104 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface CancelOrderRequest {
+  orderId: string;
+  reason?: string;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { orderId, reason } = await req.json() as CancelOrderRequest;
+
+    console.log(`Cancel request from ${user.id} for order ${orderId}`);
+
+    // Check if user can cancel this order
+    const { data: canCancel, error: checkError } = await supabase
+      .rpc('can_cancel_order', { 
+        _order_id: orderId,
+        _user_id: user.id 
+      });
+
+    if (checkError) {
+      console.error('Error checking cancellation eligibility:', checkError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify cancellation eligibility' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!canCancel) {
+      console.log(`User ${user.id} not authorized to cancel order ${orderId}`);
+      return new Response(
+        JSON.stringify({ error: 'You are not authorized to cancel this order or the cancellation window has expired' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Perform cancellation
+    const { data: order, error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: user.id,
+        cancellation_reason: reason || 'No reason provided'
+      })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error cancelling order:', updateError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to cancel order' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Order ${orderId} successfully cancelled by ${user.id}`);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        order,
+        message: 'Order cancelled successfully'
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});

@@ -423,6 +423,9 @@ export type Database = {
       }
       orders: {
         Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string | null
           doctor_id: string
           id: string
@@ -434,6 +437,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string | null
           doctor_id: string
           id?: string
@@ -445,6 +451,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string | null
           doctor_id?: string
           id?: string
@@ -1043,6 +1052,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_cancel_order: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
       create_user_with_role: {
         Args: {
           p_email: string

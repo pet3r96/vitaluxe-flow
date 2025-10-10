@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,9 +8,11 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, XCircle } from "lucide-react";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
+import { CancelOrderDialog } from "./CancelOrderDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -24,6 +27,22 @@ export const OrderDetailsDialog = ({
   order,
   onSuccess,
 }: OrderDetailsDialogProps) => {
+  const { effectiveRole, effectiveUserId } = useAuth();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+
+  const canCancelOrder = () => {
+    if (order.status === 'cancelled') return false;
+    
+    const isAdmin = effectiveRole === 'admin';
+    if (isAdmin) return true;
+    
+    const createdAt = new Date(order.created_at);
+    const now = new Date();
+    const hoursPassed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    
+    return effectiveUserId === order.doctor_id && hoursPassed < 1;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -32,6 +51,17 @@ export const OrderDetailsDialog = ({
           <DialogDescription>
             Order #{order.id.slice(0, 8)} - {new Date(order.created_at).toLocaleDateString()}
           </DialogDescription>
+          {order.status !== 'cancelled' && canCancelOrder() && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setCancelDialogOpen(true)}
+              className="mt-2 w-fit"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Cancel Order
+            </Button>
+          )}
         </DialogHeader>
 
         <div className="space-y-6">
@@ -142,6 +172,16 @@ export const OrderDetailsDialog = ({
           </div>
         </div>
       </DialogContent>
+      
+      <CancelOrderDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        orderId={order.id}
+        canCancel={canCancelOrder()}
+        isAdmin={effectiveRole === 'admin'}
+        orderCreatedAt={order.created_at}
+        onSuccess={onSuccess}
+      />
     </Dialog>
   );
 };

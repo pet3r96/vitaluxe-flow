@@ -69,6 +69,7 @@ export const OrdersDataTable = () => {
       shipped: "bg-secondary text-secondary-foreground",
       delivered: "bg-accent text-accent-foreground",
       canceled: "bg-destructive text-destructive-foreground",
+      cancelled: "bg-destructive text-destructive-foreground",
     };
     return colors[status] || "bg-muted";
   };
@@ -95,7 +96,7 @@ export const OrdersDataTable = () => {
             <SelectItem value="processing">Processing</SelectItem>
             <SelectItem value="shipped">Shipped</SelectItem>
             <SelectItem value="delivered">Delivered</SelectItem>
-            <SelectItem value="canceled">Canceled</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
       </div>

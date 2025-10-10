@@ -12,7 +12,7 @@ const Dashboard = () => {
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from("orders").select("*", { count: "exact", head: true });
+      let query = supabase.from("orders").select("*", { count: "exact", head: true }).neq("status", "cancelled");
       
       if (effectiveRole === "doctor") {
         query = query.eq("doctor_id", effectiveUserId);
@@ -49,7 +49,7 @@ const Dashboard = () => {
   const { data: pendingRevenue, isLoading: pendingRevenueLoading } = useQuery({
     queryKey: ["dashboard-pending-revenue", effectiveRole, effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from("orders").select("total_amount");
+      let query = supabase.from("orders").select("total_amount").neq("status", "cancelled");
       
       if (effectiveRole === "doctor") {
         query = query.eq("doctor_id", effectiveUserId);
@@ -66,7 +66,7 @@ const Dashboard = () => {
   const { data: collectedRevenue, isLoading: collectedRevenueLoading } = useQuery({
     queryKey: ["dashboard-collected-revenue", effectiveRole, effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from("orders").select("total_amount");
+      let query = supabase.from("orders").select("total_amount").neq("status", "cancelled");
       
       if (effectiveRole === "doctor") {
         query = query.eq("doctor_id", effectiveUserId);
