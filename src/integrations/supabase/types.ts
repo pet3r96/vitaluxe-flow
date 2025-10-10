@@ -99,6 +99,7 @@ export type Database = {
           prescription_url: string | null
           price_snapshot: number | null
           product_id: string
+          provider_id: string | null
           quantity: number | null
         }
         Insert: {
@@ -114,6 +115,7 @@ export type Database = {
           prescription_url?: string | null
           price_snapshot?: number | null
           product_id: string
+          provider_id?: string | null
           quantity?: number | null
         }
         Update: {
@@ -129,6 +131,7 @@ export type Database = {
           prescription_url?: string | null
           price_snapshot?: number | null
           product_id?: string
+          provider_id?: string | null
           quantity?: number | null
         }
         Relationships: [
@@ -151,6 +154,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
             referencedColumns: ["id"]
           },
         ]
