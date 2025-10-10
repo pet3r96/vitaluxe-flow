@@ -273,6 +273,19 @@ export const OrdersDataTable = () => {
     return colors[status] || "bg-muted";
   };
 
+  const getStatusLabel = (status: string, count: number) => {
+    const labels: Record<string, string> = {
+      all: "All Statuses",
+      pending: "Pending",
+      processing: "Processing",
+      shipped: "Shipped",
+      denied: "Denied",
+      delivered: "Delivered",
+      cancelled: "Cancelled",
+    };
+    return `${labels[status] || status} (${count})`;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -287,7 +300,9 @@ export const OrdersDataTable = () => {
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue>
+              {getStatusLabel(statusFilter, filteredOrders?.length || 0)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
