@@ -69,6 +69,7 @@ const menuItems = {
   ],
   topline: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Practices", url: "/practices", icon: Stethoscope },
     { title: "Products", url: "/products", icon: Package },
     { title: "My Downlines", url: "/downlines", icon: Users },
     { title: "Orders", url: "/orders", icon: ShoppingCart },
@@ -78,6 +79,7 @@ const menuItems = {
   ],
   downline: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Practices", url: "/practices", icon: Stethoscope },
     { title: "Products", url: "/products", icon: Package },
     { title: "Orders", url: "/orders", icon: ShoppingCart },
     { title: "Reports", url: "/rep-reports", icon: FileText },
