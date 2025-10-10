@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_role: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       cart: {
         Row: {
           created_at: string | null
@@ -316,6 +358,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_notifications: boolean | null
+          id: string
+          order_delivered_alerts: boolean | null
+          order_shipped_alerts: boolean | null
+          order_status_updates: boolean | null
+          sms_notifications: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          order_delivered_alerts?: boolean | null
+          order_shipped_alerts?: boolean | null
+          order_status_updates?: boolean | null
+          sms_notifications?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          order_delivered_alerts?: boolean | null
+          order_shipped_alerts?: boolean | null
+          order_status_updates?: boolean | null
+          sms_notifications?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       order_lines: {
         Row: {
