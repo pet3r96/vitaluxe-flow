@@ -29,35 +29,54 @@ export const ProvidersDataTable = () => {
   const { data: providers, isLoading, refetch } = useQuery({
     queryKey: ["providers", effectiveUserId, effectiveRole],
     queryFn: async () => {
-      let query = supabase
-        .from("providers" as any)
-        .select(`
-          *,
-          profiles:user_id (
-            name,
-            email,
-            npi,
-            dea,
-            license_number,
-            phone,
-            full_name
-          ),
-          practice:practice_id (
-            name,
-            company,
-            email
-          )
-        `)
+      // Step 1: Fetch all providers for this practice
+      let providersQuery = supabase
+        .from("providers")
+        .select("*")
         .order("created_at", { ascending: false });
       
       // If doctor role, only show their own providers
       if (effectiveRole === "doctor") {
-        query = query.eq("practice_id", effectiveUserId);
+        providersQuery = providersQuery.eq("practice_id", effectiveUserId);
       }
       
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as any[];
+      const { data: providersData, error: providersError } = await providersQuery;
+      if (providersError) throw providersError;
+
+      if (!providersData || providersData.length === 0) {
+        return [];
+      }
+
+      // Step 2: Fetch all user profiles for these providers
+      const userIds = providersData.map(p => p.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, name, email, npi, dea, license_number, phone, full_name")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Step 3: Fetch practice information
+      const practiceIds = [...new Set(providersData.map(p => p.practice_id))];
+      const { data: practicesData, error: practicesError } = await supabase
+        .from("profiles")
+        .select("id, name, company, email")
+        .in("id", practiceIds);
+
+      if (practicesError) throw practicesError;
+
+      // Step 4: Create lookup maps
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      const practicesMap = new Map(practicesData?.map(p => [p.id, p]) || []);
+
+      // Step 5: Merge the data
+      const enrichedProviders = providersData.map(provider => ({
+        ...provider,
+        profiles: profilesMap.get(provider.user_id) || null,
+        practice: practicesMap.get(provider.practice_id) || null,
+      }));
+
+      return enrichedProviders;
     },
     enabled: !!effectiveUserId
   });
