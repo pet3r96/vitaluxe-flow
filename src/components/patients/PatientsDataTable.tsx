@@ -132,7 +132,12 @@ export const PatientsDataTable = () => {
                   <TableCell className="font-medium">{patient.name}</TableCell>
                   <TableCell>{patient.email || "-"}</TableCell>
                   <TableCell>{patient.phone || "-"}</TableCell>
-                  <TableCell className="max-w-xs truncate">{patient.address || "-"}</TableCell>
+                  <TableCell className="max-w-xs truncate">
+                    {patient.address_formatted || 
+                     (patient.address_street ? 
+                       `${patient.address_street}${patient.address_city ? ', ' + patient.address_city : ''}${patient.address_state ? ', ' + patient.address_state : ''} ${patient.address_zip || ''}`.trim() 
+                       : patient.address || "-")}
+                  </TableCell>
                   {isAdmin && (
                     <TableCell>
                       {patient.provider?.name || "-"}
@@ -158,10 +163,16 @@ export const PatientsDataTable = () => {
 
       <PatientDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setSelectedPatient(null);
+          }
+        }}
         patient={selectedPatient}
         onSuccess={() => {
           refetch();
+          setSelectedPatient(null);
           setDialogOpen(false);
         }}
       />
