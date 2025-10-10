@@ -128,14 +128,25 @@ export const OrdersDataTable = () => {
 
       // Filter by downline rep if role is downline
       if (effectiveRole === "downline") {
-        // Get all practices assigned to this downline rep
-        const { data: assignedPractices } = await supabase
-          .from("profiles")
+        // Get current downline rep id
+        const { data: rep } = await supabase
+          .from("reps")
           .select("id")
-          .eq("linked_topline_id", effectiveUserId)
-          .eq("active", true);
+          .eq("user_id", effectiveUserId)
+          .eq("role", "downline")
+          .maybeSingle();
         
-        const practiceIds = assignedPractices?.map(p => p.id) || [];
+        if (!rep) {
+          return []; // Rep record not found
+        }
+
+        // Get practice IDs from rep_practice_links
+        const { data: links } = await supabase
+          .from("rep_practice_links")
+          .select("practice_id")
+          .eq("rep_id", rep.id);
+        
+        const practiceIds = links?.map(l => l.practice_id) || [];
         
         if (practiceIds.length === 0) {
           return []; // No practices assigned, no orders
@@ -146,7 +157,7 @@ export const OrdersDataTable = () => {
 
       // Filter by topline rep if role is topline
       if (effectiveRole === "topline") {
-        // Get this topline's rep record
+        // Get topline rep id
         const { data: toplineRep } = await supabase
           .from("reps")
           .select("id")
@@ -158,26 +169,13 @@ export const OrdersDataTable = () => {
           return []; // Topline rep record not found
         }
 
-        // Get all downline reps under this topline
-        const { data: downlineReps } = await supabase
-          .from("reps")
-          .select("user_id")
-          .eq("assigned_topline_id", toplineRep.id)
-          .eq("active", true);
+        // Get practice IDs assigned under this topline from rep_practice_links
+        const { data: links } = await supabase
+          .from("rep_practice_links")
+          .select("practice_id")
+          .eq("assigned_topline_id", toplineRep.id);
         
-        const downlineUserIds = downlineReps?.map(r => r.user_id) || [];
-        
-        // Combine topline user_id + all downline user_ids
-        const repUserIds = [effectiveUserId, ...downlineUserIds];
-        
-        // Get all practices assigned to this topline OR their downlines
-        const { data: assignedPractices } = await supabase
-          .from("profiles")
-          .select("id")
-          .in("linked_topline_id", repUserIds)
-          .eq("active", true);
-        
-        const practiceIds = assignedPractices?.map(p => p.id) || [];
+        const practiceIds = links?.map(l => l.practice_id) || [];
         
         if (practiceIds.length === 0) {
           return []; // No practices assigned, no orders
