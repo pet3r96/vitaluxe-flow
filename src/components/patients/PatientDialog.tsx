@@ -28,7 +28,7 @@ export const PatientDialog = ({
   patient,
   onSuccess,
 }: PatientDialogProps) => {
-  const { user } = useAuth();
+  const { user, effectivePracticeId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -130,11 +130,16 @@ export const PatientDialog = ({
         toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient
+        if (!effectivePracticeId) {
+          toast.error("Unable to determine practice. Please try again.");
+          return;
+        }
+        
         const { error } = await supabase
           .from("patients")
           .insert({
             ...patientData,
-            provider_id: user.id,
+            practice_id: effectivePracticeId,
           });
 
         if (error) throw error;

@@ -16,6 +16,7 @@ interface AuthContextType {
   isImpersonating: boolean;
   effectiveRole: string | null;
   effectiveUserId: string | null;
+  effectivePracticeId: string | null;
   canImpersonate: boolean;
   isProviderAccount: boolean;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
@@ -48,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentLogId, setCurrentLogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isProviderAccount, setIsProviderAccount] = useState(false);
+  const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const actualRole = userRole;
@@ -93,30 +95,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check if current user is a provider account
+  // Check if current user is a provider account and compute practice ID
   useEffect(() => {
-    const checkProviderStatus = async () => {
-      if (!effectiveUserId) {
+    const checkProviderStatusAndPractice = async () => {
+      if (!effectiveUserId || !effectiveRole) {
         setIsProviderAccount(false);
+        setEffectivePracticeId(null);
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from('providers')
-          .select('id')
-          .eq('user_id', effectiveUserId)
-          .maybeSingle();
+        // If role is doctor, practice ID is the user ID itself
+        if (effectiveRole === 'doctor') {
+          setEffectivePracticeId(effectiveUserId);
+          
+          // Check if this doctor is also a provider account
+          const { data, error } = await supabase
+            .from('providers')
+            .select('id')
+            .eq('user_id', effectiveUserId)
+            .maybeSingle();
+          
+          setIsProviderAccount(!error && data !== null);
+        } 
+        // If role is provider, fetch the practice_id from providers table
+        else if (effectiveRole === 'provider') {
+          const { data, error } = await supabase
+            .from('providers')
+            .select('practice_id')
+            .eq('user_id', effectiveUserId)
+            .maybeSingle();
 
-        setIsProviderAccount(!error && data !== null);
+          if (!error && data) {
+            setEffectivePracticeId(data.practice_id);
+            setIsProviderAccount(true);
+          } else {
+            setEffectivePracticeId(null);
+            setIsProviderAccount(false);
+          }
+        } else {
+          // Admin or other roles
+          setEffectivePracticeId(null);
+          setIsProviderAccount(false);
+        }
       } catch (error) {
-        console.error('Error checking provider status:', error);
+        console.error('Error checking provider status and practice:', error);
         setIsProviderAccount(false);
+        setEffectivePracticeId(null);
       }
     };
 
-    checkProviderStatus();
-  }, [effectiveUserId]);
+    checkProviderStatusAndPractice();
+  }, [effectiveUserId, effectiveRole]);
 
   // Real-time monitoring for account status changes
   useEffect(() => {
@@ -439,6 +469,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isImpersonating,
       effectiveRole,
       effectiveUserId,
+      effectivePracticeId,
       canImpersonate,
       isProviderAccount,
       setImpersonation,

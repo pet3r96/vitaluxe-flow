@@ -36,7 +36,7 @@ export const PatientSelectionDialog = ({
   product,
   onAddToCart,
 }: PatientSelectionDialogProps) => {
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
   const [shipTo, setShipTo] = useState<'patient' | 'practice'>('patient');
   const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -45,26 +45,28 @@ export const PatientSelectionDialog = ({
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
   const { data: patients, isLoading } = useQuery({
-    queryKey: ["patients", effectiveUserId],
+    queryKey: ["patients", effectivePracticeId],
     queryFn: async () => {
-      if (!effectiveUserId) return [];
+      if (!effectivePracticeId) return [];
       
       const { data, error } = await supabase
         .from("patients" as any)
         .select("*")
-        .eq("practice_id", effectiveUserId)
+        .eq("practice_id", effectivePracticeId)
         .order("name");
 
       if (error) throw error;
       return data as any[] || [];
     },
-    enabled: open && !!effectiveUserId,
+    enabled: open && !!effectivePracticeId,
   });
 
-  // Fetch active providers for practice or provider themselves
+  // Fetch active providers for practice (both doctor and provider roles need this)
   const { data: providers } = useQuery({
-    queryKey: ["practice-providers", effectiveUserId],
+    queryKey: ["practice-providers", effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) return [];
+      
       const { data, error } = await supabase
         .from("providers" as any)
         .select(`
@@ -78,7 +80,7 @@ export const PatientSelectionDialog = ({
             dea
           )
         `)
-        .eq("practice_id", effectiveUserId)
+        .eq("practice_id", effectivePracticeId)
         .eq("active", true)
         .order("created_at", { ascending: false });
       
@@ -91,7 +93,7 @@ export const PatientSelectionDialog = ({
         dea: p.profiles.dea
       }));
     },
-    enabled: open && !!effectiveUserId && effectiveRole === "doctor"
+    enabled: open && !!effectivePracticeId
   });
 
   // Auto-select if only one provider
@@ -101,12 +103,15 @@ export const PatientSelectionDialog = ({
     }
   }, [providers, selectedProviderId]);
 
-  // If user is a provider, use their own ID
+  // If user is a provider, find their provider record and use that ID
   useEffect(() => {
-    if (effectiveRole === "provider" && effectiveUserId) {
-      setSelectedProviderId(effectiveUserId);
+    if (effectiveRole === "provider" && effectiveUserId && providers) {
+      const matchingProvider = providers.find((p: any) => p.user_id === effectiveUserId);
+      if (matchingProvider) {
+        setSelectedProviderId(matchingProvider.id);
+      }
     }
-  }, [effectiveRole, effectiveUserId]);
+  }, [effectiveRole, effectiveUserId, providers]);
 
   useEffect(() => {
     if (!open) {
