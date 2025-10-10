@@ -108,7 +108,7 @@ export const ProductsDataTable = () => {
     product.dosage?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddToCart = async (patientId: string, quantity: number) => {
+  const handleAddToCart = async (patientId: string | null, quantity: number, shipToPractice: boolean) => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
@@ -130,30 +130,49 @@ export const ProductsDataTable = () => {
         cart = newCart;
       }
 
-      // Get patient details
-      const { data: patient } = await supabase
-        .from("patients")
-        .select("name, email, phone, address")
-        .eq("id", patientId)
-        .single();
+      if (shipToPractice) {
+        // Practice order - no patient info needed
+        const { error } = await supabase
+          .from("cart_lines" as any)
+          .insert({
+            cart_id: cart.id,
+            product_id: productForCart.id,
+            patient_id: null,
+            patient_name: "Practice Order",
+            patient_email: null,
+            patient_phone: null,
+            patient_address: null,
+            quantity: quantity,
+            price_snapshot: productForCart.base_price,
+            destination_state: "XX", // Placeholder for practice orders
+          });
 
-      // Add item to cart with patient info
-      const { error } = await supabase
-        .from("cart_lines" as any)
-        .insert({
-          cart_id: cart.id,
-          product_id: productForCart.id,
-          patient_id: patientId,
-          patient_name: patient?.name || "Unknown",
-          patient_email: patient?.email,
-          patient_phone: patient?.phone,
-          patient_address: patient?.address,
-          quantity: quantity,
-          price_snapshot: productForCart.base_price,
-          destination_state: "IL", // Default state, can be updated
-        });
+        if (error) throw error;
+      } else {
+        // Patient order - get patient details
+        const { data: patient } = await supabase
+          .from("patients")
+          .select("name, email, phone, address")
+          .eq("id", patientId!)
+          .single();
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from("cart_lines" as any)
+          .insert({
+            cart_id: cart.id,
+            product_id: productForCart.id,
+            patient_id: patientId,
+            patient_name: patient?.name || "Unknown",
+            patient_email: patient?.email,
+            patient_phone: patient?.phone,
+            patient_address: patient?.address,
+            quantity: quantity,
+            price_snapshot: productForCart.base_price,
+            destination_state: "IL", // Default state, can be updated
+          });
+
+        if (error) throw error;
+      }
 
       toast.success("Product added to cart");
     } catch (error: any) {
