@@ -7,6 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +32,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [pharmacies, setPharmacies] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
@@ -33,7 +41,28 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     topline_price: "",
     downline_price: "",
     retail_price: "",
+    pharmacy_id: "",
   });
+
+  // Fetch available pharmacies
+  useEffect(() => {
+    const fetchPharmacies = async () => {
+      const { data, error } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .eq("active", true)
+        .order("name");
+      
+      if (!error && data) {
+        setPharmacies(data);
+        // Auto-select if only one pharmacy exists (new products only)
+        if (!product && data.length === 1) {
+          setFormData(prev => ({ ...prev, pharmacy_id: data[0].id }));
+        }
+      }
+    };
+    fetchPharmacies();
+  }, [product]);
 
   useEffect(() => {
     if (product) {
@@ -45,6 +74,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         topline_price: product.topline_price?.toString() || "",
         downline_price: product.downline_price?.toString() || "",
         retail_price: product.retail_price?.toString() || "",
+        pharmacy_id: product.pharmacy_id || "",
       });
       setImagePreview(product.image_url || "");
     } else {
@@ -66,6 +96,13 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate pharmacy selection for new products
+    if (!product && !formData.pharmacy_id) {
+      toast.error("Please select a pharmacy");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -100,6 +137,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         retail_price: formData.retail_price ? parseFloat(formData.retail_price) : null,
         image_url: imageUrl,
         active: true,
+        pharmacy_id: formData.pharmacy_id || null,
       };
 
       if (product) {
@@ -136,6 +174,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       topline_price: "",
       downline_price: "",
       retail_price: "",
+      pharmacy_id: pharmacies.length === 1 ? pharmacies[0].id : "",
     });
     setImageFile(null);
     setImagePreview("");
@@ -213,6 +252,30 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                 onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
               />
             </div>
+          </div>
+
+          {/* Pharmacy Assignment */}
+          <div className="space-y-2">
+            <Label htmlFor="pharmacy_id">Assigned Pharmacy *</Label>
+            <Select
+              value={formData.pharmacy_id}
+              onValueChange={(value) => setFormData({ ...formData, pharmacy_id: value })}
+              required
+            >
+              <SelectTrigger id="pharmacy_id">
+                <SelectValue placeholder="Select a pharmacy" />
+              </SelectTrigger>
+              <SelectContent>
+                {pharmacies.map((pharmacy) => (
+                  <SelectItem key={pharmacy.id} value={pharmacy.id}>
+                    {pharmacy.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Orders for this product will be routed to this pharmacy
+            </p>
           </div>
 
           <div className="space-y-2">

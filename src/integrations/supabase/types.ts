@@ -785,6 +785,7 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          pharmacy_id: string | null
           retail_price: number | null
           sig: string | null
           topline_price: number | null
@@ -799,6 +800,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          pharmacy_id?: string | null
           retail_price?: number | null
           sig?: string | null
           topline_price?: number | null
@@ -813,12 +815,21 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          pharmacy_id?: string | null
           retail_price?: number | null
           sig?: string | null
           topline_price?: number | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

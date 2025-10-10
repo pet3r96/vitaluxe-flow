@@ -49,7 +49,14 @@ export const ProductsDataTable = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(`
+          *,
+          pharmacies:pharmacy_id (
+            id,
+            name,
+            active
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -146,6 +153,7 @@ export const ProductsDataTable = () => {
             quantity: quantity,
             price_snapshot: productForCart.retail_price || productForCart.base_price,
             destination_state: "XX", // Placeholder for practice orders
+            assigned_pharmacy_id: productForCart.pharmacy_id || null,
           });
 
         if (error) throw error;
@@ -171,6 +179,7 @@ export const ProductsDataTable = () => {
             quantity: quantity,
             price_snapshot: productForCart.retail_price || productForCart.base_price,
             destination_state: "IL", // Default state, can be updated
+            assigned_pharmacy_id: productForCart.pharmacy_id || null,
           });
 
         if (error) throw error;
@@ -221,6 +230,7 @@ export const ProductsDataTable = () => {
               {isAdmin && <TableHead>Downline Price</TableHead>}
               {isAdmin && <TableHead>Practice Price</TableHead>}
               {isProvider && <TableHead>Practice Price</TableHead>}
+              {isAdmin && <TableHead>Pharmacy</TableHead>}
               <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -261,6 +271,13 @@ export const ProductsDataTable = () => {
                   {isAdmin && <TableCell>${product.downline_price || "-"}</TableCell>}
                   {isAdmin && <TableCell>${product.retail_price || "-"}</TableCell>}
                   {isProvider && <TableCell className="font-semibold text-primary">${product.retail_price || product.base_price}</TableCell>}
+                  {isAdmin && (
+                    <TableCell>
+                      {product.pharmacies?.name || (
+                        <span className="text-muted-foreground italic text-xs">Unassigned</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Switch
                       checked={product.active}
