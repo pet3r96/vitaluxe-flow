@@ -459,6 +459,14 @@ export type Database = {
       patients: {
         Row: {
           address: string | null
+          address_city: string | null
+          address_formatted: string | null
+          address_state: string | null
+          address_street: string | null
+          address_verification_source: string | null
+          address_verification_status: string | null
+          address_verified_at: string | null
+          address_zip: string | null
           allergies: string | null
           birth_date: string | null
           created_at: string
@@ -472,6 +480,14 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
           allergies?: string | null
           birth_date?: string | null
           created_at?: string
@@ -485,6 +501,14 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
           allergies?: string | null
           birth_date?: string | null
           created_at?: string
@@ -502,6 +526,14 @@ export type Database = {
         Row: {
           active: boolean | null
           address: string | null
+          address_city: string | null
+          address_formatted: string | null
+          address_state: string | null
+          address_street: string | null
+          address_verification_source: string | null
+          address_verification_status: string | null
+          address_verified_at: string | null
+          address_zip: string | null
           contact_email: string
           created_at: string | null
           id: string
@@ -515,6 +547,14 @@ export type Database = {
         Insert: {
           active?: boolean | null
           address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
           contact_email: string
           created_at?: string | null
           id?: string
@@ -528,6 +568,14 @@ export type Database = {
         Update: {
           active?: boolean | null
           address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
           contact_email?: string
           created_at?: string | null
           id?: string
@@ -604,6 +652,14 @@ export type Database = {
         Row: {
           active: boolean | null
           address: string | null
+          address_city: string | null
+          address_formatted: string | null
+          address_state: string | null
+          address_street: string | null
+          address_verification_source: string | null
+          address_verification_status: string | null
+          address_verified_at: string | null
+          address_zip: string | null
           company: string | null
           contract_url: string | null
           created_at: string | null
@@ -618,12 +674,28 @@ export type Database = {
           parent_id: string | null
           phone: string | null
           shipping_address: string | null
+          shipping_address_city: string | null
+          shipping_address_formatted: string | null
+          shipping_address_state: string | null
+          shipping_address_street: string | null
+          shipping_address_verification_source: string | null
+          shipping_address_verification_status: string | null
+          shipping_address_verified_at: string | null
+          shipping_address_zip: string | null
           shipping_preference: string | null
           updated_at: string | null
         }
         Insert: {
           active?: boolean | null
           address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
           company?: string | null
           contract_url?: string | null
           created_at?: string | null
@@ -638,12 +710,28 @@ export type Database = {
           parent_id?: string | null
           phone?: string | null
           shipping_address?: string | null
+          shipping_address_city?: string | null
+          shipping_address_formatted?: string | null
+          shipping_address_state?: string | null
+          shipping_address_street?: string | null
+          shipping_address_verification_source?: string | null
+          shipping_address_verification_status?: string | null
+          shipping_address_verified_at?: string | null
+          shipping_address_zip?: string | null
           shipping_preference?: string | null
           updated_at?: string | null
         }
         Update: {
           active?: boolean | null
           address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
           company?: string | null
           contract_url?: string | null
           created_at?: string | null
@@ -658,6 +746,14 @@ export type Database = {
           parent_id?: string | null
           phone?: string | null
           shipping_address?: string | null
+          shipping_address_city?: string | null
+          shipping_address_formatted?: string | null
+          shipping_address_state?: string | null
+          shipping_address_street?: string | null
+          shipping_address_verification_source?: string | null
+          shipping_address_verification_status?: string | null
+          shipping_address_verified_at?: string | null
+          shipping_address_zip?: string | null
           shipping_preference?: string | null
           updated_at?: string | null
         }

@@ -27,13 +27,24 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
+import { AddressInput } from "@/components/ui/address-input";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Full name is required").max(100),
   phone: z.string().optional(),
-  address: z.string().optional(),
+  address: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip: z.string().optional(),
+  }).optional(),
   npi: z.string().optional(),
-  shipping_address: z.string().optional(),
+  shipping_address: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip: z.string().optional(),
+  }).optional(),
   shipping_preference: z.enum(["office", "patient_drop"], {
     required_error: "Please select a shipping preference",
   }),
@@ -66,23 +77,50 @@ export const ProviderProfileForm = () => {
     values: profile ? {
       name: profile.name || "",
       phone: profile.phone || "",
-      address: profile.address || "",
+      address: {
+        street: profile.address_street || "",
+        city: profile.address_city || "",
+        state: profile.address_state || "",
+        zip: profile.address_zip || "",
+      },
       npi: profile.npi || "",
-      shipping_address: profile.shipping_address || "",
+      shipping_address: {
+        street: profile.shipping_address_street || "",
+        city: profile.shipping_address_city || "",
+        state: profile.shipping_address_state || "",
+        zip: profile.shipping_address_zip || "",
+      },
       shipping_preference: (profile.shipping_preference as "office" | "patient_drop") || "patient_drop",
     } : undefined,
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (values: ProfileFormValues) => {
+    mutationFn: async (values: ProfileFormValues & { 
+      address?: any;
+      shipping_address?: any;
+    }) => {
       const { error } = await supabase
         .from("profiles")
         .update({
           name: values.name,
           phone: values.phone,
-          address: values.address,
+          address_street: values.address?.street,
+          address_city: values.address?.city,
+          address_state: values.address?.state,
+          address_zip: values.address?.zip,
+          address_formatted: values.address?.formatted,
+          address_verification_status: values.address?.status || 'unverified',
+          address_verified_at: values.address?.verified_at,
+          address_verification_source: values.address?.source,
           npi: values.npi,
-          shipping_address: values.shipping_address,
+          shipping_address_street: values.shipping_address?.street,
+          shipping_address_city: values.shipping_address?.city,
+          shipping_address_state: values.shipping_address?.state,
+          shipping_address_zip: values.shipping_address?.zip,
+          shipping_address_formatted: values.shipping_address?.formatted,
+          shipping_address_verification_status: values.shipping_address?.status || 'unverified',
+          shipping_address_verified_at: values.shipping_address?.verified_at,
+          shipping_address_verification_source: values.shipping_address?.source,
           shipping_preference: values.shipping_preference,
         })
         .eq("id", effectiveUserId);
@@ -161,11 +199,11 @@ export const ProviderProfileForm = () => {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Primary Address</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="123 Main St, City, State, ZIP" 
-                      {...field} 
+                    <AddressInput
+                      label="Primary Address"
+                      value={field.value || {}}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
@@ -195,11 +233,11 @@ export const ProviderProfileForm = () => {
               name="shipping_address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Practice Shipping Address</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Practice address for direct shipments" 
-                      {...field} 
+                    <AddressInput
+                      label="Practice Shipping Address"
+                      value={field.value || {}}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormDescription>
