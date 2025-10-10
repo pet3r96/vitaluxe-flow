@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 const roleConfig = {
   admin: { label: "Admin", icon: Shield },
   doctor: { label: "Doctor", icon: Stethoscope },
+  provider: { label: "Provider", icon: Users },
   pharmacy: { label: "Pharmacy", icon: Building2 },
   topline: { label: "Topline Rep", icon: TrendingUp },
   downline: { label: "Downline Rep", icon: Users },
@@ -39,13 +40,14 @@ export function RoleImpersonationDropdown() {
           profiles!inner(id, name, email, active)
         `)
         .eq("profiles.active", true)
-        .in("role", ["doctor", "pharmacy", "topline", "downline"]);
+        .in("role", ["doctor", "provider", "pharmacy", "topline", "downline"]);
 
       if (error) throw error;
 
       // Group users by role
       const grouped: Record<string, Array<{ id: string; name: string; email: string }>> = {
         doctor: [],
+        provider: [],
         pharmacy: [],
         topline: [],
         downline: [],
