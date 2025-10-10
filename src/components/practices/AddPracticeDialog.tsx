@@ -36,6 +36,12 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
     address_city: "",
     address_state: "",
     address_zip: "",
+    prescriberFullName: "",
+    prescriberName: "",
+    prescriberNpi: "",
+    prescriberDea: "",
+    prescriberLicense: "",
+    prescriberPhone: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,6 +90,14 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
             address_state: formData.address_state,
             address_zip: formData.address_zip,
           },
+          prescriberData: {
+            fullName: formData.prescriberFullName,
+            prescriberName: formData.prescriberName,
+            npi: formData.prescriberNpi,
+            dea: formData.prescriberDea,
+            licenseNumber: formData.prescriberLicense,
+            phone: formData.prescriberPhone,
+          },
           contractFile: contractFileData,
         },
       });
@@ -125,6 +139,12 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
       address_city: "",
       address_state: "",
       address_zip: "",
+      prescriberFullName: "",
+      prescriberName: "",
+      prescriberNpi: "",
+      prescriberDea: "",
+      prescriberLicense: "",
+      prescriberPhone: "",
     });
   };
 
@@ -244,6 +264,81 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
               });
             }}
           />
+
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-lg font-semibold">Default Prescriber Information</h3>
+            <p className="text-sm text-muted-foreground">
+              This information will be used for the primary prescriber account within this practice.
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="prescriberFullName">Prescriber Full Name *</Label>
+                <Input
+                  id="prescriberFullName"
+                  value={formData.prescriberFullName}
+                  onChange={(e) => setFormData({ ...formData, prescriberFullName: e.target.value })}
+                  placeholder="Dr. John Doe"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prescriberName">Prescriber Name *</Label>
+                <Input
+                  id="prescriberName"
+                  value={formData.prescriberName}
+                  onChange={(e) => setFormData({ ...formData, prescriberName: e.target.value })}
+                  placeholder="Name on prescriptions"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prescriberNpi">Prescriber NPI # *</Label>
+                <Input
+                  id="prescriberNpi"
+                  value={formData.prescriberNpi}
+                  onChange={(e) => setFormData({ ...formData, prescriberNpi: e.target.value })}
+                  placeholder="10-digit individual NPI"
+                  required
+                  maxLength={10}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prescriberDea">Prescriber DEA #</Label>
+                <Input
+                  id="prescriberDea"
+                  value={formData.prescriberDea}
+                  onChange={(e) => setFormData({ ...formData, prescriberDea: e.target.value })}
+                  placeholder="DEA number (optional)"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prescriberLicense">Prescriber License # *</Label>
+                <Input
+                  id="prescriberLicense"
+                  value={formData.prescriberLicense}
+                  onChange={(e) => setFormData({ ...formData, prescriberLicense: e.target.value })}
+                  placeholder="Medical license number"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prescriberPhone">Prescriber Phone</Label>
+                <Input
+                  id="prescriberPhone"
+                  type="tel"
+                  value={formData.prescriberPhone}
+                  onChange={(e) => setFormData({ ...formData, prescriberPhone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="contract">Contract Document</Label>

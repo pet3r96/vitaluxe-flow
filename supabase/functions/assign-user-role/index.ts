@@ -24,6 +24,10 @@ interface SignupRequest {
     company?: string;
     phone?: string;
     address?: string;
+    address_street?: string;
+    address_city?: string;
+    address_state?: string;
+    address_zip?: string;
     // Pharmacy fields
     contactEmail?: string;
     statesServiced?: string[];
@@ -31,6 +35,14 @@ interface SignupRequest {
     linkedToplineId?: string;
     // Provider fields
     practiceId?: string;
+  };
+  prescriberData?: {
+    fullName: string;
+    prescriberName: string;
+    npi: string;
+    dea?: string;
+    licenseNumber: string;
+    phone?: string;
   };
   contractFile?: {
     name: string;
@@ -289,7 +301,24 @@ serve(async (req) => {
     }
 
     // If doctor role, create default provider record
-    if (signupData.role === 'doctor') {
+    if (signupData.role === 'doctor' && signupData.prescriberData) {
+      // First update the profile with prescriber-specific data
+      const { error: prescriberProfileError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          full_name: signupData.prescriberData.fullName,
+          npi: signupData.prescriberData.npi,
+          dea: signupData.prescriberData.dea,
+          license_number: signupData.prescriberData.licenseNumber,
+          phone: signupData.prescriberData.phone
+        })
+        .eq('id', userId);
+
+      if (prescriberProfileError) {
+        console.error('Default prescriber profile update error:', prescriberProfileError);
+      }
+
+      // Create the provider record linking provider to practice
       const { error: providerError } = await supabaseAdmin
         .from('providers')
         .insert({
