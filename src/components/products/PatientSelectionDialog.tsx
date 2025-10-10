@@ -72,7 +72,7 @@ export const PatientSelectionDialog = ({
         .eq("active", true)
         .order("prescriber_name");
       if (error) throw error;
-      return data || [];
+      return (data || []) as any[];
     },
     enabled: open && !!effectiveUserId && effectiveRole === "doctor"
   });

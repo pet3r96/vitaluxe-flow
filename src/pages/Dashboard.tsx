@@ -12,16 +12,31 @@ const Dashboard = () => {
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from("orders").select("*", { count: "exact", head: true }).neq("status", "cancelled");
+      let count = 0;
       
       if (effectiveRole === "doctor") {
-        query = query.eq("doctor_id", effectiveUserId);
-      } else if (effectiveRole === "provider") {
-        query = query.eq("provider_id", effectiveUserId);
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("*", { count: "exact", head: true })
+          .neq("status", "cancelled")
+          .eq("doctor_id", effectiveUserId);
+        count = result.count || 0;
+      } else if (effectiveRole === "provider" as any) {
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("*", { count: "exact", head: true })
+          .neq("status", "cancelled")
+          .eq("provider_id", effectiveUserId);
+        count = result.count || 0;
+      } else {
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("*", { count: "exact", head: true })
+          .neq("status", "cancelled");
+        count = result.count || 0;
       }
       
-      const { count } = await query;
-      return count || 0;
+      return count;
     },
   });
 
@@ -51,18 +66,34 @@ const Dashboard = () => {
   const { data: pendingRevenue, isLoading: pendingRevenueLoading } = useQuery({
     queryKey: ["dashboard-pending-revenue", effectiveRole, effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from("orders").select("total_amount").neq("status", "cancelled");
+      let data: any = null;
       
       if (effectiveRole === "doctor") {
-        query = query.eq("doctor_id", effectiveUserId);
-      } else if (effectiveRole === "provider") {
-        query = query.eq("provider_id", effectiveUserId);
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("total_amount")
+          .neq("status", "cancelled")
+          .eq("doctor_id", effectiveUserId)
+          .eq("status", "pending");
+        data = result.data;
+      } else if (effectiveRole === "provider" as any) {
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("total_amount")
+          .neq("status", "cancelled")
+          .eq("provider_id", effectiveUserId)
+          .eq("status", "pending");
+        data = result.data;
+      } else {
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("total_amount")
+          .neq("status", "cancelled")
+          .eq("status", "pending");
+        data = result.data;
       }
       
-      query = query.eq("status", "pending");
-      
-      const { data } = await query;
-      const total = data?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
+      const total = data?.reduce((sum: number, order: any) => sum + Number(order.total_amount || 0), 0) || 0;
       return total;
     },
   });
@@ -70,18 +101,34 @@ const Dashboard = () => {
   const { data: collectedRevenue, isLoading: collectedRevenueLoading } = useQuery({
     queryKey: ["dashboard-collected-revenue", effectiveRole, effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from("orders").select("total_amount").neq("status", "cancelled");
+      let data: any = null;
       
       if (effectiveRole === "doctor") {
-        query = query.eq("doctor_id", effectiveUserId);
-      } else if (effectiveRole === "provider") {
-        query = query.eq("provider_id", effectiveUserId);
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("total_amount")
+          .neq("status", "cancelled")
+          .eq("doctor_id", effectiveUserId)
+          .eq("status", "completed");
+        data = result.data;
+      } else if (effectiveRole === "provider" as any) {
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("total_amount")
+          .neq("status", "cancelled")
+          .eq("provider_id", effectiveUserId)
+          .eq("status", "completed");
+        data = result.data;
+      } else {
+        const result: any = await (supabase as any)
+          .from("orders")
+          .select("total_amount")
+          .neq("status", "cancelled")
+          .eq("status", "completed");
+        data = result.data;
       }
       
-      query = query.eq("status", "completed");
-      
-      const { data } = await query;
-      const total = data?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
+      const total = data?.reduce((sum: number, order: any) => sum + Number(order.total_amount || 0), 0) || 0;
       return total;
     },
   });
@@ -91,7 +138,7 @@ const Dashboard = () => {
       title: "Total Orders",
       value: ordersLoading ? "..." : ordersCount?.toString() || "0",
       icon: ShoppingCart,
-      description: effectiveRole === "doctor" ? "Your practice orders" : effectiveRole === "provider" ? "Your orders" : "All orders",
+      description: effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders",
       isLoading: ordersLoading,
     },
     {
@@ -113,14 +160,14 @@ const Dashboard = () => {
       title: "Pending Revenue",
       value: pendingRevenueLoading ? "..." : `$${pendingRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Practice pending revenue" : effectiveRole === "provider" ? "Your pending revenue" : "Pending orders revenue",
+      description: effectiveRole === "doctor" ? "Practice pending revenue" : (effectiveRole as any) === "provider" ? "Your pending revenue" : "Pending orders revenue",
       isLoading: pendingRevenueLoading,
     },
     {
       title: "Collected Revenue",
       value: collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Practice collected revenue" : effectiveRole === "provider" ? "Your collected revenue" : "Completed orders revenue",
+      description: effectiveRole === "doctor" ? "Practice collected revenue" : (effectiveRole as any) === "provider" ? "Your collected revenue" : "Completed orders revenue",
       isLoading: collectedRevenueLoading,
     },
   ].filter(stat => !stat.hidden);

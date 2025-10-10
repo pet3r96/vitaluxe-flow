@@ -30,12 +30,12 @@ export const ProvidersDataTable = () => {
     queryKey: ["providers", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("providers")
+        .from("providers" as any)
         .select("*")
         .eq("practice_id", effectiveUserId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as any[];
     },
     enabled: !!effectiveUserId && effectiveRole === "doctor"
   });

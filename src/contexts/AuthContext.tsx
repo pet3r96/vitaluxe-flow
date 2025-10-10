@@ -157,15 +157,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserRole(role);
 
       // If provider role, fetch practice_id
-      if (role === 'provider') {
+      if (role === 'provider' as any) {
         const { data: providerData } = await supabase
-          .from('providers')
+          .from('providers' as any)
           .select('practice_id')
           .eq('id', userId)
           .single();
         
         if (providerData) {
-          setPracticeParentId(providerData.practice_id);
+          setPracticeParentId((providerData as any).practice_id);
         }
       }
 

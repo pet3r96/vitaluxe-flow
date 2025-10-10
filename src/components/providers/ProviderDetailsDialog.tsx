@@ -58,7 +58,7 @@ export const ProviderDetailsDialog = ({
       }
 
       const { error } = await supabase
-        .from("providers")
+        .from("providers" as any)
         .update(updateData)
         .eq("id", provider.id);
 
