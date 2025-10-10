@@ -91,6 +91,7 @@ export const PharmaciesDataTable = () => {
               <TableHead>Name</TableHead>
               <TableHead>Contact Email</TableHead>
               <TableHead>States Serviced</TableHead>
+              <TableHead>Priority Map</TableHead>
               <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -98,13 +99,13 @@ export const PharmaciesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
+                <TableCell colSpan={6} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPharmacies?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No pharmacies found
                 </TableCell>
               </TableRow>
@@ -129,6 +130,26 @@ export const PharmaciesDataTable = () => {
                       </div>
                     ) : (
                       "-"
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {pharmacy.priority_map && Object.keys(pharmacy.priority_map).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(pharmacy.priority_map)
+                          .slice(0, 3)
+                          .map(([state, priority]: [string, any]) => (
+                            <Badge key={state} variant="outline" className="text-xs">
+                              {state}({priority})
+                            </Badge>
+                          ))}
+                        {Object.keys(pharmacy.priority_map).length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{Object.keys(pharmacy.priority_map).length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Not configured</span>
                     )}
                   </TableCell>
                   <TableCell>

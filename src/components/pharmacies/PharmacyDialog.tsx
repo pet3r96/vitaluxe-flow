@@ -13,7 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AddressInput } from "@/components/ui/address-input";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -40,6 +42,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
     address_state: "",
     address_zip: "",
     states_serviced: [] as string[],
+    priority_map: {} as Record<string, number>,
   });
 
   useEffect(() => {
@@ -52,6 +55,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         address_state: pharmacy.address_state || "",
         address_zip: pharmacy.address_zip || "",
         states_serviced: pharmacy.states_serviced || [],
+        priority_map: pharmacy.priority_map || {},
       });
     } else {
       resetForm();
@@ -80,6 +84,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         address_state: formData.address_state || null,
         address_zip: formData.address_zip || null,
         states_serviced: formData.states_serviced,
+        priority_map: formData.priority_map,
         active: true,
       };
 
@@ -117,6 +122,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       address_state: "",
       address_zip: "",
       states_serviced: [],
+      priority_map: {},
     });
   };
 
@@ -192,6 +198,66 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             <p className="text-xs text-muted-foreground">
               Selected: {formData.states_serviced.length} state(s)
             </p>
+          </div>
+
+          {/* Priority Configuration Section */}
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+            <Label>Priority Configuration by State</Label>
+            <p className="text-sm text-muted-foreground mb-3">
+              Assign priority numbers for each serviced state (1 = highest priority)
+            </p>
+            
+            {formData.states_serviced.length > 0 ? (
+              <div className="space-y-2">
+                {formData.states_serviced.map((state) => (
+                  <div key={state} className="flex items-center gap-2">
+                    <Badge variant="secondary" className="w-12 justify-center">{state}</Badge>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Priority"
+                      value={formData.priority_map[state] || ""}
+                      onChange={(e) => {
+                        const priority = e.target.value ? parseInt(e.target.value) : null;
+                        const newPriorityMap = { ...formData.priority_map };
+                        if (priority) {
+                          newPriorityMap[state] = priority;
+                        } else {
+                          delete newPriorityMap[state];
+                        }
+                        setFormData({
+                          ...formData,
+                          priority_map: newPriorityMap
+                        });
+                      }}
+                      className="w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {!formData.priority_map[state] ? "Default (lowest)" : 
+                       formData.priority_map[state] === 1 ? "Highest priority" : 
+                       `Priority ${formData.priority_map[state]}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Select states serviced above to configure priority routing
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded text-xs space-y-1">
+              <p className="font-semibold text-blue-900 dark:text-blue-100">Priority Routing Rules:</p>
+              <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
+                <li>Priority 1 = Highest (orders go here first)</li>
+                <li>Lower numbers = Higher priority</li>
+                <li>If no priority set, pharmacy gets lowest priority for that state</li>
+                <li>Only matters when multiple pharmacies serve same product + state</li>
+              </ul>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

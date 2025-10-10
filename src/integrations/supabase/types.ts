@@ -775,6 +775,42 @@ export type Database = {
           },
         ]
       }
+      product_pharmacies: {
+        Row: {
+          created_at: string | null
+          id: string
+          pharmacy_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          pharmacy_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          pharmacy_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_pharmacies_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_pharmacies_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean | null

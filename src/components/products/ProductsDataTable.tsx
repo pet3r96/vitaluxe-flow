@@ -51,10 +51,14 @@ export const ProductsDataTable = () => {
         .from("products")
         .select(`
           *,
-          pharmacies:pharmacy_id (
-            id,
-            name,
-            active
+          product_pharmacies (
+            pharmacy:pharmacies (
+              id,
+              name,
+              states_serviced,
+              priority_map,
+              active
+            )
           )
         `)
         .order("created_at", { ascending: false });
@@ -274,8 +278,23 @@ export const ProductsDataTable = () => {
                   {isProvider && <TableCell className="font-semibold text-primary">${product.retail_price || product.base_price}</TableCell>}
                   {isAdmin && (
                     <TableCell>
-                      {product.pharmacies?.name || (
-                        <span className="text-muted-foreground italic text-xs">Unassigned</span>
+                      {product.product_pharmacies?.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {product.product_pharmacies.slice(0, 2).map((pp: any) => (
+                            <Badge key={pp.pharmacy.id} variant="secondary" className="text-xs">
+                              {pp.pharmacy.name}
+                            </Badge>
+                          ))}
+                          {product.product_pharmacies.length > 2 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{product.product_pharmacies.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="destructive" className="text-xs">
+                          No pharmacies
+                        </Badge>
                       )}
                     </TableCell>
                   )}

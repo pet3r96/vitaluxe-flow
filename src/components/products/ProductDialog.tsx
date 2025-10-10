@@ -7,13 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,28 +38,44 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     topline_price: "",
     downline_price: "",
     retail_price: "",
-    pharmacy_id: "",
+    assigned_pharmacies: [] as string[],
     requires_prescription: false,
   });
 
-  // Fetch available pharmacies
+  // Fetch available pharmacies with their states and priorities
   useEffect(() => {
     const fetchPharmacies = async () => {
       const { data, error } = await supabase
         .from("pharmacies")
-        .select("id, name")
+        .select("id, name, states_serviced, priority_map")
         .eq("active", true)
         .order("name");
       
       if (!error && data) {
         setPharmacies(data);
-        // Auto-select if only one pharmacy exists (new products only)
-        if (!product && data.length === 1) {
-          setFormData(prev => ({ ...prev, pharmacy_id: data[0].id }));
-        }
       }
     };
     fetchPharmacies();
+  }, [product]);
+
+  // Fetch existing pharmacy assignments when editing
+  useEffect(() => {
+    const fetchProductPharmacies = async () => {
+      if (product) {
+        const { data, error } = await supabase
+          .from("product_pharmacies")
+          .select("pharmacy_id")
+          .eq("product_id", product.id);
+        
+        if (!error && data) {
+          setFormData(prev => ({
+            ...prev,
+            assigned_pharmacies: data.map(pp => pp.pharmacy_id)
+          }));
+        }
+      }
+    };
+    fetchProductPharmacies();
   }, [product]);
 
   useEffect(() => {
@@ -77,7 +88,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         topline_price: product.topline_price?.toString() || "",
         downline_price: product.downline_price?.toString() || "",
         retail_price: product.retail_price?.toString() || "",
-        pharmacy_id: product.pharmacy_id || "",
+        assigned_pharmacies: [],
         requires_prescription: product.requires_prescription || false,
       });
       setImagePreview(product.image_url || "");
@@ -101,9 +112,9 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate pharmacy selection for new products
-    if (!product && !formData.pharmacy_id) {
-      toast.error("Please select a pharmacy");
+    // Validate pharmacy selection
+    if (formData.assigned_pharmacies.length === 0) {
+      toast.error("Please assign at least one pharmacy");
       return;
     }
 
@@ -141,9 +152,10 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         retail_price: formData.retail_price ? parseFloat(formData.retail_price) : null,
         image_url: imageUrl,
         active: true,
-        pharmacy_id: formData.pharmacy_id || null,
         requires_prescription: formData.requires_prescription,
       };
+
+      let productId = product?.id;
 
       if (product) {
         const { error } = await supabase
@@ -152,13 +164,37 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
           .eq("id", product.id);
 
         if (error) throw error;
+        
+        // Delete old pharmacy assignments
+        await supabase
+          .from("product_pharmacies")
+          .delete()
+          .eq("product_id", product.id);
+        
         toast.success("Product updated successfully");
       } else {
-        const { error } = await supabase.from("products").insert([productData]);
+        const { data: newProduct, error } = await supabase
+          .from("products")
+          .insert([productData])
+          .select()
+          .single();
 
         if (error) throw error;
+        productId = newProduct.id;
         toast.success("Product created successfully");
       }
+
+      // Insert new pharmacy assignments
+      const assignments = formData.assigned_pharmacies.map(pharmacy_id => ({
+        product_id: productId,
+        pharmacy_id
+      }));
+
+      const { error: assignmentError } = await supabase
+        .from("product_pharmacies")
+        .insert(assignments);
+
+      if (assignmentError) throw assignmentError;
 
       onSuccess();
       onOpenChange(false);
@@ -179,7 +215,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       topline_price: "",
       downline_price: "",
       retail_price: "",
-      pharmacy_id: pharmacies.length === 1 ? pharmacies[0].id : "",
+      assigned_pharmacies: [],
       requires_prescription: false,
     });
     setImageFile(null);
@@ -260,27 +296,52 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </div>
           </div>
 
-          {/* Pharmacy Assignment */}
+          {/* Multi-Pharmacy Assignment */}
           <div className="space-y-2">
-            <Label htmlFor="pharmacy_id">Assigned Pharmacy *</Label>
-            <Select
-              value={formData.pharmacy_id}
-              onValueChange={(value) => setFormData({ ...formData, pharmacy_id: value })}
-              required
-            >
-              <SelectTrigger id="pharmacy_id">
-                <SelectValue placeholder="Select a pharmacy" />
-              </SelectTrigger>
-              <SelectContent>
-                {pharmacies.map((pharmacy) => (
-                  <SelectItem key={pharmacy.id} value={pharmacy.id}>
-                    {pharmacy.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Orders for this product will be routed to this pharmacy
+            <Label>Assigned Pharmacies *</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Select all pharmacies that can fulfill this product
+            </p>
+            
+            <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+              {pharmacies.map((pharmacy) => (
+                <div key={pharmacy.id} className="flex items-start space-x-2">
+                  <Checkbox
+                    id={`pharmacy-${pharmacy.id}`}
+                    checked={formData.assigned_pharmacies.includes(pharmacy.id)}
+                    onCheckedChange={(checked) => {
+                      setFormData({
+                        ...formData,
+                        assigned_pharmacies: checked
+                          ? [...formData.assigned_pharmacies, pharmacy.id]
+                          : formData.assigned_pharmacies.filter(id => id !== pharmacy.id)
+                      });
+                    }}
+                  />
+                  <div className="flex-1">
+                    <Label 
+                      htmlFor={`pharmacy-${pharmacy.id}`} 
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      {pharmacy.name}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      States: {pharmacy.states_serviced?.join(", ") || "None"}
+                    </p>
+                    {pharmacy.priority_map && Object.keys(pharmacy.priority_map).length > 0 && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        Priorities: {Object.entries(pharmacy.priority_map)
+                          .map(([state, priority]) => `${state}(${priority})`)
+                          .join(", ")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <p className="text-xs text-muted-foreground mt-2">
+              Selected: {formData.assigned_pharmacies.length} pharmacy(s)
             </p>
           </div>
 

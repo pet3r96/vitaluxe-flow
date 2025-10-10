@@ -1,0 +1,148 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface RoutingInput {
+  product_id: string;
+  destination_state: string;
+}
+
+interface RoutingResult {
+  pharmacy_id: string | null;
+  reason: string;
+}
+
+async function routeOrderToPharmacy(
+  supabase: any,
+  product_id: string,
+  destination_state: string
+): Promise<RoutingResult> {
+  console.log(`Routing order for product ${product_id} to state ${destination_state}`);
+
+  // 1. Get all pharmacies assigned to this product
+  const { data: assignments, error } = await supabase
+    .from("product_pharmacies")
+    .select(`
+      pharmacy:pharmacies (
+        id,
+        name,
+        states_serviced,
+        priority_map,
+        active
+      )
+    `)
+    .eq("product_id", product_id);
+
+  if (error) {
+    console.error("Error fetching product pharmacies:", error);
+    return { 
+      pharmacy_id: null, 
+      reason: `Database error: ${error.message}` 
+    };
+  }
+
+  if (!assignments || assignments.length === 0) {
+    console.log("No pharmacies assigned to product");
+    return { 
+      pharmacy_id: null, 
+      reason: "No pharmacies assigned to product" 
+    };
+  }
+
+  // 2. Filter pharmacies that serve the destination state AND are active
+  const eligiblePharmacies = assignments
+    .map((a: any) => a.pharmacy)
+    .filter((p: any) => 
+      p && p.active && p.states_serviced?.includes(destination_state)
+    );
+
+  console.log(`Found ${eligiblePharmacies.length} eligible pharmacies for state ${destination_state}`);
+
+  if (eligiblePharmacies.length === 0) {
+    return { 
+      pharmacy_id: null, 
+      reason: `No active pharmacies serve state: ${destination_state}` 
+    };
+  }
+
+  // 3. If only one pharmacy, return it
+  if (eligiblePharmacies.length === 1) {
+    console.log(`Single pharmacy match: ${eligiblePharmacies[0].name}`);
+    return { 
+      pharmacy_id: eligiblePharmacies[0].id, 
+      reason: `Single pharmacy match: ${eligiblePharmacies[0].name}` 
+    };
+  }
+
+  // 4. Apply priority routing
+  const pharmaciesWithPriority = eligiblePharmacies.map((pharmacy: any) => ({
+    ...pharmacy,
+    priority: pharmacy.priority_map?.[destination_state] || 999 // Default to lowest
+  }));
+
+  // Sort by priority (lowest number = highest priority)
+  pharmaciesWithPriority.sort((a: any, b: any) => a.priority - b.priority);
+
+  const selectedPharmacy = pharmaciesWithPriority[0];
+
+  console.log(`Priority routing selected: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority})`);
+
+  return { 
+    pharmacy_id: selectedPharmacy.id, 
+    reason: `Priority routing: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority} for ${destination_state})` 
+  };
+}
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
+
+    const { product_id, destination_state }: RoutingInput = await req.json();
+
+    if (!product_id || !destination_state) {
+      return new Response(
+        JSON.stringify({ error: 'Missing product_id or destination_state' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const result = await routeOrderToPharmacy(supabaseClient, product_id, destination_state);
+
+    return new Response(
+      JSON.stringify(result),
+      { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  } catch (error) {
+    console.error('Error in route-order-to-pharmacy:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});
