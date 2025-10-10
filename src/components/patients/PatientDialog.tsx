@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { AddressInput } from "@/components/ui/address-input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -31,19 +31,37 @@ export const PatientDialog = ({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    full_name: "",
-    dob: "",
-    address: "",
-    last_visit_date: "",
+    name: "",
+    email: "",
+    phone: "",
+    birth_date: "",
+    allergies: "",
+    notes: "",
+    address_street: "",
+    address_city: "",
+    address_state: "",
+    address_zip: "",
+    address_formatted: "",
+    address_verification_status: "unverified",
+    address_verification_source: "",
   });
 
   useEffect(() => {
     if (patient) {
       setFormData({
-        full_name: patient.full_name || "",
-        dob: patient.dob || "",
-        address: patient.address || "",
-        last_visit_date: patient.last_visit_date || "",
+        name: patient.name || "",
+        email: patient.email || "",
+        phone: patient.phone || "",
+        birth_date: patient.birth_date || "",
+        allergies: patient.allergies || "",
+        notes: patient.notes || "",
+        address_street: patient.address_street || "",
+        address_city: patient.address_city || "",
+        address_state: patient.address_state || "",
+        address_zip: patient.address_zip || "",
+        address_formatted: patient.address_formatted || "",
+        address_verification_status: patient.address_verification_status || "unverified",
+        address_verification_source: patient.address_verification_source || "",
       });
     } else {
       resetForm();
@@ -52,17 +70,26 @@ export const PatientDialog = ({
 
   const resetForm = () => {
     setFormData({
-      full_name: "",
-      dob: "",
-      address: "",
-      last_visit_date: "",
+      name: "",
+      email: "",
+      phone: "",
+      birth_date: "",
+      allergies: "",
+      notes: "",
+      address_street: "",
+      address_city: "",
+      address_state: "",
+      address_zip: "",
+      address_formatted: "",
+      address_verification_status: "unverified",
+      address_verification_source: "",
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.full_name.trim()) {
+    if (!formData.name.trim()) {
       toast.error("Patient name is required");
       return;
     }
@@ -75,37 +102,47 @@ export const PatientDialog = ({
     setLoading(true);
 
     try {
+      const patientData = {
+        name: formData.name,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        birth_date: formData.birth_date || null,
+        allergies: formData.allergies || null,
+        notes: formData.notes || null,
+        address_street: formData.address_street || null,
+        address_city: formData.address_city || null,
+        address_state: formData.address_state || null,
+        address_zip: formData.address_zip || null,
+        address_formatted: formData.address_formatted || null,
+        address_verification_status: formData.address_verification_status,
+        address_verification_source: formData.address_verification_source || null,
+        address_verified_at: formData.address_verification_status === 'verified' ? new Date().toISOString() : null,
+      };
+
       if (patient) {
         // Update existing patient
         const { error } = await supabase
-          .from("patients" as any)
-          .update({
-            full_name: formData.full_name,
-            dob: formData.dob || null,
-            address: formData.address || null,
-            last_visit_date: formData.last_visit_date || null,
-          })
+          .from("patients")
+          .update(patientData)
           .eq("id", patient.id);
 
         if (error) throw error;
-        toast.success("Patient updated successfully");
+        toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient
         const { error } = await supabase
-          .from("patients" as any)
+          .from("patients")
           .insert({
+            ...patientData,
             provider_id: user.id,
-            full_name: formData.full_name,
-            dob: formData.dob || null,
-            address: formData.address || null,
-            last_visit_date: formData.last_visit_date || null,
           });
 
         if (error) throw error;
-        toast.success("Patient added successfully");
+        toast.success("✅ Patient added successfully");
       }
 
       onSuccess();
+      onOpenChange(false);
       resetForm();
     } catch (error: any) {
       console.error("Error saving patient:", error);
@@ -132,54 +169,102 @@ export const PatientDialog = ({
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="full_name">Full Name *</Label>
+              <Label htmlFor="name">Full Name *</Label>
               <Input
-                id="full_name"
-                value={formData.full_name}
+                id="name"
+                value={formData.name}
                 onChange={(e) =>
-                  setFormData({ ...formData, full_name: e.target.value })
+                  setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="John Doe"
                 required
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  placeholder="patient@email.com"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="dob">Date of Birth</Label>
+              <Label htmlFor="birth_date">Date of Birth</Label>
               <Input
-                id="dob"
+                id="birth_date"
                 type="date"
-                value={formData.dob}
+                value={formData.birth_date}
                 onChange={(e) =>
-                  setFormData({ ...formData, dob: e.target.value })
+                  setFormData({ ...formData, birth_date: e.target.value })
                 }
                 max={new Date().toISOString().split('T')[0]}
               />
             </div>
 
+            <AddressInput
+              label="Patient Address"
+              value={{
+                street: formData.address_street,
+                city: formData.address_city,
+                state: formData.address_state,
+                zip: formData.address_zip,
+              }}
+              onChange={(addressData) => {
+                setFormData({
+                  ...formData,
+                  address_street: addressData.street || "",
+                  address_city: addressData.city || "",
+                  address_state: addressData.state || "",
+                  address_zip: addressData.zip || "",
+                  address_formatted: addressData.formatted || "",
+                  address_verification_status: addressData.status || "unverified",
+                  address_verification_source: addressData.source || "",
+                });
+              }}
+            />
+
             <div className="grid gap-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
+              <Label htmlFor="allergies">Allergies</Label>
+              <Input
+                id="allergies"
+                value={formData.allergies}
                 onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
+                  setFormData({ ...formData, allergies: e.target.value })
                 }
-                placeholder="123 Main St, City, State ZIP"
-                rows={3}
+                placeholder="Penicillin, Latex, etc."
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="last_visit_date">Last Visit Date</Label>
+              <Label htmlFor="notes">Notes</Label>
               <Input
-                id="last_visit_date"
-                type="date"
-                value={formData.last_visit_date}
+                id="notes"
+                value={formData.notes}
                 onChange={(e) =>
-                  setFormData({ ...formData, last_visit_date: e.target.value })
+                  setFormData({ ...formData, notes: e.target.value })
                 }
-                max={new Date().toISOString().split('T')[0]}
+                placeholder="Additional patient information"
               />
             </div>
           </div>

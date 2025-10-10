@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AddressInput } from "@/components/ui/address-input";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -34,7 +35,10 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
   const [formData, setFormData] = useState({
     name: "",
     contact_email: "",
-    address: "",
+    address_street: "",
+    address_city: "",
+    address_state: "",
+    address_zip: "",
     states_serviced: [] as string[],
   });
 
@@ -43,7 +47,10 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       setFormData({
         name: pharmacy.name || "",
         contact_email: pharmacy.contact_email || "",
-        address: pharmacy.address || "",
+        address_street: pharmacy.address_street || "",
+        address_city: pharmacy.address_city || "",
+        address_state: pharmacy.address_state || "",
+        address_zip: pharmacy.address_zip || "",
         states_serviced: pharmacy.states_serviced || [],
       });
     } else {
@@ -68,7 +75,10 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       const pharmacyData = {
         name: formData.name,
         contact_email: formData.contact_email,
-        address: formData.address,
+        address_street: formData.address_street || null,
+        address_city: formData.address_city || null,
+        address_state: formData.address_state || null,
+        address_zip: formData.address_zip || null,
         states_serviced: formData.states_serviced,
         active: true,
       };
@@ -102,7 +112,10 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
     setFormData({
       name: "",
       contact_email: "",
-      address: "",
+      address_street: "",
+      address_city: "",
+      address_state: "",
+      address_zip: "",
       states_serviced: [],
     });
   };
@@ -141,14 +154,24 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            />
-          </div>
+          <AddressInput
+            label="Pharmacy Address"
+            value={{
+              street: formData.address_street,
+              city: formData.address_city,
+              state: formData.address_state,
+              zip: formData.address_zip,
+            }}
+            onChange={(addressData) => {
+              setFormData({
+                ...formData,
+                address_street: addressData.street,
+                address_city: addressData.city,
+                address_state: addressData.state,
+                address_zip: addressData.zip,
+              });
+            }}
+          />
 
           <div className="space-y-2">
             <Label>States Serviced *</Label>

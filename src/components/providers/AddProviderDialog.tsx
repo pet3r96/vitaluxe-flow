@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AddressInput } from "@/components/ui/address-input";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 
@@ -31,7 +32,10 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
     dea: "",
     company: "",
     phone: "",
-    address: "",
+    address_street: "",
+    address_city: "",
+    address_state: "",
+    address_zip: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,7 +67,10 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
             dea: formData.dea,
             company: formData.company,
             phone: formData.phone,
-            address: formData.address,
+            address_street: formData.address_street,
+            address_city: formData.address_city,
+            address_state: formData.address_state,
+            address_zip: formData.address_zip,
           },
           contractFile: contractFileData,
         },
@@ -102,7 +109,10 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
       dea: "",
       company: "",
       phone: "",
-      address: "",
+      address_street: "",
+      address_city: "",
+      address_state: "",
+      address_zip: "",
     });
   };
 
@@ -204,15 +214,24 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Street, City, State, ZIP"
-            />
-          </div>
+          <AddressInput
+            label="Provider Address"
+            value={{
+              street: formData.address_street,
+              city: formData.address_city,
+              state: formData.address_state,
+              zip: formData.address_zip,
+            }}
+            onChange={(addressData) => {
+              setFormData({
+                ...formData,
+                address_street: addressData.street,
+                address_city: addressData.city,
+                address_state: addressData.state,
+                address_zip: addressData.zip,
+              });
+            }}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="contract">Contract Document</Label>
