@@ -36,7 +36,11 @@ serve(async (req: Request) => {
     );
 
     // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const token = authHeader.replace('Bearer', '').trim();
+    if (!token) {
+      throw new Error('Missing bearer token');
+    }
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError) {
       console.error('Auth error:', userError);
       throw new Error(`Authentication failed: ${userError.message}`);
