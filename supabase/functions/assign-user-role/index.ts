@@ -272,20 +272,50 @@ serve(async (req) => {
     }
 
     if (signupData.role === 'downline') {
-      // First, get the topline's reps.id (not user_id!)
+      const linkedToplineUserId = signupData.roleData.linkedToplineId;
+      let toplineRepsId: string | null = null;
+
+      // Try to get the topline's reps.id (not user_id!)
       const { data: toplineRep, error: toplineError } = await supabaseAdmin
         .from('reps')
         .select('id')
-        .eq('user_id', signupData.roleData.linkedToplineId)
+        .eq('user_id', linkedToplineUserId)
         .maybeSingle();
 
-      if (toplineError || !toplineRep) {
-        console.error('Topline rep lookup error:', toplineError);
-        await supabaseAdmin.auth.admin.deleteUser(userId);
-        return new Response(
-          JSON.stringify({ error: 'Invalid topline rep assignment' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (toplineRep) {
+        toplineRepsId = toplineRep.id;
+      } else {
+        console.warn('Topline rep not found, creating one on the fly');
+        const { error: createToplineRepError } = await supabaseAdmin
+          .from('reps')
+          .insert({
+            user_id: linkedToplineUserId,
+            role: 'topline',
+            assigned_topline_id: null,
+            active: true
+          });
+
+        if (createToplineRepError) {
+          console.error('Failed creating topline rep record:', createToplineRepError);
+        }
+
+        // Re-fetch after attempting creation
+        const { data: createdToplineRep, error: refetchError } = await supabaseAdmin
+          .from('reps')
+          .select('id')
+          .eq('user_id', linkedToplineUserId)
+          .maybeSingle();
+
+        if (createdToplineRep) {
+          toplineRepsId = createdToplineRep.id;
+        } else {
+          console.error('Topline rep lookup error:', toplineError || refetchError);
+          await supabaseAdmin.auth.admin.deleteUser(userId);
+          return new Response(
+            JSON.stringify({ error: 'Invalid topline rep assignment' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       // Create the downline rep record
@@ -294,7 +324,7 @@ serve(async (req) => {
         .insert({
           user_id: userId,
           role: 'downline',
-          assigned_topline_id: toplineRep.id, // Use topline's reps.id
+          assigned_topline_id: toplineRepsId,
           active: true
         });
 
