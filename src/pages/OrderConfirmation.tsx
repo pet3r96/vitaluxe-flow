@@ -37,7 +37,7 @@ export default function OrderConfirmation() {
         .from("cart_lines")
         .select(`
           *,
-          product:products(name, dosage, image_url, base_price)
+          product:products(name, dosage, image_url, base_price, requires_prescription)
         `)
         .eq("cart_id", cartData.id);
 
@@ -100,6 +100,20 @@ export default function OrderConfirmation() {
         if (!hasPatientInfo) {
           throw new Error("All items must have patient information for patient orders");
         }
+      }
+
+      const allLines = [...practiceLines, ...patientLines];
+      const missingPrescriptions = allLines.filter((line: any) => 
+        line.product?.requires_prescription && !line.prescription_url
+      );
+
+      if (missingPrescriptions.length > 0) {
+        const productNames = missingPrescriptions
+          .map((line: any) => line.product?.name)
+          .join(", ");
+        throw new Error(
+          `The following products require prescriptions but none were uploaded: ${productNames}. Please go back to your cart and add prescriptions.`
+        );
       }
 
       const doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
@@ -294,6 +308,21 @@ export default function OrderConfirmation() {
                       <Badge>Patient: {line.patient_name}</Badge>
                     )}
                   </div>
+                  {line.product?.requires_prescription && (
+                    <div className="mt-2 flex items-center gap-2 text-sm">
+                      {line.prescription_url ? (
+                        <Badge variant="default" className="bg-green-600">
+                          <FileCheck className="h-3 w-3 mr-1" />
+                          Prescription Uploaded
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Missing Prescription
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold text-primary">

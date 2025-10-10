@@ -231,6 +231,7 @@ export const ProductsDataTable = () => {
               {isAdmin && <TableHead>Practice Price</TableHead>}
               {isProvider && <TableHead>Practice Price</TableHead>}
               {isAdmin && <TableHead>Pharmacy</TableHead>}
+              {isAdmin && <TableHead>Rx Required</TableHead>}
               <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -276,6 +277,13 @@ export const ProductsDataTable = () => {
                       {product.pharmacies?.name || (
                         <span className="text-muted-foreground italic text-xs">Unassigned</span>
                       )}
+                    </TableCell>
+                  )}
+                  {isAdmin && (
+                    <TableCell>
+                      <Badge variant={product.requires_prescription ? "default" : "secondary"}>
+                        {product.requires_prescription ? "Yes" : "No"}
+                      </Badge>
                     </TableCell>
                   )}
                   <TableCell>

@@ -42,6 +42,9 @@ export const PatientSelectionDialog = ({
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
+  const [prescriptionPreview, setPrescriptionPreview] = useState<string>("");
+  const [uploadingPrescription, setUploadingPrescription] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
   const { data: patients, isLoading } = useQuery({
@@ -118,14 +121,43 @@ export const PatientSelectionDialog = ({
       setShipTo('patient');
       setSelectedPatientId("");
       setQuantity(1);
+      setPrescriptionFile(null);
+      setPrescriptionPreview("");
       if (effectiveRole === "doctor") {
         setSelectedProviderId(null);
       }
     }
   }, [open, effectiveRole]);
 
-  const handleAddToCart = () => {
-    // Validate provider selection
+  const handlePrescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Please upload a PDF or PNG file");
+        return;
+      }
+      
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size must be less than 10MB");
+        return;
+      }
+      
+      setPrescriptionFile(file);
+      
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPrescriptionPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setPrescriptionPreview("");
+      }
+    }
+  };
+
+  const handleAddToCart = async () => {
     if (!selectedProviderId) {
       toast.error("Please select a provider");
       return;
@@ -141,12 +173,47 @@ export const PatientSelectionDialog = ({
       return;
     }
 
+    if (product.requires_prescription && !prescriptionFile) {
+      toast.error("This product requires a prescription. Please upload a prescription before adding to cart.");
+      return;
+    }
+
     const isPracticeOrder = shipTo === 'practice';
+    
+    let prescriptionUrl = null;
+    if (product.requires_prescription && prescriptionFile) {
+      setUploadingPrescription(true);
+      try {
+        const fileExt = prescriptionFile.name.split(".").pop();
+        const fileName = `${effectiveUserId}/${Date.now()}_${Math.random()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("prescriptions")
+          .upload(fileName, prescriptionFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("prescriptions")
+          .getPublicUrl(fileName);
+
+        prescriptionUrl = urlData.publicUrl;
+        toast.success("Prescription uploaded successfully");
+      } catch (error: any) {
+        toast.error(error.message || "Failed to upload prescription");
+        setUploadingPrescription(false);
+        return;
+      } finally {
+        setUploadingPrescription(false);
+      }
+    }
+    
     onAddToCart(
       isPracticeOrder ? null : selectedPatientId, 
       quantity,
       isPracticeOrder,
-      selectedProviderId
+      selectedProviderId,
+      prescriptionUrl
     );
     onOpenChange(false);
   };

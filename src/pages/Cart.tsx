@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Trash2, Package } from "lucide-react";
+import { ShoppingCart, Trash2, Package, FileCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -133,6 +133,12 @@ export default function Cart() {
                   <p className="text-sm">
                     <span className="font-medium">Quantity:</span> {line.quantity}
                   </p>
+                  {line.prescription_url && (
+                    <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
+                      <FileCheck className="h-3 w-3" />
+                      <span>Prescription uploaded</span>
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold text-primary">

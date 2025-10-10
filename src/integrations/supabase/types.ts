@@ -786,6 +786,7 @@ export type Database = {
           image_url: string | null
           name: string
           pharmacy_id: string | null
+          requires_prescription: boolean
           retail_price: number | null
           sig: string | null
           topline_price: number | null
@@ -801,6 +802,7 @@ export type Database = {
           image_url?: string | null
           name: string
           pharmacy_id?: string | null
+          requires_prescription?: boolean
           retail_price?: number | null
           sig?: string | null
           topline_price?: number | null
@@ -816,6 +818,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           pharmacy_id?: string | null
+          requires_prescription?: boolean
           retail_price?: number | null
           sig?: string | null
           topline_price?: number | null

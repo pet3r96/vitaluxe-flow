@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, XCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ExternalLink, XCircle, AlertCircle } from "lucide-react";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
 import { CancelOrderDialog } from "./CancelOrderDialog";
@@ -175,13 +176,40 @@ export const OrderDetailsDialog = ({
                   )}
 
                   {line.prescription_url && (
-                    <div className="pt-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={line.prescription_url} target="_blank" rel="noopener noreferrer">
+                    <div className="pt-3 border-t">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-muted-foreground">Prescription</p>
+                        {line.products?.requires_prescription && (
+                          <Badge variant="default" className="bg-green-600">Required</Badge>
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        asChild
+                        className="w-full"
+                      >
+                        <a 
+                          href={line.prescription_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center"
+                        >
                           <ExternalLink className="h-4 w-4 mr-2" />
-                          View Prescription
+                          View Prescription Document
                         </a>
                       </Button>
+                    </div>
+                  )}
+
+                  {line.products?.requires_prescription && !line.prescription_url && effectiveRole === 'pharmacy' && (
+                    <div className="pt-3 border-t">
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription className="text-xs">
+                          This product requires a prescription but none was uploaded. Please contact support.
+                        </AlertDescription>
+                      </Alert>
                     </div>
                   )}
 

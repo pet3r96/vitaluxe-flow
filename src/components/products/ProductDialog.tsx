@@ -42,6 +42,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     downline_price: "",
     retail_price: "",
     pharmacy_id: "",
+    requires_prescription: false,
   });
 
   // Fetch available pharmacies
@@ -75,6 +76,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         downline_price: product.downline_price?.toString() || "",
         retail_price: product.retail_price?.toString() || "",
         pharmacy_id: product.pharmacy_id || "",
+        requires_prescription: product.requires_prescription || false,
       });
       setImagePreview(product.image_url || "");
     } else {
@@ -138,6 +140,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         image_url: imageUrl,
         active: true,
         pharmacy_id: formData.pharmacy_id || null,
+        requires_prescription: formData.requires_prescription,
       };
 
       if (product) {
@@ -175,6 +178,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       downline_price: "",
       retail_price: "",
       pharmacy_id: pharmacies.length === 1 ? pharmacies[0].id : "",
+      requires_prescription: false,
     });
     setImageFile(null);
     setImagePreview("");
@@ -339,6 +343,37 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                 Price shown to practices at checkout
               </p>
             </div>
+          </div>
+
+          {/* Prescription Requirement Toggle */}
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="requires_prescription" className="text-base font-semibold">
+                  Prescription Required
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Require prescription upload when ordering this product
+                </p>
+              </div>
+              <Switch
+                id="requires_prescription"
+                checked={formData.requires_prescription}
+                onCheckedChange={(checked) => 
+                  setFormData({ ...formData, requires_prescription: checked })
+                }
+              />
+            </div>
+            
+            {formData.requires_prescription && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Providers must upload a valid prescription (PDF or PNG) when adding this product to cart.
+                  Orders cannot be completed without prescriptions for required products.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
