@@ -68,14 +68,22 @@ export default function Cart() {
         throw new Error("Cart is empty");
       }
 
+      // Group cart lines by order type
+      const practiceLines = (cart.lines as any[]).filter(
+        (line) => line.patient_name === "Practice Order"
+      );
+      const patientLines = (cart.lines as any[]).filter(
+        (line) => line.patient_name !== "Practice Order"
+      );
+
       // Validate practice order requirements
-      if (hasPracticeOrder && !providerProfile?.shipping_address) {
+      if (practiceLines.length > 0 && !providerProfile?.shipping_address) {
         throw new Error("Please set your practice shipping address in your profile before placing practice orders");
       }
 
       // Validate patient order requirements
-      if (!hasPracticeOrder) {
-        const hasPatientInfo = (cart.lines as any[]).every(
+      if (patientLines.length > 0) {
+        const hasPatientInfo = patientLines.every(
           (line) => line.patient_name && line.patient_id
         );
         if (!hasPatientInfo) {
@@ -83,49 +91,100 @@ export default function Cart() {
         }
       }
 
-      // Calculate total
-      const totalAmount = (cart.lines as any[]).reduce<number>(
-        (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
-        0
-      );
-
       // Determine the doctor the order should be attributed to
       const doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
 
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          doctor_id: doctorIdForOrder,
-          total_amount: totalAmount,
-          status: "pending",
-          ship_to: hasPracticeOrder ? "practice" : "patient",
-          practice_address: hasPracticeOrder ? providerProfile?.shipping_address : null,
-        })
-        .select()
-        .single();
+      const createdOrders = [];
 
-      if (orderError) throw orderError;
+      // Create practice order if needed
+      if (practiceLines.length > 0) {
+        const practiceTotal = practiceLines.reduce<number>(
+          (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
+          0
+        );
 
-      // Create order lines from cart lines (use data as already set in cart)
-      const orderLines = cart.lines.map((line: any) => ({
-        order_id: order.id,
-        product_id: line.product_id,
-        quantity: line.quantity || 1,
-        price: line.price_snapshot,
-        patient_id: line.patient_id,
-        patient_name: line.patient_name,
-        patient_email: line.patient_email,
-        patient_phone: line.patient_phone,
-        patient_address: line.patient_address,
-        prescription_url: line.prescription_url,
-        status: "pending" as const,
-      }));
+        const { data: practiceOrder, error: practiceOrderError } = await supabase
+          .from("orders")
+          .insert({
+            doctor_id: doctorIdForOrder,
+            total_amount: practiceTotal,
+            status: "pending",
+            ship_to: "practice",
+            practice_address: providerProfile?.shipping_address,
+          })
+          .select()
+          .single();
 
-      const { error: linesError } = await supabase
-        .from("order_lines")
-        .insert(orderLines);
+        if (practiceOrderError) throw practiceOrderError;
 
-      if (linesError) throw linesError;
+        // Create practice order lines
+        const practiceOrderLines = practiceLines.map((line: any) => ({
+          order_id: practiceOrder.id,
+          product_id: line.product_id,
+          quantity: line.quantity || 1,
+          price: line.price_snapshot,
+          patient_id: line.patient_id,
+          patient_name: line.patient_name,
+          patient_email: line.patient_email,
+          patient_phone: line.patient_phone,
+          patient_address: line.patient_address,
+          prescription_url: line.prescription_url,
+          status: "pending" as const,
+        }));
+
+        const { error: practiceLinesError } = await supabase
+          .from("order_lines")
+          .insert(practiceOrderLines);
+
+        if (practiceLinesError) throw practiceLinesError;
+
+        createdOrders.push(practiceOrder);
+      }
+
+      // Create patient order if needed
+      if (patientLines.length > 0) {
+        const patientTotal = patientLines.reduce<number>(
+          (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
+          0
+        );
+
+        const { data: patientOrder, error: patientOrderError } = await supabase
+          .from("orders")
+          .insert({
+            doctor_id: doctorIdForOrder,
+            total_amount: patientTotal,
+            status: "pending",
+            ship_to: "patient",
+            practice_address: null,
+          })
+          .select()
+          .single();
+
+        if (patientOrderError) throw patientOrderError;
+
+        // Create patient order lines
+        const patientOrderLines = patientLines.map((line: any) => ({
+          order_id: patientOrder.id,
+          product_id: line.product_id,
+          quantity: line.quantity || 1,
+          price: line.price_snapshot,
+          patient_id: line.patient_id,
+          patient_name: line.patient_name,
+          patient_email: line.patient_email,
+          patient_phone: line.patient_phone,
+          patient_address: line.patient_address,
+          prescription_url: line.prescription_url,
+          status: "pending" as const,
+        }));
+
+        const { error: patientLinesError } = await supabase
+          .from("order_lines")
+          .insert(patientOrderLines);
+
+        if (patientLinesError) throw patientLinesError;
+
+        createdOrders.push(patientOrder);
+      }
 
       // Clear cart lines
       const { error: deleteError } = await supabase
@@ -135,12 +194,13 @@ export default function Cart() {
 
       if (deleteError) throw deleteError;
 
-      return order;
+      return createdOrders;
     },
-    onSuccess: (order) => {
+    onSuccess: (orders) => {
+      const orderCount = orders.length;
       toast({
         title: "Order Placed Successfully! 🎉",
-        description: `Order #${order.id.slice(0, 8)} has been created. You can view it under "My Orders".`,
+        description: `${orderCount} order${orderCount > 1 ? 's' : ''} created. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
       });
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       navigate("/orders");
