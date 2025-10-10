@@ -14,13 +14,13 @@ import { AddressInput } from "@/components/ui/address-input";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 
-interface AddProviderDialogProps {
+interface AddPracticeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProviderDialogProps) => {
+export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPracticeDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
@@ -90,12 +90,12 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
 
       if (error) throw error;
 
-      toast.success("✅ Provider account created successfully");
+      toast.success("✅ Practice account created successfully");
       onSuccess();
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
-      toast.error(`❌ ${error.message || "Failed to create provider account"}`);
+      toast.error(`❌ ${error.message || "Failed to create practice account"}`);
     } finally {
       setLoading(false);
     }
@@ -132,9 +132,9 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Provider</DialogTitle>
+          <DialogTitle>Add New Practice</DialogTitle>
           <DialogDescription>
-            Create a new doctor account by filling out the form below
+            Create a new practice account by filling out the form below
           </DialogDescription>
         </DialogHeader>
 
@@ -227,7 +227,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
           </div>
 
           <AddressInput
-            label="Provider Address"
+            label="Practice Address"
             value={{
               street: formData.address_street,
               city: formData.address_city,
@@ -273,7 +273,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess }: AddProvider
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Provider
+              Create Practice
             </Button>
           </div>
         </form>

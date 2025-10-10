@@ -33,7 +33,7 @@ const menuItems = {
   admin: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Accounts", url: "/accounts", icon: Users },
-    { title: "Providers", url: "/providers", icon: Stethoscope },
+    { title: "Practices", url: "/practices", icon: Stethoscope },
     { title: "Patients", url: "/patients", icon: Users },
     { title: "Products", url: "/products", icon: Package },
     { title: "Pharmacies", url: "/pharmacies", icon: Building2 },

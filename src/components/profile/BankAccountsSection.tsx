@@ -28,9 +28,9 @@ export const BankAccountsSection = () => {
     queryKey: ["payment-methods", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("provider_payment_methods")
+        .from("practice_payment_methods")
         .select("*")
-        .eq("provider_id", effectiveUserId)
+        .eq("practice_id", effectiveUserId)
         .order("is_default", { ascending: false });
 
       if (error) throw error;
@@ -78,7 +78,7 @@ export const BankAccountsSection = () => {
         },
         body: JSON.stringify({ 
           public_token: publicToken,
-          provider_id: effectiveUserId,
+          practice_id: effectiveUserId,
         }),
       });
 
@@ -105,7 +105,7 @@ export const BankAccountsSection = () => {
   const deletePaymentMethodMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("provider_payment_methods")
+        .from("practice_payment_methods")
         .delete()
         .eq("id", id);
 
@@ -132,13 +132,13 @@ export const BankAccountsSection = () => {
     mutationFn: async (id: string) => {
       // First, unset all defaults
       await supabase
-        .from("provider_payment_methods")
+        .from("practice_payment_methods")
         .update({ is_default: false })
-        .eq("provider_id", effectiveUserId);
+        .eq("practice_id", effectiveUserId);
 
       // Then set the new default
       const { error } = await supabase
-        .from("provider_payment_methods")
+        .from("practice_payment_methods")
         .update({ is_default: true })
         .eq("id", id);
 

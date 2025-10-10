@@ -13,20 +13,20 @@ import { Separator } from "@/components/ui/separator";
 import { ExternalLink, Copy } from "lucide-react";
 import { toast } from "sonner";
 
-interface ProviderDetailsDialogProps {
+interface PracticeDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   provider: any;
   onSuccess: () => void;
 }
 
-export const ProviderDetailsDialog = ({
+export const PracticeDetailsDialog = ({
   open,
   onOpenChange,
   provider,
-}: ProviderDetailsDialogProps) => {
+}: PracticeDetailsDialogProps) => {
   const { data: orders } = useQuery({
-    queryKey: ["provider-orders", provider?.id],
+    queryKey: ["practice-orders", provider?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
@@ -42,7 +42,7 @@ export const ProviderDetailsDialog = ({
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["provider-stats", provider?.id],
+    queryKey: ["practice-stats", provider?.id],
     queryFn: async () => {
       const { data: allOrders, error } = await supabase
         .from("orders")
@@ -76,7 +76,7 @@ export const ProviderDetailsDialog = ({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Provider Details</span>
+            <span>Practice Details</span>
             <Badge variant={provider.active ? "default" : "secondary"}>
               {provider.active ? "Active" : "Inactive"}
             </Badge>

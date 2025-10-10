@@ -31,9 +31,9 @@ export const PatientsDataTable = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      // If user is a provider (doctor), only show their patients
+      // If user is a practice (doctor), only show their patients
       if (effectiveRole === "doctor" && effectiveUserId) {
-        patientsQuery = patientsQuery.eq("provider_id", effectiveUserId);
+        patientsQuery = patientsQuery.eq("practice_id", effectiveUserId);
       }
 
       const { data: patientsData, error: patientsError } = await patientsQuery;
@@ -42,21 +42,21 @@ export const PatientsDataTable = () => {
         throw patientsError;
       }
 
-      // Fetch provider details for all patients
+      // Fetch practice details for all patients
       if (patientsData && patientsData.length > 0) {
-        const providerIds = [...new Set(patientsData.map(p => p.provider_id).filter(Boolean))];
+        const practiceIds = [...new Set(patientsData.map(p => p.practice_id).filter(Boolean))];
         
-        if (providerIds.length > 0) {
-          const { data: providersData } = await supabase
+        if (practiceIds.length > 0) {
+          const { data: practicesData } = await supabase
             .from("profiles")
             .select("id, name, email")
-            .in("id", providerIds);
+            .in("id", practiceIds);
 
-          // Map provider data to patients
-          const providersMap = new Map(providersData?.map(p => [p.id, p]) || []);
+          // Map practice data to patients
+          const practicesMap = new Map(practicesData?.map(p => [p.id, p]) || []);
           return patientsData.map(patient => ({
             ...patient,
-            provider: providersMap.get(patient.provider_id)
+            practice: practicesMap.get(patient.practice_id)
           }));
         }
       }
@@ -109,7 +109,7 @@ export const PatientsDataTable = () => {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Address</TableHead>
-              {isAdmin && <TableHead>Provider</TableHead>}
+              {isAdmin && <TableHead>Practice</TableHead>}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -140,7 +140,7 @@ export const PatientsDataTable = () => {
                   </TableCell>
                   {isAdmin && (
                     <TableCell>
-                      {patient.provider?.name || "-"}
+                      {patient.practice?.name || "-"}
                     </TableCell>
                   )}
                   <TableCell className="text-right">

@@ -14,18 +14,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Eye, Power, PowerOff, UserPlus } from "lucide-react";
-import { AddProviderDialog } from "./AddProviderDialog";
-import { ProviderDetailsDialog } from "./ProviderDetailsDialog";
+import { AddPracticeDialog } from "./AddPracticeDialog";
+import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
 import { toast } from "sonner";
 
-export const ProvidersDataTable = () => {
+export const PracticesDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProvider, setSelectedProvider] = useState<any>(null);
+  const [selectedPractice, setSelectedPractice] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  const { data: providers, isLoading, refetch } = useQuery({
-    queryKey: ["providers"],
+  const { data: practices, isLoading, refetch } = useQuery({
+    queryKey: ["practices"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -42,7 +42,7 @@ export const ProvidersDataTable = () => {
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["provider-stats"],
+    queryKey: ["practice-stats"],
     queryFn: async () => {
       const { data: orders, error } = await supabase
         .from("orders")
@@ -52,27 +52,27 @@ export const ProvidersDataTable = () => {
 
       const totalOrders = orders?.length || 0;
       const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
-      const activeProviders = providers?.filter(p => p.active).length || 0;
+      const activePractices = practices?.filter(p => p.active).length || 0;
 
       return {
-        totalProviders: providers?.length || 0,
-        activeProviders,
+        totalPractices: practices?.length || 0,
+        activePractices,
         totalOrders,
         totalRevenue,
       };
     },
-    enabled: !!providers,
+    enabled: !!practices,
   });
 
-  const toggleAccountStatus = async (providerId: string, currentStatus: boolean) => {
+  const toggleAccountStatus = async (practiceId: string, currentStatus: boolean) => {
     if (currentStatus) {
       const confirmed = window.confirm(
-        "⚠️ Disable Provider Account?\n\n" +
-        "This provider will be immediately signed out and unable to:\n" +
+        "⚠️ Disable Practice Account?\n\n" +
+        "This practice will be immediately signed out and unable to:\n" +
         "• Access their account\n" +
         "• Place new orders\n" +
         "• View patient information\n\n" +
-        "Active orders will remain visible but provider cannot modify them.\n\n" +
+        "Active orders will remain visible but practice cannot modify them.\n\n" +
         "Continue?"
       );
       if (!confirmed) return;
@@ -81,27 +81,27 @@ export const ProvidersDataTable = () => {
     const { error } = await supabase
       .from("profiles")
       .update({ active: !currentStatus })
-      .eq("id", providerId);
+      .eq("id", practiceId);
 
     if (!error) {
       toast.success(
         currentStatus 
-          ? "✅ Provider account disabled successfully"
-          : "✅ Provider account enabled successfully"
+          ? "✅ Practice account disabled successfully"
+          : "✅ Practice account enabled successfully"
       );
       refetch();
     } else {
-      toast.error("❌ Failed to update provider status");
+      toast.error("❌ Failed to update practice status");
     }
   };
 
-  const filteredProviders = providers?.filter((provider) => {
+  const filteredPractices = practices?.filter((practice) => {
     const matchesSearch = 
-      provider.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.npi?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.license_number?.toLowerCase().includes(searchQuery.toLowerCase());
+      practice.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      practice.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      practice.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      practice.npi?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      practice.license_number?.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesSearch;
   });
@@ -112,14 +112,14 @@ export const ProvidersDataTable = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats?.totalProviders || 0}</div>
-            <p className="text-sm text-muted-foreground">Total Providers</p>
+            <div className="text-2xl font-bold text-foreground">{stats?.totalPractices || 0}</div>
+            <p className="text-sm text-muted-foreground">Total Practices</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-primary">{stats?.activeProviders || 0}</div>
-            <p className="text-sm text-muted-foreground">Active Providers</p>
+            <div className="text-2xl font-bold text-primary">{stats?.activePractices || 0}</div>
+            <p className="text-sm text-muted-foreground">Active Practices</p>
           </CardContent>
         </Card>
         <Card>
@@ -151,16 +151,16 @@ export const ProvidersDataTable = () => {
         </div>
         <Button onClick={() => setAddDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
-          Add Provider
+          Add Practice
         </Button>
       </div>
 
-      {/* Providers Table */}
+      {/* Practices Table */}
       <div className="rounded-md border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Provider Name</TableHead>
+              <TableHead>Practice Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>NPI</TableHead>
               <TableHead>License #</TableHead>
@@ -177,28 +177,28 @@ export const ProvidersDataTable = () => {
                   Loading...
                 </TableCell>
               </TableRow>
-            ) : filteredProviders?.length === 0 ? (
+            ) : filteredPractices?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  No providers found
+                  No practices found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProviders?.map((provider) => (
-                <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.name}</TableCell>
-                  <TableCell>{provider.email}</TableCell>
+              filteredPractices?.map((practice) => (
+                <TableRow key={practice.id}>
+                  <TableCell className="font-medium">{practice.name}</TableCell>
+                  <TableCell>{practice.email}</TableCell>
                   <TableCell>
-                    <span className="font-mono text-sm">{provider.npi || "-"}</span>
+                    <span className="font-mono text-sm">{practice.npi || "-"}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="font-mono text-sm">{provider.license_number || "-"}</span>
+                    <span className="font-mono text-sm">{practice.license_number || "-"}</span>
                   </TableCell>
-                  <TableCell>{provider.company || "-"}</TableCell>
-                  <TableCell>{provider.phone || "-"}</TableCell>
+                  <TableCell>{practice.company || "-"}</TableCell>
+                  <TableCell>{practice.phone || "-"}</TableCell>
                   <TableCell>
-                    <Badge variant={provider.active ? "default" : "secondary"}>
-                      {provider.active ? "Active" : "Inactive"}
+                    <Badge variant={practice.active ? "default" : "secondary"}>
+                      {practice.active ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -207,7 +207,7 @@ export const ProvidersDataTable = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setSelectedProvider(provider);
+                          setSelectedPractice(practice);
                           setDetailsOpen(true);
                         }}
                       >
@@ -216,9 +216,9 @@ export const ProvidersDataTable = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleAccountStatus(provider.id, provider.active)}
+                        onClick={() => toggleAccountStatus(practice.id, practice.active)}
                       >
-                        {provider.active ? (
+                        {practice.active ? (
                           <PowerOff className="h-4 w-4 text-destructive" />
                         ) : (
                           <Power className="h-4 w-4 text-primary" />
@@ -233,17 +233,17 @@ export const ProvidersDataTable = () => {
         </Table>
       </div>
 
-      <AddProviderDialog
+      <AddPracticeDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={() => refetch()}
       />
 
-      {selectedProvider && (
-        <ProviderDetailsDialog
+      {selectedPractice && (
+        <PracticeDetailsDialog
           open={detailsOpen}
           onOpenChange={setDetailsOpen}
-          provider={selectedProvider}
+          provider={selectedPractice}
           onSuccess={() => refetch()}
         />
       )}

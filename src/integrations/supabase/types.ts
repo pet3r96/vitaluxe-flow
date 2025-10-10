@@ -580,7 +580,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
-          provider_id: string | null
+          practice_id: string | null
           updated_at: string
         }
         Insert: {
@@ -601,7 +601,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
-          provider_id?: string | null
+          practice_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -622,7 +622,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
-          provider_id?: string | null
+          practice_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -703,6 +703,53 @@ export type Database = {
             foreignKeyName: "pharmacies_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_payment_methods: {
+        Row: {
+          account_mask: string | null
+          account_name: string | null
+          bank_name: string | null
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          plaid_access_token: string
+          plaid_account_id: string
+          practice_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_mask?: string | null
+          account_name?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          plaid_access_token: string
+          plaid_account_id: string
+          practice_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_mask?: string | null
+          account_name?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          plaid_access_token?: string
+          plaid_account_id?: string
+          practice_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_payment_methods_provider_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -882,53 +929,6 @@ export type Database = {
           },
         ]
       }
-      provider_payment_methods: {
-        Row: {
-          account_mask: string | null
-          account_name: string | null
-          bank_name: string | null
-          created_at: string | null
-          id: string
-          is_default: boolean | null
-          plaid_access_token: string
-          plaid_account_id: string
-          provider_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          account_mask?: string | null
-          account_name?: string | null
-          bank_name?: string | null
-          created_at?: string | null
-          id?: string
-          is_default?: boolean | null
-          plaid_access_token: string
-          plaid_account_id: string
-          provider_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          account_mask?: string | null
-          account_name?: string | null
-          bank_name?: string | null
-          created_at?: string | null
-          id?: string
-          is_default?: boolean | null
-          plaid_access_token?: string
-          plaid_account_id?: string
-          provider_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "provider_payment_methods_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       shipping_audit_logs: {
         Row: {
           change_description: string | null
@@ -1033,7 +1033,7 @@ export type Database = {
           orphaned_pharmacies_converted: number
           repaired_downlines: number
           repaired_pharmacies: number
-          repaired_providers: number
+          repaired_practices: number
           repaired_toplines: number
           summary: Json
           total_repaired: number
@@ -1048,7 +1048,7 @@ export type Database = {
           orphaned_pharmacies_converted?: number
           repaired_downlines?: number
           repaired_pharmacies?: number
-          repaired_providers?: number
+          repaired_practices?: number
           repaired_toplines?: number
           summary?: Json
           total_repaired?: number
@@ -1063,7 +1063,7 @@ export type Database = {
           orphaned_pharmacies_converted?: number
           repaired_downlines?: number
           repaired_pharmacies?: number
-          repaired_providers?: number
+          repaired_practices?: number
           repaired_toplines?: number
           summary?: Json
           total_repaired?: number

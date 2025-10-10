@@ -1,12 +1,12 @@
 import { MessagesView } from "@/components/messages/MessagesView";
-import { ProviderProfileForm } from "@/components/profile/ProviderProfileForm";
+import { PracticeProfileForm } from "@/components/profile/PracticeProfileForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageCircle, User } from "lucide-react";
 
 const Messages = () => {
   const { effectiveRole } = useAuth();
-  const isProvider = effectiveRole === "doctor";
+  const isPractice = effectiveRole === "doctor"; // doctor role represents practices
 
   return (
     <div className="space-y-6">
@@ -23,7 +23,7 @@ const Messages = () => {
             <MessageCircle className="h-4 w-4 mr-2" />
             Inbox / Conversations
           </TabsTrigger>
-          {isProvider && (
+          {isPractice && (
             <TabsTrigger value="profile">
               <User className="h-4 w-4 mr-2" />
               My Profile
@@ -35,9 +35,9 @@ const Messages = () => {
           <MessagesView />
         </TabsContent>
         
-        {isProvider && (
+        {isPractice && (
           <TabsContent value="profile" className="mt-6">
-            <ProviderProfileForm />
+            <PracticeProfileForm />
           </TabsContent>
         )}
       </Tabs>

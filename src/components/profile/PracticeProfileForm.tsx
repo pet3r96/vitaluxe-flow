@@ -53,13 +53,13 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-export const ProviderProfileForm = () => {
+export const PracticeProfileForm = () => {
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ["provider-profile", effectiveUserId],
+    queryKey: ["practice-profile", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -139,7 +139,7 @@ export const ProviderProfileForm = () => {
         title: "Profile Updated",
         description: "Your profile information has been saved successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["provider-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["practice-profile"] });
     },
     onError: (error: any) => {
       toast({

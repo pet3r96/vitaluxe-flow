@@ -69,7 +69,7 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
   };
 
   if (!canEdit) {
-    // Read-only view for providers and patients
+    // Read-only view for practices and patients
     return (
       <div className="p-4 bg-muted/50 rounded-lg border space-y-3">
         <div className="flex items-center gap-2 mb-2">

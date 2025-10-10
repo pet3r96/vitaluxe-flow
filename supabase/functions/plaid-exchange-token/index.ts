@@ -33,7 +33,7 @@ serve(async (req) => {
       });
     }
 
-    const { public_token, provider_id } = await req.json();
+    const { public_token, practice_id } = await req.json();
 
     const PLAID_CLIENT_ID = Deno.env.get("PLAID_CLIENT_ID");
     const PLAID_SECRET = Deno.env.get("PLAID_SECRET");
@@ -88,19 +88,19 @@ serve(async (req) => {
     // Get the first account (you can modify this to handle multiple accounts)
     const account = authData.accounts[0];
 
-    // Check if this is the first payment method for this provider
+    // Check if this is the first payment method for this practice
     const { data: existingMethods } = await supabaseClient
-      .from("provider_payment_methods")
+      .from("practice_payment_methods")
       .select("id")
-      .eq("provider_id", provider_id);
+      .eq("practice_id", practice_id);
 
     const isFirstMethod = !existingMethods || existingMethods.length === 0;
 
     // Store in database
     const { error: insertError } = await supabaseClient
-      .from("provider_payment_methods")
+      .from("practice_payment_methods")
       .insert({
-        provider_id,
+        practice_id,
         plaid_access_token: access_token,
         plaid_account_id: account.account_id,
         account_name: account.name,

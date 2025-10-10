@@ -176,7 +176,7 @@ const Auth = () => {
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="doctor" id="doctor" />
                     <Label htmlFor="doctor" className="font-normal cursor-pointer">
-                      Provider / Medical Spa
+                      Practice / Medical Spa
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">

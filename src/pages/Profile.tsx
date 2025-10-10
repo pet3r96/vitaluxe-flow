@@ -1,12 +1,12 @@
-import { ProviderProfileForm } from "@/components/profile/ProviderProfileForm";
+import { PracticeProfileForm } from "@/components/profile/PracticeProfileForm";
 import { BankAccountsSection } from "@/components/profile/BankAccountsSection";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Profile = () => {
   const { effectiveRole } = useAuth();
-  const isProvider = effectiveRole === "doctor";
+  const isPractice = effectiveRole === "doctor"; // doctor role represents practices
 
-  if (!isProvider) {
+  if (!isPractice) {
     return (
       <div className="space-y-6">
         <div>
@@ -27,7 +27,7 @@ const Profile = () => {
       </div>
 
       <div className="space-y-6">
-        <ProviderProfileForm />
+        <PracticeProfileForm />
         <BankAccountsSection />
       </div>
     </div>

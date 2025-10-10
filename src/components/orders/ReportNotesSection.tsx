@@ -86,7 +86,7 @@ export const ReportNotesSection = ({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        For Admin/Provider view only. Document order summaries, special notes, or reporting details.
+        For Admin/Practice view only. Document order summaries, special notes, or reporting details.
       </p>
 
       {isEditing ? (
