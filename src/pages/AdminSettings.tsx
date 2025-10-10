@@ -1,8 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddressVerificationPanel } from "@/components/admin/AddressVerificationPanel";
 import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView";
+import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, MapPin, Activity } from "lucide-react";
+import { Shield, MapPin, Activity, Building2 } from "lucide-react";
 
 const AdminSettings = () => {
   return (
@@ -14,8 +15,12 @@ const AdminSettings = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="addresses" className="space-y-4">
+      <Tabs defaultValue="practices" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="practices" className="gap-2">
+            <Building2 className="h-4 w-4" />
+            Practices
+          </TabsTrigger>
           <TabsTrigger value="addresses" className="gap-2">
             <MapPin className="h-4 w-4" />
             Address Verification
@@ -29,6 +34,20 @@ const AdminSettings = () => {
             Audit Logs
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="practices" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Practice Management</CardTitle>
+              <CardDescription>
+                Manage all medical practices, view statistics, and control account status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PracticesDataTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="addresses" className="space-y-4">
           <Card>
