@@ -73,6 +73,49 @@ export const PracticesDataTable = () => {
     },
   });
 
+  const { data: allReps } = useQuery({
+    queryKey: ["all-reps-lookup"],
+    queryFn: async () => {
+      // Fetch topline reps
+      const { data: toplineReps, error: toplineError } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          user_roles!inner(role)
+        `)
+        .eq("user_roles.role", "topline")
+        .eq("active", true);
+      
+      if (toplineError) throw toplineError;
+      
+      // Fetch downline reps
+      const { data: downlineReps, error: downlineError } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          user_roles!inner(role)
+        `)
+        .eq("user_roles.role", "downline")
+        .eq("active", true);
+      
+      if (downlineError) throw downlineError;
+      
+      // Combine and create a lookup map
+      const allReps = [...(toplineReps || []), ...(downlineReps || [])];
+      const repMap = new Map();
+      allReps.forEach(rep => {
+        repMap.set(rep.id, {
+          name: rep.name,
+          role: rep.user_roles[0].role
+        });
+      });
+      
+      return repMap;
+    },
+  });
+
   const { data: stats } = useQuery({
     queryKey: ["practice-stats"],
     queryFn: async () => {
@@ -95,6 +138,19 @@ export const PracticesDataTable = () => {
     },
     enabled: !!practices,
   });
+
+  const getRepDisplay = (linkedToplineId: string | null) => {
+    if (!linkedToplineId || !allReps) {
+      return "N/A";
+    }
+    
+    const rep = allReps.get(linkedToplineId);
+    if (!rep) {
+      return "N/A";
+    }
+    
+    return `${rep.name} (${rep.role})`;
+  };
 
   const toggleAccountStatus = async (practiceId: string, currentStatus: boolean) => {
     if (currentStatus) {
@@ -199,6 +255,7 @@ export const PracticesDataTable = () => {
               <TableHead>Company/Practice</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Providers</TableHead>
+              <TableHead>Assigned Rep</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -206,13 +263,13 @@ export const PracticesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPractices?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No practices found
                 </TableCell>
               </TableRow>
@@ -231,6 +288,11 @@ export const PracticesDataTable = () => {
                   <TableCell>{practice.phone || "-"}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{providerCounts?.[practice.id] || 0}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm">
+                      {getRepDisplay(practice.linked_topline_id)}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge variant={practice.active ? "default" : "secondary"}>
