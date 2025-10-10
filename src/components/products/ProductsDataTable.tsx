@@ -144,7 +144,7 @@ export const ProductsDataTable = () => {
             patient_phone: null,
             patient_address: null,
             quantity: quantity,
-            price_snapshot: productForCart.base_price,
+            price_snapshot: productForCart.retail_price || productForCart.base_price,
             destination_state: "XX", // Placeholder for practice orders
           });
 
@@ -169,7 +169,7 @@ export const ProductsDataTable = () => {
             patient_phone: patient?.phone,
             patient_address: patient?.address,
             quantity: quantity,
-            price_snapshot: productForCart.base_price,
+            price_snapshot: productForCart.retail_price || productForCart.base_price,
             destination_state: "IL", // Default state, can be updated
           });
 
@@ -219,8 +219,8 @@ export const ProductsDataTable = () => {
               {isAdmin && <TableHead>Base Price</TableHead>}
               {isAdmin && <TableHead>Topline Price</TableHead>}
               {isAdmin && <TableHead>Downline Price</TableHead>}
-              {isProvider && <TableHead>Your Price</TableHead>}
-              <TableHead>Retail Price</TableHead>
+              {isAdmin && <TableHead>Provider Price</TableHead>}
+              {isProvider && <TableHead>Provider Price</TableHead>}
               <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -259,8 +259,8 @@ export const ProductsDataTable = () => {
                   {isAdmin && <TableCell>${product.base_price}</TableCell>}
                   {isAdmin && <TableCell>${product.topline_price || "-"}</TableCell>}
                   {isAdmin && <TableCell>${product.downline_price || "-"}</TableCell>}
-                  {isProvider && <TableCell className="font-semibold text-primary">${product.base_price}</TableCell>}
-                  <TableCell>${product.retail_price || "-"}</TableCell>
+                  {isAdmin && <TableCell>${product.retail_price || "-"}</TableCell>}
+                  {isProvider && <TableCell className="font-semibold text-primary">${product.retail_price || product.base_price}</TableCell>}
                   <TableCell>
                     <Switch
                       checked={product.active}

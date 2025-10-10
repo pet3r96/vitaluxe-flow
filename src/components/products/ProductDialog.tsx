@@ -227,7 +227,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="base_price">Base Price *</Label>
+              <Label htmlFor="base_price">Base Price (Admin Cost) *</Label>
               <Input
                 id="base_price"
                 type="number"
@@ -236,6 +236,9 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                 onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                Your cost to acquire this product
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -261,7 +264,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="retail_price">Suggested Retail Price</Label>
+              <Label htmlFor="retail_price">Provider Price</Label>
               <Input
                 id="retail_price"
                 type="number"
@@ -270,7 +273,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                 onChange={(e) => setFormData({ ...formData, retail_price: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">
-                Doctors can modify this when ordering
+                Price shown to providers/practices at checkout
               </p>
             </div>
           </div>
