@@ -1,4 +1,4 @@
-import { ProductsDataTable } from "@/components/products/ProductsDataTable";
+import { ProductsGrid } from "@/components/products/ProductsGrid";
 
 const Products = () => {
   return (
@@ -10,7 +10,7 @@ const Products = () => {
         </p>
       </div>
 
-      <ProductsDataTable />
+      <ProductsGrid />
     </div>
   );
 };
