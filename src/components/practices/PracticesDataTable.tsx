@@ -267,63 +267,13 @@ export const PracticesDataTable = () => {
         <div className="min-w-[900px]">
           <Table>
             <TableHeader>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats?.totalPractices || 0}</div>
-            <p className="text-sm text-muted-foreground">Total Practices</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-primary">{stats?.activePractices || 0}</div>
-            <p className="text-sm text-muted-foreground">Active Practices</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats?.totalOrders || 0}</div>
-            <p className="text-sm text-muted-foreground">Total Orders</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-primary">
-              ${(stats?.totalRevenue || 0).toLocaleString()}
-            </div>
-            <p className="text-sm text-muted-foreground">Total Revenue</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Add Button */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, email, NPI, license..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add Practice
-        </Button>
-      </div>
-
-      {/* Practices Table */}
-      <div className="rounded-md border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Practice Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>NPI</TableHead>
-              <TableHead>License #</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Providers</TableHead>
+              <TableRow>
+                <TableHead>Practice Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>NPI</TableHead>
+                <TableHead>License #</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Providers</TableHead>
               <TableHead>Assigned Rep</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -398,7 +348,6 @@ export const PracticesDataTable = () => {
           </TableBody>
         </Table>
         </div>
-      </div>
       </div>
 
       {filteredPractices && filteredPractices.length > 0 && (

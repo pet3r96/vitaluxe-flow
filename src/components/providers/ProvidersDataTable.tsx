@@ -204,7 +204,6 @@ export const ProvidersDataTable = () => {
         </Table>
         </div>
       </div>
-      </div>
 
       {filteredProviders && filteredProviders.length > 0 && (
         <DataTablePagination

@@ -183,7 +183,6 @@ export const PatientsDataTable = () => {
         </Table>
         </div>
       </div>
-      </div>
 
       {filteredPatients && filteredPatients.length > 0 && (
         <DataTablePagination
