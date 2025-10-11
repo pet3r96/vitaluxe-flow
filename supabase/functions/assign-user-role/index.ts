@@ -72,6 +72,39 @@ serve(async (req) => {
     const signupData: SignupRequest = await req.json();
     console.log('Signup request received for role:', signupData.role);
 
+    // Get authorization header to check if caller is authenticated
+    const authHeader = req.headers.get('Authorization');
+    let callerUserId: string | null = null;
+    
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (!error && user) {
+        callerUserId = user.id;
+      }
+    }
+
+    // Authorization check for non-admin roles creating practices
+    if (callerUserId && signupData.role === 'doctor') {
+      const { data: callerRoles } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', callerUserId);
+
+      const hasRepRole = callerRoles?.some(r => r.role === 'topline' || r.role === 'downline');
+      const isAdmin = callerRoles?.some(r => r.role === 'admin');
+
+      // If caller is a rep (not admin), ensure they're only assigning practices to themselves
+      if (hasRepRole && !isAdmin) {
+        if (signupData.roleData.linkedToplineId !== callerUserId) {
+          return new Response(
+            JSON.stringify({ error: 'Representatives can only assign practices to themselves' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
     // Validate required fields
     if (!signupData.email || !signupData.password || !signupData.name || !signupData.role) {
       return new Response(

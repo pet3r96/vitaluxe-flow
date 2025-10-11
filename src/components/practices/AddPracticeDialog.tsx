@@ -33,9 +33,10 @@ interface AddPracticeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  preAssignedRepId?: string; // Auto-assign to this rep and hide selector
 }
 
-export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPracticeDialogProps) => {
+export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRepId }: AddPracticeDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [repComboboxOpen, setRepComboboxOpen] = useState(false);
@@ -110,6 +111,13 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
   const allReps = [...(toplineReps || []), ...(downlineReps || [])].sort((a, b) => 
     a.name.localeCompare(b.name)
   );
+
+  // Auto-set rep ID if preAssignedRepId is provided
+  useState(() => {
+    if (preAssignedRepId && open) {
+      setFormData(prev => ({ ...prev, selectedRepId: preAssignedRepId }));
+    }
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -334,70 +342,72 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess }: AddPractice
             }}
           />
 
-          <div className="space-y-2">
-            <Label htmlFor="assignedRep">Assigned Representative (Optional)</Label>
-            <p className="text-sm text-muted-foreground">
-              Assign a topline or downline rep to this practice. Leave blank if managed directly by admin.
-            </p>
-            <Popover open={repComboboxOpen} onOpenChange={setRepComboboxOpen}>
-              <PopoverTrigger asChild>
+          {!preAssignedRepId && (
+            <div className="space-y-2">
+              <Label htmlFor="assignedRep">Assigned Representative (Optional)</Label>
+              <p className="text-sm text-muted-foreground">
+                Assign a topline or downline rep to this practice. Leave blank if managed directly by admin.
+              </p>
+              <Popover open={repComboboxOpen} onOpenChange={setRepComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={repComboboxOpen}
+                    className="w-full justify-between"
+                  >
+                    {formData.selectedRepId
+                      ? allReps?.find((rep) => rep.id === formData.selectedRepId)?.name
+                      : "Select representative (optional)..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search reps by name or email..." />
+                    <CommandList>
+                      <CommandEmpty>No representative found.</CommandEmpty>
+                      <CommandGroup>
+                        {allReps?.map((rep) => (
+                          <CommandItem
+                            key={rep.id}
+                            value={`${rep.name} ${rep.email}`}
+                            onSelect={() => {
+                              setFormData({ ...formData, selectedRepId: rep.id });
+                              setRepComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.selectedRepId === rep.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{rep.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {rep.email} • {rep.user_roles[0].role}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {formData.selectedRepId && (
                 <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={repComboboxOpen}
-                  className="w-full justify-between"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, selectedRepId: "" })}
                 >
-                  {formData.selectedRepId
-                    ? allReps?.find((rep) => rep.id === formData.selectedRepId)?.name
-                    : "Select representative (optional)..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  Clear selection
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search reps by name or email..." />
-                  <CommandList>
-                    <CommandEmpty>No representative found.</CommandEmpty>
-                    <CommandGroup>
-                      {allReps?.map((rep) => (
-                        <CommandItem
-                          key={rep.id}
-                          value={`${rep.name} ${rep.email}`}
-                          onSelect={() => {
-                            setFormData({ ...formData, selectedRepId: rep.id });
-                            setRepComboboxOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              formData.selectedRepId === rep.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span>{rep.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {rep.email} • {rep.user_roles[0].role}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {formData.selectedRepId && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setFormData({ ...formData, selectedRepId: "" })}
-              >
-                Clear selection
-              </Button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold">Default Prescriber Information</h3>
