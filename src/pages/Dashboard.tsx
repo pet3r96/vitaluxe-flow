@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
-import { Package, ShoppingCart, Users, DollarSign } from "lucide-react";
+import { Package, ShoppingCart, Users, DollarSign, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -107,6 +107,43 @@ const Dashboard = () => {
         return count || 0;
       }
     },
+  });
+
+  const { data: pendingOrdersCount, isLoading: pendingOrdersLoading } = useQuery({
+    queryKey: ["dashboard-pending-orders-count", effectiveRole, effectiveUserId],
+    queryFn: async () => {
+      if (effectiveRole !== "pharmacy") {
+        return 0;
+      }
+      
+      // Get pharmacy ID first
+      const { data: pharmacyData } = await supabase
+        .from("pharmacies")
+        .select("id")
+        .eq("user_id", effectiveUserId)
+        .maybeSingle();
+      
+      if (!pharmacyData) {
+        return 0;
+      }
+      
+      // Count distinct orders where:
+      // 1. At least one order_line is assigned to this pharmacy
+      // 2. The order status is 'pending'
+      const { data: orderLines } = await supabase
+        .from("order_lines")
+        .select(`
+          order_id,
+          orders!inner(status)
+        `)
+        .eq("assigned_pharmacy_id", pharmacyData.id)
+        .eq("orders.status", "pending");
+      
+      // Get unique order IDs (one order can have multiple lines)
+      const uniqueOrderIds = [...new Set(orderLines?.map(ol => ol.order_id) || [])];
+      return uniqueOrderIds.length;
+    },
+    enabled: effectiveRole === "pharmacy",
   });
 
   const { data: usersCount, isLoading: usersLoading } = useQuery({
@@ -293,6 +330,14 @@ const Dashboard = () => {
       icon: Package,
       description: "Active products",
       isLoading: productsLoading,
+    },
+    {
+      title: "Pending Orders",
+      value: pendingOrdersLoading ? "..." : pendingOrdersCount?.toString() || "0",
+      icon: Clock,
+      description: "Orders awaiting fulfillment",
+      isLoading: pendingOrdersLoading,
+      hidden: effectiveRole !== "pharmacy",
     },
     {
       title: "Users",
