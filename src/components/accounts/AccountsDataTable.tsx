@@ -113,8 +113,7 @@ export const AccountsDataTable = () => {
 
   const filteredAccounts = accounts?.filter((account) => {
     const matchesSearch = account.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      account.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      account.company?.toLowerCase().includes(searchQuery.toLowerCase());
+      account.email?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const displayRole = getDisplayRole(account);
     const matchesRole = roleFilter === "all" || displayRole === roleFilter;
@@ -186,7 +185,7 @@ export const AccountsDataTable = () => {
       </div>
 
       <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1400px]">
+        <div className="min-w-[1200px]">
           <Table>
           <TableHeader>
             <TableRow>
@@ -194,7 +193,6 @@ export const AccountsDataTable = () => {
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Parent</TableHead>
-              <TableHead>Company</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -202,13 +200,13 @@ export const AccountsDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
+                <TableCell colSpan={6} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredAccounts?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No accounts found
                 </TableCell>
               </TableRow>
@@ -237,7 +235,6 @@ export const AccountsDataTable = () => {
                       "-"
                     )}
                   </TableCell>
-                  <TableCell>{account.company || "-"}</TableCell>
                   <TableCell>
                     <Badge variant={account.active ? "default" : "secondary"}>
                       {account.active ? "Active" : "Inactive"}
