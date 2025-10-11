@@ -21,10 +21,21 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AddressInput } from "@/components/ui/address-input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Upload, Check, ChevronsUpDown } from "lucide-react";
+import { Loader2, Upload, Check, ChevronsUpDown, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+
+const US_STATES = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+];
 
 interface AddAccountDialogProps {
   open: boolean;
@@ -58,6 +69,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
     dea: "",
     contactEmail: "",
     statesServiced: [] as string[],
+    priorityMap: {} as Record<string, number>,
     linkedToplineId: "",
   });
 
@@ -112,6 +124,15 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
     ? [...(toplineReps || []), ...(downlineReps || [])].sort((a, b) => a.name.localeCompare(b.name))
     : toplineReps || [];
 
+  const handleStateToggle = (state: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      statesServiced: prev.statesServiced.includes(state)
+        ? prev.statesServiced.filter((s) => s !== state)
+        : [...prev.statesServiced, state],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -157,6 +178,13 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
         }
       }
 
+      // Validate pharmacy has at least one state
+      if (role === "pharmacy" && formData.statesServiced.length === 0) {
+        toast.error("Please select at least one state that this pharmacy services");
+        setLoading(false);
+        return;
+      }
+
       const roleData: any = {};
       // Note: "doctor" role represents Practice accounts in the database
       if (role === "doctor") {
@@ -177,6 +205,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
         roleData.address_city = formData.address_city;
         roleData.address_state = formData.address_state;
         roleData.address_zip = formData.address_zip;
+        roleData.priorityMap = formData.priorityMap;
       } else if (role === "downline") {
         roleData.linkedToplineId = formData.linkedToplineId;
         roleData.company = formData.company;
@@ -252,6 +281,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
       dea: "",
       contactEmail: "",
       statesServiced: [],
+      priorityMap: {},
       linkedToplineId: "",
     });
   };
@@ -484,6 +514,127 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
                     Clear selection
                   </Button>
                 )}
+              </div>
+            </>
+          )}
+
+          {/* Pharmacy-specific fields */}
+          {role === "pharmacy" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="contactEmail">Contact Email *</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                  required
+                  placeholder="Primary contact email for pharmacy"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This will be used as the login email for the pharmacy account
+                </p>
+              </div>
+
+              <AddressInput
+                label="Pharmacy Address *"
+                value={{
+                  street: formData.address_street,
+                  city: formData.address_city,
+                  state: formData.address_state,
+                  zip: formData.address_zip,
+                }}
+                onChange={(addressData) => {
+                  setFormData({
+                    ...formData,
+                    address_street: addressData.street,
+                    address_city: addressData.city,
+                    address_state: addressData.state,
+                    address_zip: addressData.zip,
+                  });
+                }}
+                required
+              />
+
+              <div className="space-y-2">
+                <Label>States Serviced *</Label>
+                <div className="grid grid-cols-5 gap-2 p-4 border border-border rounded-md max-h-48 overflow-y-auto">
+                  {US_STATES.map((state) => (
+                    <div key={state} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`state-${state}`}
+                        checked={formData.statesServiced.includes(state)}
+                        onCheckedChange={() => handleStateToggle(state)}
+                      />
+                      <Label htmlFor={`state-${state}`} className="text-sm cursor-pointer">
+                        {state}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Selected: {formData.statesServiced.length} state(s)
+                </p>
+              </div>
+
+              {/* Priority Configuration Section */}
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                <Label>Priority Configuration by State</Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Assign priority numbers for each serviced state (1 = highest priority)
+                </p>
+                
+                {formData.statesServiced.length > 0 ? (
+                  <div className="space-y-2">
+                    {formData.statesServiced.map((state) => (
+                      <div key={state} className="flex items-center gap-2">
+                        <Badge variant="secondary" className="w-12 justify-center">{state}</Badge>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="Priority"
+                          value={formData.priorityMap[state] || ""}
+                          onChange={(e) => {
+                            const priority = e.target.value ? parseInt(e.target.value) : null;
+                            const newPriorityMap = { ...formData.priorityMap };
+                            if (priority) {
+                              newPriorityMap[state] = priority;
+                            } else {
+                              delete newPriorityMap[state];
+                            }
+                            setFormData({
+                              ...formData,
+                              priorityMap: newPriorityMap
+                            });
+                          }}
+                          className="w-24"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {!formData.priorityMap[state] ? "Default (lowest)" : 
+                           formData.priorityMap[state] === 1 ? "Highest priority" : 
+                           `Priority ${formData.priorityMap[state]}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Select states serviced above to configure priority routing
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded text-xs space-y-1">
+                  <p className="font-semibold text-blue-900 dark:text-blue-100">Priority Routing Rules:</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
+                    <li>Priority 1 = Highest (orders go here first)</li>
+                    <li>Lower numbers = Higher priority</li>
+                    <li>If no priority set, pharmacy gets lowest priority for that state</li>
+                    <li>Only matters when multiple pharmacies serve same product + state</li>
+                  </ul>
+                </div>
               </div>
             </>
           )}

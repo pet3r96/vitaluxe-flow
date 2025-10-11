@@ -32,6 +32,7 @@ interface SignupRequest {
     // Pharmacy fields
     contactEmail?: string;
     statesServiced?: string[];
+    priorityMap?: Record<string, number>;
     // Downline fields
     linkedToplineId?: string;
     // Provider fields
@@ -558,6 +559,22 @@ serve(async (req) => {
           JSON.stringify({ error: 'Failed to create provider record' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+    }
+
+    // For pharmacy role, update priority_map if provided
+    if (signupData.role === 'pharmacy' && signupData.roleData.priorityMap) {
+      console.log('Updating pharmacy priority_map');
+      const { error: priorityMapError } = await supabaseAdmin
+        .from('pharmacies')
+        .update({
+          priority_map: signupData.roleData.priorityMap,
+        })
+        .eq('user_id', userId);
+
+      if (priorityMapError) {
+        console.error('Priority map update error:', priorityMapError);
+        console.warn('Priority map update failed but user was created successfully');
       }
     }
 
