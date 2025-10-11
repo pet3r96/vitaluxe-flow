@@ -382,14 +382,16 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => {
-                  setFormData({ ...formData, phone: e.target.value });
+                  const value = e.target.value.replace(/\D/g, '');
+                  setFormData({ ...formData, phone: value });
                   setValidationErrors({ ...validationErrors, phone: "" });
                 }}
                 onBlur={() => {
                   const result = validatePhone(formData.phone);
                   setValidationErrors({ ...validationErrors, phone: result.error || "" });
                 }}
-                placeholder="(555) 123-4567"
+                placeholder="1234567890"
+                maxLength={10}
                 required
                 className={validationErrors.phone ? "border-destructive" : ""}
               />
@@ -520,14 +522,15 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                   id="prescriberNpi"
                   value={formData.prescriberNpi}
                   onChange={(e) => {
-                    setFormData({ ...formData, prescriberNpi: e.target.value });
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, prescriberNpi: value });
                     setValidationErrors({ ...validationErrors, prescriberNpi: "" });
                   }}
                   onBlur={() => {
                     const result = validateNPI(formData.prescriberNpi);
                     setValidationErrors({ ...validationErrors, prescriberNpi: result.error || "" });
                   }}
-                  placeholder="1234567890 (10 digits)"
+                  placeholder="1234567890"
                   required
                   maxLength={10}
                   className={validationErrors.prescriberNpi ? "border-destructive" : ""}
@@ -543,14 +546,15 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                   id="prescriberDea"
                   value={formData.prescriberDea}
                   onChange={(e) => {
-                    setFormData({ ...formData, prescriberDea: e.target.value.toUpperCase() });
+                    const value = e.target.value.toUpperCase();
+                    setFormData({ ...formData, prescriberDea: value });
                     setValidationErrors({ ...validationErrors, prescriberDea: "" });
                   }}
                   onBlur={() => {
                     const result = validateDEA(formData.prescriberDea);
                     setValidationErrors({ ...validationErrors, prescriberDea: result.error || "" });
                   }}
-                  placeholder="BJ1234567 (2 letters + 7 digits)"
+                  placeholder="AB1234567"
                   maxLength={9}
                   className={validationErrors.prescriberDea ? "border-destructive" : ""}
                 />
@@ -577,14 +581,16 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 type="tel"
                 value={formData.prescriberPhone}
                 onChange={(e) => {
-                  setFormData({ ...formData, prescriberPhone: e.target.value });
+                  const value = e.target.value.replace(/\D/g, '');
+                  setFormData({ ...formData, prescriberPhone: value });
                   setValidationErrors({ ...validationErrors, prescriberPhone: "" });
                 }}
                 onBlur={() => {
                   const result = validatePhone(formData.prescriberPhone);
                   setValidationErrors({ ...validationErrors, prescriberPhone: result.error || "" });
                 }}
-                placeholder="(555) 123-4567"
+                placeholder="1234567890"
+                maxLength={10}
                 className={validationErrors.prescriberPhone ? "border-destructive" : ""}
               />
               {validationErrors.prescriberPhone && (

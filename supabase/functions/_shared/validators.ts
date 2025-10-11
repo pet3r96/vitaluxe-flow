@@ -13,20 +13,12 @@ export function validatePhone(phone: string | null | undefined): ValidationResul
   
   const cleaned = phone.trim();
   
-  if (cleaned.length < 10) {
-    return { valid: false, error: "Phone number must be at least 10 digits" };
+  if (cleaned.length !== 10) {
+    return { valid: false, error: "Phone number must be exactly 10 digits" };
   }
   
-  if (cleaned.length > 20) {
-    return { valid: false, error: "Phone number is too long" };
-  }
-  
-  const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
-  if (!phoneRegex.test(cleaned)) {
-    return { 
-      valid: false, 
-      error: "Invalid phone number format. Use format: (123) 456-7890 or 123-456-7890" 
-    };
+  if (!/^\d{10}$/.test(cleaned)) {
+    return { valid: false, error: "Phone number must contain only numbers" };
   }
   
   return { valid: true };

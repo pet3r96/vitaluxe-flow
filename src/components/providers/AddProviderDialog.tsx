@@ -211,49 +211,88 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="npi">Provider NPI # *</Label>
-              <Input
-                id="npi"
-                value={formData.npi}
-                onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
-                placeholder="10-digit NPI"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dea">Provider DEA #</Label>
-              <Input
-                id="dea"
-                value={formData.dea}
-                onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
-                placeholder="DEA number (optional)"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="licenseNumber">License Number *</Label>
+            <Label htmlFor="npi">Provider NPI # *</Label>
             <Input
-              id="licenseNumber"
-              value={formData.licenseNumber}
-              onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-              placeholder="Medical license number"
+              id="npi"
+              value={formData.npi}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                setFormData({ ...formData, npi: value });
+                setValidationErrors({ ...validationErrors, npi: "" });
+              }}
+              onBlur={() => {
+                const result = validateNPI(formData.npi);
+                setValidationErrors({ ...validationErrors, npi: result.error || "" });
+              }}
+              placeholder="1234567890"
+              maxLength={10}
               required
+              className={validationErrors.npi ? "border-destructive" : ""}
             />
+            {validationErrors.npi && (
+              <p className="text-sm text-destructive">{validationErrors.npi}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="dea">Provider DEA #</Label>
             <Input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="(555) 123-4567"
+              id="dea"
+              value={formData.dea}
+              onChange={(e) => {
+                const value = e.target.value.toUpperCase();
+                setFormData({ ...formData, dea: value });
+                setValidationErrors({ ...validationErrors, dea: "" });
+              }}
+              onBlur={() => {
+                const result = validateDEA(formData.dea);
+                setValidationErrors({ ...validationErrors, dea: result.error || "" });
+              }}
+              placeholder="AB1234567"
+              maxLength={9}
+              className={validationErrors.dea ? "border-destructive" : ""}
             />
+            {validationErrors.dea && (
+              <p className="text-sm text-destructive">{validationErrors.dea}</p>
+            )}
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="licenseNumber">License Number *</Label>
+          <Input
+            id="licenseNumber"
+            value={formData.licenseNumber}
+            onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+            placeholder="Medical license number"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone</Label>
+          <Input
+            id="phone"
+            type="tel"
+            value={formData.phone || ""}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '');
+              setFormData({ ...formData, phone: value });
+              setValidationErrors({ ...validationErrors, phone: "" });
+            }}
+            onBlur={() => {
+              const result = validatePhone(formData.phone);
+              setValidationErrors({ ...validationErrors, phone: result.error || "" });
+            }}
+            placeholder="1234567890"
+            maxLength={10}
+            className={validationErrors.phone ? "border-destructive" : ""}
+          />
+          {validationErrors.phone && (
+            <p className="text-sm text-destructive">{validationErrors.phone}</p>
+          )}
+        </div>
 
           <div className="flex justify-end gap-2">
             <Button

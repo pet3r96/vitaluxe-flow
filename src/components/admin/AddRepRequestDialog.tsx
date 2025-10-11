@@ -144,9 +144,25 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
             <Input
               id="phone"
               type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              value={formData.phone || ""}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                setFormData({ ...formData, phone: value });
+                setValidationErrors({ ...validationErrors, phone: "" });
+              }}
+              onBlur={() => {
+                if (formData.phone) {
+                  const result = validatePhone(formData.phone);
+                  setValidationErrors({ ...validationErrors, phone: result.error || "" });
+                }
+              }}
+              placeholder="1234567890"
+              maxLength={10}
+              className={validationErrors.phone ? "border-destructive" : ""}
             />
+            {validationErrors.phone && (
+              <p className="text-sm text-destructive">{validationErrors.phone}</p>
+            )}
           </div>
 
           <div className="space-y-2">

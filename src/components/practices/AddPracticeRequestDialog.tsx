@@ -173,9 +173,23 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                   id="phone"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, phone: value });
+                    setValidationErrors({ ...validationErrors, phone: "" });
+                  }}
+                  onBlur={() => {
+                    const result = validatePhone(formData.phone);
+                    setValidationErrors({ ...validationErrors, phone: result.error || "" });
+                  }}
+                  placeholder="1234567890"
+                  maxLength={10}
                   required
+                  className={validationErrors.phone ? "border-destructive" : ""}
                 />
+                {validationErrors.phone && (
+                  <p className="text-sm text-destructive">{validationErrors.phone}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="company">Company *</Label>
@@ -191,9 +205,23 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 <Input
                   id="npi"
                   value={formData.npi}
-                  onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, npi: value });
+                    setValidationErrors({ ...validationErrors, npi: "" });
+                  }}
+                  onBlur={() => {
+                    const result = validateNPI(formData.npi);
+                    setValidationErrors({ ...validationErrors, npi: result.error || "" });
+                  }}
+                  placeholder="1234567890"
+                  maxLength={10}
                   required
+                  className={validationErrors.npi ? "border-destructive" : ""}
                 />
+                {validationErrors.npi && (
+                  <p className="text-sm text-destructive">{validationErrors.npi}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="license_number">License Number *</Label>
@@ -209,8 +237,22 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 <Input
                   id="dea"
                   value={formData.dea}
-                  onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    setFormData({ ...formData, dea: value });
+                    setValidationErrors({ ...validationErrors, dea: "" });
+                  }}
+                  onBlur={() => {
+                    const result = validateDEA(formData.dea);
+                    setValidationErrors({ ...validationErrors, dea: result.error || "" });
+                  }}
+                  placeholder="AB1234567"
+                  maxLength={9}
+                  className={validationErrors.dea ? "border-destructive" : ""}
                 />
+                {validationErrors.dea && (
+                  <p className="text-sm text-destructive">{validationErrors.dea}</p>
+                )}
               </div>
             </div>
           </div>
@@ -283,9 +325,23 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 <Input
                   id="prescriber_npi"
                   value={formData.prescriber_npi}
-                  onChange={(e) => setFormData({ ...formData, prescriber_npi: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, prescriber_npi: value });
+                    setValidationErrors({ ...validationErrors, prescriberNpi: "" });
+                  }}
+                  onBlur={() => {
+                    const result = validateNPI(formData.prescriber_npi);
+                    setValidationErrors({ ...validationErrors, prescriberNpi: result.error || "" });
+                  }}
+                  placeholder="1234567890"
+                  maxLength={10}
                   required
+                  className={validationErrors.prescriberNpi ? "border-destructive" : ""}
                 />
+                {validationErrors.prescriberNpi && (
+                  <p className="text-sm text-destructive">{validationErrors.prescriberNpi}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="prescriber_license">License *</Label>
@@ -301,8 +357,22 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 <Input
                   id="prescriber_dea"
                   value={formData.prescriber_dea}
-                  onChange={(e) => setFormData({ ...formData, prescriber_dea: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    setFormData({ ...formData, prescriber_dea: value });
+                    setValidationErrors({ ...validationErrors, prescriberDea: "" });
+                  }}
+                  onBlur={() => {
+                    const result = validateDEA(formData.prescriber_dea);
+                    setValidationErrors({ ...validationErrors, prescriberDea: result.error || "" });
+                  }}
+                  placeholder="AB1234567"
+                  maxLength={9}
+                  className={validationErrors.prescriberDea ? "border-destructive" : ""}
                 />
+                {validationErrors.prescriberDea && (
+                  <p className="text-sm text-destructive">{validationErrors.prescriberDea}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="prescriber_phone">Phone</Label>
@@ -310,8 +380,22 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                   id="prescriber_phone"
                   type="tel"
                   value={formData.prescriber_phone}
-                  onChange={(e) => setFormData({ ...formData, prescriber_phone: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, prescriber_phone: value });
+                    setValidationErrors({ ...validationErrors, prescriberPhone: "" });
+                  }}
+                  onBlur={() => {
+                    const result = validatePhone(formData.prescriber_phone);
+                    setValidationErrors({ ...validationErrors, prescriberPhone: result.error || "" });
+                  }}
+                  placeholder="1234567890"
+                  maxLength={10}
+                  className={validationErrors.prescriberPhone ? "border-destructive" : ""}
                 />
+                {validationErrors.prescriberPhone && (
+                  <p className="text-sm text-destructive">{validationErrors.prescriberPhone}</p>
+                )}
               </div>
             </div>
           </div>

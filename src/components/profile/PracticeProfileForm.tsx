@@ -240,10 +240,19 @@ export const PracticeProfileForm = () => {
                 <FormItem>
                   <FormLabel>Practice Phone Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="(555) 123-4567" {...field} />
+                    <Input 
+                      type="tel"
+                      placeholder="1234567890" 
+                      maxLength={10}
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(value);
+                      }}
+                    />
                   </FormControl>
                   <FormDescription>
-                    Main phone number for your practice
+                    Main phone number for your practice (10 digits)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

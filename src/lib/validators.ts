@@ -2,21 +2,13 @@ import { z } from "zod";
 
 /**
  * Phone Number Validation
- * Accepts US phone numbers in various formats:
- * - (123) 456-7890
- * - 123-456-7890
- * - 1234567890
- * - +1 123-456-7890
+ * Must be exactly 10 digits (no formatting characters)
  */
 export const phoneSchema = z
   .string()
   .trim()
-  .min(10, "Phone number must be at least 10 digits")
-  .max(20, "Phone number is too long")
-  .regex(
-    /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/,
-    "Invalid phone number format. Use format: (123) 456-7890 or 123-456-7890"
-  )
+  .length(10, "Phone number must be exactly 10 digits")
+  .regex(/^\d{10}$/, "Phone number must contain only numbers")
   .optional()
   .or(z.literal(""));
 

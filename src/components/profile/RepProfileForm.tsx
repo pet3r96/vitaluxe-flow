@@ -175,8 +175,13 @@ export function RepProfileForm() {
                     <FormControl>
                       <Input 
                         type="tel" 
-                        placeholder="(555) 123-4567" 
-                        {...field} 
+                        placeholder="1234567890" 
+                        maxLength={10}
+                        {...field}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          field.onChange(value);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
