@@ -128,7 +128,7 @@ export const ProductCard = ({
           )}
 
           {/* Badges */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 min-h-[28px]">
             {product.requires_prescription && (
               <Badge variant="default" className="text-xs">Rx Required</Badge>
             )}
