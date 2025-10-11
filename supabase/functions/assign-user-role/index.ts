@@ -495,98 +495,63 @@ serve(async (req) => {
       }
     }
 
-    // If doctor role, create default provider record
+    // If doctor role with prescriber data, update profile with prescriber info
     if (signupData.role === 'doctor' && signupData.prescriberData) {
-      // Get caller's roles to determine if this is admin-initiated or rep-initiated
       console.log('=== PROVIDER CREATION DECISION START ===');
-      console.log('Checking caller roles for user:', callerUserId);
+      console.log('Role:', signupData.role);
+      console.log('Has practice_id in roleData:', !!signupData.roleData?.practiceId);
+      console.log('practice_id:', signupData.roleData?.practiceId);
+      console.log('userId:', userId);
       
-      const { data: callerRoles, error: rolesError } = await supabaseAdmin
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', callerUserId);
-
-      if (rolesError) {
-        console.error('❌ Error fetching caller roles:', rolesError);
-      }
-
-      console.log('Caller roles:', JSON.stringify(callerRoles, null, 2));
-
-      const isAdmin = callerRoles?.some(r => r.role === 'admin');
+      // Check if this is an explicit provider creation request
+      // (has practice_id in roleData AND practice_id is different from userId)
+      const isProviderCreationRequest = signupData.roleData?.practiceId && 
+                                         signupData.roleData.practiceId !== userId;
       
-      console.log('Is admin?', isAdmin);
-      console.log('callerUserId is null?', !callerUserId);
-      console.log('Condition breakdown:');
-      console.log('  - isAdmin:', isAdmin);
-      console.log('  - !callerUserId:', !callerUserId);
-      
-      // ONLY create default provider if caller is an admin
-      // Reps creating practices should NOT create provider records
-      const shouldCreateDefaultProvider = isAdmin === true;
-      
-      console.log('🎯 shouldCreateDefaultProvider:', shouldCreateDefaultProvider);
+      console.log('Is explicit provider request:', isProviderCreationRequest);
+      console.log('🎯 shouldCreateProvider:', isProviderCreationRequest);
       console.log('=== PROVIDER CREATION DECISION END ===');
       
-      if (shouldCreateDefaultProvider) {
-        console.log('📝 Taking ADMIN/PUBLIC path: Creating provider record');
-        // First update the profile with prescriber-specific data
-        const { error: prescriberProfileError } = await supabaseAdmin
-          .from('profiles')
-          .update({
-            full_name: signupData.prescriberData.fullName,
-            npi: signupData.prescriberData.npi,
-            dea: signupData.prescriberData.dea,
-            license_number: signupData.prescriberData.licenseNumber,
-            phone: signupData.prescriberData.phone
-          })
-          .eq('id', userId);
+      // Always update profile with prescriber data
+      const { error: prescriberProfileError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          full_name: signupData.prescriberData.fullName,
+          npi: signupData.prescriberData.npi,
+          dea: signupData.prescriberData.dea,
+          license_number: signupData.prescriberData.licenseNumber,
+          phone: signupData.prescriberData.phone
+        })
+        .eq('id', userId);
 
-        if (prescriberProfileError) {
-          console.error('Default prescriber profile update error:', prescriberProfileError);
-        }
-
-        // Create the provider record linking provider to practice
+      if (prescriberProfileError) {
+        console.error('Prescriber profile update error:', prescriberProfileError);
+      }
+      
+      // ONLY create provider record if explicitly requested (via practiceId)
+      if (isProviderCreationRequest) {
+        console.log('📝 Creating provider record for explicit provider creation');
+        
         const { error: providerError } = await supabaseAdmin
           .from('providers')
           .insert({
             user_id: userId,
-            practice_id: userId,
+            practice_id: signupData.roleData.practiceId,
             active: true
           });
 
         if (providerError) {
-          console.error('Default provider creation error:', providerError);
-          console.warn('Failed to create default provider but practice account created');
+          console.error('Failed to create provider record:', providerError);
+          await supabaseAdmin.auth.admin.deleteUser(userId);
+          return new Response(
+            JSON.stringify({ error: `Failed to create provider record: ${providerError.message}` }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
         
-        // Add provider role as well
-        const { error: providerRoleError } = await supabaseAdmin
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: 'provider'
-          });
-          
-        if (providerRoleError) {
-          console.error('Provider role assignment error:', providerRoleError);
-        }
+        console.log('✅ Provider record created successfully');
       } else {
-        console.log('📝 Taking REP path: Storing prescriber data WITHOUT provider record');
-        // Rep-created practice: Store prescriber data in profile but DON'T create provider record
-        const { error: prescriberProfileError } = await supabaseAdmin
-          .from('profiles')
-          .update({
-            full_name: signupData.prescriberData.fullName,
-            npi: signupData.prescriberData.npi,
-            dea: signupData.prescriberData.dea,
-            license_number: signupData.prescriberData.licenseNumber,
-            phone: signupData.prescriberData.phone
-          })
-          .eq('id', userId);
-
-        if (prescriberProfileError) {
-          console.error('Prescriber profile update error:', prescriberProfileError);
-        }
+        console.log('📝 Practice account created WITHOUT provider record (as expected)');
       }
     }
 
