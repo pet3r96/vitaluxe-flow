@@ -12,7 +12,7 @@ import { MessageCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 
 export const MessagesView = () => {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [newThreadSubject, setNewThreadSubject] = useState("");
@@ -21,10 +21,10 @@ export const MessagesView = () => {
   const [resolvedFilter, setResolvedFilter] = useState<"all" | "unresolved" | "resolved">("unresolved");
   const [isAdmin, setIsAdmin] = useState(false);
   const [recipientType, setRecipientType] = useState<"admin" | "pharmacy">("admin");
-  const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [dispositionType, setDispositionType] = useState<string>("");
   const [dispositionNotes, setDispositionNotes] = useState<string>("");
+
 
   // Check if user is admin
   useEffect(() => {
@@ -44,23 +44,10 @@ export const MessagesView = () => {
     checkAdminStatus();
   }, [user?.id]);
 
-  // Fetch available pharmacies
-  const { data: pharmacies } = useQuery({
-    queryKey: ["pharmacies-for-messaging"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pharmacies")
-        .select("id, name, user_id")
-        .eq("active", true)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Fetch user's orders (for providers/practices to link to tickets)
   const { data: userOrders } = useQuery({
-    queryKey: ["user-orders-for-tickets", user?.id],
+    queryKey: ["user-orders-for-tickets", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
@@ -71,17 +58,30 @@ export const MessagesView = () => {
           total_amount,
           order_lines(
             id,
+            assigned_pharmacy_id,
             product_id,
-            products(name)
+            products(name),
+            pharmacies:assigned_pharmacy_id(
+              id,
+              name,
+              user_id
+            )
           )
         `)
-        .eq("doctor_id", user?.id)
+        .eq("doctor_id", effectiveUserId)
         .order("created_at", { ascending: false })
         .limit(50);
+      
       if (error) throw error;
-      return data;
+      
+      // Filter to only orders with assigned pharmacies
+      const ordersWithPharmacy = data?.filter(order => 
+        order.order_lines?.some((line: any) => line.assigned_pharmacy_id)
+      ) || [];
+      
+      return ordersWithPharmacy;
     },
-    enabled: recipientType === "pharmacy" && !!user?.id,
+    enabled: recipientType === "pharmacy" && !!effectiveUserId,
   });
 
   const { data: threads, refetch: refetchThreads } = useQuery({
@@ -195,12 +195,8 @@ export const MessagesView = () => {
       return;
     }
 
-    // Validate pharmacy + order selection for order_issue threads
+    // Validate order selection for order_issue threads
     if (recipientType === "pharmacy") {
-      if (!selectedPharmacyId) {
-        toast.error("Please select a pharmacy");
-        return;
-      }
       if (!selectedOrderId) {
         toast.error("Please select an order related to this issue");
         return;
@@ -244,10 +240,25 @@ export const MessagesView = () => {
         adminUsers.forEach(admin => participantIds.add(admin.user_id));
       }
     } else if (recipientType === "pharmacy") {
-      // Add selected pharmacy user
-      const pharmacy = pharmacies?.find(p => p.id === selectedPharmacyId);
-      if (pharmacy?.user_id) {
-        participantIds.add(pharmacy.user_id);
+      // Auto-determine pharmacy from the selected order
+      const selectedOrder = userOrders?.find(o => o.id === selectedOrderId);
+      
+      // Get unique pharmacy user_ids from order lines
+      const pharmacyUserIds = new Set<string>();
+      selectedOrder?.order_lines?.forEach((line: any) => {
+        if (line.pharmacies?.user_id) {
+          pharmacyUserIds.add(line.pharmacies.user_id);
+        }
+      });
+      
+      // Add all pharmacy users
+      pharmacyUserIds.forEach(pharmacyUserId => {
+        participantIds.add(pharmacyUserId);
+      });
+      
+      if (pharmacyUserIds.size === 0) {
+        toast.error("No pharmacy found for this order");
+        return;
       }
     }
 
@@ -281,17 +292,16 @@ export const MessagesView = () => {
       return;
     }
 
-    // Reset form
-    setShowNewThread(false);
-    setNewThreadSubject("");
-    setNewThreadMessage("");
-    setRecipientType("admin");
-    setSelectedPharmacyId(null);
-    setSelectedOrderId(null);
-    setDispositionType("");
-    setDispositionNotes("");
-    setSelectedThread(thread.id);
-    refetchThreads();
+  // Reset form
+  setShowNewThread(false);
+  setNewThreadSubject("");
+  setNewThreadMessage("");
+  setRecipientType("admin");
+  setSelectedOrderId(null);
+  setDispositionType("");
+  setDispositionNotes("");
+  setSelectedThread(thread.id);
+  refetchThreads();
     
     const ticketType = threadType === "order_issue" ? "Order Issue Ticket" : "Support Ticket";
     toast.success(`${ticketType} created successfully`);
@@ -403,15 +413,14 @@ export const MessagesView = () => {
             {/* Recipient Type Selector */}
             <div>
               <label className="text-sm font-medium mb-2 block">Send to:</label>
-              <Select 
-                value={recipientType} 
-                onValueChange={(value: any) => {
-                  setRecipientType(value);
-                  setSelectedPharmacyId(null);
-                  setSelectedOrderId(null);
-                  setDispositionType("");
-                }}
-              >
+            <Select 
+              value={recipientType} 
+              onValueChange={(value: any) => {
+                setRecipientType(value);
+                setSelectedOrderId(null);
+                setDispositionType("");
+              }}
+            >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -422,28 +431,9 @@ export const MessagesView = () => {
               </Select>
             </div>
 
-            {/* Pharmacy Selection - Only show for order issues */}
+            {/* Order Selection - Only show for order issues */}
             {recipientType === "pharmacy" && (
               <>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Select Pharmacy:</label>
-                  <Select 
-                    value={selectedPharmacyId || ""} 
-                    onValueChange={setSelectedPharmacyId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a pharmacy..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pharmacies?.map(pharmacy => (
-                        <SelectItem key={pharmacy.id} value={pharmacy.id}>
-                          {pharmacy.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Order Selection */}
                 <div>
                   <label className="text-sm font-medium mb-2 block">Related Order: *</label>
@@ -455,14 +445,28 @@ export const MessagesView = () => {
                       <SelectValue placeholder="Select an order..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {userOrders?.map(order => (
-                        <SelectItem key={order.id} value={order.id}>
-                          Order from {new Date(order.created_at).toLocaleDateString()} - 
-                          ${order.total_amount} ({order.status})
-                        </SelectItem>
-                      ))}
+                      {userOrders?.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground">
+                          No orders with assigned pharmacies found
+                        </div>
+                      ) : (
+                        userOrders?.map((order: any) => {
+                          // Get pharmacy name from first order line
+                          const pharmacyName = order.order_lines?.[0]?.pharmacies?.name || "Unknown Pharmacy";
+                          
+                          return (
+                            <SelectItem key={order.id} value={order.id}>
+                              Order from {new Date(order.created_at).toLocaleDateString()} - 
+                              ${order.total_amount} ({order.status}) - {pharmacyName}
+                            </SelectItem>
+                          );
+                        })
+                      )}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The pharmacy will be automatically notified based on the order
+                  </p>
                 </div>
 
                 {/* Issue Type / Disposition */}
@@ -516,7 +520,6 @@ export const MessagesView = () => {
                   setNewThreadSubject("");
                   setNewThreadMessage("");
                   setRecipientType("admin");
-                  setSelectedPharmacyId(null);
                   setSelectedOrderId(null);
                   setDispositionType("");
                 }}
