@@ -189,32 +189,57 @@ export const PatientSelectionDialog = ({
     let destinationState = '';
     if (shipTo === 'patient') {
       const selectedPatient = patients?.find(p => p.id === selectedPatientId);
+      
+      // Try structured fields first
       if (selectedPatient?.address_state) {
         destinationState = selectedPatient.address_state;
       } else if (selectedPatient?.address_formatted) {
-        // Extract from formatted address
         const stateMatch = selectedPatient.address_formatted.match(/,\s*([A-Z]{2})\s+\d{5}/);
         destinationState = stateMatch ? stateMatch[1] : '';
       }
+      
+      // Fallback: Try old address field if structured fields are empty
+      if (!destinationState && selectedPatient?.address) {
+        const stateMatch = selectedPatient.address.match(/,\s*([A-Z]{2})\s+\d{5}/);
+        destinationState = stateMatch ? stateMatch[1] : '';
+      }
     } else {
-      // Practice order - get from provider profile
+      // Practice order - check shipping address first, then regular address
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("shipping_address_state, shipping_address_formatted")
+        .select("shipping_address_state, shipping_address_formatted, address_state, address_formatted")
         .eq("id", effectiveUserId)
         .maybeSingle();
       
+      // Priority 1: shipping_address_state
       if (profileData?.shipping_address_state) {
         destinationState = profileData.shipping_address_state;
-      } else if (profileData?.shipping_address_formatted) {
+      } 
+      // Priority 2: shipping_address_formatted
+      else if (profileData?.shipping_address_formatted) {
         const stateMatch = profileData.shipping_address_formatted.match(/,\s*([A-Z]{2})\s+\d{5}/);
+        destinationState = stateMatch ? stateMatch[1] : '';
+      }
+      // Priority 3: address_state (regular address)
+      else if (profileData?.address_state) {
+        destinationState = profileData.address_state;
+      }
+      // Priority 4: address_formatted (regular address)
+      else if (profileData?.address_formatted) {
+        const stateMatch = profileData.address_formatted.match(/,\s*([A-Z]{2})\s+\d{5}/);
         destinationState = stateMatch ? stateMatch[1] : '';
       }
     }
 
     // Validate destination state exists
     if (!destinationState) {
-      toast.error("Unable to determine destination state. Please ensure patient/practice address is complete.");
+      const locationMsg = shipTo === 'practice' 
+        ? "practice address in your Profile" 
+        : "patient address";
+      toast.error(
+        `Unable to determine destination state. Please update the ${locationMsg} with complete address information including state.`,
+        { duration: 6000 }
+      );
       return;
     }
 
