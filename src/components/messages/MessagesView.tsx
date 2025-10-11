@@ -213,7 +213,7 @@ export const MessagesView = () => {
       .from("message_threads")
       .insert([{ 
         subject: newThreadSubject, 
-        created_by: user?.id,
+        created_by: effectiveUserId,
         thread_type: threadType,
         order_id: recipientType === "pharmacy" ? selectedOrderId : null,
         disposition_type: recipientType === "pharmacy" ? dispositionType : null,
@@ -227,7 +227,7 @@ export const MessagesView = () => {
       return;
     }
 
-    let participantIds = new Set([user?.id]);
+    let participantIds = new Set([effectiveUserId]);
 
     if (recipientType === "admin") {
       // Add all admins
@@ -282,7 +282,7 @@ export const MessagesView = () => {
       .from("messages")
       .insert([{
         thread_id: thread.id,
-        sender_id: user?.id,
+        sender_id: effectiveUserId,
         body: newThreadMessage,
       }]);
 
