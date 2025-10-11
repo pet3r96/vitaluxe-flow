@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { validatePhone, validateNPI, validateDEA } from '../_shared/validators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,6 +72,73 @@ serve(async (req) => {
 
     const signupData: SignupRequest = await req.json();
     console.log('Signup request received for role:', signupData.role);
+
+    // Validate phone numbers, NPI, and DEA
+    if (signupData.roleData.phone) {
+      const phoneResult = validatePhone(signupData.roleData.phone);
+      if (!phoneResult.valid) {
+        console.error('Phone validation failed:', phoneResult.error);
+        return new Response(
+          JSON.stringify({ error: `Phone validation: ${phoneResult.error}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (signupData.roleData.npi) {
+      const npiResult = validateNPI(signupData.roleData.npi);
+      if (!npiResult.valid) {
+        console.error('NPI validation failed:', npiResult.error);
+        return new Response(
+          JSON.stringify({ error: `NPI validation: ${npiResult.error}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (signupData.roleData.dea) {
+      const deaResult = validateDEA(signupData.roleData.dea);
+      if (!deaResult.valid) {
+        console.error('DEA validation failed:', deaResult.error);
+        return new Response(
+          JSON.stringify({ error: `DEA validation: ${deaResult.error}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Validate prescriber data if present
+    if (signupData.prescriberData) {
+      if (signupData.prescriberData.phone) {
+        const result = validatePhone(signupData.prescriberData.phone);
+        if (!result.valid) {
+          return new Response(
+            JSON.stringify({ error: `Prescriber phone validation: ${result.error}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
+      if (signupData.prescriberData.npi) {
+        const result = validateNPI(signupData.prescriberData.npi);
+        if (!result.valid) {
+          return new Response(
+            JSON.stringify({ error: `Prescriber NPI validation: ${result.error}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
+      if (signupData.prescriberData.dea) {
+        const result = validateDEA(signupData.prescriberData.dea);
+        if (!result.valid) {
+          return new Response(
+            JSON.stringify({ error: `Prescriber DEA validation: ${result.error}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
 
     // Get authorization header to check if caller is authenticated
     const authHeader = req.headers.get('Authorization');

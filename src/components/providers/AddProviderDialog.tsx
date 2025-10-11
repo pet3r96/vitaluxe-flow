@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 
 interface AddProviderDialogProps {
   open: boolean;
@@ -20,6 +21,11 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
   const { effectiveUserId, effectiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedPractice, setSelectedPractice] = useState(practiceId || "");
+  const [validationErrors, setValidationErrors] = useState({
+    phone: "",
+    npi: "",
+    dea: "",
+  });
   const [formData, setFormData] = useState({
     fullName: "",
     prescriberName: "",
@@ -73,6 +79,21 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate fields
+    const phoneResult = validatePhone(formData.phone);
+    const npiResult = validateNPI(formData.npi);
+    const deaResult = validateDEA(formData.dea);
+    
+    if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
+      setValidationErrors({
+        phone: phoneResult.error || "",
+        npi: npiResult.error || "",
+        dea: deaResult.error || "",
+      });
+      toast.error("Please fix validation errors before submitting");
+      return;
+    }
     
     const targetPracticeId = practiceId || selectedPractice || effectiveUserId;
     if (!targetPracticeId) {

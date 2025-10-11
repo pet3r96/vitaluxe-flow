@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validatePhone } from '../_shared/validators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,6 +64,14 @@ serve(async (req) => {
     }
 
     if (action === 'approve') {
+      // Validate phone number
+      if (pendingRep.phone) {
+        const phoneResult = validatePhone(pendingRep.phone);
+        if (!phoneResult.valid) {
+          throw new Error(`Phone validation: ${phoneResult.error}`);
+        }
+      }
+
       // Generate secure password
       const password = crypto.randomUUID();
 

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { validatePhone } from "@/lib/validators";
 
 interface AddRepRequestDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface AddRepRequestDialogProps {
 export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepRequestDialogProps) => {
   const { user, effectiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({ phone: "" });
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -27,6 +29,17 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate phone number
+    if (formData.phone) {
+      const phoneResult = validatePhone(formData.phone);
+      if (!phoneResult.valid) {
+        setValidationErrors({ phone: phoneResult.error || "" });
+        toast.error("Please fix validation errors before submitting");
+        return;
+      }
+    }
+    
     setLoading(true);
 
     try {

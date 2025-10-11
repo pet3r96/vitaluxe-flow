@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { Loader2, Upload, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 
 interface AddPracticeDialogProps {
   open: boolean;
@@ -40,6 +41,14 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
   const [loading, setLoading] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [repComboboxOpen, setRepComboboxOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({
+    phone: "",
+    npi: "",
+    dea: "",
+    prescriberPhone: "",
+    prescriberNpi: "",
+    prescriberDea: "",
+  });
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -121,6 +130,29 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate all fields
+    const phoneResult = validatePhone(formData.phone);
+    const npiResult = validateNPI(formData.npi);
+    const deaResult = validateDEA(formData.dea);
+    const prescriberPhoneResult = validatePhone(formData.prescriberPhone);
+    const prescriberNpiResult = validateNPI(formData.prescriberNpi);
+    const prescriberDeaResult = validateDEA(formData.prescriberDea);
+    
+    if (!phoneResult.valid || !npiResult.valid || !deaResult.valid ||
+        !prescriberPhoneResult.valid || !prescriberNpiResult.valid || !prescriberDeaResult.valid) {
+      setValidationErrors({
+        phone: phoneResult.error || "",
+        npi: npiResult.error || "",
+        dea: deaResult.error || "",
+        prescriberPhone: prescriberPhoneResult.error || "",
+        prescriberNpi: prescriberNpiResult.error || "",
+        prescriberDea: prescriberDeaResult.error || "",
+      });
+      toast.error("Please fix validation errors before submitting");
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -223,6 +255,14 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
       prescriberPhone: "",
       selectedRepId: "",
     });
+    setValidationErrors({
+      phone: "",
+      npi: "",
+      dea: "",
+      prescriberPhone: "",
+      prescriberNpi: "",
+      prescriberDea: "",
+    });
   };
 
   return (
@@ -275,11 +315,22 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
               <Input
                 id="npi"
                 value={formData.npi}
-                onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, npi: e.target.value });
+                  setValidationErrors({ ...validationErrors, npi: "" });
+                }}
+                onBlur={() => {
+                  const result = validateNPI(formData.npi);
+                  setValidationErrors({ ...validationErrors, npi: result.error || "" });
+                }}
                 required
-                placeholder="10-digit practice NPI"
+                placeholder="1234567890 (10 digits)"
                 maxLength={10}
+                className={validationErrors.npi ? "border-destructive" : ""}
               />
+              {validationErrors.npi && (
+                <p className="text-sm text-destructive">{validationErrors.npi}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -297,8 +348,21 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
               <Input
                 id="dea"
                 value={formData.dea}
-                onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, dea: e.target.value.toUpperCase() });
+                  setValidationErrors({ ...validationErrors, dea: "" });
+                }}
+                onBlur={() => {
+                  const result = validateDEA(formData.dea);
+                  setValidationErrors({ ...validationErrors, dea: result.error || "" });
+                }}
+                placeholder="AB1234567 (2 letters + 7 digits)"
+                maxLength={9}
+                className={validationErrors.dea ? "border-destructive" : ""}
               />
+              {validationErrors.dea && (
+                <p className="text-sm text-destructive">{validationErrors.dea}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -317,9 +381,21 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, phone: e.target.value });
+                  setValidationErrors({ ...validationErrors, phone: "" });
+                }}
+                onBlur={() => {
+                  const result = validatePhone(formData.phone);
+                  setValidationErrors({ ...validationErrors, phone: result.error || "" });
+                }}
+                placeholder="(555) 123-4567"
                 required
+                className={validationErrors.phone ? "border-destructive" : ""}
               />
+              {validationErrors.phone && (
+                <p className="text-sm text-destructive">{validationErrors.phone}</p>
+              )}
             </div>
           </div>
 
@@ -443,11 +519,22 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 <Input
                   id="prescriberNpi"
                   value={formData.prescriberNpi}
-                  onChange={(e) => setFormData({ ...formData, prescriberNpi: e.target.value })}
-                  placeholder="10-digit individual NPI"
+                  onChange={(e) => {
+                    setFormData({ ...formData, prescriberNpi: e.target.value });
+                    setValidationErrors({ ...validationErrors, prescriberNpi: "" });
+                  }}
+                  onBlur={() => {
+                    const result = validateNPI(formData.prescriberNpi);
+                    setValidationErrors({ ...validationErrors, prescriberNpi: result.error || "" });
+                  }}
+                  placeholder="1234567890 (10 digits)"
                   required
                   maxLength={10}
+                  className={validationErrors.prescriberNpi ? "border-destructive" : ""}
                 />
+                {validationErrors.prescriberNpi && (
+                  <p className="text-sm text-destructive">{validationErrors.prescriberNpi}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -455,9 +542,21 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 <Input
                   id="prescriberDea"
                   value={formData.prescriberDea}
-                  onChange={(e) => setFormData({ ...formData, prescriberDea: e.target.value })}
-                  placeholder="DEA number (optional)"
+                  onChange={(e) => {
+                    setFormData({ ...formData, prescriberDea: e.target.value.toUpperCase() });
+                    setValidationErrors({ ...validationErrors, prescriberDea: "" });
+                  }}
+                  onBlur={() => {
+                    const result = validateDEA(formData.prescriberDea);
+                    setValidationErrors({ ...validationErrors, prescriberDea: result.error || "" });
+                  }}
+                  placeholder="BJ1234567 (2 letters + 7 digits)"
+                  maxLength={9}
+                  className={validationErrors.prescriberDea ? "border-destructive" : ""}
                 />
+                {validationErrors.prescriberDea && (
+                  <p className="text-sm text-destructive">{validationErrors.prescriberDea}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -471,16 +570,27 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="prescriberPhone">Prescriber Phone</Label>
-                <Input
-                  id="prescriberPhone"
-                  type="tel"
-                  value={formData.prescriberPhone}
-                  onChange={(e) => setFormData({ ...formData, prescriberPhone: e.target.value })}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="prescriberPhone">Prescriber Phone</Label>
+              <Input
+                id="prescriberPhone"
+                type="tel"
+                value={formData.prescriberPhone}
+                onChange={(e) => {
+                  setFormData({ ...formData, prescriberPhone: e.target.value });
+                  setValidationErrors({ ...validationErrors, prescriberPhone: "" });
+                }}
+                onBlur={() => {
+                  const result = validatePhone(formData.prescriberPhone);
+                  setValidationErrors({ ...validationErrors, prescriberPhone: result.error || "" });
+                }}
+                placeholder="(555) 123-4567"
+                className={validationErrors.prescriberPhone ? "border-destructive" : ""}
+              />
+              {validationErrors.prescriberPhone && (
+                <p className="text-sm text-destructive">{validationErrors.prescriberPhone}</p>
+              )}
+            </div>
             </div>
           </div>
 

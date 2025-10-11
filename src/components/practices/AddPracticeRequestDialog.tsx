@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 
 interface AddPracticeRequestDialogProps {
   open: boolean;
@@ -16,6 +17,14 @@ interface AddPracticeRequestDialogProps {
 export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddPracticeRequestDialogProps) => {
   const { user, effectiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({
+    phone: "",
+    npi: "",
+    dea: "",
+    prescriberPhone: "",
+    prescriberNpi: "",
+    prescriberDea: "",
+  });
   const [formData, setFormData] = useState({
     practice_name: "",
     email: "",
@@ -38,6 +47,29 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate all fields
+    const phoneResult = validatePhone(formData.phone);
+    const npiResult = validateNPI(formData.npi);
+    const deaResult = validateDEA(formData.dea);
+    const prescriberPhoneResult = validatePhone(formData.prescriber_phone);
+    const prescriberNpiResult = validateNPI(formData.prescriber_npi);
+    const prescriberDeaResult = validateDEA(formData.prescriber_dea);
+    
+    if (!phoneResult.valid || !npiResult.valid || !deaResult.valid ||
+        !prescriberPhoneResult.valid || !prescriberNpiResult.valid || !prescriberDeaResult.valid) {
+      setValidationErrors({
+        phone: phoneResult.error || "",
+        npi: npiResult.error || "",
+        dea: deaResult.error || "",
+        prescriberPhone: prescriberPhoneResult.error || "",
+        prescriberNpi: prescriberNpiResult.error || "",
+        prescriberDea: prescriberDeaResult.error || "",
+      });
+      toast.error("Please fix validation errors before submitting");
+      return;
+    }
+    
     setLoading(true);
 
     try {

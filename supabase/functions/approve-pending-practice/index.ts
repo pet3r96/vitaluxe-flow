@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validatePhone, validateNPI, validateDEA } from '../_shared/validators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -65,6 +66,49 @@ serve(async (req) => {
     if (action === 'approve') {
       // Use updated data if provided, otherwise use original
       const practiceData = updatedData || pendingPractice;
+
+      // Validate data before creating account
+      if (practiceData.phone) {
+        const phoneResult = validatePhone(practiceData.phone);
+        if (!phoneResult.valid) {
+          throw new Error(`Phone validation: ${phoneResult.error}`);
+        }
+      }
+
+      if (practiceData.npi) {
+        const npiResult = validateNPI(practiceData.npi);
+        if (!npiResult.valid) {
+          throw new Error(`NPI validation: ${npiResult.error}`);
+        }
+      }
+
+      if (practiceData.dea) {
+        const deaResult = validateDEA(practiceData.dea);
+        if (!deaResult.valid) {
+          throw new Error(`DEA validation: ${deaResult.error}`);
+        }
+      }
+
+      if (practiceData.prescriber_npi) {
+        const result = validateNPI(practiceData.prescriber_npi);
+        if (!result.valid) {
+          throw new Error(`Prescriber NPI validation: ${result.error}`);
+        }
+      }
+
+      if (practiceData.prescriber_dea) {
+        const result = validateDEA(practiceData.prescriber_dea);
+        if (!result.valid) {
+          throw new Error(`Prescriber DEA validation: ${result.error}`);
+        }
+      }
+
+      if (practiceData.prescriber_phone) {
+        const result = validatePhone(practiceData.prescriber_phone);
+        if (!result.valid) {
+          throw new Error(`Prescriber phone validation: ${result.error}`);
+        }
+      }
 
       // Generate secure password
       const password = crypto.randomUUID();

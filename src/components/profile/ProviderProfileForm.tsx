@@ -19,13 +19,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, KeyRound } from "lucide-react";
+import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 
 const providerFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required").max(100),
   email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
-  npi: z.string().optional(),
-  dea: z.string().optional(),
+  phone: phoneSchema,
+  npi: npiSchema,
+  dea: deaSchema,
   license_number: z.string().optional(),
 });
 

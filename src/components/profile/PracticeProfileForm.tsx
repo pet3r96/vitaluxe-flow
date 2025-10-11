@@ -28,19 +28,20 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, KeyRound } from "lucide-react";
 import { AddressInput } from "@/components/ui/address-input";
+import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Practice name is required").max(100),
   email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
+  phone: phoneSchema,
   address: z.object({
     street: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     zip: z.string().optional(),
   }).optional(),
-  practice_npi: z.string().optional(),
-  dea: z.string().optional(),
+  practice_npi: npiSchema,
+  dea: deaSchema,
   license_number: z.string().optional(),
   shipping_address: z.object({
     street: z.string().optional(),
