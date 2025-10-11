@@ -34,7 +34,7 @@ interface AddPracticeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  preAssignedRepId?: string; // Auto-assign to this rep and hide selector
+  preAssignedRepId?: string;
 }
 
 export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRepId }: AddPracticeDialogProps) => {
@@ -45,9 +45,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     phone: "",
     npi: "",
     dea: "",
-    prescriberPhone: "",
-    prescriberNpi: "",
-    prescriberDea: "",
   });
   const [formData, setFormData] = useState({
     name: "",
@@ -62,16 +59,9 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     address_city: "",
     address_state: "",
     address_zip: "",
-    prescriberFullName: "",
-    prescriberName: "",
-    prescriberNpi: "",
-    prescriberDea: "",
-    prescriberLicense: "",
-    prescriberPhone: "",
     selectedRepId: "",
   });
 
-  // Fetch all topline and downline reps
   // Fetch topline reps
   const { data: toplineReps } = useQuery({
     queryKey: ["topline-reps-for-practices"],
@@ -135,19 +125,12 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     const phoneResult = validatePhone(formData.phone);
     const npiResult = validateNPI(formData.npi);
     const deaResult = validateDEA(formData.dea);
-    const prescriberPhoneResult = validatePhone(formData.prescriberPhone);
-    const prescriberNpiResult = validateNPI(formData.prescriberNpi);
-    const prescriberDeaResult = validateDEA(formData.prescriberDea);
-    
-    if (!phoneResult.valid || !npiResult.valid || !deaResult.valid ||
-        !prescriberPhoneResult.valid || !prescriberNpiResult.valid || !prescriberDeaResult.valid) {
+
+    if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
       setValidationErrors({
         phone: phoneResult.error || "",
         npi: npiResult.error || "",
         dea: deaResult.error || "",
-        prescriberPhone: prescriberPhoneResult.error || "",
-        prescriberNpi: prescriberNpiResult.error || "",
-        prescriberDea: prescriberDeaResult.error || "",
       });
       toast.error("Please fix validation errors before submitting");
       return;
@@ -168,6 +151,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
         setLoading(false);
         return;
       }
+      
       // Upload contract if provided
       let contractFileData = null;
       if (contractFile) {
@@ -179,32 +163,24 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
         };
       }
 
-      // Call edge function with hardcoded 'doctor' role
+      // Call edge function
       const { data, error } = await supabase.functions.invoke("assign-user-role", {
         body: {
           email: formData.email,
           password: formData.password,
           name: formData.name,
-          role: "doctor", // HARDCODED
+          role: "doctor",
           roleData: {
             npi: formData.npi,
             licenseNumber: formData.licenseNumber,
-            dea: formData.dea,
+            dea: formData.dea || undefined,
             company: formData.company,
             phone: formData.phone,
             address_street: formData.address_street,
             address_city: formData.address_city,
             address_state: formData.address_state,
             address_zip: formData.address_zip,
-            linkedToplineId: formData.selectedRepId || undefined,
-          },
-          prescriberData: {
-            fullName: formData.prescriberFullName,
-            prescriberName: formData.prescriberName,
-            npi: formData.prescriberNpi,
-            dea: formData.prescriberDea,
-            licenseNumber: formData.prescriberLicense,
-            phone: formData.prescriberPhone,
+            linkedToplineId: formData.selectedRepId || preAssignedRepId || undefined,
           },
           contractFile: contractFileData,
         },
@@ -247,21 +223,12 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
       address_city: "",
       address_state: "",
       address_zip: "",
-      prescriberFullName: "",
-      prescriberName: "",
-      prescriberNpi: "",
-      prescriberDea: "",
-      prescriberLicense: "",
-      prescriberPhone: "",
       selectedRepId: "",
     });
     setValidationErrors({
       phone: "",
       npi: "",
       dea: "",
-      prescriberPhone: "",
-      prescriberNpi: "",
-      prescriberDea: "",
     });
   };
 
@@ -271,7 +238,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
         <DialogHeader>
           <DialogTitle>Add New Practice</DialogTitle>
           <DialogDescription>
-            Create a new practice account by filling out the form below
+            Create a new practice account. Providers must be added separately after creation.
           </DialogDescription>
         </DialogHeader>
 
@@ -487,119 +454,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
             </div>
           )}
 
-          <div className="space-y-4 pt-4 border-t">
-            <h3 className="text-lg font-semibold">Default Prescriber Information</h3>
-            <p className="text-sm text-muted-foreground">
-              This information will be used for the primary prescriber account within this practice.
-            </p>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="prescriberFullName">Prescriber Full Name *</Label>
-                <Input
-                  id="prescriberFullName"
-                  value={formData.prescriberFullName}
-                  onChange={(e) => setFormData({ ...formData, prescriberFullName: e.target.value })}
-                  placeholder="Dr. John Doe"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="prescriberName">Prescriber Name *</Label>
-                <Input
-                  id="prescriberName"
-                  value={formData.prescriberName}
-                  onChange={(e) => setFormData({ ...formData, prescriberName: e.target.value })}
-                  placeholder="Name on prescriptions"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="prescriberNpi">Prescriber NPI # *</Label>
-                <Input
-                  id="prescriberNpi"
-                  value={formData.prescriberNpi}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    setFormData({ ...formData, prescriberNpi: value });
-                    setValidationErrors({ ...validationErrors, prescriberNpi: "" });
-                  }}
-                  onBlur={() => {
-                    const result = validateNPI(formData.prescriberNpi);
-                    setValidationErrors({ ...validationErrors, prescriberNpi: result.error || "" });
-                  }}
-                  placeholder="1234567890"
-                  required
-                  maxLength={10}
-                  className={validationErrors.prescriberNpi ? "border-destructive" : ""}
-                />
-                {validationErrors.prescriberNpi && (
-                  <p className="text-sm text-destructive">{validationErrors.prescriberNpi}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="prescriberDea">Prescriber DEA #</Label>
-                <Input
-                  id="prescriberDea"
-                  value={formData.prescriberDea}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase();
-                    setFormData({ ...formData, prescriberDea: value });
-                    setValidationErrors({ ...validationErrors, prescriberDea: "" });
-                  }}
-                  onBlur={() => {
-                    const result = validateDEA(formData.prescriberDea);
-                    setValidationErrors({ ...validationErrors, prescriberDea: result.error || "" });
-                  }}
-                  placeholder="AB1234567"
-                  maxLength={9}
-                  className={validationErrors.prescriberDea ? "border-destructive" : ""}
-                />
-                {validationErrors.prescriberDea && (
-                  <p className="text-sm text-destructive">{validationErrors.prescriberDea}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="prescriberLicense">Prescriber License # *</Label>
-                <Input
-                  id="prescriberLicense"
-                  value={formData.prescriberLicense}
-                  onChange={(e) => setFormData({ ...formData, prescriberLicense: e.target.value })}
-                  placeholder="Medical license number"
-                  required
-                />
-              </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="prescriberPhone">Prescriber Phone</Label>
-              <Input
-                id="prescriberPhone"
-                type="tel"
-                value={formData.prescriberPhone}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '');
-                  setFormData({ ...formData, prescriberPhone: value });
-                  setValidationErrors({ ...validationErrors, prescriberPhone: "" });
-                }}
-                onBlur={() => {
-                  const result = validatePhone(formData.prescriberPhone);
-                  setValidationErrors({ ...validationErrors, prescriberPhone: result.error || "" });
-                }}
-                placeholder="1234567890"
-                maxLength={10}
-                className={validationErrors.prescriberPhone ? "border-destructive" : ""}
-              />
-              {validationErrors.prescriberPhone && (
-                <p className="text-sm text-destructive">{validationErrors.prescriberPhone}</p>
-              )}
-            </div>
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="contract">Contract Document</Label>
             <div className="flex items-center gap-2">
@@ -608,27 +462,30 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 type="file"
                 accept=".pdf,.doc,.docx"
                 onChange={(e) => setContractFile(e.target.files?.[0] || null)}
-                className="hidden"
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById("contract")?.click()}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {contractFile ? contractFile.name : "Upload Contract"}
-              </Button>
+              {contractFile && (
+                <span className="text-sm text-muted-foreground">
+                  {contractFile.name}
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false);
+                resetForm();
+              }}
+              disabled={loading}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Practice
+              {loading ? "Creating..." : "Create Practice"}
             </Button>
           </div>
         </form>

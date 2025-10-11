@@ -37,14 +37,6 @@ interface SignupRequest {
     // Provider fields
     practiceId?: string;
   };
-  prescriberData?: {
-    fullName: string;
-    prescriberName: string;
-    npi: string;
-    dea?: string;
-    licenseNumber: string;
-    phone?: string;
-  };
   contractFile?: {
     name: string;
     data: string; // base64
@@ -107,38 +99,6 @@ serve(async (req) => {
       }
     }
 
-    // Validate prescriber data if present
-    if (signupData.prescriberData) {
-      if (signupData.prescriberData.phone) {
-        const result = validatePhone(signupData.prescriberData.phone);
-        if (!result.valid) {
-          return new Response(
-            JSON.stringify({ error: `Prescriber phone validation: ${result.error}` }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
-      
-      if (signupData.prescriberData.npi) {
-        const result = validateNPI(signupData.prescriberData.npi);
-        if (!result.valid) {
-          return new Response(
-            JSON.stringify({ error: `Prescriber NPI validation: ${result.error}` }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
-      
-      if (signupData.prescriberData.dea) {
-        const result = validateDEA(signupData.prescriberData.dea);
-        if (!result.valid) {
-          return new Response(
-            JSON.stringify({ error: `Prescriber DEA validation: ${result.error}` }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
-    }
 
     // Get authorization header to check if caller is authenticated
     const authHeader = req.headers.get('Authorization');
@@ -495,65 +455,6 @@ serve(async (req) => {
       }
     }
 
-    // If doctor role with prescriber data, update profile with prescriber info
-    if (signupData.role === 'doctor' && signupData.prescriberData) {
-      console.log('=== PROVIDER CREATION DECISION START ===');
-      console.log('Role:', signupData.role);
-      console.log('Has practice_id in roleData:', !!signupData.roleData?.practiceId);
-      console.log('practice_id:', signupData.roleData?.practiceId);
-      console.log('userId:', userId);
-      
-      // Check if this is an explicit provider creation request
-      // (has practice_id in roleData AND practice_id is different from userId)
-      const isProviderCreationRequest = signupData.roleData?.practiceId && 
-                                         signupData.roleData.practiceId !== userId;
-      
-      console.log('Is explicit provider request:', isProviderCreationRequest);
-      console.log('🎯 shouldCreateProvider:', isProviderCreationRequest);
-      console.log('=== PROVIDER CREATION DECISION END ===');
-      
-      // Always update profile with prescriber data
-      const { error: prescriberProfileError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          full_name: signupData.prescriberData.fullName,
-          npi: signupData.prescriberData.npi,
-          dea: signupData.prescriberData.dea,
-          license_number: signupData.prescriberData.licenseNumber,
-          phone: signupData.prescriberData.phone
-        })
-        .eq('id', userId);
-
-      if (prescriberProfileError) {
-        console.error('Prescriber profile update error:', prescriberProfileError);
-      }
-      
-      // ONLY create provider record if explicitly requested (via practiceId)
-      if (isProviderCreationRequest) {
-        console.log('📝 Creating provider record for explicit provider creation');
-        
-        const { error: providerError } = await supabaseAdmin
-          .from('providers')
-          .insert({
-            user_id: userId,
-            practice_id: signupData.roleData.practiceId,
-            active: true
-          });
-
-        if (providerError) {
-          console.error('Failed to create provider record:', providerError);
-          await supabaseAdmin.auth.admin.deleteUser(userId);
-          return new Response(
-            JSON.stringify({ error: `Failed to create provider record: ${providerError.message}` }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        console.log('✅ Provider record created successfully');
-      } else {
-        console.log('📝 Practice account created WITHOUT provider record (as expected)');
-      }
-    }
 
     console.log('User signup completed successfully');
 
