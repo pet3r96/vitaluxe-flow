@@ -121,7 +121,7 @@ export const ProductCard = ({
         </div>
 
         {/* Product Info */}
-        <div className="space-y-2 h-[200px] flex flex-col">
+        <div className={`space-y-2 flex flex-col ${isAdmin ? 'h-[280px]' : 'h-[200px]'}`}>
           <h3 className="font-semibold text-lg line-clamp-2">{product.name}</h3>
           {product.dosage && (
             <p className="text-sm text-muted-foreground">{product.dosage}</p>
