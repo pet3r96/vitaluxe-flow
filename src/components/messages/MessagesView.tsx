@@ -60,6 +60,7 @@ export const MessagesView = () => {
             id,
             assigned_pharmacy_id,
             product_id,
+            patient_name,
             products(name),
             pharmacies:assigned_pharmacy_id(
               id,
@@ -243,22 +244,26 @@ export const MessagesView = () => {
       // Auto-determine pharmacy from the selected order
       const selectedOrder = userOrders?.find(o => o.id === selectedOrderId);
       
-      // Get unique pharmacy user_ids from order lines
-      const pharmacyUserIds = new Set<string>();
-      selectedOrder?.order_lines?.forEach((line: any) => {
-        if (line.pharmacies?.user_id) {
-          pharmacyUserIds.add(line.pharmacies.user_id);
-        }
-      });
+      // Get the pharmacy from the first order line (all lines should have same pharmacy)
+      const firstLinePharmacy = selectedOrder?.order_lines?.find((line: any) => 
+        line.assigned_pharmacy_id && line.pharmacies?.user_id
+      );
       
-      // Add all pharmacy users
-      pharmacyUserIds.forEach(pharmacyUserId => {
-        participantIds.add(pharmacyUserId);
-      });
-      
-      if (pharmacyUserIds.size === 0) {
+      if (!firstLinePharmacy?.pharmacies?.user_id) {
         toast.error("No pharmacy found for this order");
         return;
+      }
+      
+      // Add only the assigned pharmacy user to participants
+      participantIds.add(firstLinePharmacy.pharmacies.user_id);
+      
+      // Validation: Ensure all order lines go to the same pharmacy
+      const allSamePharmacy = selectedOrder?.order_lines?.every((line: any) => 
+        !line.assigned_pharmacy_id || line.assigned_pharmacy_id === firstLinePharmacy.assigned_pharmacy_id
+      );
+      
+      if (!allSamePharmacy) {
+        console.warn("Order has multiple pharmacies assigned - this should not happen");
       }
     }
 
@@ -454,13 +459,15 @@ export const MessagesView = () => {
                         </div>
                       ) : (
                         userOrders?.map((order: any) => {
-                          // Get pharmacy name from first order line
-                          const pharmacyName = order.order_lines?.[0]?.pharmacies?.name || "Unknown Pharmacy";
+                          // Get pharmacy name and patient name from first order line
+                          const firstLine = order.order_lines?.[0];
+                          const pharmacyName = firstLine?.pharmacies?.name || "Unknown Pharmacy";
+                          const patientName = firstLine?.patient_name || "Unknown Patient";
+                          const shortOrderId = order.id.slice(0, 8); // First 8 chars of UUID
                           
                           return (
                             <SelectItem key={order.id} value={order.id}>
-                              Order from {new Date(order.created_at).toLocaleDateString()} - 
-                              ${order.total_amount} ({order.status}) - {pharmacyName}
+                              Order #{shortOrderId} - Patient: {patientName} - ${order.total_amount} - {new Date(order.created_at).toLocaleDateString()} - {pharmacyName}
                             </SelectItem>
                           );
                         })
