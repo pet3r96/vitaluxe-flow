@@ -410,46 +410,78 @@ serve(async (req) => {
 
     // If doctor role, create default provider record
     if (signupData.role === 'doctor' && signupData.prescriberData) {
-      // First update the profile with prescriber-specific data
-      const { error: prescriberProfileError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          full_name: signupData.prescriberData.fullName,
-          npi: signupData.prescriberData.npi,
-          dea: signupData.prescriberData.dea,
-          license_number: signupData.prescriberData.licenseNumber,
-          phone: signupData.prescriberData.phone
-        })
-        .eq('id', userId);
-
-      if (prescriberProfileError) {
-        console.error('Default prescriber profile update error:', prescriberProfileError);
-      }
-
-      // Create the provider record linking provider to practice
-      const { error: providerError } = await supabaseAdmin
-        .from('providers')
-        .insert({
-          user_id: userId,
-          practice_id: userId,
-          active: true
-        });
-
-      if (providerError) {
-        console.error('Default provider creation error:', providerError);
-        console.warn('Failed to create default provider but practice account created');
-      }
-      
-      // Add provider role as well
-      const { error: providerRoleError } = await supabaseAdmin
+      // Get caller's roles to determine if this is admin-initiated or rep-initiated
+      const { data: callerRoles } = await supabaseAdmin
         .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'provider'
-        });
+        .select('role')
+        .eq('user_id', callerUserId);
+
+      const isAdmin = callerRoles?.some(r => r.role === 'admin');
+      
+      // ONLY create default provider if:
+      // 1. Caller is an admin (admin-created practice gets default provider)
+      // 2. OR callerUserId is null (public signup, legacy behavior)
+      const shouldCreateDefaultProvider = isAdmin || !callerUserId;
+      
+      if (shouldCreateDefaultProvider) {
+        // First update the profile with prescriber-specific data
+        const { error: prescriberProfileError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            full_name: signupData.prescriberData.fullName,
+            npi: signupData.prescriberData.npi,
+            dea: signupData.prescriberData.dea,
+            license_number: signupData.prescriberData.licenseNumber,
+            phone: signupData.prescriberData.phone
+          })
+          .eq('id', userId);
+
+        if (prescriberProfileError) {
+          console.error('Default prescriber profile update error:', prescriberProfileError);
+        }
+
+        // Create the provider record linking provider to practice
+        const { error: providerError } = await supabaseAdmin
+          .from('providers')
+          .insert({
+            user_id: userId,
+            practice_id: userId,
+            active: true
+          });
+
+        if (providerError) {
+          console.error('Default provider creation error:', providerError);
+          console.warn('Failed to create default provider but practice account created');
+        }
         
-      if (providerRoleError) {
-        console.error('Provider role assignment error:', providerRoleError);
+        // Add provider role as well
+        const { error: providerRoleError } = await supabaseAdmin
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: 'provider'
+          });
+          
+        if (providerRoleError) {
+          console.error('Provider role assignment error:', providerRoleError);
+        }
+      } else {
+        // Rep-created practice: Store prescriber data in profile but DON'T create provider record
+        console.log('Rep-created practice: Storing prescriber data without creating provider record');
+        const { error: prescriberProfileError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            full_name: signupData.prescriberData.fullName,
+            npi: signupData.prescriberData.npi,
+            dea: signupData.prescriberData.dea,
+            license_number: signupData.prescriberData.licenseNumber,
+            phone: signupData.prescriberData.phone
+          })
+          .eq('id', userId);
+
+        if (prescriberProfileError) {
+          console.error('Prescriber profile update error:', prescriberProfileError);
+        }
       }
     }
 
