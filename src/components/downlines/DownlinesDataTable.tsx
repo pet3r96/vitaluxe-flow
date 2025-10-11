@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Eye, Search } from "lucide-react";
 import { DownlineDetailsDialog } from "./DownlineDetailsDialog";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 interface EnrichedDownline {
   id: string;
@@ -43,7 +45,8 @@ export function DownlinesDataTable() {
         .from("profiles")
         .select("id, name, email, phone, company, active")
         .eq("linked_topline_id", effectiveUserId)
-        .eq("active", true);
+        .eq("active", true)
+        .order("created_at", { ascending: false });
 
       if (downlinesError) throw downlinesError;
       if (!downlinesData || downlinesData.length === 0) return [];
@@ -108,6 +111,21 @@ export function DownlinesDataTable() {
     );
   });
 
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredDownlines?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedDownlines = filteredDownlines?.slice(startIndex, endIndex);
+
   const totalPractices = downlines?.reduce((sum, d) => sum + d.practiceCount, 0) || 0;
 
   const handleViewDetails = (downline: EnrichedDownline) => {
@@ -153,7 +171,7 @@ export function DownlinesDataTable() {
           </TableHeader>
           <TableBody>
             {filteredDownlines && filteredDownlines.length > 0 ? (
-              filteredDownlines.map((downline) => (
+              paginatedDownlines?.map((downline) => (
                 <TableRow key={downline.id}>
                   <TableCell className="font-medium">{downline.name}</TableCell>
                   <TableCell>{downline.email}</TableCell>
@@ -192,6 +210,19 @@ export function DownlinesDataTable() {
           </TableBody>
         </Table>
       </div>
+
+      {filteredDownlines && filteredDownlines.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredDownlines.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredDownlines.length)}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="rounded-lg border bg-card p-4">

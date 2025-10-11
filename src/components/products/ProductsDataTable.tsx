@@ -17,6 +17,8 @@ import { Switch } from "@/components/ui/switch";
 import { Search, Eye, Edit, ShoppingCart, Trash2 } from "lucide-react";
 import { ProductDialog } from "./ProductDialog";
 import { PatientSelectionDialog } from "./PatientSelectionDialog";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -33,6 +35,7 @@ export const ProductsDataTable = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -117,10 +120,30 @@ export const ProductsDataTable = () => {
     }
   };
 
-  const filteredProducts = products?.filter((product) =>
-    product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.dosage?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products?.filter((product) => {
+    const matchesSearch =
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.dosage?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesActive = activeFilter === "all" || 
+      (activeFilter === "active" && product.active) || 
+      (activeFilter === "inactive" && !product.active);
+    return matchesSearch && matchesActive;
+  });
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredProducts?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedProducts = filteredProducts?.slice(startIndex, endIndex);
 
   const handleAddToCart = async (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string, prescriptionUrl: string | null = null) => {
     if (!effectiveUserId || !productForCart) return;
@@ -286,7 +309,7 @@ export const ProductsDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProducts?.map((product) => (
+              paginatedProducts?.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
                     {product.image_url ? (
@@ -409,6 +432,19 @@ export const ProductsDataTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {filteredProducts && filteredProducts.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredProducts.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredProducts.length)}
+        />
+      )}
 
       <ProductDialog
         open={dialogOpen}

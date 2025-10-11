@@ -23,6 +23,8 @@ import { Search, Edit, Eye, Power, PowerOff } from "lucide-react";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AccountDetailsDialog } from "./AccountDetailsDialog";
 import { DataSyncButton } from "./DataSyncButton";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const AccountsDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,6 +122,21 @@ export const AccountsDataTable = () => {
     return matchesSearch && matchesRole;
   });
 
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredAccounts?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedAccounts = filteredAccounts?.slice(startIndex, endIndex);
+
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
       admin: "bg-accent text-accent-foreground",
@@ -195,7 +212,7 @@ export const AccountsDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredAccounts?.map((account) => (
+              paginatedAccounts?.map((account) => (
                 <TableRow key={account.id}>
                   <TableCell className="font-medium">{account.name}</TableCell>
                   <TableCell>{account.email}</TableCell>
@@ -256,6 +273,19 @@ export const AccountsDataTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {filteredAccounts && filteredAccounts.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredAccounts.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredAccounts.length)}
+        />
+      )}
 
       <AddAccountDialog
         open={addDialogOpen}

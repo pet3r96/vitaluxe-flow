@@ -16,6 +16,8 @@ import { Switch } from "@/components/ui/switch";
 import { Search, Edit, UserPlus, AlertCircle } from "lucide-react";
 import { PharmacyDialog } from "./PharmacyDialog";
 import { toast } from "sonner";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const PharmaciesDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,6 +97,21 @@ export const PharmaciesDataTable = () => {
     pharmacy.contact_email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredPharmacies?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedPharmacies = filteredPharmacies?.slice(startIndex, endIndex);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -144,7 +161,7 @@ export const PharmaciesDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPharmacies?.map((pharmacy) => (
+              paginatedPharmacies?.map((pharmacy) => (
                 <TableRow key={pharmacy.id}>
                   <TableCell className="font-medium">{pharmacy.name}</TableCell>
                   <TableCell>{pharmacy.contact_email}</TableCell>
@@ -241,6 +258,19 @@ export const PharmaciesDataTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {filteredPharmacies && filteredPharmacies.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredPharmacies.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredPharmacies.length)}
+        />
+      )}
 
       <PharmacyDialog
         open={dialogOpen}

@@ -18,6 +18,8 @@ import { AddProviderDialog } from "./AddProviderDialog";
 import { ProviderDetailsDialog } from "./ProviderDetailsDialog";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const ProvidersDataTable = () => {
   const { effectiveUserId, effectiveRole } = useAuth();
@@ -104,6 +106,21 @@ export const ProvidersDataTable = () => {
     provider.practice?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredProviders?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedProviders = filteredProviders?.slice(startIndex, endIndex);
+
   if (isLoading) {
     return <div className="text-center py-12 text-muted-foreground">Loading providers...</div>;
   }
@@ -142,7 +159,7 @@ export const ProvidersDataTable = () => {
           </TableHeader>
           <TableBody>
             {filteredProviders && filteredProviders.length > 0 ? (
-              filteredProviders.map((provider) => (
+              paginatedProviders?.map((provider) => (
                 <TableRow key={provider.id}>
                   <TableCell className="font-medium">{provider.profiles?.full_name || provider.profiles?.name}</TableCell>
                   <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
@@ -185,6 +202,19 @@ export const ProvidersDataTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {filteredProviders && filteredProviders.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredProviders.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredProviders.length)}
+        />
+      )}
 
       <AddProviderDialog
         open={addDialogOpen}

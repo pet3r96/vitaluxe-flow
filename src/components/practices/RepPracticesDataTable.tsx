@@ -17,6 +17,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, Eye, UserPlus } from "lucide-react";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
 import { AddPracticeDialog } from "./AddPracticeDialog";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const RepPracticesDataTable = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -53,9 +55,7 @@ export const RepPracticesDataTable = () => {
       // Query practices via rep_practice_links
       const { data: practiceLinks, error: linksError } = await supabase
         .from("rep_practice_links")
-        .select(`
-          practice_id
-        `)
+        .select("practice_id")
         .eq("rep_id", repRecord.id);
       
       if (linksError) {
@@ -80,7 +80,8 @@ export const RepPracticesDataTable = () => {
         `)
         .in("id", practiceIds)
         .eq("user_roles.role", "doctor")
-        .eq("active", true);
+        .eq("active", true)
+        .order("created_at", { ascending: false });
 
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
@@ -219,6 +220,21 @@ export const RepPracticesDataTable = () => {
     return matchesSearch;
   });
 
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredPractices?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedPractices = filteredPractices?.slice(startIndex, endIndex);
+
   return (
     <div className="space-y-4">
       {/* Statistics Cards */}
@@ -287,7 +303,7 @@ export const RepPracticesDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPractices?.map((practice) => (
+              paginatedPractices?.map((practice) => (
                 <TableRow key={practice.id}>
                   <TableCell className="font-medium">{practice.name}</TableCell>
                   <TableCell>{practice.email}</TableCell>
@@ -331,7 +347,20 @@ export const RepPracticesDataTable = () => {
         </Table>
       </div>
 
-          <div className="flex justify-end mb-4">
+      {filteredPractices && filteredPractices.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredPractices.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredPractices.length)}
+        />
+      )}
+
+      <div className="flex justify-end mb-4">
             <Button onClick={() => setAddDialogOpen(true)}>
               <UserPlus className="h-4 w-4 mr-2" />
               Add New Practice

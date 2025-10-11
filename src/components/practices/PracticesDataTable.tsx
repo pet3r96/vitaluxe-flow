@@ -17,6 +17,8 @@ import { Search, Eye, Power, PowerOff, UserPlus } from "lucide-react";
 import { AddPracticeDialog } from "./AddPracticeDialog";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
 import { toast } from "sonner";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const PracticesDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -229,6 +231,21 @@ export const PracticesDataTable = () => {
     return matchesSearch;
   });
 
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredPractices?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedPractices = filteredPractices?.slice(startIndex, endIndex);
+
   return (
     <div className="space-y-4">
       {/* Statistics Cards */}
@@ -308,7 +325,7 @@ export const PracticesDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPractices?.map((practice) => (
+              paginatedPractices?.map((practice) => (
                 <TableRow key={practice.id}>
                   <TableCell className="font-medium">{practice.name}</TableCell>
                   <TableCell>{practice.email}</TableCell>
@@ -363,6 +380,19 @@ export const PracticesDataTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {filteredPractices && filteredPractices.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredPractices.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredPractices.length)}
+        />
+      )}
 
       <AddPracticeDialog
         open={addDialogOpen}

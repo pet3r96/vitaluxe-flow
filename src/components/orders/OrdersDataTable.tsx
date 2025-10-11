@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OrderDetailsDialog } from "./OrderDetailsDialog";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const OrdersDataTable = () => {
   const { effectiveRole, effectiveUserId, user } = useAuth();
@@ -257,6 +259,21 @@ export const OrdersDataTable = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredOrders?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedOrders = filteredOrders?.slice(startIndex, endIndex);
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: "bg-muted text-muted-foreground",
@@ -347,7 +364,7 @@ export const OrdersDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredOrders?.map((order) => {
+              paginatedOrders?.map((order) => {
                 const firstOrderLine = order.order_lines?.[0];
                 const patientId = firstOrderLine?.patient_id;
                 const patientName = firstOrderLine?.patient_name || "N/A";
@@ -424,6 +441,19 @@ export const OrdersDataTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {filteredOrders && filteredOrders.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredOrders.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredOrders.length)}
+        />
+      )}
 
       {selectedOrder && (
         <OrderDetailsDialog

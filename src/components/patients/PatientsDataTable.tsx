@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Edit } from "lucide-react";
 import { PatientDialog } from "./PatientDialog";
 import { format } from "date-fns";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const PatientsDataTable = () => {
   const { effectiveRole, effectivePracticeId } = useAuth();
@@ -72,6 +74,21 @@ export const PatientsDataTable = () => {
   const filteredPatients = patients?.filter(patient =>
     patient.name?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: filteredPatients?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedPatients = filteredPatients?.slice(startIndex, endIndex);
 
   const handleAddPatient = () => {
     setSelectedPatient(null);
@@ -131,7 +148,7 @@ export const PatientsDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPatients.map((patient) => (
+              paginatedPatients?.map((patient) => (
                 <TableRow key={patient.id}>
                   <TableCell className="font-medium">{patient.name}</TableCell>
                   <TableCell>{patient.email || "-"}</TableCell>
@@ -164,6 +181,19 @@ export const PatientsDataTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {filteredPatients && filteredPatients.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={filteredPatients.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, filteredPatients.length)}
+        />
+      )}
 
       <PatientDialog
         open={dialogOpen}
