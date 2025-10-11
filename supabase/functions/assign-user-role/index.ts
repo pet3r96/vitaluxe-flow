@@ -452,10 +452,9 @@ serve(async (req) => {
       console.log('  - isAdmin:', isAdmin);
       console.log('  - !callerUserId:', !callerUserId);
       
-      // ONLY create default provider if:
-      // 1. Caller is an admin (admin-created practice gets default provider)
-      // 2. OR callerUserId is null (public signup, legacy behavior)
-      const shouldCreateDefaultProvider = isAdmin || !callerUserId;
+      // ONLY create default provider if caller is an admin
+      // Reps creating practices should NOT create provider records
+      const shouldCreateDefaultProvider = isAdmin === true;
       
       console.log('🎯 shouldCreateDefaultProvider:', shouldCreateDefaultProvider);
       console.log('=== PROVIDER CREATION DECISION END ===');
