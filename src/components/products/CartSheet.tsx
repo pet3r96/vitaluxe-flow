@@ -126,7 +126,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
         <SheetHeader>
           <SheetTitle>Shopping Cart</SheetTitle>
           <SheetDescription>
-            {cartData?.items.length || 0} item(s) in your cart
+            {cartData?.items?.length || 0} item(s) in your cart
           </SheetDescription>
         </SheetHeader>
 
@@ -233,7 +233,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
             className="w-full"
             size="lg"
             onClick={handleCheckout}
-            disabled={!cartData?.items.length}
+            disabled={!cartData?.items?.length}
           >
             Check Out
           </Button>
