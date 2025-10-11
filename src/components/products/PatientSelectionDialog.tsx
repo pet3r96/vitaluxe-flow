@@ -89,13 +89,19 @@ export const PatientSelectionDialog = ({
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return (data || []).map((p: any) => ({
-        id: p.id,
-        user_id: p.user_id,
-        prescriber_name: p.profiles.name,
-        npi: p.profiles.npi,
-        dea: p.profiles.dea
-      }));
+      console.log('Raw provider data:', data);
+      const mappedData = (data || []).map((p: any) => {
+        console.log('Mapping provider:', p);
+        return {
+          id: p.id,
+          user_id: p.user_id,
+          prescriber_name: p.profiles?.name || 'Unknown Provider',
+          npi: p.profiles?.npi || 'N/A',
+          dea: p.profiles?.dea || 'N/A'
+        };
+      });
+      console.log('Mapped provider data:', mappedData);
+      return mappedData;
     },
     enabled: open && !!effectivePracticeId
   });
