@@ -76,13 +76,32 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     let callerUserId: string | null = null;
     
+    console.log('=== TOKEN VALIDATION START ===');
+    console.log('Authorization header present:', !!authHeader);
+    
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
+      console.log('Token extracted (first 20 chars):', token.substring(0, 20) + '...');
+      
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-      if (!error && user) {
-        callerUserId = user.id;
+      
+      if (error) {
+        console.error('❌ Failed to get user from token:', error.message);
+        console.error('Error details:', JSON.stringify(error, null, 2));
       }
+      
+      if (user) {
+        callerUserId = user.id;
+        console.log('✅ Caller user ID extracted:', callerUserId);
+      } else {
+        console.warn('⚠️ No user found from token (user is null)');
+      }
+    } else {
+      console.warn('⚠️ No Authorization header provided');
     }
+    
+    console.log('Final callerUserId value:', callerUserId);
+    console.log('=== TOKEN VALIDATION END ===');
 
     // Authorization check for non-admin roles creating practices
     if (callerUserId && signupData.role === 'doctor') {
@@ -411,19 +430,38 @@ serve(async (req) => {
     // If doctor role, create default provider record
     if (signupData.role === 'doctor' && signupData.prescriberData) {
       // Get caller's roles to determine if this is admin-initiated or rep-initiated
-      const { data: callerRoles } = await supabaseAdmin
+      console.log('=== PROVIDER CREATION DECISION START ===');
+      console.log('Checking caller roles for user:', callerUserId);
+      
+      const { data: callerRoles, error: rolesError } = await supabaseAdmin
         .from('user_roles')
         .select('role')
         .eq('user_id', callerUserId);
 
+      if (rolesError) {
+        console.error('❌ Error fetching caller roles:', rolesError);
+      }
+
+      console.log('Caller roles:', JSON.stringify(callerRoles, null, 2));
+
       const isAdmin = callerRoles?.some(r => r.role === 'admin');
+      
+      console.log('Is admin?', isAdmin);
+      console.log('callerUserId is null?', !callerUserId);
+      console.log('Condition breakdown:');
+      console.log('  - isAdmin:', isAdmin);
+      console.log('  - !callerUserId:', !callerUserId);
       
       // ONLY create default provider if:
       // 1. Caller is an admin (admin-created practice gets default provider)
       // 2. OR callerUserId is null (public signup, legacy behavior)
       const shouldCreateDefaultProvider = isAdmin || !callerUserId;
       
+      console.log('🎯 shouldCreateDefaultProvider:', shouldCreateDefaultProvider);
+      console.log('=== PROVIDER CREATION DECISION END ===');
+      
       if (shouldCreateDefaultProvider) {
+        console.log('📝 Taking ADMIN/PUBLIC path: Creating provider record');
         // First update the profile with prescriber-specific data
         const { error: prescriberProfileError } = await supabaseAdmin
           .from('profiles')
@@ -466,8 +504,8 @@ serve(async (req) => {
           console.error('Provider role assignment error:', providerRoleError);
         }
       } else {
+        console.log('📝 Taking REP path: Storing prescriber data WITHOUT provider record');
         // Rep-created practice: Store prescriber data in profile but DON'T create provider record
-        console.log('Rep-created practice: Storing prescriber data without creating provider record');
         const { error: prescriberProfileError } = await supabaseAdmin
           .from('profiles')
           .update({
