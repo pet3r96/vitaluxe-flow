@@ -121,7 +121,7 @@ export const ProductCard = ({
         </div>
 
         {/* Product Info */}
-        <div className="space-y-2">
+        <div className="space-y-2 h-[200px] flex flex-col">
           <h3 className="font-semibold text-lg line-clamp-2">{product.name}</h3>
           {product.dosage && (
             <p className="text-sm text-muted-foreground">{product.dosage}</p>
@@ -137,8 +137,11 @@ export const ProductCard = ({
             </Badge>
           </div>
 
+          {/* Spacer to push price to bottom */}
+          <div className="flex-1"></div>
+
           {/* Price Display */}
-          <div className="pt-2 border-t">
+          <div className="pt-2 border-t mt-auto">
             {getPriceDisplay()}
           </div>
 
