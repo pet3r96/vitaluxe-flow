@@ -20,9 +20,11 @@ import {
 } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AddressInput } from "@/components/ui/address-input";
 import { toast } from "sonner";
 import { Loader2, Upload, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 
 interface AddAccountDialogProps {
   open: boolean;
@@ -35,13 +37,22 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
   const [role, setRole] = useState<string>("");
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [toplineComboboxOpen, setToplineComboboxOpen] = useState(false);
+  const [repComboboxOpen, setRepComboboxOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({
+    phone: "",
+    npi: "",
+    dea: "",
+  });
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     company: "",
     phone: "",
-    address: "",
+    address_street: "",
+    address_city: "",
+    address_state: "",
+    address_zip: "",
     licenseNumber: "",
     npi: "",
     dea: "",
@@ -50,6 +61,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
     linkedToplineId: "",
   });
 
+  // Fetch topline reps for downline role assignment
   const { data: toplineReps } = useQuery({
     queryKey: ["topline-reps"],
     queryFn: async () => {
@@ -69,8 +81,36 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
       
       return data || [];
     },
-    enabled: role === "downline",
+    enabled: role === "downline" || role === "doctor",
   });
+
+  // Fetch downline reps for practice assignment
+  const { data: downlineReps } = useQuery({
+    queryKey: ["downline-reps"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          name,
+          email,
+          user_roles!inner(role)
+        `)
+        .eq("user_roles.role", "downline")
+        .eq("active", true)
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      
+      return data || [];
+    },
+    enabled: role === "doctor",
+  });
+
+  // Combine and sort all reps for practice assignment
+  const allReps = role === "doctor" 
+    ? [...(toplineReps || []), ...(downlineReps || [])].sort((a, b) => a.name.localeCompare(b.name))
+    : toplineReps || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +139,24 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
         };
       }
 
+      // Validate practice-specific fields
+      if (role === "doctor") {
+        const phoneResult = validatePhone(formData.phone);
+        const npiResult = validateNPI(formData.npi);
+        const deaResult = validateDEA(formData.dea);
+
+        if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
+          setValidationErrors({
+            phone: phoneResult.error || "",
+            npi: npiResult.error || "",
+            dea: deaResult.error || "",
+          });
+          toast.error("Please fix validation errors before submitting");
+          setLoading(false);
+          return;
+        }
+      }
+
       const roleData: any = {};
       // Note: "doctor" role represents Practice accounts in the database
       if (role === "doctor") {
@@ -107,20 +165,33 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
         roleData.dea = formData.dea;
         roleData.company = formData.company;
         roleData.phone = formData.phone;
-        roleData.address = formData.address;
+        roleData.address_street = formData.address_street;
+        roleData.address_city = formData.address_city;
+        roleData.address_state = formData.address_state;
+        roleData.address_zip = formData.address_zip;
+        roleData.linkedToplineId = formData.linkedToplineId || undefined;
       } else if (role === "pharmacy") {
         roleData.contactEmail = formData.contactEmail;
         roleData.statesServiced = formData.statesServiced;
-        roleData.address = formData.address;
+        roleData.address_street = formData.address_street;
+        roleData.address_city = formData.address_city;
+        roleData.address_state = formData.address_state;
+        roleData.address_zip = formData.address_zip;
       } else if (role === "downline") {
         roleData.linkedToplineId = formData.linkedToplineId;
         roleData.company = formData.company;
         roleData.phone = formData.phone;
-        roleData.address = formData.address;
+        roleData.address_street = formData.address_street;
+        roleData.address_city = formData.address_city;
+        roleData.address_state = formData.address_state;
+        roleData.address_zip = formData.address_zip;
       } else if (role === "topline") {
         roleData.company = formData.company;
         roleData.phone = formData.phone;
-        roleData.address = formData.address;
+        roleData.address_street = formData.address_street;
+        roleData.address_city = formData.address_city;
+        roleData.address_state = formData.address_state;
+        roleData.address_zip = formData.address_zip;
       }
 
       // Get current admin user for parent_id
@@ -164,13 +235,18 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
     setRole("");
     setContractFile(null);
     setToplineComboboxOpen(false);
+    setRepComboboxOpen(false);
+    setValidationErrors({ phone: "", npi: "", dea: "" });
     setFormData({
       name: "",
       email: "",
       password: "",
       company: "",
       phone: "",
-      address: "",
+      address_street: "",
+      address_city: "",
+      address_state: "",
+      address_zip: "",
       licenseNumber: "",
       npi: "",
       dea: "",
@@ -247,7 +323,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="licenseNumber">License Number *</Label>
+                  <Label htmlFor="licenseNumber">Practice License # *</Label>
                   <Input
                     id="licenseNumber"
                     value={formData.licenseNumber}
@@ -256,21 +332,64 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="npi">NPI *</Label>
+                  <Label htmlFor="npi">Practice NPI # *</Label>
                   <Input
                     id="npi"
+                    placeholder="1234567890 (10 digits)"
+                    maxLength={10}
                     value={formData.npi}
                     onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
+                    onBlur={() => {
+                      const result = validateNPI(formData.npi);
+                      setValidationErrors({ ...validationErrors, npi: result.error || "" });
+                    }}
+                    className={validationErrors.npi ? "border-destructive" : ""}
                     required
                   />
+                  {validationErrors.npi && (
+                    <p className="text-sm text-destructive">{validationErrors.npi}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dea">DEA</Label>
+                  <Label htmlFor="dea">Practice DEA #</Label>
                   <Input
                     id="dea"
+                    placeholder="AB1234567 (2 letters + 7 digits)"
+                    maxLength={9}
                     value={formData.dea}
-                    onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, dea: e.target.value.toUpperCase() })}
+                    onBlur={() => {
+                      const result = validateDEA(formData.dea);
+                      setValidationErrors({ ...validationErrors, dea: result.error || "" });
+                    }}
+                    className={validationErrors.dea ? "border-destructive" : ""}
                   />
+                  {validationErrors.dea && (
+                    <p className="text-sm text-destructive">{validationErrors.dea}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="1234567890 (10 digits)"
+                    maxLength={10}
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setFormData({ ...formData, phone: value });
+                    }}
+                    onBlur={() => {
+                      const result = validatePhone(formData.phone);
+                      setValidationErrors({ ...validationErrors, phone: result.error || "" });
+                    }}
+                    className={validationErrors.phone ? "border-destructive" : ""}
+                    required
+                  />
+                  {validationErrors.phone && (
+                    <p className="text-sm text-destructive">{validationErrors.phone}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="company">Company</Label>
@@ -280,6 +399,91 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <AddressInput
+                label="Practice Address *"
+                value={{
+                  street: formData.address_street,
+                  city: formData.address_city,
+                  state: formData.address_state,
+                  zip: formData.address_zip,
+                }}
+                onChange={(addressData) => {
+                  setFormData({
+                    ...formData,
+                    address_street: addressData.street,
+                    address_city: addressData.city,
+                    address_state: addressData.state,
+                    address_zip: addressData.zip,
+                  });
+                }}
+                required
+              />
+
+              <div className="space-y-2">
+                <Label htmlFor="assignedRep">Assigned Representative (Optional)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Assign a topline or downline rep to this practice. Leave blank if managed directly by admin.
+                </p>
+                <Popover open={repComboboxOpen} onOpenChange={setRepComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={repComboboxOpen}
+                      className="w-full justify-between"
+                    >
+                      {formData.linkedToplineId
+                        ? allReps?.find((rep) => rep.id === formData.linkedToplineId)?.name
+                        : "Select representative (optional)..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search reps by name or email..." />
+                      <CommandList>
+                        <CommandEmpty>No representative found.</CommandEmpty>
+                        <CommandGroup>
+                          {allReps?.map((rep) => (
+                            <CommandItem
+                              key={rep.id}
+                              value={`${rep.name} ${rep.email}`}
+                              onSelect={() => {
+                                setFormData({ ...formData, linkedToplineId: rep.id });
+                                setRepComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.linkedToplineId === rep.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{rep.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {rep.email} • {rep.user_roles[0].role}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {formData.linkedToplineId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFormData({ ...formData, linkedToplineId: "" })}
+                  >
+                    Clear selection
+                  </Button>
+                )}
               </div>
             </>
           )}

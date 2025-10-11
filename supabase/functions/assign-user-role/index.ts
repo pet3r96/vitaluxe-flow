@@ -14,15 +14,16 @@ interface SignupRequest {
   name: string;
   fullName?: string;
   prescriberName?: string;
-  role: 'admin' | 'doctor' | 'pharmacy' | 'topline' | 'downline' | 'provider';
+  role: 'admin' | 'doctor' | 'practice' | 'pharmacy' | 'topline' | 'downline' | 'provider';
   parentId?: string;
   roleData: {
-    // Doctor fields
+    // Doctor/Practice fields
     licenseNumber?: string;
     npi?: string;
     practiceNpi?: string;
     dea?: string;
     phone?: string;
+    company?: string;
     address?: string;
     address_street?: string;
     address_city?: string;
@@ -303,21 +304,41 @@ serve(async (req) => {
       contract_url: contractUrl
     };
 
+    // Handle address data - support both old (single string) and new (structured) format
+    const getAddressFields = (roleData: any) => {
+      if (roleData.address_street) {
+        // New structured format (preferred)
+        return {
+          address_street: roleData.address_street,
+          address_city: roleData.address_city,
+          address_state: roleData.address_state,
+          address_zip: roleData.address_zip,
+        };
+      } else if (roleData.address) {
+        // Old single-string format (backward compatibility)
+        return { address: roleData.address };
+      }
+      return {};
+    };
+
     if (signupData.role === 'doctor') {
       profileUpdate.license_number = signupData.roleData.licenseNumber;
       profileUpdate.npi = signupData.roleData.npi;
       profileUpdate.practice_npi = signupData.roleData.practiceNpi;
       profileUpdate.dea = signupData.roleData.dea;
       profileUpdate.phone = signupData.roleData.phone;
-      profileUpdate.address = signupData.roleData.address;
+      profileUpdate.company = signupData.roleData.company;
       profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
+      Object.assign(profileUpdate, getAddressFields(signupData.roleData));
     } else if (signupData.role === 'downline') {
       profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
       profileUpdate.phone = signupData.roleData.phone;
-      profileUpdate.address = signupData.roleData.address;
+      profileUpdate.company = signupData.roleData.company;
+      Object.assign(profileUpdate, getAddressFields(signupData.roleData));
     } else if (signupData.role === 'topline') {
       profileUpdate.phone = signupData.roleData.phone;
-      profileUpdate.address = signupData.roleData.address;
+      profileUpdate.company = signupData.roleData.company;
+      Object.assign(profileUpdate, getAddressFields(signupData.roleData));
     }
 
     // Only update if there are additional fields
