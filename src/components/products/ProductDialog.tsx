@@ -118,6 +118,32 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       return;
     }
 
+    // Validate pricing tiers to prevent negative profits
+    const basePrice = parseFloat(formData.base_price);
+    const toplinePrice = formData.topline_price ? parseFloat(formData.topline_price) : null;
+    const downlinePrice = formData.downline_price ? parseFloat(formData.downline_price) : null;
+    const retailPrice = formData.retail_price ? parseFloat(formData.retail_price) : null;
+
+    if (toplinePrice && toplinePrice <= basePrice) {
+      toast.error("Topline price must be greater than base price");
+      return;
+    }
+
+    if (downlinePrice && toplinePrice && downlinePrice <= toplinePrice) {
+      toast.error("Downline price must be greater than topline price");
+      return;
+    }
+
+    if (retailPrice && downlinePrice && retailPrice < downlinePrice) {
+      toast.error("Practice price must be greater than or equal to downline price");
+      return;
+    }
+
+    if (retailPrice && toplinePrice && !downlinePrice && retailPrice < toplinePrice) {
+      toast.error("Practice price must be greater than or equal to topline price");
+      return;
+    }
+
     setLoading(true);
 
     try {
