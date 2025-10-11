@@ -273,8 +273,9 @@ export const RepPracticesDataTable = () => {
       </div>
 
       {/* Practices Table (Read-Only) */}
-      <div className="rounded-md border border-border bg-card">
-        <Table>
+      <div className="rounded-md border border-border bg-card overflow-x-auto">
+        <div className="min-w-[800px]">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Practice Name</TableHead>
@@ -345,6 +346,7 @@ export const RepPracticesDataTable = () => {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {filteredPractices && filteredPractices.length > 0 && (

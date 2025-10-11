@@ -189,14 +189,14 @@ export const PracticeProfileForm = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-      <CardHeader>
-        <CardTitle>Practice Profile</CardTitle>
-        <CardDescription>
+      <Card className="p-4 sm:p-6">
+      <CardHeader className="px-0 pt-0">
+        <CardTitle className="text-lg sm:text-xl">Practice Profile</CardTitle>
+        <CardDescription className="text-sm">
           Manage your practice information and shipping preferences
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -372,14 +372,14 @@ export const PracticeProfileForm = () => {
       </CardContent>
     </Card>
 
-    <Card>
-      <CardHeader>
-        <CardTitle>Account Security</CardTitle>
-        <CardDescription>
+    <Card className="p-4 sm:p-6">
+      <CardHeader className="px-0 pt-0">
+        <CardTitle className="text-lg sm:text-xl">Account Security</CardTitle>
+        <CardDescription className="text-sm">
           Manage your password and account security settings
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0">
         <Button
           variant="outline"
           onClick={handleResetPassword}

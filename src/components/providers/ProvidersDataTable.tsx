@@ -143,8 +143,9 @@ export const ProvidersDataTable = () => {
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <div className="min-w-[800px]">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Full Name</TableHead>
@@ -201,6 +202,8 @@ export const ProvidersDataTable = () => {
             )}
           </TableBody>
         </Table>
+        </div>
+      </div>
       </div>
 
       {filteredProviders && filteredProviders.length > 0 && (

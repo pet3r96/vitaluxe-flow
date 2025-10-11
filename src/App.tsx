@@ -51,11 +51,14 @@ const App = () => (
                   <SidebarProvider>
                     <div className="flex min-h-screen w-full bg-background">
                       <AppSidebar />
-                      <main className="flex-1 p-8 bg-[hsl(var(--main-content-bg))]">
-                        <div className="mb-6 flex justify-end">
-                          <RoleImpersonationDropdown />
+                      <main className="flex-1 flex flex-col bg-[hsl(var(--main-content-bg))]">
+                        <div className="sticky top-0 z-20 flex items-center justify-between p-4 lg:p-6 border-b border-border bg-[hsl(var(--main-content-bg))]">
+                          <div className="ml-auto">
+                            <RoleImpersonationDropdown />
+                          </div>
                         </div>
-                        <Routes>
+                        <div className="flex-1 p-4 sm:p-6 lg:p-8">
+                          <Routes>
                           <Route path="/" element={<DashboardRouter />} />
                           <Route path="/dashboard" element={<DashboardRouter />} />
                           <Route path="/accounts" element={<Accounts />} />
@@ -76,6 +79,7 @@ const App = () => (
                           <Route path="/rep-reports" element={<RepProfitReports />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
+                        </div>
                       </main>
                     </div>
                   </SidebarProvider>

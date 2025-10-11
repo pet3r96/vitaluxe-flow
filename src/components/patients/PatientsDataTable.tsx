@@ -122,8 +122,9 @@ export const PatientsDataTable = () => {
         )}
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
+      <div className="rounded-md border bg-card overflow-x-auto">
+        <div className="min-w-[800px]">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -180,6 +181,8 @@ export const PatientsDataTable = () => {
             )}
           </TableBody>
         </Table>
+        </div>
+      </div>
       </div>
 
       {filteredPatients && filteredPatients.length > 0 && (

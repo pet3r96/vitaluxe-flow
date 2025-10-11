@@ -71,21 +71,22 @@ export function DataTablePagination({
   const pageNumbers = getPageNumbers();
   
   return (
-    <div className="flex items-center justify-between px-2 py-4">
-      <div className="text-sm text-muted-foreground">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4">
+      <div className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
         Showing {startIndex + 1}-{displayEnd} of {totalItems} results
       </div>
       
-      <Pagination>
-        <PaginationContent>
+      <Pagination className="order-1 sm:order-2">
+        <PaginationContent className="gap-1">
           <PaginationItem>
             <PaginationPrevious 
               onClick={() => hasPrevPage && onPageChange(currentPage - 1)}
               className={!hasPrevPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
             />
           </PaginationItem>
-          
-          {pageNumbers.map((page, index) => (
+
+          <div className="hidden sm:flex gap-1">
+            {pageNumbers.map((page, index) => (
             <PaginationItem key={index}>
               {page === "ellipsis" ? (
                 <PaginationEllipsis />
@@ -100,6 +101,13 @@ export function DataTablePagination({
               )}
             </PaginationItem>
           ))}
+          </div>
+
+          <div className="flex sm:hidden items-center gap-2 px-3">
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+          </div>
           
           <PaginationItem>
             <PaginationNext 

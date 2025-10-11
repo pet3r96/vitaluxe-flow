@@ -111,11 +111,13 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-center p-4">
+        <div className="flex items-center justify-center p-4 lg:p-6">
           <img 
             src={logo} 
             alt="Vitaluxe Services" 
-            className={`transition-all duration-200 ${isCollapsed ? "h-8" : "h-12"}`}
+            className={`transition-all duration-200 ${
+              isCollapsed ? "h-8 sm:h-10" : "h-10 sm:h-12 md:h-14"
+            }`}
           />
         </div>
       </SidebarHeader>
@@ -132,10 +134,10 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild className="min-h-[44px]">
                     <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="h-5 w-5" />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                      {!isCollapsed && <span className="text-sm sm:text-base">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

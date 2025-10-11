@@ -100,4 +100,24 @@ All colors MUST be HSL.
   .glow-gold {
     box-shadow: var(--shadow-gold-glow);
   }
+
+  /* Touch-friendly minimum sizes */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .touch-target-sm {
+    min-height: 36px;
+    min-width: 36px;
+  }
+  
+  /* Mobile-first typography */
+  .heading-responsive {
+    @apply text-xl sm:text-2xl lg:text-3xl;
+  }
+  
+  .subheading-responsive {
+    @apply text-base sm:text-lg lg:text-xl;
+  }
 }

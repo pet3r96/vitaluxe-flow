@@ -333,8 +333,9 @@ export const OrdersDataTable = () => {
         </Select>
       </div>
 
-      <div className="rounded-md border border-border bg-card">
-        <Table>
+      <div className="rounded-md border border-border bg-card overflow-x-auto">
+        <div className="min-w-[1000px]">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Order ID</TableHead>
@@ -440,6 +441,7 @@ export const OrdersDataTable = () => {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {filteredOrders && filteredOrders.length > 0 && (

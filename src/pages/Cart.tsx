@@ -87,12 +87,12 @@ export default function Cart() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">My Cart</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Cart</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Review and manage your cart items
           </p>
         </div>
-        <ShoppingCart className="h-8 w-8 text-primary" />
+        <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
       </div>
 
       {isEmpty ? (
@@ -109,28 +109,28 @@ export default function Cart() {
         <div className="space-y-4">
           {cartLines.map((line: any) => (
             <Card key={line.id}>
-              <CardContent className="flex items-center gap-4 p-6">
+              <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-6">
                 {line.product?.image_url && (
                   <img
                     src={line.product.image_url}
                     alt={line.product.name}
-                    className="h-20 w-20 object-cover rounded"
+                    className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded"
                   />
                 )}
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{line.product?.name}</h3>
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex-1 w-full">
+                  <h3 className="font-semibold text-base sm:text-lg">{line.product?.name}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {line.product?.dosage}
                   </p>
-                  <p className="text-sm mt-2">
+                  <p className="text-xs sm:text-sm mt-2">
                     <span className="font-medium">Patient:</span> {line.patient_name}
                   </p>
                   {line.provider?.profiles && (
-                    <p className="text-sm">
+                    <p className="text-xs sm:text-sm">
                       <span className="font-medium">Provider:</span> {line.provider.profiles.name}
                     </p>
                   )}
-                  <p className="text-sm">
+                  <p className="text-xs sm:text-sm">
                     <span className="font-medium">Quantity:</span> {line.quantity}
                   </p>
                   {line.prescription_url && (
@@ -140,14 +140,14 @@ export default function Cart() {
                     </div>
                   )}
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-primary">
+                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-4">
+                  <p className="text-lg sm:text-xl font-bold text-primary">
                     ${line.price_snapshot?.toFixed(2)}
                   </p>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="mt-2 text-destructive"
+                    className="text-destructive min-h-[44px] min-w-[44px]"
                     onClick={() => removeMutation.mutate(line.id)}
                     disabled={removeMutation.isPending}
                   >
@@ -159,22 +159,22 @@ export default function Cart() {
           ))}
 
           <Card>
-            <CardHeader>
-              <CardTitle>Cart Summary</CardTitle>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl">Cart Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-muted-foreground">Total Items:</span>
                   <span className="font-medium">{cartLines.length}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <div className="flex justify-between text-base sm:text-lg font-bold border-t pt-2">
                   <span>Total Amount:</span>
                   <span className="text-primary">${calculateTotal().toFixed(2)}</span>
                 </div>
               </div>
               <Button 
-                className="w-full" 
+                className="w-full min-h-[48px] text-base" 
                 size="lg"
                 onClick={() => navigate("/order-confirmation")}
               >

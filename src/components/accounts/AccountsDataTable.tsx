@@ -151,15 +151,15 @@ export const AccountsDataTable = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
+          <div className="relative flex-1 max-w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search accounts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 w-full"
             />
           </div>
           <Select value={roleFilter} onValueChange={setRoleFilter}>
@@ -177,7 +177,7 @@ export const AccountsDataTable = () => {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <DataSyncButton onSyncComplete={() => refetch()} />
           <Button onClick={() => setAddDialogOpen(true)}>
             Add Account
@@ -185,8 +185,9 @@ export const AccountsDataTable = () => {
         </div>
       </div>
 
-      <div className="rounded-md border border-border bg-card">
-        <Table>
+      <div className="rounded-md border border-border bg-card overflow-x-auto">
+        <div className="min-w-[800px]">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -272,6 +273,7 @@ export const AccountsDataTable = () => {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {filteredAccounts && filteredAccounts.length > 0 && (
