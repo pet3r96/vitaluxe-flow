@@ -12,7 +12,7 @@ import { MessageCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 
 export const MessagesView = () => {
-  const { user, effectiveUserId } = useAuth();
+  const { user, effectiveUserId, effectiveRole } = useAuth();
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [newThreadSubject, setNewThreadSubject] = useState("");
@@ -426,7 +426,10 @@ export const MessagesView = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Support / Admin</SelectItem>
-                  <SelectItem value="pharmacy">Pharmacy (Order Issue)</SelectItem>
+                  {/* Only show pharmacy option for practices, providers, and admins */}
+                  {effectiveRole !== "pharmacy" && (
+                    <SelectItem value="pharmacy">Pharmacy (Order Issue)</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
