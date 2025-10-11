@@ -13,10 +13,18 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   
   const isRep = effectiveRole === "topline" || effectiveRole === "downline";
-  const allowedRoles = ["doctor", "topline", "downline"];
+  const allowedRoles = ["doctor", "topline", "downline", "provider"];
 
   useEffect(() => {
     const checkProviderStatus = async () => {
+      // If already identified as provider role, set it immediately
+      if (effectiveRole === "provider") {
+        setIsProvider(true);
+        setLoading(false);
+        return;
+      }
+      
+      // For doctor role, check if they're also a provider
       if (!effectiveUserId || effectiveRole !== "doctor") {
         setLoading(false);
         return;
