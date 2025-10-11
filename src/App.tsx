@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ImpersonationBanner } from "./components/layout/ImpersonationBanner";
@@ -53,6 +53,7 @@ const App = () => (
                       <AppSidebar />
                       <main className="flex-1 flex flex-col bg-[hsl(var(--main-content-bg))]">
                         <div className="sticky top-0 z-20 flex items-center justify-between p-4 lg:p-6 border-b border-border bg-[hsl(var(--main-content-bg))]">
+                          <SidebarTrigger className="lg:hidden" />
                           <div className="ml-auto">
                             <RoleImpersonationDropdown />
                           </div>
