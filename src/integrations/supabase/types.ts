@@ -730,6 +730,165 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_practices: {
+        Row: {
+          address_city: string
+          address_state: string
+          address_street: string
+          address_zip: string
+          admin_notes: string | null
+          assigned_rep_user_id: string
+          company: string
+          contract_file: Json | null
+          created_at: string
+          created_by_role: Database["public"]["Enums"]["app_role"]
+          created_by_user_id: string
+          dea: string | null
+          email: string
+          id: string
+          license_number: string
+          npi: string
+          phone: string
+          practice_name: string
+          prescriber_dea: string | null
+          prescriber_full_name: string
+          prescriber_license: string
+          prescriber_name: string
+          prescriber_npi: string
+          prescriber_phone: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          address_city: string
+          address_state: string
+          address_street: string
+          address_zip: string
+          admin_notes?: string | null
+          assigned_rep_user_id: string
+          company: string
+          contract_file?: Json | null
+          created_at?: string
+          created_by_role: Database["public"]["Enums"]["app_role"]
+          created_by_user_id: string
+          dea?: string | null
+          email: string
+          id?: string
+          license_number: string
+          npi: string
+          phone: string
+          practice_name: string
+          prescriber_dea?: string | null
+          prescriber_full_name: string
+          prescriber_license: string
+          prescriber_name: string
+          prescriber_npi: string
+          prescriber_phone?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          address_city?: string
+          address_state?: string
+          address_street?: string
+          address_zip?: string
+          admin_notes?: string | null
+          assigned_rep_user_id?: string
+          company?: string
+          contract_file?: Json | null
+          created_at?: string
+          created_by_role?: Database["public"]["Enums"]["app_role"]
+          created_by_user_id?: string
+          dea?: string | null
+          email?: string
+          id?: string
+          license_number?: string
+          npi?: string
+          phone?: string
+          practice_name?: string
+          prescriber_dea?: string | null
+          prescriber_full_name?: string
+          prescriber_license?: string
+          prescriber_name?: string
+          prescriber_npi?: string
+          prescriber_phone?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pending_reps: {
+        Row: {
+          admin_notes: string | null
+          assigned_topline_user_id: string | null
+          company: string | null
+          created_at: string
+          created_by_role: Database["public"]["Enums"]["app_role"]
+          created_by_user_id: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          assigned_topline_user_id?: string | null
+          company?: string | null
+          created_at?: string
+          created_by_role: Database["public"]["Enums"]["app_role"]
+          created_by_user_id: string
+          email: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          assigned_topline_user_id?: string | null
+          company?: string | null
+          created_at?: string
+          created_by_role?: Database["public"]["Enums"]["app_role"]
+          created_by_user_id?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pharmacies: {
         Row: {
           active: boolean | null

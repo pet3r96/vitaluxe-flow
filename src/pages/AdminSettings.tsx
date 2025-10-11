@@ -5,6 +5,8 @@ import { OrphanedPharmacyFixer } from "@/components/admin/OrphanedPharmacyFixer"
 import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
 import { RepsManagement } from "@/components/admin/RepsManagement";
+import { PendingRepsApproval } from "@/components/admin/PendingRepsApproval";
+import { PendingPracticesApproval } from "@/components/admin/PendingPracticesApproval";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, MapPin, Activity, Building2, Users, Wrench } from "lucide-react";
 
@@ -31,6 +33,14 @@ const AdminSettings = () => {
           <TabsTrigger value="reps" className="gap-2">
             <Users className="h-4 w-4" />
             Representatives
+          </TabsTrigger>
+          <TabsTrigger value="pending-reps" className="gap-2">
+            <Users className="h-4 w-4" />
+            Pending Reps
+          </TabsTrigger>
+          <TabsTrigger value="pending-practices" className="gap-2">
+            <Building2 className="h-4 w-4" />
+            Pending Practices
           </TabsTrigger>
           <TabsTrigger value="addresses" className="gap-2">
             <MapPin className="h-4 w-4" />
@@ -88,6 +98,34 @@ const AdminSettings = () => {
             </CardHeader>
             <CardContent>
               <RepsManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending-reps" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Representative Requests</CardTitle>
+              <CardDescription>
+                Review and approve/reject representative requests from topline and downline reps
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PendingRepsApproval />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending-practices" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Practice Requests</CardTitle>
+              <CardDescription>
+                Review and approve/reject practice requests from representatives
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PendingPracticesApproval />
             </CardContent>
           </Card>
         </TabsContent>

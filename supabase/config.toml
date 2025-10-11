@@ -3,6 +3,12 @@ project_id = "qbtsfajshnrwwlfzkeog"
 [functions.assign-user-role]
 verify_jwt = false
 
+[functions.approve-pending-rep]
+verify_jwt = true
+
+[functions.approve-pending-practice]
+verify_jwt = true
+
 [functions.bulk-verify-addresses]
 verify_jwt = true
 

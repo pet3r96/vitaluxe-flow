@@ -14,14 +14,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, UserPlus } from "lucide-react";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
+import { AddPracticeRequestDialog } from "./AddPracticeRequestDialog";
 
 export const RepPracticesDataTable = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPractice, setSelectedPractice] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
   // Fetch practices based on role
   const { data: practices, isLoading, refetch } = useQuery({
@@ -347,6 +349,13 @@ export const RepPracticesDataTable = () => {
         </Table>
       </div>
 
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setRequestDialogOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Request New Practice
+        </Button>
+      </div>
+
       {selectedPractice && (
         <PracticeDetailsDialog
           open={detailsOpen}
@@ -355,6 +364,12 @@ export const RepPracticesDataTable = () => {
           onSuccess={() => refetch()}
         />
       )}
+
+      <AddPracticeRequestDialog
+        open={requestDialogOpen}
+        onOpenChange={setRequestDialogOpen}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 };
