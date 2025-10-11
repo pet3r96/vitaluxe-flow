@@ -136,7 +136,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
               <div className="text-center text-muted-foreground py-8">
                 Loading cart...
               </div>
-            ) : !cartData?.items.length ? (
+            ) : !cartData?.items?.length ? (
               <div className="text-center text-muted-foreground py-8">
                 Your cart is empty
               </div>
