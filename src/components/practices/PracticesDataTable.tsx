@@ -116,6 +116,37 @@ export const PracticesDataTable = () => {
     },
   });
 
+  // Fetch rep-practice links
+  const { data: repPracticeLinks } = useQuery({
+    queryKey: ["rep-practice-links"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rep_practice_links")
+        .select(`
+          practice_id,
+          rep_id,
+          reps!inner(
+            user_id,
+            role
+          )
+        `);
+      
+      if (error) throw error;
+      
+      // Group by practice_id
+      const linksByPractice: Record<string, any[]> = {};
+      data?.forEach(link => {
+        if (!linksByPractice[link.practice_id]) {
+          linksByPractice[link.practice_id] = [];
+        }
+        linksByPractice[link.practice_id].push(link);
+      });
+      
+      return linksByPractice;
+    },
+    enabled: !!practices,
+  });
+
   const { data: stats } = useQuery({
     queryKey: ["practice-stats"],
     queryFn: async () => {
@@ -139,17 +170,21 @@ export const PracticesDataTable = () => {
     enabled: !!practices,
   });
 
-  const getRepDisplay = (linkedToplineId: string | null) => {
-    if (!linkedToplineId || !allReps) {
-      return "N/A";
+  const getRepDisplay = (practiceId: string, linkedToplineId: string | null) => {
+    const links = repPracticeLinks?.[practiceId] || [];
+    
+    if (links.length === 0) {
+      // Fallback to old linked_topline_id system
+      if (!linkedToplineId || !allReps) return "N/A";
+      const rep = allReps.get(linkedToplineId);
+      return rep ? `${rep.name} (${rep.role})` : "N/A";
     }
     
-    const rep = allReps.get(linkedToplineId);
-    if (!rep) {
-      return "N/A";
-    }
-    
-    return `${rep.name} (${rep.role})`;
+    // Show all reps linked to this practice
+    return links.map(link => {
+      const rep = allReps.get(link.reps.user_id);
+      return rep ? `${rep.name} (${rep.role})` : "Unknown";
+    }).join(", ");
   };
 
   const toggleAccountStatus = async (practiceId: string, currentStatus: boolean) => {
@@ -289,7 +324,7 @@ export const PracticesDataTable = () => {
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">
-                      {getRepDisplay(practice.linked_topline_id)}
+                      {getRepDisplay(practice.id, practice.linked_topline_id)}
                     </span>
                   </TableCell>
                   <TableCell>

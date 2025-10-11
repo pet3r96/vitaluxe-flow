@@ -25,99 +25,81 @@ export const RepPracticesDataTable = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  // Fetch practices based on role
+  // Fetch practices based on role using rep_practice_links
   const { data: practices, isLoading, refetch } = useQuery({
     queryKey: ["rep-practices", effectiveUserId, effectiveRole],
     queryFn: async () => {
       if (!effectiveUserId) return [];
 
-      if (effectiveRole === "topline") {
-        // Step 1: Find the topline's rep record
-        const { data: toplineRepData, error: toplineRepError } = await supabase
-          .from("reps")
-          .select("id")
-          .eq("user_id", effectiveUserId)
-          .eq("role", "topline")
-          .maybeSingle();
+      // Get the current user's rep record (reps.id, not user_id)
+      const { data: repRecord, error: repError } = await supabase
+        .from("reps")
+        .select("id")
+        .eq("user_id", effectiveUserId)
+        .maybeSingle();
+      
+      if (repError) {
+        console.error("Error fetching rep record:", repError);
+        throw repError;
+      }
+      
+      if (!repRecord) {
+        console.log("No rep record found for user");
+        return [];
+      }
+      
+      console.log("Rep record found:", repRecord.id);
+      
+      // Query practices via rep_practice_links
+      const { data: practiceLinks, error: linksError } = await supabase
+        .from("rep_practice_links")
+        .select(`
+          practice_id
+        `)
+        .eq("rep_id", repRecord.id);
+      
+      if (linksError) {
+        console.error("Error fetching practice links:", linksError);
+        throw linksError;
+      }
+      
+      console.log("Practice links found:", practiceLinks?.length || 0);
 
-        if (toplineRepError) throw toplineRepError;
-        if (!toplineRepData) return [];
-
-        // Step 2: Get user_ids of all downlines assigned to this topline
-        const { data: downlineReps, error: downlineError } = await supabase
-          .from("reps")
-          .select("user_id")
-          .eq("assigned_topline_id", toplineRepData.id)
-          .eq("role", "downline");
-
-        if (downlineError) throw downlineError;
-
-        // Step 3: Build list of user_ids to check (topline + all their downlines)
-        const userIdsToCheck = [effectiveUserId, ...(downlineReps?.map(r => r.user_id) || [])];
-
-        // Step 4: Get practices where linked_topline_id matches any of these user_ids
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .in("linked_topline_id", userIdsToCheck)
-          .eq("active", true)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        // Step 5: Filter out providers
-        const { data: providerIds, error: providersError } = await supabase
-          .from("providers")
-          .select("user_id");
-
-        if (providersError) throw providersError;
-
-        const providerUserIds = new Set(providerIds?.map(p => p.user_id) || []);
-        return data?.filter(doc => !providerUserIds.has(doc.id)) || [];
-      } else if (effectiveRole === "downline") {
-        // Downline: Get practices via assigned topline
-        const { data: repData, error: repError } = await supabase
-          .from("reps")
-          .select("assigned_topline_id")
-          .eq("user_id", effectiveUserId)
-          .eq("role", "downline")
-          .maybeSingle();
-
-        if (repError) throw repError;
-        if (!repData?.assigned_topline_id) return [];
-
-        // Get the topline's user_id
-        const { data: toplineRep, error: toplineError } = await supabase
-          .from("reps")
-          .select("user_id")
-          .eq("id", repData.assigned_topline_id)
-          .maybeSingle();
-
-        if (toplineError) throw toplineError;
-        if (!toplineRep?.user_id) return [];
-
-        // Get practices linked to this topline
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("linked_topline_id", toplineRep.user_id)
-          .eq("active", true)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        // Filter out providers
-        const { data: providerIds, error: providersError } = await supabase
-          .from("providers")
-          .select("user_id");
-
-        if (providersError) throw providersError;
-
-        const providerUserIds = new Set(providerIds?.map(p => p.user_id) || []);
-        return data?.filter(doc => !providerUserIds.has(doc.id)) || [];
+      if (!practiceLinks || practiceLinks.length === 0) {
+        return [];
       }
 
-      return [];
+      const practiceIds = practiceLinks.map(link => link.practice_id);
+
+      // Fetch full practice details
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select(`
+          *,
+          user_roles!inner(role)
+        `)
+        .in("id", practiceIds)
+        .eq("user_roles.role", "doctor")
+        .eq("active", true);
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      // Get provider user IDs to filter out
+      const { data: providerIds, error: providersError } = await supabase
+        .from("providers")
+        .select("user_id");
+
+      if (providersError) throw providersError;
+
+      const providerUserIds = new Set(providerIds?.map(p => p.user_id) || []);
+      
+      // Filter out providers
+      const practicesData = profilesData?.filter(p => !providerUserIds.has(p.id)) || [];
+      
+      return practicesData;
     },
     enabled: !!effectiveUserId && (effectiveRole === "topline" || effectiveRole === "downline"),
   });
