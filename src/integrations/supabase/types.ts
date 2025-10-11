@@ -301,34 +301,54 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          disposition_notes: string | null
+          disposition_type: string | null
           id: string
+          order_id: string | null
           resolved: boolean | null
           resolved_at: string | null
           resolved_by: string | null
           subject: string
+          thread_type: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          disposition_notes?: string | null
+          disposition_type?: string | null
           id?: string
+          order_id?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
           subject: string
+          thread_type?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
+          disposition_notes?: string | null
+          disposition_type?: string | null
           id?: string
+          order_id?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
           subject?: string
+          thread_type?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "message_threads_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
