@@ -86,7 +86,7 @@ export const MessagesView = () => {
   });
 
   const { data: threads, refetch: refetchThreads } = useQuery({
-    queryKey: ["message-threads", resolvedFilter, isAdmin],
+    queryKey: ["message-threads", resolvedFilter, effectiveUserId],
     queryFn: async () => {
       let query = supabase
         .from("message_threads")
@@ -95,7 +95,7 @@ export const MessagesView = () => {
           thread_participants!inner(user_id),
           orders(id, status, created_at, total_amount)
         `)
-        .eq("thread_participants.user_id", user?.id)
+        .eq("thread_participants.user_id", effectiveUserId)
         .order("updated_at", { ascending: false });
 
       // Apply filter
@@ -176,7 +176,7 @@ export const MessagesView = () => {
     const { error } = await supabase.from("messages").insert([
       {
         thread_id: selectedThread,
-        sender_id: user?.id,
+        sender_id: effectiveUserId,
         body: newMessage,
       },
     ]);
@@ -267,6 +267,13 @@ export const MessagesView = () => {
       }
     }
 
+    console.log("Creating ticket with participants:", {
+      creator: effectiveUserId,
+      participants: Array.from(participantIds),
+      threadType: threadType,
+      orderId: selectedOrderId
+    });
+
     const participants = Array.from(participantIds).map(userId => ({
       thread_id: thread.id,
       user_id: userId
@@ -317,7 +324,7 @@ export const MessagesView = () => {
       .from("message_threads")
       .update({ 
         resolved: true, 
-        resolved_by: user?.id,
+        resolved_by: effectiveUserId,
         resolved_at: new Date().toISOString() 
       })
       .eq("id", threadId);
@@ -345,7 +352,7 @@ export const MessagesView = () => {
       .from("message_threads")
       .update({ 
         resolved: true, 
-        resolved_by: user?.id,
+        resolved_by: effectiveUserId,
         resolved_at: new Date().toISOString(),
         disposition_notes: dispositionNotes,
       })
