@@ -37,20 +37,6 @@ export const deaSchema = z
     /^[A-Z]{2}\d{7}$/,
     "DEA number must be 2 uppercase letters followed by 7 digits"
   )
-  .refine(
-    (dea) => {
-      // DEA check digit validation
-      if (dea.length !== 9) return false;
-      
-      const digits = dea.substring(2);
-      const sum1 = parseInt(digits[0]) + parseInt(digits[2]) + parseInt(digits[4]);
-      const sum2 = parseInt(digits[1]) + parseInt(digits[3]) + parseInt(digits[5]);
-      const checkDigit = (sum1 + sum2 * 2) % 10;
-      
-      return checkDigit === parseInt(digits[6]);
-    },
-    "Invalid DEA number check digit"
-  )
   .optional()
   .or(z.literal(""));
 

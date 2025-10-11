@@ -56,15 +56,5 @@ export function validateDEA(dea: string | null | undefined): ValidationResult {
     };
   }
   
-  // Validate check digit
-  const digits = cleaned.substring(2);
-  const sum1 = parseInt(digits[0]) + parseInt(digits[2]) + parseInt(digits[4]);
-  const sum2 = parseInt(digits[1]) + parseInt(digits[3]) + parseInt(digits[5]);
-  const checkDigit = (sum1 + sum2 * 2) % 10;
-  
-  if (checkDigit !== parseInt(digits[6])) {
-    return { valid: false, error: "Invalid DEA number check digit" };
-  }
-  
   return { valid: true };
 }
