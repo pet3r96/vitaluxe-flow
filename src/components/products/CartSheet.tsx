@@ -115,7 +115,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
     navigate("/cart");
   };
 
-  const total = cartData?.items.reduce(
+  const total = cartData?.items?.reduce(
     (sum, item) => sum + (item.price_snapshot || 0) * (item.quantity || 1),
     0
   ) || 0;
