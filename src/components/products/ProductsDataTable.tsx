@@ -126,8 +126,30 @@ export const ProductsDataTable = () => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
-      // All practices pay retail_price regardless of rep hierarchy
-      const correctPrice = productForCart.retail_price || productForCart.base_price;
+      // Determine correct price tier based on practice's rep hierarchy
+      const { data: practiceProfile } = await supabase
+        .from("profiles")
+        .select("linked_topline_id")
+        .eq("id", effectiveUserId)
+        .single();
+
+      let correctPrice = productForCart.retail_price || productForCart.base_price;
+
+      if (practiceProfile?.linked_topline_id) {
+        const { data: linkedRep } = await supabase
+          .from("reps")
+          .select("role, assigned_topline_id")
+          .eq("user_id", practiceProfile.linked_topline_id)
+          .single();
+
+        if (linkedRep?.role === 'downline') {
+          // Practice linked to downline → pays retail_price (Practice Price)
+          correctPrice = productForCart.retail_price || productForCart.base_price;
+        } else if (linkedRep?.role === 'topline') {
+          // Practice linked to topline → pays topline_price (unchanged)
+          correctPrice = productForCart.topline_price || productForCart.base_price;
+        }
+      }
 
       // Get or create cart
       let { data: cart } = await supabase
