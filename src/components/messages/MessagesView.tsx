@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [newThreadSubject, setNewThreadSubject] = useState("");
@@ -304,17 +305,31 @@ export const MessagesView = () => {
       return;
     }
 
-  // Reset form
-  setShowNewThread(false);
-  setNewThreadSubject("");
-  setNewThreadMessage("");
-  setRecipientType("admin");
-  setSelectedOrderId(null);
-  setDispositionType("");
-  setDispositionNotes("");
-  setSelectedThread(thread.id);
-  refetchThreads();
+    // Show loading state
+    const loadingToast = toast.loading("Loading your new ticket...");
+
+    // Invalidate and refetch queries
+    await queryClient.invalidateQueries({ 
+      queryKey: ["message-threads"] 
+    });
+
+    // Wait for the refetch to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Reset form
+    setShowNewThread(false);
+    setNewThreadSubject("");
+    setNewThreadMessage("");
+    setRecipientType("admin");
+    setSelectedOrderId(null);
+    setDispositionType("");
+    setDispositionNotes("");
     
+    // Select the new thread
+    setSelectedThread(thread.id);
+
+    // Dismiss loading and show success
+    toast.dismiss(loadingToast);
     const ticketType = threadType === "order_issue" ? "Order Issue Ticket" : "Support Ticket";
     toast.success(`${ticketType} created successfully`);
   };
