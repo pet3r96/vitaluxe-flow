@@ -18,23 +18,23 @@ import { Search, Eye } from "lucide-react";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
 
 export const RepPracticesDataTable = () => {
-  const { effectiveRole, user } = useAuth();
+  const { effectiveRole, effectiveUserId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPractice, setSelectedPractice] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Fetch practices based on role
   const { data: practices, isLoading, refetch } = useQuery({
-    queryKey: ["rep-practices", user?.id, effectiveRole],
+    queryKey: ["rep-practices", effectiveUserId, effectiveRole],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!effectiveUserId) return [];
 
       if (effectiveRole === "topline") {
         // Step 1: Find the topline's rep record
         const { data: toplineRepData, error: toplineRepError } = await supabase
           .from("reps")
           .select("id")
-          .eq("user_id", user.id)
+          .eq("user_id", effectiveUserId)
           .eq("role", "topline")
           .maybeSingle();
 
@@ -51,16 +51,12 @@ export const RepPracticesDataTable = () => {
         if (downlineError) throw downlineError;
 
         // Step 3: Build list of user_ids to check (topline + all their downlines)
-        const userIdsToCheck = [user.id, ...(downlineReps?.map(r => r.user_id) || [])];
+        const userIdsToCheck = [effectiveUserId, ...(downlineReps?.map(r => r.user_id) || [])];
 
         // Step 4: Get practices where linked_topline_id matches any of these user_ids
         const { data, error } = await supabase
           .from("profiles")
-          .select(`
-            *,
-            user_roles!inner(role)
-          `)
-          .eq("user_roles.role", "doctor")
+          .select("*")
           .in("linked_topline_id", userIdsToCheck)
           .eq("active", true)
           .order("created_at", { ascending: false });
@@ -81,7 +77,7 @@ export const RepPracticesDataTable = () => {
         const { data: repData, error: repError } = await supabase
           .from("reps")
           .select("assigned_topline_id")
-          .eq("user_id", user.id)
+          .eq("user_id", effectiveUserId)
           .eq("role", "downline")
           .maybeSingle();
 
@@ -101,11 +97,7 @@ export const RepPracticesDataTable = () => {
         // Get practices linked to this topline
         const { data, error } = await supabase
           .from("profiles")
-          .select(`
-            *,
-            user_roles!inner(role)
-          `)
-          .eq("user_roles.role", "doctor")
+          .select("*")
           .eq("linked_topline_id", toplineRep.user_id)
           .eq("active", true)
           .order("created_at", { ascending: false });
@@ -125,7 +117,7 @@ export const RepPracticesDataTable = () => {
 
       return [];
     },
-    enabled: !!user?.id && (effectiveRole === "topline" || effectiveRole === "downline"),
+    enabled: !!effectiveUserId && (effectiveRole === "topline" || effectiveRole === "downline"),
   });
 
   const { data: providerCounts } = useQuery({
@@ -187,7 +179,7 @@ export const RepPracticesDataTable = () => {
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["rep-practice-stats", user?.id, effectiveRole],
+    queryKey: ["rep-practice-stats", effectiveUserId, effectiveRole],
     queryFn: async () => {
       if (!practices || practices.length === 0) {
         return {
