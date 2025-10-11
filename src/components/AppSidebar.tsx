@@ -66,6 +66,7 @@ const menuItems = {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Orders", url: "/orders", icon: ShoppingCart },
     { title: "Reports", url: "/reports", icon: FileText },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
   ],
   topline: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
