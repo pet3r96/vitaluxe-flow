@@ -308,13 +308,9 @@ export const MessagesView = () => {
     // Show loading state
     const loadingToast = toast.loading("Loading your new ticket...");
 
-    // Invalidate and refetch queries
-    await queryClient.invalidateQueries({ 
-      queryKey: ["message-threads"] 
-    });
-
-    // Wait for the refetch to complete
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Refresh threads list
+    await queryClient.invalidateQueries({ queryKey: ["message-threads"] });
+    await refetchThreads();
 
     // Reset form
     setShowNewThread(false);
