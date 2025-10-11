@@ -49,10 +49,10 @@ const App = () => (
                 <ProtectedRoute>
                   <ImpersonationBanner />
                   <SidebarProvider>
-                    <div className="flex min-h-screen w-full bg-background">
+                    <div className="flex min-h-screen w-full bg-background overflow-hidden">
                       <AppSidebar />
-                      <main className="flex-1 flex flex-col bg-[hsl(var(--main-content-bg))]">
-                        <div className="sticky top-0 z-20 flex items-center justify-between p-4 lg:p-6 border-b border-border bg-[hsl(var(--main-content-bg))]">
+                      <main className="flex-1 flex flex-col overflow-y-auto bg-[hsl(var(--main-content-bg))]">
+                        <div className="sticky top-0 z-10 flex items-center justify-between p-4 lg:p-6 border-b border-border bg-[hsl(var(--main-content-bg))]">
                           <SidebarTrigger className="lg:hidden" />
                           <div className="ml-auto">
                             <RoleImpersonationDropdown />
