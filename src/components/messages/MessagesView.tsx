@@ -62,7 +62,7 @@ export const MessagesView = () => {
             product_id,
             patient_name,
             products(name),
-            pharmacies:assigned_pharmacy_id(
+            pharmacies!left(
               id,
               name,
               user_id
