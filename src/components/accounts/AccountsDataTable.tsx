@@ -68,6 +68,16 @@ export const AccountsDataTable = () => {
         .eq("user_roles.role", "topline")
         .eq("active", true);
 
+      // Fetch all reps to understand downline->topline relationships
+      const { data: repsData } = await supabase
+        .from("reps")
+        .select(`
+          id,
+          user_id,
+          role,
+          assigned_topline_id
+        `);
+
       // Create a Set of provider user_ids for quick lookup
       const providerUserIds = new Set(providersData?.map(p => p.user_id) || []);
 
@@ -76,12 +86,42 @@ export const AccountsDataTable = () => {
         (toplinesData || []).map(t => [t.id, { id: t.id, name: t.name, email: t.email }])
       );
 
+      // Create a map to resolve downline -> topline
+      const downlineToToplineMap = new Map();
+      repsData?.forEach(rep => {
+        if (rep.role === 'downline' && rep.assigned_topline_id) {
+          // Find the topline rep record
+          const toplineRep = repsData?.find(r => r.id === rep.assigned_topline_id);
+          if (toplineRep?.user_id) {
+            // Get the topline profile from the toplineMap
+            const toplineProfile = toplineMap.get(toplineRep.user_id);
+            if (toplineProfile) {
+              downlineToToplineMap.set(rep.user_id, toplineProfile);
+            }
+          }
+        }
+      });
+
       // Enrich profiles data with provider information and computed topline display
-      const enrichedData = profilesData?.map(profile => ({
-        ...profile,
-        isProvider: providerUserIds.has(profile.id),
-        linked_topline_display: profile.linked_topline_id ? toplineMap.get(profile.linked_topline_id) : null,
-      }));
+      const enrichedData = profilesData?.map(profile => {
+        let resolvedTopline = null;
+        
+        if (profile.linked_topline_id) {
+          // First check if it's directly a topline
+          resolvedTopline = toplineMap.get(profile.linked_topline_id);
+          
+          // If not found in toplineMap, check if it's a downline rep
+          if (!resolvedTopline) {
+            resolvedTopline = downlineToToplineMap.get(profile.linked_topline_id);
+          }
+        }
+        
+        return {
+          ...profile,
+          isProvider: providerUserIds.has(profile.id),
+          linked_topline_display: resolvedTopline,
+        };
+      });
 
       // Debug logging for data verification
       console.log('Sample account data:', enrichedData?.[0]);
