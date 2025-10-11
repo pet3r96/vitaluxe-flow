@@ -168,7 +168,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
           email: formData.email,
           password: formData.password,
           name: formData.name,
-          role: "doctor",
+          role: "doctor", // Practice account role in database
           roleData: {
             npi: formData.npi,
             licenseNumber: formData.licenseNumber,

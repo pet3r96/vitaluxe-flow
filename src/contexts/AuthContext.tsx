@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        // If role is doctor, practice ID is the user ID itself
+        // If role is doctor (Practice account), practice ID is the user ID itself
         if (effectiveRole === 'doctor') {
           setEffectivePracticeId(effectiveUserId);
           
@@ -216,7 +216,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const role = data?.role ?? null;
       setUserRole(role);
 
-      // If provider role, fetch practice_id
+      // If provider role, fetch practice_id from providers table
       if (role === 'provider' as any) {
         const { data: providerData } = await supabase
           .from('providers' as any)

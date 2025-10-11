@@ -64,6 +64,13 @@ serve(async (req) => {
     const signupData: SignupRequest = await req.json();
     console.log('Signup request received for role:', signupData.role);
 
+    // Normalize role: "practice" → "doctor" for backward compatibility
+    // Frontend may send "practice", but database uses "doctor" for practice accounts
+    if (signupData.role === "practice") {
+      console.log("⚠️ Normalizing 'practice' role to 'doctor' for database compatibility");
+      signupData.role = "doctor";
+    }
+
     // Validate phone numbers, NPI, and DEA
     if (signupData.roleData.phone) {
       const phoneResult = validatePhone(signupData.roleData.phone);

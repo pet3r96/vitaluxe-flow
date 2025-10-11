@@ -40,11 +40,11 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
   const { data: practices } = useQuery({
     queryKey: ["practices"],
     queryFn: async () => {
-      // First get all doctor user IDs
+      // First get all doctor user IDs (doctor role = Practice accounts in the database)
       const { data: doctorRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("role", "doctor");
+        .eq("role", "doctor"); // Practice accounts use the doctor role internally
       
       if (rolesError) throw rolesError;
       

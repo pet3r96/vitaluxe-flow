@@ -14,7 +14,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"doctor" | "pharmacy">("doctor");
+  const [role, setRole] = useState<"doctor" | "pharmacy">("doctor"); // "doctor" = Practice in the database
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
@@ -178,7 +178,7 @@ const Auth = () => {
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="doctor" id="doctor" />
                     <Label htmlFor="doctor" className="font-normal cursor-pointer">
-                      Practice / Medical Spa
+                      Practice
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">

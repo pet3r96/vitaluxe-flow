@@ -100,6 +100,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
       }
 
       const roleData: any = {};
+      // Note: "doctor" role represents Practice accounts in the database
       if (role === "doctor") {
         roleData.licenseNumber = formData.licenseNumber;
         roleData.npi = formData.npi;
@@ -232,7 +233,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="doctor">Doctor</SelectItem>
+                  <SelectItem value="doctor">Practice</SelectItem>
                   <SelectItem value="pharmacy">Pharmacy</SelectItem>
                   <SelectItem value="topline">Topline Rep</SelectItem>
                   <SelectItem value="downline">Downline Rep</SelectItem>
@@ -241,7 +242,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
             </div>
           </div>
 
-          {/* Role-specific fields */}
+          {/* Practice-specific fields (doctor role = Practice in database) */}
           {role === "doctor" && (
             <>
               <div className="grid grid-cols-2 gap-4">
