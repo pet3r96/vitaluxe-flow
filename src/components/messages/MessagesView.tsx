@@ -687,19 +687,20 @@ export const MessagesView = () => {
                 <div className="flex gap-2">
                   {!currentThread?.resolved ? (
                     <>
-                      {/* Support tickets: only admins can resolve */}
-                      {(currentThread as any)?.thread_type === 'support' && isAdmin && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => markAsResolved(selectedThread)}
-                        >
-                          Mark as Resolved
-                        </Button>
-                      )}
+            {/* Support tickets: creator or admin can resolve */}
+            {(currentThread as any)?.thread_type === 'support' && 
+             (currentThread.created_by === user?.id || isAdmin) && (
+              <Button 
+                size="sm" 
+                onClick={() => markAsResolved(selectedThread)}
+              >
+                Mark as Resolved
+              </Button>
+            )}
 
-                      {/* Order issue tickets: creator (practice/provider) can close */}
-                      {(currentThread as any)?.thread_type === 'order_issue' && 
-                       currentThread.created_by === user?.id && (
+            {/* Order issue tickets: creator (practice/provider) or admin can close */}
+            {(currentThread as any)?.thread_type === 'order_issue' && 
+             (currentThread.created_by === user?.id || isAdmin) && (
                         <div className="flex flex-col gap-2">
                           <Textarea
                             placeholder="Enter resolution notes..."
@@ -721,25 +722,26 @@ export const MessagesView = () => {
                   ) : (
                     <>
                       {/* Reopen logic */}
-                      {isAdmin && (currentThread as any)?.thread_type === 'support' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => reopenThread(selectedThread)}
-                        >
-                          Reopen Ticket
-                        </Button>
-                      )}
-                      {currentThread?.created_by === user?.id && 
-                       (currentThread as any)?.thread_type === 'order_issue' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => reopenThread(selectedThread)}
-                        >
-                          Reopen Issue
-                        </Button>
-                      )}
+            {(currentThread.created_by === user?.id || isAdmin) && 
+             (currentThread as any)?.thread_type === 'support' && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => reopenThread(selectedThread)}
+              >
+                Reopen Ticket
+              </Button>
+            )}
+            {(currentThread?.created_by === user?.id || isAdmin) && 
+             (currentThread as any)?.thread_type === 'order_issue' && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => reopenThread(selectedThread)}
+              >
+                Reopen Issue
+              </Button>
+            )}
                     </>
                   )}
                 </div>
