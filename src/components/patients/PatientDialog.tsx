@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { AddressInput } from "@/components/ui/address-input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { validatePhone } from "@/lib/validators";
 
 interface PatientDialogProps {
   open: boolean;
@@ -30,6 +31,9 @@ export const PatientDialog = ({
 }: PatientDialogProps) => {
   const { user, effectivePracticeId } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({
+    phone: "",
+  });
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -84,6 +88,7 @@ export const PatientDialog = ({
       address_verification_status: "unverified",
       address_verification_source: "",
     });
+    setValidationErrors({ phone: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,6 +102,16 @@ export const PatientDialog = ({
     if (!user) {
       toast.error("You must be logged in to manage patients");
       return;
+    }
+
+    // Validate phone number
+    if (formData.phone) {
+      const phoneResult = validatePhone(formData.phone);
+      if (!phoneResult.valid) {
+        setValidationErrors({ phone: phoneResult.error || "" });
+        toast.error("Please fix validation errors before submitting");
+        return;
+      }
     }
 
     setLoading(true);
@@ -206,11 +221,24 @@ export const PatientDialog = ({
                   id="phone"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  placeholder="(555) 123-4567"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, phone: value });
+                    setValidationErrors({ ...validationErrors, phone: "" });
+                  }}
+                  onBlur={() => {
+                    if (formData.phone) {
+                      const result = validatePhone(formData.phone);
+                      setValidationErrors({ ...validationErrors, phone: result.error || "" });
+                    }
+                  }}
+                  placeholder="1234567890"
+                  maxLength={10}
+                  className={validationErrors.phone ? "border-destructive" : ""}
                 />
+                {validationErrors.phone && (
+                  <p className="text-sm text-destructive">{validationErrors.phone}</p>
+                )}
               </div>
             </div>
 
