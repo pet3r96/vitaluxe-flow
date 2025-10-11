@@ -333,8 +333,8 @@ export const OrdersDataTable = () => {
         </Select>
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto">
-        <div className="min-w-[1000px]">
+      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="min-w-[1800px]">
           <Table>
           <TableHeader>
             <TableRow>

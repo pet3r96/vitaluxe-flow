@@ -120,4 +120,46 @@ All colors MUST be HSL.
   .subheading-responsive {
     @apply text-base sm:text-lg lg:text-xl;
   }
+
+  /* Better mobile table scrolling */
+  .mobile-scroll-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .mobile-scroll-container::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .mobile-scroll-container::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  .mobile-scroll-container::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 4px;
+  }
+
+  /* Scroll shadow indicator */
+  .scroll-shadow {
+    position: relative;
+  }
+
+  .scroll-shadow::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 40px;
+    background: linear-gradient(to left, hsl(var(--card)), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .scroll-shadow.has-overflow::after {
+    opacity: 1;
+  }
 }

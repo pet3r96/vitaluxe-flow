@@ -11,8 +11,8 @@ const Messages = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Messages & Profile</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Messages & Profile</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">
           Manage your support tickets and professional information
         </p>
       </div>

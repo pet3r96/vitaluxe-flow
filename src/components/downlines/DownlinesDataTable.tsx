@@ -155,8 +155,8 @@ export function DownlinesDataTable() {
         </div>
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto">
-        <div className="min-w-[800px]">
+      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="min-w-[1400px]">
           <Table>
             <TableHeader>
               <TableRow>
