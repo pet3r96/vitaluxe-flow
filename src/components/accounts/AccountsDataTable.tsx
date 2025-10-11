@@ -81,6 +81,9 @@ export const AccountsDataTable = () => {
         linked_topline_display: profile.linked_topline_id ? toplineMap.get(profile.linked_topline_id) : null,
       }));
 
+      // Debug logging for data verification
+      console.log('Sample account data:', enrichedData?.[0]);
+
       return enrichedData;
     },
   });
@@ -202,7 +205,7 @@ export const AccountsDataTable = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {account.user_roles?.[0]?.role === 'downline' ? (
+                    {(account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') ? (
                       account.linked_topline_display?.name ? (
                         <span className="text-sm">{account.linked_topline_display.name}</span>
                       ) : account.linked_topline?.name ? (
