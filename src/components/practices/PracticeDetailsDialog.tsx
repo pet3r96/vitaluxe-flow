@@ -47,7 +47,6 @@ export const PracticeDetailsDialog = ({
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    company: "",
     phone: "",
     address: "",
     npi: "",
@@ -155,7 +154,6 @@ export const PracticeDetailsDialog = ({
       setFormData({
         name: provider.name || "",
         email: provider.email || "",
-        company: provider.company || "",
         phone: provider.phone || "",
         address: provider.address || "",
         npi: provider.npi || "",
@@ -172,7 +170,6 @@ export const PracticeDetailsDialog = ({
         .from("profiles")
         .update({
           name: formData.name,
-          company: formData.company,
           phone: formData.phone,
           address: formData.address,
           npi: formData.npi,
@@ -412,17 +409,6 @@ export const PracticeDetailsDialog = ({
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Company/Practice</p>
-                  {isEditing ? (
-                    <Input
-                      value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    />
-                  ) : (
-                    <p className="font-medium">{provider.company || "-"}</p>
-                  )}
-                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
                   {isEditing ? (

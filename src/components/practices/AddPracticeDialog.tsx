@@ -53,7 +53,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     npi: "",
     licenseNumber: "",
     dea: "",
-    company: "",
     phone: "",
     address_street: "",
     address_city: "",
@@ -174,7 +173,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
             npi: formData.npi,
             licenseNumber: formData.licenseNumber,
             dea: formData.dea || undefined,
-            company: formData.company,
             phone: formData.phone,
             address_street: formData.address_street,
             address_city: formData.address_city,
@@ -217,7 +215,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
       npi: "",
       licenseNumber: "",
       dea: "",
-      company: "",
       phone: "",
       address_street: "",
       address_city: "",
@@ -330,16 +327,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
               {validationErrors.dea && (
                 <p className="text-sm text-destructive">{validationErrors.dea}</p>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="company">Company/Practice *</Label>
-              <Input
-                id="company"
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                required
-              />
             </div>
 
             <div className="space-y-2">

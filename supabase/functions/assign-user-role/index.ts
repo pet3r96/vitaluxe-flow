@@ -22,7 +22,6 @@ interface SignupRequest {
     npi?: string;
     practiceNpi?: string;
     dea?: string;
-    company?: string;
     phone?: string;
     address?: string;
     address_street?: string;
@@ -302,17 +301,14 @@ serve(async (req) => {
       profileUpdate.npi = signupData.roleData.npi;
       profileUpdate.practice_npi = signupData.roleData.practiceNpi;
       profileUpdate.dea = signupData.roleData.dea;
-      profileUpdate.company = signupData.roleData.company;
       profileUpdate.phone = signupData.roleData.phone;
       profileUpdate.address = signupData.roleData.address;
       profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
     } else if (signupData.role === 'downline') {
       profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
-      profileUpdate.company = signupData.roleData.company;
       profileUpdate.phone = signupData.roleData.phone;
       profileUpdate.address = signupData.roleData.address;
     } else if (signupData.role === 'topline') {
-      profileUpdate.company = signupData.roleData.company;
       profileUpdate.phone = signupData.roleData.phone;
       profileUpdate.address = signupData.roleData.address;
     }

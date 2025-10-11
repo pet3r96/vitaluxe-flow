@@ -28,7 +28,6 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
     npi: "",
     license_number: "",
     dea: "",
-    company: "",
     phone: "",
     address_street: "",
     address_city: "",
@@ -72,7 +71,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
           npi: formData.npi,
           license_number: formData.license_number,
           dea: formData.dea || null,
-          company: formData.company,
+          company: "",
           phone: formData.phone,
           address_street: formData.address_street,
           address_city: formData.address_city,
@@ -97,7 +96,6 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
         npi: "",
         license_number: "",
         dea: "",
-        company: "",
         phone: "",
         address_street: "",
         address_city: "",
@@ -168,15 +166,6 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 {validationErrors.phone && (
                   <p className="text-sm text-destructive">{validationErrors.phone}</p>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="company">Company *</Label>
-                <Input
-                  id="company"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  required
-                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="npi">NPI *</Label>

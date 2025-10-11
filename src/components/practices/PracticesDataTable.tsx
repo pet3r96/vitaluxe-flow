@@ -252,7 +252,6 @@ export const PracticesDataTable = () => {
               <TableHead>Email</TableHead>
               <TableHead>NPI</TableHead>
               <TableHead>License #</TableHead>
-              <TableHead>Company/Practice</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Providers</TableHead>
               <TableHead>Assigned Rep</TableHead>
@@ -263,13 +262,13 @@ export const PracticesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center">
+                <TableCell colSpan={9} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPractices?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   No practices found
                 </TableCell>
               </TableRow>
@@ -284,7 +283,6 @@ export const PracticesDataTable = () => {
                   <TableCell>
                     <span className="font-mono text-sm">{practice.license_number || "-"}</span>
                   </TableCell>
-                  <TableCell>{practice.company || "-"}</TableCell>
                   <TableCell>{practice.phone || "-"}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{providerCounts?.[practice.id] || 0}</Badge>
