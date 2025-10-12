@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 const AdminProfitReports = () => {
   // Get profit details with order and product information
@@ -44,6 +46,21 @@ const AdminProfitReports = () => {
   const collectedAdminProfit = profitDetails
     ?.filter(item => ['shipped', 'delivered'].includes(item.orders?.status || ''))
     .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0;
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: profitDetails?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedProfitDetails = profitDetails?.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-6">
@@ -116,7 +133,7 @@ const AdminProfitReports = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                profitDetails?.map((profit: any) => (
+                paginatedProfitDetails?.map((profit: any) => (
                   <TableRow key={profit.id}>
                     <TableCell>
                       {profit.created_at ? format(new Date(profit.created_at), "MMM d, yyyy") : "-"}
@@ -145,6 +162,19 @@ const AdminProfitReports = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {profitDetails && profitDetails.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={profitDetails.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, profitDetails.length)}
+        />
+      )}
     </div>
   );
 };

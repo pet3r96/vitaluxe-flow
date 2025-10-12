@@ -5,6 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 const RepProfitReports = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -73,6 +75,21 @@ const RepProfitReports = () => {
       const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
       return sum + (parseFloat(profit?.toString() || '0'));
     }, 0) || 0;
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: profitDetails?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedProfitDetails = profitDetails?.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-6">
@@ -144,7 +161,7 @@ const RepProfitReports = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                profitDetails?.map((profit: any) => {
+                paginatedProfitDetails?.map((profit: any) => {
                   const myProfit = effectiveRole === 'topline' ? profit.topline_profit : profit.downline_profit;
                   return (
                     <TableRow key={profit.id}>
@@ -175,6 +192,19 @@ const RepProfitReports = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {profitDetails && profitDetails.length > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          totalItems={profitDetails.length}
+          startIndex={startIndex}
+          endIndex={Math.min(endIndex, profitDetails.length)}
+        />
+      )}
     </div>
   );
 };
