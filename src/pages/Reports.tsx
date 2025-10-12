@@ -2,6 +2,7 @@ import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView"
 import { useAuth } from "@/contexts/AuthContext";
 import AdminProfitReports from "./AdminProfitReports";
 import RepProfitReports from "./RepProfitReports";
+import PracticeProfitReports from "./PracticeProfitReports";
 
 const Reports = () => {
   const { userRole, effectiveRole, isImpersonating } = useAuth();
@@ -11,6 +12,9 @@ const Reports = () => {
   
   // Rep or Admin impersonating as rep → Rep Profit Report
   const showRepReport = effectiveRole === 'topline' || effectiveRole === 'downline';
+  
+  // Practice (doctor role) → Practice Order/Expense Report
+  const showPracticeReport = effectiveRole === 'doctor';
 
   if (showAdminReport) {
     return <AdminProfitReports />;
@@ -18,6 +22,10 @@ const Reports = () => {
 
   if (showRepReport) {
     return <RepProfitReports />;
+  }
+
+  if (showPracticeReport) {
+    return <PracticeProfitReports />;
   }
 
   // Fallback: Impersonation logs
