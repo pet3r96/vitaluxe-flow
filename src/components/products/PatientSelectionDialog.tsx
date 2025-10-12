@@ -249,6 +249,14 @@ export const PatientSelectionDialog = ({
       return;
     }
     
+    // Initialize custom sig and dosage from product defaults
+    if (product?.sig && !customSig) {
+      setCustomSig(product.sig);
+    }
+    if (product?.dosage && !customDosage) {
+      setCustomDosage(product.dosage);
+    }
+    
     setCurrentStep('prescription');
   };
 
@@ -640,6 +648,40 @@ export const PatientSelectionDialog = ({
                     </RadioGroup>
                   </div>
 
+                  {/* Editable SIG and Dosage Fields */}
+                  {prescriptionMethod && (
+                    <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                      <h3 className="font-semibold text-sm">Prescription Details</h3>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="dosage-input">Dosage Instructions</Label>
+                        <Input
+                          id="dosage-input"
+                          placeholder="e.g., 10mg, 1mL, etc."
+                          value={customDosage}
+                          onChange={(e) => setCustomDosage(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Default from product: {product.dosage || 'Not specified'}
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="sig-input">SIG - Directions for Use</Label>
+                        <Textarea
+                          id="sig-input"
+                          placeholder="e.g., Take 1 tablet by mouth daily..."
+                          value={customSig}
+                          onChange={(e) => setCustomSig(e.target.value)}
+                          rows={3}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Default from product: {product.sig || 'Not specified'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Show upload input if upload method selected */}
                   {prescriptionMethod === 'upload' && (
                     <div className="space-y-3 p-4 border-2 border-orange-300 rounded-lg bg-orange-50/50">
@@ -708,6 +750,21 @@ export const PatientSelectionDialog = ({
                           </Button>
                         </>
                       )}
+                      
+                      {/* Prescription Summary for Upload */}
+                      {prescriptionFile && (
+                        <Alert className="border-blue-200 bg-blue-50">
+                          <FileCheck className="h-4 w-4 text-blue-600" />
+                          <AlertDescription>
+                            <div className="space-y-2">
+                              <p className="font-semibold text-blue-900">Prescription File Uploaded</p>
+                              <p className="text-sm"><strong>File:</strong> {prescriptionFile.name}</p>
+                              <p className="text-sm"><strong>Dosage:</strong> {customDosage || product.dosage}</p>
+                              <p className="text-sm"><strong>SIG:</strong> {customSig || product.sig}</p>
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
                   )}
 
@@ -774,6 +831,8 @@ export const PatientSelectionDialog = ({
               address: practiceData.address_formatted || practiceData.address || 'N/A'
             } : null}
             quantity={quantity}
+            initialSig={customSig}
+            initialDosage={customDosage}
             onPrescriptionGenerated={(url, sig, dosage, notes) => {
               setPrescriptionPreview(url);
               setCustomSig(sig);

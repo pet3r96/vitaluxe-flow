@@ -17,6 +17,8 @@ interface PrescriptionWriterDialogProps {
   provider: any;
   practice: any;
   quantity: number;
+  initialSig?: string;
+  initialDosage?: string;
   onPrescriptionGenerated: (prescriptionUrl: string, customSig: string, customDosage: string, notes: string) => void;
 }
 
@@ -28,10 +30,12 @@ export function PrescriptionWriterDialog({
   provider,
   practice,
   quantity,
+  initialSig,
+  initialDosage,
   onPrescriptionGenerated,
 }: PrescriptionWriterDialogProps) {
-  const [customDosage, setCustomDosage] = useState(product?.dosage || "");
-  const [customSig, setCustomSig] = useState(product?.sig || "");
+  const [customDosage, setCustomDosage] = useState(initialDosage || product?.dosage || "");
+  const [customSig, setCustomSig] = useState(initialSig || product?.sig || "");
   const [notes, setNotes] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
