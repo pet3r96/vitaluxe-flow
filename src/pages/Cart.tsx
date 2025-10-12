@@ -133,6 +133,18 @@ export default function Cart() {
                   <p className="text-xs sm:text-sm">
                     <span className="font-medium">Quantity:</span> {line.quantity}
                   </p>
+                  {line.custom_sig && (
+                    <div className="text-xs sm:text-sm mt-2 bg-blue-50 dark:bg-blue-950/30 p-2 rounded border border-blue-200 dark:border-blue-800">
+                      <span className="font-medium text-blue-700 dark:text-blue-300">SIG:</span>
+                      <p className="text-blue-600 dark:text-blue-400 mt-1">{line.custom_sig}</p>
+                    </div>
+                  )}
+                  {line.order_notes && (
+                    <div className="text-xs sm:text-sm mt-2 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+                      <span className="font-medium text-amber-700 dark:text-amber-300">Notes:</span>
+                      <p className="text-amber-600 dark:text-amber-400 mt-1">{line.order_notes}</p>
+                    </div>
+                  )}
                   {line.prescription_url && (
                     <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
                       <FileCheck className="h-3 w-3" />
