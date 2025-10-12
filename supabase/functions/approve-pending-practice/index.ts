@@ -12,8 +12,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Declare variables at top scope for error logging
+  let supabaseAdmin: any;
+  let requestId: string | undefined;
+  let action: string | undefined;
+  let adminNotes: string | undefined;
+  let pendingPractice: any;
+
   try {
-    const supabaseAdmin = createClient(
+    supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
@@ -44,20 +51,27 @@ serve(async (req) => {
       throw new Error('Unauthorized - Admin access required');
     }
 
-    const { requestId, action, rejectionReason, adminNotes, updatedData } = await req.json();
+    const requestData = await req.json();
+    requestId = requestData.requestId;
+    action = requestData.action;
+    const rejectionReason = requestData.rejectionReason;
+    adminNotes = requestData.adminNotes;
+    const updatedData = requestData.updatedData;
 
     console.log('Processing pending practice request:', { requestId, action });
 
     // Get pending request
-    const { data: pendingPractice, error: fetchError } = await supabaseAdmin
+    const { data: fetchedPractice, error: fetchError } = await supabaseAdmin
       .from('pending_practices')
       .select('*')
       .eq('id', requestId)
       .single();
 
-    if (fetchError || !pendingPractice) {
+    if (fetchError || !fetchedPractice) {
       throw new Error('Pending request not found');
     }
+
+    pendingPractice = fetchedPractice;
 
     if (pendingPractice.status !== 'pending') {
       throw new Error('Request already processed');
@@ -291,6 +305,25 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Error in approve-pending-practice:', error);
+    
+    // Log error to database
+    try {
+      await supabaseAdmin.rpc('log_audit_event', {
+        p_action_type: 'edge_function_error',
+        p_entity_type: 'approve-pending-practice',
+        p_entity_id: requestId,
+        p_details: {
+          error_message: error.message,
+          error_stack: error.stack,
+          function_name: 'approve-pending-practice',
+          request_data: { requestId, action, adminNotes },
+          practice_email: pendingPractice?.email
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

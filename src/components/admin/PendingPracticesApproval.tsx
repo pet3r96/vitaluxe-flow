@@ -118,6 +118,23 @@ export const PendingPracticesApproval = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to approve practice");
+      
+      // Log error to database
+      supabase.functions.invoke('log-error', {
+        body: {
+          action_type: 'client_error',
+          entity_type: 'pending_practice_approval',
+          entity_id: selectedRequest?.id,
+          details: {
+            error_message: error.message,
+            error_stack: error.stack,
+            practice_name: selectedRequest?.practice_name,
+            practice_email: selectedRequest?.email,
+            action: 'approve',
+            user_role: 'admin'
+          }
+        }
+      });
     },
   });
 
@@ -139,6 +156,23 @@ export const PendingPracticesApproval = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to reject request");
+      
+      // Log error to database
+      supabase.functions.invoke('log-error', {
+        body: {
+          action_type: 'client_error',
+          entity_type: 'pending_practice_rejection',
+          entity_id: selectedRequest?.id,
+          details: {
+            error_message: error.message,
+            error_stack: error.stack,
+            practice_name: selectedRequest?.practice_name,
+            practice_email: selectedRequest?.email,
+            action: 'reject',
+            user_role: 'admin'
+          }
+        }
+      });
     },
   });
 

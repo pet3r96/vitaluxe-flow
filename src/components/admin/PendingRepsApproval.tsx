@@ -101,6 +101,23 @@ export const PendingRepsApproval = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to approve representative");
+      
+      // Log error to database
+      supabase.functions.invoke('log-error', {
+        body: {
+          action_type: 'client_error',
+          entity_type: 'pending_rep_approval',
+          entity_id: selectedRequest?.id,
+          details: {
+            error_message: error.message,
+            error_stack: error.stack,
+            rep_name: selectedRequest?.full_name,
+            rep_email: selectedRequest?.email,
+            action: 'approve',
+            user_role: 'admin'
+          }
+        }
+      });
     },
   });
 
@@ -122,6 +139,23 @@ export const PendingRepsApproval = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to reject request");
+      
+      // Log error to database
+      supabase.functions.invoke('log-error', {
+        body: {
+          action_type: 'client_error',
+          entity_type: 'pending_rep_rejection',
+          entity_id: selectedRequest?.id,
+          details: {
+            error_message: error.message,
+            error_stack: error.stack,
+            rep_name: selectedRequest?.full_name,
+            rep_email: selectedRequest?.email,
+            action: 'reject',
+            user_role: 'admin'
+          }
+        }
+      });
     },
   });
 
