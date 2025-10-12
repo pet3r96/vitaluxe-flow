@@ -9,6 +9,7 @@ import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ImpersonationBanner } from "./components/layout/ImpersonationBanner";
 import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonationDropdown";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
@@ -26,6 +27,7 @@ import Downlines from "./pages/Downlines";
 import MedSpas from "./pages/MedSpas";
 import Profile from "./pages/Profile";
 import AdminSettings from "./pages/AdminSettings";
+import ErrorLogs from "./pages/ErrorLogs";
 import NotFound from "./pages/NotFound";
 import RepDashboard from "./pages/RepDashboard";
 import MyDownlines from "./pages/MyDownlines";
@@ -37,14 +39,15 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/change-password" element={<ChangePassword />} />
+    <ErrorBoundary>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/change-password" element={<ChangePassword />} />
             <Route
               path="/*"
               element={
@@ -79,6 +82,7 @@ const App = () => (
                           <Route path="/med-spas" element={<MedSpas />} />
                           <Route path="/profile" element={<Profile />} />
                           <Route path="/admin-settings" element={<AdminSettings />} />
+                          <Route path="/error-logs" element={<ErrorLogs />} />
                           <Route path="/rep-reports" element={<RepProfitReports />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
@@ -93,6 +97,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
+    </ErrorBoundary>
   </QueryClientProvider>
 );
 

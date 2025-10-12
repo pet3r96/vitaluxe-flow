@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   UserCog,
+  AlertCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,6 +42,7 @@ const menuItems = {
     { title: "Orders", url: "/orders", icon: ShoppingCart },
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "Error Logs", url: "/error-logs", icon: AlertCircle },
     { title: "Admin Settings", url: "/admin-settings", icon: ShieldCheck },
   ],
   doctor: [
