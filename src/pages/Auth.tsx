@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/vitaluxe-logo-dark-bg.png";
+import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,6 +17,7 @@ const Auth = () => {
   const [name, setName] = useState("");
   const [role, setRole] = useState<"doctor" | "pharmacy">("doctor"); // "doctor" = Practice in the database
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
@@ -389,6 +391,18 @@ const Auth = () => {
             />
           </div>
 
+          {isLogin && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-primary hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
+          )}
+
           <Button
             type="submit"
             className="w-full gold-gradient text-primary-foreground font-semibold"
@@ -410,6 +424,11 @@ const Auth = () => {
           </button>
         </div>
       </Card>
+
+      <ForgotPasswordDialog 
+        open={showForgotPassword}
+        onOpenChange={setShowForgotPassword}
+      />
     </div>
   );
 };

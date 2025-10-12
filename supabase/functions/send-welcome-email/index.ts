@@ -10,6 +10,7 @@ interface WelcomeEmailRequest {
   name: string;
   temporaryPassword: string;
   role: string;
+  isPasswordReset?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -18,9 +19,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, name, temporaryPassword, role }: WelcomeEmailRequest = await req.json();
+    const { email, name, temporaryPassword, role, isPasswordReset }: WelcomeEmailRequest = await req.json();
 
-    console.log(`Sending welcome email to ${email} (${role})`);
+    console.log(`Sending ${isPasswordReset ? 'password reset' : 'welcome'} email to ${email} (${role})`);
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     
@@ -38,6 +39,18 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const emailSubject = isPasswordReset 
+      ? "Your Password Has Been Reset - Vitaluxe Services CRM"
+      : "Welcome to Vitaluxe Services CRM";
+
+    const emailHeading = isPasswordReset
+      ? "Password Reset Successful"
+      : `Welcome, ${name}!`;
+
+    const emailIntro = isPasswordReset
+      ? `Your password has been successfully reset. Below are your new login credentials. Please note that you <strong>must change this temporary password</strong> upon your next login for security and HIPAA compliance.`
+      : `Thank you for joining <strong>Vitaluxe Services CRM</strong>. Your account has been created with the role: <strong>${role}</strong>.`;
+
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -47,7 +60,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Vitaluxe Services <onboarding@resend.dev>",
         to: [email],
-        subject: "Welcome to Vitaluxe Services CRM",
+        subject: emailSubject,
         html: `
           <!DOCTYPE html>
           <html>
@@ -75,10 +88,10 @@ const handler = async (req: Request): Promise<Response> => {
                   <p style="color: white; margin: 10px 0 0 0;">Professional CRM Platform</p>
                 </div>
                 
-                <div class="content">
-                  <h2 style="color: #667eea; margin-top: 0;">Welcome, ${name}!</h2>
-                  
-                  <p>Thank you for joining <strong>Vitaluxe Services CRM</strong>. Your account has been created with the role: <strong>${role}</strong>.</p>
+              <div class="content">
+                <h2 style="color: #667eea; margin-top: 0;">${emailHeading}</h2>
+                
+                <p>${emailIntro}</p>
                   
                   <div class="credential-box">
                     <div class="credential-label">Username / Email</div>
