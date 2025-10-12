@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -19,7 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Edit, Eye, Power, PowerOff } from "lucide-react";
+import { Search, Edit, Eye, Power, PowerOff, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AccountDetailsDialog } from "./AccountDetailsDialog";
 import { DataSyncButton } from "./DataSyncButton";
@@ -27,11 +38,14 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const AccountsDataTable = () => {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: accounts, isLoading, refetch } = useQuery({
     queryKey: ["accounts", roleFilter],
@@ -140,6 +154,38 @@ export const AccountsDataTable = () => {
     return baseRole || 'No role';
   };
 
+  const cleanupMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const { data, error } = await supabase.functions.invoke('cleanup-test-data', {
+        body: { 
+          email,
+          pendingPracticeId: null
+        }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Cleanup failed');
+      
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Account deleted successfully",
+      });
+      refetch();
+      setDeleteDialogOpen(false);
+      setAccountToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete account",
+        variant: "destructive",
+      });
+    },
+  });
+
   const toggleAccountStatus = async (accountId: string, currentStatus: boolean) => {
     const { error } = await supabase
       .from("profiles")
@@ -148,6 +194,17 @@ export const AccountsDataTable = () => {
 
     if (!error) {
       refetch();
+    }
+  };
+
+  const handleDeleteClick = (account: any) => {
+    setAccountToDelete(account);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (accountToDelete?.email) {
+      cleanupMutation.mutate(accountToDelete.email);
     }
   };
 
@@ -292,6 +349,17 @@ export const AccountsDataTable = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      {getDisplayRole(account) === "No role" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(account)}
+                          disabled={cleanupMutation.isPending}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -340,6 +408,35 @@ export const AccountsDataTable = () => {
           onSuccess={() => refetch()}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this account? This will permanently remove:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>The user's authentication account</li>
+                <li>Their profile data</li>
+                <li>Any associated records</li>
+              </ul>
+              <p className="mt-2 font-semibold">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cleanupMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={cleanupMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cleanupMutation.isPending ? "Deleting..." : "Delete Account"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
