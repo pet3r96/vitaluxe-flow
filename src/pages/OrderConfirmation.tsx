@@ -49,7 +49,7 @@ export default function OrderConfirmation() {
         .from("cart_lines")
         .select(`
           *,
-          product:products(name, dosage, image_url, base_price, requires_prescription)
+          product:products(name, dosage, sig, image_url, base_price, requires_prescription)
         `)
         .eq("cart_id", cartData.id);
 
@@ -201,6 +201,10 @@ export default function OrderConfirmation() {
               assigned_pharmacy_id: assignedPharmacyId,
               destination_state: destinationState,
               status: "pending" as const,
+              custom_sig: line.custom_sig,
+              custom_dosage: line.custom_dosage,
+              order_notes: line.order_notes,
+              prescription_method: line.prescription_method,
             };
           })
         );
@@ -280,6 +284,10 @@ export default function OrderConfirmation() {
               assigned_pharmacy_id: assignedPharmacyId,
               destination_state: destinationState,
               status: "pending" as const,
+              custom_sig: line.custom_sig,
+              custom_dosage: line.custom_dosage,
+              order_notes: line.order_notes,
+              prescription_method: line.prescription_method,
             };
           })
         );
@@ -462,7 +470,7 @@ export default function OrderConfirmation() {
           {cartLines.map((line: any, index: number) => (
             <div key={line.id}>
               {index > 0 && <Separator className="my-4" />}
-              <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-4">
                 {line.product?.image_url && (
                   <img
                     src={line.product.image_url}
@@ -473,6 +481,24 @@ export default function OrderConfirmation() {
                 <div className="flex-1 space-y-1">
                   <h4 className="font-semibold text-lg">{line.product?.name}</h4>
                   <p className="text-sm text-muted-foreground">{line.product?.dosage}</p>
+                  
+                  {/* Display prescription details if written */}
+                  {line.product?.requires_prescription && line.prescription_method === 'written' && (
+                    <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm space-y-1 border">
+                      <p className="font-semibold text-xs text-muted-foreground uppercase">Prescription Details:</p>
+                      {line.custom_dosage && <p><strong>Dosage:</strong> {line.custom_dosage}</p>}
+                      {line.custom_sig && <p><strong>SIG:</strong> {line.custom_sig}</p>}
+                    </div>
+                  )}
+                  
+                  {/* Display order notes if present */}
+                  {line.order_notes && (
+                    <div className="mt-2 p-3 bg-accent/50 rounded-md text-sm border">
+                      <p className="font-semibold text-xs text-muted-foreground uppercase mb-1">Notes:</p>
+                      <p>{line.order_notes}</p>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline">
                       Qty: {line.quantity}

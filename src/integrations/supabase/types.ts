@@ -89,13 +89,17 @@ export type Database = {
         Row: {
           cart_id: string
           created_at: string | null
+          custom_dosage: string | null
+          custom_sig: string | null
           destination_state: string
           id: string
+          order_notes: string | null
           patient_address: string | null
           patient_email: string | null
           patient_id: string | null
           patient_name: string
           patient_phone: string | null
+          prescription_method: string | null
           prescription_url: string | null
           price_snapshot: number | null
           product_id: string
@@ -105,13 +109,17 @@ export type Database = {
         Insert: {
           cart_id: string
           created_at?: string | null
+          custom_dosage?: string | null
+          custom_sig?: string | null
           destination_state: string
           id?: string
+          order_notes?: string | null
           patient_address?: string | null
           patient_email?: string | null
           patient_id?: string | null
           patient_name: string
           patient_phone?: string | null
+          prescription_method?: string | null
           prescription_url?: string | null
           price_snapshot?: number | null
           product_id: string
@@ -121,13 +129,17 @@ export type Database = {
         Update: {
           cart_id?: string
           created_at?: string | null
+          custom_dosage?: string | null
+          custom_sig?: string | null
           destination_state?: string
           id?: string
+          order_notes?: string | null
           patient_address?: string | null
           patient_email?: string | null
           patient_id?: string | null
           patient_name?: string
           patient_phone?: string | null
+          prescription_method?: string | null
           prescription_url?: string | null
           price_snapshot?: number | null
           product_id?: string
@@ -429,15 +441,19 @@ export type Database = {
         Row: {
           assigned_pharmacy_id: string | null
           created_at: string | null
+          custom_dosage: string | null
+          custom_sig: string | null
           delivered_at: string | null
           destination_state: string | null
           id: string
           order_id: string
+          order_notes: string | null
           patient_address: string | null
           patient_email: string | null
           patient_id: string | null
           patient_name: string
           patient_phone: string | null
+          prescription_method: string | null
           prescription_url: string | null
           price: number
           processing_at: string | null
@@ -455,15 +471,19 @@ export type Database = {
         Insert: {
           assigned_pharmacy_id?: string | null
           created_at?: string | null
+          custom_dosage?: string | null
+          custom_sig?: string | null
           delivered_at?: string | null
           destination_state?: string | null
           id?: string
           order_id: string
+          order_notes?: string | null
           patient_address?: string | null
           patient_email?: string | null
           patient_id?: string | null
           patient_name: string
           patient_phone?: string | null
+          prescription_method?: string | null
           prescription_url?: string | null
           price: number
           processing_at?: string | null
@@ -481,15 +501,19 @@ export type Database = {
         Update: {
           assigned_pharmacy_id?: string | null
           created_at?: string | null
+          custom_dosage?: string | null
+          custom_sig?: string | null
           delivered_at?: string | null
           destination_state?: string | null
           id?: string
           order_id?: string
+          order_notes?: string | null
           patient_address?: string | null
           patient_email?: string | null
           patient_id?: string | null
           patient_name?: string
           patient_phone?: string | null
+          prescription_method?: string | null
           prescription_url?: string | null
           price?: number
           processing_at?: string | null

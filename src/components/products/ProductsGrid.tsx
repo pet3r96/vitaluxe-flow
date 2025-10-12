@@ -138,7 +138,17 @@ export const ProductsGrid = () => {
 
   const paginatedProducts = filteredProducts?.slice(startIndex, endIndex);
 
-  const handleAddToCart = async (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string, prescriptionUrl: string | null = null) => {
+  const handleAddToCart = async (
+    patientId: string | null, 
+    quantity: number, 
+    shipToPractice: boolean, 
+    providerId: string, 
+    prescriptionUrl: string | null = null,
+    customSig: string | null = null,
+    customDosage: string | null = null,
+    orderNotes: string | null = null,
+    prescriptionMethod: string | null = null
+  ) => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
@@ -199,6 +209,10 @@ export const ProductsGrid = () => {
             price_snapshot: correctPrice,
             destination_state: "XX",
             prescription_url: prescriptionUrl,
+            custom_sig: customSig,
+            custom_dosage: customDosage,
+            order_notes: orderNotes,
+            prescription_method: prescriptionMethod,
           });
 
         if (error) throw error;
@@ -224,6 +238,10 @@ export const ProductsGrid = () => {
             price_snapshot: correctPrice,
             destination_state: "IL",
             prescription_url: prescriptionUrl,
+            custom_sig: customSig,
+            custom_dosage: customDosage,
+            order_notes: orderNotes,
+            prescription_method: prescriptionMethod,
           });
 
         if (error) throw error;
