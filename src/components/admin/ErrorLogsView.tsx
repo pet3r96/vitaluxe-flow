@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle, Eye, Loader2 } from "lucide-react";
 import { ErrorDetailsDialog } from "./ErrorDetailsDialog";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const ErrorLogsView = () => {
   const [selectedError, setSelectedError] = useState<any>(null);
@@ -22,7 +24,7 @@ export const ErrorLogsView = () => {
         .from("audit_logs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(1000);
 
       // Filter by error types
       if (errorTypeFilter === "all") {
@@ -63,6 +65,21 @@ export const ErrorLogsView = () => {
       return data || [];
     },
   });
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: errorLogs?.length || 0,
+    itemsPerPage: 25
+  });
+
+  const paginatedErrorLogs = errorLogs?.slice(startIndex, endIndex);
 
   const handleViewDetails = (error: any) => {
     setSelectedError(error);
@@ -128,58 +145,70 @@ export const ErrorLogsView = () => {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : errorLogs && errorLogs.length > 0 ? (
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="hidden md:table-cell">Message</TableHead>
-                    <TableHead className="hidden lg:table-cell">User</TableHead>
-                    <TableHead className="hidden xl:table-cell">Component</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {errorLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="font-mono text-xs whitespace-nowrap">
-                        {new Date(log.created_at).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getErrorBadgeVariant(log.action_type)}>
-                          {log.action_type.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell font-mono text-xs">
-                        {truncateMessage(
-                          (log.details as any)?.error_message ||
-                            (log.details as any)?.message ||
-                            "No message"
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs">
-                        {log.user_email || "Anonymous"}
-                      </TableCell>
-                      <TableCell className="hidden xl:table-cell font-mono text-xs">
-                        {log.entity_type || "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDetails(log)}
-                          className="gap-2"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="hidden sm:inline">View</span>
-                        </Button>
-                      </TableCell>
+            <>
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Timestamp</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="hidden md:table-cell">Message</TableHead>
+                      <TableHead className="hidden lg:table-cell">User</TableHead>
+                      <TableHead className="hidden xl:table-cell">Component</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedErrorLogs?.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="font-mono text-xs whitespace-nowrap">
+                          {new Date(log.created_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getErrorBadgeVariant(log.action_type)}>
+                            {log.action_type.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell font-mono text-xs">
+                          {truncateMessage(
+                            (log.details as any)?.error_message ||
+                              (log.details as any)?.message ||
+                              "No message"
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs">
+                          {log.user_email || "Anonymous"}
+                        </TableCell>
+                        <TableCell className="hidden xl:table-cell font-mono text-xs">
+                          {log.entity_type || "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(log)}
+                            className="gap-2"
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <DataTablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={goToPage}
+                hasNextPage={hasNextPage}
+                hasPrevPage={hasPrevPage}
+                totalItems={errorLogs.length}
+                startIndex={startIndex}
+                endIndex={Math.min(endIndex, errorLogs.length)}
+              />
+            </>
           ) : (
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
