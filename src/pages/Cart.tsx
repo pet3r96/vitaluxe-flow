@@ -133,7 +133,7 @@ export default function Cart() {
                   <p className="text-xs sm:text-sm">
                     <span className="font-medium">Quantity:</span> {line.quantity}
                   </p>
-                  {line.custom_sig && (
+                  {line.custom_sig && line.patient_name !== "Practice Order" && (
                     <div className="text-xs sm:text-sm mt-2 bg-blue-50 dark:bg-blue-950/30 p-2 rounded border border-blue-200 dark:border-blue-800">
                       <span className="font-medium text-blue-700 dark:text-blue-300">SIG:</span>
                       <p className="text-blue-600 dark:text-blue-400 mt-1">{line.custom_sig}</p>

@@ -483,7 +483,7 @@ export default function OrderConfirmation() {
                   <p className="text-sm text-muted-foreground">{line.product?.dosage}</p>
                   
                   {/* Display prescription details if present */}
-                  {(line.custom_sig || line.custom_dosage) && (
+                  {(line.custom_sig || line.custom_dosage) && line.patient_name !== "Practice Order" && (
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md text-sm space-y-1 border border-blue-200 dark:border-blue-800">
                       <p className="font-semibold text-xs text-blue-700 dark:text-blue-300 uppercase">Prescription Details:</p>
                       {line.custom_dosage && (
