@@ -129,31 +129,57 @@ serve(async (req) => {
 
       console.log('Creating practice account for:', practiceData.email);
 
-      // Create user with admin client
-      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-        email: practiceData.email,
-        password: temporaryPassword,
-        email_confirm: true,
-        user_metadata: {
-          name: practiceData.practice_name,
-          phone: practiceData.phone,
-          company: practiceData.company
+      // Create user with admin client (handle existing users)
+      let userId: string;
+      let isNewUser = false;
+      
+      try {
+        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+          email: practiceData.email,
+          password: temporaryPassword,
+          email_confirm: true,
+          user_metadata: {
+            name: practiceData.practice_name,
+            phone: practiceData.phone,
+            company: practiceData.company
+          }
+        });
+
+        if (createUserError) {
+          // Check if user already exists
+          if (createUserError.message?.includes('already registered') || 
+              createUserError.message?.includes('duplicate')) {
+            console.log('User already exists, fetching existing user');
+            const { data: existingUser, error: fetchError } = await supabaseAdmin.auth.admin
+              .listUsers();
+            
+            const foundUser = existingUser?.users?.find((u: any) => u.email === practiceData.email);
+            if (!foundUser) {
+              throw new Error(`Failed to create or find user: ${createUserError.message}`);
+            }
+            userId = foundUser.id;
+            console.log('Found existing user:', userId);
+          } else {
+            throw new Error(`Failed to create user: ${createUserError.message}`);
+          }
+        } else if (!newUser?.user) {
+          throw new Error('Failed to create user: No user data returned');
+        } else {
+          userId = newUser.user.id;
+          isNewUser = true;
+          console.log('User created:', userId);
         }
-      });
-
-      if (createUserError || !newUser.user) {
-        console.error('Failed to create user:', createUserError);
-        throw new Error(`Failed to create user: ${createUserError?.message}`);
+      } catch (error: any) {
+        console.error('Error handling user creation:', error);
+        throw error;
       }
-
-      console.log('User created:', newUser.user.id);
 
       // Upload contract file if provided
       let contract_url = null;
       if (practiceData.contract_file) {
         try {
           const contractData = practiceData.contract_file;
-          const fileName = `${newUser.user.id}/${Date.now()}_contract.pdf`;
+          const fileName = `${userId}/${Date.now()}_contract.pdf`;
           
           const { error: uploadError } = await supabaseAdmin.storage
             .from('contracts')
@@ -172,11 +198,11 @@ serve(async (req) => {
         }
       }
 
-      // Create profile
+      // Upsert profile (idempotent)
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .insert({
-          id: newUser.user.id,
+        .upsert({
+          id: userId,
           name: practiceData.practice_name,
           email: practiceData.email,
           phone: practiceData.phone,
@@ -190,60 +216,78 @@ serve(async (req) => {
           address_zip: practiceData.address_zip,
           contract_url: contract_url,
           linked_topline_id: practiceData.assigned_rep_user_id,
-          active: true
+          active: true,
+          updated_at: new Date().toISOString()
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
         });
 
       if (profileError) {
-        console.error('Failed to create profile:', profileError);
-        throw new Error(`Failed to create profile: ${profileError.message}`);
+        console.error('Failed to upsert profile:', profileError);
+        throw new Error(`Failed to upsert profile: ${profileError.message}`);
       }
 
-      // Add doctor role
+      // Upsert doctor role (idempotent)
       const { error: roleError } = await supabaseAdmin
         .from('user_roles')
-        .insert({
-          user_id: newUser.user.id,
+        .upsert({
+          user_id: userId,
           role: 'doctor'
+        }, { 
+          onConflict: 'user_id,role',
+          ignoreDuplicates: false 
         });
 
       if (roleError) {
-        console.error('Failed to add role:', roleError);
-        throw new Error(`Failed to add role: ${roleError.message}`);
+        console.error('Failed to upsert role:', roleError);
+        throw new Error(`Failed to upsert role: ${roleError.message}`);
       }
 
-      // Create default provider
+      // Upsert default provider (idempotent)
       const { error: providerError } = await supabaseAdmin
         .from('providers')
-        .insert({
-          user_id: newUser.user.id,
-          practice_id: newUser.user.id,
-          active: true
+        .upsert({
+          user_id: userId,
+          practice_id: userId,
+          active: true,
+          updated_at: new Date().toISOString()
+        }, { 
+          onConflict: 'user_id',
+          ignoreDuplicates: false 
         });
 
       if (providerError) {
-        console.error('Failed to create provider:', providerError);
+        console.error('Failed to upsert provider:', providerError);
       }
 
-      // Insert password status record
-      await supabaseAdmin.from('user_password_status').insert({
-        user_id: newUser.user.id,
+      // Upsert password status record (idempotent)
+      await supabaseAdmin.from('user_password_status').upsert({
+        user_id: userId,
         must_change_password: true,
         temporary_password_sent: true,
         first_login_completed: false
+      }, { 
+        onConflict: 'user_id',
+        ignoreDuplicates: false 
       });
 
-      // Send welcome email
-      try {
-        await supabaseAdmin.functions.invoke('send-welcome-email', {
-          body: {
-            email: practiceData.email,
-            name: practiceData.practice_name,
-            temporaryPassword: temporaryPassword,
-            role: 'doctor'
-          }
-        });
-      } catch (emailErr) {
-        console.error('Failed to send welcome email:', emailErr);
+      // Send welcome email only for new users
+      if (isNewUser) {
+        try {
+          await supabaseAdmin.functions.invoke('send-welcome-email', {
+            body: {
+              email: practiceData.email,
+              name: practiceData.practice_name,
+              temporaryPassword: temporaryPassword,
+              role: 'doctor'
+            }
+          });
+        } catch (emailErr) {
+          console.error('Failed to send welcome email:', emailErr);
+        }
+      } else {
+        console.log('Skipping welcome email for existing user');
       }
 
       // Update pending request
@@ -267,8 +311,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Practice approved and welcome email sent',
-          userId: newUser.user.id
+          message: isNewUser ? 'Practice approved and welcome email sent' : 'Practice approval completed',
+          userId: userId,
+          isNewUser: isNewUser
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
