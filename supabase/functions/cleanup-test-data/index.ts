@@ -64,19 +64,23 @@ Deno.serve(async (req) => {
       console.log('Deleted pending practice request');
     }
 
-    // Step 2: Find and delete the auth user (this will cascade to profiles)
+    // Step 2: Find and delete the auth user via profile lookup
     if (email) {
-      const { data: authUser, error: getUserError } = await supabase.auth.admin.listUsers();
-      
-      if (getUserError) {
-        console.error('Error listing users:', getUserError);
-        throw new Error(`Failed to list users: ${getUserError.message}`);
+      // First, get the user_id from the profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Error finding profile:', profileError);
+        throw new Error(`Failed to find profile: ${profileError.message}`);
       }
 
-      const userToDelete = authUser.users.find(u => u.email === email);
-      
-      if (userToDelete) {
-        const { error: deleteUserError } = await supabase.auth.admin.deleteUser(userToDelete.id);
+      if (profile) {
+        // Directly delete the auth user using the user_id
+        const { error: deleteUserError } = await supabase.auth.admin.deleteUser(profile.id);
         
         if (deleteUserError) {
           console.error('Error deleting auth user:', deleteUserError);
@@ -84,7 +88,7 @@ Deno.serve(async (req) => {
         }
         console.log('Deleted auth user (profile cascaded)');
       } else {
-        console.log('Auth user not found, might already be deleted');
+        console.log('Profile not found, user might already be deleted');
       }
     }
 
