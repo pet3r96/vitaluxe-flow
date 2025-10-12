@@ -49,7 +49,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "",
     npi: "",
     licenseNumber: "",
     dea: "",
@@ -166,7 +165,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
       const { data, error } = await supabase.functions.invoke("assign-user-role", {
         body: {
           email: formData.email,
-          password: formData.password,
           name: formData.name,
           role: "doctor", // Practice account role in database
           roleData: {
@@ -186,7 +184,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
 
       if (error) throw error;
 
-      toast.success("✅ Practice account created successfully");
+      toast.success("✅ Practice account created! Welcome email with login credentials sent to " + formData.email);
       onSuccess();
       onOpenChange(false);
       resetForm();
@@ -211,7 +209,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     setFormData({
       name: "",
       email: "",
-      password: "",
       npi: "",
       licenseNumber: "",
       dea: "",
@@ -259,18 +256,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                minLength={6}
               />
             </div>
 

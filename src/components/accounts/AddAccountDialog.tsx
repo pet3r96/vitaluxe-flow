@@ -57,7 +57,6 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "",
     company: "",
     phone: "",
     address_street: "",
@@ -229,7 +228,6 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
       const { data, error } = await supabase.functions.invoke("assign-user-role", {
         body: {
           email: formData.email,
-          password: formData.password,
           name: formData.name,
           role,
           parentId: user?.id, // Set current admin as parent
@@ -240,7 +238,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
 
       if (error) throw error;
 
-      toast.success("Account created successfully");
+      toast.success(`Account created! Welcome email with login credentials sent to ${formData.email}`);
       onSuccess();
       onOpenChange(false);
       resetForm();
@@ -269,7 +267,6 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
     setFormData({
       name: "",
       email: "",
-      password: "",
       company: "",
       phone: "",
       address_street: "",
@@ -316,18 +313,6 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                minLength={6}
               />
             </div>
 

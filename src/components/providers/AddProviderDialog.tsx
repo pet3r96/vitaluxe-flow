@@ -30,7 +30,6 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
     fullName: "",
     prescriberName: "",
     email: "",
-    password: "",
     npi: "",
     dea: "",
     licenseNumber: "",
@@ -69,7 +68,6 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
       fullName: "",
       prescriberName: "",
       email: "",
-      password: "",
       npi: "",
       dea: "",
       licenseNumber: "",
@@ -107,7 +105,6 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
       const { data, error } = await supabase.functions.invoke('assign-user-role', {
         body: {
           email: formData.email,
-          password: formData.password,
           name: formData.email,
           fullName: formData.fullName,
           prescriberName: formData.prescriberName,
@@ -126,7 +123,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
         throw new Error(data?.error || error.message);
       }
 
-      toast.success("Provider added successfully");
+      toast.success(`Provider added! Welcome email with login credentials sent to ${formData.email}`);
       resetForm();
       onSuccess();
       onOpenChange(false);
@@ -194,18 +191,6 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder="provider@example.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password *</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="Secure password"
               required
             />
           </div>
