@@ -14,21 +14,33 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, AlertCircle, Info, Upload, X, FileText, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, AlertCircle, Info, Upload, X, FileText, Loader2, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PrescriptionWriterDialog } from "./PrescriptionWriterDialog";
 
 interface PatientSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: any;
-  onAddToCart: (patientId: string | null, quantity: number, shipToPractice: boolean, providerId: string, prescriptionUrl?: string | null) => void;
+  onAddToCart: (
+    patientId: string | null, 
+    quantity: number, 
+    shipToPractice: boolean, 
+    providerId: string, 
+    prescriptionUrl?: string | null,
+    customSig?: string | null,
+    customDosage?: string | null,
+    orderNotes?: string | null,
+    prescriptionMethod?: string | null
+  ) => void;
 }
 
 export const PatientSelectionDialog = ({
@@ -39,6 +51,7 @@ export const PatientSelectionDialog = ({
 }: PatientSelectionDialogProps) => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState<'details' | 'prescription'>('details');
   const [shipTo, setShipTo] = useState<'patient' | 'practice'>('patient');
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
@@ -47,6 +60,11 @@ export const PatientSelectionDialog = ({
   const [prescriptionPreview, setPrescriptionPreview] = useState<string>("");
   const [uploadingPrescription, setUploadingPrescription] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [prescriptionMethod, setPrescriptionMethod] = useState<'upload' | 'write' | null>(null);
+  const [showPrescriptionWriter, setShowPrescriptionWriter] = useState(false);
+  const [customSig, setCustomSig] = useState("");
+  const [customDosage, setCustomDosage] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
 
   const { data: patients, isLoading } = useQuery({
     queryKey: ["patients", effectivePracticeId],
@@ -123,13 +141,64 @@ export const PatientSelectionDialog = ({
     }
   }, [effectiveRole, effectiveUserId, providers]);
 
+  // Fetch provider details for prescription writer
+  const { data: selectedProviderData } = useQuery({
+    queryKey: ["provider-details", selectedProviderId],
+    queryFn: async () => {
+      if (!selectedProviderId) return null;
+      
+      const { data, error } = await supabase
+        .from("providers")
+        .select(`
+          id,
+          profiles!inner(
+            id,
+            name,
+            npi,
+            dea,
+            license_number
+          )
+        `)
+        .eq("id", selectedProviderId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedProviderId && currentStep === 'prescription' && prescriptionMethod === 'write'
+  });
+
+  // Fetch practice details for prescription writer
+  const { data: practiceData } = useQuery({
+    queryKey: ["practice-details", effectivePracticeId],
+    queryFn: async () => {
+      if (!effectivePracticeId) return null;
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("name, address_formatted, address, address_street, address_city, address_state, address_zip")
+        .eq("id", effectivePracticeId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!effectivePracticeId && currentStep === 'prescription' && prescriptionMethod === 'write'
+  });
+
   useEffect(() => {
     if (!open) {
+      setCurrentStep('details');
       setShipTo('patient');
       setSelectedPatientId("");
       setQuantity(1);
       setPrescriptionFile(null);
       setPrescriptionPreview("");
+      setPrescriptionMethod(null);
+      setCustomSig("");
+      setCustomDosage("");
+      setOrderNotes("");
+      setShowPrescriptionWriter(false);
       if (effectiveRole === "doctor") {
         setSelectedProviderId(null);
       }
@@ -164,7 +233,7 @@ export const PatientSelectionDialog = ({
     }
   };
 
-  const handleAddToCart = async () => {
+  const handleContinue = () => {
     if (!selectedProviderId) {
       toast.error("Please select a provider");
       return;
@@ -179,9 +248,24 @@ export const PatientSelectionDialog = ({
       toast.error("Quantity must be at least 1");
       return;
     }
+    
+    setCurrentStep('prescription');
+  };
 
-    if (product.requires_prescription && !prescriptionFile) {
-      toast.error("This product requires a prescription. Please upload a prescription before adding to cart.");
+  const handleAddToCart = async () => {
+    // Validate prescription requirements on Page 2
+    if (product.requires_prescription && prescriptionMethod === null) {
+      toast.error("Please select a prescription method");
+      return;
+    }
+    
+    if (product.requires_prescription && prescriptionMethod === 'upload' && !prescriptionFile) {
+      toast.error("Please upload a prescription file");
+      return;
+    }
+    
+    if (product.requires_prescription && prescriptionMethod === 'write' && !prescriptionPreview) {
+      toast.error("Please write and generate the prescription");
       return;
     }
 
@@ -315,7 +399,11 @@ export const PatientSelectionDialog = ({
       quantity,
       isPracticeOrder,
       selectedProviderId,
-      prescriptionUrl
+      prescriptionUrl,
+      customSig || null,
+      customDosage || null,
+      orderNotes || null,
+      prescriptionMethod || null
     );
     onOpenChange(false);
   };
@@ -396,221 +484,339 @@ export const PatientSelectionDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Product to Cart</DialogTitle>
+          <DialogTitle>
+            {currentStep === 'details' ? 'Add Product to Cart' : 'Prescription Details'}
+          </DialogTitle>
           <DialogDescription>
-            Product: {product?.name}
+            {currentStep === 'details' ? `Product: ${product?.name}` : 'Complete prescription information'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          {/* Provider Selection for Practices */}
-          {effectiveRole === "doctor" && providers && providers.length > 0 && (
-            <div className="grid gap-3 pb-4 border-b">
-              <Label className="text-base font-semibold">Select Provider *</Label>
-              {providers.length === 1 ? (
-                <div className="p-3 border rounded-md bg-muted">
-                  <p className="text-sm font-medium">{providers[0].prescriber_name}</p>
-                  <p className="text-xs text-muted-foreground">Provider NPI: {providers[0].npi}</p>
-                </div>
-              ) : (
-                <RadioGroup value={selectedProviderId || ""} onValueChange={setSelectedProviderId}>
-                  {providers.map((provider: any) => (
-                    <div key={provider.id} className="flex items-center space-x-2 p-2 border rounded-md">
-                      <RadioGroupItem value={provider.id} id={provider.id} />
-                      <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
-                        <span className="font-medium">{provider.prescriber_name}</span>
-                        <span className="text-xs text-muted-foreground ml-2">NPI: {provider.npi}</span>
-                      </Label>
+          {/* PAGE 1: Details Section */}
+          {currentStep === 'details' && (
+            <>
+              {/* Provider Selection for Practices */}
+              {effectiveRole === "doctor" && providers && providers.length > 0 && (
+                <div className="grid gap-3 pb-4 border-b">
+                  <Label className="text-base font-semibold">Select Provider *</Label>
+                  {providers.length === 1 ? (
+                    <div className="p-3 border rounded-md bg-muted">
+                      <p className="text-sm font-medium">{providers[0].prescriber_name}</p>
+                      <p className="text-xs text-muted-foreground">Provider NPI: {providers[0].npi}</p>
                     </div>
-                  ))}
-                </RadioGroup>
-              )}
-            </div>
-          )}
-
-          <div className="grid gap-3">
-            <Label>Where would you like this shipped?</Label>
-            <RadioGroup value={shipTo} onValueChange={(value) => setShipTo(value as 'patient' | 'practice')}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="patient" id="patient" />
-                <Label htmlFor="patient" className="font-normal cursor-pointer">
-                  Ship to a Patient
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="practice" id="practice" />
-                <Label htmlFor="practice" className="font-normal cursor-pointer">
-                  Ship to My Practice
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <div className="border-t pt-4 space-y-4">
-            {shipTo === 'patient' ? (
-              <div className="grid gap-2">
-                <Label>Patient</Label>
-                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={comboboxOpen}
-                      className="justify-between"
-                    >
-                      {selectedPatient
-                        ? `${selectedPatient.name} ${selectedPatient.birth_date ? `(DOB: ${format(new Date(selectedPatient.birth_date), "MM/dd/yyyy")})` : ""}`
-                        : "Select patient..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0">
-                    <Command>
-                      <CommandInput placeholder="Search patients..." />
-                      <CommandList>
-                        <CommandEmpty>No patient found.</CommandEmpty>
-                        <CommandGroup>
-                          {patients?.map((patient) => (
-                            <CommandItem
-                              key={patient.id}
-                              value={patient.name}
-                              onSelect={() => {
-                                setSelectedPatientId(patient.id);
-                                setComboboxOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedPatientId === patient.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span>{patient.name}</span>
-                                {patient.birth_date && (
-                                  <span className="text-xs text-muted-foreground">
-                                    DOB: {format(new Date(patient.birth_date), "MM/dd/yyyy")}
-                                  </span>
-                                )}
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            ) : (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  This product will be shipped to your practice address on file.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid gap-2">
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-              />
-            </div>
-
-            {/* Prescription Upload Section - Only show if product requires prescription */}
-            {product?.requires_prescription && (
-              <div className="space-y-3 p-4 border-2 border-orange-300 rounded-lg bg-orange-50/50">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <Label className="text-base font-semibold text-orange-900">
-                      Prescription Required *
-                    </Label>
-                    <p className="text-sm text-orange-700 mt-1">
-                      This product requires a valid prescription. Please upload a PDF or PNG file (max 10MB).
-                    </p>
-                  </div>
-                </div>
-                
-                {prescriptionFile ? (
-                  <div className="relative p-3 border rounded-md bg-white">
-                    <div className="flex items-center gap-3">
-                      {prescriptionPreview ? (
-                        <img
-                          src={prescriptionPreview}
-                          alt="Prescription preview"
-                          className="h-16 w-16 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
-                          <FileText className="h-8 w-8 text-muted-foreground" />
+                  ) : (
+                    <RadioGroup value={selectedProviderId || ""} onValueChange={setSelectedProviderId}>
+                      {providers.map((provider: any) => (
+                        <div key={provider.id} className="flex items-center space-x-2 p-2 border rounded-md">
+                          <RadioGroupItem value={provider.id} id={provider.id} />
+                          <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
+                            <span className="font-medium">{provider.prescriber_name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">NPI: {provider.npi}</span>
+                          </Label>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{prescriptionFile.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(prescriptionFile.size / 1024).toFixed(2)} KB
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setPrescriptionFile(null);
-                          setPrescriptionPreview("");
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      ))}
+                    </RadioGroup>
+                  )}
+                </div>
+              )}
+
+              <div className="grid gap-3">
+                <Label>Where would you like this shipped?</Label>
+                <RadioGroup value={shipTo} onValueChange={(value) => setShipTo(value as 'patient' | 'practice')}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="patient" id="patient" />
+                    <Label htmlFor="patient" className="font-normal cursor-pointer">
+                      Ship to a Patient
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="practice" id="practice" />
+                    <Label htmlFor="practice" className="font-normal cursor-pointer">
+                      Ship to My Practice
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="border-t pt-4 space-y-4">
+                {shipTo === 'patient' ? (
+                  <div className="grid gap-2">
+                    <Label>Patient</Label>
+                    <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={comboboxOpen}
+                          className="justify-between"
+                        >
+                          {selectedPatient
+                            ? `${selectedPatient.name} ${selectedPatient.birth_date ? `(DOB: ${format(new Date(selectedPatient.birth_date), "MM/dd/yyyy")})` : ""}`
+                            : "Select patient..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search patients..." />
+                          <CommandList>
+                            <CommandEmpty>No patient found.</CommandEmpty>
+                            <CommandGroup>
+                              {patients?.map((patient) => (
+                                <CommandItem
+                                  key={patient.id}
+                                  value={patient.name}
+                                  onSelect={() => {
+                                    setSelectedPatientId(patient.id);
+                                    setComboboxOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedPatientId === patient.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{patient.name}</span>
+                                    {patient.birth_date && (
+                                      <span className="text-xs text-muted-foreground">
+                                        DOB: {format(new Date(patient.birth_date), "MM/dd/yyyy")}
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 ) : (
-                  <>
-                    <Input
-                      id="prescription-upload"
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg"
-                      onChange={handlePrescriptionChange}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById("prescription-upload")?.click()}
-                      className="w-full border-orange-300 hover:bg-orange-50"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Prescription (PDF or PNG)
-                    </Button>
-                  </>
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      This product will be shipped to your practice address on file.
+                    </AlertDescription>
+                  </Alert>
                 )}
+
+                <div className="grid gap-2">
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  />
+                </div>
               </div>
-            )}
-          </div>
+            </>
+          )}
+
+          {/* PAGE 2: Prescription & Notes Section */}
+          {currentStep === 'prescription' && (
+            <>
+              {product?.requires_prescription && (
+                <div className="space-y-4">
+                  <div className="grid gap-3 border-b pb-4">
+                    <Label className="text-base font-semibold">Prescription Method *</Label>
+                    <RadioGroup value={prescriptionMethod || ""} onValueChange={(value) => setPrescriptionMethod(value as 'upload' | 'write')}>
+                      <div className="flex items-center space-x-2 p-3 border rounded-md">
+                        <RadioGroupItem value="upload" id="upload" />
+                        <Label htmlFor="upload" className="flex-1 cursor-pointer font-normal">
+                          Upload Prescription File
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 border rounded-md">
+                        <RadioGroupItem value="write" id="write" />
+                        <Label htmlFor="write" className="flex-1 cursor-pointer font-normal">
+                          Write Prescription Now
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Show upload input if upload method selected */}
+                  {prescriptionMethod === 'upload' && (
+                    <div className="space-y-3 p-4 border-2 border-orange-300 rounded-lg bg-orange-50/50">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <Label className="text-base font-semibold text-orange-900">
+                            Upload Prescription File
+                          </Label>
+                          <p className="text-sm text-orange-700 mt-1">
+                            Please upload a PDF or PNG file (max 10MB).
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {prescriptionFile ? (
+                        <div className="relative p-3 border rounded-md bg-white">
+                          <div className="flex items-center gap-3">
+                            {prescriptionPreview ? (
+                              <img
+                                src={prescriptionPreview}
+                                alt="Prescription preview"
+                                className="h-16 w-16 object-cover rounded"
+                              />
+                            ) : (
+                              <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
+                                <FileText className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{prescriptionFile.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {(prescriptionFile.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setPrescriptionFile(null);
+                                setPrescriptionPreview("");
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Input
+                            id="prescription-upload"
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg"
+                            onChange={handlePrescriptionChange}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById("prescription-upload")?.click()}
+                            className="w-full border-orange-300 hover:bg-orange-50"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload Prescription (PDF or PNG)
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Show prescription writer button if write method selected */}
+                  {prescriptionMethod === 'write' && (
+                    <div className="space-y-3">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowPrescriptionWriter(true)}
+                        className="w-full"
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Open Prescription Writer
+                      </Button>
+
+                      {/* Prescription Summary after generation */}
+                      {prescriptionPreview && (
+                        <Alert className="border-green-200 bg-green-50">
+                          <FileCheck className="h-4 w-4 text-green-600" />
+                          <AlertDescription>
+                            <div className="space-y-2">
+                              <p className="font-semibold text-green-900">Prescription Generated</p>
+                              <p className="text-sm"><strong>Dosage:</strong> {customDosage || product.dosage}</p>
+                              <p className="text-sm"><strong>SIG:</strong> {customSig || product.sig}</p>
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Order Notes - Always visible on Page 2 */}
+              <div className="grid gap-3 border-t pt-4">
+                <Label htmlFor="notes">Order Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Add any special instructions or notes for this order..."
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </>
+          )}
         </div>
 
+        {/* Prescription Writer Dialog */}
+        {prescriptionMethod === 'write' && (
+          <PrescriptionWriterDialog
+            open={showPrescriptionWriter}
+            onOpenChange={setShowPrescriptionWriter}
+            product={product}
+            patient={selectedPatient}
+            provider={selectedProviderData ? {
+              name: selectedProviderData.profiles?.name || 'Unknown',
+              npi: selectedProviderData.profiles?.npi || 'N/A',
+              dea: selectedProviderData.profiles?.dea || 'N/A',
+              license: selectedProviderData.profiles?.license_number || 'N/A'
+            } : null}
+            practice={practiceData ? {
+              name: practiceData.name || 'Unknown Practice',
+              address: practiceData.address_formatted || practiceData.address || 'N/A'
+            } : null}
+            quantity={quantity}
+            onPrescriptionGenerated={(url, sig, dosage, notes) => {
+              setPrescriptionPreview(url);
+              setCustomSig(sig);
+              setCustomDosage(dosage);
+              if (notes) setOrderNotes(notes);
+              setShowPrescriptionWriter(false);
+              toast.success("Prescription generated successfully");
+            }}
+          />
+        )}
+
         <DialogFooter>
+          {currentStep === 'prescription' && (
+            <Button variant="ghost" onClick={() => setCurrentStep('details')}>
+              ← Back
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleAddToCart}
-            disabled={uploadingPrescription || (product?.requires_prescription && !prescriptionFile)}
-          >
-            {uploadingPrescription ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              shipTo === 'practice' ? 'Add to Practice Order' : 'Add to Cart'
-            )}
-          </Button>
+          
+          {currentStep === 'details' ? (
+            <Button onClick={handleContinue}>
+              {product?.requires_prescription ? 'Review Prescription' : 'Continue'}
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleAddToCart}
+              disabled={
+                uploadingPrescription || 
+                (product?.requires_prescription && !prescriptionFile && !prescriptionPreview)
+              }
+            >
+              {uploadingPrescription ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                'Add to Cart'
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
