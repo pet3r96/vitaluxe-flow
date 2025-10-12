@@ -628,62 +628,63 @@ export const PatientSelectionDialog = ({
           {/* PAGE 2: Prescription & Notes Section */}
           {currentStep === 'prescription' && (
             <>
-              {product?.requires_prescription && (
+              {shipTo === 'patient' && (
                 <div className="space-y-4">
-                  <div className="grid gap-3 border-b pb-4">
-                    <Label className="text-base font-semibold">Prescription Method *</Label>
-                    <RadioGroup value={prescriptionMethod || ""} onValueChange={(value) => setPrescriptionMethod(value as 'upload' | 'write')}>
-                      <div className="flex items-center space-x-2 p-3 border rounded-md">
-                        <RadioGroupItem value="upload" id="upload" />
-                        <Label htmlFor="upload" className="flex-1 cursor-pointer font-normal">
-                          Upload Prescription File
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 p-3 border rounded-md">
-                        <RadioGroupItem value="write" id="write" />
-                        <Label htmlFor="write" className="flex-1 cursor-pointer font-normal">
-                          Write Prescription Now
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {/* Editable SIG and Dosage Fields */}
-                  {prescriptionMethod && (
-                    <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
-                      <h3 className="font-semibold text-sm">Prescription Details</h3>
-                      
-                      <div className="grid gap-2">
-                        <Label htmlFor="dosage-input">Dosage Instructions</Label>
-                        <Input
-                          id="dosage-input"
-                          placeholder="e.g., 10mg, 1mL, etc."
-                          value={customDosage}
-                          onChange={(e) => setCustomDosage(e.target.value)}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Default from product: {product.dosage || 'Not specified'}
-                        </p>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="sig-input">SIG - Directions for Use</Label>
-                        <Textarea
-                          id="sig-input"
-                          placeholder="e.g., Take 1 tablet by mouth daily..."
-                          value={customSig}
-                          onChange={(e) => setCustomSig(e.target.value)}
-                          rows={3}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Default from product: {product.sig || 'Not specified'}
-                        </p>
-                      </div>
+                  {/* Prescription Method Radio Buttons - Only for RX Required */}
+                  {product?.requires_prescription && (
+                    <div className="grid gap-3 border-b pb-4">
+                      <Label className="text-base font-semibold">Prescription Method *</Label>
+                      <RadioGroup value={prescriptionMethod || ""} onValueChange={(value) => setPrescriptionMethod(value as 'upload' | 'write')}>
+                        <div className="flex items-center space-x-2 p-3 border rounded-md">
+                          <RadioGroupItem value="upload" id="upload" />
+                          <Label htmlFor="upload" className="flex-1 cursor-pointer font-normal">
+                            Upload Prescription File
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 p-3 border rounded-md">
+                          <RadioGroupItem value="write" id="write" />
+                          <Label htmlFor="write" className="flex-1 cursor-pointer font-normal">
+                            Write Prescription Now
+                          </Label>
+                        </div>
+                      </RadioGroup>
                     </div>
                   )}
 
-                  {/* Show upload input if upload method selected */}
-                  {prescriptionMethod === 'upload' && (
+                  {/* Editable SIG and Dosage Fields - Always show for patient shipments */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                    <h3 className="font-semibold text-sm">Prescription Details</h3>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="dosage-input">Dosage Instructions</Label>
+                      <Input
+                        id="dosage-input"
+                        placeholder="e.g., 10mg, 1mL, etc."
+                        value={customDosage}
+                        onChange={(e) => setCustomDosage(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Default from product: {product.dosage || 'Not specified'}
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="sig-input">SIG - Directions for Use</Label>
+                      <Textarea
+                        id="sig-input"
+                        placeholder="e.g., Take 1 tablet by mouth daily..."
+                        value={customSig}
+                        onChange={(e) => setCustomSig(e.target.value)}
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Default from product: {product.sig || 'Not specified'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Show upload input if upload method selected - Only for RX Required */}
+                  {product?.requires_prescription && prescriptionMethod === 'upload' && (
                     <div className="space-y-3 p-4 border-2 border-orange-300 rounded-lg bg-orange-50/50">
                       <div className="flex items-start gap-2">
                         <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
@@ -768,8 +769,8 @@ export const PatientSelectionDialog = ({
                     </div>
                   )}
 
-                  {/* Show prescription writer button if write method selected */}
-                  {prescriptionMethod === 'write' && (
+                  {/* Show prescription writer button if write method selected - Only for RX Required */}
+                  {product?.requires_prescription && prescriptionMethod === 'write' && (
                     <div className="space-y-3">
                       <Button 
                         variant="outline" 
