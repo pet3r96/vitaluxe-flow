@@ -35,6 +35,30 @@ export function PrescriptionWriterDialog({
   const [notes, setNotes] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Show loading state if data is not ready
+  if (!provider || !practice || !patient) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Loading Prescription Details...
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 p-8">
+            <div className="flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+            <p className="text-center text-sm text-muted-foreground">
+              Fetching prescriber and practice information...
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   const handleGenerate = async () => {
     if (!customSig.trim()) {
       toast.error("Please provide directions for use (SIG)");
