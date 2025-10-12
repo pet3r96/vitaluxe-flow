@@ -655,18 +655,15 @@ export const PatientSelectionDialog = ({
                   <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
                     <h3 className="font-semibold text-sm">Prescription Details</h3>
                     
-                    <div className="grid gap-2">
-                      <Label htmlFor="dosage-input">Dosage Instructions</Label>
-                      <Input
-                        id="dosage-input"
-                        placeholder="e.g., 10mg, 1mL, etc."
-                        value={customDosage}
-                        onChange={(e) => setCustomDosage(e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Default from product: {product.dosage || 'Not specified'}
-                      </p>
-                    </div>
+              <div className="grid gap-2">
+                <Label>Dosage Instructions</Label>
+                <div className="px-3 py-2 bg-muted/50 border rounded-md text-sm">
+                  {customDosage || product.dosage || 'Not specified'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This value is from the product configuration
+                </p>
+              </div>
 
                     <div className="grid gap-2">
                       <Label htmlFor="sig-input">SIG - Directions for Use</Label>
