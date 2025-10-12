@@ -482,12 +482,22 @@ export default function OrderConfirmation() {
                   <h4 className="font-semibold text-lg">{line.product?.name}</h4>
                   <p className="text-sm text-muted-foreground">{line.product?.dosage}</p>
                   
-                  {/* Display prescription details if written */}
-                  {line.product?.requires_prescription && line.prescription_method === 'written' && (
-                    <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm space-y-1 border">
-                      <p className="font-semibold text-xs text-muted-foreground uppercase">Prescription Details:</p>
-                      {line.custom_dosage && <p><strong>Dosage:</strong> {line.custom_dosage}</p>}
-                      {line.custom_sig && <p><strong>SIG:</strong> {line.custom_sig}</p>}
+                  {/* Display prescription details if present */}
+                  {(line.custom_sig || line.custom_dosage) && (
+                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md text-sm space-y-1 border border-blue-200 dark:border-blue-800">
+                      <p className="font-semibold text-xs text-blue-700 dark:text-blue-300 uppercase">Prescription Details:</p>
+                      {line.custom_dosage && (
+                        <p>
+                          <strong className="text-blue-700 dark:text-blue-300">Dosage:</strong>{" "}
+                          <span className="text-blue-600 dark:text-blue-400">{line.custom_dosage}</span>
+                        </p>
+                      )}
+                      {line.custom_sig && (
+                        <p>
+                          <strong className="text-blue-700 dark:text-blue-300">SIG:</strong>{" "}
+                          <span className="text-blue-600 dark:text-blue-400">{line.custom_sig}</span>
+                        </p>
+                      )}
                     </div>
                   )}
                   
