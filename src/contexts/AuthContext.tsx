@@ -19,6 +19,8 @@ interface AuthContextType {
   effectivePracticeId: string | null;
   canImpersonate: boolean;
   isProviderAccount: boolean;
+  mustChangePassword: boolean;
+  checkPasswordStatus: () => Promise<void>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -50,6 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isProviderAccount, setIsProviderAccount] = useState(false);
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const navigate = useNavigate();
 
   const actualRole = userRole;
@@ -253,6 +256,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const checkPasswordStatus = async () => {
+    if (!user || actualRole === 'admin') {
+      setMustChangePassword(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('user_password_status')
+        .select('must_change_password')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking password status:', error);
+        return;
+      }
+
+      setMustChangePassword(data?.must_change_password || false);
+    } catch (error) {
+      console.error('Error in checkPasswordStatus:', error);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       const { data: { user }, error } = await supabase.auth.signInWithPassword({
@@ -283,6 +310,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } 
         };
       }
+
+      // Check password status after successful login
+      await checkPasswordStatus();
 
       navigate("/dashboard");
       return { error: null };
@@ -475,6 +505,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       effectivePracticeId,
       canImpersonate,
       isProviderAccount,
+      mustChangePassword,
+      checkPasswordStatus,
       setImpersonation,
       clearImpersonation,
       signIn, 

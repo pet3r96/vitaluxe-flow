@@ -58,3 +58,6 @@ export function validateDEA(dea: string | null | undefined): ValidationResult {
   
   return { valid: true };
 }
+
+// Export password generator utility
+export { generateSecurePassword } from './passwordGenerator.ts';

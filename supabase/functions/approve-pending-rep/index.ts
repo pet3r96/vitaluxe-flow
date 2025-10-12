@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { validatePhone } from '../_shared/validators.ts';
+import { validatePhone, generateSecurePassword } from '../_shared/validators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -72,15 +72,15 @@ serve(async (req) => {
         }
       }
 
-      // Generate secure password
-      const password = crypto.randomUUID();
+      // Generate secure temporary password
+      const temporaryPassword = generateSecurePassword();
 
       console.log('Creating user account for:', pendingRep.email);
 
       // Create user with admin client
       const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
         email: pendingRep.email,
-        password: password,
+        password: temporaryPassword,
         email_confirm: true,
         user_metadata: {
           name: pendingRep.full_name,
@@ -155,6 +155,28 @@ serve(async (req) => {
         throw new Error(`Failed to create rep record: ${repError.message}`);
       }
 
+      // Insert password status record
+      await supabaseAdmin.from('user_password_status').insert({
+        user_id: newUser.user.id,
+        must_change_password: true,
+        temporary_password_sent: true,
+        first_login_completed: false
+      });
+
+      // Send welcome email
+      try {
+        await supabaseAdmin.functions.invoke('send-welcome-email', {
+          body: {
+            email: pendingRep.email,
+            name: pendingRep.full_name,
+            temporaryPassword: temporaryPassword,
+            role: pendingRep.role
+          }
+        });
+      } catch (emailErr) {
+        console.error('Failed to send welcome email:', emailErr);
+      }
+
       // Update pending request
       const { error: updateError } = await supabaseAdmin
         .from('pending_reps')
@@ -176,9 +198,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Representative approved and account created',
-          userId: newUser.user.id,
-          tempPassword: password
+          message: 'Representative approved and welcome email sent',
+          userId: newUser.user.id
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

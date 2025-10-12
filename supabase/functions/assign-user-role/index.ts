@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { validatePhone, validateNPI, validateDEA } from '../_shared/validators.ts';
+import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from '../_shared/validators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -581,10 +581,64 @@ serve(async (req) => {
 
     console.log('User signup completed successfully');
 
+    // Generate temporary password and send welcome email (non-admin only)
+    const mustChangePassword = signupData.role !== 'admin';
+    
+    if (mustChangePassword) {
+      const temporaryPassword = generateSecurePassword();
+      console.log('Generated temporary password for user:', userId);
+
+      // Update user password in auth
+      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { password: temporaryPassword }
+      );
+
+      if (passwordError) {
+        console.error('Error setting temporary password:', passwordError);
+      }
+
+      // Insert password status record
+      const { error: statusError } = await supabaseAdmin
+        .from('user_password_status')
+        .insert({
+          user_id: userId,
+          must_change_password: true,
+          temporary_password_sent: true,
+          first_login_completed: false
+        });
+
+      if (statusError) {
+        console.error('Error creating password status:', statusError);
+      }
+
+      // Send welcome email
+      try {
+        const { error: emailError } = await supabaseAdmin.functions.invoke('send-welcome-email', {
+          body: {
+            email: signupData.email,
+            name: signupData.name,
+            temporaryPassword: temporaryPassword,
+            role: signupData.role
+          }
+        });
+
+        if (emailError) {
+          console.error('Error sending welcome email:', emailError);
+        } else {
+          console.log('Welcome email sent successfully to:', signupData.email);
+        }
+      } catch (emailErr) {
+        console.error('Failed to invoke send-welcome-email function:', emailErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: 'Account created successfully! You can now sign in.',
+        message: mustChangePassword 
+          ? 'Account created successfully! A welcome email with login credentials has been sent.'
+          : 'Account created successfully! You can now sign in.',
         userId: userId
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

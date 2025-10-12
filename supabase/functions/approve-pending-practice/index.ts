@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { validatePhone, validateNPI, validateDEA } from '../_shared/validators.ts';
+import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from '../_shared/validators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,15 +110,15 @@ serve(async (req) => {
         }
       }
 
-      // Generate secure password
-      const password = crypto.randomUUID();
+      // Generate secure temporary password
+      const temporaryPassword = generateSecurePassword();
 
       console.log('Creating practice account for:', practiceData.email);
 
       // Create user with admin client
       const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
         email: practiceData.email,
-        password: password,
+        password: temporaryPassword,
         email_confirm: true,
         user_metadata: {
           name: practiceData.practice_name,
@@ -210,6 +210,28 @@ serve(async (req) => {
         console.error('Failed to create provider:', providerError);
       }
 
+      // Insert password status record
+      await supabaseAdmin.from('user_password_status').insert({
+        user_id: newUser.user.id,
+        must_change_password: true,
+        temporary_password_sent: true,
+        first_login_completed: false
+      });
+
+      // Send welcome email
+      try {
+        await supabaseAdmin.functions.invoke('send-welcome-email', {
+          body: {
+            email: practiceData.email,
+            name: practiceData.practice_name,
+            temporaryPassword: temporaryPassword,
+            role: 'doctor'
+          }
+        });
+      } catch (emailErr) {
+        console.error('Failed to send welcome email:', emailErr);
+      }
+
       // Update pending request
       const { error: updateError } = await supabaseAdmin
         .from('pending_practices')
@@ -231,9 +253,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Practice approved and account created',
-          userId: newUser.user.id,
-          tempPassword: password
+          message: 'Practice approved and welcome email sent',
+          userId: newUser.user.id
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

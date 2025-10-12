@@ -30,6 +30,7 @@ import NotFound from "./pages/NotFound";
 import RepDashboard from "./pages/RepDashboard";
 import MyDownlines from "./pages/MyDownlines";
 import RepProfitReports from "./pages/RepProfitReports";
+import ChangePassword from "./pages/ChangePassword";
 import { DashboardRouter } from "./components/DashboardRouter";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/change-password" element={<ChangePassword />} />
             <Route
               path="/*"
               element={

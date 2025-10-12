@@ -1,5 +1,5 @@
 import { ReactNode, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
@@ -7,14 +7,28 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, mustChangePassword, effectiveRole } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
     }
   }, [user, loading, navigate]);
+
+  // Redirect non-admin users who must change password
+  useEffect(() => {
+    if (!loading && user) {
+      if (
+        mustChangePassword &&
+        effectiveRole !== 'admin' &&
+        location.pathname !== '/change-password'
+      ) {
+        navigate("/change-password");
+      }
+    }
+  }, [user, loading, mustChangePassword, effectiveRole, location.pathname, navigate]);
 
   if (loading) {
     return (

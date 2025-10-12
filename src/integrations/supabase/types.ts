@@ -1610,6 +1610,39 @@ export type Database = {
           },
         ]
       }
+      user_password_status: {
+        Row: {
+          created_at: string | null
+          first_login_completed: boolean | null
+          id: string
+          must_change_password: boolean | null
+          password_last_changed: string | null
+          temporary_password_sent: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          first_login_completed?: boolean | null
+          id?: string
+          must_change_password?: boolean | null
+          password_last_changed?: string | null
+          temporary_password_sent?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          first_login_completed?: boolean | null
+          id?: string
+          must_change_password?: boolean | null
+          password_last_changed?: string | null
+          temporary_password_sent?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
