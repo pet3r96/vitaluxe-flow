@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Check, X, Loader2, Eye } from "lucide-react";
+import { Check, X, Loader2, Eye, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const PendingPracticesApproval = () => {
@@ -176,6 +176,25 @@ export const PendingPracticesApproval = () => {
     },
   });
 
+  const cleanupMutation = useMutation({
+    mutationFn: async (request: PendingPracticeWithProfiles) => {
+      const { error } = await supabase.functions.invoke('cleanup-test-data', {
+        body: {
+          email: request.email,
+          pendingPracticeId: request.id,
+        },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Test data cleaned up successfully");
+      queryClient.invalidateQueries({ queryKey: ["pending-practices"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to cleanup test data");
+    },
+  });
+
   const handleApprove = (request: any) => {
     setSelectedRequest(request);
     setAdminNotes("");
@@ -288,6 +307,19 @@ export const PendingPracticesApproval = () => {
                                 onClick={() => handleReject(request)}
                               >
                                 <X className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  if (confirm(`Delete test data for ${request.email}? This will remove the pending request and any associated user account.`)) {
+                                    cleanupMutation.mutate(request);
+                                  }
+                                }}
+                                disabled={cleanupMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </>
                           )}
