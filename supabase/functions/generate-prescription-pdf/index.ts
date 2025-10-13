@@ -30,7 +30,8 @@ serve(async (req) => {
       practice_address,
       date,
       notes,
-      quantity
+      quantity,
+      signature
     } = await req.json();
 
     console.log('Generating prescription PDF for:', product_name);
@@ -151,6 +152,7 @@ serve(async (req) => {
         ` : ''}
 
         <div style="margin-top: 60px;">
+          ${signature ? `<div style="font-family: 'Brush Script MT', cursive; font-size: 24px; margin-bottom: 5px;">${signature}</div>` : ''}
           <div class="signature-line"></div>
           <div class="provider-info">
             ${provider_name}<br>
@@ -196,6 +198,7 @@ SIG (Directions for Use)
 ${sig || 'As directed by prescriber'}
 
 ${notes ? `ADDITIONAL NOTES\n----------------\n${notes}\n` : ''}
+${signature ? `\nELECTRONIC SIGNATURE\n--------------------\n${signature}\n` : ''}
 
 ___________________________________
 ${provider_name}

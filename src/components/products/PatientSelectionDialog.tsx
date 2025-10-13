@@ -65,6 +65,7 @@ export const PatientSelectionDialog = ({
   const [customSig, setCustomSig] = useState("");
   const [customDosage, setCustomDosage] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
+  const [providerSignature, setProviderSignature] = useState("");
 
   const { data: patients, isLoading } = useQuery({
     queryKey: ["patients", effectivePracticeId],
@@ -832,11 +833,13 @@ export const PatientSelectionDialog = ({
             initialSig={customSig}
             initialDosage={customDosage}
             initialNotes={orderNotes}
-            onPrescriptionGenerated={(url, sig, dosage, notes) => {
+            initialSignature={providerSignature}
+            onPrescriptionGenerated={(url, sig, dosage, notes, signature) => {
               setPrescriptionPreview(url);
               setCustomSig(sig);
               setCustomDosage(dosage);
               if (notes) setOrderNotes(notes);
+              setProviderSignature(signature);
               setShowPrescriptionWriter(false);
               toast.success("Prescription generated successfully");
             }}

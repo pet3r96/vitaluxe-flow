@@ -20,7 +20,8 @@ interface PrescriptionWriterDialogProps {
   initialSig?: string;
   initialDosage?: string;
   initialNotes?: string;
-  onPrescriptionGenerated: (prescriptionUrl: string, customSig: string, customDosage: string, notes: string) => void;
+  initialSignature?: string;
+  onPrescriptionGenerated: (prescriptionUrl: string, customSig: string, customDosage: string, notes: string, signature: string) => void;
 }
 
 export function PrescriptionWriterDialog({
@@ -34,11 +35,13 @@ export function PrescriptionWriterDialog({
   initialSig,
   initialDosage,
   initialNotes,
+  initialSignature,
   onPrescriptionGenerated,
 }: PrescriptionWriterDialogProps) {
   const [customDosage, setCustomDosage] = useState(initialDosage || product?.dosage || "");
   const [customSig, setCustomSig] = useState(initialSig || product?.sig || "");
   const [notes, setNotes] = useState(initialNotes || "");
+  const [signature, setSignature] = useState(initialSignature || "");
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Sync state with prop changes
@@ -53,6 +56,10 @@ export function PrescriptionWriterDialog({
   useEffect(() => {
     setNotes(initialNotes || "");
   }, [initialNotes]);
+
+  useEffect(() => {
+    setSignature(initialSignature || "");
+  }, [initialSignature]);
 
   // Show loading state if data is not ready
   if (!provider || !practice || !patient) {
@@ -84,6 +91,11 @@ export function PrescriptionWriterDialog({
       return;
     }
 
+    if (!signature.trim()) {
+      toast.error("Please provide your signature to complete the prescription");
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-prescription-pdf', {
@@ -101,7 +113,8 @@ export function PrescriptionWriterDialog({
           practice_address: practice.address_formatted || practice.address,
           date: format(new Date(), 'MM/dd/yyyy'),
           notes: notes,
-          quantity: quantity
+          quantity: quantity,
+          signature: signature
         }
       });
 
@@ -109,7 +122,7 @@ export function PrescriptionWriterDialog({
 
       if (data?.success) {
         toast.success("Prescription generated successfully");
-        onPrescriptionGenerated(data.prescription_url, customSig, customDosage, notes);
+        onPrescriptionGenerated(data.prescription_url, customSig, customDosage, notes, signature);
         onOpenChange(false);
       } else {
         throw new Error(data?.error || "Failed to generate prescription");
@@ -202,14 +215,14 @@ export function PrescriptionWriterDialog({
             </div>
           </div>
 
-          {/* Editable Dosage */}
+          {/* Read-only Dosage */}
           <div className="grid gap-2">
             <Label htmlFor="dosage">Dosage Instructions</Label>
             <Input
               id="dosage"
-              placeholder="e.g., 10mg, 1mL, etc."
               value={customDosage}
-              onChange={(e) => setCustomDosage(e.target.value)}
+              readOnly
+              className="bg-muted/50 cursor-not-allowed"
             />
           </div>
 
@@ -241,6 +254,25 @@ export function PrescriptionWriterDialog({
             />
           </div>
 
+          {/* Signature */}
+          <div className="grid gap-2">
+            <Label htmlFor="signature" className="flex items-center gap-1">
+              Provider Signature *
+              <span className="text-xs text-muted-foreground font-normal">(Type your name to sign)</span>
+            </Label>
+            <Input
+              id="signature"
+              placeholder="Type your full name to electronically sign this prescription"
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              required
+              className="font-medium"
+            />
+            <p className="text-xs text-muted-foreground">
+              By typing your name, you are electronically signing this prescription
+            </p>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex gap-3 justify-end pt-4 border-t">
             <Button
@@ -252,7 +284,7 @@ export function PrescriptionWriterDialog({
             </Button>
             <Button
               onClick={handleGenerate}
-              disabled={isGenerating || !customSig.trim()}
+              disabled={isGenerating || !customSig.trim() || !signature.trim()}
             >
               {isGenerating ? (
                 <>
