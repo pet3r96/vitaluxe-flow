@@ -162,4 +162,19 @@ All colors MUST be HSL.
   .scroll-shadow.has-overflow::after {
     opacity: 1;
   }
+
+  /* Terms and Conditions Spacing */
+  .terms-content h2 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .terms-content h2:first-child {
+    margin-top: 0;
+  }
+
+  .terms-content ul {
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
 }
