@@ -42,12 +42,13 @@ serve(async (req) => {
 
     console.log('Generating prescription PDF for:', product_name, 'with dispensing option:', dispensing_option);
 
-    // Create PDF document
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'in',
-      format: 'letter'
-    });
+    try {
+      // Create PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'in',
+        format: 'letter'
+      });
 
     // Set beige/cream background (like prescription pad)
     doc.setFillColor(245, 245, 220);
@@ -122,7 +123,7 @@ serve(async (req) => {
     doc.setFontSize(80);
     doc.setFont('times', 'bold');
     doc.setTextColor(139, 69, 19); // Brown color
-    doc.text('℞', 1.2, rxY);
+    doc.text('Rx', 1.2, rxY);
 
     // Medication information (in bordered box)
     doc.setTextColor(0, 0, 0);
@@ -159,7 +160,7 @@ serve(async (req) => {
     const sigY = 7.5;
     if (signature) {
       doc.setFontSize(20);
-      doc.setFont('courier', 'italic'); // Cursive-like font
+      doc.setFont('helvetica', 'italic'); // Cursive-like font
       doc.text(signature, 2, sigY);
     }
     doc.setDrawColor(0, 0, 0);
@@ -195,40 +196,52 @@ serve(async (req) => {
     // Get PDF as array buffer
     const pdfOutput = doc.output('arraybuffer');
 
+    // Validate PDF output
+    if (!pdfOutput || pdfOutput.byteLength === 0) {
+      throw new Error('PDF generation failed - empty output');
+    }
+
+    console.log('PDF generated successfully, size:', pdfOutput.byteLength, 'bytes');
+
     // Prepare for upload
     const fileName = `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
     const prescriptionData = new Uint8Array(pdfOutput);
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('prescriptions')
-      .upload(fileName, prescriptionData, {
-        contentType: 'application/pdf',
-        upsert: false
-      });
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('prescriptions')
+        .upload(fileName, prescriptionData, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw new Error(`Failed to upload prescription: ${uploadError.message}`);
-    }
-
-    // Get signed URL
-    const { data: signedUrlData } = await supabase.storage
-      .from('prescriptions')
-      .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
-
-    console.log('Prescription generated successfully:', fileName);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        prescription_url: signedUrlData?.signedUrl || uploadData.path,
-        file_name: fileName
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error(`Failed to upload prescription: ${uploadError.message}`);
       }
-    );
+
+      // Get signed URL
+      const { data: signedUrlData } = await supabase.storage
+        .from('prescriptions')
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
+
+      console.log('Prescription generated successfully:', fileName);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          prescription_url: signedUrlData?.signedUrl || uploadData.path,
+          file_name: fileName
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+
+    } catch (pdfError) {
+      console.error('PDF generation error:', pdfError);
+      throw new Error(`PDF generation failed: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`);
+    }
 
   } catch (error) {
     console.error('Error generating prescription:', error);
