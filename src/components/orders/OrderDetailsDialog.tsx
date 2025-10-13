@@ -64,15 +64,56 @@ export const OrderDetailsDialog = ({
         throw new Error('No data received from storage');
       }
       
+      // Determine correct file extension from MIME type
+      const getExtFromMime = (mime?: string | null): string | null => {
+        const map: Record<string, string> = {
+          'application/pdf': 'pdf',
+          'image/png': 'png',
+          'image/jpeg': 'jpg',
+          'image/jpg': 'jpg',
+          'image/webp': 'webp',
+        };
+        return mime ? map[mime] ?? null : null;
+      };
+
+      const pathExt = (filePath.split('.').pop() || '').toLowerCase();
+      const blobType = (data as Blob).type;
+      const mimeExt = getExtFromMime(blobType);
+      const finalExt = mimeExt || pathExt || 'pdf';
+      const filename = `prescription_${patientName.replace(/\s+/g, '_')}_${Date.now()}.${finalExt}`;
+
+      // Log mismatches for admin visibility
+      if (mimeExt && pathExt && mimeExt !== pathExt) {
+        await supabase.functions.invoke('log-error', {
+          body: {
+            action_type: 'client_error',
+            entity_type: 'prescription_filetype_mismatch',
+            details: {
+              filePath,
+              blobType,
+              inferredExt: mimeExt,
+              pathExt,
+              userId: effectiveUserId,
+              userRole: effectiveRole,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        });
+      }
+      
       // Create blob URL and trigger download
       const url = window.URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `prescription_${patientName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      // Small timeout before cleanup to ensure download starts
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 200);
       
       console.log('Prescription downloaded successfully');
       
