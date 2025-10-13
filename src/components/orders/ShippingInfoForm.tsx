@@ -155,6 +155,7 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="filled">Fulfilling</SelectItem>
               <SelectItem value="shipped">Shipped</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
             </SelectContent>
           </Select>
         </div>

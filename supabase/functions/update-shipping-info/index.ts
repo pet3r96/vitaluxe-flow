@@ -25,7 +25,7 @@ const normalizeStatus = (status?: string): string | undefined => {
   }
   
   // Valid enum values
-  const validStatuses = ['pending', 'filled', 'shipped', 'denied', 'change_requested'];
+  const validStatuses = ['pending', 'filled', 'shipped', 'delivered', 'denied', 'change_requested'];
   if (validStatuses.includes(lower)) {
     return lower;
   }
@@ -121,6 +121,9 @@ serve(async (req: Request) => {
       }
       if (normalizedStatus === 'filled' && currentLine.status !== 'filled') {
         updateData.processing_at = new Date().toISOString();
+      }
+      if (normalizedStatus === 'delivered' && currentLine.status !== 'delivered') {
+        updateData.delivered_at = new Date().toISOString();
       }
     }
 

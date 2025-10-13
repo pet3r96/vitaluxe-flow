@@ -1849,6 +1849,7 @@ export type Database = {
         | "shipped"
         | "denied"
         | "change_requested"
+        | "delivered"
       shipping_carrier: "fedex" | "ups" | "usps"
     }
     CompositeTypes: {
@@ -1991,6 +1992,7 @@ export const Constants = {
         "shipped",
         "denied",
         "change_requested",
+        "delivered",
       ],
       shipping_carrier: ["fedex", "ups", "usps"],
     },

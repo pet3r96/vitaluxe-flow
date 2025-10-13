@@ -281,6 +281,7 @@ export const OrdersDataTable = () => {
       processing: "bg-primary text-primary-foreground",
       shipped: "bg-secondary text-secondary-foreground",
       delivered: "bg-accent text-accent-foreground",
+      completed: "bg-accent text-accent-foreground",
       denied: "bg-destructive text-destructive-foreground",
       canceled: "bg-destructive text-destructive-foreground",
       cancelled: "bg-destructive text-destructive-foreground",
