@@ -209,9 +209,15 @@ export const PatientSelectionDialog = ({
   const handlePrescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('File selected:', file.name, 'Type:', file.type);
+      
       const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-      if (!validTypes.includes(file.type)) {
-        toast.error("Please upload a PDF or PNG file");
+      const validExtensions = ['.pdf', '.png', '.jpg', '.jpeg'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      // Check both MIME type and file extension for maximum compatibility
+      if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+        toast.error(`File type not supported. Please upload a PDF or PNG/JPG file. Detected type: ${file.type || 'unknown'}`);
         return;
       }
       
@@ -221,8 +227,9 @@ export const PatientSelectionDialog = ({
       }
       
       setPrescriptionFile(file);
+      toast.success("Prescription file uploaded successfully");
       
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/') || fileExtension.match(/\.(png|jpg|jpeg)$/i)) {
         const reader = new FileReader();
         reader.onloadend = () => {
           setPrescriptionPreview(reader.result as string);
@@ -771,20 +778,7 @@ export const PatientSelectionDialog = ({
                         </>
                       )}
                       
-                      {/* Prescription Summary for Upload */}
-                      {prescriptionFile && (
-                        <Alert className="border-blue-200 bg-blue-50">
-                          <FileCheck className="h-4 w-4 text-blue-600" />
-                          <AlertDescription>
-                            <div className="space-y-2">
-                              <p className="font-semibold text-blue-900">Prescription File Uploaded</p>
-                              <p className="text-sm"><strong>File:</strong> {prescriptionFile.name}</p>
-                              <p className="text-sm"><strong>Dosage:</strong> {customDosage || product.dosage}</p>
-                              <p className="text-sm"><strong>SIG:</strong> {customSig || product.sig}</p>
-                            </div>
-                          </AlertDescription>
-                        </Alert>
-                      )}
+                      {/* Removed redundant prescription summary - file card above shows upload success */}
                     </div>
                   )}
 
