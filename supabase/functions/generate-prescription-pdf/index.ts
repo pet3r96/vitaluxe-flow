@@ -175,16 +175,13 @@ serve(async (req) => {
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Refills:', 1, bottomY + 0.3);
-    doc.rect(1.6, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
+    
+    doc.rect(1, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
     doc.setFont('helvetica', 'normal');
-    doc.text('_______', 1.85, bottomY + 0.3);
+    doc.text('Dispense as Written', 1.25, bottomY + 0.3);
 
-    doc.rect(4.5, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
-    doc.text('Dispense as Written', 4.75, bottomY + 0.3);
-
-    doc.rect(6.3, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
-    doc.text('May Substitute', 6.55, bottomY + 0.3);
+    doc.rect(4, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
+    doc.text('May Substitute', 4.25, bottomY + 0.3);
 
     // Footer note
     doc.setFontSize(8);
