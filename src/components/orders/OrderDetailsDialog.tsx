@@ -9,12 +9,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ExternalLink, XCircle, AlertCircle } from "lucide-react";
+import { Download, XCircle, AlertCircle } from "lucide-react";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
 import { CancelOrderDialog } from "./CancelOrderDialog";
 import { ReportNotesSection } from "./ReportNotesSection";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -30,7 +31,30 @@ export const OrderDetailsDialog = ({
   onSuccess,
 }: OrderDetailsDialogProps) => {
   const { effectiveRole, effectiveUserId } = useAuth();
+  const { toast } = useToast();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+
+  const handleDownloadPrescription = async (prescriptionUrl: string, patientName: string) => {
+    try {
+      const response = await fetch(prescriptionUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `prescription_${patientName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading prescription:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download prescription. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const canCancelOrder = () => {
     if (order.status === 'cancelled') return false;
@@ -190,18 +214,11 @@ export const OrderDetailsDialog = ({
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        asChild
+                        onClick={() => handleDownloadPrescription(line.prescription_url, line.patient_name)}
                         className="w-full"
                       >
-                        <a 
-                          href={line.prescription_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          View Prescription Document
-                        </a>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Prescription
                       </Button>
                     </div>
                   )}
