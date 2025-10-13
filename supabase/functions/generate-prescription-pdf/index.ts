@@ -133,7 +133,9 @@ serve(async (req) => {
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.02);
     doc.rect(3, medBoxY, 4.5, 0.5, 'S'); // Medication box
-    doc.text(`${product_name} ${dosage || ''}`, 5.25, medBoxY + 0.35, { align: 'center' });
+    // Extract medication name without base dosage to avoid duplication
+    const baseName = product_name.replace(/\s+\d+(\.\d+)?(mg|ml|g|mcg).*$/i, '').trim();
+    doc.text(`${baseName} ${dosage || ''}`, 5.25, medBoxY + 0.35, { align: 'center' });
 
     // Medication details
     doc.setFontSize(12);
