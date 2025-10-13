@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,7 +22,15 @@ interface PrescriptionWriterDialogProps {
   initialDosage?: string;
   initialNotes?: string;
   initialSignature?: string;
-  onPrescriptionGenerated: (prescriptionUrl: string, customSig: string, customDosage: string, notes: string, signature: string) => void;
+  initialDispensingOption?: "dispense_as_written" | "may_substitute";
+  onPrescriptionGenerated: (
+    prescriptionUrl: string, 
+    customSig: string, 
+    customDosage: string, 
+    notes: string, 
+    signature: string,
+    dispensingOption: "dispense_as_written" | "may_substitute"
+  ) => void;
 }
 
 export function PrescriptionWriterDialog({
@@ -36,12 +45,16 @@ export function PrescriptionWriterDialog({
   initialDosage,
   initialNotes,
   initialSignature,
+  initialDispensingOption,
   onPrescriptionGenerated,
 }: PrescriptionWriterDialogProps) {
   const [customDosage, setCustomDosage] = useState(initialDosage || product?.dosage || "");
   const [customSig, setCustomSig] = useState(initialSig || product?.sig || "");
   const [notes, setNotes] = useState(initialNotes || "");
   const [signature, setSignature] = useState(initialSignature || "");
+  const [dispensingOption, setDispensingOption] = useState<"dispense_as_written" | "may_substitute">(
+    initialDispensingOption || "dispense_as_written"
+  );
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Sync state with prop changes
@@ -60,6 +73,10 @@ export function PrescriptionWriterDialog({
   useEffect(() => {
     setSignature(initialSignature || "");
   }, [initialSignature]);
+
+  useEffect(() => {
+    setDispensingOption(initialDispensingOption || "dispense_as_written");
+  }, [initialDispensingOption]);
 
   // Show loading state if data is not ready
   if (!provider || !practice || !patient) {
@@ -130,7 +147,8 @@ export function PrescriptionWriterDialog({
           date: format(new Date(), 'MM/dd/yyyy'),
           notes: notes,
           quantity: quantity,
-          signature: signature
+          signature: signature,
+          dispensing_option: dispensingOption
         }
       });
 
@@ -138,7 +156,7 @@ export function PrescriptionWriterDialog({
 
       if (data?.success) {
         toast.success("Prescription generated successfully");
-        onPrescriptionGenerated(data.prescription_url, customSig, customDosage, notes, signature);
+        onPrescriptionGenerated(data.prescription_url, customSig, customDosage, notes, signature, dispensingOption);
         onOpenChange(false);
       } else {
         throw new Error(data?.error || "Failed to generate prescription");
@@ -287,6 +305,41 @@ export function PrescriptionWriterDialog({
             <p className="text-xs text-muted-foreground">
               By typing your name, you are electronically signing this prescription
             </p>
+          </div>
+
+          {/* Dispensing Option */}
+          <div className="grid gap-3">
+            <Label className="text-base font-semibold">Please Choose Applicable *</Label>
+            <RadioGroup
+              value={dispensingOption}
+              onValueChange={(value) => setDispensingOption(value as "dispense_as_written" | "may_substitute")}
+              className="flex flex-col gap-3"
+            >
+              <div className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors">
+                <RadioGroupItem value="dispense_as_written" id="dispense_as_written" />
+                <Label 
+                  htmlFor="dispense_as_written" 
+                  className="cursor-pointer flex-1 font-medium"
+                >
+                  Dispense as Written
+                  <p className="text-xs text-muted-foreground font-normal mt-1">
+                    Pharmacist must dispense the exact brand/formulation prescribed
+                  </p>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors">
+                <RadioGroupItem value="may_substitute" id="may_substitute" />
+                <Label 
+                  htmlFor="may_substitute" 
+                  className="cursor-pointer flex-1 font-medium"
+                >
+                  May Substitute
+                  <p className="text-xs text-muted-foreground font-normal mt-1">
+                    Pharmacist may substitute with generic equivalent if available
+                  </p>
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
           {/* Action Buttons */}

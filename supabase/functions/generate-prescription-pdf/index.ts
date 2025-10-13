@@ -36,10 +36,11 @@ serve(async (req) => {
       date,
       notes,
       quantity,
-      signature
+      signature,
+      dispensing_option
     } = await req.json();
 
-    console.log('Generating prescription PDF for:', product_name);
+    console.log('Generating prescription PDF for:', product_name, 'with dispensing option:', dispensing_option);
 
     // Create PDF document
     const doc = new jsPDF({
@@ -176,11 +177,13 @@ serve(async (req) => {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     
-    doc.rect(1, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
+    // Check "Dispense as Written" if selected
+    doc.rect(1, bottomY + 0.15, 0.15, 0.15, dispensing_option === 'dispense_as_written' ? 'F' : 'S');
     doc.setFont('helvetica', 'normal');
     doc.text('Dispense as Written', 1.25, bottomY + 0.3);
 
-    doc.rect(4, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
+    // Check "May Substitute" if selected
+    doc.rect(4, bottomY + 0.15, 0.15, 0.15, dispensing_option === 'may_substitute' ? 'F' : 'S');
     doc.text('May Substitute', 4.25, bottomY + 0.3);
 
     // Footer note
