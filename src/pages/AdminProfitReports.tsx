@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -36,17 +37,26 @@ const AdminProfitReports = () => {
     },
   });
 
-  const totalAdminProfit = profitDetails?.reduce((sum, item) => 
-    sum + parseFloat(item.admin_profit?.toString() || '0'), 0
-  ) || 0;
+  const totalAdminProfit = useMemo(() => 
+    profitDetails?.reduce((sum, item) => 
+      sum + parseFloat(item.admin_profit?.toString() || '0'), 0
+    ) || 0,
+    [profitDetails]
+  );
 
-  const pendingAdminProfit = profitDetails
-    ?.filter(item => ['pending', 'processing'].includes(item.orders?.status || ''))
-    .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0;
+  const pendingAdminProfit = useMemo(() => 
+    profitDetails
+      ?.filter(item => ['pending', 'processing'].includes(item.orders?.status || ''))
+      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    [profitDetails]
+  );
 
-  const collectedAdminProfit = profitDetails
-    ?.filter(item => ['shipped', 'delivered'].includes(item.orders?.status || ''))
-    .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0;
+  const collectedAdminProfit = useMemo(() => 
+    profitDetails
+      ?.filter(item => ['shipped', 'delivered'].includes(item.orders?.status || ''))
+      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    [profitDetails]
+  );
 
   const {
     currentPage,

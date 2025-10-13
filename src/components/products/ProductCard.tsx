@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,7 @@ interface ProductCardProps {
   onToggleStatus: (productId: string, currentStatus: boolean) => void;
 }
 
-export const ProductCard = ({
+export const ProductCard = memo(({
   product,
   isAdmin,
   isProvider,
@@ -201,4 +202,4 @@ export const ProductCard = ({
       </CardFooter>
     </Card>
   );
-};
+});

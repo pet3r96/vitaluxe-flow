@@ -38,7 +38,16 @@ import AdminTermsManagement from "@/pages/AdminTermsManagement";
 import AdminDiscountCodes from "@/pages/AdminDiscountCodes";
 import { DashboardRouter } from "./components/DashboardRouter";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

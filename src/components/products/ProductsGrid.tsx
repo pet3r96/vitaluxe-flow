@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -116,12 +116,15 @@ export const ProductsGrid = () => {
     }
   };
 
-  const filteredProducts = products?.filter((product) => {
-    const matchesSearch =
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.dosage?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+  const filteredProducts = useMemo(() => 
+    products?.filter((product) => {
+      const matchesSearch =
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.dosage?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
+    }), 
+    [products, searchQuery]
+  );
 
   const {
     currentPage,

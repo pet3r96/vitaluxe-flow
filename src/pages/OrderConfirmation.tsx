@@ -86,8 +86,6 @@ export default function OrderConfirmation() {
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
-      console.log('Checkout mutation started with discount:', { discountCode, discountPercentage });
-      
       if (!cart?.id || !cart.lines || cart.lines.length === 0) {
         throw new Error("Cart is empty");
       }
