@@ -76,8 +76,8 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      queryClient.invalidateQueries({ queryKey: ["cart-count"] });
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update quantity");
@@ -95,8 +95,8 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
     },
     onSuccess: () => {
       toast.success("Item removed from cart");
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      queryClient.invalidateQueries({ queryKey: ["cart-count"] });
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to remove item");

@@ -64,7 +64,7 @@ export default function Cart() {
         title: "Item Removed",
         description: "Item has been removed from your cart.",
       });
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
     },
   });
 

@@ -251,8 +251,8 @@ export const ProductsGrid = () => {
       }
 
       toast.success("Product added to cart");
-      queryClient.invalidateQueries({ queryKey: ["cart-count"] });
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
     } catch (error: any) {
       console.error("Error adding to cart:", error);
       toast.error(error.message || "Failed to add product to cart");
