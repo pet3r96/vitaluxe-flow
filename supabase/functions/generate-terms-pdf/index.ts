@@ -153,7 +153,7 @@ serve(async (req) => {
     contentLines.forEach((line) => {
       // Check if we need a new page
       if (yPos > pageHeight - 1) {
-        addPageFooter(pageNum, 999); // Will update later
+        // Don't add footer yet - wait until we know total pages
         doc.addPage();
         pageNum++;
         yPos = 0.75;
@@ -198,8 +198,7 @@ serve(async (req) => {
       }
     });
 
-    // Add footer to last content page
-    addPageFooter(pageNum, pageNum + 1);
+    // Don't add footer yet - will be added in second pass with correct total
 
     // SIGNATURE PAGE - Always on new page
     doc.addPage();
