@@ -59,24 +59,56 @@ export default function AdminTermsManagement() {
 
   const loadAcceptances = async () => {
     setLoadingAcceptances(true);
-    const { data, error } = await supabase
-      .from('user_terms_acceptances')
-      .select(`
-        *,
-        profiles (
-          name,
-          email
-        )
-      `)
-      .order('accepted_at', { ascending: false });
+    try {
+      // 1) Fetch acceptances without embedding
+      const { data: accepts, error: aErr } = await supabase
+        .from('user_terms_acceptances')
+        .select('*')
+        .order('accepted_at', { ascending: false });
 
-    if (error) {
-      console.error('Error loading acceptances:', error);
-      toast.error("Failed to load acceptances");
-    } else {
-      setAcceptances(data || []);
+      if (aErr) {
+        console.error('Error loading acceptances:', aErr);
+        toast.error('Failed to load acceptances');
+        setAcceptances([]);
+        return;
+      }
+
+      if (!accepts || accepts.length === 0) {
+        setAcceptances([]);
+        return;
+      }
+
+      // 2) Fetch corresponding profiles
+      const userIds = Array.from(new Set(accepts.map((a: any) => a.user_id).filter(Boolean)));
+
+      let profilesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: profiles, error: pErr } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', userIds as string[]);
+
+        if (pErr) {
+          console.warn('Could not load profiles for acceptances:', pErr);
+        } else if (profiles) {
+          profilesMap = Object.fromEntries(profiles.map((p: any) => [p.id, p]));
+        }
+      }
+
+      // 3) Merge back into the same shape the UI expects (acceptance.profiles?.name/email)
+      const enriched = accepts.map((a: any) => ({
+        ...a,
+        profiles: profilesMap[a.user_id] || null,
+      }));
+
+      setAcceptances(enriched);
+    } catch (e) {
+      console.error('Unexpected error loading acceptances:', e);
+      toast.error('Failed to load acceptances');
+      setAcceptances([]);
+    } finally {
+      setLoadingAcceptances(false);
     }
-    setLoadingAcceptances(false);
   };
 
   const handleSave = async () => {
