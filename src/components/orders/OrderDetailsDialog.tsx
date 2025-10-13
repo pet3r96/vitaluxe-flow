@@ -17,6 +17,7 @@ import { ReportNotesSection } from "./ReportNotesSection";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -185,10 +186,22 @@ export const OrderDetailsDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Order Details</DialogTitle>
-          <DialogDescription>
-            Order #{order.id.slice(0, 8)} - {new Date(order.created_at).toLocaleDateString()}
-          </DialogDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <DialogTitle>Order Details</DialogTitle>
+              <DialogDescription>
+                Order #{order.id.slice(0, 8)} - {new Date(order.created_at).toLocaleDateString()}
+              </DialogDescription>
+            </div>
+            <ReceiptDownloadButton
+              orderId={order.id}
+              orderDate={order.created_at}
+              practiceName={order.profiles?.name || "Practice"}
+              variant="outline"
+              size="sm"
+              showLabel
+            />
+          </div>
           {order.status !== 'cancelled' && canCancelOrder() && (
             <Button
               variant="destructive"

@@ -24,6 +24,7 @@ import {
 import { OrderDetailsDialog } from "./OrderDetailsDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 
 export const OrdersDataTable = () => {
   const { effectiveRole, effectiveUserId, user } = useAuth();
@@ -424,7 +425,13 @@ export const OrdersDataTable = () => {
                     <TableCell>
                       {new Date(order.created_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <ReceiptDownloadButton
+                        orderId={order.id}
+                        orderDate={order.created_at}
+                        practiceName={order.profiles?.name || "Practice"}
+                      />
                       <Button
                         variant="ghost"
                         size="sm"
@@ -435,7 +442,8 @@ export const OrdersDataTable = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                    </TableCell>
+                    </div>
+                  </TableCell>
                   </TableRow>
                 );
               })
