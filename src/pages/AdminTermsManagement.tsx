@@ -1,0 +1,274 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Download, Save } from "lucide-react";
+import { format } from "date-fns";
+
+type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy';
+
+const ROLE_LABELS: Record<AppRole, string> = {
+  doctor: 'Practice',
+  provider: 'Provider',
+  topline: 'Topline Rep',
+  downline: 'Downline Rep',
+  pharmacy: 'Pharmacy'
+};
+
+export default function AdminTermsManagement() {
+  const [activeRole, setActiveRole] = useState<AppRole>('doctor');
+  const [terms, setTerms] = useState<any>(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [acceptances, setAcceptances] = useState<any[]>([]);
+  const [loadingAcceptances, setLoadingAcceptances] = useState(false);
+
+  useEffect(() => {
+    loadTerms();
+  }, [activeRole]);
+
+  useEffect(() => {
+    loadAcceptances();
+  }, []);
+
+  const loadTerms = async () => {
+    const { data, error } = await supabase
+      .from('terms_and_conditions')
+      .select('*')
+      .eq('role', activeRole)
+      .single();
+
+    if (error) {
+      console.error('Error loading terms:', error);
+      toast.error("Failed to load terms");
+      return;
+    }
+
+    setTerms(data);
+    setTitle(data.title);
+    setContent(data.content);
+  };
+
+  const loadAcceptances = async () => {
+    setLoadingAcceptances(true);
+    const { data, error } = await supabase
+      .from('user_terms_acceptances')
+      .select(`
+        *,
+        profiles:user_id (
+          name,
+          email
+        )
+      `)
+      .order('accepted_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading acceptances:', error);
+      toast.error("Failed to load acceptances");
+    } else {
+      setAcceptances(data || []);
+    }
+    setLoadingAcceptances(false);
+  };
+
+  const handleSave = async () => {
+    if (!title.trim() || !content.trim()) {
+      toast.error("Title and content are required");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from('terms_and_conditions')
+        .update({
+          title,
+          content,
+          version: (terms?.version || 0) + 1,
+          updated_at: new Date().toISOString(),
+          updated_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('id', terms.id);
+
+      if (error) throw error;
+
+      toast.success("Terms updated successfully");
+      await loadTerms();
+    } catch (error: any) {
+      console.error('Error saving terms:', error);
+      toast.error(error.message || "Failed to save terms");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const downloadPDF = async (pdfUrl: string, userName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('terms-signed')
+        .createSignedUrl(pdfUrl, 60);
+
+      if (error) throw error;
+
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Error downloading PDF:', error);
+      toast.error("Failed to download PDF");
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Terms & Conditions Management</h1>
+        <p className="text-muted-foreground">Manage terms and conditions for each user role</p>
+      </div>
+
+      <Tabs defaultValue="editor" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="editor">Terms Editor</TabsTrigger>
+          <TabsTrigger value="acceptances">User Acceptances</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="editor" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Role</CardTitle>
+              <CardDescription>Choose which role's terms you want to edit</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 flex-wrap">
+                {(Object.keys(ROLE_LABELS) as AppRole[]).map((role) => (
+                  <Button
+                    key={role}
+                    variant={activeRole === role ? "default" : "outline"}
+                    onClick={() => setActiveRole(role)}
+                  >
+                    {ROLE_LABELS[role]}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Edit {ROLE_LABELS[activeRole]} Terms</CardTitle>
+                  <CardDescription>
+                    Current Version: {terms?.version || 0} | Last Updated: {terms?.updated_at ? format(new Date(terms.updated_at), 'PPp') : 'Never'}
+                  </CardDescription>
+                </div>
+                <Button onClick={handleSave} disabled={saving}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter title"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="content">Content (Markdown supported)</Label>
+                <Textarea
+                  id="content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Enter terms and conditions content"
+                  className="min-h-[500px] font-mono"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Use Markdown formatting. Example: # Heading, ## Subheading, **bold**, - bullet point
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="acceptances">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Acceptances</CardTitle>
+              <CardDescription>
+                View all users who have accepted terms and conditions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingAcceptances ? (
+                <div className="text-center py-8">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+                  <p className="mt-4 text-muted-foreground">Loading acceptances...</p>
+                </div>
+              ) : acceptances.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No acceptances yet</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Accepted Date</TableHead>
+                      <TableHead>Signature</TableHead>
+                      <TableHead>PDF</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {acceptances.map((acceptance) => (
+                      <TableRow key={acceptance.id}>
+                        <TableCell>{acceptance.profiles?.name || 'N/A'}</TableCell>
+                        <TableCell>{acceptance.profiles?.email || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {ROLE_LABELS[acceptance.role as AppRole]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>v{acceptance.terms_version}</TableCell>
+                        <TableCell>
+                          {format(new Date(acceptance.accepted_at), 'PP p')}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {acceptance.signature_name}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => downloadPDF(acceptance.signed_pdf_url, acceptance.profiles?.name)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

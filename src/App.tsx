@@ -33,6 +33,8 @@ import RepDashboard from "./pages/RepDashboard";
 import MyDownlines from "./pages/MyDownlines";
 import RepProfitReports from "./pages/RepProfitReports";
 import ChangePassword from "./pages/ChangePassword";
+import AcceptTerms from "@/pages/AcceptTerms";
+import AdminTermsManagement from "@/pages/AdminTermsManagement";
 import { DashboardRouter } from "./components/DashboardRouter";
 
 const queryClient = new QueryClient();
@@ -48,6 +50,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/change-password" element={<ChangePassword />} />
+              <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
             <Route
               path="/*"
               element={
@@ -83,6 +86,7 @@ const App = () => (
                           <Route path="/profile" element={<Profile />} />
                           <Route path="/admin-settings" element={<AdminSettings />} />
                           <Route path="/error-logs" element={<ErrorLogs />} />
+                          <Route path="/admin/terms" element={<AdminTermsManagement />} />
                           <Route path="/rep-reports" element={<RepProfitReports />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

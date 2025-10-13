@@ -43,6 +43,7 @@ const menuItems = {
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Error Logs", url: "/error-logs", icon: AlertCircle },
+    { title: "Terms Management", url: "/admin/terms", icon: FileText },
     { title: "Admin Settings", url: "/admin-settings", icon: ShieldCheck },
   ],
   doctor: [

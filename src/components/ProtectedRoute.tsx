@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading, mustChangePassword, effectiveRole } = useAuth();
+  const { user, loading, mustChangePassword, termsAccepted, effectiveRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,6 +29,19 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
     }
   }, [user, loading, mustChangePassword, effectiveRole, location.pathname, navigate]);
+
+  // Redirect non-admin users who haven't accepted terms (after password change)
+  useEffect(() => {
+    if (!loading && user && !mustChangePassword) {
+      if (
+        !termsAccepted &&
+        effectiveRole !== 'admin' &&
+        location.pathname !== '/accept-terms'
+      ) {
+        navigate("/accept-terms");
+      }
+    }
+  }, [user, loading, mustChangePassword, termsAccepted, effectiveRole, location.pathname, navigate]);
 
   if (loading) {
     return (

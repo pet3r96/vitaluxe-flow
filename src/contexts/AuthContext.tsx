@@ -20,6 +20,7 @@ interface AuthContextType {
   canImpersonate: boolean;
   isProviderAccount: boolean;
   mustChangePassword: boolean;
+  termsAccepted: boolean;
   checkPasswordStatus: () => Promise<void>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
@@ -53,6 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isProviderAccount, setIsProviderAccount] = useState(false);
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
 
   const actualRole = userRole;
@@ -506,6 +508,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       canImpersonate,
       isProviderAccount,
       mustChangePassword,
+      termsAccepted,
       checkPasswordStatus,
       setImpersonation,
       clearImpersonation,

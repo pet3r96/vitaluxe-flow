@@ -1,0 +1,224 @@
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
+
+export default function AcceptTerms() {
+  const { user, userRole, checkPasswordStatus } = useAuth();
+  const navigate = useNavigate();
+  
+  const [terms, setTerms] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [signatureName, setSignatureName] = useState("");
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!user || !userRole) return;
+
+    const fetchTerms = async () => {
+      const { data, error } = await supabase
+        .from('terms_and_conditions')
+        .select('*')
+        .eq('role', userRole as any)
+        .single();
+
+      if (error) {
+        console.error('Error fetching terms:', error);
+        toast.error("Failed to load terms and conditions");
+        return;
+      }
+
+      setTerms(data);
+      setLoading(false);
+    };
+
+    fetchTerms();
+  }, [user, userRole]);
+
+  const handleScroll = () => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const scrollTop = container.scrollTop;
+    const scrollHeight = container.scrollHeight - container.clientHeight;
+    const progress = (scrollTop / scrollHeight) * 100;
+
+    setScrollProgress(progress);
+
+    // Consider scrolled to bottom if within 50px
+    if (scrollHeight - scrollTop < 50) {
+      setHasScrolledToBottom(true);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!signatureName.trim()) {
+      toast.error("Please enter your full name");
+      return;
+    }
+
+    if (!agreed) {
+      toast.error("You must agree to the terms to continue");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-terms-pdf', {
+        body: {
+          terms_id: terms.id,
+          signature_name: signatureName.trim()
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success("Terms accepted successfully");
+        await checkPasswordStatus();
+        navigate("/");
+      } else {
+        throw new Error(data.error || "Failed to accept terms");
+      }
+    } catch (error: any) {
+      console.error('Error accepting terms:', error);
+      toast.error(error.message || "Failed to accept terms");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+          <p className="mt-4 text-muted-foreground">Loading terms...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!terms) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Terms and conditions not found for your role. Please contact support.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  const canSubmit = hasScrolledToBottom && agreed && signatureName.trim() && !submitting;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-4xl">
+        <CardHeader>
+          <CardTitle>{terms.title}</CardTitle>
+          <CardDescription>
+            Please read the terms and conditions carefully. You must scroll to the bottom and agree to continue.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Scroll Progress Indicator */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Scroll Progress</span>
+              <span>{Math.round(scrollProgress)}%</span>
+            </div>
+            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${scrollProgress}%` }}
+              />
+            </div>
+            {!hasScrolledToBottom && (
+              <p className="text-sm text-muted-foreground">
+                Scroll to the bottom to enable acceptance
+              </p>
+            )}
+          </div>
+
+          {/* Terms Content */}
+          <ScrollArea 
+            ref={scrollRef}
+            className="h-[400px] w-full border rounded-md p-4"
+            onScrollCapture={handleScroll}
+          >
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown>{terms.content}</ReactMarkdown>
+            </div>
+          </ScrollArea>
+
+          {/* Acceptance Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>
+                By signing below, you acknowledge that you have read and agree to these terms and conditions.
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="agree" 
+                checked={agreed}
+                onCheckedChange={(checked) => setAgreed(checked as boolean)}
+                disabled={!hasScrolledToBottom}
+              />
+              <Label 
+                htmlFor="agree"
+                className={!hasScrolledToBottom ? "text-muted-foreground" : ""}
+              >
+                I agree to the above terms and conditions
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="signature">
+                Full Name (This will serve as your electronic signature)
+              </Label>
+              <Input
+                id="signature"
+                placeholder="Enter your full name"
+                value={signatureName}
+                onChange={(e) => setSignatureName(e.target.value)}
+                disabled={!hasScrolledToBottom || !agreed}
+                required
+              />
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={!canSubmit}
+            >
+              {submitting ? "Processing..." : "I Accept and Sign"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

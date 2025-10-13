@@ -1601,6 +1601,45 @@ export type Database = {
           },
         ]
       }
+      terms_and_conditions: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          effective_date: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          effective_date?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          title: string
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          effective_date?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
       thread_participants: {
         Row: {
           id: string
@@ -1642,6 +1681,7 @@ export type Database = {
           must_change_password: boolean | null
           password_last_changed: string | null
           temporary_password_sent: boolean | null
+          terms_accepted: boolean | null
           updated_at: string | null
           user_id: string
         }
@@ -1652,6 +1692,7 @@ export type Database = {
           must_change_password?: boolean | null
           password_last_changed?: string | null
           temporary_password_sent?: boolean | null
+          terms_accepted?: boolean | null
           updated_at?: string | null
           user_id: string
         }
@@ -1662,6 +1703,7 @@ export type Database = {
           must_change_password?: boolean | null
           password_last_changed?: string | null
           temporary_password_sent?: boolean | null
+          terms_accepted?: boolean | null
           updated_at?: string | null
           user_id?: string
         }
@@ -1689,6 +1731,53 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_terms_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          ip_address: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          signature_name: string
+          signed_pdf_url: string
+          terms_id: string
+          terms_version: number
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          signature_name: string
+          signed_pdf_url: string
+          terms_id: string
+          terms_version: number
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          signature_name?: string
+          signed_pdf_url?: string
+          terms_id?: string
+          terms_version?: number
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_terms_acceptances_terms_id_fkey"
+            columns: ["terms_id"]
+            isOneToOne: false
+            referencedRelation: "terms_and_conditions"
             referencedColumns: ["id"]
           },
         ]
