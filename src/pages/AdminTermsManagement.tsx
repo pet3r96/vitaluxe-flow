@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Download, Save } from "lucide-react";
 import { format } from "date-fns";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy';
 
@@ -110,6 +112,27 @@ export default function AdminTermsManagement() {
       setLoadingAcceptances(false);
     }
   };
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
+    totalItems: acceptances.length,
+    itemsPerPage: 25
+  });
+
+  const paginatedAcceptances = acceptances.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    if (acceptances.length > 0) {
+      goToPage(1);
+    }
+  }, [acceptances.length]);
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
@@ -286,7 +309,7 @@ export default function AdminTermsManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {acceptances.map((acceptance) => (
+                    {paginatedAcceptances.map((acceptance) => (
                       <TableRow key={acceptance.id}>
                         <TableCell>{acceptance.profiles?.name || 'N/A'}</TableCell>
                         <TableCell>{acceptance.profiles?.email || 'N/A'}</TableCell>
@@ -317,6 +340,20 @@ export default function AdminTermsManagement() {
                 </Table>
               )}
             </CardContent>
+            {acceptances.length > 0 && (
+              <div className="px-6 pb-4">
+                <DataTablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
+                  hasNextPage={hasNextPage}
+                  hasPrevPage={hasPrevPage}
+                  totalItems={acceptances.length}
+                  startIndex={startIndex}
+                  endIndex={Math.min(endIndex, acceptances.length)}
+                />
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>
