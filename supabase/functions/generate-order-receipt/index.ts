@@ -254,7 +254,7 @@ serve(async (req) => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     const displaySubtotal = order.subtotal_before_discount || subtotal;
-    doc.text('Subtotal:', pageWidth - 65, yPos);
+    doc.text('Subtotal:', pageWidth - 100, yPos);
     doc.text(`$${displaySubtotal.toFixed(2)}`, colX.total, yPos, { align: 'right' });
 
     yPos += 6;
@@ -262,7 +262,7 @@ serve(async (req) => {
     // Discount (if applicable)
     if (order.discount_percentage && order.discount_percentage > 0) {
       doc.setTextColor(0, 128, 0);
-      doc.text(`Discount (${order.discount_code} - ${order.discount_percentage}%):`, pageWidth - 65, yPos);
+      doc.text(`Discount (${order.discount_code} - ${order.discount_percentage}%):`, pageWidth - 100, yPos);
       doc.text(`-$${order.discount_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
       doc.setTextColor(0, 0, 0);
       yPos += 6;
@@ -273,7 +273,7 @@ serve(async (req) => {
     // Total
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text('TOTAL:', pageWidth - 65, yPos);
+    doc.text('TOTAL:', pageWidth - 100, yPos);
     doc.text(`$${order.total_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
 
     // Savings note
