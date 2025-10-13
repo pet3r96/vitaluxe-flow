@@ -59,14 +59,40 @@ export default function AcceptTerms() {
     fetchTerms();
   }, [user, effectiveRole, isImpersonating, navigate]);
 
+  useEffect(() => {
+    const scrollAreaRoot = scrollRef.current;
+    if (!scrollAreaRoot) return;
+    
+    const viewport = scrollAreaRoot.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    if (!viewport) return;
+
+    viewport.addEventListener('scroll', handleScroll);
+    
+    // Initial check in case content is short enough to not need scrolling
+    handleScroll();
+    
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [terms]);
+
   const handleScroll = () => {
-    const container = scrollRef.current;
-    if (!container) return;
+    const scrollAreaRoot = scrollRef.current;
+    if (!scrollAreaRoot) return;
+    
+    // Get the actual scrollable viewport inside ScrollArea
+    const viewport = scrollAreaRoot.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    if (!viewport) return;
 
-    const scrollTop = container.scrollTop;
-    const scrollHeight = container.scrollHeight - container.clientHeight;
+    const scrollTop = viewport.scrollTop;
+    const scrollHeight = viewport.scrollHeight - viewport.clientHeight;
+    
+    // Prevent division by zero
+    if (scrollHeight <= 0) {
+      setScrollProgress(100);
+      setHasScrolledToBottom(true);
+      return;
+    }
+    
     const progress = (scrollTop / scrollHeight) * 100;
-
     setScrollProgress(progress);
 
     // Consider scrolled to bottom if within 50px
@@ -177,7 +203,6 @@ export default function AcceptTerms() {
           <ScrollArea 
             ref={scrollRef}
             className="h-[400px] w-full border rounded-md p-4"
-            onScrollCapture={handleScroll}
           >
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown>{terms.content}</ReactMarkdown>
