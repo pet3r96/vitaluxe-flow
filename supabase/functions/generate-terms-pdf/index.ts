@@ -147,7 +147,7 @@ serve(async (req) => {
       }
     });
 
-    let yPos = 2.5;
+    let yPos = 2.75;
     const pageHeight = 10.5;
     const leftMargin = 0.5;
     const rightMargin = 8.0;
