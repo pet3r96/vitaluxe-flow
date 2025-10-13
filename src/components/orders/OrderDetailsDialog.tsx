@@ -16,6 +16,7 @@ import { CancelOrderDialog } from "./CancelOrderDialog";
 import { ReportNotesSection } from "./ReportNotesSection";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -36,9 +37,28 @@ export const OrderDetailsDialog = ({
 
   const handleDownloadPrescription = async (prescriptionUrl: string, patientName: string) => {
     try {
-      const response = await fetch(prescriptionUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      console.log('Starting prescription download:', { prescriptionUrl, patientName });
+      
+      // Extract filename from the signed URL
+      const urlParts = prescriptionUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1].split('?')[0];
+      
+      // Use Supabase client to download - handles auth and CORS properly
+      const { data, error } = await supabase.storage
+        .from('prescriptions')
+        .download(fileName);
+      
+      if (error) {
+        console.error('Supabase storage download error:', error);
+        throw new Error(`Storage error: ${error.message}`);
+      }
+      
+      if (!data) {
+        throw new Error('No data received from storage');
+      }
+      
+      // Create blob URL and trigger download
+      const url = window.URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
       a.download = `prescription_${patientName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
@@ -46,11 +66,37 @@ export const OrderDetailsDialog = ({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      
+      console.log('Prescription downloaded successfully');
+      
+      toast({
+        title: "Download Complete",
+        description: "Prescription downloaded successfully.",
+      });
+      
     } catch (error) {
       console.error('Error downloading prescription:', error);
+      
+      // Log to backend error system
+      await supabase.functions.invoke('log-error', {
+        body: {
+          action_type: 'client_error',
+          entity_type: 'prescription_download_error',
+          details: {
+            message: error instanceof Error ? error.message : String(error),
+            prescriptionUrl,
+            patientName,
+            userId: effectiveUserId,
+            userRole: effectiveRole,
+            timestamp: new Date().toISOString(),
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        },
+      });
+      
       toast({
         title: "Download Failed",
-        description: "Failed to download prescription. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to download prescription. Please try again.",
         variant: "destructive",
       });
     }

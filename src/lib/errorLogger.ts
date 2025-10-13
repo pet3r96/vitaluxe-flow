@@ -28,6 +28,30 @@ const logError = async (data: ErrorLogData) => {
   }
 };
 
+export const logApplicationError = async (
+  errorType: string,
+  error: Error | unknown,
+  context?: Record<string, any>
+) => {
+  const errorData: ErrorLogData = {
+    action_type: 'client_error',
+    entity_type: errorType,
+    details: {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      url: window.location.href,
+      browser: navigator.userAgent,
+      timestamp: new Date().toISOString(),
+      ...context,
+    },
+  };
+  
+  await logError(errorData);
+  
+  // Also log to console for developer visibility
+  console.error(`[${errorType}]`, error, context);
+};
+
 export const initializeErrorHandlers = () => {
   // Handle unhandled JavaScript errors
   window.onerror = (message, source, lineno, colno, error) => {
