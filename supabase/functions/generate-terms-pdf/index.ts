@@ -31,10 +31,35 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { terms_id, signature_name } = await req.json();
+    const { terms_id, signature_name, target_user_id } = await req.json();
 
     if (!terms_id || !signature_name) {
       throw new Error('Missing required fields');
+    }
+
+    // Determine the target user (for impersonation support)
+    const actingUser = user;
+    const targetUserId = target_user_id || user.id;
+
+    // If impersonating (target_user_id provided and different from acting user)
+    if (target_user_id && target_user_id !== user.id) {
+      // Verify the acting user is an admin
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (roleError || !roleData) {
+        throw new Error('Unauthorized: Only admins can accept terms on behalf of other users');
+      }
+
+      // Additional check: only allow the specific authorized admin
+      const { data: userData } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (userData?.user?.email !== 'admin@vitaluxeservice.com') {
+        throw new Error('Unauthorized: You are not authorized to perform impersonation');
+      }
     }
 
     // Fetch terms content
@@ -48,11 +73,11 @@ serve(async (req) => {
       throw new Error('Terms not found');
     }
 
-    // Fetch user profile for validation
+    // Fetch user profile for the target user
     const { data: profile } = await supabase
       .from('profiles')
       .select('name, email')
-      .eq('id', user.id)
+      .eq('id', targetUserId)
       .single();
 
     // Get client info
@@ -125,18 +150,21 @@ serve(async (req) => {
 
     // Add footer info
     doc.setFontSize(8);
-    doc.text(`Signed by: ${profile?.name || user.email}`, 0.5, 3.5);
-    doc.text(`Email: ${user.email}`, 0.5, 3.7);
+    doc.text(`Signed by: ${profile?.name || profile?.email}`, 0.5, 3.5);
+    doc.text(`Email: ${profile?.email}`, 0.5, 3.7);
     doc.text(`Date/Time: ${new Date().toISOString()}`, 0.5, 3.9);
     doc.text(`IP Address: ${ipAddress}`, 0.5, 4.1);
     doc.text(`Terms Version: ${terms.version}`, 0.5, 4.3);
+    if (target_user_id && target_user_id !== actingUser.id) {
+      doc.text(`Accepted by Admin: ${actingUser.email}`, 0.5, 4.5);
+    }
 
     // Generate PDF as base64
     const pdfBase64 = doc.output('datauristring').split(',')[1];
     const pdfBytes = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
 
-    // Upload to storage
-    const fileName = `${user.id}/terms_${Date.now()}.pdf`;
+    // Upload to storage (use target user's folder)
+    const fileName = `${targetUserId}/terms_${Date.now()}.pdf`;
     const { error: uploadError } = await supabase.storage
       .from('terms-signed')
       .upload(fileName, pdfBytes, {
@@ -149,11 +177,11 @@ serve(async (req) => {
       throw new Error('Failed to upload PDF');
     }
 
-    // Record acceptance in database
+    // Record acceptance in database (for target user)
     const { data: acceptance, error: acceptanceError } = await supabase
       .from('user_terms_acceptances')
       .insert({
-        user_id: user.id,
+        user_id: targetUserId,
         terms_id: terms.id,
         role: terms.role,
         terms_version: terms.version,
@@ -170,11 +198,11 @@ serve(async (req) => {
       throw new Error('Failed to record acceptance');
     }
 
-    // Update user_password_status
+    // Update user_password_status (for target user)
     await supabase
       .from('user_password_status')
       .update({ terms_accepted: true })
-      .eq('user_id', user.id);
+      .eq('user_id', targetUserId);
 
     // Get signed URL for download
     const { data: signedUrl } = await supabase.storage

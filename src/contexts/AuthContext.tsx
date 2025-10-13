@@ -261,8 +261,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkPasswordStatus = async () => {
     if (!user) return;
 
-    // Admins are exempt from both password change and terms acceptance
-    if (actualRole === 'admin') {
+    // Only real admins (not impersonating) are exempt from both password change and terms acceptance
+    if (effectiveRole === 'admin' && !isImpersonating) {
       setMustChangePassword(false);
       setTermsAccepted(true);
       return;
@@ -272,7 +272,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase
         .from('user_password_status')
         .select('must_change_password, terms_accepted')
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .maybeSingle();
 
       if (error) {
@@ -286,6 +286,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error in checkPasswordStatus:', error);
     }
   };
+
+  // Re-check password status when impersonation changes
+  useEffect(() => {
+    if (user && effectiveUserId && effectiveRole) {
+      checkPasswordStatus();
+    }
+  }, [user, effectiveUserId, effectiveRole]);
 
   const signIn = async (email: string, password: string) => {
     try {

@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading, mustChangePassword, termsAccepted, effectiveRole } = useAuth();
+  const { user, loading, mustChangePassword, termsAccepted, effectiveRole, isImpersonating } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -43,12 +43,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [user, loading, mustChangePassword, termsAccepted, effectiveRole, location.pathname, navigate]);
 
-  // Prevent admins from accessing the terms page
+  // Prevent admins from accessing the terms page (unless impersonating)
   useEffect(() => {
-    if (!loading && user && effectiveRole === 'admin' && location.pathname === '/accept-terms') {
+    if (!loading && user && effectiveRole === 'admin' && !isImpersonating && location.pathname === '/accept-terms') {
       navigate('/');
     }
-  }, [loading, user, effectiveRole, location.pathname, navigate]);
+  }, [loading, user, effectiveRole, isImpersonating, location.pathname, navigate]);
 
   if (loading) {
     return (

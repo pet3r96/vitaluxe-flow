@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 
 export default function AcceptTerms() {
-  const { user, userRole, checkPasswordStatus } = useAuth();
+  const { user, effectiveRole, effectiveUserId, isImpersonating, impersonatedUserName, checkPasswordStatus } = useAuth();
   const navigate = useNavigate();
   
   const [terms, setTerms] = useState<any>(null);
@@ -26,21 +26,22 @@ export default function AcceptTerms() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Redirect admins away from this page
+  // Redirect admins away from this page (unless impersonating)
   useEffect(() => {
-    if (userRole === 'admin') {
+    if (effectiveRole === 'admin' && !isImpersonating) {
+      setLoading(false);
       navigate('/');
     }
-  }, [userRole, navigate]);
+  }, [effectiveRole, isImpersonating, navigate]);
 
   useEffect(() => {
-    if (!user || !userRole || userRole === 'admin') return;
+    if (!user || !effectiveRole || (effectiveRole === 'admin' && !isImpersonating)) return;
 
     const fetchTerms = async () => {
       const { data, error } = await supabase
         .from('terms_and_conditions')
         .select('*')
-        .eq('role', userRole as any)
+        .eq('role', effectiveRole as any)
         .maybeSingle();
 
       if (error) {
@@ -56,7 +57,7 @@ export default function AcceptTerms() {
     };
 
     fetchTerms();
-  }, [user, userRole, navigate]);
+  }, [user, effectiveRole, isImpersonating, navigate]);
 
   const handleScroll = () => {
     const container = scrollRef.current;
@@ -93,14 +94,17 @@ export default function AcceptTerms() {
       const { data, error } = await supabase.functions.invoke('generate-terms-pdf', {
         body: {
           terms_id: terms.id,
-          signature_name: signatureName.trim()
+          signature_name: signatureName.trim(),
+          target_user_id: isImpersonating ? effectiveUserId : undefined,
         }
       });
 
       if (error) throw error;
 
       if (data.success) {
-        toast.success("Terms accepted successfully");
+        toast.success(isImpersonating 
+          ? `Terms accepted for ${impersonatedUserName || 'impersonated user'}!`
+          : "Terms accepted successfully!");
         await checkPasswordStatus();
         navigate("/");
       } else {
