@@ -95,9 +95,9 @@ serve(async (req) => {
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
       doc.text(`Page ${pageNum} of ${totalPages}`, 4.25, 10.5, null, { align: 'center' });
-      doc.text('VitaLuxe - Confidential Agreement', 0.75, 10.5);
+      doc.text('VitaLuxe - Confidential Agreement', 0.5, 10.5);
       doc.setFontSize(7);
-      doc.text(`Document Version ${terms.version}`, 7.75, 10.5, null, { align: 'right' });
+      doc.text(`Document Version ${terms.version}`, 8.0, 10.5, null, { align: 'right' });
     };
 
     // Professional Header
@@ -111,9 +111,9 @@ serve(async (req) => {
     // Document Title with Border
     doc.setDrawColor(200, 166, 75);
     doc.setLineWidth(0.03);
-    doc.rect(0.75, 1.25, 7, 0.7);
+    doc.rect(0.5, 1.25, 7.5, 0.8);
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(18);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text(terms.title.toUpperCase(), 4.25, 1.7, null, { align: 'center' });
 
@@ -145,9 +145,9 @@ serve(async (req) => {
 
     let yPos = 2.3;
     const pageHeight = 10.5;
-    const leftMargin = 0.75;
-    const rightMargin = 7.75;
-    const contentWidth = rightMargin - leftMargin;
+    const leftMargin = 0.5;
+    const rightMargin = 8.0;
+    const contentWidth = 7.5;
     let pageNum = 1;
 
     contentLines.forEach((line) => {
@@ -178,7 +178,7 @@ serve(async (req) => {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(51, 51, 51);
         
-        const wrappedLines = doc.splitTextToSize(bulletText, contentWidth - 0.3);
+        const wrappedLines = doc.splitTextToSize(bulletText, 7.0);
         doc.text('•', leftMargin + 0.1, yPos);
         doc.text(wrappedLines, leftMargin + 0.3, yPos);
         yPos += wrappedLines.length * 0.18;
@@ -189,7 +189,7 @@ serve(async (req) => {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(51, 51, 51);
         
-        const wrappedLines = doc.splitTextToSize(text, contentWidth);
+        const wrappedLines = doc.splitTextToSize(text, 7.5);
         doc.text(wrappedLines, leftMargin, yPos);
         yPos += wrappedLines.length * 0.18;
         
@@ -207,12 +207,12 @@ serve(async (req) => {
 
     // Decorative background
     doc.setFillColor(250, 250, 250);
-    doc.rect(0.75, 1.5, 7, 7.5, 'F');
+    doc.rect(0.5, 1.5, 7.5, 7.5, 'F');
     
     // Border
     doc.setDrawColor(200, 166, 75);
     doc.setLineWidth(0.04);
-    doc.rect(0.75, 1.5, 7, 7.5);
+    doc.rect(0.5, 1.5, 7.5, 7.5);
 
     // Title
     doc.setFontSize(18);
@@ -318,9 +318,9 @@ serve(async (req) => {
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.text(`Page ${i} of ${totalPages}`, 4.25, 10.5, null, { align: 'center' });
-        doc.text('VitaLuxe - Confidential Agreement', 0.75, 10.5);
+        doc.text('VitaLuxe - Confidential Agreement', 0.5, 10.5);
         doc.setFontSize(7);
-        doc.text(`Document Version ${terms.version}`, 7.75, 10.5, null, { align: 'right' });
+        doc.text(`Document Version ${terms.version}`, 8.0, 10.5, null, { align: 'right' });
       }
     }
 
