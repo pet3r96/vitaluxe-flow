@@ -277,52 +277,16 @@ serve(async (req) => {
       </html>
     `;
 
-    // Convert HTML to text-based prescription (simplified approach)
-    // In production, you would use a proper HTML-to-PDF library
-    const prescriptionText = `
-PRESCRIPTION
-============
-
-DEA# ${provider_dea || 'N/A'}    License# ${provider_license || 'N/A'}    NPI# ${provider_npi}
-
-${provider_name}
-${practice_name}
-${practice_address}
-
-PATIENT INFORMATION
--------------------
-Name: ${patient_name}               DOB: ${patient_dob || 'N/A'}
-Address: ${patient_address || 'N/A'}   Age: ${patient_age || 'N/A'}
-Allergies: ${patient_allergies || 'NKDA'}  Sex: ${patient_sex || 'N/A'}
-Date: ${date}
-
-℞
-
-${product_name} ${dosage || ''}
-Sig: ${sig || 'As directed by prescriber'}
-Quantity: ${quantity || '1'}
-${notes ? `Notes: ${notes}` : ''}
-
-${signature ? `Electronic Signature: ${signature}` : ''}
-___________________________________
-Prescriber Signature
-
-Refills: _______    [ ] Dispense as Written    [ ] May Substitute
-
-This prescription was generated electronically on ${date}.
-For pharmacy use only. Verify prescriber credentials before dispensing.
-    `.trim();
-
-    // Create a Blob from the text content
-    const fileName = `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+    // Use the HTML prescription format
+    const fileName = `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.html`;
     const textEncoder = new TextEncoder();
-    const prescriptionData = textEncoder.encode(prescriptionText);
+    const prescriptionData = textEncoder.encode(html);
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('prescriptions')
       .upload(fileName, prescriptionData, {
-        contentType: 'text/plain',
+        contentType: 'text/html',
         upsert: false
       });
 
