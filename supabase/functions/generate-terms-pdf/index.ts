@@ -90,72 +90,238 @@ serve(async (req) => {
       format: 'letter'
     });
 
-    // Add title
-    doc.setFontSize(20);
+    // Helper function to add footer to each page
+    const addPageFooter = (pageNum: number, totalPages: number) => {
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Page ${pageNum} of ${totalPages}`, 4.25, 10.5, null, { align: 'center' });
+      doc.text('VitaLuxe - Confidential Agreement', 0.75, 10.5);
+      doc.setFontSize(7);
+      doc.text(`Document Version ${terms.version}`, 7.75, 10.5, null, { align: 'right' });
+    };
+
+    // Professional Header
+    doc.setFillColor(200, 166, 75); // Gold color
+    doc.rect(0, 0, 8.5, 1, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(26);
     doc.setFont('helvetica', 'bold');
-    doc.text(terms.title, 0.5, 0.75);
+    doc.text('VITALUXE', 4.25, 0.65, null, { align: 'center' });
 
-    // Add content (parse markdown to plain text for PDF)
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    
-    const content = terms.content
-      .replace(/^#+ /gm, '') // Remove markdown headers
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-      .replace(/\*(.*?)\*/g, '$1'); // Remove italics
+    // Document Title with Border
+    doc.setDrawColor(200, 166, 75);
+    doc.setLineWidth(0.03);
+    doc.rect(0.75, 1.25, 7, 0.7);
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(terms.title.toUpperCase(), 4.25, 1.7, null, { align: 'center' });
 
-    const lines = doc.splitTextToSize(content, 7.5);
-    let yPos = 1.25;
-    const pageHeight = 10.5;
+    // Parse markdown content with enhanced formatting
+    const contentLines: string[] = [];
+    const sections = terms.content.split(/(?=^## )/gm);
     
-    lines.forEach((line: string) => {
-      if (yPos > pageHeight - 2) {
-        doc.addPage();
-        yPos = 0.75;
+    sections.forEach((section: string) => {
+      if (section.trim()) {
+        // Extract section header
+        const headerMatch = section.match(/^## (.+)/);
+        if (headerMatch) {
+          contentLines.push(`SECTION_HEADER:${headerMatch[1]}`);
+          const body = section.replace(/^## .+\n/, '').trim();
+          
+          // Process bullets and regular text
+          const bodyLines = body.split('\n');
+          bodyLines.forEach((line: string) => {
+            if (line.trim().startsWith('-')) {
+              contentLines.push(`BULLET:${line.trim().substring(1).trim()}`);
+            } else if (line.trim()) {
+              contentLines.push(`TEXT:${line.trim()}`);
+            }
+          });
+          contentLines.push('SPACING');
+        }
       }
-      doc.text(line, 0.5, yPos);
-      yPos += 0.2;
     });
 
-    // Add signature section on new page
+    let yPos = 2.3;
+    const pageHeight = 10.5;
+    const leftMargin = 0.75;
+    const rightMargin = 7.75;
+    const contentWidth = rightMargin - leftMargin;
+    let pageNum = 1;
+
+    contentLines.forEach((line) => {
+      // Check if we need a new page
+      if (yPos > pageHeight - 1) {
+        addPageFooter(pageNum, 999); // Will update later
+        doc.addPage();
+        pageNum++;
+        yPos = 0.75;
+      }
+
+      if (line.startsWith('SECTION_HEADER:')) {
+        const headerText = line.replace('SECTION_HEADER:', '');
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text(headerText, leftMargin, yPos);
+        
+        // Underline with gold color
+        doc.setDrawColor(200, 166, 75);
+        doc.setLineWidth(0.015);
+        doc.line(leftMargin, yPos + 0.08, rightMargin, yPos + 0.08);
+        yPos += 0.35;
+        
+      } else if (line.startsWith('BULLET:')) {
+        const bulletText = line.replace('BULLET:', '');
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 51, 51);
+        
+        const wrappedLines = doc.splitTextToSize(bulletText, contentWidth - 0.3);
+        doc.text('•', leftMargin + 0.1, yPos);
+        doc.text(wrappedLines, leftMargin + 0.3, yPos);
+        yPos += wrappedLines.length * 0.18;
+        
+      } else if (line.startsWith('TEXT:')) {
+        const text = line.replace('TEXT:', '');
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 51, 51);
+        
+        const wrappedLines = doc.splitTextToSize(text, contentWidth);
+        doc.text(wrappedLines, leftMargin, yPos);
+        yPos += wrappedLines.length * 0.18;
+        
+      } else if (line === 'SPACING') {
+        yPos += 0.25;
+      }
+    });
+
+    // Add footer to last content page
+    addPageFooter(pageNum, pageNum + 1);
+
+    // SIGNATURE PAGE - Always on new page
     doc.addPage();
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ACCEPTANCE AND SIGNATURE', 0.5, 1);
+    pageNum++;
 
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text('I acknowledge that I have read and understood the above terms and conditions.', 0.5, 1.5);
-    doc.text('I agree to be bound by these terms.', 0.5, 1.75);
-
-    // Signature line
-    doc.setLineWidth(0.01);
-    doc.line(0.5, 2.75, 4, 2.75);
-    doc.setFontSize(10);
-    doc.text('Signature', 0.5, 3);
+    // Decorative background
+    doc.setFillColor(250, 250, 250);
+    doc.rect(0.75, 1.5, 7, 7.5, 'F');
     
-    // Add typed signature
-    doc.setFontSize(16);
-    doc.setFont('courier', 'italic');
-    doc.text(signature_name, 0.5, 2.65);
+    // Border
+    doc.setDrawColor(200, 166, 75);
+    doc.setLineWidth(0.04);
+    doc.rect(0.75, 1.5, 7, 7.5);
 
-    // Date line
-    doc.setFont('helvetica', 'normal');
+    // Title
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('AGREEMENT ACCEPTANCE', 4.25, 2, null, { align: 'center' });
+
+    // Decorative line
+    doc.setDrawColor(200, 166, 75);
+    doc.setLineWidth(0.02);
+    doc.line(2, 2.2, 6.5, 2.2);
+
+    // Acceptance text
     doc.setFontSize(11);
-    doc.line(5, 2.75, 7.5, 2.75);
-    doc.setFontSize(10);
-    doc.text('Date', 5, 3);
-    doc.text(new Date().toLocaleDateString(), 5, 2.65);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 51, 51);
+    const acceptanceText = `I, ${signature_name}, hereby acknowledge that I have read, understood, and agree to be bound by the terms and conditions set forth in this agreement.`;
+    const wrappedAcceptance = doc.splitTextToSize(acceptanceText, 6);
+    doc.text(wrappedAcceptance, 1.25, 2.7);
 
-    // Add footer info
+    // Signature boxes
+    const sigBoxY = 4.2;
+    
+    // Signature box
+    doc.setDrawColor(100, 100, 100);
+    doc.setLineWidth(0.02);
+    doc.rect(1.25, sigBoxY, 3.5, 1.2);
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Electronic Signature', 1.35, sigBoxY - 0.1);
+    
+    // Add signature
+    doc.setFontSize(18);
+    doc.setFont('courier', 'italic');
+    doc.setTextColor(0, 0, 139);
+    doc.text(signature_name, 2.9, sigBoxY + 0.7, null, { align: 'center' });
+
+    // Date box
+    doc.setDrawColor(100, 100, 100);
+    doc.rect(5.25, sigBoxY, 2.5, 1.2);
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Date', 5.35, sigBoxY - 0.1);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text(new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }), 6.5, sigBoxY + 0.7, null, { align: 'center' });
+
+    // Signatory information section
+    const infoY = 6;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('SIGNATORY INFORMATION', 1.25, infoY);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Name:`, 1.25, infoY + 0.3);
+    doc.text(`${profile?.name || 'N/A'}`, 2.5, infoY + 0.3);
+    
+    doc.text(`Email:`, 1.25, infoY + 0.55);
+    doc.text(`${profile?.email}`, 2.5, infoY + 0.55);
+    
+    doc.text(`Role:`, 1.25, infoY + 0.8);
+    doc.text(`${terms.role.charAt(0).toUpperCase() + terms.role.slice(1)}`, 2.5, infoY + 0.8);
+
+    // Acceptance metadata
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('ACCEPTANCE METADATA', 1.25, infoY + 1.3);
+
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text(`Signed by: ${profile?.name || profile?.email}`, 0.5, 3.5);
-    doc.text(`Email: ${profile?.email}`, 0.5, 3.7);
-    doc.text(`Date/Time: ${new Date().toISOString()}`, 0.5, 3.9);
-    doc.text(`IP Address: ${ipAddress}`, 0.5, 4.1);
-    doc.text(`Terms Version: ${terms.version}`, 0.5, 4.3);
+    doc.text(`Timestamp: ${new Date().toISOString()}`, 1.25, infoY + 1.55);
+    doc.text(`IP Address: ${ipAddress}`, 1.25, infoY + 1.75);
+    doc.text(`User Agent: ${userAgent.substring(0, 60)}`, 1.25, infoY + 1.95);
     if (target_user_id && target_user_id !== actingUser.id) {
-      doc.text(`Accepted by Admin: ${actingUser.email}`, 0.5, 4.5);
+      doc.text(`Accepted by Admin: ${actingUser.email}`, 1.25, infoY + 2.15);
+    }
+
+    // Legal disclaimer
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont('helvetica', 'italic');
+    const disclaimer = 'This document constitutes a legally binding electronic agreement. By providing an electronic signature above, you acknowledge your consent to be bound by these terms.';
+    const wrappedDisclaimer = doc.splitTextToSize(disclaimer, 6);
+    doc.text(wrappedDisclaimer, 1.25, 8.5);
+
+    // Update total page count on all pages
+    const totalPages = pageNum;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      if (i < totalPages) {
+        addPageFooter(i, totalPages);
+      } else {
+        // Footer for signature page
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Page ${i} of ${totalPages}`, 4.25, 10.5, null, { align: 'center' });
+        doc.text('VitaLuxe - Confidential Agreement', 0.75, 10.5);
+        doc.setFontSize(7);
+        doc.text(`Document Version ${terms.version}`, 7.75, 10.5, null, { align: 'right' });
+      }
     }
 
     // Generate PDF as base64
