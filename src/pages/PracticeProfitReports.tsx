@@ -54,7 +54,9 @@ const PracticeProfitReports = () => {
   });
 
   // Calculate summary metrics
-  const totalSpent = orders?.reduce((sum, order) => sum + parseFloat(order.total_amount?.toString() || '0'), 0) || 0;
+  const totalSpent = orders
+    ?.filter(order => order.status !== 'cancelled')
+    .reduce((sum, order) => sum + parseFloat(order.total_amount?.toString() || '0'), 0) || 0;
   
   const pendingAmount = orders
     ?.filter(order => ['pending', 'processing'].includes(order.status || ''))

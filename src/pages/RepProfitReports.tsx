@@ -60,10 +60,12 @@ const RepProfitReports = () => {
     enabled: !!repData?.id,
   });
 
-  const totalProfit = profitDetails?.reduce((sum, item) => {
-    const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
-    return sum + (parseFloat(profit?.toString() || '0'));
-  }, 0) || 0;
+  const totalProfit = profitDetails
+    ?.filter(item => item.orders?.status !== 'cancelled')
+    .reduce((sum, item) => {
+      const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
+      return sum + (parseFloat(profit?.toString() || '0'));
+    }, 0) || 0;
 
   const pendingProfit = profitDetails?.filter(item => item.orders?.status === 'pending' || item.orders?.status === 'processing')
     .reduce((sum, item) => {

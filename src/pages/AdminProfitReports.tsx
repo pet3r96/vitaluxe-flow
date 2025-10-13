@@ -38,22 +38,24 @@ const AdminProfitReports = () => {
   });
 
   const totalAdminProfit = useMemo(() => 
-    profitDetails?.reduce((sum, item) => 
-      sum + parseFloat(item.admin_profit?.toString() || '0'), 0
-    ) || 0,
+    profitDetails
+      ?.filter(item => item.orders?.status !== 'cancelled')
+      .reduce((sum, item) => 
+        sum + parseFloat(item.admin_profit?.toString() || '0'), 0
+      ) || 0,
     [profitDetails]
   );
 
   const pendingAdminProfit = useMemo(() => 
     profitDetails
-      ?.filter(item => ['pending', 'processing'].includes(item.orders?.status || ''))
+      ?.filter(item => ['pending', 'processing'].includes(item.orders?.status || '') && item.orders?.status !== 'cancelled')
       .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
     [profitDetails]
   );
 
   const collectedAdminProfit = useMemo(() => 
     profitDetails
-      ?.filter(item => ['shipped', 'delivered'].includes(item.orders?.status || ''))
+      ?.filter(item => ['shipped', 'delivered'].includes(item.orders?.status || '') && item.orders?.status !== 'cancelled')
       .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
     [profitDetails]
   );
