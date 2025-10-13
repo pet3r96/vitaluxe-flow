@@ -97,7 +97,7 @@ serve(async (req) => {
       doc.text(`Page ${pageNum} of ${totalPages}`, 4.25, 10.5, null, { align: 'center' });
       doc.text('VitaLuxe - Confidential Agreement', 0.5, 10.5);
       doc.setFontSize(7);
-      doc.text(`Document Version ${terms.version}`, 8.0, 10.5, null, { align: 'right' });
+      doc.text(`Document Version ${terms.version}`, 7.95, 10.5, { align: 'right' });
     };
 
     // Professional Header
@@ -325,7 +325,7 @@ serve(async (req) => {
         doc.text(`Page ${i} of ${totalPages}`, 4.25, 10.5, null, { align: 'center' });
         doc.text('VitaLuxe - Confidential Agreement', 0.5, 10.5);
         doc.setFontSize(7);
-        doc.text(`Document Version ${terms.version}`, 8.0, 10.5, null, { align: 'right' });
+        doc.text(`Document Version ${terms.version}`, 7.95, 10.5, { align: 'right' });
       }
     }
 
