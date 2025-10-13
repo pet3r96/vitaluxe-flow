@@ -70,10 +70,9 @@ serve(async (req) => {
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text(provider_name, 4.25, 1.2, { align: 'center' });
-    doc.text(practice_name, 4.25, 1.5, { align: 'center' });
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(practice_address, 4.25, 1.75, { align: 'center' });
+    doc.text(practice_address, 4.25, 1.5, { align: 'center' });
 
     // Patient information section (grid layout)
     doc.setFontSize(11);
