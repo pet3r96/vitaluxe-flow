@@ -259,15 +259,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const checkPasswordStatus = async () => {
-    if (!user || actualRole === 'admin') {
+    if (!user) return;
+
+    // Admins are exempt from both password change and terms acceptance
+    if (actualRole === 'admin') {
       setMustChangePassword(false);
+      setTermsAccepted(true);
       return;
     }
 
     try {
       const { data, error } = await supabase
         .from('user_password_status')
-        .select('must_change_password')
+        .select('must_change_password, terms_accepted')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -277,6 +281,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setMustChangePassword(data?.must_change_password || false);
+      setTermsAccepted(data?.terms_accepted || false);
     } catch (error) {
       console.error('Error in checkPasswordStatus:', error);
     }
