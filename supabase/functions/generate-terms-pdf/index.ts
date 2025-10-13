@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
-import "https://esm.sh/jspdf@2.5.1";
+import jsPDF from "https://esm.sh/jspdf@2.5.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -85,7 +85,6 @@ serve(async (req) => {
     const userAgent = req.headers.get('user-agent') || 'unknown';
 
     // Generate PDF using jsPDF
-    const { jsPDF } = globalThis as any;
     const doc = new jsPDF({
       unit: 'in',
       format: 'letter'
