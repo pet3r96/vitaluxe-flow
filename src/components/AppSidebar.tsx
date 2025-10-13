@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   UserCog,
   AlertCircle,
+  Tag,
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,6 +42,7 @@ const menuItems = {
     { title: "Pharmacies", url: "/pharmacies", icon: Building2 },
     { title: "Orders", url: "/orders", icon: ShoppingCart },
     { title: "Reports", url: "/reports", icon: FileText },
+    { title: "Discount Codes", url: "/admin/discount-codes", icon: Tag },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Error Logs", url: "/error-logs", icon: AlertCircle },
     { title: "Terms Management", url: "/admin/terms", icon: FileText },

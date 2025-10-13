@@ -35,6 +35,7 @@ import RepProfitReports from "./pages/RepProfitReports";
 import ChangePassword from "./pages/ChangePassword";
 import AcceptTerms from "@/pages/AcceptTerms";
 import AdminTermsManagement from "@/pages/AdminTermsManagement";
+import AdminDiscountCodes from "@/pages/AdminDiscountCodes";
 import { DashboardRouter } from "./components/DashboardRouter";
 
 const queryClient = new QueryClient();
@@ -87,6 +88,7 @@ const App = () => (
                           <Route path="/admin-settings" element={<AdminSettings />} />
                           <Route path="/error-logs" element={<ErrorLogs />} />
                           <Route path="/admin/terms" element={<AdminTermsManagement />} />
+                          <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
                           <Route path="/rep-reports" element={<RepProfitReports />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
