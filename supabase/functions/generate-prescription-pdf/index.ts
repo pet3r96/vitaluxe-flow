@@ -22,10 +22,14 @@ serve(async (req) => {
       sig,
       patient_name,
       patient_dob,
+      patient_age,
       patient_address,
+      patient_allergies,
+      patient_sex,
       provider_name,
       provider_npi,
       provider_dea,
+      provider_license,
       practice_name,
       practice_address,
       date,
@@ -44,124 +48,229 @@ serve(async (req) => {
         <meta charset="UTF-8">
         <style>
           body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 20px;
-            line-height: 1.6;
+            font-family: 'Times New Roman', Times, serif;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.5in;
+            background: #f5f5dc;
+            border: 2px solid #000;
           }
-          .header {
-            border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
+          
+          .credentials-header {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            border-bottom: 2px solid #000;
+            font-weight: bold;
+            font-size: 14px;
             margin-bottom: 20px;
           }
+          
           .practice-info {
-            text-align: right;
-            color: #64748b;
-            font-size: 14px;
+            text-align: center;
+            margin-bottom: 30px;
           }
+          
+          .practice-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          
+          .practice-address {
+            font-size: 12px;
+          }
+          
+          .patient-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 30px;
+            font-size: 13px;
+          }
+          
+          .patient-field {
+            display: flex;
+            gap: 10px;
+          }
+          
+          .patient-field strong {
+            min-width: 80px;
+          }
+          
+          .rx-section {
+            display: flex;
+            align-items: flex-start;
+            margin: 40px 0;
+            min-height: 120px;
+          }
+          
           .rx-symbol {
-            font-size: 48px;
+            font-size: 120px;
+            font-family: 'Times New Roman', serif;
             font-weight: bold;
-            color: #2563eb;
-            margin: 20px 0;
+            color: #8B4513;
+            line-height: 1;
+            margin-right: 30px;
+            flex-shrink: 0;
           }
-          .section {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8fafc;
-            border-left: 4px solid #2563eb;
+          
+          .medication-info {
+            flex-grow: 1;
+            padding-top: 30px;
           }
-          .section-title {
+          
+          .medication-name {
+            font-size: 24px;
             font-weight: bold;
-            color: #1e293b;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            font-size: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #000;
+            padding: 10px;
+            border-radius: 5px;
           }
-          .content {
-            color: #334155;
+          
+          .medication-details {
+            font-size: 14px;
+            line-height: 1.8;
           }
-          .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #e2e8f0;
-            color: #64748b;
-            font-size: 12px;
+          
+          .signature-section {
+            margin-top: 80px;
+            margin-bottom: 30px;
           }
+          
+          .signature-text {
+            font-family: 'Brush Script MT', cursive;
+            font-size: 24px;
+            margin-bottom: 5px;
+            height: 30px;
+          }
+          
           .signature-line {
-            margin-top: 40px;
-            border-top: 1px solid #000;
-            width: 300px;
-          }
-          .provider-info {
+            border-top: 2px solid #000;
+            width: 100%;
             margin-top: 10px;
+            padding-top: 5px;
+            text-align: center;
             font-size: 12px;
-            color: #64748b;
+          }
+          
+          .bottom-section {
+            display: flex;
+            justify-content: space-between;
+            border-top: 2px solid #000;
+            padding-top: 15px;
+            margin-top: 30px;
+            font-size: 13px;
+          }
+          
+          .refills-section,
+          .dispense-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          
+          .checkbox {
+            width: 15px;
+            height: 15px;
+            border: 2px solid #000;
+            display: inline-block;
+          }
+          
+          .footer-note {
+            margin-top: 20px;
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
           }
         </style>
       </head>
       <body>
-        <div class="header">
-          <h1 style="margin: 0; color: #1e293b;">${practice_name}</h1>
-          <div class="practice-info">
-            ${practice_address}<br>
-            Provider: ${provider_name}<br>
-            NPI: ${provider_npi}${provider_dea ? ` | DEA: ${provider_dea}` : ''}
-          </div>
+        <div class="credentials-header">
+          <div>DEA# ${provider_dea || 'N/A'}</div>
+          <div>License# ${provider_license || 'N/A'}</div>
+          <div>NPI# ${provider_npi}</div>
         </div>
-
-        <div class="rx-symbol">℞</div>
         
-        <div style="margin: 20px 0;">
-          <strong>Date:</strong> ${date}
+        <div class="practice-info">
+          <div class="practice-name">${provider_name}</div>
+          <div class="practice-name">${practice_name}</div>
+          <div class="practice-address">${practice_address}</div>
         </div>
-
-        <div class="section">
-          <div class="section-title">Patient Information</div>
-          <div class="content">
-            <strong>Name:</strong> ${patient_name}<br>
-            ${patient_dob ? `<strong>Date of Birth:</strong> ${patient_dob}<br>` : ''}
-            ${patient_address ? `<strong>Address:</strong> ${patient_address}` : ''}
+        
+        <div class="patient-section">
+          <div class="patient-field">
+            <strong>Name:</strong>
+            <span>${patient_name}</span>
+          </div>
+          <div class="patient-field">
+            <strong>DOB:</strong>
+            <span>${patient_dob || 'N/A'}</span>
+          </div>
+          <div class="patient-field">
+            <strong>Address:</strong>
+            <span>${patient_address || 'N/A'}</span>
+          </div>
+          <div class="patient-field">
+            <strong>Age:</strong>
+            <span>${patient_age || 'N/A'}</span>
+          </div>
+          <div class="patient-field">
+            <strong>Allergies:</strong>
+            <span>${patient_allergies || 'NKDA'}</span>
+          </div>
+          <div class="patient-field">
+            <strong>Sex:</strong>
+            <span>${patient_sex || 'N/A'}</span>
+          </div>
+          <div class="patient-field">
+            <strong>Weight:</strong>
+            <span>_____ lbs</span>
+          </div>
+          <div class="patient-field">
+            <strong>Date:</strong>
+            <span>${date}</span>
           </div>
         </div>
-
-        <div class="section">
-          <div class="section-title">Prescription</div>
-          <div class="content">
-            <strong>${product_name}</strong><br>
-            ${dosage ? `<strong>Dosage:</strong> ${dosage}<br>` : ''}
-            ${quantity ? `<strong>Quantity:</strong> ${quantity}<br>` : ''}
+        
+        <div class="rx-section">
+          <div class="rx-symbol">℞</div>
+          <div class="medication-info">
+            <div class="medication-name">${product_name} ${dosage || ''}</div>
+            <div class="medication-details">
+              <div><strong>Sig:</strong> ${sig || 'As directed by prescriber'}</div>
+              <div><strong>Quantity:</strong> ${quantity || '1'}</div>
+              ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
+            </div>
           </div>
         </div>
-
-        <div class="section">
-          <div class="section-title">Sig (Directions for Use)</div>
-          <div class="content">
-            ${sig || 'As directed by prescriber'}
+        
+        <div class="signature-section">
+          <div class="signature-text">${signature || ''}</div>
+          <div class="signature-line">
+            Prescriber Signature
           </div>
         </div>
-
-        ${notes ? `
-        <div class="section">
-          <div class="section-title">Additional Notes</div>
-          <div class="content">
-            ${notes}
+        
+        <div class="bottom-section">
+          <div class="refills-section">
+            <strong>Refills:</strong>
+            <span class="checkbox"></span>
+            <span>_______</span>
+          </div>
+          <div class="dispense-section">
+            <span class="checkbox"></span>
+            <span>Dispense as Written</span>
+            <span style="margin-left: 30px;" class="checkbox"></span>
+            <span>May Substitute</span>
           </div>
         </div>
-        ` : ''}
-
-        <div style="margin-top: 60px;">
-          ${signature ? `<div style="font-family: 'Brush Script MT', cursive; font-size: 24px; margin-bottom: 5px;">${signature}</div>` : ''}
-          <div class="signature-line"></div>
-          <div class="provider-info">
-            ${provider_name}<br>
-            NPI: ${provider_npi}${provider_dea ? ` | DEA: ${provider_dea}` : ''}
-          </div>
-        </div>
-
-        <div class="footer">
-          This prescription was generated electronically on ${date}. 
+        
+        <div class="footer-note">
+          This prescription was generated electronically on ${date}.
           For pharmacy use only. Verify prescriber credentials before dispensing.
         </div>
       </body>
@@ -174,35 +283,31 @@ serve(async (req) => {
 PRESCRIPTION
 ============
 
-Practice: ${practice_name}
-${practice_address}
-Provider: ${provider_name}
-NPI: ${provider_npi}${provider_dea ? ` | DEA: ${provider_dea}` : ''}
+DEA# ${provider_dea || 'N/A'}    License# ${provider_license || 'N/A'}    NPI# ${provider_npi}
 
-Date: ${date}
+${provider_name}
+${practice_name}
+${practice_address}
 
 PATIENT INFORMATION
 -------------------
-Name: ${patient_name}
-${patient_dob ? `Date of Birth: ${patient_dob}` : ''}
-${patient_address ? `Address: ${patient_address}` : ''}
+Name: ${patient_name}               DOB: ${patient_dob || 'N/A'}
+Address: ${patient_address || 'N/A'}   Age: ${patient_age || 'N/A'}
+Allergies: ${patient_allergies || 'NKDA'}  Sex: ${patient_sex || 'N/A'}
+Date: ${date}
 
-PRESCRIPTION
-------------
-${product_name}
-${dosage ? `Dosage: ${dosage}` : ''}
-${quantity ? `Quantity: ${quantity}` : ''}
+℞
 
-SIG (Directions for Use)
--------------------------
-${sig || 'As directed by prescriber'}
+${product_name} ${dosage || ''}
+Sig: ${sig || 'As directed by prescriber'}
+Quantity: ${quantity || '1'}
+${notes ? `Notes: ${notes}` : ''}
 
-${notes ? `ADDITIONAL NOTES\n----------------\n${notes}\n` : ''}
-${signature ? `\nELECTRONIC SIGNATURE\n--------------------\n${signature}\n` : ''}
-
+${signature ? `Electronic Signature: ${signature}` : ''}
 ___________________________________
-${provider_name}
-NPI: ${provider_npi}${provider_dea ? ` | DEA: ${provider_dea}` : ''}
+Prescriber Signature
+
+Refills: _______    [ ] Dispense as Written    [ ] May Substitute
 
 This prescription was generated electronically on ${date}.
 For pharmacy use only. Verify prescriber credentials before dispensing.

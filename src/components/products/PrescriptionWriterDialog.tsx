@@ -98,6 +98,18 @@ export function PrescriptionWriterDialog({
 
     setIsGenerating(true);
     try {
+      // Calculate age from birth date
+      const calculateAge = (birthDate: string) => {
+        const today = new Date();
+        const birth = new Date(birthDate);
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age--;
+        }
+        return age;
+      };
+
       const { data, error } = await supabase.functions.invoke('generate-prescription-pdf', {
         body: {
           product_name: product.name,
@@ -105,10 +117,14 @@ export function PrescriptionWriterDialog({
           sig: customSig,
           patient_name: patient.name,
           patient_dob: patient.birth_date ? format(new Date(patient.birth_date), 'MM/dd/yyyy') : null,
+          patient_age: patient.birth_date ? calculateAge(patient.birth_date) : null,
           patient_address: patient.address_formatted || patient.address,
+          patient_allergies: patient.allergies,
+          patient_sex: null,
           provider_name: provider.name,
           provider_npi: provider.npi,
           provider_dea: provider.dea,
+          provider_license: provider.license_number,
           practice_name: practice.name,
           practice_address: practice.address_formatted || practice.address,
           date: format(new Date(), 'MM/dd/yyyy'),
