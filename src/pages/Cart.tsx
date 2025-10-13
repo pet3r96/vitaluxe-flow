@@ -178,7 +178,7 @@ export default function Cart() {
               <div className="space-y-2">
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-muted-foreground">Total Items:</span>
-                  <span className="font-medium">{cartLines.length}</span>
+                  <span className="font-medium">{cartLines.reduce((sum, line) => sum + (line.quantity || 1), 0)}</span>
                 </div>
                 <div className="flex justify-between text-base sm:text-lg font-bold border-t pt-2">
                   <span>Total Amount:</span>
