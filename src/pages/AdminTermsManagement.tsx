@@ -145,6 +145,7 @@ export default function AdminTermsManagement() {
 
   const downloadPDF = async (pdfUrl: string, userName: string) => {
     try {
+      // Get signed URL from Supabase
       const { data, error } = await supabase.storage
         .from('terms-signed')
         .createSignedUrl(pdfUrl, 60);
@@ -152,7 +153,25 @@ export default function AdminTermsManagement() {
       if (error) throw error;
 
       if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
+        // Fetch the PDF as a blob
+        const response = await fetch(data.signedUrl);
+        if (!response.ok) throw new Error('Failed to fetch PDF');
+        
+        const blob = await response.blob();
+        
+        // Create blob URL and trigger download
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `${userName.replace(/[^a-z0-9]/gi, '_')}_terms_acceptance.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+        
+        toast.success("PDF downloaded successfully");
       }
     } catch (error: any) {
       console.error('Error downloading PDF:', error);
