@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logApplicationError } from "@/lib/errorLogger";
 
 interface ReceiptDownloadButtonProps {
   orderId: string;
@@ -64,6 +65,15 @@ export const ReceiptDownloadButton = ({
 
     } catch (error: any) {
       console.error('Receipt download error:', error);
+      
+      // Log to admin error logs
+      await logApplicationError('receipt_download', error, {
+        orderId,
+        practiceName,
+        orderDate,
+        component: 'ReceiptDownloadButton',
+      });
+      
       toast({
         title: "Download failed",
         description: error.message || "Failed to download receipt. Please try again.",
