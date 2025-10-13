@@ -680,6 +680,18 @@ export const PatientSelectionDialog = ({
                     </div>
                   </div>
 
+                  {/* Order Notes */}
+                  <div className="grid gap-3">
+                    <Label htmlFor="notes">Order Notes (Optional)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Add any special instructions or notes for this order..."
+                      value={orderNotes}
+                      onChange={(e) => setOrderNotes(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
                   {/* Show upload input if upload method selected - Only for RX Required */}
                   {product?.requires_prescription && prescriptionMethod === 'upload' && (
                     <div className="space-y-3 p-4 border-2 border-orange-300 rounded-lg bg-orange-50/50">
@@ -795,18 +807,6 @@ export const PatientSelectionDialog = ({
                   )}
                 </div>
               )}
-
-              {/* Order Notes - Always visible on Page 2 */}
-              <div className="grid gap-3 border-t pt-4">
-                <Label htmlFor="notes">Order Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Add any special instructions or notes for this order..."
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
             </>
           )}
         </div>
