@@ -14,7 +14,7 @@ interface PrescriptionWriterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: any;
-  patient: any;
+  patient: any | null;
   provider: any;
   practice: any;
   quantity: number;
@@ -78,8 +78,8 @@ export function PrescriptionWriterDialog({
     setDispensingOption(initialDispensingOption || "dispense_as_written");
   }, [initialDispensingOption]);
 
-  // Show loading state if data is not ready
-  if (!provider || !practice || !patient) {
+  // Show loading state if data is not ready (patient is optional for office dispensing)
+  if (!provider || !practice) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl">
@@ -132,12 +132,13 @@ export function PrescriptionWriterDialog({
           product_name: product.name,
           dosage: customDosage,
           sig: customSig,
-          patient_name: patient.name,
-          patient_dob: patient.birth_date ? format(new Date(patient.birth_date), 'MM/dd/yyyy') : null,
-          patient_age: patient.birth_date ? calculateAge(patient.birth_date) : null,
-          patient_address: patient.address_formatted || patient.address,
-          patient_allergies: patient.allergies,
+          patient_name: patient ? patient.name : 'DISPENSING IN OFFICE ONLY',
+          patient_dob: patient?.birth_date ? format(new Date(patient.birth_date), 'MM/dd/yyyy') : null,
+          patient_age: patient?.birth_date ? calculateAge(patient.birth_date) : null,
+          patient_address: patient ? (patient.address_formatted || patient.address) : null,
+          patient_allergies: patient?.allergies || null,
           patient_sex: null,
+          is_office_dispensing: !patient,
           provider_name: provider.name,
           provider_npi: provider.npi,
           provider_dea: provider.dea,
@@ -226,19 +227,29 @@ export function PrescriptionWriterDialog({
             </div>
           </div>
 
-          {/* Read-only Patient Info */}
-          <div className="rounded-lg border bg-muted/50 p-4">
-            <h3 className="font-semibold mb-2">Patient Information</h3>
-            <div className="text-sm space-y-1 text-muted-foreground">
-              <p><strong>Name:</strong> {patient.name}</p>
-              {patient.birth_date && (
-                <p><strong>Date of Birth:</strong> {format(new Date(patient.birth_date), 'MM/dd/yyyy')}</p>
-              )}
-              {patient.address_formatted && (
-                <p><strong>Address:</strong> {patient.address_formatted}</p>
-              )}
+          {/* Patient Info - Show banner for office dispensing or patient details */}
+          {patient ? (
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <h3 className="font-semibold mb-2">Patient Information</h3>
+              <div className="text-sm space-y-1 text-muted-foreground">
+                <p><strong>Name:</strong> {patient.name}</p>
+                {patient.birth_date && (
+                  <p><strong>Date of Birth:</strong> {format(new Date(patient.birth_date), 'MM/dd/yyyy')}</p>
+                )}
+                {patient.address_formatted && (
+                  <p><strong>Address:</strong> {patient.address_formatted}</p>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-lg border bg-yellow-50 p-4">
+              <h3 className="font-semibold mb-2 text-yellow-900">Office Dispensing</h3>
+              <div className="text-sm space-y-1 text-yellow-800">
+                <p className="font-bold text-lg">DISPENSING IN OFFICE ONLY</p>
+                <p className="text-xs text-yellow-700">This prescription is for practice use. No patient-specific information required.</p>
+              </div>
+            </div>
+          )}
 
           {/* Read-only Product Info */}
           <div className="rounded-lg border bg-accent/50 p-4">

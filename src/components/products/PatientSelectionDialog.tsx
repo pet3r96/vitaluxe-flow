@@ -247,6 +247,7 @@ export const PatientSelectionDialog = ({
       return;
     }
 
+    // Only require patient selection when shipping to patient
     if (shipTo === 'patient' && !selectedPatientId) {
       toast.error("Please select a patient");
       return;
@@ -653,10 +654,9 @@ export const PatientSelectionDialog = ({
           {/* PAGE 2: Prescription & Notes Section */}
           {currentStep === 'prescription' && (
             <>
-              {shipTo === 'patient' && (
-                <div className="space-y-4">
-                  {/* Prescription Method Radio Buttons - Only for RX Required */}
-                  {product?.requires_prescription && (
+              <div className="space-y-4">
+                {/* Prescription Method Radio Buttons - Only for RX Required */}
+                {product?.requires_prescription && (
                     <div className="grid gap-3 border-b pb-4">
                       <Label className="text-base font-semibold">Prescription Method *</Label>
                       <RadioGroup value={prescriptionMethod || ""} onValueChange={(value) => setPrescriptionMethod(value as 'upload' | 'written')}>
@@ -676,7 +676,8 @@ export const PatientSelectionDialog = ({
                     </div>
                   )}
 
-                  {/* Editable SIG and Dosage Fields - Always show for patient shipments */}
+                {/* Editable SIG and Dosage Fields - Show for all orders */}
+                {shipTo === 'patient' && (
                   <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
                     <h3 className="font-semibold text-sm">Prescription Details</h3>
                     
@@ -704,21 +705,22 @@ export const PatientSelectionDialog = ({
                       </p>
                     </div>
                   </div>
+                )}
 
-                  {/* Order Notes */}
-                  <div className="grid gap-3">
-                    <Label htmlFor="notes">Order Notes (Optional)</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Add any special instructions or notes for this order..."
-                      value={orderNotes}
-                      onChange={(e) => setOrderNotes(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
+                {/* Order Notes */}
+                <div className="grid gap-3">
+                  <Label htmlFor="notes">Order Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Add any special instructions or notes for this order..."
+                    value={orderNotes}
+                    onChange={(e) => setOrderNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
 
-                  {/* Show upload input if upload method selected - Only for RX Required */}
-                  {product?.requires_prescription && prescriptionMethod === 'upload' && (
+                {/* Show upload input if upload method selected - Only for RX Required */}
+                {product?.requires_prescription && prescriptionMethod === 'upload' && (
                     <div className="space-y-3 p-4 border-2 border-orange-300 rounded-lg bg-orange-50/50">
                       <div className="flex items-start gap-2">
                         <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
@@ -790,8 +792,8 @@ export const PatientSelectionDialog = ({
                     </div>
                   )}
 
-                  {/* Show prescription writer button if write method selected - Only for RX Required */}
-                  {product?.requires_prescription && prescriptionMethod === 'written' && (
+                {/* Show prescription writer button if write method selected - Only for RX Required */}
+                {product?.requires_prescription && prescriptionMethod === 'written' && (
                     <div className="space-y-3">
                       <Button 
                         variant="outline" 
@@ -817,8 +819,7 @@ export const PatientSelectionDialog = ({
                       )}
                     </div>
                   )}
-                </div>
-              )}
+              </div>
             </>
           )}
         </div>
@@ -829,7 +830,7 @@ export const PatientSelectionDialog = ({
             open={showPrescriptionWriter}
             onOpenChange={setShowPrescriptionWriter}
             product={product}
-            patient={selectedPatient}
+            patient={shipTo === 'practice' ? null : selectedPatient}
             provider={selectedProviderData ? {
               name: selectedProviderData.profiles?.name || 'Unknown',
               npi: selectedProviderData.profiles?.npi || 'N/A',

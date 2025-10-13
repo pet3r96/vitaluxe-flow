@@ -27,6 +27,7 @@ serve(async (req) => {
       patient_address,
       patient_allergies,
       patient_sex,
+      is_office_dispensing,
       provider_name,
       provider_npi,
       provider_dea,
@@ -75,48 +76,69 @@ serve(async (req) => {
     doc.setFont('helvetica', 'normal');
     doc.text(practice_address, 4.25, 1.5, { align: 'center' });
 
-    // Patient information section (grid layout)
+    // Patient information section
     doc.setFontSize(11);
     const startY = 2.2;
-    
-    // Row 1
-    doc.setFont('helvetica', 'bold');
-    doc.text('Name:', 0.75, startY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(patient_name, 1.5, startY);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('DOB:', 4.5, startY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(patient_dob || 'N/A', 5.2, startY);
 
-    // Row 2
-    doc.setFont('helvetica', 'bold');
-    doc.text('Address:', 0.75, startY + 0.3);
-    doc.setFont('helvetica', 'normal');
-    doc.text(patient_address || 'N/A', 1.5, startY + 0.3, { maxWidth: 2.5 });
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Age:', 4.5, startY + 0.3);
-    doc.setFont('helvetica', 'normal');
-    doc.text(patient_age?.toString() || 'N/A', 5.2, startY + 0.3);
+    if (is_office_dispensing) {
+      // Show "DISPENSING IN OFFICE ONLY" message
+      doc.setFillColor(255, 255, 200); // Light yellow background
+      doc.rect(0.75, startY - 0.2, 6.5, 1.0, 'FD');
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(139, 0, 0); // Dark red
+      doc.text('DISPENSING IN OFFICE ONLY', 4, startY + 0.3, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text('For practice use. Not for patient dispensing.', 4, startY + 0.6, { align: 'center' });
+      
+    } else {
+      // Original patient info grid layout
+      // Row 1
+      doc.setFont('helvetica', 'bold');
+      doc.text('Name:', 0.75, startY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patient_name, 1.5, startY);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('DOB:', 4.5, startY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patient_dob || 'N/A', 5.2, startY);
 
-    // Row 3
-    doc.setFont('helvetica', 'bold');
-    doc.text('Allergies:', 0.75, startY + 0.6);
-    doc.setFont('helvetica', 'normal');
-    doc.text(patient_allergies || 'NKDA', 1.5, startY + 0.6);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Sex:', 4.5, startY + 0.6);
-    doc.setFont('helvetica', 'normal');
-    doc.text(patient_sex || 'N/A', 5.2, startY + 0.6);
+      // Row 2
+      doc.setFont('helvetica', 'bold');
+      doc.text('Address:', 0.75, startY + 0.3);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patient_address || 'N/A', 1.5, startY + 0.3, { maxWidth: 2.5 });
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Age:', 4.5, startY + 0.3);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patient_age?.toString() || 'N/A', 5.2, startY + 0.3);
 
-    // Row 4
-    doc.setFont('helvetica', 'bold');
-    doc.text('Date:', 0.75, startY + 0.9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(date, 1.5, startY + 0.9);
+      // Row 3
+      doc.setFont('helvetica', 'bold');
+      doc.text('Allergies:', 0.75, startY + 0.6);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patient_allergies || 'NKDA', 1.5, startY + 0.6);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sex:', 4.5, startY + 0.6);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patient_sex || 'N/A', 5.2, startY + 0.6);
+
+      // Row 4
+      doc.setFont('helvetica', 'bold');
+      doc.text('Date:', 0.75, startY + 0.9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(date, 1.5, startY + 0.9);
+    }
+
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
 
     // Large Rx symbol
     const rxY = 4.0;
@@ -206,7 +228,9 @@ serve(async (req) => {
     console.log('PDF generated successfully, size:', pdfOutput.byteLength, 'bytes');
 
     // Prepare for upload
-    const fileName = `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+    const fileName = is_office_dispensing 
+      ? `prescription_OFFICE_DISPENSING_${Date.now()}.pdf`
+      : `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
     const prescriptionData = new Uint8Array(pdfOutput);
 
       // Upload to Supabase Storage
