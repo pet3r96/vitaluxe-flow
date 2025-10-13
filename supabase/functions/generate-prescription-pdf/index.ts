@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import jsPDF from "https://esm.sh/jspdf@2.5.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,253 +41,170 @@ serve(async (req) => {
 
     console.log('Generating prescription PDF for:', product_name);
 
-    // Generate HTML prescription
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            font-family: 'Times New Roman', Times, serif;
-            max-width: 8.5in;
-            margin: 0 auto;
-            padding: 0.5in;
-            background: #f5f5dc;
-            border: 2px solid #000;
-          }
-          
-          .credentials-header {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px;
-            border-bottom: 2px solid #000;
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 20px;
-          }
-          
-          .practice-info {
-            text-align: center;
-            margin-bottom: 30px;
-          }
-          
-          .practice-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-          }
-          
-          .practice-address {
-            font-size: 12px;
-          }
-          
-          .patient-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 30px;
-            font-size: 13px;
-          }
-          
-          .patient-field {
-            display: flex;
-            gap: 10px;
-          }
-          
-          .patient-field strong {
-            min-width: 80px;
-          }
-          
-          .rx-section {
-            display: flex;
-            align-items: flex-start;
-            margin: 40px 0;
-            min-height: 120px;
-          }
-          
-          .rx-symbol {
-            font-size: 120px;
-            font-family: 'Times New Roman', serif;
-            font-weight: bold;
-            color: #8B4513;
-            line-height: 1;
-            margin-right: 30px;
-            flex-shrink: 0;
-          }
-          
-          .medication-info {
-            flex-grow: 1;
-            padding-top: 30px;
-          }
-          
-          .medication-name {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            border: 2px solid #000;
-            padding: 10px;
-            border-radius: 5px;
-          }
-          
-          .medication-details {
-            font-size: 14px;
-            line-height: 1.8;
-          }
-          
-          .signature-section {
-            margin-top: 80px;
-            margin-bottom: 30px;
-          }
-          
-          .signature-text {
-            font-family: 'Brush Script MT', cursive;
-            font-size: 24px;
-            margin-bottom: 5px;
-            height: 30px;
-          }
-          
-          .signature-line {
-            border-top: 2px solid #000;
-            width: 100%;
-            margin-top: 10px;
-            padding-top: 5px;
-            text-align: center;
-            font-size: 12px;
-          }
-          
-          .bottom-section {
-            display: flex;
-            justify-content: space-between;
-            border-top: 2px solid #000;
-            padding-top: 15px;
-            margin-top: 30px;
-            font-size: 13px;
-          }
-          
-          .refills-section,
-          .dispense-section {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          
-          .checkbox {
-            width: 15px;
-            height: 15px;
-            border: 2px solid #000;
-            display: inline-block;
-          }
-          
-          .footer-note {
-            margin-top: 20px;
-            font-size: 10px;
-            color: #666;
-            text-align: center;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="credentials-header">
-          <div>DEA# ${provider_dea || 'N/A'}</div>
-          <div>License# ${provider_license || 'N/A'}</div>
-          <div>NPI# ${provider_npi}</div>
-        </div>
-        
-        <div class="practice-info">
-          <div class="practice-name">${provider_name}</div>
-          <div class="practice-name">${practice_name}</div>
-          <div class="practice-address">${practice_address}</div>
-        </div>
-        
-        <div class="patient-section">
-          <div class="patient-field">
-            <strong>Name:</strong>
-            <span>${patient_name}</span>
-          </div>
-          <div class="patient-field">
-            <strong>DOB:</strong>
-            <span>${patient_dob || 'N/A'}</span>
-          </div>
-          <div class="patient-field">
-            <strong>Address:</strong>
-            <span>${patient_address || 'N/A'}</span>
-          </div>
-          <div class="patient-field">
-            <strong>Age:</strong>
-            <span>${patient_age || 'N/A'}</span>
-          </div>
-          <div class="patient-field">
-            <strong>Allergies:</strong>
-            <span>${patient_allergies || 'NKDA'}</span>
-          </div>
-          <div class="patient-field">
-            <strong>Sex:</strong>
-            <span>${patient_sex || 'N/A'}</span>
-          </div>
-          <div class="patient-field">
-            <strong>Weight:</strong>
-            <span>_____ lbs</span>
-          </div>
-          <div class="patient-field">
-            <strong>Date:</strong>
-            <span>${date}</span>
-          </div>
-        </div>
-        
-        <div class="rx-section">
-          <div class="rx-symbol">℞</div>
-          <div class="medication-info">
-            <div class="medication-name">${product_name} ${dosage || ''}</div>
-            <div class="medication-details">
-              <div><strong>Sig:</strong> ${sig || 'As directed by prescriber'}</div>
-              <div><strong>Quantity:</strong> ${quantity || '1'}</div>
-              ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
-            </div>
-          </div>
-        </div>
-        
-        <div class="signature-section">
-          <div class="signature-text">${signature || ''}</div>
-          <div class="signature-line">
-            Prescriber Signature
-          </div>
-        </div>
-        
-        <div class="bottom-section">
-          <div class="refills-section">
-            <strong>Refills:</strong>
-            <span class="checkbox"></span>
-            <span>_______</span>
-          </div>
-          <div class="dispense-section">
-            <span class="checkbox"></span>
-            <span>Dispense as Written</span>
-            <span style="margin-left: 30px;" class="checkbox"></span>
-            <span>May Substitute</span>
-          </div>
-        </div>
-        
-        <div class="footer-note">
-          This prescription was generated electronically on ${date}.
-          For pharmacy use only. Verify prescriber credentials before dispensing.
-        </div>
-      </body>
-      </html>
-    `;
+    // Create PDF document
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'in',
+      format: 'letter'
+    });
 
-    // Use the HTML prescription format
-    const fileName = `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.html`;
-    const textEncoder = new TextEncoder();
-    const prescriptionData = textEncoder.encode(html);
+    // Set beige/cream background (like prescription pad)
+    doc.setFillColor(245, 245, 220);
+    doc.rect(0, 0, 8.5, 11, 'F');
+
+    // Add border
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.02);
+    doc.rect(0.5, 0.5, 7.5, 10, 'S');
+
+    // Top credentials bar
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`DEA# ${provider_dea || 'N/A'}`, 1.5, 0.75);
+    doc.text(`License # ${provider_license || 'N/A'}`, 4.25, 0.75);
+    doc.text(`NPI # ${provider_npi}`, 7, 0.75);
+    doc.line(0.5, 0.85, 8, 0.85); // Line below credentials
+
+    // Provider/Practice info (centered)
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(provider_name, 4.25, 1.2, { align: 'center' });
+    doc.text(practice_name, 4.25, 1.5, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(practice_address, 4.25, 1.75, { align: 'center' });
+
+    // Patient information section (grid layout)
+    doc.setFontSize(11);
+    const startY = 2.2;
+    
+    // Row 1
+    doc.setFont('helvetica', 'bold');
+    doc.text('Name:', 0.75, startY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(patient_name, 1.5, startY);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('DOB:', 4.5, startY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(patient_dob || 'N/A', 5.2, startY);
+
+    // Row 2
+    doc.setFont('helvetica', 'bold');
+    doc.text('Address:', 0.75, startY + 0.3);
+    doc.setFont('helvetica', 'normal');
+    doc.text(patient_address || 'N/A', 1.5, startY + 0.3, { maxWidth: 2.5 });
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Age:', 4.5, startY + 0.3);
+    doc.setFont('helvetica', 'normal');
+    doc.text(patient_age?.toString() || 'N/A', 5.2, startY + 0.3);
+
+    // Row 3
+    doc.setFont('helvetica', 'bold');
+    doc.text('Allergies:', 0.75, startY + 0.6);
+    doc.setFont('helvetica', 'normal');
+    doc.text(patient_allergies || 'NKDA', 1.5, startY + 0.6);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sex:', 4.5, startY + 0.6);
+    doc.setFont('helvetica', 'normal');
+    doc.text(patient_sex || 'N/A', 5.2, startY + 0.6);
+
+    // Row 4
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', 0.75, startY + 0.9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(date, 1.5, startY + 0.9);
+
+    // Large Rx symbol
+    const rxY = 4.0;
+    doc.setFontSize(80);
+    doc.setFont('times', 'bold');
+    doc.setTextColor(139, 69, 19); // Brown color
+    doc.text('℞', 1.2, rxY);
+
+    // Medication information (in bordered box)
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    const medBoxY = rxY - 0.3;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.02);
+    doc.rect(3, medBoxY, 4.5, 0.5, 'S'); // Medication box
+    doc.text(`${product_name} ${dosage || ''}`, 5.25, medBoxY + 0.35, { align: 'center' });
+
+    // Medication details
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    const detailsY = medBoxY + 0.8;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sig:', 3, detailsY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(sig || 'As directed by prescriber', 3.5, detailsY, { maxWidth: 4 });
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Quantity:', 3, detailsY + 0.3);
+    doc.setFont('helvetica', 'normal');
+    doc.text(quantity?.toString() || '1', 3.8, detailsY + 0.3);
+
+    if (notes) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Notes:', 3, detailsY + 0.6);
+      doc.setFont('helvetica', 'normal');
+      doc.text(notes, 3.5, detailsY + 0.6, { maxWidth: 4 });
+    }
+
+    // Signature section
+    const sigY = 7.5;
+    if (signature) {
+      doc.setFontSize(20);
+      doc.setFont('courier', 'italic'); // Cursive-like font
+      doc.text(signature, 2, sigY);
+    }
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.02);
+    doc.line(1.5, sigY + 0.2, 6.5, sigY + 0.2); // Signature line
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Prescriber Signature', 4, sigY + 0.45, { align: 'center' });
+
+    // Bottom section
+    const bottomY = 8.5;
+    doc.line(0.5, bottomY, 8, bottomY); // Top line
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Refills:', 1, bottomY + 0.3);
+    doc.rect(1.6, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
+    doc.setFont('helvetica', 'normal');
+    doc.text('_______', 1.85, bottomY + 0.3);
+
+    doc.rect(4.5, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
+    doc.text('Dispense as Written', 4.75, bottomY + 0.3);
+
+    doc.rect(6.3, bottomY + 0.15, 0.15, 0.15, 'S'); // Checkbox
+    doc.text('May Substitute', 6.55, bottomY + 0.3);
+
+    // Footer note
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.line(0.5, bottomY + 0.6, 8, bottomY + 0.6);
+    doc.text('This prescription was generated electronically on ' + date + '.', 4.25, bottomY + 0.8, { align: 'center' });
+    doc.text('For pharmacy use only. Verify prescriber credentials before dispensing.', 4.25, bottomY + 1, { align: 'center' });
+
+    // Get PDF as array buffer
+    const pdfOutput = doc.output('arraybuffer');
+
+    // Prepare for upload
+    const fileName = `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+    const prescriptionData = new Uint8Array(pdfOutput);
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('prescriptions')
       .upload(fileName, prescriptionData, {
-        contentType: 'text/html',
+        contentType: 'application/pdf',
         upsert: false
       });
 
