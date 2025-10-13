@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ interface PrescriptionWriterDialogProps {
   quantity: number;
   initialSig?: string;
   initialDosage?: string;
+  initialNotes?: string;
   onPrescriptionGenerated: (prescriptionUrl: string, customSig: string, customDosage: string, notes: string) => void;
 }
 
@@ -32,12 +33,26 @@ export function PrescriptionWriterDialog({
   quantity,
   initialSig,
   initialDosage,
+  initialNotes,
   onPrescriptionGenerated,
 }: PrescriptionWriterDialogProps) {
   const [customDosage, setCustomDosage] = useState(initialDosage || product?.dosage || "");
   const [customSig, setCustomSig] = useState(initialSig || product?.sig || "");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(initialNotes || "");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Sync state with prop changes
+  useEffect(() => {
+    setCustomDosage(initialDosage || product?.dosage || "");
+  }, [initialDosage, product?.dosage]);
+
+  useEffect(() => {
+    setCustomSig(initialSig || product?.sig || "");
+  }, [initialSig, product?.sig]);
+
+  useEffect(() => {
+    setNotes(initialNotes || "");
+  }, [initialNotes]);
 
   // Show loading state if data is not ready
   if (!provider || !practice || !patient) {

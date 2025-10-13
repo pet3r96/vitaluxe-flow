@@ -831,6 +831,7 @@ export const PatientSelectionDialog = ({
             quantity={quantity}
             initialSig={customSig}
             initialDosage={customDosage}
+            initialNotes={orderNotes}
             onPrescriptionGenerated={(url, sig, dosage, notes) => {
               setPrescriptionPreview(url);
               setCustomSig(sig);
