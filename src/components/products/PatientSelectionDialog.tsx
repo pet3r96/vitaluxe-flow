@@ -60,7 +60,7 @@ export const PatientSelectionDialog = ({
   const [prescriptionPreview, setPrescriptionPreview] = useState<string>("");
   const [uploadingPrescription, setUploadingPrescription] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
-  const [prescriptionMethod, setPrescriptionMethod] = useState<'upload' | 'write' | null>(null);
+  const [prescriptionMethod, setPrescriptionMethod] = useState<'upload' | 'written' | null>(null);
   const [showPrescriptionWriter, setShowPrescriptionWriter] = useState(false);
   const [customSig, setCustomSig] = useState("");
   const [customDosage, setCustomDosage] = useState("");
@@ -166,7 +166,7 @@ export const PatientSelectionDialog = ({
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedProviderId && currentStep === 'prescription' && prescriptionMethod === 'write'
+    enabled: !!selectedProviderId && currentStep === 'prescription' && prescriptionMethod === 'written'
   });
 
   // Fetch practice details for prescription writer
@@ -184,7 +184,7 @@ export const PatientSelectionDialog = ({
       if (error) throw error;
       return data;
     },
-    enabled: !!effectivePracticeId && currentStep === 'prescription' && prescriptionMethod === 'write'
+    enabled: !!effectivePracticeId && currentStep === 'prescription' && prescriptionMethod === 'written'
   });
 
   useEffect(() => {
@@ -273,7 +273,7 @@ export const PatientSelectionDialog = ({
       return;
     }
     
-    if (product.requires_prescription && prescriptionMethod === 'write' && !prescriptionPreview) {
+    if (product.requires_prescription && prescriptionMethod === 'written' && !prescriptionPreview) {
       toast.error("Please write and generate the prescription");
       return;
     }
@@ -635,7 +635,7 @@ export const PatientSelectionDialog = ({
                   {product?.requires_prescription && (
                     <div className="grid gap-3 border-b pb-4">
                       <Label className="text-base font-semibold">Prescription Method *</Label>
-                      <RadioGroup value={prescriptionMethod || ""} onValueChange={(value) => setPrescriptionMethod(value as 'upload' | 'write')}>
+                      <RadioGroup value={prescriptionMethod || ""} onValueChange={(value) => setPrescriptionMethod(value as 'upload' | 'written')}>
                         <div className="flex items-center space-x-2 p-3 border rounded-md">
                           <RadioGroupItem value="upload" id="upload" />
                           <Label htmlFor="upload" className="flex-1 cursor-pointer font-normal">
@@ -643,8 +643,8 @@ export const PatientSelectionDialog = ({
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2 p-3 border rounded-md">
-                          <RadioGroupItem value="write" id="write" />
-                          <Label htmlFor="write" className="flex-1 cursor-pointer font-normal">
+                          <RadioGroupItem value="written" id="written" />
+                          <Label htmlFor="written" className="flex-1 cursor-pointer font-normal">
                             Write Prescription Now
                           </Label>
                         </div>
@@ -780,7 +780,7 @@ export const PatientSelectionDialog = ({
                   )}
 
                   {/* Show prescription writer button if write method selected - Only for RX Required */}
-                  {product?.requires_prescription && prescriptionMethod === 'write' && (
+                  {product?.requires_prescription && prescriptionMethod === 'written' && (
                     <div className="space-y-3">
                       <Button 
                         variant="outline" 
@@ -813,7 +813,7 @@ export const PatientSelectionDialog = ({
         </div>
 
         {/* Prescription Writer Dialog */}
-        {prescriptionMethod === 'write' && (
+        {prescriptionMethod === 'written' && (
           <PrescriptionWriterDialog
             open={showPrescriptionWriter}
             onOpenChange={setShowPrescriptionWriter}
