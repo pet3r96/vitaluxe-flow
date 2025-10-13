@@ -43,6 +43,13 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [user, loading, mustChangePassword, termsAccepted, effectiveRole, location.pathname, navigate]);
 
+  // Prevent admins from accessing the terms page
+  useEffect(() => {
+    if (!loading && user && effectiveRole === 'admin' && location.pathname === '/accept-terms') {
+      navigate('/');
+    }
+  }, [loading, user, effectiveRole, location.pathname, navigate]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

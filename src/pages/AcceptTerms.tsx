@@ -26,19 +26,28 @@ export default function AcceptTerms() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Redirect admins away from this page
   useEffect(() => {
-    if (!user || !userRole) return;
+    if (userRole === 'admin') {
+      navigate('/');
+    }
+  }, [userRole, navigate]);
+
+  useEffect(() => {
+    if (!user || !userRole || userRole === 'admin') return;
 
     const fetchTerms = async () => {
       const { data, error } = await supabase
         .from('terms_and_conditions')
         .select('*')
         .eq('role', userRole as any)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching terms:', error);
         toast.error("Failed to load terms and conditions");
+        setTerms(null);
+        setLoading(false);
         return;
       }
 
@@ -47,7 +56,7 @@ export default function AcceptTerms() {
     };
 
     fetchTerms();
-  }, [user, userRole]);
+  }, [user, userRole, navigate]);
 
   const handleScroll = () => {
     const container = scrollRef.current;
