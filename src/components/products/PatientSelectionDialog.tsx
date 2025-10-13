@@ -374,7 +374,13 @@ export const PatientSelectionDialog = ({
     const isPracticeOrder = shipTo === 'practice';
     
     let prescriptionUrl = null;
-    if (product.requires_prescription && prescriptionFile) {
+    
+    // If prescription was written, use the generated URL
+    if (product.requires_prescription && prescriptionMethod === 'written' && prescriptionPreview) {
+      prescriptionUrl = prescriptionPreview;
+    }
+    // If prescription was uploaded, upload the file
+    else if (product.requires_prescription && prescriptionFile) {
       setUploadingPrescription(true);
       try {
         const fileExt = prescriptionFile.name.split(".").pop();
