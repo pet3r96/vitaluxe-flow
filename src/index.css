@@ -176,5 +176,12 @@ All colors MUST be HSL.
   .terms-content ul {
     margin-top: 0.5rem;
     margin-bottom: 1.5rem;
+    list-style-type: disc;
+    padding-left: 1.5rem;
+  }
+
+  .terms-content ul li {
+    list-style-type: disc;
+    margin-bottom: 0.25rem;
   }
 }
