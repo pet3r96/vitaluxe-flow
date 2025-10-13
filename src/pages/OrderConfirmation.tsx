@@ -336,9 +336,17 @@ export default function OrderConfirmation() {
       
       const { error: uploadError } = await supabase.storage
         .from("prescriptions")
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          contentType: file.type
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        // Provide friendlier error message for MIME type issues
+        if (uploadError.message?.toLowerCase().includes('mime type')) {
+          throw new Error("This file type isn't allowed by the server. Allowed types: PDF, PNG, JPG.");
+        }
+        throw uploadError;
+      }
 
     const { data: urlData, error: urlError } = await supabase.storage
       .from("prescriptions")
@@ -380,11 +388,17 @@ export default function OrderConfirmation() {
   const handlePrescriptionChange = (lineId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('File selected:', file.name, 'Type:', file.type);
+      
       const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-      if (!validTypes.includes(file.type)) {
+      const validExtensions = ['.pdf', '.png', '.jpg', '.jpeg'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      // Check both MIME type and file extension for maximum compatibility
+      if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
         toast({
           title: "Invalid File Type",
-          description: "Please upload a PDF or PNG file",
+          description: `File type not supported. Please upload a PDF or PNG/JPG file. Detected type: ${file.type || 'unknown'}`,
           variant: "destructive",
         });
         return;
@@ -400,8 +414,12 @@ export default function OrderConfirmation() {
       }
       
       setPrescriptionFiles(prev => ({ ...prev, [lineId]: file }));
+      toast({
+        title: "Prescription Uploaded",
+        description: "File uploaded successfully",
+      });
       
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/') || fileExtension.match(/\.(png|jpg|jpeg)$/i)) {
         const reader = new FileReader();
         reader.onloadend = () => {
           setPrescriptionPreviews(prev => ({ ...prev, [lineId]: reader.result as string }));

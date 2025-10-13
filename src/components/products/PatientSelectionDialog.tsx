@@ -396,11 +396,19 @@ export const PatientSelectionDialog = ({
         const fileExt = prescriptionFile.name.split(".").pop();
         const fileName = `${effectiveUserId}/${Date.now()}_${Math.random()}.${fileExt}`;
         
-        const { error: uploadError } = await supabase.storage
-          .from("prescriptions")
-          .upload(fileName, prescriptionFile);
+      const { error: uploadError } = await supabase.storage
+        .from("prescriptions")
+        .upload(fileName, prescriptionFile, {
+          contentType: prescriptionFile.type
+        });
 
-        if (uploadError) throw uploadError;
+      if (uploadError) {
+        // Provide friendlier error message for MIME type issues
+        if (uploadError.message?.toLowerCase().includes('mime type')) {
+          throw new Error("This file type isn't allowed by the server. Allowed types: PDF, PNG, JPG.");
+        }
+        throw uploadError;
+      }
 
         const { data: urlData, error: urlError } = await supabase.storage
           .from("prescriptions")
