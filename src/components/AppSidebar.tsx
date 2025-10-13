@@ -100,9 +100,11 @@ export function AppSidebar() {
 
   let items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
   
-  // Hide "Providers" tab for provider accounts
+  // Hide "Providers" and "Reports" tabs for provider accounts
   if (effectiveRole === 'doctor' && isProviderAccount) {
-    items = items.filter(item => item.title !== "Providers");
+    items = items.filter(item => 
+      item.title !== "Providers" && item.title !== "Reports"
+    );
   }
   
   const isCollapsed = state === "collapsed";
