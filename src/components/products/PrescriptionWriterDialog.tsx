@@ -288,25 +288,6 @@ export function PrescriptionWriterDialog({
             />
           </div>
 
-          {/* Signature */}
-          <div className="grid gap-2">
-            <Label htmlFor="signature" className="flex items-center gap-1">
-              Provider Signature *
-              <span className="text-xs text-muted-foreground font-normal">(Type your name to sign)</span>
-            </Label>
-            <Input
-              id="signature"
-              placeholder="Type your full name to electronically sign this prescription"
-              value={signature}
-              onChange={(e) => setSignature(e.target.value)}
-              required
-              className="font-medium"
-            />
-            <p className="text-xs text-muted-foreground">
-              By typing your name, you are electronically signing this prescription
-            </p>
-          </div>
-
           {/* Dispensing Option */}
           <div className="grid gap-3">
             <Label className="text-base font-semibold">Please Choose Applicable *</Label>
@@ -340,6 +321,25 @@ export function PrescriptionWriterDialog({
                 </Label>
               </div>
             </RadioGroup>
+          </div>
+
+          {/* Signature */}
+          <div className="grid gap-2">
+            <Label htmlFor="signature" className="flex items-center gap-1">
+              Provider Signature *
+              <span className="text-xs text-muted-foreground font-normal">(Type your name to sign)</span>
+            </Label>
+            <Input
+              id="signature"
+              placeholder="Type your full name to electronically sign this prescription"
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              required
+              className="font-medium"
+            />
+            <p className="text-xs text-muted-foreground">
+              By typing your name, you are electronically signing this prescription
+            </p>
           </div>
 
           {/* Action Buttons */}
