@@ -131,173 +131,171 @@ export default function OrderConfirmation() {
       const doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
       const createdOrders = [];
 
+      // Process each practice line separately - create one order per line
       if (practiceLines.length > 0) {
-        const practiceTotal = practiceLines.reduce<number>(
-          (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
-          0
-        );
-
         const practiceAddress = providerProfile?.shipping_address_formatted || 
           `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
 
-        const { data: practiceOrder, error: practiceOrderError } = await supabase
-          .from("orders")
-          .insert({
-            doctor_id: doctorIdForOrder,
-            total_amount: practiceTotal,
-            status: "pending",
-            ship_to: "practice",
-            practice_address: practiceAddress,
-          })
-          .select()
-          .single();
+        for (const line of practiceLines) {
+          // Calculate total for THIS SINGLE LINE only
+          const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
+          
+          // Create ONE order for THIS line
+          const { data: practiceOrder, error: practiceOrderError } = await supabase
+            .from("orders")
+            .insert({
+              doctor_id: doctorIdForOrder,
+              total_amount: lineTotal,
+              status: "pending",
+              ship_to: "practice",
+              practice_address: practiceAddress,
+            })
+            .select()
+            .single();
 
-        if (practiceOrderError) throw practiceOrderError;
+          if (practiceOrderError) throw practiceOrderError;
 
-        // Route each line to appropriate pharmacy
-        const practiceOrderLines = await Promise.all(
-          practiceLines.map(async (line: any) => {
-            let assignedPharmacyId = null;
-            const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
-            
-            // Call routing function
-            try {
-              const { data: routingResult, error: routingError } = await supabase.functions.invoke(
-                'route-order-to-pharmacy',
-                {
-                  body: {
-                    product_id: line.product_id,
-                    destination_state: destinationState
-                  }
+          // Route this single line to pharmacy
+          let assignedPharmacyId = null;
+          const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
+          
+          try {
+            const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+              'route-order-to-pharmacy',
+              {
+                body: {
+                  product_id: line.product_id,
+                  destination_state: destinationState
                 }
-              );
-              
-              if (!routingError && routingResult?.pharmacy_id) {
-                assignedPharmacyId = routingResult.pharmacy_id;
-                console.log(`Routed to pharmacy: ${routingResult.reason}`);
-              } else {
-                // Pharmacy routing failed - this should have been caught at add-to-cart
-                const productName = line.product?.name || 'Unknown product';
-                throw new Error(
-                  `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
-                );
               }
-            } catch (error) {
-              console.error('Pharmacy routing failed:', error);
-            }
+            );
             
-            return {
-              order_id: practiceOrder.id,
-              product_id: line.product_id,
-              quantity: line.quantity || 1,
-              price: line.price_snapshot,
-              patient_id: line.patient_id,
-              patient_name: line.patient_name,
-              patient_email: line.patient_email,
-              patient_phone: line.patient_phone,
-              patient_address: line.patient_address,
-              prescription_url: line.prescription_url,
-              provider_id: line.provider_id,
-              assigned_pharmacy_id: assignedPharmacyId,
-              destination_state: destinationState,
-              status: "pending" as const,
-              custom_sig: line.custom_sig,
-              custom_dosage: line.custom_dosage,
-              order_notes: line.order_notes,
-              prescription_method: line.prescription_method,
-            };
-          })
-        );
+            if (!routingError && routingResult?.pharmacy_id) {
+              assignedPharmacyId = routingResult.pharmacy_id;
+              console.log(`Routed to pharmacy: ${routingResult.reason}`);
+            } else {
+              const productName = line.product?.name || 'Unknown product';
+              throw new Error(
+                `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
+              );
+            }
+          } catch (error) {
+            console.error('Pharmacy routing failed:', error);
+            throw error;
+          }
+          
+          // Create ONE order_line for this order
+          const orderLine = {
+            order_id: practiceOrder.id,
+            product_id: line.product_id,
+            quantity: line.quantity || 1,
+            price: line.price_snapshot,
+            patient_id: line.patient_id,
+            patient_name: line.patient_name,
+            patient_email: line.patient_email,
+            patient_phone: line.patient_phone,
+            patient_address: line.patient_address,
+            prescription_url: line.prescription_url,
+            provider_id: line.provider_id,
+            assigned_pharmacy_id: assignedPharmacyId,
+            destination_state: destinationState,
+            status: "pending" as const,
+            custom_sig: line.custom_sig,
+            custom_dosage: line.custom_dosage,
+            order_notes: line.order_notes,
+            prescription_method: line.prescription_method,
+          };
 
-        const { error: practiceLinesError } = await supabase
-          .from("order_lines")
-          .insert(practiceOrderLines);
+          const { error: practiceLinesError } = await supabase
+            .from("order_lines")
+            .insert([orderLine]);
 
-        if (practiceLinesError) throw practiceLinesError;
-        createdOrders.push(practiceOrder);
+          if (practiceLinesError) throw practiceLinesError;
+          
+          createdOrders.push(practiceOrder);
+        }
       }
 
+      // Process each patient line separately - create one order per line
       if (patientLines.length > 0) {
-        const patientTotal = patientLines.reduce<number>(
-          (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
-          0
-        );
+        for (const line of patientLines) {
+          // Calculate total for THIS SINGLE LINE only
+          const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
+          
+          // Create ONE order for THIS line
+          const { data: patientOrder, error: patientOrderError } = await supabase
+            .from("orders")
+            .insert({
+              doctor_id: doctorIdForOrder,
+              total_amount: lineTotal,
+              status: "pending",
+              ship_to: "patient",
+              practice_address: null,
+            })
+            .select()
+            .single();
 
-        const { data: patientOrder, error: patientOrderError } = await supabase
-          .from("orders")
-          .insert({
-            doctor_id: doctorIdForOrder,
-            total_amount: patientTotal,
-            status: "pending",
-            ship_to: "patient",
-            practice_address: null,
-          })
-          .select()
-          .single();
+          if (patientOrderError) throw patientOrderError;
 
-        if (patientOrderError) throw patientOrderError;
-
-        // Route each line to appropriate pharmacy
-        const patientOrderLines = await Promise.all(
-          patientLines.map(async (line: any) => {
-            let assignedPharmacyId = null;
-            const destinationState = extractStateFromAddress(line.patient_address);
-            
-            // Call routing function
-            try {
-              const { data: routingResult, error: routingError } = await supabase.functions.invoke(
-                'route-order-to-pharmacy',
-                {
-                  body: {
-                    product_id: line.product_id,
-                    destination_state: destinationState
-                  }
+          // Route this single line to pharmacy
+          let assignedPharmacyId = null;
+          const destinationState = extractStateFromAddress(line.patient_address);
+          
+          try {
+            const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+              'route-order-to-pharmacy',
+              {
+                body: {
+                  product_id: line.product_id,
+                  destination_state: destinationState
                 }
-              );
-              
-              if (!routingError && routingResult?.pharmacy_id) {
-                assignedPharmacyId = routingResult.pharmacy_id;
-                console.log(`Routed to pharmacy: ${routingResult.reason}`);
-              } else {
-                // Pharmacy routing failed - this should have been caught at add-to-cart
-                const productName = line.product?.name || 'Unknown product';
-                throw new Error(
-                  `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
-                );
               }
-            } catch (error) {
-              console.error('Pharmacy routing failed:', error);
-            }
+            );
             
-            return {
-              order_id: patientOrder.id,
-              product_id: line.product_id,
-              quantity: line.quantity || 1,
-              price: line.price_snapshot,
-              patient_id: line.patient_id,
-              patient_name: line.patient_name,
-              patient_email: line.patient_email,
-              patient_phone: line.patient_phone,
-              patient_address: line.patient_address,
-              prescription_url: line.prescription_url,
-              provider_id: line.provider_id,
-              assigned_pharmacy_id: assignedPharmacyId,
-              destination_state: destinationState,
-              status: "pending" as const,
-              custom_sig: line.custom_sig,
-              custom_dosage: line.custom_dosage,
-              order_notes: line.order_notes,
-              prescription_method: line.prescription_method,
-            };
-          })
-        );
+            if (!routingError && routingResult?.pharmacy_id) {
+              assignedPharmacyId = routingResult.pharmacy_id;
+              console.log(`Routed to pharmacy: ${routingResult.reason}`);
+            } else {
+              const productName = line.product?.name || 'Unknown product';
+              throw new Error(
+                `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
+              );
+            }
+          } catch (error) {
+            console.error('Pharmacy routing failed:', error);
+            throw error;
+          }
+          
+          // Create ONE order_line for this order
+          const orderLine = {
+            order_id: patientOrder.id,
+            product_id: line.product_id,
+            quantity: line.quantity || 1,
+            price: line.price_snapshot,
+            patient_id: line.patient_id,
+            patient_name: line.patient_name,
+            patient_email: line.patient_email,
+            patient_phone: line.patient_phone,
+            patient_address: line.patient_address,
+            prescription_url: line.prescription_url,
+            provider_id: line.provider_id,
+            assigned_pharmacy_id: assignedPharmacyId,
+            destination_state: destinationState,
+            status: "pending" as const,
+            custom_sig: line.custom_sig,
+            custom_dosage: line.custom_dosage,
+            order_notes: line.order_notes,
+            prescription_method: line.prescription_method,
+          };
 
-        const { error: patientLinesError } = await supabase
-          .from("order_lines")
-          .insert(patientOrderLines);
+          const { error: patientLinesError } = await supabase
+            .from("order_lines")
+            .insert([orderLine]);
 
-        if (patientLinesError) throw patientLinesError;
-        createdOrders.push(patientOrder);
+          if (patientLinesError) throw patientLinesError;
+          
+          createdOrders.push(patientOrder);
+        }
       }
 
       const { error: deleteError } = await supabase
