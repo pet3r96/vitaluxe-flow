@@ -262,6 +262,9 @@ export const PatientSelectionDialog = ({
   };
 
   const handleAddToCart = async () => {
+    // Capture prescription URL before any state changes or dialog closing
+    const capturedPrescriptionPreview = prescriptionPreview;
+    
     // Validate prescription requirements on Page 2
     if (product.requires_prescription && prescriptionMethod === null) {
       toast.error("Please select a prescription method");
@@ -273,7 +276,7 @@ export const PatientSelectionDialog = ({
       return;
     }
     
-    if (product.requires_prescription && prescriptionMethod === 'written' && !prescriptionPreview) {
+    if (product.requires_prescription && prescriptionMethod === 'written' && !capturedPrescriptionPreview) {
       toast.error("Please write and generate the prescription");
       return;
     }
@@ -375,9 +378,9 @@ export const PatientSelectionDialog = ({
     
     let prescriptionUrl = null;
     
-    // If prescription was written, use the generated URL
-    if (product.requires_prescription && prescriptionMethod === 'written' && prescriptionPreview) {
-      prescriptionUrl = prescriptionPreview;
+    // If prescription was written, use the captured generated URL
+    if (product.requires_prescription && prescriptionMethod === 'written' && capturedPrescriptionPreview) {
+      prescriptionUrl = capturedPrescriptionPreview;
     }
     // If prescription was uploaded, upload the file
     else if (product.requires_prescription && prescriptionFile) {
