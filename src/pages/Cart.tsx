@@ -7,12 +7,15 @@ import { ShoppingCart, Trash2, Package, FileCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { DiscountCodeInput } from "@/components/orders/DiscountCodeInput";
 
 export default function Cart() {
   const { effectiveUserId, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [discountCode, setDiscountCode] = useState<string | null>(null);
+  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -65,11 +68,19 @@ export default function Cart() {
     },
   });
 
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return (cartLines as any[]).reduce<number>(
       (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
       0
     );
+  };
+
+  const calculateDiscountAmount = () => {
+    return calculateSubtotal() * (discountPercentage / 100);
+  };
+
+  const calculateTotal = () => {
+    return calculateSubtotal() - calculateDiscountAmount();
   };
 
   if (isLoading) {
@@ -175,11 +186,37 @@ export default function Cart() {
               <CardTitle className="text-lg sm:text-xl">Cart Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
+              {/* Discount Code Input */}
+              <DiscountCodeInput
+                onDiscountApplied={(code, percentage) => {
+                  setDiscountCode(code);
+                  setDiscountPercentage(percentage);
+                }}
+                onDiscountRemoved={() => {
+                  setDiscountCode(null);
+                  setDiscountPercentage(0);
+                }}
+                currentCode={discountCode || undefined}
+                currentPercentage={discountPercentage}
+              />
+              
               <div className="space-y-2">
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-muted-foreground">Total Items:</span>
                   <span className="font-medium">{cartLines.reduce((sum, line) => sum + (line.quantity || 1), 0)}</span>
                 </div>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="font-medium">${calculateSubtotal().toFixed(2)}</span>
+                </div>
+                
+                {discountPercentage > 0 && (
+                  <div className="flex justify-between text-xs sm:text-sm">
+                    <span className="text-green-600 dark:text-green-400">Discount ({discountPercentage}%):</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">-${calculateDiscountAmount().toFixed(2)}</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between text-base sm:text-lg font-bold border-t pt-2">
                   <span>Total Amount:</span>
                   <span className="text-primary">${calculateTotal().toFixed(2)}</span>
@@ -188,7 +225,9 @@ export default function Cart() {
               <Button 
                 className="w-full min-h-[48px] text-base" 
                 size="lg"
-                onClick={() => navigate("/order-confirmation")}
+                onClick={() => navigate("/order-confirmation", { 
+                  state: { discountCode, discountPercentage } 
+                })}
               >
                 Proceed to Confirmation
               </Button>

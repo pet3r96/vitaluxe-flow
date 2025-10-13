@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { Tag } from "lucide-react";
 
 const AdminProfitReports = () => {
   // Get profit details with order and product information
@@ -115,6 +116,7 @@ const AdminProfitReports = () => {
                 <TableHead>Practice</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Order ID</TableHead>
+                <TableHead>Discount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Admin Profit</TableHead>
               </TableRow>
@@ -122,7 +124,7 @@ const AdminProfitReports = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Loading...
                   </TableCell>
                 </TableRow>

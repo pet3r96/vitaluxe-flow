@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { DollarSign, Clock, CheckCircle } from "lucide-react";
+import { DollarSign, Clock, CheckCircle, Tag } from "lucide-react";
 
 const PracticeProfitReports = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -32,6 +32,10 @@ const PracticeProfitReports = () => {
           created_at,
           status,
           total_amount,
+          discount_code,
+          discount_percentage,
+          discount_amount,
+          subtotal_before_discount,
           order_lines (
             id,
             product_id,
@@ -149,6 +153,7 @@ const PracticeProfitReports = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Order ID</TableHead>
                 <TableHead>Products</TableHead>
+                <TableHead>Discount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>

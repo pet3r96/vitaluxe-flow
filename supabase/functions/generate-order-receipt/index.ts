@@ -46,6 +46,10 @@ serve(async (req) => {
         id,
         created_at,
         total_amount,
+        subtotal_before_discount,
+        discount_code,
+        discount_percentage,
+        discount_amount,
         status,
         doctor_id,
         profiles (
@@ -246,17 +250,42 @@ serve(async (req) => {
 
     yPos += 8;
 
-    // Totals
+    // Subtotal
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const displaySubtotal = order.subtotal_before_discount || subtotal;
     doc.text('Subtotal:', pageWidth - 65, yPos);
-    doc.text(`$${subtotal.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+    doc.text(`$${displaySubtotal.toFixed(2)}`, colX.total, yPos, { align: 'right' });
 
-    yPos += 8;
+    yPos += 6;
 
+    // Discount (if applicable)
+    if (order.discount_percentage && order.discount_percentage > 0) {
+      doc.setTextColor(0, 128, 0);
+      doc.text(`Discount (${order.discount_code} - ${order.discount_percentage}%):`, pageWidth - 65, yPos);
+      doc.text(`-$${order.discount_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+      doc.setTextColor(0, 0, 0);
+      yPos += 6;
+    }
+
+    yPos += 2;
+
+    // Total
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL:', pageWidth - 65, yPos);
     doc.text(`$${order.total_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+
+    // Savings note
+    if (order.discount_percentage && order.discount_percentage > 0) {
+      yPos += 10;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(0, 128, 0);
+      doc.text(`You saved $${order.discount_amount.toFixed(2)} with code ${order.discount_code}!`, 
+        pageWidth / 2, yPos, { align: 'center' });
+      doc.setTextColor(0, 0, 0);
+    }
 
     // Footer
     const footerY = pageHeight - 20;

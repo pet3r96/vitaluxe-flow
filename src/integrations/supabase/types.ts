@@ -219,6 +219,51 @@ export type Database = {
           },
         ]
       }
+      discount_codes: {
+        Row: {
+          active: boolean | null
+          code: string
+          created_at: string | null
+          created_by: string | null
+          current_uses: number | null
+          description: string | null
+          discount_percentage: number
+          id: string
+          max_uses: number | null
+          updated_at: string | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          current_uses?: number | null
+          description?: string | null
+          discount_percentage: number
+          id?: string
+          max_uses?: number | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          current_uses?: number | null
+          description?: string | null
+          discount_percentage?: number
+          id?: string
+          max_uses?: number | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           document_type: string
@@ -445,6 +490,8 @@ export type Database = {
           custom_sig: string | null
           delivered_at: string | null
           destination_state: string | null
+          discount_amount: number | null
+          discount_percentage: number | null
           id: string
           order_id: string
           order_notes: string | null
@@ -456,6 +503,7 @@ export type Database = {
           prescription_method: string | null
           prescription_url: string | null
           price: number
+          price_before_discount: number | null
           processing_at: string | null
           product_id: string
           provider_id: string | null
@@ -475,6 +523,8 @@ export type Database = {
           custom_sig?: string | null
           delivered_at?: string | null
           destination_state?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
           id?: string
           order_id: string
           order_notes?: string | null
@@ -486,6 +536,7 @@ export type Database = {
           prescription_method?: string | null
           prescription_url?: string | null
           price: number
+          price_before_discount?: number | null
           processing_at?: string | null
           product_id: string
           provider_id?: string | null
@@ -505,6 +556,8 @@ export type Database = {
           custom_sig?: string | null
           delivered_at?: string | null
           destination_state?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
           id?: string
           order_id?: string
           order_notes?: string | null
@@ -516,6 +569,7 @@ export type Database = {
           prescription_method?: string | null
           prescription_url?: string | null
           price?: number
+          price_before_discount?: number | null
           processing_at?: string | null
           product_id?: string
           provider_id?: string | null
@@ -569,11 +623,15 @@ export type Database = {
       order_profits: {
         Row: {
           admin_profit: number | null
+          admin_profit_before_discount: number | null
           base_price: number
           created_at: string | null
+          discount_code: string | null
+          discount_percentage: number | null
           downline_id: string | null
           downline_price: number | null
           downline_profit: number | null
+          downline_profit_before_discount: number | null
           id: string
           order_id: string
           order_line_id: string
@@ -582,14 +640,19 @@ export type Database = {
           topline_id: string | null
           topline_price: number | null
           topline_profit: number | null
+          topline_profit_before_discount: number | null
         }
         Insert: {
           admin_profit?: number | null
+          admin_profit_before_discount?: number | null
           base_price: number
           created_at?: string | null
+          discount_code?: string | null
+          discount_percentage?: number | null
           downline_id?: string | null
           downline_price?: number | null
           downline_profit?: number | null
+          downline_profit_before_discount?: number | null
           id?: string
           order_id: string
           order_line_id: string
@@ -598,14 +661,19 @@ export type Database = {
           topline_id?: string | null
           topline_price?: number | null
           topline_profit?: number | null
+          topline_profit_before_discount?: number | null
         }
         Update: {
           admin_profit?: number | null
+          admin_profit_before_discount?: number | null
           base_price?: number
           created_at?: string | null
+          discount_code?: string | null
+          discount_percentage?: number | null
           downline_id?: string | null
           downline_price?: number | null
           downline_profit?: number | null
+          downline_profit_before_discount?: number | null
           id?: string
           order_id?: string
           order_line_id?: string
@@ -614,6 +682,7 @@ export type Database = {
           topline_id?: string | null
           topline_price?: number | null
           topline_profit?: number | null
+          topline_profit_before_discount?: number | null
         }
         Relationships: [
           {
@@ -652,6 +721,9 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           created_at: string | null
+          discount_amount: number | null
+          discount_code: string | null
+          discount_percentage: number | null
           doctor_id: string
           formatted_shipping_address: string | null
           id: string
@@ -661,6 +733,7 @@ export type Database = {
           shipping_verification_status: string | null
           status: string | null
           stripe_payment_id: string | null
+          subtotal_before_discount: number | null
           total_amount: number
           updated_at: string | null
         }
@@ -669,6 +742,9 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           created_at?: string | null
+          discount_amount?: number | null
+          discount_code?: string | null
+          discount_percentage?: number | null
           doctor_id: string
           formatted_shipping_address?: string | null
           id?: string
@@ -678,6 +754,7 @@ export type Database = {
           shipping_verification_status?: string | null
           status?: string | null
           stripe_payment_id?: string | null
+          subtotal_before_discount?: number | null
           total_amount: number
           updated_at?: string | null
         }
@@ -686,6 +763,9 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           created_at?: string | null
+          discount_amount?: number | null
+          discount_code?: string | null
+          discount_percentage?: number | null
           doctor_id?: string
           formatted_shipping_address?: string | null
           id?: string
@@ -695,6 +775,7 @@ export type Database = {
           shipping_verification_status?: string | null
           status?: string | null
           stripe_payment_id?: string | null
+          subtotal_before_discount?: number | null
           total_amount?: number
           updated_at?: string | null
         }
@@ -1810,6 +1891,15 @@ export type Database = {
         }
         Returns: Json
       }
+      get_discount_code_stats: {
+        Args: { p_code: string }
+        Returns: {
+          code: string
+          total_discount_amount: number
+          total_orders: number
+          total_uses: number
+        }[]
+      }
       get_user_rep_id: {
         Args: { _user_id: string }
         Returns: string
@@ -1820,6 +1910,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_discount_usage: {
+        Args: { p_code: string }
+        Returns: undefined
       }
       is_thread_participant: {
         Args: { _thread_id: string; _user_id: string }
@@ -1833,6 +1927,14 @@ export type Database = {
           p_entity_type?: string
         }
         Returns: string
+      }
+      validate_discount_code: {
+        Args: { p_code: string }
+        Returns: {
+          discount_percentage: number
+          message: string
+          valid: boolean
+        }[]
       }
     }
     Enums: {

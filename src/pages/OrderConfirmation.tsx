@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 
@@ -31,8 +31,13 @@ export default function OrderConfirmation() {
   const [uploadingPrescriptions, setUploadingPrescriptions] = useState<Record<string, boolean>>({});
   const [prescriptionFiles, setPrescriptionFiles] = useState<Record<string, File>>({});
   const [prescriptionPreviews, setPrescriptionPreviews] = useState<Record<string, string>>({});
+  
+  // Get discount from navigation state
+  const location = useLocation();
+  const discountCode = location.state?.discountCode || null;
+  const discountPercentage = location.state?.discountPercentage || 0;
 
-  const { data: cart, isLoading } = useQuery({
+  const { data: cart, isLoading} = useQuery({
     queryKey: ["cart", effectiveUserId],
     queryFn: async () => {
       const { data: cartData, error: cartError } = await supabase
@@ -139,13 +144,19 @@ export default function OrderConfirmation() {
         for (const line of practiceLines) {
           // Calculate total for THIS SINGLE LINE only
           const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
+          const discountAmount = lineTotal * (discountPercentage / 100);
+          const totalAfterDiscount = lineTotal - discountAmount;
           
           // Create ONE order for THIS line
           const { data: practiceOrder, error: practiceOrderError } = await supabase
             .from("orders")
             .insert({
               doctor_id: doctorIdForOrder,
-              total_amount: lineTotal,
+              total_amount: totalAfterDiscount,
+              subtotal_before_discount: lineTotal,
+              discount_code: discountCode,
+              discount_percentage: discountPercentage,
+              discount_amount: discountAmount,
               status: "pending",
               ship_to: "practice",
               practice_address: practiceAddress,
@@ -185,11 +196,15 @@ export default function OrderConfirmation() {
           }
           
           // Create ONE order_line for this order
+          const discountedPrice = line.price_snapshot * (1 - discountPercentage / 100);
           const orderLine = {
             order_id: practiceOrder.id,
             product_id: line.product_id,
             quantity: line.quantity || 1,
-            price: line.price_snapshot,
+            price: discountedPrice,
+            price_before_discount: line.price_snapshot,
+            discount_percentage: discountPercentage,
+            discount_amount: (line.price_snapshot - discountedPrice) * (line.quantity || 1),
             patient_id: line.patient_id,
             patient_name: line.patient_name,
             patient_email: line.patient_email,
@@ -221,13 +236,19 @@ export default function OrderConfirmation() {
         for (const line of patientLines) {
           // Calculate total for THIS SINGLE LINE only
           const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
+          const discountAmount = lineTotal * (discountPercentage / 100);
+          const totalAfterDiscount = lineTotal - discountAmount;
           
           // Create ONE order for THIS line
           const { data: patientOrder, error: patientOrderError } = await supabase
             .from("orders")
             .insert({
               doctor_id: doctorIdForOrder,
-              total_amount: lineTotal,
+              total_amount: totalAfterDiscount,
+              subtotal_before_discount: lineTotal,
+              discount_code: discountCode,
+              discount_percentage: discountPercentage,
+              discount_amount: discountAmount,
               status: "pending",
               ship_to: "patient",
               practice_address: null,
@@ -267,11 +288,15 @@ export default function OrderConfirmation() {
           }
           
           // Create ONE order_line for this order
+          const discountedPrice = line.price_snapshot * (1 - discountPercentage / 100);
           const orderLine = {
             order_id: patientOrder.id,
             product_id: line.product_id,
             quantity: line.quantity || 1,
-            price: line.price_snapshot,
+            price: discountedPrice,
+            price_before_discount: line.price_snapshot,
+            discount_percentage: discountPercentage,
+            discount_amount: (line.price_snapshot - discountedPrice) * (line.quantity || 1),
             patient_id: line.patient_id,
             patient_name: line.patient_name,
             patient_email: line.patient_email,
@@ -296,6 +321,11 @@ export default function OrderConfirmation() {
           
           createdOrders.push(patientOrder);
         }
+      }
+
+      // Increment discount code usage
+      if (discountCode) {
+        await supabase.rpc('increment_discount_usage', { p_code: discountCode });
       }
 
       const { error: deleteError } = await supabase

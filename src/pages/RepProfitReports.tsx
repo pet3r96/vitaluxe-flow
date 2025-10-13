@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { Tag } from "lucide-react";
 
 const RepProfitReports = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -143,6 +144,7 @@ const RepProfitReports = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Practice</TableHead>
                 <TableHead>Order ID</TableHead>
+                <TableHead>Discount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Your Profit</TableHead>
               </TableRow>
