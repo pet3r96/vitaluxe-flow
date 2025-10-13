@@ -101,6 +101,30 @@ export function PrescriptionWriterDialog({
       }
     } catch (error: any) {
       console.error('Error generating prescription:', error);
+      
+      // Log error to audit logs for admin visibility
+      try {
+        await supabase.functions.invoke('log-error', {
+          body: {
+            action_type: 'edge_function_error',
+            entity_type: 'prescription_generation',
+            details: {
+              message: error.message || "Failed to generate prescription",
+              error_type: error.name || 'Error',
+              stack: error.stack,
+              product_name: product.name,
+              patient_name: patient.name,
+              provider_name: provider.name,
+              edge_function: 'generate-prescription-pdf',
+              timestamp: new Date().toISOString(),
+              url: window.location.href,
+            }
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log error:', logError);
+      }
+      
       toast.error(error.message || "Failed to generate prescription");
     } finally {
       setIsGenerating(false);
