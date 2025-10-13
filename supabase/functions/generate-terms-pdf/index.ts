@@ -104,9 +104,9 @@ serve(async (req) => {
     doc.setFillColor(200, 166, 75); // Gold color
     doc.rect(0, 0, 8.5, 1, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(26);
+    doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('VITALUXE', 4.25, 0.65, null, { align: 'center' });
+    doc.text('VITALUXE SERVICES LLC', 4.25, 0.65, { align: 'center' });
 
     // Document Title with Border
     doc.setDrawColor(200, 166, 75);
@@ -147,7 +147,7 @@ serve(async (req) => {
       }
     });
 
-    let yPos = 2.3;
+    let yPos = 2.5;
     const pageHeight = 10.5;
     const leftMargin = 0.5;
     const rightMargin = 8.0;
