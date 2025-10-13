@@ -39,14 +39,21 @@ export const OrderDetailsDialog = ({
     try {
       console.log('Starting prescription download:', { prescriptionUrl, patientName });
       
-      // Extract filename from the signed URL
-      const urlParts = prescriptionUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1].split('?')[0];
+      // Extract the full file path from the signed URL
+      // URL format: https://.../storage/v1/object/sign/prescriptions/{path}?token=...
+      const match = prescriptionUrl.match(/\/prescriptions\/(.+?)(\?|$)/);
+      
+      if (!match || !match[1]) {
+        throw new Error('Invalid prescription URL format');
+      }
+      
+      const filePath = decodeURIComponent(match[1]); // Decode any URL encoding
+      console.log('Extracted file path:', filePath);
       
       // Use Supabase client to download - handles auth and CORS properly
       const { data, error } = await supabase.storage
         .from('prescriptions')
-        .download(fileName);
+        .download(filePath);
       
       if (error) {
         console.error('Supabase storage download error:', error);
