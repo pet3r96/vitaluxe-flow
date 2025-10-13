@@ -122,7 +122,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     // Validate all fields
     const phoneResult = validatePhone(formData.phone);
     const npiResult = validateNPI(formData.npi);
-    const deaResult = validateDEA(formData.dea);
+    const deaResult = formData.dea ? validateDEA(formData.dea) : { valid: true };
 
     if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
       setValidationErrors({
