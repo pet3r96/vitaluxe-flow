@@ -63,7 +63,7 @@ export default function AdminTermsManagement() {
       .from('user_terms_acceptances')
       .select(`
         *,
-        profiles:user_id (
+        profiles (
           name,
           email
         )
