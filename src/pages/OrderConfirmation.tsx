@@ -32,10 +32,10 @@ export default function OrderConfirmation() {
   const [prescriptionFiles, setPrescriptionFiles] = useState<Record<string, File>>({});
   const [prescriptionPreviews, setPrescriptionPreviews] = useState<Record<string, string>>({});
   
-  // Get discount from navigation state
+  // Get discount from navigation state - use useState to persist during async operations
   const location = useLocation();
-  const discountCode = location.state?.discountCode || null;
-  const discountPercentage = location.state?.discountPercentage || 0;
+  const [discountCode, setDiscountCode] = useState<string | null>(location.state?.discountCode || null);
+  const [discountPercentage, setDiscountPercentage] = useState<number>(location.state?.discountPercentage || 0);
 
   const { data: cart, isLoading} = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -86,6 +86,8 @@ export default function OrderConfirmation() {
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
+      console.log('Checkout mutation started with discount:', { discountCode, discountPercentage });
+      
       if (!cart?.id || !cart.lines || cart.lines.length === 0) {
         throw new Error("Cart is empty");
       }
@@ -154,9 +156,9 @@ export default function OrderConfirmation() {
               doctor_id: doctorIdForOrder,
               total_amount: totalAfterDiscount,
               subtotal_before_discount: lineTotal,
-              discount_code: discountCode,
-              discount_percentage: discountPercentage,
-              discount_amount: discountAmount,
+              discount_code: discountCode || null,
+              discount_percentage: discountPercentage || 0,
+              discount_amount: discountAmount || 0,
               status: "pending",
               ship_to: "practice",
               practice_address: practiceAddress,
@@ -203,8 +205,8 @@ export default function OrderConfirmation() {
             quantity: line.quantity || 1,
             price: discountedPrice,
             price_before_discount: line.price_snapshot,
-            discount_percentage: discountPercentage,
-            discount_amount: (line.price_snapshot - discountedPrice) * (line.quantity || 1),
+            discount_percentage: discountPercentage || 0,
+            discount_amount: ((line.price_snapshot - discountedPrice) * (line.quantity || 1)) || 0,
             patient_id: line.patient_id,
             patient_name: line.patient_name,
             patient_email: line.patient_email,
@@ -246,9 +248,9 @@ export default function OrderConfirmation() {
               doctor_id: doctorIdForOrder,
               total_amount: totalAfterDiscount,
               subtotal_before_discount: lineTotal,
-              discount_code: discountCode,
-              discount_percentage: discountPercentage,
-              discount_amount: discountAmount,
+              discount_code: discountCode || null,
+              discount_percentage: discountPercentage || 0,
+              discount_amount: discountAmount || 0,
               status: "pending",
               ship_to: "patient",
               practice_address: null,
@@ -295,8 +297,8 @@ export default function OrderConfirmation() {
             quantity: line.quantity || 1,
             price: discountedPrice,
             price_before_discount: line.price_snapshot,
-            discount_percentage: discountPercentage,
-            discount_amount: (line.price_snapshot - discountedPrice) * (line.quantity || 1),
+            discount_percentage: discountPercentage || 0,
+            discount_amount: ((line.price_snapshot - discountedPrice) * (line.quantity || 1)) || 0,
             patient_id: line.patient_id,
             patient_name: line.patient_name,
             patient_email: line.patient_email,
@@ -466,11 +468,20 @@ export default function OrderConfirmation() {
     }
   };
 
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return (cart?.lines || []).reduce<number>(
       (sum, line: any) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
       0
     );
+  };
+
+  const calculateDiscountAmount = () => {
+    if (!discountPercentage) return 0;
+    return calculateSubtotal() * (discountPercentage / 100);
+  };
+
+  const calculateFinalTotal = () => {
+    return calculateSubtotal() - calculateDiscountAmount();
   };
 
   if (isLoading) {
@@ -663,9 +674,34 @@ export default function OrderConfirmation() {
           
           <Separator className="my-4" />
           
-          <div className="flex justify-between items-center text-lg font-bold pt-2">
-            <span>Total Amount:</span>
-            <span className="text-2xl text-primary">${calculateTotal().toFixed(2)}</span>
+          {/* Discount Summary */}
+          <div className="space-y-3 pt-2">
+            <div className="flex justify-between items-center text-base">
+              <span className="text-muted-foreground">Subtotal:</span>
+              <span className="font-semibold">${calculateSubtotal().toFixed(2)}</span>
+            </div>
+            
+            {discountCode && discountPercentage > 0 && (
+              <>
+                <div className="flex justify-between items-center text-base">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Discount:</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {discountCode} ({discountPercentage}% off)
+                    </Badge>
+                  </div>
+                  <span className="font-semibold text-green-600 dark:text-green-400">
+                    -${calculateDiscountAmount().toFixed(2)}
+                  </span>
+                </div>
+                <Separator />
+              </>
+            )}
+            
+            <div className="flex justify-between items-center text-lg font-bold">
+              <span>Total Amount:</span>
+              <span className="text-2xl text-primary">${calculateFinalTotal().toFixed(2)}</span>
+            </div>
           </div>
         </CardContent>
       </Card>
