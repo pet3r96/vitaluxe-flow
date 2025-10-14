@@ -122,13 +122,13 @@ export const ProductCard = memo(({
         </div>
 
         {/* Product Info */}
-        <div className={`space-y-2 flex flex-col ${isAdmin ? 'h-[320px]' : 'h-[240px]'}`}>
+        <div className={`space-y-2 flex flex-col items-start ${isAdmin ? 'h-[320px]' : 'h-[240px]'}`}>
           <h3 className="font-semibold text-lg line-clamp-3">{product.name}</h3>
           {product.dosage && (
             <p className="text-sm text-muted-foreground line-clamp-2">{product.dosage}</p>
           )}
           {product.product_type && (
-            <Badge variant="outline" className="text-xs mt-1 self-start">
+            <Badge variant="outline" className="text-xs mt-1 self-start mr-auto">
               {product.product_type}
             </Badge>
           )}
