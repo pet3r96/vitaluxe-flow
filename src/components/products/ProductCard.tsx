@@ -127,6 +127,11 @@ export const ProductCard = memo(({
           {product.dosage && (
             <p className="text-sm text-muted-foreground line-clamp-2">{product.dosage}</p>
           )}
+          {product.product_type && (
+            <Badge variant="outline" className="text-xs w-fit mt-1">
+              {product.product_type}
+            </Badge>
+          )}
 
           {/* Badges */}
           <div className="flex flex-wrap gap-2 min-h-[28px]">

@@ -15,6 +15,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Upload, X, AlertCircle } from "lucide-react";
 
@@ -40,6 +47,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     retail_price: "",
     assigned_pharmacies: [] as string[],
     requires_prescription: false,
+    product_type: "Peptides" as "Vitamins" | "R & D Products" | "Peptides" | "GLP 1" | "GLP 2" | "GLP 3" | "Supplies" | "Vitamin IV's",
   });
 
   // Fetch available pharmacies with their states and priorities
@@ -90,6 +98,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         retail_price: product.retail_price?.toString() || "",
         assigned_pharmacies: [],
         requires_prescription: product.requires_prescription || false,
+        product_type: product.product_type || "Peptides",
       });
       setImagePreview(product.image_url || "");
     } else {
@@ -179,6 +188,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         image_url: imageUrl,
         active: true,
         requires_prescription: formData.requires_prescription,
+        product_type: formData.product_type,
       };
 
       let productId = product?.id;
@@ -243,6 +253,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       retail_price: "",
       assigned_pharmacies: [],
       requires_prescription: false,
+      product_type: "Peptides",
     });
     setImageFile(null);
     setImagePreview("");
@@ -319,6 +330,31 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                 value={formData.dosage}
                 onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="product_type">Product Type *</Label>
+              <Select
+                value={formData.product_type}
+                onValueChange={(value: "Vitamins" | "R & D Products" | "Peptides" | "GLP 1" | "GLP 2" | "GLP 3" | "Supplies" | "Vitamin IV's") =>
+                  setFormData({ ...formData, product_type: value })
+                }
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select product type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Vitamins">Vitamins</SelectItem>
+                  <SelectItem value="R & D Products">R & D Products</SelectItem>
+                  <SelectItem value="Peptides">Peptides</SelectItem>
+                  <SelectItem value="GLP 1">GLP 1</SelectItem>
+                  <SelectItem value="GLP 2">GLP 2</SelectItem>
+                  <SelectItem value="GLP 3">GLP 3</SelectItem>
+                  <SelectItem value="Supplies">Supplies</SelectItem>
+                  <SelectItem value="Vitamin IV's">Vitamin IV's</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

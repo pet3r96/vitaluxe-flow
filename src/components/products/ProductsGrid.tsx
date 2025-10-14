@@ -5,6 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Search, ShoppingCart } from "lucide-react";
 import { ProductDialog } from "./ProductDialog";
 import { PatientSelectionDialog } from "./PatientSelectionDialog";
@@ -29,6 +36,7 @@ export const ProductsGrid = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -122,9 +130,13 @@ export const ProductsGrid = () => {
       const matchesSearch =
         product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.dosage?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
+      
+      const matchesType = productTypeFilter === "all" || 
+        product.product_type === productTypeFilter;
+      
+      return matchesSearch && matchesType;
     }), 
-    [products, searchQuery]
+    [products, searchQuery, productTypeFilter]
   );
 
   const {
@@ -264,14 +276,35 @@ export const ProductsGrid = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-1 gap-3 flex-col sm:flex-row">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select
+            value={productTypeFilter}
+            onValueChange={setProductTypeFilter}
+          >
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="Vitamins">Vitamins</SelectItem>
+              <SelectItem value="R & D Products">R & D Products</SelectItem>
+              <SelectItem value="Peptides">Peptides</SelectItem>
+              <SelectItem value="GLP 1">GLP 1</SelectItem>
+              <SelectItem value="GLP 2">GLP 2</SelectItem>
+              <SelectItem value="GLP 3">GLP 3</SelectItem>
+              <SelectItem value="Supplies">Supplies</SelectItem>
+              <SelectItem value="Vitamin IV's">Vitamin IV's</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
         <div className="flex items-center gap-3">

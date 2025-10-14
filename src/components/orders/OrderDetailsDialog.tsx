@@ -271,7 +271,14 @@ export const OrderDetailsDialog = ({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Product</p>
-                      <p className="font-medium">{line.products?.name || "N/A"}</p>
+                      <div className="flex flex-col gap-1">
+                        <p className="font-medium">{line.products?.name || "N/A"}</p>
+                        {line.products?.product_type && (
+                          <Badge variant="outline" className="text-xs w-fit">
+                            {line.products.product_type}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Quantity</p>

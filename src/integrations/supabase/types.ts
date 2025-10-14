@@ -1588,6 +1588,7 @@ export type Database = {
           image_url: string | null
           name: string
           pharmacy_id: string | null
+          product_type: Database["public"]["Enums"]["product_type"]
           requires_prescription: boolean
           retail_price: number | null
           sig: string | null
@@ -1604,6 +1605,7 @@ export type Database = {
           image_url?: string | null
           name: string
           pharmacy_id?: string | null
+          product_type?: Database["public"]["Enums"]["product_type"]
           requires_prescription?: boolean
           retail_price?: number | null
           sig?: string | null
@@ -1620,6 +1622,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           pharmacy_id?: string | null
+          product_type?: Database["public"]["Enums"]["product_type"]
           requires_prescription?: boolean
           retail_price?: number | null
           sig?: string | null
@@ -2427,6 +2430,15 @@ export type Database = {
         | "denied"
         | "change_requested"
         | "delivered"
+      product_type:
+        | "Vitamins"
+        | "R & D Products"
+        | "Peptides"
+        | "GLP 1"
+        | "GLP 2"
+        | "GLP 3"
+        | "Supplies"
+        | "Vitamin IV's"
       shipping_carrier: "fedex" | "ups" | "usps"
     }
     CompositeTypes: {
@@ -2570,6 +2582,16 @@ export const Constants = {
         "denied",
         "change_requested",
         "delivered",
+      ],
+      product_type: [
+        "Vitamins",
+        "R & D Products",
+        "Peptides",
+        "GLP 1",
+        "GLP 2",
+        "GLP 3",
+        "Supplies",
+        "Vitamin IV's",
       ],
       shipping_carrier: ["fedex", "ups", "usps"],
     },
