@@ -2338,6 +2338,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: string
       }
+      get_current_user_rep_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_discount_code_stats: {
         Args: { p_code: string }
         Returns: {
@@ -2366,8 +2370,16 @@ export type Database = {
         Args: { _cart_id: string; _user_id: string }
         Returns: boolean
       }
+      is_downline_of_topline: {
+        Args: { _topline_user_id: string }
+        Returns: boolean
+      }
       is_thread_participant: {
         Args: { _thread_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_topline_of_rep: {
+        Args: { _rep_id: string }
         Returns: boolean
       }
       log_audit_event: {
