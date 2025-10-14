@@ -529,6 +529,30 @@ export type Database = {
         }
         Relationships: []
       }
+      encryption_keys: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          key_name: string
+          rotated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          key_name: string
+          rotated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          key_name?: string
+          rotated_at?: string | null
+        }
+        Relationships: []
+      }
       failed_login_attempts: {
         Row: {
           attempt_count: number | null
@@ -737,7 +761,9 @@ export type Database = {
           assigned_pharmacy_id: string | null
           created_at: string | null
           custom_dosage: string | null
+          custom_dosage_encrypted: string | null
           custom_sig: string | null
+          custom_sig_encrypted: string | null
           delivered_at: string | null
           destination_state: string | null
           discount_amount: number | null
@@ -752,6 +778,7 @@ export type Database = {
           patient_phone: string | null
           prescription_method: string | null
           prescription_url: string | null
+          prescription_url_encrypted: string | null
           price: number
           price_before_discount: number | null
           processing_at: string | null
@@ -770,7 +797,9 @@ export type Database = {
           assigned_pharmacy_id?: string | null
           created_at?: string | null
           custom_dosage?: string | null
+          custom_dosage_encrypted?: string | null
           custom_sig?: string | null
+          custom_sig_encrypted?: string | null
           delivered_at?: string | null
           destination_state?: string | null
           discount_amount?: number | null
@@ -785,6 +814,7 @@ export type Database = {
           patient_phone?: string | null
           prescription_method?: string | null
           prescription_url?: string | null
+          prescription_url_encrypted?: string | null
           price: number
           price_before_discount?: number | null
           processing_at?: string | null
@@ -803,7 +833,9 @@ export type Database = {
           assigned_pharmacy_id?: string | null
           created_at?: string | null
           custom_dosage?: string | null
+          custom_dosage_encrypted?: string | null
           custom_sig?: string | null
+          custom_sig_encrypted?: string | null
           delivered_at?: string | null
           destination_state?: string | null
           discount_amount?: number | null
@@ -818,6 +850,7 @@ export type Database = {
           patient_phone?: string | null
           prescription_method?: string | null
           prescription_url?: string | null
+          prescription_url_encrypted?: string | null
           price?: number
           price_before_discount?: number | null
           processing_at?: string | null
@@ -1051,12 +1084,14 @@ export type Database = {
           address_verified_at: string | null
           address_zip: string | null
           allergies: string | null
+          allergies_encrypted: string | null
           birth_date: string | null
           created_at: string
           email: string | null
           id: string
           name: string
           notes: string | null
+          notes_encrypted: string | null
           phone: string | null
           practice_id: string | null
           updated_at: string
@@ -1072,12 +1107,14 @@ export type Database = {
           address_verified_at?: string | null
           address_zip?: string | null
           allergies?: string | null
+          allergies_encrypted?: string | null
           birth_date?: string | null
           created_at?: string
           email?: string | null
           id?: string
           name: string
           notes?: string | null
+          notes_encrypted?: string | null
           phone?: string | null
           practice_id?: string | null
           updated_at?: string
@@ -1093,12 +1130,14 @@ export type Database = {
           address_verified_at?: string | null
           address_zip?: string | null
           allergies?: string | null
+          allergies_encrypted?: string | null
           birth_date?: string | null
           created_at?: string
           email?: string | null
           id?: string
           name?: string
           notes?: string | null
+          notes_encrypted?: string | null
           phone?: string | null
           practice_id?: string | null
           updated_at?: string
@@ -2151,7 +2190,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      security_events_summary: {
+        Row: {
+          action_type: string | null
+          event_count: number | null
+          event_hour: string | null
+          unique_ips: number | null
+          unique_users: number | null
+          user_role: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       archive_old_audit_logs: {
@@ -2180,6 +2229,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      decrypt_plaid_token: {
+        Args: { p_encrypted_token: string }
+        Returns: string
+      }
+      encrypt_plaid_token: {
+        Args: { p_token: string }
+        Returns: string
       }
       get_discount_code_stats: {
         Args: { p_code: string }
@@ -2221,6 +2278,10 @@ export type Database = {
           p_entity_type?: string
         }
         Returns: string
+      }
+      refresh_security_events_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       validate_discount_code: {
         Args: { p_code: string }
