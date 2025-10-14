@@ -9,30 +9,30 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
 export const SecurityOverview = () => {
-  // Real-time alerts for critical security events
-  useEffect(() => {
-    const channel = supabase
-      .channel('critical-security-events')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'security_events',
-          filter: 'severity=eq.critical',
-        },
-        (payload) => {
-          toast.error("⚠️ Critical Security Event", {
-            description: payload.new.details?.message || "Review Security Dashboard",
-          });
-        }
-      )
-      .subscribe();
+  // Real-time alerts temporarily disabled during recovery
+  // useEffect(() => {
+  //   const channel = supabase
+  //     .channel('critical-security-events')
+  //     .on(
+  //       'postgres_changes',
+  //       {
+  //         event: 'INSERT',
+  //         schema: 'public',
+  //         table: 'security_events',
+  //         filter: 'severity=eq.critical',
+  //       },
+  //       (payload) => {
+  //         toast.error("⚠️ Critical Security Event", {
+  //           description: payload.new.details?.message || "Review Security Dashboard",
+  //         });
+  //       }
+  //     )
+  //     .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, []);
 
   const { data: errorStats, isLoading: errorStatsLoading } = useQuery({
     queryKey: ["security-overview-errors"],

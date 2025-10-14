@@ -99,22 +99,12 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
-          // Get real client IP address
-          let clientIP = "unknown";
-          try {
-            const ipResponse = await fetch('https://api.ipify.org?format=json');
-            const ipData = await ipResponse.json();
-            clientIP = ipData.ip;
-          } catch (ipError) {
-            console.error("Failed to get client IP:", ipError);
-          }
-
           // Track failed login attempt
           try {
             await supabase.functions.invoke("track-failed-login", {
               body: {
                 email,
-                ip_address: clientIP,
+                ip_address: "browser",
                 user_agent: navigator.userAgent,
               },
             });
