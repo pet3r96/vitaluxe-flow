@@ -146,10 +146,39 @@ This document outlines the comprehensive security measures implemented in the Vi
 |----------|-------|--------|----------|----------|---------|----------|
 | All Patients | ✅ | Own Practice | Own Practice | Assigned Orders | Downline Practices | Assigned Practices |
 | Order Lines | ✅ | Own Orders | Own Orders | Assigned Only | Downline Orders | Assigned Orders |
+| **Profiles** | ✅ | **Own Only** | **Own Only** | Own Only | **Assigned Practices** | **Assigned Practices** |
+| **Cart Lines** | ✅ | **Recent Only (30 days)** | ❌ | ❌ | ❌ | ❌ |
 | Payment Methods | ✅ | Own Practice | ❌ | ❌ | ❌ | ❌ |
 | Audit Logs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Encryption Keys | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Security Dashboard | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+### Enhanced RLS Protections
+
+**Profiles Table Security:**
+- ✅ Users can only view their own profile by default
+- ✅ Toplines can view profiles of practices assigned to them (via `linked_topline_id`)
+- ✅ Downlines can view profiles of practices they're authorized for
+- ✅ Prevents exposure of sensitive NPI/DEA/license numbers to unauthorized users
+- ✅ Removed overly permissive "view associated profiles" policy
+
+**Cart Lines Table Security:**
+- ✅ Time-based access: Users can only view cart lines created within last 30 days
+- ✅ Patient data masking function available (`mask_patient_data()`)
+- ✅ Prevents long-term PHI exposure from abandoned carts
+- ✅ Automatic expiration of sensitive temporary data
+
+**Security Functions:**
+```sql
+-- Check if cart line is recent (within 30 days)
+is_recent_cart_line(created_at timestamptz) → boolean
+
+-- Mask patient data for non-owners
+mask_patient_data(cart_id, name, email, phone) → jsonb
+
+-- Log RLS policy violations
+log_rls_violation(table_name, entity_id, action) → void
+```
 
 ---
 
