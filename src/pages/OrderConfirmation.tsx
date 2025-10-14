@@ -323,10 +323,14 @@ export default function OrderConfirmation() {
         }
       }
 
-      // Increment discount code usage
-      if (discountCode) {
-        await supabase.rpc('increment_discount_usage', { p_code: discountCode });
-      }
+        // Increment discount code usage
+        if (discountCode) {
+          await supabase.rpc('increment_discount_usage' as any, { 
+            p_code: discountCode,
+            p_user_id: effectiveUserId,
+            p_order_id: createdOrders[0].id
+          } as any);
+        }
 
       const { error: deleteError } = await supabase
         .from("cart_lines")

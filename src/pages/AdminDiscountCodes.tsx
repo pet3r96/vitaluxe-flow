@@ -135,12 +135,12 @@ const AdminDiscountCodes = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Discount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Valid Period</TableHead>
-                    <TableHead>Usage</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Code</TableHead>
+            <TableHead>Discount</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Valid Period</TableHead>
+            <TableHead>Usage Limits</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -168,20 +168,38 @@ const AdminDiscountCodes = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {code.current_uses} / {code.max_uses || "∞"}
-                            </span>
-                            {code.max_uses && (
-                              <div className="w-24 h-1.5 bg-secondary rounded-full mt-1">
-                                <div
-                                  className="h-full bg-primary rounded-full"
-                                  style={{
-                                    width: `${Math.min((code.current_uses / code.max_uses) * 100, 100)}%`,
-                                  }}
-                                />
+                          <div className="flex flex-col gap-1.5 text-xs">
+                            {/* Per-User Limit */}
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                Per User
+                              </Badge>
+                              <span className="font-medium">
+                                {(code as any).max_uses_per_user || "Unlimited"}
+                              </span>
+                            </div>
+                            
+                            {/* Global Limit with Progress Bar */}
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs shrink-0">
+                                Total
+                              </Badge>
+                              <div className="flex flex-col flex-1">
+                                <span className="font-medium">
+                                  {code.current_uses} / {code.max_uses || "∞"}
+                                </span>
+                                {code.max_uses && (
+                                  <div className="w-full h-1.5 bg-secondary rounded-full mt-1">
+                                    <div
+                                      className="h-full bg-primary rounded-full"
+                                      style={{
+                                        width: `${Math.min((code.current_uses / code.max_uses) * 100, 100)}%`,
+                                      }}
+                                    />
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,7 @@ const formSchema = z.object({
   valid_from: z.date().optional(),
   valid_until: z.date().optional(),
   max_uses: z.number().optional(),
+  max_uses_per_user: z.number().optional(),
 });
 
 interface DiscountCodeDialogProps {
@@ -73,6 +75,7 @@ export const DiscountCodeDialog = ({
       valid_from: undefined,
       valid_until: undefined,
       max_uses: undefined,
+      max_uses_per_user: 1,
     },
   });
 
@@ -86,6 +89,7 @@ export const DiscountCodeDialog = ({
         valid_from: discountCode.valid_from ? new Date(discountCode.valid_from) : undefined,
         valid_until: discountCode.valid_until ? new Date(discountCode.valid_until) : undefined,
         max_uses: discountCode.max_uses || undefined,
+        max_uses_per_user: discountCode.max_uses_per_user || 1,
       });
     } else {
       form.reset({
@@ -96,6 +100,7 @@ export const DiscountCodeDialog = ({
         valid_from: undefined,
         valid_until: undefined,
         max_uses: undefined,
+        max_uses_per_user: 1,
       });
     }
   }, [discountCode, form]);
@@ -112,7 +117,8 @@ export const DiscountCodeDialog = ({
             active: values.active,
             valid_from: values.valid_from?.toISOString(),
             valid_until: values.valid_until?.toISOString(),
-            max_uses: values.max_uses,
+            max_uses: values.max_uses || null,
+            max_uses_per_user: values.max_uses_per_user || 1,
           })
           .eq("id", discountCode.id);
 
@@ -130,7 +136,8 @@ export const DiscountCodeDialog = ({
           active: values.active,
           valid_from: values.valid_from?.toISOString(),
           valid_until: values.valid_until?.toISOString(),
-          max_uses: values.max_uses,
+          max_uses: values.max_uses || null,
+          max_uses_per_user: values.max_uses_per_user || 1,
         });
 
         if (error) throw error;
@@ -319,32 +326,108 @@ export const DiscountCodeDialog = ({
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="max_uses"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maximum Uses (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value ? parseInt(e.target.value) : undefined
-                        )
-                      }
-                      value={field.value || ""}
-                      min={1}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Leave empty for unlimited uses
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Usage Limits Section */}
+            <div className="space-y-4 rounded-lg border p-4 bg-muted/50">
+              <div className="space-y-1">
+                <h4 className="font-medium">Usage Limits</h4>
+                <p className="text-sm text-muted-foreground">
+                  Control how many times this code can be used
+                </p>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="max_uses_per_user"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span className="font-semibold">Per Customer</span>
+                      <Badge variant="outline" className="text-xs">Recommended</Badge>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value ? parseInt(e.target.value) : undefined
+                          )
+                        }
+                        value={field.value || ""}
+                        min={1}
+                        placeholder="1"
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      <strong>How many times EACH customer can use this code.</strong>
+                      <br />
+                      Example: Set to <code className="bg-muted px-1 rounded">1</code> = each customer can use it once
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="max_uses"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span className="font-semibold">Total Global Limit</span>
+                      <Badge variant="secondary" className="text-xs">Optional</Badge>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value ? parseInt(e.target.value) : undefined
+                          )
+                        }
+                        value={field.value || ""}
+                        min={1}
+                        placeholder="Leave empty for unlimited"
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      <strong>Total uses across ALL customers (optional cap).</strong>
+                      <br />
+                      Example: Set to <code className="bg-muted px-1 rounded">100</code> = only first 100 customers can use it
+                      <br />
+                      Leave empty = unlimited total uses
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Visual Example Section */}
+              <div className="rounded-md bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 space-y-2">
+                <h5 className="text-xs font-semibold text-blue-900 dark:text-blue-100">
+                  💡 Configuration Examples:
+                </h5>
+                <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                  <div className="flex items-start gap-2">
+                    <span className="font-mono bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded shrink-0">Per Customer: 1, Total: (empty)</span>
+                    <span>= Each customer uses it once, unlimited customers ✅</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-mono bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded shrink-0">Per Customer: 1, Total: 100</span>
+                    <span>= First 100 customers each use it once</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-mono bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded shrink-0">Per Customer: 5, Total: (empty)</span>
+                    <span>= VIP customers can use it 5 times each</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-mono bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded shrink-0">Per Customer: (empty), Total: 1</span>
+                    <span>= Only 1 customer total can use it (old behavior)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <FormField
               control={form.control}
