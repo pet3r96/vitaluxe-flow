@@ -395,6 +395,47 @@ export type Database = {
           },
         ]
       }
+      discount_code_usage: {
+        Row: {
+          created_at: string
+          discount_code_id: string
+          first_used_at: string
+          id: string
+          last_used_at: string
+          updated_at: string
+          usage_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discount_code_id: string
+          first_used_at?: string
+          id?: string
+          last_used_at?: string
+          updated_at?: string
+          usage_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discount_code_id?: string
+          first_used_at?: string
+          id?: string
+          last_used_at?: string
+          updated_at?: string
+          usage_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_code_usage_discount_code_id_fkey"
+            columns: ["discount_code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discount_codes: {
         Row: {
           active: boolean | null
@@ -406,6 +447,7 @@ export type Database = {
           discount_percentage: number
           id: string
           max_uses: number | null
+          max_uses_per_user: number | null
           updated_at: string | null
           valid_from: string | null
           valid_until: string | null
@@ -420,6 +462,7 @@ export type Database = {
           discount_percentage: number
           id?: string
           max_uses?: number | null
+          max_uses_per_user?: number | null
           updated_at?: string | null
           valid_from?: string | null
           valid_until?: string | null
@@ -434,6 +477,7 @@ export type Database = {
           discount_percentage?: number
           id?: string
           max_uses?: number | null
+          max_uses_per_user?: number | null
           updated_at?: string | null
           valid_from?: string | null
           valid_until?: string | null
