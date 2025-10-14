@@ -9,7 +9,39 @@ This document outlines the comprehensive security measures implemented in the Vi
 
 ### 1. Data Encryption at Rest
 
-**PHI/PII Encryption:**
+**⚠️ Current Status: Encryption Triggers Disabled by Design**
+
+The application is built with encryption capabilities, but triggers are currently **disabled** to avoid breaking existing workflows. This is a conscious security tradeoff documented in the migration files.
+
+**Encryption Coverage Dashboard:**
+- Navigate to Security → Encryption to view real-time coverage
+- Shows 0% when encryption is disabled
+- Color-coded warnings: Red (0%), Yellow (partial), Green (100%)
+- Displays "No data to encrypt" when no encryptable records exist
+
+**To Enable Encryption (Admin Only):**
+
+1. **Set Encryption Secret** in backend configuration:
+   ```
+   app.encryption_secret = 'your-secure-secret-key'
+   ```
+
+2. **Uncomment and run trigger SQL** from migration files:
+   ```sql
+   -- Enable patient PHI encryption
+   CREATE TRIGGER encrypt_patient_phi_trigger
+     BEFORE INSERT OR UPDATE ON patients
+     FOR EACH ROW EXECUTE FUNCTION encrypt_patient_phi();
+   
+   -- Enable prescription data encryption
+   CREATE TRIGGER encrypt_prescription_trigger
+     BEFORE INSERT OR UPDATE ON order_lines
+     FOR EACH ROW EXECUTE FUNCTION encrypt_prescription_data();
+   ```
+
+3. **Backfill existing data** using the encryption functions manually
+
+**PHI/PII Encryption (When Enabled):**
 - Patient PHI (allergies, notes) encrypted using AES-256
 - Prescription data (URLs, dosage, sig) encrypted
 - Payment methods (Plaid tokens) encrypted
@@ -19,14 +51,6 @@ This document outlines the comprehensive security measures implemented in the Vi
 - Stored in `encryption_keys` table with RLS enabled
 - Recommended rotation: Every 90 days
 - Admins can monitor key age in Security → Encryption tab
-
-**Implementation:**
-```sql
--- Encryption happens automatically via triggers:
-- encrypt_patient_phi_trigger (patients table)
-- encrypt_prescription_trigger (order_lines table)
-- Payment method encryption on insert/update
-```
 
 ---
 

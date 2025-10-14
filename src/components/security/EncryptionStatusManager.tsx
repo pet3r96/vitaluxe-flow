@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Key, Shield, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Key, Shield, AlertTriangle, CheckCircle2, Loader2, Info } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export const EncryptionStatusManager = () => {
   const { data: encryptionKeys, isLoading: keysLoading } = useQuery({
@@ -81,6 +83,86 @@ export const EncryptionStatusManager = () => {
   const prescriptionData = coverageData?.["Prescription Data"] || { total: 0, encrypted: 0, percentage: 0 };
   const paymentMethods = coverageData?.["Payment Methods"] || { total: 0, encrypted: 0, percentage: 0 };
 
+  // Helper to get progress bar color based on coverage
+  const getProgressColor = (percentage: number, total: number) => {
+    if (total === 0) return "bg-muted"; // No data
+    if (percentage === 0) return "bg-destructive"; // Not encrypted
+    if (percentage < 100) return "bg-yellow-500"; // Partially encrypted
+    return "bg-green-500"; // Fully encrypted
+  };
+
+  // Helper to render coverage display
+  const renderCoverageCard = (
+    title: string,
+    description: string,
+    icon: React.ReactNode,
+    stats: { total: number; encrypted: number; percentage: number }
+  ) => {
+    const hasData = stats.total > 0;
+    const isEncrypted = stats.encrypted > 0;
+    const isFullyEncrypted = stats.percentage === 100 && hasData;
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {icon}
+            {title}
+          </CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium">
+                {hasData ? "Data Encrypted" : "No Data Available"}
+              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {hasData ? `${stats.encrypted} / ${stats.total} records` : "N/A"}
+                </p>
+                {hasData && (
+                  isFullyEncrypted ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                  )
+                )}
+                {!hasData && <Info className="h-4 w-4 text-muted-foreground" />}
+              </div>
+            </div>
+            <Progress 
+              value={hasData ? stats.percentage : 0} 
+              className={cn("h-2", !hasData && "opacity-50")}
+              indicatorClassName={getProgressColor(stats.percentage, stats.total)}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {hasData ? `${stats.percentage.toFixed(1)}% coverage` : "No data to encrypt"}
+            </p>
+          </div>
+          
+          {hasData && !isEncrypted && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Encryption not enabled - Data stored in plain text
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {!hasData && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                No {title.toLowerCase()} data exists to encrypt
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Encryption Key Status */}
@@ -122,79 +204,28 @@ export const EncryptionStatusManager = () => {
       </Card>
 
       {/* Patient PHI Encryption */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Patient PHI Encryption Coverage
-          </CardTitle>
-          <CardDescription>Protected Health Information field-level encryption status</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium">Patient Data Encrypted</p>
-              <p className="text-sm text-muted-foreground">
-                {patientPHI.encrypted} / {patientPHI.total} records
-              </p>
-            </div>
-            <Progress value={patientPHI.percentage} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {patientPHI.percentage.toFixed(1)}% coverage
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {renderCoverageCard(
+        "Patient PHI Encryption Coverage",
+        "Protected Health Information field-level encryption status",
+        <Shield className="h-5 w-5" />,
+        patientPHI
+      )}
 
       {/* Prescription Data Encryption */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Prescription Data Encryption
-          </CardTitle>
-          <CardDescription>DEA-regulated prescription information protection</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium">Prescription Data Encrypted</p>
-              <p className="text-sm text-muted-foreground">
-                {prescriptionData.encrypted} / {prescriptionData.total} records
-              </p>
-            </div>
-            <Progress value={prescriptionData.percentage} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {prescriptionData.percentage.toFixed(1)}% coverage
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {renderCoverageCard(
+        "Prescription Data Encryption",
+        "DEA-regulated prescription information protection",
+        <Shield className="h-5 w-5" />,
+        prescriptionData
+      )}
 
       {/* Payment Method Encryption */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Banking Data Encryption
-          </CardTitle>
-          <CardDescription>Plaid access token and payment method protection</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium">Payment Methods Secured</p>
-              <p className="text-sm text-muted-foreground">
-                {paymentMethods.encrypted} / {paymentMethods.total} accounts
-              </p>
-            </div>
-            <Progress value={paymentMethods.percentage} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {paymentMethods.percentage.toFixed(1)}% coverage
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {renderCoverageCard(
+        "Banking Data Encryption",
+        "Plaid access token and payment method protection",
+        <Shield className="h-5 w-5" />,
+        paymentMethods
+      )}
     </div>
   );
 };

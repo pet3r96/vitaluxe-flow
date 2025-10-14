@@ -2354,6 +2354,15 @@ export type Database = {
           total_uses: number
         }[]
       }
+      get_encryption_coverage: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          coverage_percentage: number
+          data_type: string
+          encrypted_records: number
+          total_records: number
+        }[]
+      }
       get_my_topline_rep_id: {
         Args: Record<PropertyKey, never>
         Returns: string
