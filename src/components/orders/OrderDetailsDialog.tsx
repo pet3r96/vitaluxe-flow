@@ -36,6 +36,9 @@ export const OrderDetailsDialog = ({
   const { toast } = useToast();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
+  // Determine if user can view PHI (HIPAA compliance)
+  const canViewPHI = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
+
   const handleDownloadPrescription = async (prescriptionUrl: string, patientName: string) => {
     try {
       if (import.meta.env.DEV) {
@@ -312,6 +315,22 @@ export const OrderDetailsDialog = ({
                             <p className="text-sm">{line.patient_address}</p>
                           </div>
                         )}
+                        {canViewPHI && line.patients?.allergies && (
+                          <div className="col-span-2 pt-2 border-t border-amber-200">
+                            <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Patient Allergies (PHI)
+                            </p>
+                            <p className="text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded mt-1 border border-amber-200 dark:border-amber-900">
+                              {line.patients.allergies}
+                            </p>
+                          </div>
+                        )}
+                        {canViewPHI && line.patients?.allergies === null && (
+                          <div className="col-span-2 pt-2 border-t">
+                            <p className="text-xs text-muted-foreground italic">No known allergies recorded</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -319,11 +338,35 @@ export const OrderDetailsDialog = ({
                   {line.prescription_url && (
                     <div className="pt-3 border-t">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-muted-foreground">Prescription</p>
+                        <p className="text-sm font-medium text-muted-foreground">Prescription Details</p>
                         {line.products?.requires_prescription && (
                           <Badge variant="default" className="bg-green-600">Required</Badge>
                         )}
                       </div>
+                      
+                      {canViewPHI && (line.custom_dosage || line.custom_sig || line.order_notes) && (
+                        <div className="space-y-2 mb-3 p-3 bg-muted/50 rounded-md border">
+                          {line.custom_dosage && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">Dosage Instructions</p>
+                              <p className="text-sm">{line.custom_dosage}</p>
+                            </div>
+                          )}
+                          {line.custom_sig && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">SIG (Directions for Use)</p>
+                              <p className="text-sm">{line.custom_sig}</p>
+                            </div>
+                          )}
+                          {line.order_notes && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">Additional Notes</p>
+                              <p className="text-sm text-muted-foreground">{line.order_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
                       <Button 
                         variant="outline" 
                         size="sm" 
