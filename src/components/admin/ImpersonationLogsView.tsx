@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Shield, Clock, User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export function ImpersonationLogsView() {
   const { userRole, isImpersonating, effectiveUserId, user } = useAuth();
@@ -27,7 +29,7 @@ export function ImpersonationLogsView() {
         .from("impersonation_logs")
         .select("*")
         .order("start_time", { ascending: false })
-        .limit(100);
+        .limit(1000);
       
       // Non-admin users and admins who are impersonating only see logs where they were the target
       if (!isAdminNotImpersonating && effectiveUserId) {
@@ -40,6 +42,21 @@ export function ImpersonationLogsView() {
     },
     enabled: !!effectiveUserId,
   });
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage,
+  } = usePagination({
+    totalItems: logs?.length || 0,
+    itemsPerPage: 25,
+  });
+
+  const paginatedLogs = logs?.slice(startIndex, endIndex);
 
   const calculateDuration = (startTime: string, endTime: string | null) => {
     if (!endTime) return "Active";
@@ -85,7 +102,7 @@ export function ImpersonationLogsView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => (
+                {paginatedLogs?.map((log) => (
                   <TableRow key={log.id}>
                     {isAdminNotImpersonating && (
                       <TableCell>
@@ -138,6 +155,16 @@ export function ImpersonationLogsView() {
                 ))}
               </TableBody>
             </Table>
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              hasNextPage={hasNextPage}
+              hasPrevPage={hasPrevPage}
+              totalItems={logs?.length || 0}
+              startIndex={startIndex}
+              endIndex={endIndex}
+            />
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">

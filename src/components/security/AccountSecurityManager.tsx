@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Lock, Unlock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const AccountSecurityManager = () => {
   const { data: lockouts, isLoading, refetch } = useQuery({
@@ -21,6 +23,21 @@ export const AccountSecurityManager = () => {
       return data || [];
     },
   });
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage,
+  } = usePagination({
+    totalItems: lockouts?.length || 0,
+    itemsPerPage: 25,
+  });
+
+  const paginatedLockouts = lockouts?.slice(startIndex, endIndex);
 
   const handleUnlock = async (lockoutId: string) => {
     const { error } = await supabase
@@ -70,7 +87,7 @@ export const AccountSecurityManager = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lockouts.map((lockout) => (
+                {paginatedLockouts?.map((lockout) => (
                   <TableRow key={lockout.id}>
                     <TableCell className="font-medium">{lockout.user_email}</TableCell>
                     <TableCell>
@@ -102,6 +119,16 @@ export const AccountSecurityManager = () => {
                 ))}
               </TableBody>
             </Table>
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              hasNextPage={hasNextPage}
+              hasPrevPage={hasPrevPage}
+              totalItems={lockouts?.length || 0}
+              startIndex={startIndex}
+              endIndex={endIndex}
+            />
           </div>
         ) : (
           <div className="text-center py-12 text-muted-foreground">
