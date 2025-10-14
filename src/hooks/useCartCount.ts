@@ -24,5 +24,6 @@ export const useCartCount = (userId: string | null) => {
       return count || 0;
     },
     enabled: !!userId,
+    staleTime: 0,
   });
 };

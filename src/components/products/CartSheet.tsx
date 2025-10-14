@@ -60,6 +60,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
       };
     },
     enabled: !!effectiveUserId && open,
+    staleTime: 0,
   });
 
   const updateQuantityMutation = useMutation({
