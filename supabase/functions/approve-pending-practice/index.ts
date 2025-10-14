@@ -58,8 +58,6 @@ serve(async (req) => {
     adminNotes = requestData.adminNotes;
     const updatedData = requestData.updatedData;
 
-    console.log('Processing pending practice request:', { requestId, action });
-
     // Get pending request
     const { data: fetchedPractice, error: fetchError } = await supabaseAdmin
       .from('pending_practices')
@@ -127,8 +125,6 @@ serve(async (req) => {
       // Generate secure temporary password
       const temporaryPassword = generateSecurePassword();
 
-      console.log('Creating practice account for:', practiceData.email);
-
       // Create user with admin client (handle existing users)
       let userId: string;
       let isNewUser = false;
@@ -149,7 +145,6 @@ serve(async (req) => {
           // Check if user already exists
           if (createUserError.message?.includes('already registered') || 
               createUserError.message?.includes('duplicate')) {
-            console.log('User already exists, fetching existing user');
             const { data: existingUser, error: fetchError } = await supabaseAdmin.auth.admin
               .listUsers();
             
@@ -158,7 +153,6 @@ serve(async (req) => {
               throw new Error(`Failed to create or find user: ${createUserError.message}`);
             }
             userId = foundUser.id;
-            console.log('Found existing user:', userId);
           } else {
             throw new Error(`Failed to create user: ${createUserError.message}`);
           }
@@ -167,7 +161,6 @@ serve(async (req) => {
         } else {
           userId = newUser.user.id;
           isNewUser = true;
-          console.log('User created:', userId);
         }
       } catch (error: any) {
         console.error('Error handling user creation:', error);
@@ -334,8 +327,6 @@ serve(async (req) => {
       if (updateError) {
         throw new Error(`Failed to reject request: ${updateError.message}`);
       }
-
-      console.log('Practice request rejected');
 
       return new Response(
         JSON.stringify({ 

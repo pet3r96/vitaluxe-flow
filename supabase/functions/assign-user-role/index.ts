@@ -64,12 +64,10 @@ serve(async (req) => {
     });
 
     const signupData: SignupRequest = await req.json();
-    console.log('Signup request received for role:', signupData.role);
 
     // Normalize role: "practice" → "doctor" for backward compatibility
     // Frontend may send "practice", but database uses "doctor" for practice accounts
     if (signupData.role === "practice") {
-      console.log("⚠️ Normalizing 'practice' role to 'doctor' for database compatibility");
       signupData.role = "doctor";
     }
 
@@ -112,32 +110,19 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     let callerUserId: string | null = null;
     
-    console.log('=== TOKEN VALIDATION START ===');
-    console.log('Authorization header present:', !!authHeader);
-    
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
-      console.log('Token extracted (first 20 chars):', token.substring(0, 20) + '...');
       
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
       
       if (error) {
         console.error('❌ Failed to get user from token:', error.message);
-        console.error('Error details:', JSON.stringify(error, null, 2));
       }
       
       if (user) {
         callerUserId = user.id;
-        console.log('✅ Caller user ID extracted:', callerUserId);
-      } else {
-        console.warn('⚠️ No user found from token (user is null)');
       }
-    } else {
-      console.warn('⚠️ No Authorization header provided');
     }
-    
-    console.log('Final callerUserId value:', callerUserId);
-    console.log('=== TOKEN VALIDATION END ===');
 
     // Authorization check for non-admin roles creating practices
     if (callerUserId && signupData.role === 'doctor') {
@@ -238,7 +223,6 @@ serve(async (req) => {
     }
 
     const userId = authData.user.id;
-    console.log('User created:', userId);
 
     // Determine parent_id
     const parentId = signupData.parentId || 
@@ -266,8 +250,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    console.log('User profile and role created:', signupData.role);
 
     // Upload contract if provided
     let contractUrl = null;
@@ -357,8 +339,6 @@ serve(async (req) => {
 
     // Create rep_practice_links for doctor (practice) role
     if (signupData.role === 'doctor' && signupData.roleData.linkedToplineId) {
-      console.log('Creating rep_practice_links for practice:', userId);
-      
       // Determine if the linked rep is a downline or topline
       const { data: linkedRepData } = await supabaseAdmin
         .from('user_roles')
@@ -390,8 +370,6 @@ serve(async (req) => {
           
           if (link1Error) {
             console.error('Failed to create downline rep_practice_link:', link1Error);
-          } else {
-            console.log('Created downline rep_practice_link');
           }
           
           // Link 2: Topline rep → practice (if downline has a topline)
@@ -406,8 +384,6 @@ serve(async (req) => {
             
             if (link2Error) {
               console.error('Failed to create topline rep_practice_link:', link2Error);
-            } else {
-              console.log('Created topline rep_practice_link');
             }
           }
         }
@@ -430,8 +406,6 @@ serve(async (req) => {
           
           if (linkError) {
             console.error('Failed to create topline rep_practice_link:', linkError);
-          } else {
-            console.log('Created topline rep_practice_link');
           }
         }
       }
@@ -564,7 +538,6 @@ serve(async (req) => {
 
     // For pharmacy role, update priority_map if provided
     if (signupData.role === 'pharmacy' && signupData.roleData.priorityMap) {
-      console.log('Updating pharmacy priority_map');
       const { error: priorityMapError } = await supabaseAdmin
         .from('pharmacies')
         .update({
@@ -579,14 +552,11 @@ serve(async (req) => {
     }
 
 
-    console.log('User signup completed successfully');
-
     // Generate temporary password and send welcome email (non-admin only)
     const mustChangePassword = signupData.role !== 'admin';
     
     if (mustChangePassword) {
       const temporaryPassword = generateSecurePassword();
-      console.log('Generated temporary password for user:', userId);
 
       // Update user password in auth
       const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -625,8 +595,6 @@ serve(async (req) => {
 
         if (emailError) {
           console.error('Error sending welcome email:', emailError);
-        } else {
-          console.log('Welcome email sent successfully to:', signupData.email);
         }
       } catch (emailErr) {
         console.error('Failed to invoke send-welcome-email function:', emailErr);

@@ -30,7 +30,9 @@ export const PatientsDataTable = () => {
     queryKey: ["patients", effectiveRole, effectivePracticeId],
     staleTime: 0,
     queryFn: async () => {
-      console.debug('Patients query params', { effectiveRole, effectivePracticeId });
+      if (import.meta.env.DEV) {
+        console.debug('Patients query params', { effectiveRole, effectivePracticeId });
+      }
       let patientsQuery = supabase
         .from("patients")
         .select("*")
@@ -47,7 +49,9 @@ export const PatientsDataTable = () => {
         throw patientsError;
       }
 
-      console.debug('Patients fetched', patientsData?.length || 0);
+      if (import.meta.env.DEV) {
+        console.debug('Patients fetched', patientsData?.length || 0);
+      }
 
       // Fetch practice details for all patients
       if (patientsData && patientsData.length > 0) {

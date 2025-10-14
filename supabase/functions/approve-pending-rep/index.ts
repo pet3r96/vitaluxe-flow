@@ -57,8 +57,6 @@ serve(async (req) => {
     const rejectionReason = requestData.rejectionReason;
     adminNotes = requestData.adminNotes;
 
-    console.log('Processing pending rep request:', { requestId, action });
-
     // Get pending request
     const { data: fetchedRep, error: fetchError } = await supabaseAdmin
       .from('pending_reps')
@@ -88,8 +86,6 @@ serve(async (req) => {
       // Generate secure temporary password
       const temporaryPassword = generateSecurePassword();
 
-      console.log('Creating user account for:', pendingRep.email);
-
       // Create user with admin client
       const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
         email: pendingRep.email,
@@ -106,8 +102,6 @@ serve(async (req) => {
         console.error('Failed to create user:', createUserError);
         throw new Error(`Failed to create user: ${createUserError?.message}`);
       }
-
-      console.log('User created:', newUser.user.id);
 
       // Create profile
       const { error: profileError } = await supabaseAdmin
@@ -206,8 +200,6 @@ serve(async (req) => {
         throw new Error(`Failed to update pending request: ${updateError.message}`);
       }
 
-      console.log('Rep approved successfully');
-
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -233,8 +225,6 @@ serve(async (req) => {
       if (updateError) {
         throw new Error(`Failed to reject request: ${updateError.message}`);
       }
-
-      console.log('Rep request rejected');
 
       return new Response(
         JSON.stringify({ 

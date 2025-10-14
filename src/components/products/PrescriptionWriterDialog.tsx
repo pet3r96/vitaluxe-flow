@@ -163,8 +163,6 @@ export function PrescriptionWriterDialog({
         throw new Error(data?.error || "Failed to generate prescription");
       }
     } catch (error: any) {
-      console.error('Error generating prescription:', error);
-      
       // Log error to audit logs for admin visibility
       try {
         await supabase.functions.invoke('log-error', {
