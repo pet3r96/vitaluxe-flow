@@ -24,12 +24,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const AdminDiscountCodes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCode, setSelectedCode] = useState<any>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [showStatsDialog, setShowStatsDialog] = useState(false);
+  const [deleteConfirmCode, setDeleteConfirmCode] = useState<any>(null);
   const { toast } = useToast();
 
   const { data: discountCodes, refetch } = useQuery({
@@ -70,6 +83,39 @@ const AdminDiscountCodes = () => {
     code.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     code.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const pagination = usePagination({
+    totalItems: filteredCodes?.length || 0,
+    itemsPerPage: 25,
+    initialPage: 1,
+  });
+
+  const paginatedCodes = filteredCodes?.slice(
+    pagination.startIndex,
+    pagination.endIndex
+  );
+
+  const handleDelete = async (code: any) => {
+    const { error } = await supabase
+      .from("discount_codes")
+      .delete()
+      .eq("id", code.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete discount code",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Discount code deleted successfully",
+      });
+      refetch();
+    }
+    setDeleteConfirmCode(null);
+  };
 
   const getStatusBadge = (code: any) => {
     const now = new Date();
@@ -144,8 +190,8 @@ const AdminDiscountCodes = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCodes && filteredCodes.length > 0 ? (
-                    filteredCodes.map((code) => (
+                  {paginatedCodes && paginatedCodes.length > 0 ? (
+                    paginatedCodes.map((code) => (
                       <TableRow key={code.id}>
                         <TableCell>
                           <div className="flex flex-col">
@@ -243,6 +289,12 @@ const AdminDiscountCodes = () => {
                               >
                                 Copy Code
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setDeleteConfirmCode(code)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                Delete
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -258,6 +310,17 @@ const AdminDiscountCodes = () => {
                 </TableBody>
               </Table>
             </div>
+
+            <DataTablePagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={pagination.goToPage}
+              hasNextPage={pagination.hasNextPage}
+              hasPrevPage={pagination.hasPrevPage}
+              totalItems={filteredCodes?.length || 0}
+              startIndex={pagination.startIndex}
+              endIndex={pagination.endIndex}
+            />
           </div>
         </CardContent>
       </Card>
@@ -278,6 +341,30 @@ const AdminDiscountCodes = () => {
         onOpenChange={setShowStatsDialog}
         discountCode={selectedCode}
       />
+
+      <AlertDialog
+        open={!!deleteConfirmCode}
+        onOpenChange={(open) => !open && setDeleteConfirmCode(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Discount Code?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the code "{deleteConfirmCode?.code}"? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDelete(deleteConfirmCode)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
