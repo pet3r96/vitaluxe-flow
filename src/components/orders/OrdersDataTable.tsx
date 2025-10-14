@@ -37,9 +37,11 @@ export const OrdersDataTable = () => {
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
     staleTime: 0,
     queryFn: async () => {
-      console.log('OrdersDataTable - effectiveRole:', effectiveRole);
-      console.log('OrdersDataTable - effectiveUserId:', effectiveUserId);
-      console.log('OrdersDataTable - auth.uid:', user?.id);
+      if (import.meta.env.DEV) {
+        console.log('OrdersDataTable - effectiveRole:', effectiveRole);
+        console.log('OrdersDataTable - effectiveUserId:', effectiveUserId);
+        console.log('OrdersDataTable - auth.uid:', user?.id);
+      }
 
       // Special handling for pharmacy users - fetch from order_lines
       if (effectiveRole === "pharmacy") {
@@ -222,7 +224,9 @@ export const OrdersDataTable = () => {
           filter: effectiveRole === 'doctor' ? `doctor_id=eq.${effectiveUserId}` : undefined
         },
         () => {
-          console.log('Order update detected, refetching...');
+          if (import.meta.env.DEV) {
+            console.log('Order update detected, refetching...');
+          }
           refetch();
         }
       )
@@ -234,7 +238,9 @@ export const OrdersDataTable = () => {
           table: 'order_lines'
         },
         () => {
-          console.log('Order line update detected, refetching...');
+          if (import.meta.env.DEV) {
+            console.log('Order line update detected, refetching...');
+          }
           refetch();
         }
       )

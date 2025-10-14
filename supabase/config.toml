@@ -21,6 +21,12 @@ verify_jwt = true
 [functions.generate-prescription-pdf]
 verify_jwt = true
 
+[functions.generate-order-receipt]
+verify_jwt = true
+
+[functions.generate-terms-pdf]
+verify_jwt = true
+
 [functions.manage-provider-status]
 verify_jwt = true
 

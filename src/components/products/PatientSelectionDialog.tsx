@@ -108,9 +108,13 @@ export const PatientSelectionDialog = ({
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      console.log('Raw provider data:', data);
+      if (import.meta.env.DEV) {
+        console.log('Raw provider data:', data);
+      }
       const mappedData = (data || []).map((p: any) => {
-        console.log('Mapping provider:', p);
+        if (import.meta.env.DEV) {
+          console.log('Mapping provider:', p);
+        }
         return {
           id: p.id,
           user_id: p.user_id,
@@ -119,7 +123,9 @@ export const PatientSelectionDialog = ({
           dea: p.profiles?.dea || 'N/A'
         };
       });
-      console.log('Mapped provider data:', mappedData);
+      if (import.meta.env.DEV) {
+        console.log('Mapped provider data:', mappedData);
+      }
       return mappedData;
     },
     enabled: open && !!effectivePracticeId
@@ -209,7 +215,9 @@ export const PatientSelectionDialog = ({
   const handlePrescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      console.log('File selected:', file.name, 'Type:', file.type);
+      if (import.meta.env.DEV) {
+        console.log('File selected:', file.name, 'Type:', file.type);
+      }
       
       const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
       const validExtensions = ['.pdf', '.png', '.jpg', '.jpeg'];
@@ -360,7 +368,9 @@ export const PatientSelectionDialog = ({
       );
       
       if (routingError) {
-        console.error('Pharmacy routing check failed:', routingError);
+        if (import.meta.env.DEV) {
+          console.error('Pharmacy routing check failed:', routingError);
+        }
         toast.error("Unable to verify pharmacy availability. Please try again.");
         return;
       }
@@ -375,9 +385,13 @@ export const PatientSelectionDialog = ({
       }
       
       // Log success for debugging
-      console.log(`Pharmacy available: ${routingResult.reason}`);
+      if (import.meta.env.DEV) {
+        console.log(`Pharmacy available: ${routingResult.reason}`);
+      }
     } catch (error) {
-      console.error('Pharmacy availability check failed:', error);
+      if (import.meta.env.DEV) {
+        console.error('Pharmacy availability check failed:', error);
+      }
       toast.error("Unable to verify pharmacy availability. Please try again.");
       return;
     }

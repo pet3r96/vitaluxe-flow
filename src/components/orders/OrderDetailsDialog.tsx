@@ -38,7 +38,9 @@ export const OrderDetailsDialog = ({
 
   const handleDownloadPrescription = async (prescriptionUrl: string, patientName: string) => {
     try {
-      console.log('Starting prescription download:', { prescriptionUrl, patientName });
+      if (import.meta.env.DEV) {
+        console.log('Starting prescription download:', { prescriptionUrl, patientName });
+      }
       
       // Extract the full file path from the signed URL
       // URL format: https://.../storage/v1/object/sign/prescriptions/{path}?token=...
@@ -49,7 +51,9 @@ export const OrderDetailsDialog = ({
       }
       
       const filePath = decodeURIComponent(match[1]); // Decode any URL encoding
-      console.log('Extracted file path:', filePath);
+      if (import.meta.env.DEV) {
+        console.log('Extracted file path:', filePath);
+      }
       
       // Use Supabase client to download - handles auth and CORS properly
       const { data, error } = await supabase.storage
@@ -116,7 +120,9 @@ export const OrderDetailsDialog = ({
         document.body.removeChild(a);
       }, 200);
       
-      console.log('Prescription downloaded successfully');
+      if (import.meta.env.DEV) {
+        console.log('Prescription downloaded successfully');
+      }
       
       toast({
         title: "Download Complete",
