@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -236,8 +236,24 @@ export function PrescriptionWriterDialog({
                 {patient.birth_date && (
                   <p><strong>Date of Birth:</strong> {format(new Date(patient.birth_date), 'MM/dd/yyyy')}</p>
                 )}
+                
+                {/* Patient Allergies Display */}
+                <div className="pt-2 border-t border-amber-200 mt-2">
+                  <p className="text-xs font-semibold text-amber-700 flex items-center gap-1 mb-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Patient Allergies (PHI)
+                  </p>
+                  {patient.allergies ? (
+                    <p className="text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-900">
+                      {patient.allergies}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No known allergies recorded</p>
+                  )}
+                </div>
+                
                 {patient.address_formatted && (
-                  <p><strong>Address:</strong> {patient.address_formatted}</p>
+                  <p className="mt-2"><strong>Address:</strong> {patient.address_formatted}</p>
                 )}
               </div>
             </div>
