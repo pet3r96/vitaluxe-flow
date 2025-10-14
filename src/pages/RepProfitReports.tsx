@@ -31,6 +31,7 @@ const RepProfitReports = () => {
   // Get profit details
   const { data: profitDetails, isLoading } = useQuery({
     queryKey: ["rep-profit-details", repData?.id, effectiveRole],
+    staleTime: 0,
     queryFn: async () => {
       if (!repData?.id) return [];
       

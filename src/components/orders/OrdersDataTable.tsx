@@ -35,6 +35,7 @@ export const OrdersDataTable = () => {
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
+    staleTime: 0,
     queryFn: async () => {
       console.log('OrdersDataTable - effectiveRole:', effectiveRole);
       console.log('OrdersDataTable - effectiveUserId:', effectiveUserId);

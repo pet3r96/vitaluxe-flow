@@ -13,6 +13,7 @@ const AdminProfitReports = () => {
   // Get profit details with order and product information
   const { data: profitDetails, isLoading } = useQuery({
     queryKey: ["admin-profit-details"],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_profits")
