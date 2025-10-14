@@ -21,75 +21,33 @@ export const EncryptionStatusManager = () => {
     },
   });
 
-  const { data: patientStats, isLoading: patientStatsLoading } = useQuery({
-    queryKey: ["patient-encryption-stats"],
+  // Use the new database function for encryption coverage
+  const { data: coverageData, isLoading: coverageLoading } = useQuery({
+    queryKey: ["encryption-coverage"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("id, allergies_encrypted, notes_encrypted");
-
+      const { data, error } = await supabase.rpc("get_encryption_coverage" as any);
+      
       if (error) throw error;
-
-      const total = data?.length || 0;
-      const allergiesEncrypted = data?.filter(p => p.allergies_encrypted).length || 0;
-      const notesEncrypted = data?.filter(p => p.notes_encrypted).length || 0;
-
-      return {
-        total,
-        allergiesEncrypted,
-        notesEncrypted,
-        allergiesPercentage: total > 0 ? (allergiesEncrypted / total) * 100 : 0,
-        notesPercentage: total > 0 ? (notesEncrypted / total) * 100 : 0,
-      };
+      
+      // Transform array to object for easy access
+      const coverage: Record<string, { total: number; encrypted: number; percentage: number }> = {};
+      
+      if (Array.isArray(data)) {
+        data.forEach((row: any) => {
+          coverage[row.data_type] = {
+            total: row.total_records,
+            encrypted: row.encrypted_records,
+            percentage: row.coverage_percentage || 0
+          };
+        });
+      }
+      
+      return coverage;
     },
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const { data: orderStats, isLoading: orderStatsLoading } = useQuery({
-    queryKey: ["order-encryption-stats"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("order_lines")
-        .select("id, prescription_url_encrypted, custom_dosage_encrypted, custom_sig_encrypted");
-
-      if (error) throw error;
-
-      const total = data?.length || 0;
-      const prescriptionEncrypted = data?.filter(o => o.prescription_url_encrypted).length || 0;
-      const dosageEncrypted = data?.filter(o => o.custom_dosage_encrypted).length || 0;
-      const sigEncrypted = data?.filter(o => o.custom_sig_encrypted).length || 0;
-
-      return {
-        total,
-        prescriptionEncrypted,
-        dosageEncrypted,
-        sigEncrypted,
-        prescriptionPercentage: total > 0 ? (prescriptionEncrypted / total) * 100 : 0,
-      };
-    },
-  });
-
-  const { data: paymentStats, isLoading: paymentStatsLoading } = useQuery({
-    queryKey: ["payment-encryption-stats"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("practice_payment_methods")
-        .select("id, plaid_access_token");
-
-      if (error) throw error;
-
-      const total = data?.length || 0;
-      // All Plaid tokens should be encrypted by default now
-      const encrypted = total;
-
-      return {
-        total,
-        encrypted,
-        percentage: total > 0 ? (encrypted / total) * 100 : 100,
-      };
-    },
-  });
-
-  const isLoading = keysLoading || patientStatsLoading || orderStatsLoading || paymentStatsLoading;
+  const isLoading = keysLoading || coverageLoading;
 
   const getKeyStatus = (key: any) => {
     if (!key) return { status: "unknown", message: "No key found", variant: "secondary" as const };
@@ -117,6 +75,11 @@ export const EncryptionStatusManager = () => {
 
   const primaryKey = encryptionKeys?.[0];
   const keyStatus = getKeyStatus(primaryKey);
+  
+  // Extract coverage stats
+  const patientPHI = coverageData?.["Patient PHI"] || { total: 0, encrypted: 0, percentage: 0 };
+  const prescriptionData = coverageData?.["Prescription Data"] || { total: 0, encrypted: 0, percentage: 0 };
+  const paymentMethods = coverageData?.["Payment Methods"] || { total: 0, encrypted: 0, percentage: 0 };
 
   return (
     <div className="space-y-6">
@@ -158,7 +121,7 @@ export const EncryptionStatusManager = () => {
         </CardContent>
       </Card>
 
-      {/* Patient Data Encryption */}
+      {/* Patient PHI Encryption */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -167,30 +130,17 @@ export const EncryptionStatusManager = () => {
           </CardTitle>
           <CardDescription>Protected Health Information field-level encryption status</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent>
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium">Allergies Encrypted</p>
+              <p className="text-sm font-medium">Patient Data Encrypted</p>
               <p className="text-sm text-muted-foreground">
-                {patientStats?.allergiesEncrypted || 0} / {patientStats?.total || 0} records
+                {patientPHI.encrypted} / {patientPHI.total} records
               </p>
             </div>
-            <Progress value={patientStats?.allergiesPercentage || 0} className="h-2" />
+            <Progress value={patientPHI.percentage} className="h-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              {patientStats?.allergiesPercentage?.toFixed(1)}% coverage
-            </p>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium">Notes Encrypted</p>
-              <p className="text-sm text-muted-foreground">
-                {patientStats?.notesEncrypted || 0} / {patientStats?.total || 0} records
-              </p>
-            </div>
-            <Progress value={patientStats?.notesPercentage || 0} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {patientStats?.notesPercentage?.toFixed(1)}% coverage
+              {patientPHI.percentage.toFixed(1)}% coverage
             </p>
           </div>
         </CardContent>
@@ -208,14 +158,14 @@ export const EncryptionStatusManager = () => {
         <CardContent>
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium">Prescription URLs Encrypted</p>
+              <p className="text-sm font-medium">Prescription Data Encrypted</p>
               <p className="text-sm text-muted-foreground">
-                {orderStats?.prescriptionEncrypted || 0} / {orderStats?.total || 0} orders
+                {prescriptionData.encrypted} / {prescriptionData.total} records
               </p>
             </div>
-            <Progress value={orderStats?.prescriptionPercentage || 0} className="h-2" />
+            <Progress value={prescriptionData.percentage} className="h-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              {orderStats?.prescriptionPercentage?.toFixed(1)}% coverage
+              {prescriptionData.percentage.toFixed(1)}% coverage
             </p>
           </div>
         </CardContent>
@@ -235,12 +185,12 @@ export const EncryptionStatusManager = () => {
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-medium">Payment Methods Secured</p>
               <p className="text-sm text-muted-foreground">
-                {paymentStats?.encrypted || 0} / {paymentStats?.total || 0} accounts
+                {paymentMethods.encrypted} / {paymentMethods.total} accounts
               </p>
             </div>
-            <Progress value={paymentStats?.percentage || 0} className="h-2" />
+            <Progress value={paymentMethods.percentage} className="h-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              {paymentStats?.percentage?.toFixed(1)}% coverage
+              {paymentMethods.percentage.toFixed(1)}% coverage
             </p>
           </div>
         </CardContent>

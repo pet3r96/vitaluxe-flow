@@ -305,7 +305,8 @@ Security → Prescriptions → Export for Compliance
 
 ### Pre-Production Checklist
 
-- [x] Encryption triggers enabled
+- [x] Encryption triggers enabled (✅ **Active on all sensitive tables**)
+- [x] Encryption backfill completed (✅ **All existing data encrypted**)
 - [x] RLS policies on all sensitive tables (✅ **ALL tables now have RLS**)
 - [x] Audit logging configured
 - [x] Security alerts active (6 rules)
@@ -328,12 +329,20 @@ Security → Prescriptions → Export for Compliance
 - ✅ Profiles table RLS strengthened (own-only + assigned practices)
 - ✅ Cart lines time-restricted to 30 days with PHI masking functions
 
+**Phase 2 Completion (October 2025):**
+- ✅ Encryption triggers enabled on `patients`, `order_lines`, and `practice_payment_methods`
+- ✅ All existing sensitive data backfilled with encryption
+- ✅ Encryption coverage function created (`get_encryption_coverage()`)
+- ✅ Automatic encryption on all new PHI, prescription data, and payment methods
+
 **Security Verification:**
 ```sql
 -- Run this to audit RLS coverage across all tables:
 SELECT * FROM public.audit_rls_coverage();
-
 -- Expected: All tables show "OK" status
+
+-- Check encryption coverage (should show ~100% for all data types):
+SELECT * FROM public.get_encryption_coverage();
 ```
 
 ### Monthly Maintenance
