@@ -128,7 +128,7 @@ export const ProductCard = memo(({
             <p className="text-sm text-muted-foreground line-clamp-2">{product.dosage}</p>
           )}
           {product.product_type && (
-            <Badge variant="outline" className="text-xs w-fit mt-1">
+            <Badge variant="outline" className="text-xs mt-1">
               {product.product_type}
             </Badge>
           )}
