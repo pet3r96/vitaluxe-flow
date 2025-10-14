@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddressVerificationPanel } from "@/components/admin/AddressVerificationPanel";
-import { OrphanedPharmacyFixer } from "@/components/admin/OrphanedPharmacyFixer";
+import { OrphanedUserFixer } from "@/components/admin/OrphanedUserFixer";
 import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
 import { RepsManagement } from "@/components/admin/RepsManagement";
@@ -136,7 +136,7 @@ const AdminSettings = () => {
         </TabsContent>
 
         <TabsContent value="utilities" className="space-y-4">
-          <OrphanedPharmacyFixer />
+          <OrphanedUserFixer />
         </TabsContent>
       </Tabs>
     </div>
