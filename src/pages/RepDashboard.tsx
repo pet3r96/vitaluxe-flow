@@ -101,7 +101,8 @@ const RepDashboard = () => {
         const { count, error } = await supabase
           .from("orders")
           .select("*", { count: 'exact', head: true })
-          .in("doctor_id", practiceIds);
+          .in("doctor_id", practiceIds)
+          .neq("status", "cancelled");
         
         if (error) throw error;
         return count || 0;
@@ -126,7 +127,8 @@ const RepDashboard = () => {
         const { count, error } = await supabase
           .from("orders")
           .select("*", { count: 'exact', head: true })
-          .in("doctor_id", practiceIds);
+          .in("doctor_id", practiceIds)
+          .neq("status", "cancelled");
         
         if (error) throw error;
         return count || 0;
