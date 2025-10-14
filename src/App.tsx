@@ -27,7 +27,7 @@ import Downlines from "./pages/Downlines";
 import MedSpas from "./pages/MedSpas";
 import Profile from "./pages/Profile";
 import AdminSettings from "./pages/AdminSettings";
-import ErrorLogs from "./pages/ErrorLogs";
+import Security from "@/pages/Security";
 import NotFound from "./pages/NotFound";
 import RepDashboard from "./pages/RepDashboard";
 import MyDownlines from "./pages/MyDownlines";
@@ -95,7 +95,7 @@ const App = () => (
                           <Route path="/med-spas" element={<MedSpas />} />
                           <Route path="/profile" element={<Profile />} />
                           <Route path="/admin-settings" element={<AdminSettings />} />
-                          <Route path="/error-logs" element={<ErrorLogs />} />
+                          <Route path="/security" element={<Security />} />
                           <Route path="/admin/terms" element={<AdminTermsManagement />} />
                           <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
                           <Route path="/rep-reports" element={<RepProfitReports />} />

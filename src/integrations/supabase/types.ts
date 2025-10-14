@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_lockouts: {
+        Row: {
+          id: string
+          ip_address: string | null
+          locked_at: string | null
+          locked_until: string | null
+          lockout_reason: string
+          notes: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          user_email: string
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          ip_address?: string | null
+          locked_at?: string | null
+          locked_until?: string | null
+          lockout_reason: string
+          notes?: string | null
+          unlocked_at?: string | null
+          unlocked_by?: string | null
+          user_email: string
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          ip_address?: string | null
+          locked_at?: string | null
+          locked_until?: string | null
+          lockout_reason?: string
+          notes?: string | null
+          unlocked_at?: string | null
+          unlocked_by?: string | null
+          user_email?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action_type: string

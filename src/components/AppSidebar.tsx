@@ -16,6 +16,7 @@ import {
   UserCog,
   AlertCircle,
   Tag,
+  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,9 +45,9 @@ const menuItems = {
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Discount Codes", url: "/admin/discount-codes", icon: Tag },
     { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "Error Logs", url: "/error-logs", icon: AlertCircle },
+    { title: "Security", url: "/security", icon: Shield },
     { title: "Terms Management", url: "/admin/terms", icon: FileText },
-    { title: "Admin Settings", url: "/admin-settings", icon: ShieldCheck },
+    { title: "Admin Settings", url: "/admin-settings", icon: Settings },
   ],
   doctor: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },

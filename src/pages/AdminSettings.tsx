@@ -1,6 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddressVerificationPanel } from "@/components/admin/AddressVerificationPanel";
-import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView";
 import { OrphanedPharmacyFixer } from "@/components/admin/OrphanedPharmacyFixer";
 import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
@@ -8,7 +7,7 @@ import { RepsManagement } from "@/components/admin/RepsManagement";
 import { PendingRepsApproval } from "@/components/admin/PendingRepsApproval";
 import { PendingPracticesApproval } from "@/components/admin/PendingPracticesApproval";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, MapPin, Activity, Building2, Users, Wrench } from "lucide-react";
+import { MapPin, Building2, Users, Wrench } from "lucide-react";
 
 const AdminSettings = () => {
   return (
@@ -16,7 +15,7 @@ const AdminSettings = () => {
       <div>
         <h1 className="text-3xl font-bold text-foreground">Admin Settings</h1>
         <p className="text-muted-foreground mt-2">
-          Manage system-wide settings, address verification, and audit logs
+          Manage business operations, practices, providers, and system utilities
         </p>
       </div>
 
@@ -46,17 +45,9 @@ const AdminSettings = () => {
             <MapPin className="h-4 w-4" />
             Address Verification
           </TabsTrigger>
-          <TabsTrigger value="impersonation" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Impersonation Logs
-          </TabsTrigger>
           <TabsTrigger value="utilities" className="gap-2">
             <Wrench className="h-4 w-4" />
             Utilities
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="gap-2">
-            <Activity className="h-4 w-4" />
-            Audit Logs
           </TabsTrigger>
         </TabsList>
 
@@ -144,36 +135,8 @@ const AdminSettings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="impersonation" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Impersonation Activity</CardTitle>
-              <CardDescription>
-                View all admin impersonation sessions with full audit trail
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ImpersonationLogsView />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="utilities" className="space-y-4">
           <OrphanedPharmacyFixer />
-        </TabsContent>
-
-        <TabsContent value="audit" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Audit Logs</CardTitle>
-              <CardDescription>
-                Track all user actions and system events
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Coming soon...</p>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>
