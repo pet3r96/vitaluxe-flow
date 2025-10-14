@@ -628,6 +628,42 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_permissions: {
+        Row: {
+          can_impersonate: boolean
+          created_at: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          notes: string | null
+          revoked_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_impersonate?: boolean
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          revoked_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_impersonate?: boolean
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          revoked_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_threads: {
         Row: {
           created_at: string | null
@@ -2217,6 +2253,10 @@ export type Database = {
       }
       can_topline_view_practice: {
         Args: { _practice_id: string; _topline_user_id: string }
+        Returns: boolean
+      }
+      can_user_impersonate: {
+        Args: { _user_id: string }
         Returns: boolean
       }
       create_user_with_role: {

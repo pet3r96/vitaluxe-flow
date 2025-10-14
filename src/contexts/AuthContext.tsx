@@ -37,8 +37,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const AUTHORIZED_IMPERSONATOR_EMAIL = 'admin@vitaluxeservice.com';
-
+// Impersonation permissions are now managed via database
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -55,13 +54,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [canImpersonateDb, setCanImpersonateDb] = useState(false);
   const navigate = useNavigate();
 
   const actualRole = userRole;
   const isImpersonating = impersonatedRole !== null;
   const effectiveRole = impersonatedRole || userRole;
   const effectiveUserId = impersonatedUserId || user?.id || null;
-  const canImpersonate = userRole === 'admin' && user?.email === AUTHORIZED_IMPERSONATOR_EMAIL;
+  const canImpersonate = userRole === 'admin' && canImpersonateDb;
 
   useEffect(() => {
     // Set up auth state listener
@@ -99,6 +99,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Check impersonation permission from database
+  useEffect(() => {
+    const checkImpersonationPermission = async () => {
+      if (!user?.id || userRole !== 'admin') {
+        setCanImpersonateDb(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('can_user_impersonate', {
+          _user_id: user.id
+        });
+
+        if (!error && data === true) {
+          setCanImpersonateDb(true);
+        } else {
+          setCanImpersonateDb(false);
+        }
+      } catch (error) {
+        console.error('Error checking impersonation permission:', error);
+        setCanImpersonateDb(false);
+      }
+    };
+
+    checkImpersonationPermission();
+  }, [user?.id, userRole]);
 
   // Check if current user is a provider account and compute practice ID
   useEffect(() => {
@@ -236,8 +263,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Restore impersonation from sessionStorage if authorized admin
       if (role === 'admin') {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user?.email === AUTHORIZED_IMPERSONATOR_EMAIL) {
+        // Check database permission before restoring impersonation
+        const { data: canImpersonate } = await supabase.rpc('can_user_impersonate', {
+          _user_id: userId
+        });
+        
+        if (canImpersonate === true) {
           const stored = sessionStorage.getItem('vitaluxe_impersonation');
           if (stored) {
             try {
