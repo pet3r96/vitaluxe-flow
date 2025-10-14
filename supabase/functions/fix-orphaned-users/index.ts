@@ -7,6 +7,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to get all auth user IDs with pagination
+async function getAllAuthUserIds(supabaseAdmin: any): Promise<Set<string>> {
+  const allUserIds = new Set<string>();
+  let page = 0;
+  const perPage = 1000; // Max allowed by Supabase
+  
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+    
+    if (error) {
+      console.error('Error fetching auth users:', error);
+      throw error;
+    }
+    
+    if (!data.users || data.users.length === 0) break;
+    
+    data.users.forEach((u: any) => allUserIds.add(u.id));
+    
+    if (data.users.length < perPage) break; // Last page
+    page++;
+  }
+  
+  console.log(`Fetched ${allUserIds.size} total auth users`);
+  return allUserIds;
+}
+
 interface OrphanedPharmacy {
   id: string;
   name: string;
@@ -469,8 +498,7 @@ serve(async (req) => {
       const doctorIds = doctorRoles?.map(r => r.user_id) || [];
 
       // Then check which profiles exist with those IDs but aren't in auth.users
-      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const authUserIds = new Set(authUsers.users.map(u => u.id));
+      const authUserIds = await getAllAuthUserIds(supabaseAdmin);
       
       const orphanedDoctorIds = doctorIds.filter(id => !authUserIds.has(id));
 
@@ -496,9 +524,8 @@ serve(async (req) => {
 
     // Fix Orphaned Topline Reps
     if (!roleType || roleType === 'topline') {
-      // Get all auth user IDs
-      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const authUserIds = new Set(authUsers.users.map(u => u.id));
+      // Get all auth user IDs with pagination
+      const authUserIds = await getAllAuthUserIds(supabaseAdmin);
 
       // Get all topline reps
       const { data: allToplines } = await supabaseAdmin
@@ -556,9 +583,8 @@ serve(async (req) => {
 
     // Fix Orphaned Downline Reps
     if (!roleType || roleType === 'downline') {
-      // Get all auth user IDs
-      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const authUserIds = new Set(authUsers.users.map(u => u.id));
+      // Get all auth user IDs with pagination
+      const authUserIds = await getAllAuthUserIds(supabaseAdmin);
 
       // Get all downline reps
       const { data: allDownlines } = await supabaseAdmin
@@ -616,9 +642,8 @@ serve(async (req) => {
 
     // Fix Orphaned Providers
     if (!roleType || roleType === 'provider') {
-      // Get all auth user IDs
-      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const authUserIds = new Set(authUsers.users.map(u => u.id));
+      // Get all auth user IDs with pagination
+      const authUserIds = await getAllAuthUserIds(supabaseAdmin);
 
       // Get all providers
       const { data: allProviders } = await supabaseAdmin
