@@ -9,7 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { validatePasswordStrength } from "@/lib/passwordValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, EyeOff, CheckCircle2, XCircle, Lock } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, XCircle, Lock, Info } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 export default function ChangePassword() {
   const { user, checkPasswordStatus } = useAuth();
@@ -74,7 +75,7 @@ export default function ChangePassword() {
       // Navigate to dashboard
       navigate("/");
     } catch (error: any) {
-      console.error("Error changing password:", error);
+      logger.error("Password change failed", error, { user_id: user?.id });
       toast.error(error.message || "Failed to change password");
     } finally {
       setLoading(false);
@@ -190,8 +191,8 @@ export default function ChangePassword() {
                   ))}
                 </div>
                 
-                {/* Password Strength Indicator */}
-                <div className="pt-2">
+                {/* Password Strength Indicator with zxcvbn feedback */}
+                <div className="pt-2 space-y-2">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium">Strength:</span>
                     <span className={`text-sm font-semibold ${
@@ -199,7 +200,7 @@ export default function ChangePassword() {
                       validation.strength === 'medium' ? 'text-amber-600' :
                       'text-red-600'
                     }`}>
-                      {validation.strength.toUpperCase()}
+                      {validation.strength.toUpperCase()} (Score: {validation.zxcvbnScore}/4)
                     </span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -211,6 +212,21 @@ export default function ChangePassword() {
                       }`}
                     />
                   </div>
+                  
+                  {/* zxcvbn feedback */}
+                  {validation.feedback && (
+                    <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-xs text-blue-700 dark:text-blue-300">
+                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <span>{validation.feedback}</span>
+                    </div>
+                  )}
+                  
+                  {/* Crack time estimate */}
+                  {validation.crackTimeDisplay && validation.strength === 'strong' && (
+                    <div className="text-xs text-muted-foreground">
+                      Estimated crack time: <span className="font-semibold text-green-600">{validation.crackTimeDisplay}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

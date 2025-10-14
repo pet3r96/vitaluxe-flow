@@ -1,3 +1,5 @@
+import zxcvbn from 'zxcvbn';
+
 export interface PasswordRequirement {
   label: string;
   met: boolean;
@@ -7,6 +9,9 @@ export interface PasswordValidationResult {
   valid: boolean;
   requirements: PasswordRequirement[];
   strength: 'weak' | 'medium' | 'strong';
+  zxcvbnScore: number;
+  feedback?: string;
+  crackTimeDisplay?: string;
 }
 
 /**
@@ -51,14 +56,39 @@ export function validatePasswordStrength(
     });
   }
 
+  // Use zxcvbn for industry-standard password strength
+  const zxcvbnResult = zxcvbn(password, [email, email.split('@')[0]]);
+  
+  // Require zxcvbn score >= 3 (strong)
+  requirements.push({
+    label: 'Industry-standard strength score (strong)',
+    met: zxcvbnResult.score >= 3
+  });
+
   const metCount = requirements.filter(r => r.met).length;
   const valid = metCount === requirements.length;
   
+  // Determine strength based on zxcvbn score
   let strength: 'weak' | 'medium' | 'strong' = 'weak';
-  if (metCount >= requirements.length) strength = 'strong';
-  else if (metCount >= requirements.length - 1) strength = 'medium';
+  if (zxcvbnResult.score >= 3) strength = 'strong';
+  else if (zxcvbnResult.score >= 2) strength = 'medium';
+  else strength = 'weak';
 
-  return { valid, requirements, strength };
+  // Get user-friendly feedback
+  const feedback = zxcvbnResult.feedback.suggestions?.[0] || 
+    (zxcvbnResult.score < 3 ? 'Add more words or unique characters' : '');
+
+  // Format crack time display
+  const crackTimeDisplay = String(zxcvbnResult.crack_times_display.offline_slow_hashing_1e4_per_second);
+
+  return { 
+    valid, 
+    requirements, 
+    strength,
+    zxcvbnScore: zxcvbnResult.score,
+    feedback,
+    crackTimeDisplay
+  };
 }
 
 export function getPasswordRequirementsList(): string[] {
@@ -69,6 +99,7 @@ export function getPasswordRequirementsList(): string[] {
     'At least 1 number (0-9)',
     'At least 1 special character (!@#$%^&*)',
     'Cannot contain your email address',
-    'Must be different from temporary password'
+    'Must be different from temporary password',
+    'Industry-standard strength score (strong)'
   ];
 }

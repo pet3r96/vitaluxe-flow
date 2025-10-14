@@ -1,73 +1,31 @@
-import { supabase } from '@/integrations/supabase/client';
+import { logger } from './logger';
 
-interface ErrorLogData {
-  action_type: string;
-  entity_type: string;
-  details: {
-    message?: string;
-    source?: string;
-    line?: number;
-    column?: number;
-    stack?: string;
-    url?: string;
-    browser?: string;
-    reason?: any;
-    promise?: any;
-    timestamp?: string;
-    [key: string]: any;
-  };
-}
-
-const logError = async (data: ErrorLogData) => {
-  try {
-    await supabase.functions.invoke('log-error', {
-      body: data,
-    });
-  } catch (error) {
-    console.error('Failed to log error to backend:', error);
-  }
-};
+/**
+ * Legacy error logging - migrated to use structured logger
+ * This file maintains backward compatibility while using the new logging system
+ */
 
 export const logApplicationError = async (
   errorType: string,
   error: Error | unknown,
   context?: Record<string, any>
 ) => {
-  const errorData: ErrorLogData = {
-    action_type: 'client_error',
-    entity_type: errorType,
-    details: {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      url: window.location.href,
-      browser: navigator.userAgent,
-      timestamp: new Date().toISOString(),
-      ...context,
-    },
-  };
-  
-  await logError(errorData);
-  
-  // Also log to console for developer visibility
-  console.error(`[${errorType}]`, error, context);
+  // Use new structured logger
+  logger.error(
+    `Application Error: ${errorType}`,
+    error,
+    logger.sanitize(context || {})
+  );
 };
 
 export const initializeErrorHandlers = () => {
   // Handle unhandled JavaScript errors
   window.onerror = (message, source, lineno, colno, error) => {
-    logError({
-      action_type: 'client_error',
-      entity_type: 'javascript_error',
-      details: {
-        message: typeof message === 'string' ? message : String(message),
-        source: source || undefined,
-        line: lineno || undefined,
-        column: colno || undefined,
-        stack: error?.stack,
-        url: window.location.href,
-        browser: navigator.userAgent,
-        timestamp: new Date().toISOString(),
-      },
+    logger.error('Unhandled JavaScript Error', error, {
+      message: typeof message === 'string' ? message : String(message),
+      source,
+      line: lineno,
+      column: colno,
     });
 
     // Don't suppress default error handling
@@ -76,18 +34,10 @@ export const initializeErrorHandlers = () => {
 
   // Handle unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
-    logError({
-      action_type: 'client_error',
-      entity_type: 'promise_rejection',
-      details: {
-        reason: event.reason,
-        promise: String(event.promise),
-        url: window.location.href,
-        browser: navigator.userAgent,
-        timestamp: new Date().toISOString(),
-      },
+    logger.error('Unhandled Promise Rejection', event.reason, {
+      promise: String(event.promise),
     });
   });
 
-  console.log('Error handlers initialized');
+  logger.info('Error handlers initialized');
 };
