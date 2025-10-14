@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/vitaluxe-logo-dark-bg.png";
 import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
 
@@ -98,6 +99,19 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
+          // Track failed login attempt
+          try {
+            await supabase.functions.invoke("track-failed-login", {
+              body: {
+                email,
+                ip_address: "unknown",
+                user_agent: navigator.userAgent,
+              },
+            });
+          } catch (trackError) {
+            console.error("Failed to track login attempt:", trackError);
+          }
+          
           toast({
             title: "Error",
             description: error.message || "Failed to sign in",

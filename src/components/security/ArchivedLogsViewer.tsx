@@ -1,11 +1,61 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Archive, CheckCircle2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Archive, CheckCircle2, Search, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const ArchivedLogsViewer = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const retentionYears = 6;
   const oldestLogDate = new Date();
   oldestLogDate.setFullYear(oldestLogDate.getFullYear() - retentionYears);
+
+  const { data: archivedLogs, isLoading } = useQuery({
+    queryKey: ["archived-logs", searchTerm],
+    queryFn: async () => {
+      let query = supabase
+        .from("audit_logs_archive")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      
+      if (searchTerm) {
+        query = query.or(`user_email.ilike.%${searchTerm}%,action_type.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isSearching,
+  });
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    goToPage,
+    hasNextPage,
+    hasPrevPage,
+  } = usePagination({
+    totalItems: archivedLogs?.length || 0,
+    itemsPerPage: 25,
+  });
+
+  const paginatedLogs = archivedLogs?.slice(startIndex, endIndex);
+
+  const handleSearch = () => {
+    setIsSearching(true);
+  };
 
   return (
     <Card>
@@ -71,18 +121,75 @@ export const ArchivedLogsViewer = () => {
           </Card>
         </div>
 
-        {/* Info */}
-        <div className="text-center py-8 text-muted-foreground">
-          <Archive className="h-16 w-16 mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-medium mb-2">Archived Logs Viewer</p>
-          <p className="text-sm">
-            Search and view logs older than 90 days from cold storage.
-            <br />
-            Archived logs are kept for 6 years to meet HIPAA requirements.
-            <br />
-            Requires edge function from Phase 1 to be deployed.
-          </p>
+        {/* Search */}
+        <div className="flex gap-2">
+          <Input
+            placeholder="Search archived logs (email, action type...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          />
+          <Button onClick={handleSearch} disabled={isLoading}>
+            <Search className="h-4 w-4 mr-2" />
+            Search
+          </Button>
         </div>
+
+        {/* Results */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : isSearching && archivedLogs && archivedLogs.length > 0 ? (
+          <div className="space-y-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Entity</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Archived</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedLogs?.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{log.user_email || "System"}</TableCell>
+                    <TableCell className="font-medium">{log.action_type}</TableCell>
+                    <TableCell>{log.entity_type || "N/A"}</TableCell>
+                    <TableCell>{format(new Date(log.created_at), "PPp")}</TableCell>
+                    <TableCell>{format(new Date(log.archived_at), "PP")}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              hasNextPage={hasNextPage}
+              hasPrevPage={hasPrevPage}
+              totalItems={archivedLogs?.length || 0}
+              startIndex={startIndex}
+              endIndex={endIndex}
+            />
+          </div>
+        ) : isSearching ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Archive className="h-16 w-16 mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-medium mb-2">No Results Found</p>
+            <p className="text-sm">Try a different search term.</p>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <Archive className="h-16 w-16 mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-medium mb-2">Search Archived Logs</p>
+            <p className="text-sm">
+              Enter a search term above to view logs from cold storage.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

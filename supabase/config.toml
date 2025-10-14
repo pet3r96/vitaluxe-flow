@@ -3,6 +3,21 @@ project_id = "qbtsfajshnrwwlfzkeog"
 [functions.assign-user-role]
 verify_jwt = false
 
+[functions.track-failed-login]
+verify_jwt = false
+
+[functions.detect-brute-force]
+verify_jwt = false
+
+[functions.detect-anomalies]
+verify_jwt = true
+
+[functions.trigger-alert]
+verify_jwt = false
+
+[functions.archive-old-logs]
+verify_jwt = false
+
 [functions.approve-pending-rep]
 verify_jwt = true
 

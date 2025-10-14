@@ -53,6 +53,98 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          enabled: boolean
+          event_type: string
+          id: string
+          name: string
+          notification_channels: Json | null
+          recipients: Json | null
+          severity: string
+          threshold: number
+          time_window_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          event_type: string
+          id?: string
+          name: string
+          notification_channels?: Json | null
+          recipients?: Json | null
+          severity?: string
+          threshold: number
+          time_window_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          event_type?: string
+          id?: string
+          name?: string
+          notification_channels?: Json | null
+          recipients?: Json | null
+          severity?: string
+          threshold?: number
+          time_window_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      alerts: {
+        Row: {
+          details: Json | null
+          event_type: string
+          id: string
+          message: string
+          notification_error: string | null
+          notification_sent: boolean | null
+          rule_id: string | null
+          severity: string
+          triggered_at: string
+        }
+        Insert: {
+          details?: Json | null
+          event_type: string
+          id?: string
+          message: string
+          notification_error?: string | null
+          notification_sent?: boolean | null
+          rule_id?: string | null
+          severity: string
+          triggered_at?: string
+        }
+        Update: {
+          details?: Json | null
+          event_type?: string
+          id?: string
+          message?: string
+          notification_error?: string | null
+          notification_sent?: boolean | null
+          rule_id?: string | null
+          severity?: string
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "alert_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action_type: string
@@ -82,6 +174,51 @@ export type Database = {
         }
         Update: {
           action_type?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_archive: {
+        Row: {
+          action_type: string
+          archived_at: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_role: string | null
+        }
+        Insert: {
+          action_type: string
+          archived_at?: string
+          created_at: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          action_type?: string
+          archived_at?: string
           created_at?: string
           details?: Json | null
           entity_id?: string | null
@@ -345,6 +482,36 @@ export type Database = {
           verified?: boolean | null
           verified_at?: string | null
           verified_by?: string | null
+        }
+        Relationships: []
+      }
+      failed_login_attempts: {
+        Row: {
+          attempt_count: number | null
+          created_at: string
+          email: string
+          id: string
+          ip_address: string
+          last_attempt_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          created_at?: string
+          email: string
+          id?: string
+          ip_address: string
+          last_attempt_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: string
+          last_attempt_at?: string
+          user_agent?: string | null
         }
         Relationships: []
       }
@@ -1572,6 +1739,42 @@ export type Database = {
           },
         ]
       }
+      security_events: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          severity: string
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          severity?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          severity?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       shipping_audit_logs: {
         Row: {
           change_description: string | null
@@ -1907,6 +2110,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_old_audit_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       can_cancel_order: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
