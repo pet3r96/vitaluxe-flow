@@ -18,6 +18,7 @@ import { PatientDialog } from "./PatientDialog";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { formatPhoneNumber } from "@/lib/validators";
 
 export const PatientsDataTable = () => {
   const { effectiveRole, effectivePracticeId } = useAuth();
@@ -154,7 +155,7 @@ export const PatientsDataTable = () => {
                 <TableRow key={patient.id}>
                   <TableCell className="font-medium">{patient.name}</TableCell>
                   <TableCell>{patient.email || "-"}</TableCell>
-                  <TableCell>{patient.phone || "-"}</TableCell>
+                  <TableCell>{formatPhoneNumber(patient.phone)}</TableCell>
                   <TableCell className="max-w-xs truncate">
                     {patient.address_formatted || 
                      (patient.address_street ? 

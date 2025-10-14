@@ -19,6 +19,7 @@ import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { formatPhoneNumber } from "@/lib/validators";
 
 export const PracticesDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -308,7 +309,7 @@ export const PracticesDataTable = () => {
                   <TableCell>
                     <span className="font-mono text-sm">{practice.license_number || "-"}</span>
                   </TableCell>
-                  <TableCell>{practice.phone || "-"}</TableCell>
+                  <TableCell>{formatPhoneNumber(practice.phone)}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{providerCounts?.[practice.id] || 0}</Badge>
                   </TableCell>

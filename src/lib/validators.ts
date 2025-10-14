@@ -69,3 +69,20 @@ export function validateDEA(dea: string | null | undefined): { valid: boolean; e
     ? { valid: true } 
     : { valid: false, error: result.error.errors[0]?.message };
 }
+
+/**
+ * Format phone number for display
+ * Converts 10-digit string to (XXX) XXX-XXXX format
+ */
+export function formatPhoneNumber(phone: string | null | undefined): string {
+  if (!phone) return "-";
+  
+  // Remove all non-digit characters
+  const cleaned = phone.replace(/\D/g, "");
+  
+  // Return as-is if not 10 digits
+  if (cleaned.length !== 10) return phone;
+  
+  // Format as (XXX) XXX-XXXX
+  return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+}
