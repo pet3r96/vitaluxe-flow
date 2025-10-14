@@ -306,15 +306,35 @@ Security → Prescriptions → Export for Compliance
 ### Pre-Production Checklist
 
 - [x] Encryption triggers enabled
-- [x] RLS policies on all sensitive tables
+- [x] RLS policies on all sensitive tables (✅ **ALL tables now have RLS**)
 - [x] Audit logging configured
-- [x] Security alerts active (≥5 rules)
+- [x] Security alerts active (6 rules)
 - [x] Encryption key rotation schedule set
-- [x] Leaked password protection enabled
+- [x] Leaked password protection enabled (✅ **Verified via auth config**)
 - [x] Rate limiting configured
-- [x] Search paths on SECURITY DEFINER functions
+- [x] Search paths on SECURITY DEFINER functions (✅ **All functions updated**)
 - [x] Compliance reporting view created
 - [x] Security dashboard accessible
+- [x] Materialized view secured (✅ **Wrapped in secure view**)
+- [x] RLS audit function created (✅ **Use `audit_rls_coverage()` to verify**)
+
+### Critical Issues Resolved ✅
+
+**Phase 1 Completion (October 2025):**
+- ✅ RLS enabled on ALL public tables (commissions, documents, products, providers, reps, etc.)
+- ✅ Materialized view `security_events_summary` secured via `secure_security_events_summary` wrapper view
+- ✅ All SECURITY DEFINER functions updated with `SET search_path TO 'public'`
+- ✅ Auth configuration verified (leaked password protection enabled)
+- ✅ Profiles table RLS strengthened (own-only + assigned practices)
+- ✅ Cart lines time-restricted to 30 days with PHI masking functions
+
+**Security Verification:**
+```sql
+-- Run this to audit RLS coverage across all tables:
+SELECT * FROM public.audit_rls_coverage();
+
+-- Expected: All tables show "OK" status
+```
 
 ### Monthly Maintenance
 
