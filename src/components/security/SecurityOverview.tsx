@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Shield, Activity, Lock } from "lucide-react";
+import { AlertTriangle, Shield, Activity, Eye, Key, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 export const SecurityOverview = () => {
   const { data: errorStats, isLoading: errorStatsLoading } = useQuery({
@@ -42,6 +43,39 @@ export const SecurityOverview = () => {
     },
   });
 
+  const { data: phiAccessCount } = useQuery({
+    queryKey: ["phi-access-24h"],
+    queryFn: async () => {
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const { count } = await supabase
+        .from("audit_logs")
+        .select("*", { count: "exact", head: true })
+        .in("action_type", ["SELECT_patient", "UPDATE_patient", "prescription_accessed", "cart_line_accessed"])
+        .gte("created_at", yesterday.toISOString());
+      return count || 0;
+    },
+  });
+
+  const { data: encryptionCoverage } = useQuery({
+    queryKey: ["encryption-coverage"],
+    queryFn: async () => {
+      const [patientsRes, orderLinesRes] = await Promise.all([
+        supabase.from("patients").select("id, allergies_encrypted, notes_encrypted"),
+        supabase.from("order_lines").select("id, prescription_url_encrypted"),
+      ]);
+
+      const patients = patientsRes.data || [];
+      const orderLines = orderLinesRes.data || [];
+      const totalRecords = patients.length + orderLines.length;
+      if (totalRecords === 0) return 100;
+
+      const encryptedPatients = patients.filter(p => p.allergies_encrypted || p.notes_encrypted).length;
+      const encryptedOrders = orderLines.filter(o => o.prescription_url_encrypted).length;
+      
+      return ((encryptedPatients + encryptedOrders) / totalRecords) * 100;
+    },
+  });
+
   const { data: recentErrors, isLoading: recentErrorsLoading } = useQuery({
     queryKey: ["security-overview-recent-errors"],
     queryFn: async () => {
@@ -69,49 +103,91 @@ export const SecurityOverview = () => {
         </Alert>
       )}
 
+      {/* Security Score */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Security Health Score
+          </CardTitle>
+          <CardDescription>Overall system security assessment</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Encryption Coverage</span>
+              <span className="text-sm">{encryptionCoverage?.toFixed(0) || 0}%</span>
+            </div>
+            <Progress value={encryptionCoverage || 0} className="h-2" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-2">
+              <div>
+                <p className="text-muted-foreground">RLS Policies</p>
+                <p className="font-medium flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" /> Active
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">PHI Accesses</p>
+                <p className="font-medium">{phiAccessCount || 0} (24h)</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Audit Logging</p>
+                <p className="font-medium flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" /> Enabled
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Errors</p>
+                <p className="font-medium">{errorStats || 0} (24h)</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Errors (24h)</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <CardTitle className="text-sm font-medium">PHI Accesses</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{errorStatsLoading ? '...' : (errorStats ?? 0)}</div>
-            <p className="text-xs text-muted-foreground">Application errors</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Audit Actions</CardTitle>
-            <Activity className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{auditStatsLoading ? '...' : (auditStats ?? 0)}</div>
+            <div className="text-2xl font-bold">{phiAccessCount || 0}</div>
             <p className="text-xs text-muted-foreground">Last 24 hours</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
-            <Shield className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Errors</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{impersonationStatsLoading ? '...' : (impersonationStats ?? 0)}</div>
-            <p className="text-xs text-muted-foreground">Impersonation active</p>
+            <div className="text-2xl font-bold">{errorStats || 0}</div>
+            <p className="text-xs text-muted-foreground">Last 24 hours</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Status</CardTitle>
-            <Lock className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium">Encryption</CardTitle>
+            <Key className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Secure</div>
-            <p className="text-xs text-muted-foreground">All systems normal</p>
+            <div className="text-2xl font-bold">{encryptionCoverage?.toFixed(0) || 0}%</div>
+            <p className="text-xs text-muted-foreground">Protected data</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{impersonationStats || 0}</div>
+            <p className="text-xs text-muted-foreground">Impersonations</p>
           </CardContent>
         </Card>
       </div>

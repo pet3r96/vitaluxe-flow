@@ -140,6 +140,10 @@ export const AlertRulesManager = () => {
                       <SelectItem value="brute_force">Brute Force</SelectItem>
                       <SelectItem value="anomaly">Anomaly</SelectItem>
                       <SelectItem value="bulk_download">Bulk Download</SelectItem>
+                      <SelectItem value="high_phi_access">High Volume PHI Access</SelectItem>
+                      <SelectItem value="encryption_failure">Encryption Failure</SelectItem>
+                      <SelectItem value="suspicious_prescription_access">Suspicious Prescription Access</SelectItem>
+                      <SelectItem value="payment_bulk_access">Payment Method Bulk Access</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
