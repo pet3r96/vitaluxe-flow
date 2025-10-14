@@ -6,7 +6,7 @@ import { AlertTriangle, Shield, Activity, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const SecurityOverview = () => {
-  const { data: errorStats } = useQuery({
+  const { data: errorStats, isLoading: errorStatsLoading } = useQuery({
     queryKey: ["security-overview-errors"],
     queryFn: async () => {
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -19,7 +19,7 @@ export const SecurityOverview = () => {
     },
   });
 
-  const { data: auditStats } = useQuery({
+  const { data: auditStats, isLoading: auditStatsLoading } = useQuery({
     queryKey: ["security-overview-audit"],
     queryFn: async () => {
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -31,7 +31,7 @@ export const SecurityOverview = () => {
     },
   });
 
-  const { data: impersonationStats } = useQuery({
+  const { data: impersonationStats, isLoading: impersonationStatsLoading } = useQuery({
     queryKey: ["security-overview-impersonation"],
     queryFn: async () => {
       const { data } = await supabase
@@ -42,7 +42,7 @@ export const SecurityOverview = () => {
     },
   });
 
-  const { data: recentErrors } = useQuery({
+  const { data: recentErrors, isLoading: recentErrorsLoading } = useQuery({
     queryKey: ["security-overview-recent-errors"],
     queryFn: async () => {
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -60,7 +60,7 @@ export const SecurityOverview = () => {
   return (
     <div className="space-y-6">
       {/* Critical Alerts */}
-      {errorStats > 10 && (
+      {errorStats && errorStats > 10 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -77,7 +77,7 @@ export const SecurityOverview = () => {
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{errorStats}</div>
+            <div className="text-2xl font-bold">{errorStatsLoading ? '...' : (errorStats ?? 0)}</div>
             <p className="text-xs text-muted-foreground">Application errors</p>
           </CardContent>
         </Card>
@@ -88,7 +88,7 @@ export const SecurityOverview = () => {
             <Activity className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{auditStats}</div>
+            <div className="text-2xl font-bold">{auditStatsLoading ? '...' : (auditStats ?? 0)}</div>
             <p className="text-xs text-muted-foreground">Last 24 hours</p>
           </CardContent>
         </Card>
@@ -99,7 +99,7 @@ export const SecurityOverview = () => {
             <Shield className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{impersonationStats}</div>
+            <div className="text-2xl font-bold">{impersonationStatsLoading ? '...' : (impersonationStats ?? 0)}</div>
             <p className="text-xs text-muted-foreground">Impersonation active</p>
           </CardContent>
         </Card>
@@ -122,7 +122,9 @@ export const SecurityOverview = () => {
           <CardTitle>Recent Error Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          {recentErrors.length > 0 ? (
+          {recentErrorsLoading ? (
+            <p className="text-center text-muted-foreground py-4">Loading...</p>
+          ) : recentErrors && recentErrors.length > 0 ? (
             <div className="space-y-2">
               {recentErrors.map((error) => (
                 <div key={error.id} className="flex items-center justify-between p-3 border rounded">
