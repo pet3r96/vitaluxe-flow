@@ -2351,6 +2351,14 @@ export type Database = {
           total_uses: number
         }[]
       }
+      get_my_topline_rep_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_topline_rep_id_for_practice: {
+        Args: { _practice_linked_topline_user_id: string }
+        Returns: string
+      }
       get_user_rep_id: {
         Args: { _user_id: string }
         Returns: string
