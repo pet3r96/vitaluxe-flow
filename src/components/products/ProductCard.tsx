@@ -134,7 +134,7 @@ export const ProductCard = memo(({
               <Badge variant="default" className="text-xs">Rx Required</Badge>
             )}
             {product.product_type && (
-              <Badge variant="default" className="text-xs bg-slate-600 hover:bg-slate-700">{product.product_type}</Badge>
+              <Badge variant="default" className="text-xs bg-slate-500 hover:bg-slate-600">{product.product_type}</Badge>
             )}
             <Badge variant={product.active ? "secondary" : "outline"} className="text-xs">
               {product.active ? "Active" : "Inactive"}
