@@ -12,7 +12,8 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(), 
     mode === "development" && componentTagger(),
-    {
+    // Only enable security headers in production to allow preview iframe in development
+    mode === "production" && {
       name: 'security-headers',
       configureServer(server: any) {
         server.middlewares.use((_req: any, res: any, next: any) => {
