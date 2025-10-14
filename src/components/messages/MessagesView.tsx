@@ -88,18 +88,22 @@ export const MessagesView = () => {
   });
 
   const { data: threads, refetch: refetchThreads } = useQuery({
-    queryKey: ["message-threads", resolvedFilter, effectiveUserId],
+    queryKey: ["message-threads", resolvedFilter, effectiveUserId, isAdmin],
     staleTime: 0,
     queryFn: async () => {
       let query = supabase
         .from("message_threads")
         .select(`
           *,
-          thread_participants!inner(user_id),
+          ${isAdmin ? 'thread_participants(user_id)' : 'thread_participants!inner(user_id)'},
           orders(id, status, created_at, total_amount)
         `)
-        .eq("thread_participants.user_id", effectiveUserId)
         .order("updated_at", { ascending: false });
+
+      // Only filter by participant if NOT admin
+      if (!isAdmin) {
+        query = query.eq("thread_participants.user_id", effectiveUserId);
+      }
 
       // Apply filter
       if (resolvedFilter === "resolved") {
@@ -412,13 +416,22 @@ export const MessagesView = () => {
   return (
     <div className="grid grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
       <Card className="col-span-1 p-4 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">
-            {isAdmin ? "All Tickets" : "My Tickets"}
-          </h2>
-          <Button size="sm" onClick={() => setShowNewThread(true)}>
-            New Support Ticket
-          </Button>
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">
+                {isAdmin ? "All Tickets" : "My Tickets"}
+              </h2>
+              {isAdmin && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  You can view all support and order issue tickets for oversight
+                </p>
+              )}
+            </div>
+            <Button size="sm" onClick={() => setShowNewThread(true)}>
+              New Support Ticket
+            </Button>
+          </div>
         </div>
 
         <div className="mb-4">
