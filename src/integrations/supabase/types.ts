@@ -2205,6 +2205,10 @@ export type Database = {
         Args: { p_code: string }
         Returns: undefined
       }
+      is_cart_owner: {
+        Args: { _cart_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_thread_participant: {
         Args: { _thread_id: string; _user_id: string }
         Returns: boolean
