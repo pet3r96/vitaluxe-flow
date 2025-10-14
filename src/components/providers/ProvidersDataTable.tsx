@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { logCredentialAccess } from "@/lib/auditLogger";
 
 export const ProvidersDataTable = () => {
   const { effectiveUserId, effectiveRole } = useAuth();
@@ -121,6 +122,31 @@ export const ProvidersDataTable = () => {
   });
 
   const paginatedProviders = filteredProviders?.slice(startIndex, endIndex);
+
+  // Log credential access when providers with credentials are displayed
+  useEffect(() => {
+    if (paginatedProviders && paginatedProviders.length > 0) {
+      paginatedProviders.forEach(provider => {
+        if (provider.profiles && (provider.profiles.npi || provider.profiles.dea || provider.profiles.license_number)) {
+          const isPracticeView = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
+          const isOwnProvider = effectiveUserId === provider.user_id;
+          
+          logCredentialAccess({
+            profileId: provider.user_id,
+            profileName: provider.profiles.full_name || provider.profiles.name,
+            accessedFields: {
+              npi: !!provider.profiles.npi,
+              dea: !!provider.profiles.dea,
+              license: !!provider.profiles.license_number,
+            },
+            viewerRole: effectiveRole || 'unknown',
+            relationship: isOwnProvider ? 'self' : isPracticeView ? 'practice_admin' : 'admin',
+            componentContext: 'ProvidersDataTable'
+          });
+        }
+      });
+    }
+  }, [paginatedProviders, effectiveRole, effectiveUserId]);
 
   if (isLoading) {
     return <div className="text-center py-12 text-muted-foreground">Loading providers...</div>;

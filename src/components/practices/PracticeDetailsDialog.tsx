@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -28,6 +29,7 @@ import {
 import { ExternalLink, Copy, Pencil, Check, ChevronsUpDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { logCredentialAccess } from "@/lib/auditLogger";
 
 interface PracticeDetailsDialogProps {
   open: boolean;
@@ -42,6 +44,7 @@ export const PracticeDetailsDialog = ({
   provider,
   onSuccess,
 }: PracticeDetailsDialogProps) => {
+  const { effectiveRole, effectiveUserId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [repComboboxOpen, setRepComboboxOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -54,6 +57,31 @@ export const PracticeDetailsDialog = ({
     dea: "",
     selectedRepId: "",
   });
+
+  // Log credential access when dialog opens
+  useEffect(() => {
+    if (open && provider && (provider.npi || provider.dea || provider.license_number)) {
+      const relationship = 
+        effectiveUserId === provider.id ? 'self' :
+        effectiveRole === 'admin' ? 'admin' :
+        effectiveRole === 'topline' ? 'topline' :
+        effectiveRole === 'downline' ? 'downline' :
+        'practice_admin';
+
+      logCredentialAccess({
+        profileId: provider.id,
+        profileName: provider.name,
+        accessedFields: {
+          npi: !!provider.npi,
+          dea: !!provider.dea,
+          license: !!provider.license_number,
+        },
+        viewerRole: effectiveRole || 'unknown',
+        relationship,
+        componentContext: 'PracticeDetailsDialog'
+      });
+    }
+  }, [open, provider, effectiveRole, effectiveUserId]);
 
   // Check if current user is admin
   const { data: userRole } = useQuery({

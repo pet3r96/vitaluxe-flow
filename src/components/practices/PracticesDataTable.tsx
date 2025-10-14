@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -20,8 +21,10 @@ import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { formatPhoneNumber } from "@/lib/validators";
+import { logCredentialAccess } from "@/lib/auditLogger";
 
 export const PracticesDataTable = () => {
+  const { effectiveRole, effectiveUserId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPractice, setSelectedPractice] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -251,6 +254,28 @@ export const PracticesDataTable = () => {
   });
 
   const paginatedPractices = filteredPractices?.slice(startIndex, endIndex);
+
+  // Log credential access when practices with credentials are displayed
+  useEffect(() => {
+    if (paginatedPractices && paginatedPractices.length > 0) {
+      paginatedPractices.forEach(practice => {
+        if (practice.npi || practice.license_number) {
+          logCredentialAccess({
+            profileId: practice.id,
+            profileName: practice.name,
+            accessedFields: {
+              npi: !!practice.npi,
+              license: !!practice.license_number,
+              dea: false,
+            },
+            viewerRole: effectiveRole || 'admin',
+            relationship: effectiveUserId === practice.id ? 'self' : 'admin',
+            componentContext: 'PracticesDataTable'
+          });
+        }
+      });
+    }
+  }, [paginatedPractices, effectiveRole, effectiveUserId]);
 
   return (
     <div className="space-y-4">

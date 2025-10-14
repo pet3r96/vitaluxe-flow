@@ -213,11 +213,20 @@ export default function ChangePassword() {
                     />
                   </div>
                   
-                  {/* zxcvbn feedback */}
+                  {/* zxcvbn feedback with breach warnings */}
                   {validation.feedback && (
-                    <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-xs text-blue-700 dark:text-blue-300">
-                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                      <span>{validation.feedback}</span>
+                    <div className={`flex items-start gap-2 p-3 rounded text-sm font-medium ${
+                      validation.zxcvbnScore < 2 
+                        ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900'
+                        : 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                    }`}>
+                      <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold mb-1">
+                          {validation.zxcvbnScore < 2 ? '🚨 Security Warning' : '💡 Suggestion'}
+                        </p>
+                        <p className="text-xs">{validation.feedback}</p>
+                      </div>
                     </div>
                   )}
                   

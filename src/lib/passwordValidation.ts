@@ -74,9 +74,18 @@ export function validatePasswordStrength(
   else if (zxcvbnResult.score >= 2) strength = 'medium';
   else strength = 'weak';
 
-  // Get user-friendly feedback
-  const feedback = zxcvbnResult.feedback.suggestions?.[0] || 
-    (zxcvbnResult.score < 3 ? 'Add more words or unique characters' : '');
+  // Get user-friendly feedback with breach warnings
+  let feedback = zxcvbnResult.feedback.suggestions?.[0] || '';
+  
+  // Add explicit breach warning if dictionary words detected
+  if (zxcvbnResult.feedback.warning && zxcvbnResult.score < 3) {
+    feedback = zxcvbnResult.feedback.warning + '. ' + feedback;
+  }
+  
+  // Enhanced feedback for very weak passwords
+  if (zxcvbnResult.score < 2 && !feedback) {
+    feedback = '⚠️ This password appears in known data breaches. Choose a unique password.';
+  }
 
   // Format crack time display
   const crackTimeDisplay = String(zxcvbnResult.crack_times_display.offline_slow_hashing_1e4_per_second);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Edit2, Save, X } from "lucide-react";
+import { logCredentialAccess } from "@/lib/auditLogger";
 
 interface ProviderDetailsDialogProps {
   open: boolean;
@@ -37,6 +38,31 @@ export const ProviderDetailsDialog = ({
   const isPractice = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
   const isOwnProvider = effectiveRole === "provider" && effectiveUserId === provider.user_id;
   const isAdmin = effectiveRole === "admin";
+
+  // Log credential access when dialog opens
+  useEffect(() => {
+    if (open && provider?.profiles && (provider.profiles.npi || provider.profiles.dea || provider.profiles.license_number)) {
+      const relationship = 
+        isOwnProvider ? 'self' :
+        isAdmin ? 'admin' :
+        isPractice ? 'practice_admin' :
+        effectiveRole === 'topline' ? 'topline' :
+        'downline';
+
+      logCredentialAccess({
+        profileId: provider.user_id,
+        profileName: provider.profiles.full_name || provider.profiles.name,
+        accessedFields: {
+          npi: !!provider.profiles.npi,
+          dea: !!provider.profiles.dea,
+          license: !!provider.profiles.license_number,
+        },
+        viewerRole: effectiveRole || 'unknown',
+        relationship,
+        componentContext: 'ProviderDetailsDialog'
+      });
+    }
+  }, [open, provider, effectiveRole, isOwnProvider, isPractice, isAdmin]);
 
   const handleSave = async () => {
     setLoading(true);
