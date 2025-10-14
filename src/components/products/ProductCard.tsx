@@ -41,19 +41,19 @@ export const ProductCard = memo(({
       return (
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Base :</span>
+            <span className="text-muted-foreground pr-2">Base:</span>
             <span className="font-semibold">${product.base_price}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Topline :</span>
+            <span className="text-muted-foreground pr-2">Topline:</span>
             <span>${product.topline_price || "-"}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Downline :</span>
+            <span className="text-muted-foreground pr-2">Downline:</span>
             <span>${product.downline_price || "-"}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Practice :</span>
+            <span className="text-muted-foreground pr-2">Practice:</span>
             <span>${product.retail_price || "-"}</span>
           </div>
         </div>
