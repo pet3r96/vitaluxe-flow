@@ -6,8 +6,9 @@ import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
 import { RepsManagement } from "@/components/admin/RepsManagement";
 import { PendingRepsApproval } from "@/components/admin/PendingRepsApproval";
 import { PendingPracticesApproval } from "@/components/admin/PendingPracticesApproval";
+import { ProductTypeManager } from "@/components/admin/ProductTypeManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Building2, Users, Wrench } from "lucide-react";
+import { MapPin, Building2, Users, Wrench, Package } from "lucide-react";
 
 const AdminSettings = () => {
   return (
@@ -44,6 +45,10 @@ const AdminSettings = () => {
           <TabsTrigger value="addresses" className="gap-2">
             <MapPin className="h-4 w-4" />
             Address Verification
+          </TabsTrigger>
+          <TabsTrigger value="product-types" className="gap-2">
+            <Package className="h-4 w-4" />
+            Product Types
           </TabsTrigger>
           <TabsTrigger value="utilities" className="gap-2">
             <Wrench className="h-4 w-4" />
@@ -131,6 +136,20 @@ const AdminSettings = () => {
             </CardHeader>
             <CardContent>
               <AddressVerificationPanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="product-types" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Type Management</CardTitle>
+              <CardDescription>
+                Manage product categories used throughout the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ProductTypeManager />
             </CardContent>
           </Card>
         </TabsContent>
