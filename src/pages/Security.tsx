@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorLogsView } from "@/components/admin/ErrorLogsView";
 import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView";
@@ -14,6 +15,8 @@ import { PrescriptionAccessAudit } from "@/components/security/PrescriptionAcces
 import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard } from "lucide-react";
 
 const Security = () => {
+  const [activeTab, setActiveTab] = useState("overview");
+
   return (
     <div className="space-y-6">
       <div>
@@ -23,7 +26,7 @@ const Security = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6 xl:grid-cols-12">
           <TabsTrigger value="overview" className="gap-2">
             <Shield className="h-4 w-4" />
@@ -76,7 +79,7 @@ const Security = () => {
         </TabsList>
 
         <TabsContent value="overview">
-          <SecurityOverview />
+          <SecurityOverview onViewAllErrors={() => setActiveTab("errors")} />
         </TabsContent>
 
         <TabsContent value="phi-access">

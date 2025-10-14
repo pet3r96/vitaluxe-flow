@@ -6,9 +6,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Shield, Activity, Eye, Key, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export const SecurityOverview = () => {
+interface SecurityOverviewProps {
+  onViewAllErrors?: () => void;
+}
+
+export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => {
   // Real-time alerts temporarily disabled during recovery
   // useEffect(() => {
   //   const channel = supabase
@@ -222,7 +227,22 @@ export const SecurityOverview = () => {
       {/* Recent Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Error Activity</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle>Recent Error Activity</CardTitle>
+              <CardDescription>
+                {errorStats && errorStats > 5 
+                  ? `Showing 5 most recent of ${errorStats} errors`
+                  : "Recent error activity from the last 24 hours"
+                }
+              </CardDescription>
+            </div>
+            {errorStats && errorStats > 5 && onViewAllErrors && (
+              <Button variant="link" className="gap-2" onClick={onViewAllErrors}>
+                View All Errors →
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {recentErrorsLoading ? (
