@@ -21,6 +21,7 @@ export function ImpersonationLogsView() {
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ["impersonation-logs", isAdminNotImpersonating ? "admin" : effectiveUserId],
+    staleTime: 0,
     queryFn: async () => {
       let query = supabase
         .from("impersonation_logs")

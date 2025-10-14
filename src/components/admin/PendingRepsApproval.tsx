@@ -45,6 +45,7 @@ export const PendingRepsApproval = () => {
 
   const { data: pendingReps, isLoading } = useQuery<PendingRepWithProfiles[]>({
     queryKey: ["pending-reps", statusFilter],
+    staleTime: 0,
     queryFn: async () => {
       let query = supabase
         .from("pending_reps")

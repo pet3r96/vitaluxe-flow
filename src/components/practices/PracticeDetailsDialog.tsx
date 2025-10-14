@@ -58,6 +58,7 @@ export const PracticeDetailsDialog = ({
   // Check if current user is admin
   const { data: userRole } = useQuery({
     queryKey: ["user-role"],
+    staleTime: 0,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
@@ -79,6 +80,7 @@ export const PracticeDetailsDialog = ({
   // Fetch topline reps
   const { data: toplineReps } = useQuery({
     queryKey: ["topline-reps-for-practices"],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -101,6 +103,7 @@ export const PracticeDetailsDialog = ({
   // Fetch downline reps
   const { data: downlineReps } = useQuery({
     queryKey: ["downline-reps-for-practices"],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -128,6 +131,7 @@ export const PracticeDetailsDialog = ({
   // Fetch current assigned rep
   const { data: assignedRep } = useQuery({
     queryKey: ["practice-assigned-rep", provider?.id],
+    staleTime: 0,
     queryFn: async () => {
       if (!provider?.linked_topline_id) return null;
       
@@ -192,6 +196,7 @@ export const PracticeDetailsDialog = ({
 
   const { data: orders } = useQuery({
     queryKey: ["practice-orders", provider?.id],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
@@ -208,6 +213,7 @@ export const PracticeDetailsDialog = ({
 
   const { data: stats } = useQuery({
     queryKey: ["practice-stats", provider?.id],
+    staleTime: 0,
     queryFn: async () => {
       const { data: allOrders, error } = await supabase
         .from("orders")
@@ -231,6 +237,7 @@ export const PracticeDetailsDialog = ({
 
   const { data: providers } = useQuery({
     queryKey: ["practice-providers", provider?.id],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("providers")

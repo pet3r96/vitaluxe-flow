@@ -30,6 +30,7 @@ export const ProvidersDataTable = () => {
 
   const { data: providers, isLoading, refetch } = useQuery({
     queryKey: ["providers", effectiveUserId, effectiveRole],
+    staleTime: 0,
     queryFn: async () => {
       // Step 1: Fetch all providers for this practice
       let providersQuery = supabase

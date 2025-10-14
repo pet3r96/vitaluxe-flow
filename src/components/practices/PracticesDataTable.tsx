@@ -28,6 +28,7 @@ export const PracticesDataTable = () => {
 
   const { data: practices, isLoading, refetch } = useQuery({
     queryKey: ["practices"],
+    staleTime: 0,
     queryFn: async () => {
       // First get all doctor role users
       const { data: allDoctors, error: doctorsError } = await supabase
@@ -58,6 +59,7 @@ export const PracticesDataTable = () => {
 
   const { data: providerCounts } = useQuery({
     queryKey: ["provider-counts"],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("providers")
@@ -77,6 +79,7 @@ export const PracticesDataTable = () => {
 
   const { data: allReps } = useQuery({
     queryKey: ["all-reps-lookup"],
+    staleTime: 0,
     queryFn: async () => {
       // Fetch topline reps
       const { data: toplineReps, error: toplineError } = await supabase
@@ -121,6 +124,7 @@ export const PracticesDataTable = () => {
   // Fetch rep-practice links
   const { data: repPracticeLinks } = useQuery({
     queryKey: ["rep-practice-links"],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rep_practice_links")
@@ -151,6 +155,7 @@ export const PracticesDataTable = () => {
 
   const { data: stats } = useQuery({
     queryKey: ["practice-stats"],
+    staleTime: 0,
     queryFn: async () => {
       const { data: orders, error } = await supabase
         .from("orders")

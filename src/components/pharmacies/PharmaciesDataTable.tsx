@@ -27,6 +27,7 @@ export const PharmaciesDataTable = () => {
 
   const { data: pharmacies, isLoading, refetch } = useQuery({
     queryKey: ["pharmacies"],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pharmacies")

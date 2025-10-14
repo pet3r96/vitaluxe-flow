@@ -19,6 +19,7 @@ export const ErrorLogsView = () => {
 
   const { data: errorLogs, isLoading } = useQuery({
     queryKey: ["error-logs", errorTypeFilter, dateFilter],
+    staleTime: 0,
     queryFn: async () => {
       let query = supabase
         .from("audit_logs")

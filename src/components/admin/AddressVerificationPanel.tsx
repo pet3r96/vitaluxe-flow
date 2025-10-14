@@ -21,6 +21,7 @@ export const AddressVerificationPanel = () => {
 
   const { data: invalidAddresses, isLoading, refetch } = useQuery({
     queryKey: ["invalid-addresses"],
+    staleTime: 0,
     queryFn: async () => {
       const [patients, pharmacies, providers] = await Promise.all([
         supabase

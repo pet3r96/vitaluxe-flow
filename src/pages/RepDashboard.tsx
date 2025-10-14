@@ -10,6 +10,7 @@ const RepDashboard = () => {
   // Get rep ID
   const { data: repData } = useQuery({
     queryKey: ["rep-data", effectiveUserId],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")
@@ -26,6 +27,7 @@ const RepDashboard = () => {
   // Get practice count (only for toplines)
   const { data: practiceCount } = useQuery({
     queryKey: ["rep-practice-count", repData?.id, effectiveUserId, effectiveRole],
+    staleTime: 0,
     queryFn: async () => {
       if (!repData?.id || !effectiveUserId) return 0;
       
@@ -62,6 +64,7 @@ const RepDashboard = () => {
   // Get order count
   const { data: orderCount } = useQuery({
     queryKey: ["rep-order-count", repData?.id, effectiveUserId, effectiveRole],
+    staleTime: 0,
     queryFn: async () => {
       if (!repData?.id || !effectiveUserId) return 0;
       
@@ -135,6 +138,7 @@ const RepDashboard = () => {
   // Get downline count (only for toplines)
   const { data: downlineCount } = useQuery({
     queryKey: ["downline-count", repData?.id],
+    staleTime: 0,
     queryFn: async () => {
       if (!repData?.id) return 0;
       
@@ -153,6 +157,7 @@ const RepDashboard = () => {
   // Get profit stats
   const { data: profitStats } = useQuery({
     queryKey: ["rep-profit-stats", repData?.id, effectiveRole],
+    staleTime: 0,
     queryFn: async () => {
       if (!repData?.id) return null;
       

@@ -48,6 +48,7 @@ export const ProductsGrid = () => {
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")

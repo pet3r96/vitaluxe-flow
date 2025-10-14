@@ -12,6 +12,7 @@ export function RepsManagement() {
 
   const { data: reps, isLoading } = useQuery({
     queryKey: ["all-reps"],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")
@@ -38,6 +39,7 @@ export function RepsManagement() {
 
   const { data: repStats } = useQuery({
     queryKey: ["rep-stats"],
+    staleTime: 0,
     queryFn: async () => {
       const { count: toplineCount } = await supabase
         .from("reps")

@@ -49,6 +49,7 @@ export const MessagesView = () => {
   // Fetch user's orders (for providers/practices to link to tickets)
   const { data: userOrders } = useQuery({
     queryKey: ["user-orders-for-tickets", effectiveUserId],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
@@ -88,6 +89,7 @@ export const MessagesView = () => {
 
   const { data: threads, refetch: refetchThreads } = useQuery({
     queryKey: ["message-threads", resolvedFilter, effectiveUserId],
+    staleTime: 0,
     queryFn: async () => {
       let query = supabase
         .from("message_threads")
@@ -153,6 +155,7 @@ export const MessagesView = () => {
 
   const { data: messages, refetch: refetchMessages } = useQuery({
     queryKey: ["messages", selectedThread],
+    staleTime: 0,
     queryFn: async () => {
       if (!selectedThread) return [];
       

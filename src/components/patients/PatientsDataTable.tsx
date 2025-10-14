@@ -27,6 +27,7 @@ export const PatientsDataTable = () => {
 
   const { data: patients, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["patients", effectiveRole, effectivePracticeId],
+    staleTime: 0,
     queryFn: async () => {
       console.debug('Patients query params', { effectiveRole, effectivePracticeId });
       let patientsQuery = supabase
