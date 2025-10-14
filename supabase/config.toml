@@ -71,3 +71,9 @@ verify_jwt = false
 
 [functions.log-error]
 verify_jwt = false
+
+[functions.check-key-rotation]
+verify_jwt = false
+
+[functions.check-key-rotation.schedule]
+cron = "0 9 * * 1"

@@ -9,7 +9,22 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(), 
+    mode === "development" && componentTagger(),
+    {
+      name: 'security-headers',
+      configureServer(server: any) {
+        server.middlewares.use((_req: any, res: any, next: any) => {
+          res.setHeader('X-Frame-Options', 'DENY');
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+          res.setHeader('X-XSS-Protection', '1; mode=block');
+          res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+          next();
+        });
+      },
+    },
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

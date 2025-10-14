@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,8 +6,34 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Shield, Activity, Eye, Key, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 
 export const SecurityOverview = () => {
+  // Real-time alerts for critical security events
+  useEffect(() => {
+    const channel = supabase
+      .channel('critical-security-events')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'security_events',
+          filter: 'severity=eq.critical',
+        },
+        (payload) => {
+          toast.error("⚠️ Critical Security Event", {
+            description: payload.new.details?.message || "Review Security Dashboard",
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const { data: errorStats, isLoading: errorStatsLoading } = useQuery({
     queryKey: ["security-overview-errors"],
     queryFn: async () => {
