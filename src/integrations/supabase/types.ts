@@ -314,6 +314,9 @@ export type Database = {
           product_id: string
           provider_id: string | null
           quantity: number | null
+          refills_allowed: boolean | null
+          refills_remaining: number | null
+          refills_total: number | null
         }
         Insert: {
           cart_id: string
@@ -334,6 +337,9 @@ export type Database = {
           product_id: string
           provider_id?: string | null
           quantity?: number | null
+          refills_allowed?: boolean | null
+          refills_remaining?: number | null
+          refills_total?: number | null
         }
         Update: {
           cart_id?: string
@@ -354,6 +360,9 @@ export type Database = {
           product_id?: string
           provider_id?: string | null
           quantity?: number | null
+          refills_allowed?: boolean | null
+          refills_remaining?: number | null
+          refills_total?: number | null
         }
         Relationships: [
           {
