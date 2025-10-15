@@ -2582,17 +2582,6 @@ export type Database = {
           },
         ]
       }
-      security_events_summary: {
-        Row: {
-          action_type: string | null
-          event_count: number | null
-          event_hour: string | null
-          unique_ips: number | null
-          unique_users: number | null
-          user_role: string | null
-        }
-        Relationships: []
-      }
     }
     Functions: {
       archive_old_audit_logs: {
@@ -2671,6 +2660,15 @@ export type Database = {
       get_my_topline_rep_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_security_events_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          action_type: string
+          event_count: number
+          last_occurrence: string
+          unique_users: number
+        }[]
       }
       get_topline_rep_id_for_practice: {
         Args: { _practice_linked_topline_user_id: string }
