@@ -238,13 +238,13 @@ export function PrescriptionWriterDialog({
                 )}
                 
                 {/* Patient Allergies Display */}
-                <div className="pt-2 border-t border-amber-200 mt-2">
-                  <p className="text-xs font-semibold text-amber-700 flex items-center gap-1 mb-1">
+                <div className="pt-2 border-t border-primary/30 mt-2">
+                  <p className="text-xs font-semibold text-primary flex items-center gap-1 mb-1">
                     <AlertCircle className="h-3 w-3" />
                     Patient Allergies (PHI)
                   </p>
                   {patient.allergies ? (
-                    <p className="text-sm text-amber-900 dark:text-amber-100 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-900">
+                    <p className="text-sm text-foreground bg-primary/10 p-2 rounded border border-primary/30">
                       {patient.allergies}
                     </p>
                   ) : (
