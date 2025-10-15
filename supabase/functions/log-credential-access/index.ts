@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { validateLogCredentialAccessRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +57,27 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const body: CredentialAccessRequest = await req.json();
+    // Parse and validate JSON
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateLogCredentialAccessRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = requestData;
 
     console.log(`Logging credential access: ${user.email} viewed ${body.profile_name}'s credentials`);
 
@@ -91,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || "Internal server error" 
+        error: 'An error occurred logging credential access'
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -177,7 +177,7 @@ export function validateValidateAddressRequest(data: any) {
 
 export function validateBulkVerifyAddressesRequest(data: any) {
   const validations = [
-    validateArray(data.addresses, 'addresses', { required: true, minLength: 1, maxLength: 100 })
+    validateEnum(data.entity_type, 'entity_type', ['providers', 'pharmacies', 'patients', 'all'], false)
   ];
   
   return validateInput(validations);
@@ -194,7 +194,7 @@ export function validateRouteOrderRequest(data: any) {
 
 export function validateGenerateReceiptRequest(data: any) {
   const validations = [
-    validateUUID(data.orderId, 'orderId')
+    validateUUID(data.order_id, 'order_id')
   ];
   
   return validateInput(validations);
@@ -202,7 +202,20 @@ export function validateGenerateReceiptRequest(data: any) {
 
 export function validateGeneratePrescriptionRequest(data: any) {
   const validations = [
-    validateUUID(data.orderLineId, 'orderLineId')
+    validateString(data.product_name, 'product_name', { required: true, maxLength: 200 }),
+    validateString(data.dosage, 'dosage', { maxLength: 100 }),
+    validateString(data.sig, 'sig', { maxLength: 500 }),
+    validateString(data.patient_name, 'patient_name', { required: true, maxLength: 200 }),
+    validateString(data.patient_dob, 'patient_dob', { maxLength: 50 }),
+    validateString(data.patient_address, 'patient_address', { maxLength: 500 }),
+    validateString(data.provider_name, 'provider_name', { required: true, maxLength: 200 }),
+    validateString(data.provider_npi, 'provider_npi', { required: true, maxLength: 50 }),
+    validateString(data.practice_name, 'practice_name', { maxLength: 200 }),
+    validateString(data.notes, 'notes', { maxLength: 1000 }),
+    validateNumber(data.quantity, 'quantity', { min: 1, max: 1000 }),
+    validateBoolean(data.is_office_dispensing, 'is_office_dispensing'),
+    validateBoolean(data.refills_allowed, 'refills_allowed'),
+    validateNumber(data.refills_total, 'refills_total', { min: 0, max: 12 })
   ];
   
   return validateInput(validations);
@@ -210,7 +223,9 @@ export function validateGeneratePrescriptionRequest(data: any) {
 
 export function validateGenerateTermsRequest(data: any) {
   const validations = [
-    validateUUID(data.termsId, 'termsId')
+    validateUUID(data.terms_id, 'terms_id'),
+    validateString(data.signature_name, 'signature_name', { required: true, maxLength: 200 }),
+    validateUUID(data.target_user_id, 'target_user_id')
   ];
   
   return validateInput(validations);
@@ -218,9 +233,9 @@ export function validateGenerateTermsRequest(data: any) {
 
 export function validateManageProductTypeRequest(data: any) {
   const validations = [
-    validateEnum(data.action, 'action', ['create', 'update', 'delete'], true),
-    validateString(data.name, 'name', { maxLength: 255 }),
-    validateString(data.description, 'description', { maxLength: 1000 })
+    validateEnum(data.operation, 'operation', ['add', 'delete', 'update', 'getUsage'], true),
+    validateString(data.typeName, 'typeName', { maxLength: 100 }),
+    validateString(data.newName, 'newName', { maxLength: 100 })
   ];
   
   return validateInput(validations);
@@ -229,7 +244,41 @@ export function validateManageProductTypeRequest(data: any) {
 export function validateLogCredentialAccessRequest(data: any) {
   const validations = [
     validateUUID(data.profile_id, 'profile_id'),
-    validateArray(data.accessed_fields, 'accessed_fields', { required: true, minLength: 1 })
+    validateString(data.profile_name, 'profile_name', { required: true, maxLength: 200 }),
+    validateString(data.viewer_role, 'viewer_role', { required: true, maxLength: 50 }),
+    validateString(data.relationship, 'relationship', { required: true, maxLength: 100 }),
+    validateString(data.component_context, 'component_context', { maxLength: 200 })
+  ];
+  
+  return validateInput(validations);
+}
+
+export function validateApprovePendingRepRequest(data: any) {
+  const validations = [
+    validateUUID(data.requestId, 'requestId'),
+    validateEnum(data.action, 'action', ['approve', 'reject'], true),
+    validateString(data.rejectionReason, 'rejectionReason', { maxLength: 1000 }),
+    validateString(data.adminNotes, 'adminNotes', { maxLength: 1000 })
+  ];
+  
+  return validateInput(validations);
+}
+
+export function validateApprovePendingPracticeRequest(data: any) {
+  const validations = [
+    validateUUID(data.requestId, 'requestId'),
+    validateEnum(data.action, 'action', ['approve', 'reject'], true),
+    validateString(data.rejectionReason, 'rejectionReason', { maxLength: 1000 }),
+    validateString(data.adminNotes, 'adminNotes', { maxLength: 1000 })
+  ];
+  
+  return validateInput(validations);
+}
+
+export function validateFixOrphanedUsersRequest(data: any) {
+  const validations = [
+    validateEnum(data.roleType, 'roleType', ['pharmacy', 'practice', 'topline', 'downline', 'provider'], false),
+    validateUUID(data.entityId, 'entityId')
   ];
   
   return validateInput(validations);

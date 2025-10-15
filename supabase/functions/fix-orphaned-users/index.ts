@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { generateSecurePassword } from "../_shared/passwordGenerator.ts";
+import { validateFixOrphanedUsersRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -454,8 +455,26 @@ serve(async (req) => {
       throw new Error('Admin access required');
     }
 
-    // Parse request body for optional filters
-    const { roleType, entityId } = await req.json().catch(() => ({}));
+    // Parse and validate JSON
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      requestData = {};
+    }
+
+    if (requestData && Object.keys(requestData).length > 0) {
+      const validation = validateFixOrphanedUsersRequest(requestData);
+      if (!validation.valid) {
+        console.warn('Validation failed:', validation.errors);
+        return new Response(
+          JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const { roleType, entityId } = requestData || {};
 
     const results: FixResult[] = [];
     const summary: Record<string, RoleSummary> = {

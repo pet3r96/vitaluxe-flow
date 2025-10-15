@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePhone, generateSecurePassword } from '../_shared/validators.ts';
+import { validateApprovePendingRepRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +21,26 @@ serve(async (req) => {
   let pendingRep: any;
 
   try {
+    // Parse and validate JSON
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateApprovePendingRepRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -50,8 +71,6 @@ serve(async (req) => {
     if (!adminRole) {
       throw new Error('Unauthorized - Admin access required');
     }
-
-    const requestData = await req.json();
     requestId = requestData.requestId;
     action = requestData.action;
     const rejectionReason = requestData.rejectionReason;
@@ -259,7 +278,7 @@ serve(async (req) => {
     }
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'An error occurred processing the request' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

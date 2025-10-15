@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { validateRouteOrderRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -113,11 +114,31 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { product_id, destination_state }: RoutingInput = await req.json();
+    // Parse and validate JSON
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateRouteOrderRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { product_id, destination_state } = requestData;
 
     if (!product_id || !destination_state) {
       return new Response(
-        JSON.stringify({ error: 'Missing product_id or destination_state' }),
+        JSON.stringify({ error: 'Missing required fields' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -138,7 +159,7 @@ Deno.serve(async (req) => {
     console.error('Error in route-order-to-pharmacy:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An error occurred processing the request' }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

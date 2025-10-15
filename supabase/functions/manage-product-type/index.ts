@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { validateManageProductTypeRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,8 +50,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    const body: RequestBody = await req.json();
-    const { operation, typeName, oldTypeName, newTypeName } = body;
+    // Parse and validate JSON
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateManageProductTypeRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { operation, typeName, oldTypeName, newTypeName } = requestData;
 
     console.log('Product type operation:', operation, { typeName, oldTypeName, newTypeName });
 
@@ -138,9 +158,8 @@ Deno.serve(async (req) => {
     }
   } catch (error) {
     console.error('Error in manage-product-type function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An error occurred processing the request' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

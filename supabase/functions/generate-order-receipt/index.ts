@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
+import { validateGenerateReceiptRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +32,27 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { order_id } = await req.json();
+    // Parse and validate JSON
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateGenerateReceiptRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { order_id } = requestData;
 
     if (!order_id) {
       throw new Error('order_id is required');
@@ -360,7 +381,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error?.message || 'Failed to generate receipt'
+        error: 'An error occurred generating the receipt'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

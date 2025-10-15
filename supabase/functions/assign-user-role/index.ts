@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from '../_shared/validators.ts';
+import { validateAssignRoleRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,7 +64,32 @@ serve(async (req) => {
       }
     });
 
-    const signupData: SignupRequest = await req.json();
+    // Parse and validate JSON
+    let signupData: SignupRequest;
+    try {
+      signupData = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Basic validation for required signup fields
+    const basicValidation = validateAssignRoleRequest({
+      userId: signupData.roleData?.practiceId || 'new',  // For new users
+      role: signupData.role,
+      name: signupData.name,
+      email: signupData.email
+    });
+    
+    if (!basicValidation.valid) {
+      console.warn('Basic validation failed:', basicValidation.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: basicValidation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Normalize role: "practice" → "doctor" for backward compatibility
     // Frontend may send "practice", but database uses "doctor" for practice accounts
@@ -615,7 +641,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Unexpected error in assign-user-role:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      JSON.stringify({ error: 'An error occurred processing the request' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

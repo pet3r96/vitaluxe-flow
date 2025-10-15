@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
+import { validateGeneratePrescriptionRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,26 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Parse and validate JSON
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateGeneratePrescriptionRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const {
       product_name,
@@ -41,7 +62,7 @@ serve(async (req) => {
       dispensing_option,
       refills_allowed = false,
       refills_total = 0
-    } = await req.json();
+    } = requestData;
 
     console.log('Generating prescription PDF for:', product_name, 'with dispensing option:', dispensing_option);
 
@@ -281,11 +302,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error generating prescription:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage
+        error: 'An error occurred generating the prescription'
       }),
       {
         status: 500,

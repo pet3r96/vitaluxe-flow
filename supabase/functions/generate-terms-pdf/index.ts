@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
+import { validateGenerateTermsRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +32,27 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { terms_id, signature_name, target_user_id } = await req.json();
+    // Parse and validate JSON
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateGenerateTermsRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { terms_id, signature_name, target_user_id } = requestData;
 
     if (!terms_id || !signature_name) {
       throw new Error('Missing required fields');
@@ -395,7 +416,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error?.message || 'Unknown error' }),
+      JSON.stringify({ error: 'An error occurred processing the request' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400
