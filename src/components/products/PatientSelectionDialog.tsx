@@ -205,6 +205,7 @@ export const PatientSelectionDialog = ({
       setCustomSig("");
       setCustomDosage("");
       setOrderNotes("");
+      setProviderSignature("");
       setShowPrescriptionWriter(false);
       if (effectiveRole === "doctor") {
         setSelectedProviderId(null);
