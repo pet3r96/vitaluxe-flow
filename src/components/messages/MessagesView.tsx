@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, Send } from "lucide-react";
+import { MessageCircle, Send, AlertCircle, Headset } from "lucide-react";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole } = useAuth();
@@ -25,6 +26,7 @@ export const MessagesView = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [dispositionType, setDispositionType] = useState<string>("");
   const [dispositionNotes, setDispositionNotes] = useState<string>("");
+  const [activeTicketTab, setActiveTicketTab] = useState<"support" | "order_issues">("support");
 
 
   // Check if user is admin
@@ -412,26 +414,23 @@ export const MessagesView = () => {
   };
 
   const currentThread = threads?.find(t => t.id === selectedThread);
+  
+  // Filter threads by type
+  const supportTickets = threads?.filter(t => (t as any).thread_type !== 'order_issue') || [];
+  const orderIssueTickets = threads?.filter(t => (t as any).thread_type === 'order_issue') || [];
 
   return (
     <div className="grid grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
       <Card className="col-span-1 p-4 flex flex-col">
         <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">
-                {isAdmin ? "All Tickets" : "My Tickets"}
-              </h2>
-              {isAdmin && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  You can view all support and order issue tickets for oversight
-                </p>
-              )}
-            </div>
-            <Button size="sm" onClick={() => setShowNewThread(true)}>
-              New Support Ticket
-            </Button>
-          </div>
+          <h2 className="text-lg font-semibold">
+            {isAdmin ? "All Tickets" : "My Tickets"}
+          </h2>
+          {isAdmin && (
+            <p className="text-xs text-muted-foreground mt-1">
+              You can view all support and order issue tickets for oversight
+            </p>
+          )}
         </div>
 
         <div className="mb-4">
@@ -574,73 +573,210 @@ export const MessagesView = () => {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto space-y-2">
-          {threads?.map((thread) => {
-            const isOrderIssue = (thread as any).thread_type === 'order_issue';
-            
-            return (
-              <button
-                key={thread.id}
-                onClick={() => setSelectedThread(thread.id)}
-                className={`w-full p-3 text-left rounded-md transition-colors border-l-4 ${
-                  isOrderIssue 
-                    ? 'border-l-orange-500' 
-                    : 'border-l-blue-500'
-                } ${
-                  selectedThread === thread.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted hover:bg-muted/80"
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium truncate flex-1">{thread.subject}</p>
-                      <Badge 
-                        variant={thread.resolved ? "secondary" : "default"}
-                        className="flex-shrink-0"
-                      >
-                        {thread.resolved ? "Closed" : "Open"}
-                      </Badge>
-                    </div>
+        {/* Admin View: Tabbed Interface */}
+        {isAdmin ? (
+          <Tabs value={activeTicketTab} onValueChange={(v: any) => setActiveTicketTab(v)} className="flex-1 flex flex-col">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="support" className="gap-2">
+                <Headset className="h-4 w-4" />
+                Support ({supportTickets.length})
+              </TabsTrigger>
+              <TabsTrigger value="order_issues" className="gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Order Issues ({orderIssueTickets.length})
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Support Tickets Tab */}
+            <TabsContent value="support" className="flex-1 flex flex-col space-y-4 mt-4">
+              <Button size="sm" onClick={() => setShowNewThread(true)} className="w-full">
+                New Support Ticket
+              </Button>
+              
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {supportTickets.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No support tickets</p>
+                ) : (
+                  supportTickets.map((thread) => {
+                    const isOrderIssue = (thread as any).thread_type === 'order_issue';
                     
-                    {/* Show thread type badge */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge 
-                        variant="outline" 
-                        className={isOrderIssue ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}
+                    return (
+                      <button
+                        key={thread.id}
+                        onClick={() => setSelectedThread(thread.id)}
+                        className={`w-full p-3 text-left rounded-md transition-colors border-l-4 border-l-blue-500 ${
+                          selectedThread === thread.id
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted hover:bg-muted/80"
+                        }`}
                       >
-                        {isOrderIssue ? "Order Issue" : "Support"}
-                      </Badge>
-                      {isOrderIssue && (thread as any).disposition_type && (
-                        <Badge variant="outline" className="text-xs">
-                          {(thread as any).disposition_type.replace(/_/g, ' ')}
+                        <div className="flex items-start gap-2">
+                          <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate flex-1">{thread.subject}</p>
+                              <Badge 
+                                variant={thread.resolved ? "secondary" : "default"}
+                                className="flex-shrink-0"
+                              >
+                                {thread.resolved ? "Closed" : "Open"}
+                              </Badge>
+                            </div>
+
+                            {thread.created_by && (thread as any).creator && (
+                              <p className="text-xs opacity-70">
+                                By: {(thread as any).creator.name}
+                              </p>
+                            )}
+                            <p className="text-xs opacity-70">
+                              {new Date(thread.updated_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Order Issues Tab */}
+            <TabsContent value="order_issues" className="flex-1 flex flex-col space-y-4 mt-4">
+              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+                <p className="font-medium">Order issue tickets are created by practices/providers</p>
+                <p className="text-xs mt-1">These tickets are conversations between practices and pharmacies regarding specific orders</p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {orderIssueTickets.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No order issue tickets</p>
+                ) : (
+                  orderIssueTickets.map((thread) => {
+                    const isOrderIssue = (thread as any).thread_type === 'order_issue';
+                    
+                    return (
+                      <button
+                        key={thread.id}
+                        onClick={() => setSelectedThread(thread.id)}
+                        className={`w-full p-3 text-left rounded-md transition-colors border-l-4 border-l-orange-500 ${
+                          selectedThread === thread.id
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted hover:bg-muted/80"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate flex-1">{thread.subject}</p>
+                              <Badge 
+                                variant={thread.resolved ? "secondary" : "default"}
+                                className="flex-shrink-0"
+                              >
+                                {thread.resolved ? "Closed" : "Open"}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {(thread as any).disposition_type && (
+                                <Badge variant="outline" className="text-xs">
+                                  {(thread as any).disposition_type.replace(/_/g, ' ')}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {(thread as any).orders && (
+                              <p className="text-xs opacity-70">
+                                Order: {new Date((thread as any).orders.created_at).toLocaleDateString()} - ${(thread as any).orders.total_amount}
+                              </p>
+                            )}
+
+                            {thread.created_by && (thread as any).creator && (
+                              <p className="text-xs opacity-70">
+                                By: {(thread as any).creator.name}
+                              </p>
+                            )}
+                            <p className="text-xs opacity-70">
+                              {new Date(thread.updated_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          /* Non-Admin View: Single list */
+          <>
+            <Button size="sm" onClick={() => setShowNewThread(true)} className="w-full mb-4">
+              New Ticket
+            </Button>
+            
+            <div className="flex-1 overflow-y-auto space-y-2">
+            {threads?.map((thread) => {
+              const isOrderIssue = (thread as any).thread_type === 'order_issue';
+              
+              return (
+                <button
+                  key={thread.id}
+                  onClick={() => setSelectedThread(thread.id)}
+                  className={`w-full p-3 text-left rounded-md transition-colors border-l-4 ${
+                    isOrderIssue 
+                      ? 'border-l-orange-500' 
+                      : 'border-l-blue-500'
+                  } ${
+                    selectedThread === thread.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/80"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate flex-1">{thread.subject}</p>
+                        <Badge 
+                          variant={thread.resolved ? "secondary" : "default"}
+                          className="flex-shrink-0"
+                        >
+                          {thread.resolved ? "Closed" : "Open"}
                         </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge 
+                          variant="outline" 
+                          className={isOrderIssue ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}
+                        >
+                          {isOrderIssue ? "Order Issue" : "Support"}
+                        </Badge>
+                        {isOrderIssue && (thread as any).disposition_type && (
+                          <Badge variant="outline" className="text-xs">
+                            {(thread as any).disposition_type.replace(/_/g, ' ')}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {isOrderIssue && (thread as any).orders && (
+                        <p className="text-xs opacity-70">
+                          Order: {new Date((thread as any).orders.created_at).toLocaleDateString()} - ${(thread as any).orders.total_amount}
+                        </p>
                       )}
+
+                      <p className="text-xs opacity-70">
+                        {new Date(thread.updated_at).toLocaleDateString()}
+                      </p>
                     </div>
-
-                    {/* Show order info for order issues */}
-                    {isOrderIssue && (thread as any).orders && (
-                      <p className="text-xs opacity-70">
-                        Order: {new Date((thread as any).orders.created_at).toLocaleDateString()} - ${(thread as any).orders.total_amount}
-                      </p>
-                    )}
-
-                    {isAdmin && thread.created_by && (thread as any).creator && (
-                      <p className="text-xs opacity-70">
-                        By: {(thread as any).creator.name}
-                      </p>
-                    )}
-                    <p className="text-xs opacity-70">
-                      {new Date(thread.updated_at).toLocaleDateString()}
-                    </p>
                   </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                </button>
+              );
+            })}
+          </div>
+          </>
+        )}
       </Card>
 
       <Card className="col-span-2 p-4 flex flex-col">
