@@ -9,6 +9,7 @@ import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ImpersonationBanner } from "./components/layout/ImpersonationBanner";
 import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonationDropdown";
+import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -73,7 +74,7 @@ const App = () => (
                         <div className="sticky top-0 z-10 flex items-center justify-between p-4 lg:p-6 border-b border-border bg-[hsl(var(--main-content-bg))]">
                           <SidebarTrigger className="lg:hidden" />
                           <div className="ml-auto flex items-center gap-2">
-                            {/* Notification Bell - will be imported after types regenerate */}
+                            <NotificationBell />
                             <RoleImpersonationDropdown />
                           </div>
                         </div>
