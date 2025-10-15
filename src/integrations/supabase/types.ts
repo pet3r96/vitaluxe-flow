@@ -889,8 +889,10 @@ export type Database = {
           discount_amount: number | null
           discount_percentage: number | null
           id: string
+          is_refill: boolean | null
           order_id: string
           order_notes: string | null
+          original_order_line_id: string | null
           patient_address: string | null
           patient_email: string | null
           patient_id: string | null
@@ -905,6 +907,10 @@ export type Database = {
           product_id: string
           provider_id: string | null
           quantity: number | null
+          refill_number: number | null
+          refills_allowed: boolean | null
+          refills_remaining: number | null
+          refills_total: number | null
           shipped_at: string | null
           shipping_carrier:
             | Database["public"]["Enums"]["shipping_carrier"]
@@ -925,8 +931,10 @@ export type Database = {
           discount_amount?: number | null
           discount_percentage?: number | null
           id?: string
+          is_refill?: boolean | null
           order_id: string
           order_notes?: string | null
+          original_order_line_id?: string | null
           patient_address?: string | null
           patient_email?: string | null
           patient_id?: string | null
@@ -941,6 +949,10 @@ export type Database = {
           product_id: string
           provider_id?: string | null
           quantity?: number | null
+          refill_number?: number | null
+          refills_allowed?: boolean | null
+          refills_remaining?: number | null
+          refills_total?: number | null
           shipped_at?: string | null
           shipping_carrier?:
             | Database["public"]["Enums"]["shipping_carrier"]
@@ -961,8 +973,10 @@ export type Database = {
           discount_amount?: number | null
           discount_percentage?: number | null
           id?: string
+          is_refill?: boolean | null
           order_id?: string
           order_notes?: string | null
+          original_order_line_id?: string | null
           patient_address?: string | null
           patient_email?: string | null
           patient_id?: string | null
@@ -977,6 +991,10 @@ export type Database = {
           product_id?: string
           provider_id?: string | null
           quantity?: number | null
+          refill_number?: number | null
+          refills_allowed?: boolean | null
+          refills_remaining?: number | null
+          refills_total?: number | null
           shipped_at?: string | null
           shipping_carrier?:
             | Database["public"]["Enums"]["shipping_carrier"]
@@ -998,6 +1016,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_lines_original_order_line_id_fkey"
+            columns: ["original_order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
             referencedColumns: ["id"]
           },
           {
@@ -1547,6 +1572,57 @@ export type Database = {
             columns: ["practice_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prescription_refills: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_order_line_id: string
+          new_prescription_url: string | null
+          new_refills_authorized: number | null
+          original_order_line_id: string
+          refill_number: number
+          refilled_at: string | null
+          refilled_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_order_line_id: string
+          new_prescription_url?: string | null
+          new_refills_authorized?: number | null
+          original_order_line_id: string
+          refill_number: number
+          refilled_at?: string | null
+          refilled_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_order_line_id?: string
+          new_prescription_url?: string | null
+          new_refills_authorized?: number | null
+          original_order_line_id?: string
+          refill_number?: number
+          refilled_at?: string | null
+          refilled_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescription_refills_new_order_line_id_fkey"
+            columns: ["new_order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescription_refills_original_order_line_id_fkey"
+            columns: ["original_order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
             referencedColumns: ["id"]
           },
         ]
@@ -2372,6 +2448,10 @@ export type Database = {
       can_user_impersonate: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      check_refill_eligibility: {
+        Args: { p_order_line_id: string }
+        Returns: Json
       }
       create_user_with_role: {
         Args: {

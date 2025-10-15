@@ -860,7 +860,7 @@ export const PatientSelectionDialog = ({
             initialDosage={customDosage}
             initialNotes={orderNotes}
             initialSignature={providerSignature}
-            onPrescriptionGenerated={(url, sig, dosage, notes, signature) => {
+            onPrescriptionGenerated={(url, sig, dosage, notes, signature, dispensingOpt, refillsAuth, refillsTot) => {
               setPrescriptionPreview(url);
               setCustomSig(sig);
               setCustomDosage(dosage);

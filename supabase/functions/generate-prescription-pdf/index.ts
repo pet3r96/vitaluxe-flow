@@ -38,7 +38,9 @@ serve(async (req) => {
       notes,
       quantity,
       signature,
-      dispensing_option
+      dispensing_option,
+      refills_allowed = false,
+      refills_total = 0
     } = await req.json();
 
     console.log('Generating prescription PDF for:', product_name, 'with dispensing option:', dispensing_option);
@@ -195,27 +197,35 @@ serve(async (req) => {
     doc.text('Prescriber Signature', 4, sigY + 0.45, { align: 'center' });
 
     // Bottom section
-    const bottomY = 8.5;
+    const bottomY = 8.3;
     doc.line(0.5, bottomY, 8, bottomY); // Top line
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     
-    // Check "Dispense as Written" if selected
-    doc.rect(1, bottomY + 0.15, 0.15, 0.15, dispensing_option === 'dispense_as_written' ? 'F' : 'S');
+    // Refills section
+    doc.text('Refills:', 1, bottomY + 0.25);
     doc.setFont('helvetica', 'normal');
-    doc.text('Dispense as Written', 1.25, bottomY + 0.3);
+    const refillText = refills_allowed ? `${refills_total} refill${refills_total !== 1 ? 's' : ''} authorized` : 'No refills';
+    doc.text(refillText, 1.75, bottomY + 0.25);
+    
+    // Dispensing options
+    doc.setFont('helvetica', 'bold');
+    // Check "Dispense as Written" if selected
+    doc.rect(1, bottomY + 0.5, 0.15, 0.15, dispensing_option === 'dispense_as_written' ? 'F' : 'S');
+    doc.setFont('helvetica', 'normal');
+    doc.text('Dispense as Written', 1.25, bottomY + 0.65);
 
     // Check "May Substitute" if selected
-    doc.rect(4, bottomY + 0.15, 0.15, 0.15, dispensing_option === 'may_substitute' ? 'F' : 'S');
-    doc.text('May Substitute', 4.25, bottomY + 0.3);
+    doc.rect(4, bottomY + 0.5, 0.15, 0.15, dispensing_option === 'may_substitute' ? 'F' : 'S');
+    doc.text('May Substitute', 4.25, bottomY + 0.65);
 
     // Footer note
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.line(0.5, bottomY + 0.6, 8, bottomY + 0.6);
-    doc.text('This prescription was generated electronically on ' + date + '.', 4.25, bottomY + 0.8, { align: 'center' });
-    doc.text('For pharmacy use only. Verify prescriber credentials before dispensing.', 4.25, bottomY + 1, { align: 'center' });
+    doc.line(0.5, bottomY + 0.95, 8, bottomY + 0.95);
+    doc.text('This prescription was generated electronically on ' + date + '.', 4.25, bottomY + 1.15, { align: 'center' });
+    doc.text('For pharmacy use only. Verify prescriber credentials before dispensing.', 4.25, bottomY + 1.35, { align: 'center' });
 
     // Get PDF as array buffer
     const pdfOutput = doc.output('arraybuffer');
