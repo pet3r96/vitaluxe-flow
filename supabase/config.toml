@@ -4,16 +4,16 @@ project_id = "qbtsfajshnrwwlfzkeog"
 verify_jwt = false
 
 [functions.track-failed-login]
-verify_jwt = false
+verify_jwt = true
 
 [functions.detect-brute-force]
-verify_jwt = false
+verify_jwt = true
 
 [functions.detect-anomalies]
 verify_jwt = true
 
 [functions.trigger-alert]
-verify_jwt = false
+verify_jwt = true
 
 [functions.archive-old-logs]
 verify_jwt = false
@@ -70,7 +70,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.log-error]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-key-rotation]
 verify_jwt = false
@@ -91,4 +91,4 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-notification]
-verify_jwt = false
+verify_jwt = true
