@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Trash2, Star } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";
 
 interface PaymentMethod {
   id: string;
@@ -70,6 +71,17 @@ export const BankAccountsSection = () => {
   // Exchange public token
   const exchangeTokenMutation = useMutation({
     mutationFn: async (publicToken: string) => {
+      // Validate CSRF token before Plaid token exchange
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Security token missing. Please refresh and try again.");
+      }
+      
+      const isValid = await validateCSRFToken(csrfToken);
+      if (!isValid) {
+        throw new Error("Security token expired. Please refresh and try again.");
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plaid-exchange-token`, {
         method: "POST",
         headers: {
@@ -79,6 +91,7 @@ export const BankAccountsSection = () => {
         body: JSON.stringify({ 
           public_token: publicToken,
           practice_id: effectiveUserId,
+          csrf_token: csrfToken,
         }),
       });
 
@@ -104,6 +117,17 @@ export const BankAccountsSection = () => {
   // Delete payment method
   const deletePaymentMethodMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Validate CSRF token before deleting payment method
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Security token missing. Please refresh and try again.");
+      }
+      
+      const isValid = await validateCSRFToken(csrfToken);
+      if (!isValid) {
+        throw new Error("Security token expired. Please refresh and try again.");
+      }
+
       const { error } = await supabase
         .from("practice_payment_methods")
         .delete()
@@ -130,6 +154,17 @@ export const BankAccountsSection = () => {
   // Set default payment method
   const setDefaultMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Validate CSRF token before changing default payment method
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Security token missing. Please refresh and try again.");
+      }
+      
+      const isValid = await validateCSRFToken(csrfToken);
+      if (!isValid) {
+        throw new Error("Security token expired. Please refresh and try again.");
+      }
+
       // First, unset all defaults
       await supabase
         .from("practice_payment_methods")

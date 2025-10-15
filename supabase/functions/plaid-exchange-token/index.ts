@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePlaidExchangeRequest } from "../_shared/requestValidators.ts";
+import { validateCSRFToken } from "../_shared/csrfValidator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,16 @@ serve(async (req) => {
       });
     }
 
-    const { public_token, practice_id } = requestData;
+    // Validate CSRF token
+    const { csrf_token, public_token, practice_id } = requestData;
+    const csrfValidation = await validateCSRFToken(supabaseClient, user.id, csrf_token);
+    if (!csrfValidation.valid) {
+      console.warn(`CSRF validation failed for user ${user.email}:`, csrfValidation.error);
+      return new Response(
+        JSON.stringify({ error: "Security validation failed" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const PLAID_CLIENT_ID = Deno.env.get("PLAID_CLIENT_ID");
     const PLAID_SECRET = Deno.env.get("PLAID_SECRET");

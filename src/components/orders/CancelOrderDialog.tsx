@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";
 import { AlertTriangle } from "lucide-react";
 
 interface CancelOrderDialogProps {
@@ -52,8 +53,19 @@ export const CancelOrderDialog = ({
     setIsSubmitting(true);
     
     try {
+      // Validate CSRF token before cancellation
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Security token missing. Please refresh the page and try again.");
+      }
+      
+      const isValid = await validateCSRFToken(csrfToken);
+      if (!isValid) {
+        throw new Error("Security token expired. Please refresh the page and try again.");
+      }
+
       const { data, error } = await supabase.functions.invoke('cancel-order', {
-        body: { orderId, reason }
+        body: { orderId, reason, csrf_token: csrfToken }
       });
 
       if (error) throw error;

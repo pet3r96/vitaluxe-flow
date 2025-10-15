@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { generateCSRFToken, clearCSRFToken } from "@/lib/csrf";
 
 interface AuthContextType {
   user: User | null;
@@ -74,6 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Fetch user role in a deferred manner
           setTimeout(() => {
             fetchUserRole(session.user.id);
+            // Regenerate CSRF token on auth state restoration
+            generateCSRFToken();
           }, 0);
         } else {
           setUserRole(null);
@@ -82,6 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setImpersonatedUserName(null);
           setCurrentLogId(null);
           sessionStorage.removeItem('vitaluxe_impersonation');
+          clearCSRFToken();
         }
       }
     );
@@ -359,6 +363,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Check password status after successful login
       await checkPasswordStatus();
 
+      // Generate CSRF token after successful authentication
+      const csrfToken = await generateCSRFToken();
+      if (!csrfToken) {
+        console.warn('Failed to generate CSRF token - some operations may be restricted');
+      }
+
       navigate("/dashboard");
       return { error: null };
     } catch (error: any) {
@@ -523,6 +533,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error updating impersonation log on signout:', error);
       }
     }
+    
+    // Clear CSRF token before signing out
+    clearCSRFToken();
     
     await supabase.auth.signOut();
     setUserRole(null);

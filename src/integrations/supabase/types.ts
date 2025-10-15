@@ -2612,6 +2612,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      cleanup_expired_csrf_tokens: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_user_with_role: {
         Args: {
           p_email: string

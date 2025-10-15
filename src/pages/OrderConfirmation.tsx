@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
+import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";
 
 // Helper function to extract state from address string
 const extractStateFromAddress = (address: string): string => {
@@ -92,6 +93,17 @@ export default function OrderConfirmation() {
 
       if (!agreed) {
         throw new Error("You must agree to the terms before confirming your order");
+      }
+
+      // Validate CSRF token before order placement
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Security token missing. Please refresh the page and try again.");
+      }
+      
+      const isValid = await validateCSRFToken(csrfToken);
+      if (!isValid) {
+        throw new Error("Security token expired. Please refresh the page and try again.");
       }
 
       const practiceLines = (cart.lines as any[]).filter(

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { validateCancelOrderRequest } from "../_shared/requestValidators.ts";
+import { validateCSRFToken } from "../_shared/csrfValidator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,7 +62,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { orderId, reason } = requestData as CancelOrderRequest;
+    // Validate CSRF token
+    const { csrf_token, orderId, reason } = requestData as CancelOrderRequest & { csrf_token?: string };
+    const csrfValidation = await validateCSRFToken(supabase, user.id, csrf_token);
+    if (!csrfValidation.valid) {
+      console.warn(`CSRF validation failed for user ${user.email}:`, csrfValidation.error);
+      return new Response(
+        JSON.stringify({ error: 'Security validation failed' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log(`Cancel request from ${user.id} for order ${orderId}`);
 
