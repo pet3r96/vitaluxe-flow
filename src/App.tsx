@@ -37,7 +37,7 @@ import ChangePassword from "./pages/ChangePassword";
 import AcceptTerms from "@/pages/AcceptTerms";
 import AdminTermsManagement from "@/pages/AdminTermsManagement";
 import AdminDiscountCodes from "@/pages/AdminDiscountCodes";
-import RefillCenter from "@/pages/RefillCenter";
+
 import { DashboardRouter } from "./components/DashboardRouter";
 
 const queryClient = new QueryClient({
@@ -89,7 +89,7 @@ const App = () => (
                           <Route path="/providers" element={<Providers />} />
                           <Route path="/products" element={<Products />} />
                           <Route path="/orders" element={<Orders />} />
-                          <Route path="/refill-center" element={<RefillCenter />} />
+                          
                           <Route path="/messages" element={<Messages />} />
                           <Route path="/pharmacies" element={<Pharmacies />} />
                           <Route path="/reports" element={<Reports />} />

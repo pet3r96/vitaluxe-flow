@@ -125,9 +125,7 @@ export function QuickRefillDialog({ open, onOpenChange, orderLine, onSuccess }: 
     customDosage: string,
     notes: string,
     signature: string,
-    dispensingOption: "dispense_as_written" | "may_substitute",
-    refillsAllowed: boolean,
-    refillsTotal: number
+    dispensingOption: "dispense_as_written" | "may_substitute"
   ) => {
     setIsProcessing(true);
     try {
@@ -173,9 +171,9 @@ export function QuickRefillDialog({ open, onOpenChange, orderLine, onSuccess }: 
           original_order_line_id: orderLine.id,
           is_refill: true,
           refill_number: nextRefillNumber,
-          refills_allowed: refillsAllowed,
-          refills_total: refillsTotal,
-          refills_remaining: refillsTotal,
+          refills_allowed: false,
+          refills_total: 0,
+          refills_remaining: 0,
           status: "pending",
         })
         .select()
@@ -191,7 +189,7 @@ export function QuickRefillDialog({ open, onOpenChange, orderLine, onSuccess }: 
           new_order_line_id: newOrderLine.id,
           refill_number: nextRefillNumber,
           new_prescription_url: prescriptionUrl,
-          new_refills_authorized: refillsTotal,
+          new_refills_authorized: 0,
           refilled_by: user.id,
         });
 

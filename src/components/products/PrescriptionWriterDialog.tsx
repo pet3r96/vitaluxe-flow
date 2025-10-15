@@ -23,17 +23,13 @@ interface PrescriptionWriterDialogProps {
   initialNotes?: string;
   initialSignature?: string;
   initialDispensingOption?: "dispense_as_written" | "may_substitute";
-  initialRefillsAllowed?: boolean;
-  initialRefillsTotal?: number;
   onPrescriptionGenerated: (
     prescriptionUrl: string, 
     customSig: string, 
     customDosage: string, 
     notes: string, 
     signature: string,
-    dispensingOption: "dispense_as_written" | "may_substitute",
-    refillsAllowed: boolean,
-    refillsTotal: number
+    dispensingOption: "dispense_as_written" | "may_substitute"
   ) => void;
 }
 
@@ -50,8 +46,6 @@ export function PrescriptionWriterDialog({
   initialNotes,
   initialSignature,
   initialDispensingOption,
-  initialRefillsAllowed,
-  initialRefillsTotal,
   onPrescriptionGenerated,
 }: PrescriptionWriterDialogProps) {
   const [customDosage, setCustomDosage] = useState(initialDosage || product?.dosage || "");
@@ -61,8 +55,6 @@ export function PrescriptionWriterDialog({
   const [dispensingOption, setDispensingOption] = useState<"dispense_as_written" | "may_substitute">(
     initialDispensingOption || "dispense_as_written"
   );
-  const [refillsAllowed, setRefillsAllowed] = useState(initialRefillsAllowed || false);
-  const [refillsTotal, setRefillsTotal] = useState(initialRefillsTotal || 0);
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Sync state with prop changes
@@ -85,14 +77,6 @@ export function PrescriptionWriterDialog({
   useEffect(() => {
     setDispensingOption(initialDispensingOption || "dispense_as_written");
   }, [initialDispensingOption]);
-
-  useEffect(() => {
-    setRefillsAllowed(initialRefillsAllowed || false);
-  }, [initialRefillsAllowed]);
-
-  useEffect(() => {
-    setRefillsTotal(initialRefillsTotal || 0);
-  }, [initialRefillsTotal]);
 
   // Show loading state if data is not ready (patient is optional for office dispensing)
   if (!provider || !practice) {
@@ -166,8 +150,8 @@ export function PrescriptionWriterDialog({
           quantity: quantity,
           signature: signature,
           dispensing_option: dispensingOption,
-          refills_allowed: refillsAllowed,
-          refills_total: refillsAllowed ? refillsTotal : 0
+          refills_allowed: false,
+          refills_total: 0
         }
       });
 
@@ -175,7 +159,7 @@ export function PrescriptionWriterDialog({
 
       if (data?.success) {
         toast.success("Prescription generated successfully");
-        onPrescriptionGenerated(data.prescription_url, customSig, customDosage, notes, signature, dispensingOption, refillsAllowed, refillsAllowed ? refillsTotal : 0);
+        onPrescriptionGenerated(data.prescription_url, customSig, customDosage, notes, signature, dispensingOption);
         onOpenChange(false);
       } else {
         throw new Error(data?.error || "Failed to generate prescription");
@@ -329,65 +313,6 @@ export function PrescriptionWriterDialog({
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
             />
-          </div>
-
-          {/* Refills Authorization */}
-          <div className="grid gap-3">
-            <Label className="text-base font-semibold">Refills Authorization</Label>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors">
-                <input
-                  type="radio"
-                  id="no-refills"
-                  checked={!refillsAllowed}
-                  onChange={() => {
-                    setRefillsAllowed(false);
-                    setRefillsTotal(0);
-                  }}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="no-refills" className="cursor-pointer flex-1 font-medium">
-                  No Refills
-                  <p className="text-xs text-muted-foreground font-normal mt-1">
-                    This prescription is for one-time use only
-                  </p>
-                </Label>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors">
-                  <input
-                    type="radio"
-                    id="authorize-refills"
-                    checked={refillsAllowed}
-                    onChange={() => {
-                      setRefillsAllowed(true);
-                      if (refillsTotal === 0) setRefillsTotal(1);
-                    }}
-                    className="h-4 w-4"
-                  />
-                  <Label htmlFor="authorize-refills" className="cursor-pointer flex-1 font-medium">
-                    Authorize Refills
-                    <p className="text-xs text-muted-foreground font-normal mt-1">
-                      Allow patient to refill this prescription
-                    </p>
-                  </Label>
-                </div>
-                {refillsAllowed && (
-                  <div className="ml-6 space-y-1">
-                    <select
-                      value={refillsTotal}
-                      onChange={(e) => setRefillsTotal(Number(e.target.value))}
-                      className="w-32 h-10 px-3 rounded-md border border-input bg-background"
-                    >
-                      <option value={1}>1 Refill</option>
-                      <option value={2}>2 Refills</option>
-                      <option value={3}>3 Refills</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground">Maximum 3 refills per prescription</p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Dispensing Option */}

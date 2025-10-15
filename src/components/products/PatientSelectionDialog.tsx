@@ -39,9 +39,7 @@ interface PatientSelectionDialogProps {
     customSig?: string | null,
     customDosage?: string | null,
     orderNotes?: string | null,
-    prescriptionMethod?: string | null,
-    refillsAllowed?: boolean | null,
-    refillsTotal?: number | null
+    prescriptionMethod?: string | null
   ) => void;
 }
 
@@ -68,8 +66,6 @@ export const PatientSelectionDialog = ({
   const [customDosage, setCustomDosage] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [providerSignature, setProviderSignature] = useState("");
-  const [refillsAllowed, setRefillsAllowed] = useState(false);
-  const [refillsTotal, setRefillsTotal] = useState(0);
 
   const { data: patients, isLoading } = useQuery({
     queryKey: ["patients", effectivePracticeId],
@@ -210,8 +206,6 @@ export const PatientSelectionDialog = ({
       setCustomDosage("");
       setOrderNotes("");
       setShowPrescriptionWriter(false);
-      setRefillsAllowed(false);
-      setRefillsTotal(0);
       if (effectiveRole === "doctor") {
         setSelectedProviderId(null);
       }
@@ -457,9 +451,7 @@ export const PatientSelectionDialog = ({
       customSig || null,
       customDosage || null,
       orderNotes || null,
-      prescriptionMethod || null,
-      prescriptionMethod === 'written' ? refillsAllowed : null,
-      prescriptionMethod === 'written' ? refillsTotal : null
+      prescriptionMethod || null
     );
     onOpenChange(false);
   };
@@ -868,14 +860,12 @@ export const PatientSelectionDialog = ({
             initialDosage={customDosage}
             initialNotes={orderNotes}
             initialSignature={providerSignature}
-            onPrescriptionGenerated={(url, sig, dosage, notes, signature, dispensingOpt, refillsAuth, refillsTot) => {
+            onPrescriptionGenerated={(url, sig, dosage, notes, signature, dispensingOpt) => {
               setPrescriptionPreview(url);
               setCustomSig(sig);
               setCustomDosage(dosage);
               if (notes) setOrderNotes(notes);
               setProviderSignature(signature);
-              setRefillsAllowed(!!refillsAuth);
-              setRefillsTotal(refillsAuth ? (refillsTot || 0) : 0);
               setShowPrescriptionWriter(false);
               toast.success("Prescription generated successfully");
             }}
