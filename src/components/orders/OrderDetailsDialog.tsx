@@ -323,12 +323,12 @@ export const OrderDetailsDialog = ({
                           </div>
                         )}
                         {canViewPHI && line.patients?.allergies && (
-                          <div className="col-span-2 pt-2 border-t border-amber-200">
-                            <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
+                          <div className="col-span-2 pt-2 border-t border-primary/30">
+                            <p className="text-xs font-semibold text-primary flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
                               Patient Allergies (PHI)
                             </p>
-                            <p className="text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded mt-1 border border-amber-200 dark:border-amber-900">
+                            <p className="text-sm text-primary-foreground bg-primary/25 p-2 rounded mt-1 border border-primary/40 shadow-inner">
                               {line.patients.allergies}
                             </p>
                           </div>
