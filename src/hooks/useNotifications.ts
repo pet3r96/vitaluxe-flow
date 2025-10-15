@@ -8,7 +8,7 @@ export interface Notification {
   title: string;
   message: string;
   notification_type: string;
-  severity: "info" | "warning" | "error" | "success";
+  severity: string;
   entity_type: string | null;
   entity_id: string | null;
   read: boolean;

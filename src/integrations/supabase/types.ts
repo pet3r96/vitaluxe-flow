@@ -825,6 +825,57 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          expires_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          read: boolean | null
+          read_at: string | null
+          severity: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expires_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          read?: boolean | null
+          read_at?: string | null
+          severity: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expires_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          notification_type?: Database["public"]["Enums"]["notification_type"]
+          read?: boolean | null
+          read_at?: string | null
+          severity?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_lines: {
         Row: {
           assigned_pharmacy_id: string | null
@@ -2371,6 +2422,10 @@ export type Database = {
         Args: { _practice_linked_topline_user_id: string }
         Returns: string
       }
+      get_unread_notification_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       get_user_rep_id: {
         Args: { _user_id: string }
         Returns: string
@@ -2411,6 +2466,14 @@ export type Database = {
         }
         Returns: string
       }
+      mark_all_notifications_read: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      mark_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: undefined
+      }
       refresh_security_events_summary: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2432,6 +2495,18 @@ export type Database = {
         | "topline"
         | "downline"
         | "provider"
+      notification_type:
+        | "message"
+        | "order_status"
+        | "order_shipped"
+        | "order_delivered"
+        | "order_issue"
+        | "account_alert"
+        | "system_announcement"
+        | "payment_method"
+        | "practice_approved"
+        | "rep_approved"
+        | "low_inventory"
       order_status:
         | "pending"
         | "filled"
@@ -2583,6 +2658,19 @@ export const Constants = {
         "topline",
         "downline",
         "provider",
+      ],
+      notification_type: [
+        "message",
+        "order_status",
+        "order_shipped",
+        "order_delivered",
+        "order_issue",
+        "account_alert",
+        "system_announcement",
+        "payment_method",
+        "practice_approved",
+        "rep_approved",
+        "low_inventory",
       ],
       order_status: [
         "pending",

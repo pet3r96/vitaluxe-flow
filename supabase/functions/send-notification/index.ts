@@ -114,7 +114,7 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error("Email error:", error);
-        results.errors.push(`Email error: ${error.message}`);
+        results.errors.push(`Email error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -155,7 +155,7 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error("SMS error:", error);
-        results.errors.push(`SMS error: ${error.message}`);
+        results.errors.push(`SMS error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -165,7 +165,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Error in send-notification:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
