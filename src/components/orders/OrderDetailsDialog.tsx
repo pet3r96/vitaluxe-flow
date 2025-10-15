@@ -14,7 +14,6 @@ import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
 import { CancelOrderDialog } from "./CancelOrderDialog";
 import { ReportNotesSection } from "./ReportNotesSection";
-import { QuickRefillDialog } from "./QuickRefillDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +35,6 @@ export const OrderDetailsDialog = ({
   const { effectiveRole, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [refillOrderLineId, setRefillOrderLineId] = useState<string | null>(null);
 
   // Determine if user can view PHI (HIPAA compliance)
   const canViewPHI = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
@@ -385,17 +383,6 @@ export const OrderDetailsDialog = ({
                         <Download className="h-4 w-4 mr-2" />
                         Download Prescription
                       </Button>
-
-                      {canViewPHI && line.refills_allowed && line.refills_remaining > 0 && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setRefillOrderLineId(line.id)}
-                          className="w-full mt-2"
-                        >
-                          Quick Refill ({line.refills_remaining} remaining)
-                        </Button>
-                      )}
                     </div>
                   )}
 
@@ -434,15 +421,6 @@ export const OrderDetailsDialog = ({
         orderCreatedAt={order.created_at}
         onSuccess={onSuccess}
       />
-
-      {refillOrderLineId && (
-        <QuickRefillDialog
-          open={!!refillOrderLineId}
-          onOpenChange={(open) => !open && setRefillOrderLineId(null)}
-          orderLine={order.order_lines?.find((line: any) => line.id === refillOrderLineId)}
-          onSuccess={onSuccess}
-        />
-      )}
     </Dialog>
   );
 };
