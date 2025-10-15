@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Tag,
   Shield,
+  Pill,
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,6 +57,7 @@ const menuItems = {
     { title: "Products", url: "/products", icon: Package },
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
     { title: "My Orders", url: "/orders", icon: FileText },
+    { title: "Refill Center", url: "/refill-center", icon: Pill },
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "My Profile", url: "/profile", icon: UserCircle },
     { title: "Messages", url: "/messages", icon: MessageSquare },
@@ -66,6 +68,7 @@ const menuItems = {
     { title: "Products", url: "/products", icon: Package },
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
     { title: "My Orders", url: "/orders", icon: FileText },
+    { title: "Refill Center", url: "/refill-center", icon: Pill },
     { title: "My Profile", url: "/profile", icon: UserCircle },
     { title: "Messages", url: "/messages", icon: MessageSquare },
   ],
