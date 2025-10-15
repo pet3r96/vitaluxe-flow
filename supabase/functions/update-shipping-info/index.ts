@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { validateUpdateShippingRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,31 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Parse JSON with error handling
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error('Invalid JSON in request body:', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate input
+    const validation = validateUpdateShippingRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data', 
+          details: validation.errors 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
@@ -82,7 +108,7 @@ serve(async (req: Request) => {
       throw new Error('Insufficient permissions');
     }
 
-    const { orderLineId, trackingNumber, carrier, status, changeDescription }: UpdateShippingRequest = await req.json();
+    const { orderLineId, trackingNumber, carrier, status, changeDescription }: UpdateShippingRequest = requestData;
 
     console.log('Incoming payload:', { orderLineId, trackingNumber, carrier, status });
 

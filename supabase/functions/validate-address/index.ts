@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { validateValidateAddressRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -89,7 +90,30 @@ serve(async (req) => {
   }
 
   try {
-    const { street, city, state, zip, manual_override }: AddressInput = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error('Invalid JSON in request body:', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateValidateAddressRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data', 
+          details: validation.errors 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { street, city, state, zip, manual_override }: AddressInput = requestData;
 
     if (!zip) {
       return new Response(

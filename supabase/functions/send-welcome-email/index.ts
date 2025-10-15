@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { validateSendWelcomeEmailRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,7 +20,32 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, name, temporaryPassword, role, isPasswordReset }: WelcomeEmailRequest = await req.json();
+    // Parse JSON with error handling
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error('Invalid JSON in request body:', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate input
+    const validation = validateSendWelcomeEmailRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data', 
+          details: validation.errors 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { email, name, temporaryPassword, role, isPasswordReset }: WelcomeEmailRequest = requestData;
 
     console.log(`Sending ${isPasswordReset ? 'password reset' : 'welcome'} email to ${email} (${role})`);
 

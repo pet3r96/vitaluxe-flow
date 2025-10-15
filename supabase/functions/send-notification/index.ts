@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { validateSendNotificationRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,12 +20,35 @@ serve(async (req) => {
   }
 
   try {
+    // Parse JSON with error handling
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error('Invalid JSON in request body:', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Note: send-notification uses a different pattern - it takes notification_id, not userId/message
+    // The validation is for notification_id as UUID
+    const { notification_id, send_email = true, send_sms = false } = requestData;
+    
+    if (!notification_id) {
+      return new Response(
+        JSON.stringify({ error: 'notification_id is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { notification_id, send_email = true, send_sms = false }: SendNotificationRequest = await req.json();
+    const { notification_id: notificationId, send_email: sendEmail, send_sms: sendSms }: SendNotificationRequest = requestData;
 
     // Get notification details
     const { data: notification, error: notifError } = await supabase

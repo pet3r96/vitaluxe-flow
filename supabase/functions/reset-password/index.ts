@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { validateResetPasswordRequest } from "../_shared/requestValidators.ts";
 import { generateSecurePassword } from "../_shared/validators.ts";
 
 const corsHeaders = {
@@ -17,14 +18,32 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email }: ResetPasswordRequest = await req.json();
-
-    if (!email || !email.includes('@')) {
+    // Parse JSON with error handling
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error('Invalid JSON in request body:', error);
       return new Response(
-        JSON.stringify({ success: false, error: "Invalid email format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Validate input
+    const validation = validateResetPasswordRequest(requestData);
+    if (!validation.valid) {
+      console.warn('Validation failed:', validation.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data', 
+          details: validation.errors 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { email }: ResetPasswordRequest = requestData;
 
     console.log(`Password reset requested for: ${email}`);
 

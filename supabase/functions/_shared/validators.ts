@@ -59,5 +59,180 @@ export function validateDEA(dea: string | null | undefined): ValidationResult {
   return { valid: true };
 }
 
+// UUID validation
+export function validateUUID(value: any, fieldName: string): ValidationResult {
+  if (!value) return { valid: false, error: `${fieldName} is required` };
+  
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(String(value))) {
+    return { valid: false, error: `${fieldName} must be a valid UUID` };
+  }
+  
+  return { valid: true };
+}
+
+// Email validation
+export function validateEmail(email: any): ValidationResult {
+  if (!email) return { valid: false, error: "Email is required" };
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(String(email))) {
+    return { valid: false, error: "Invalid email format" };
+  }
+  
+  if (String(email).length > 255) {
+    return { valid: false, error: "Email must be less than 255 characters" };
+  }
+  
+  return { valid: true };
+}
+
+// String length validation
+export function validateString(
+  value: any, 
+  fieldName: string, 
+  options: { required?: boolean; minLength?: number; maxLength?: number } = {}
+): ValidationResult {
+  const { required = false, minLength = 0, maxLength = 10000 } = options;
+  
+  if (!value || String(value).trim() === "") {
+    if (required) return { valid: false, error: `${fieldName} is required` };
+    return { valid: true };
+  }
+  
+  const str = String(value).trim();
+  
+  if (str.length < minLength) {
+    return { valid: false, error: `${fieldName} must be at least ${minLength} characters` };
+  }
+  
+  if (str.length > maxLength) {
+    return { valid: false, error: `${fieldName} must be less than ${maxLength} characters` };
+  }
+  
+  return { valid: true };
+}
+
+// Boolean validation
+export function validateBoolean(value: any, fieldName: string, required: boolean = false): ValidationResult {
+  if (value === undefined || value === null) {
+    if (required) return { valid: false, error: `${fieldName} is required` };
+    return { valid: true };
+  }
+  
+  if (typeof value !== 'boolean') {
+    return { valid: false, error: `${fieldName} must be a boolean` };
+  }
+  
+  return { valid: true };
+}
+
+// Number validation
+export function validateNumber(
+  value: any,
+  fieldName: string,
+  options: { required?: boolean; min?: number; max?: number } = {}
+): ValidationResult {
+  const { required = false, min, max } = options;
+  
+  if (value === undefined || value === null || value === '') {
+    if (required) return { valid: false, error: `${fieldName} is required` };
+    return { valid: true };
+  }
+  
+  const num = Number(value);
+  if (isNaN(num)) {
+    return { valid: false, error: `${fieldName} must be a number` };
+  }
+  
+  if (min !== undefined && num < min) {
+    return { valid: false, error: `${fieldName} must be at least ${min}` };
+  }
+  
+  if (max !== undefined && num > max) {
+    return { valid: false, error: `${fieldName} must be at most ${max}` };
+  }
+  
+  return { valid: true };
+}
+
+// Enum validation
+export function validateEnum(
+  value: any, 
+  fieldName: string, 
+  allowedValues: string[], 
+  required: boolean = false
+): ValidationResult {
+  if (!value) {
+    if (required) return { valid: false, error: `${fieldName} is required` };
+    return { valid: true };
+  }
+  
+  if (!allowedValues.includes(String(value))) {
+    return { 
+      valid: false, 
+      error: `${fieldName} must be one of: ${allowedValues.join(', ')}` 
+    };
+  }
+  
+  return { valid: true };
+}
+
+// IP address validation
+export function validateIP(ip: any): ValidationResult {
+  if (!ip) return { valid: true };
+  
+  const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+  const ipv6Regex = /^([0-9a-fA-F]{0,4}:){7}[0-9a-fA-F]{0,4}$/;
+  
+  const ipStr = String(ip);
+  if (!ipv4Regex.test(ipStr) && !ipv6Regex.test(ipStr)) {
+    return { valid: false, error: "Invalid IP address format" };
+  }
+  
+  return { valid: true };
+}
+
+// Array validation
+export function validateArray(
+  value: any,
+  fieldName: string,
+  options: { required?: boolean; minLength?: number; maxLength?: number } = {}
+): ValidationResult {
+  const { required = false, minLength, maxLength } = options;
+  
+  if (!value) {
+    if (required) return { valid: false, error: `${fieldName} is required` };
+    return { valid: true };
+  }
+  
+  if (!Array.isArray(value)) {
+    return { valid: false, error: `${fieldName} must be an array` };
+  }
+  
+  if (minLength !== undefined && value.length < minLength) {
+    return { valid: false, error: `${fieldName} must have at least ${minLength} items` };
+  }
+  
+  if (maxLength !== undefined && value.length > maxLength) {
+    return { valid: false, error: `${fieldName} must have at most ${maxLength} items` };
+  }
+  
+  return { valid: true };
+}
+
+// Composite validator - runs multiple validations and returns all errors
+export function validateInput(validations: ValidationResult[]): { valid: boolean; errors: string[] } {
+  const errors = validations
+    .filter(v => !v.valid)
+    .map(v => v.error!)
+    .filter(Boolean);
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
 // Export password generator utility
 export { generateSecurePassword } from './passwordGenerator.ts';
