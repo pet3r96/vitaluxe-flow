@@ -163,7 +163,9 @@ export const ProductsGrid = () => {
     customSig: string | null = null,
     customDosage: string | null = null,
     orderNotes: string | null = null,
-    prescriptionMethod: string | null = null
+    prescriptionMethod: string | null = null,
+    refillsAllowed: boolean | null = null,
+    refillsTotal: number | null = null
   ) => {
     if (!effectiveUserId || !productForCart) return;
 
@@ -229,6 +231,9 @@ export const ProductsGrid = () => {
             custom_dosage: customDosage,
             order_notes: orderNotes,
             prescription_method: prescriptionMethod,
+            refills_allowed: !!refillsAllowed,
+            refills_total: refillsAllowed ? (refillsTotal ?? 0) : 0,
+            refills_remaining: refillsAllowed ? (refillsTotal ?? 0) : 0,
           });
 
         if (error) throw error;
@@ -258,6 +263,9 @@ export const ProductsGrid = () => {
             custom_dosage: customDosage,
             order_notes: orderNotes,
             prescription_method: prescriptionMethod,
+            refills_allowed: !!refillsAllowed,
+            refills_total: refillsAllowed ? (refillsTotal ?? 0) : 0,
+            refills_remaining: refillsAllowed ? (refillsTotal ?? 0) : 0,
           });
 
         if (error) throw error;

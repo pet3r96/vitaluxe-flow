@@ -167,7 +167,9 @@ export default function Cart() {
                     <div className="text-xs sm:text-sm mt-2 bg-purple-50 dark:bg-purple-950/30 p-2 rounded border border-purple-200 dark:border-purple-800">
                       <span className="font-medium text-purple-700 dark:text-purple-300">Refills:</span>
                       <span className="text-purple-600 dark:text-purple-400 ml-2">
-                        {line.refills_allowed ? `Yes - ${line.refills_total} refill(s) authorized` : 'No refills'}
+                        {((line.refills_allowed === true) || ((line.refills_total || 0) > 0)) 
+                          ? `Yes - ${line.refills_total || 0} refill(s) authorized` 
+                          : 'No refills'}
                       </span>
                     </div>
                   )}
