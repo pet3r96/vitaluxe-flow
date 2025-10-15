@@ -219,6 +219,9 @@ export default function OrderConfirmation() {
             custom_dosage: line.custom_dosage,
             order_notes: line.order_notes,
             prescription_method: line.prescription_method,
+            refills_allowed: line.refills_allowed || false,
+            refills_total: line.refills_total || 0,
+            refills_remaining: line.refills_total || 0,
           };
 
           const { error: practiceLinesError } = await supabase
@@ -311,6 +314,9 @@ export default function OrderConfirmation() {
             custom_dosage: line.custom_dosage,
             order_notes: line.order_notes,
             prescription_method: line.prescription_method,
+            refills_allowed: line.refills_allowed || false,
+            refills_total: line.refills_total || 0,
+            refills_remaining: line.refills_total || 0,
           };
 
           const { error: patientLinesError } = await supabase
@@ -557,6 +563,16 @@ export default function OrderConfirmation() {
                           <span className="text-blue-600 dark:text-blue-400">{line.custom_sig}</span>
                         </p>
                       )}
+                    </div>
+                  )}
+                  
+                  {/* Display refill information */}
+                  {line.prescription_url && line.patient_name !== "Practice Order" && (
+                    <div className="mt-2 p-3 bg-purple-50 dark:bg-purple-950/30 rounded-md text-sm border border-purple-200 dark:border-purple-800">
+                      <p className="font-semibold text-xs text-purple-700 dark:text-purple-300 uppercase mb-1">Refills:</p>
+                      <p className="text-purple-600 dark:text-purple-400">
+                        {line.refills_allowed ? `${line.refills_total} refill(s) authorized` : 'No refills authorized'}
+                      </p>
                     </div>
                   )}
                   
