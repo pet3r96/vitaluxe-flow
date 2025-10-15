@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MessageCircle, Send, AlertCircle, Headset } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole } = useAuth();
@@ -27,6 +29,11 @@ export const MessagesView = () => {
   const [dispositionType, setDispositionType] = useState<string>("");
   const [dispositionNotes, setDispositionNotes] = useState<string>("");
   const [activeTicketTab, setActiveTicketTab] = useState<"support" | "order_issues">("support");
+  
+  // Pagination state
+  const [supportPage, setSupportPage] = useState(1);
+  const [orderIssuesPage, setOrderIssuesPage] = useState(1);
+  const [allTicketsPage, setAllTicketsPage] = useState(1);
 
 
   // Check if user is admin
@@ -419,6 +426,82 @@ export const MessagesView = () => {
   const supportTickets = threads?.filter(t => (t as any).thread_type !== 'order_issue') || [];
   const orderIssueTickets = threads?.filter(t => (t as any).thread_type === 'order_issue') || [];
 
+  // Reset pagination when filters or tabs change
+  useEffect(() => {
+    setSupportPage(1);
+  }, [resolvedFilter, activeTicketTab]);
+
+  useEffect(() => {
+    setOrderIssuesPage(1);
+  }, [resolvedFilter, activeTicketTab]);
+
+  useEffect(() => {
+    setAllTicketsPage(1);
+  }, [resolvedFilter]);
+
+  // Pagination for support tickets (admin)
+  const {
+    currentPage: supportCurrentPage,
+    totalPages: supportTotalPages,
+    startIndex: supportStartIndex,
+    endIndex: supportEndIndex,
+    goToPage: supportGoToPage,
+    hasNextPage: supportHasNextPage,
+    hasPrevPage: supportHasPrevPage
+  } = usePagination({
+    totalItems: supportTickets.length,
+    itemsPerPage: 25,
+    initialPage: supportPage
+  });
+
+  useEffect(() => {
+    setSupportPage(supportCurrentPage);
+  }, [supportCurrentPage]);
+
+  const paginatedSupportTickets = supportTickets.slice(supportStartIndex, supportEndIndex);
+
+  // Pagination for order issues (admin)
+  const {
+    currentPage: orderIssuesCurrentPage,
+    totalPages: orderIssuesTotalPages,
+    startIndex: orderIssuesStartIndex,
+    endIndex: orderIssuesEndIndex,
+    goToPage: orderIssuesGoToPage,
+    hasNextPage: orderIssuesHasNextPage,
+    hasPrevPage: orderIssuesHasPrevPage
+  } = usePagination({
+    totalItems: orderIssueTickets.length,
+    itemsPerPage: 25,
+    initialPage: orderIssuesPage
+  });
+
+  useEffect(() => {
+    setOrderIssuesPage(orderIssuesCurrentPage);
+  }, [orderIssuesCurrentPage]);
+
+  const paginatedOrderIssueTickets = orderIssueTickets.slice(orderIssuesStartIndex, orderIssuesEndIndex);
+
+  // Pagination for all tickets (non-admin)
+  const {
+    currentPage: allTicketsCurrentPage,
+    totalPages: allTicketsTotalPages,
+    startIndex: allTicketsStartIndex,
+    endIndex: allTicketsEndIndex,
+    goToPage: allTicketsGoToPage,
+    hasNextPage: allTicketsHasNextPage,
+    hasPrevPage: allTicketsHasPrevPage
+  } = usePagination({
+    totalItems: threads?.length || 0,
+    itemsPerPage: 25,
+    initialPage: allTicketsPage
+  });
+
+  useEffect(() => {
+    setAllTicketsPage(allTicketsCurrentPage);
+  }, [allTicketsCurrentPage]);
+
+  const paginatedAllTickets = threads?.slice(allTicketsStartIndex, allTicketsEndIndex);
+
   return (
     <div className="grid grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
       <Card className="col-span-1 p-4 flex flex-col">
@@ -594,10 +677,10 @@ export const MessagesView = () => {
               </Button>
               
               <div className="flex-1 overflow-y-auto space-y-2">
-                {supportTickets.length === 0 ? (
+                {paginatedSupportTickets.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">No support tickets</p>
                 ) : (
-                  supportTickets.map((thread) => {
+                  paginatedSupportTickets.map((thread) => {
                     const isOrderIssue = (thread as any).thread_type === 'order_issue';
                     
                     return (
@@ -638,6 +721,20 @@ export const MessagesView = () => {
                   })
                 )}
               </div>
+
+              {/* Pagination Controls */}
+              {supportTickets.length > 0 && (
+                <DataTablePagination
+                  currentPage={supportCurrentPage}
+                  totalPages={supportTotalPages}
+                  onPageChange={supportGoToPage}
+                  hasNextPage={supportHasNextPage}
+                  hasPrevPage={supportHasPrevPage}
+                  totalItems={supportTickets.length}
+                  startIndex={supportStartIndex}
+                  endIndex={supportEndIndex}
+                />
+              )}
             </TabsContent>
 
             {/* Order Issues Tab */}
@@ -648,10 +745,10 @@ export const MessagesView = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-2">
-                {orderIssueTickets.length === 0 ? (
+                {paginatedOrderIssueTickets.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">No order issue tickets</p>
                 ) : (
-                  orderIssueTickets.map((thread) => {
+                  paginatedOrderIssueTickets.map((thread) => {
                     const isOrderIssue = (thread as any).thread_type === 'order_issue';
                     
                     return (
@@ -706,6 +803,20 @@ export const MessagesView = () => {
                   })
                 )}
               </div>
+
+              {/* Pagination Controls */}
+              {orderIssueTickets.length > 0 && (
+                <DataTablePagination
+                  currentPage={orderIssuesCurrentPage}
+                  totalPages={orderIssuesTotalPages}
+                  onPageChange={orderIssuesGoToPage}
+                  hasNextPage={orderIssuesHasNextPage}
+                  hasPrevPage={orderIssuesHasPrevPage}
+                  totalItems={orderIssueTickets.length}
+                  startIndex={orderIssuesStartIndex}
+                  endIndex={orderIssuesEndIndex}
+                />
+              )}
             </TabsContent>
           </Tabs>
         ) : (
@@ -715,66 +826,84 @@ export const MessagesView = () => {
               New Ticket
             </Button>
             
-            <div className="flex-1 overflow-y-auto space-y-2">
-            {threads?.map((thread) => {
-              const isOrderIssue = (thread as any).thread_type === 'order_issue';
-              
-              return (
-                <button
-                  key={thread.id}
-                  onClick={() => setSelectedThread(thread.id)}
-                  className={`w-full p-3 text-left rounded-md transition-colors border-l-4 ${
-                    isOrderIssue 
-                      ? 'border-l-orange-500' 
-                      : 'border-l-blue-500'
-                  } ${
-                    selectedThread === thread.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80"
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium truncate flex-1">{thread.subject}</p>
-                        <Badge 
-                          variant={thread.resolved ? "secondary" : "default"}
-                          className="flex-shrink-0"
-                        >
-                          {thread.resolved ? "Closed" : "Open"}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge 
-                          variant="outline" 
-                          className={isOrderIssue ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}
-                        >
-                          {isOrderIssue ? "Order Issue" : "Support"}
-                        </Badge>
-                        {isOrderIssue && (thread as any).disposition_type && (
-                          <Badge variant="outline" className="text-xs">
-                            {(thread as any).disposition_type.replace(/_/g, ' ')}
-                          </Badge>
-                        )}
-                      </div>
+            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+              {paginatedAllTickets?.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No tickets found</p>
+              ) : (
+                paginatedAllTickets?.map((thread) => {
+                  const isOrderIssue = (thread as any).thread_type === 'order_issue';
+                  
+                  return (
+                    <button
+                      key={thread.id}
+                      onClick={() => setSelectedThread(thread.id)}
+                      className={`w-full p-3 text-left rounded-md transition-colors border-l-4 ${
+                        isOrderIssue 
+                          ? 'border-l-orange-500' 
+                          : 'border-l-blue-500'
+                      } ${
+                        selectedThread === thread.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted hover:bg-muted/80"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate flex-1">{thread.subject}</p>
+                            <Badge 
+                              variant={thread.resolved ? "secondary" : "default"}
+                              className="flex-shrink-0"
+                            >
+                              {thread.resolved ? "Closed" : "Open"}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge 
+                              variant="outline" 
+                              className={isOrderIssue ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}
+                            >
+                              {isOrderIssue ? "Order Issue" : "Support"}
+                            </Badge>
+                            {isOrderIssue && (thread as any).disposition_type && (
+                              <Badge variant="outline" className="text-xs">
+                                {(thread as any).disposition_type.replace(/_/g, ' ')}
+                              </Badge>
+                            )}
+                          </div>
 
-                      {isOrderIssue && (thread as any).orders && (
-                        <p className="text-xs opacity-70">
-                          Order: {new Date((thread as any).orders.created_at).toLocaleDateString()} - ${(thread as any).orders.total_amount}
-                        </p>
-                      )}
+                          {isOrderIssue && (thread as any).orders && (
+                            <p className="text-xs opacity-70">
+                              Order: {new Date((thread as any).orders.created_at).toLocaleDateString()} - ${(thread as any).orders.total_amount}
+                            </p>
+                          )}
 
-                      <p className="text-xs opacity-70">
-                        {new Date(thread.updated_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                          <p className="text-xs opacity-70">
+                            {new Date(thread.updated_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Pagination Controls */}
+            {threads && threads.length > 0 && (
+              <DataTablePagination
+                currentPage={allTicketsCurrentPage}
+                totalPages={allTicketsTotalPages}
+                onPageChange={allTicketsGoToPage}
+                hasNextPage={allTicketsHasNextPage}
+                hasPrevPage={allTicketsHasPrevPage}
+                totalItems={threads.length}
+                startIndex={allTicketsStartIndex}
+                endIndex={allTicketsEndIndex}
+              />
+            )}
           </>
         )}
       </Card>
