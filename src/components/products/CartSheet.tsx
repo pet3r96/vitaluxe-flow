@@ -13,8 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Trash2, Plus, Minus } from "lucide-react";
+import { Trash2, Plus, Minus, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 interface CartSheetProps {
   open: boolean;
@@ -50,7 +51,8 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
             image_url
           )
         `)
-        .eq("cart_id", cart.id);
+        .eq("cart_id", cart.id)
+        .gte("expires_at", new Date().toISOString());
 
       if (error) throw error;
 
@@ -142,7 +144,14 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
                 Your cart is empty
               </div>
             ) : (
-              cartData.items.map((item: any) => (
+              cartData.items.map((item: any) => {
+                const expiresAt = item.expires_at ? new Date(item.expires_at) : null;
+                const now = new Date();
+                const timeUntilExpiry = expiresAt ? expiresAt.getTime() - now.getTime() : null;
+                const hoursUntilExpiry = timeUntilExpiry ? timeUntilExpiry / (1000 * 60 * 60) : null;
+                const isExpiringSoon = hoursUntilExpiry && hoursUntilExpiry <= 48;
+                
+                return (
                 <div key={item.id} className="flex gap-4">
                   {/* Product Image */}
                   <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
@@ -172,6 +181,12 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
                     <p className="text-xs text-muted-foreground mt-1">
                       Patient: {item.patient_name}
                     </p>
+                    {isExpiringSoon && expiresAt && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-yellow-600 dark:text-yellow-500">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>Expires {formatDistanceToNow(expiresAt, { addSuffix: true })}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-2">
                         <Button
@@ -218,7 +233,8 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </ScrollArea>

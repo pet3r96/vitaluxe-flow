@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Trash2, Package, FileCheck } from "lucide-react";
+import { ShoppingCart, Trash2, Package, FileCheck, Clock, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { DiscountCodeInput } from "@/components/orders/DiscountCodeInput";
 
@@ -41,7 +42,8 @@ export default function Cart() {
             profiles!inner(name, npi, dea)
           )
         `)
-        .eq("cart_id", cartData.id);
+        .eq("cart_id", cartData.id)
+        .gte("expires_at", new Date().toISOString());
 
       if (linesError) throw linesError;
 
@@ -119,8 +121,15 @@ export default function Cart() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {cartLines.map((line: any) => (
-            <Card key={line.id}>
+          {cartLines.map((line: any) => {
+            const expiresAt = line.expires_at ? new Date(line.expires_at) : null;
+            const now = new Date();
+            const timeUntilExpiry = expiresAt ? expiresAt.getTime() - now.getTime() : null;
+            const hoursUntilExpiry = timeUntilExpiry ? timeUntilExpiry / (1000 * 60 * 60) : null;
+            const isExpiringSoon = hoursUntilExpiry && hoursUntilExpiry <= 48;
+            
+            return (
+            <Card key={line.id} className={isExpiringSoon ? "border-yellow-500" : ""}>
               <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-6">
                 {line.product?.image_url && (
                   <img
@@ -137,6 +146,14 @@ export default function Cart() {
                   <p className="text-xs sm:text-sm mt-2">
                     <span className="font-medium">Patient:</span> {line.patient_name}
                   </p>
+                  {isExpiringSoon && expiresAt && (
+                    <div className="flex items-center gap-2 mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded border border-yellow-200 dark:border-yellow-800">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                      <span className="text-xs text-yellow-700 dark:text-yellow-400">
+                        This cart item will expire {formatDistanceToNow(expiresAt, { addSuffix: true })}
+                      </span>
+                    </div>
+                  )}
                   {line.provider?.profiles && (
                     <p className="text-xs sm:text-sm">
                       <span className="font-medium">Provider:</span> {line.provider.profiles.name}
@@ -190,7 +207,8 @@ export default function Cart() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
 
           <Card>
             <CardHeader className="p-4 sm:p-6">

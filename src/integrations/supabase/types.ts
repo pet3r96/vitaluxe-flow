@@ -294,22 +294,67 @@ export type Database = {
           },
         ]
       }
+      cart_access_log: {
+        Row: {
+          access_count: number | null
+          cart_id: string | null
+          id: string
+          ip_address: string | null
+          last_access_at: string | null
+          user_id: string | null
+          window_start: string | null
+        }
+        Insert: {
+          access_count?: number | null
+          cart_id?: string | null
+          id?: string
+          ip_address?: string | null
+          last_access_at?: string | null
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          access_count?: number | null
+          cart_id?: string | null
+          id?: string
+          ip_address?: string | null
+          last_access_at?: string | null
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_access_log_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "cart"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cart_lines: {
         Row: {
           cart_id: string
           created_at: string | null
           custom_dosage: string | null
+          custom_dosage_encrypted: string | null
           custom_sig: string | null
+          custom_sig_encrypted: string | null
           destination_state: string
+          expires_at: string | null
           id: string
           order_notes: string | null
           patient_address: string | null
+          patient_address_encrypted: string | null
           patient_email: string | null
+          patient_email_encrypted: string | null
           patient_id: string | null
           patient_name: string
           patient_phone: string | null
+          patient_phone_encrypted: string | null
           prescription_method: string | null
           prescription_url: string | null
+          prescription_url_encrypted: string | null
           price_snapshot: number | null
           product_id: string
           provider_id: string | null
@@ -322,17 +367,24 @@ export type Database = {
           cart_id: string
           created_at?: string | null
           custom_dosage?: string | null
+          custom_dosage_encrypted?: string | null
           custom_sig?: string | null
+          custom_sig_encrypted?: string | null
           destination_state: string
+          expires_at?: string | null
           id?: string
           order_notes?: string | null
           patient_address?: string | null
+          patient_address_encrypted?: string | null
           patient_email?: string | null
+          patient_email_encrypted?: string | null
           patient_id?: string | null
           patient_name: string
           patient_phone?: string | null
+          patient_phone_encrypted?: string | null
           prescription_method?: string | null
           prescription_url?: string | null
+          prescription_url_encrypted?: string | null
           price_snapshot?: number | null
           product_id: string
           provider_id?: string | null
@@ -345,17 +397,24 @@ export type Database = {
           cart_id?: string
           created_at?: string | null
           custom_dosage?: string | null
+          custom_dosage_encrypted?: string | null
           custom_sig?: string | null
+          custom_sig_encrypted?: string | null
           destination_state?: string
+          expires_at?: string | null
           id?: string
           order_notes?: string | null
           patient_address?: string | null
+          patient_address_encrypted?: string | null
           patient_email?: string | null
+          patient_email_encrypted?: string | null
           patient_id?: string | null
           patient_name?: string
           patient_phone?: string | null
+          patient_phone_encrypted?: string | null
           prescription_method?: string | null
           prescription_url?: string | null
+          prescription_url_encrypted?: string | null
           price_snapshot?: number | null
           product_id?: string
           provider_id?: string | null
@@ -2425,6 +2484,104 @@ export type Database = {
       }
     }
     Views: {
+      cart_lines_masked: {
+        Row: {
+          cart_id: string | null
+          created_at: string | null
+          destination_state: string | null
+          expires_at: string | null
+          id: string | null
+          order_notes: string | null
+          patient_address_masked: string | null
+          patient_email_masked: string | null
+          patient_id: string | null
+          patient_name: string | null
+          patient_phone_masked: string | null
+          prescription_method: string | null
+          prescription_url_indicator: string | null
+          price_snapshot: number | null
+          product_id: string | null
+          provider_id: string | null
+          quantity: number | null
+          refills_allowed: boolean | null
+          refills_remaining: number | null
+          refills_total: number | null
+        }
+        Insert: {
+          cart_id?: string | null
+          created_at?: string | null
+          destination_state?: string | null
+          expires_at?: string | null
+          id?: string | null
+          order_notes?: string | null
+          patient_address_masked?: never
+          patient_email_masked?: never
+          patient_id?: string | null
+          patient_name?: string | null
+          patient_phone_masked?: never
+          prescription_method?: string | null
+          prescription_url_indicator?: never
+          price_snapshot?: number | null
+          product_id?: string | null
+          provider_id?: string | null
+          quantity?: number | null
+          refills_allowed?: boolean | null
+          refills_remaining?: number | null
+          refills_total?: number | null
+        }
+        Update: {
+          cart_id?: string | null
+          created_at?: string | null
+          destination_state?: string | null
+          expires_at?: string | null
+          id?: string | null
+          order_notes?: string | null
+          patient_address_masked?: never
+          patient_email_masked?: never
+          patient_id?: string | null
+          patient_name?: string | null
+          patient_phone_masked?: never
+          prescription_method?: string | null
+          prescription_url_indicator?: never
+          price_snapshot?: number | null
+          product_id?: string | null
+          provider_id?: string | null
+          quantity?: number | null
+          refills_allowed?: boolean | null
+          refills_remaining?: number | null
+          refills_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_lines_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "cart"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_events_summary: {
         Row: {
           action_type: string | null
@@ -2462,6 +2619,10 @@ export type Database = {
         Args: { p_order_line_id: string }
         Returns: Json
       }
+      cleanup_expired_cart_lines: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_user_with_role: {
         Args: {
           p_email: string
@@ -2472,6 +2633,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      decrypt_cart_phi: {
+        Args: { p_encrypted_data: string; p_field_type: string }
+        Returns: string
       }
       decrypt_plaid_token: {
         Args: { p_encrypted_token: string }

@@ -77,3 +77,18 @@ verify_jwt = false
 
 [functions.check-key-rotation.schedule]
 cron = "0 9 * * 1"
+
+[functions.cleanup-cart-lines]
+verify_jwt = false
+
+[functions.cleanup-cart-lines.schedule]
+cron = "0 2 * * *"
+
+[functions.log-credential-access]
+verify_jwt = true
+
+[functions.manage-product-type]
+verify_jwt = true
+
+[functions.send-notification]
+verify_jwt = false
