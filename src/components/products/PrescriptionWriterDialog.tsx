@@ -244,7 +244,7 @@ export function PrescriptionWriterDialog({
                     Patient Allergies (PHI)
                   </p>
                   {patient.allergies ? (
-                    <p className="text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-900">
+                    <p className="text-sm text-amber-900 dark:text-amber-100 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-900">
                       {patient.allergies}
                     </p>
                   ) : (
