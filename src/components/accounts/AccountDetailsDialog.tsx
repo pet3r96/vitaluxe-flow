@@ -9,6 +9,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, Edit2, X } from "lucide-react";
+import { ExternalLink, Edit2, X, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 
 interface AccountDetailsDialogProps {
@@ -38,6 +48,25 @@ export const AccountDetailsDialog = ({
   const [isEditing, setIsEditing] = useState(false);
   const [selectedParentId, setSelectedParentId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting2FA, setIsResetting2FA] = useState(false);
+
+  // Fetch 2FA status
+  const { data: twoFAData, refetch: refetch2FA } = useQuery({
+    queryKey: ["user-2fa", account?.id],
+    queryFn: async () => {
+      if (!account?.id) return null;
+      const { data, error } = await supabase
+        .from('user_2fa_settings')
+        .select('*')
+        .eq('user_id', account.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!account?.id && open
+  });
 
   const getDisplayRole = (account: any): string => {
     const baseRole = account.user_roles?.[0]?.role;
@@ -94,6 +123,36 @@ export const AccountDetailsDialog = ({
       }
     }
   }, [open, account, isDownline]);
+
+  const handleReset2FA = async () => {
+    setIsResetting2FA(true);
+    try {
+      const { error } = await supabase.functions.invoke('reset-user-2fa', {
+        body: { 
+          targetUserId: account.id,
+          reason: 'Admin reset via account management'
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('2FA reset successfully');
+      await refetch2FA();
+      setShowResetConfirm(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to reset 2FA');
+    } finally {
+      setIsResetting2FA(false);
+    }
+  };
+
+  const maskPhoneNumber = (phone: string) => {
+    if (phone?.startsWith('+1')) {
+      const digits = phone.slice(2);
+      return `***-***-${digits.slice(-4)}`;
+    }
+    return '***-***-****';
+  };
 
   const handleSave = async () => {
     if (!account) return;
@@ -245,6 +304,35 @@ export const AccountDetailsDialog = ({
                 <p className="font-medium">{account.license_number}</p>
               </div>
             )}
+
+            {/* 2FA Status Section */}
+            <div className="col-span-2 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Two-Factor Authentication</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={twoFAData?.is_enrolled ? "default" : "secondary"}>
+                      {twoFAData?.is_enrolled ? "Enrolled" : "Not Enrolled"}
+                    </Badge>
+                    {twoFAData?.phone_number && (
+                      <span className="text-sm text-muted-foreground">
+                        {maskPhoneNumber(twoFAData.phone_number)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {twoFAData?.is_enrolled && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowResetConfirm(true)}
+                  >
+                    <ShieldOff className="h-4 w-4 mr-2" />
+                    Reset 2FA
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Parent/Topline Assignment Section for Reps */}
@@ -322,6 +410,23 @@ export const AccountDetailsDialog = ({
           </DialogFooter>
         )}
       </DialogContent>
+
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Two-Factor Authentication</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear the user's 2FA enrollment. They will be required to re-enroll with a new phone number on their next login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReset2FA} disabled={isResetting2FA}>
+              {isResetting2FA ? "Resetting..." : "Reset 2FA"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

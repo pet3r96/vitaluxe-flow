@@ -2346,6 +2346,123 @@ export type Database = {
           },
         ]
       }
+      two_fa_reset_logs: {
+        Row: {
+          created_at: string
+          id: string
+          previous_phone_number: string | null
+          reason: string | null
+          reset_by_email: string
+          reset_by_user_id: string
+          target_user_email: string
+          target_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          previous_phone_number?: string | null
+          reason?: string | null
+          reset_by_email: string
+          reset_by_user_id: string
+          target_user_email: string
+          target_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          previous_phone_number?: string | null
+          reason?: string | null
+          reset_by_email?: string
+          reset_by_user_id?: string
+          target_user_email?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
+      two_fa_verification_codes: {
+        Row: {
+          attempts: number
+          code: string
+          code_type: Database["public"]["Enums"]["verification_code_type"]
+          created_at: string
+          expires_at: string
+          id: string
+          phone_number: string
+          user_id: string
+          verified: boolean
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          code: string
+          code_type?: Database["public"]["Enums"]["verification_code_type"]
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone_number: string
+          user_id: string
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          code?: string
+          code_type?: Database["public"]["Enums"]["verification_code_type"]
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone_number?: string
+          user_id?: string
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
+      user_2fa_settings: {
+        Row: {
+          created_at: string
+          enrolled_at: string | null
+          id: string
+          is_enrolled: boolean
+          last_verified_at: string | null
+          phone_number: string
+          phone_verified: boolean
+          phone_verified_at: string | null
+          reset_at: string | null
+          reset_requested_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enrolled_at?: string | null
+          id?: string
+          is_enrolled?: boolean
+          last_verified_at?: string | null
+          phone_number: string
+          phone_verified?: boolean
+          phone_verified_at?: string | null
+          reset_at?: string | null
+          reset_requested_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enrolled_at?: string | null
+          id?: string
+          is_enrolled?: boolean
+          last_verified_at?: string | null
+          phone_number?: string
+          phone_verified?: boolean
+          phone_verified_at?: string | null
+          reset_at?: string | null
+          reset_requested_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_password_status: {
         Row: {
           created_at: string | null
@@ -2780,6 +2897,7 @@ export type Database = {
         | "Supplies"
         | "Vitamin IV's"
       shipping_carrier: "fedex" | "ups" | "usps"
+      verification_code_type: "2fa_setup" | "2fa_login"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2947,6 +3065,7 @@ export const Constants = {
         "Vitamin IV's",
       ],
       shipping_carrier: ["fedex", "ups", "usps"],
+      verification_code_type: ["2fa_setup", "2fa_login"],
     },
   },
 } as const

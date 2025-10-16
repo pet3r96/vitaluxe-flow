@@ -22,6 +22,9 @@ interface AuthContextType {
   isProviderAccount: boolean;
   mustChangePassword: boolean;
   termsAccepted: boolean;
+  requires2FASetup: boolean;
+  requires2FAVerify: boolean;
+  user2FAPhone: string | null;
   checkPasswordStatus: () => Promise<void>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
@@ -56,6 +59,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [canImpersonateDb, setCanImpersonateDb] = useState(false);
+  const [requires2FASetup, setRequires2FASetup] = useState(false);
+  const [requires2FAVerify, setRequires2FAVerify] = useState(false);
+  const [user2FAPhone, setUser2FAPhone] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const actualRole = userRole;
@@ -63,6 +69,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const effectiveRole = impersonatedRole || userRole;
   const effectiveUserId = impersonatedUserId || user?.id || null;
   const canImpersonate = userRole === 'admin' && canImpersonateDb;
+
+  // Function to check 2FA status
+  const check2FAStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_2fa_settings')
+        .select('is_enrolled, phone_verified, phone_number')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        // No 2FA settings - need setup
+        setRequires2FASetup(true);
+        setRequires2FAVerify(false);
+        setUser2FAPhone(null);
+      } else if (data.is_enrolled && data.phone_verified) {
+        // Has 2FA enrolled - need verification on login
+        setRequires2FAVerify(true);
+        setRequires2FASetup(false);
+        setUser2FAPhone(data.phone_number);
+      } else {
+        // Incomplete enrollment - need setup
+        setRequires2FASetup(true);
+        setRequires2FAVerify(false);
+        setUser2FAPhone(null);
+      }
+    } catch (error) {
+      console.error('Error checking 2FA status:', error);
+      setRequires2FASetup(false);
+      setRequires2FAVerify(false);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener
@@ -360,6 +400,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
       }
 
+      // Check 2FA status after successful login
+      await check2FAStatus(user.id);
+
       // Check password status after successful login
       await checkPasswordStatus();
 
@@ -565,6 +608,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isProviderAccount,
       mustChangePassword,
       termsAccepted,
+      requires2FASetup,
+      requires2FAVerify,
+      user2FAPhone,
       checkPasswordStatus,
       setImpersonation,
       clearImpersonation,

@@ -1,13 +1,25 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { TwoFactorSetupDialog } from "@/components/auth/TwoFactorSetupDialog";
+import { TwoFactorVerifyDialog } from "@/components/auth/TwoFactorVerifyDialog";
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading, mustChangePassword, termsAccepted, effectiveRole, isImpersonating } = useAuth();
+  const { 
+    user, 
+    loading, 
+    mustChangePassword, 
+    termsAccepted, 
+    effectiveRole, 
+    isImpersonating,
+    requires2FASetup,
+    requires2FAVerify,
+    user2FAPhone
+  } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -63,6 +75,17 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!user) {
     return null;
+  }
+
+  // Show 2FA dialogs if needed (admins not impersonating are exempt)
+  if (effectiveRole !== 'admin' || isImpersonating) {
+    if (requires2FASetup) {
+      return <TwoFactorSetupDialog open={true} userId={user.id} />;
+    }
+
+    if (requires2FAVerify && user2FAPhone) {
+      return <TwoFactorVerifyDialog open={true} phoneNumber={user2FAPhone} />;
+    }
   }
 
   return <>{children}</>;
