@@ -314,6 +314,32 @@ export const OrdersDataTable = () => {
     return `${labels[status] || status} (${count})`;
   };
 
+  const handlePrescriptionDownload = async (prescriptionUrl: string, productName: string) => {
+    try {
+      const response = await fetch(prescriptionUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download prescription');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const urlParts = prescriptionUrl.split('/');
+      const filename = urlParts[urlParts.length - 1].split('?')[0];
+      const extension = filename.includes('.') ? filename.split('.').pop() : 'pdf';
+      link.download = `prescription_${productName.replace(/\s+/g, '_')}.${extension}`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Prescription download error:', error);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -440,7 +466,10 @@ export const OrdersDataTable = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  window.open(line.prescription_url, '_blank');
+                                  handlePrescriptionDownload(
+                                    line.prescription_url,
+                                    line.products?.name || 'prescription'
+                                  );
                                 }}
                                 className="h-7 px-2 text-xs"
                               >
