@@ -576,12 +576,15 @@ export default function OrderConfirmation() {
           } as any);
         }
 
-      const { error: deleteError } = await supabase
-        .from("cart_lines")
-        .delete()
-        .eq("cart_id", cart.id);
+      // Only clear cart if ALL payments succeeded
+      if (failedPayments.length === 0) {
+        const { error: deleteError } = await supabase
+          .from("cart_lines")
+          .delete()
+          .eq("cart_id", cart.id);
 
-      if (deleteError) throw deleteError;
+        if (deleteError) throw deleteError;
+      }
 
       return { createdOrders, failedPayments, failedOrders };
     },
@@ -602,11 +605,11 @@ export default function OrderConfirmation() {
         setPaymentErrors(failedPayments);
         setFailedOrderIds(failedOrders);
         setShowPaymentRetryDialog(true);
-        queryClient.invalidateQueries({ queryKey: ["cart"] });
+        // Don't invalidate cart query - keep cart intact so user can edit if needed
         
         toast({
-          title: "Orders Created - Payment Issues",
-          description: `${failedPayments.length} order${failedPayments.length > 1 ? 's' : ''} created but payment failed. Please retry payment.`,
+          title: "Payment Declined",
+          description: `${failedPayments.length} payment${failedPayments.length > 1 ? 's' : ''} failed. Your cart has been preserved. Fix payment details and try again, or go back to cart.`,
           variant: "destructive",
         });
       }
