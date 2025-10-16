@@ -58,7 +58,43 @@ export const OrdersDataTable = () => {
         const { data: orderLinesData, error: orderLinesError } = await supabase
           .from("order_lines_masked" as any)
           .select(`
-            *,
+            id,
+            order_id,
+            product_id,
+            provider_id,
+            patient_id,
+            quantity,
+            price,
+            status,
+            tracking_number,
+            assigned_pharmacy_id,
+            created_at,
+            updated_at,
+            shipping_speed,
+            shipping_carrier,
+            shipping_cost,
+            destination_state,
+            order_notes,
+            processing_at,
+            shipped_at,
+            delivered_at,
+            price_before_discount,
+            discount_amount,
+            discount_percentage,
+            refills_allowed,
+            refills_total,
+            refills_remaining,
+            original_order_line_id,
+            is_refill,
+            refill_number,
+            prescription_method,
+            patient_name,
+            patient_email,
+            patient_phone,
+            patient_address,
+            prescription_url_indicator,
+            custom_dosage,
+            custom_sig,
             products(name, product_type),
             pharmacies:assigned_pharmacy_id(name),
             providers!order_lines_provider_id_fkey(
@@ -74,7 +110,10 @@ export const OrdersDataTable = () => {
           .eq("assigned_pharmacy_id", pharmacyData.id)
           .order("created_at", { ascending: false });
 
-        if (orderLinesError) throw orderLinesError;
+        if (orderLinesError) {
+          console.error('Pharmacy order lines query error:', orderLinesError);
+          throw orderLinesError;
+        }
 
         // Transform data to match expected format - group order_lines by order
         const ordersMap = new Map();
@@ -457,7 +496,17 @@ export const OrdersDataTable = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {order.order_lines?.some((line: any) => line.prescription_url) ? (
+                      {effectiveRole === "pharmacy" ? (
+                        // For pharmacies, show indicator only (no download)
+                        <div className="space-y-1">
+                          {order.order_lines?.map((line: any, idx: number) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {line.prescription_url_indicator || 'N/A'}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : order.order_lines?.some((line: any) => line.prescription_url) ? (
+                        // For non-pharmacy roles, show download button
                         <div className="space-y-1">
                           {order.order_lines?.map((line: any, idx: number) => 
                             line.prescription_url ? (
