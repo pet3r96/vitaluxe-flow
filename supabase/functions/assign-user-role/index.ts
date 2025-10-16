@@ -95,7 +95,7 @@ serve(async (req) => {
 
     // Basic validation for required signup fields
     const basicValidation = validateAssignRoleRequest({
-      userId: signupData.roleData?.practiceId || 'new',  // For new users
+      userId: signupData.roleData?.practiceId || '00000000-0000-0000-0000-000000000000',  // Nil UUID for new users
       role: signupData.role,
       name: signupData.name,
       email: signupData.email
