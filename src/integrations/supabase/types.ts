@@ -1387,6 +1387,127 @@ export type Database = {
           },
         ]
       }
+      order_status_configs: {
+        Row: {
+          color_class: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          display_name: string
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          is_system_default: boolean | null
+          sort_order: number
+          status_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          color_class: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_default?: boolean | null
+          sort_order: number
+          status_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          color_class?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_default?: boolean | null
+          sort_order?: number
+          status_key?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_history: {
+        Row: {
+          change_reason: string | null
+          changed_by: string
+          changed_by_role: Database["public"]["Enums"]["app_role"]
+          created_at: string | null
+          id: string
+          is_manual_override: boolean | null
+          metadata: Json | null
+          new_status: string
+          old_status: string
+          order_id: string
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_by: string
+          changed_by_role: Database["public"]["Enums"]["app_role"]
+          created_at?: string | null
+          id?: string
+          is_manual_override?: boolean | null
+          metadata?: Json | null
+          new_status: string
+          old_status: string
+          order_id: string
+        }
+        Update: {
+          change_reason?: string | null
+          changed_by?: string
+          changed_by_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string | null
+          id?: string
+          is_manual_override?: boolean | null
+          metadata?: Json | null
+          new_status?: string
+          old_status?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           authorizenet_profile_id: string | null
@@ -1412,6 +1533,8 @@ export type Database = {
           shipping_total: number | null
           shipping_verification_status: string | null
           status: string | null
+          status_manual_override: boolean | null
+          status_override_reason: string | null
           stripe_payment_id: string | null
           subtotal_before_discount: number | null
           total_amount: number
@@ -1442,6 +1565,8 @@ export type Database = {
           shipping_total?: number | null
           shipping_verification_status?: string | null
           status?: string | null
+          status_manual_override?: boolean | null
+          status_override_reason?: string | null
           stripe_payment_id?: string | null
           subtotal_before_discount?: number | null
           total_amount: number
@@ -1472,6 +1597,8 @@ export type Database = {
           shipping_total?: number | null
           shipping_verification_status?: string | null
           status?: string | null
+          status_manual_override?: boolean | null
+          status_override_reason?: string | null
           stripe_payment_id?: string | null
           subtotal_before_discount?: number | null
           total_amount?: number

@@ -576,9 +576,16 @@ export const OrdersDataTable = () => {
                     </TableCell>
                     {effectiveRole !== "pharmacy" && <TableCell>${order.total_amount}</TableCell>}
                     <TableCell>
-                      <Badge className={getStatusColor(order.status)}>
-                        {order.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(order.status)}>
+                          {order.status}
+                        </Badge>
+                        {order.status_manual_override && (
+                          <Badge variant="outline" className="text-xs">
+                            Manual
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={getPaymentStatusColor(order.payment_status)}>

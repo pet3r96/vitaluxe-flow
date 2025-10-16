@@ -8,8 +8,9 @@ import { PendingRepsApproval } from "@/components/admin/PendingRepsApproval";
 import { PendingPracticesApproval } from "@/components/admin/PendingPracticesApproval";
 import { ProductTypeManager } from "@/components/admin/ProductTypeManager";
 import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
+import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Building2, Users, Wrench, Package, Settings } from "lucide-react";
+import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered } from "lucide-react";
 
 const AdminSettings = () => {
   return (
@@ -22,7 +23,7 @@ const AdminSettings = () => {
       </div>
 
       <Tabs defaultValue="practices" className="space-y-4">
-        <TabsList className="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <TabsList className="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <TabsTrigger value="practices" className="gap-2">
             <Building2 className="h-4 w-4" />
             Practices
@@ -50,6 +51,10 @@ const AdminSettings = () => {
           <TabsTrigger value="product-types" className="gap-2">
             <Package className="h-4 w-4" />
             Product Types
+          </TabsTrigger>
+          <TabsTrigger value="order-statuses" className="gap-2">
+            <ListOrdered className="h-4 w-4" />
+            Order Statuses
           </TabsTrigger>
           <TabsTrigger value="system" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -155,6 +160,20 @@ const AdminSettings = () => {
             </CardHeader>
             <CardContent>
               <ProductTypeManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="order-statuses" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Status Management</CardTitle>
+              <CardDescription>
+                Manage order status configurations and create custom statuses
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <OrderStatusManager />
             </CardContent>
           </Card>
         </TabsContent>

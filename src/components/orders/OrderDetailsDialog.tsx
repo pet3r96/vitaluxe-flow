@@ -17,6 +17,8 @@ import { CancelOrderDialog } from "./CancelOrderDialog";
 import { ReportNotesSection } from "./ReportNotesSection";
 import { RefundOrderDialog } from "./RefundOrderDialog";
 import { RefundHistory } from "./RefundHistory";
+import { OrderStatusSelector } from "./OrderStatusSelector";
+import { OrderStatusHistory } from "./OrderStatusHistory";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -414,10 +416,7 @@ export const OrderDetailsDialog = ({
                 </div>
               </div>
             )}
-            <div>
-              <p className="text-sm text-muted-foreground">Status</p>
-              <Badge>{order.status}</Badge>
-            </div>
+            <OrderStatusSelector order={order} onSuccess={onSuccess} />
             <div>
               <p className="text-sm text-muted-foreground">Fulfillment Type</p>
               <Badge variant={order.ship_to === 'practice' ? 'secondary' : 'default'}>
@@ -652,6 +651,9 @@ export const OrderDetailsDialog = ({
               ))}
             </div>
           </div>
+
+          {/* Order Status History */}
+          <OrderStatusHistory orderId={order.id} />
 
           {/* Refund History Section */}
           <RefundHistory orderId={order.id} />
