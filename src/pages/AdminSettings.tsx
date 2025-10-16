@@ -21,7 +21,7 @@ const AdminSettings = () => {
       </div>
 
       <Tabs defaultValue="practices" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           <TabsTrigger value="practices" className="gap-2">
             <Building2 className="h-4 w-4" />
             Practices
