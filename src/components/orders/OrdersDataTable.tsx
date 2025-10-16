@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Download } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -59,7 +59,7 @@ export const OrdersDataTable = () => {
           .from("order_lines")
           .select(`
             *,
-            products(name),
+            products(name, product_type),
             pharmacies:assigned_pharmacy_id(name),
             providers!order_lines_provider_id_fkey(
               id,
@@ -99,7 +99,7 @@ export const OrdersDataTable = () => {
         .select(`
           *,
           order_lines(*,
-            products(name),
+            products(name, product_type),
             pharmacies:assigned_pharmacy_id(name),
             providers!order_lines_provider_id_fkey(
               id,
@@ -345,7 +345,7 @@ export const OrdersDataTable = () => {
       </div>
 
       <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1800px]">
+        <div className="min-w-[2000px]">
           <Table>
           <TableHeader>
             <TableRow>
@@ -354,6 +354,7 @@ export const OrdersDataTable = () => {
               <TableHead>Patient Name</TableHead>
               <TableHead>Fulfillment Type</TableHead>
               <TableHead>Products</TableHead>
+              <TableHead>Prescription</TableHead>
               <TableHead>Shipping</TableHead>
               <TableHead>Shipping Status</TableHead>
               <TableHead>Carrier</TableHead>
@@ -366,13 +367,13 @@ export const OrdersDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 11 : 12} className="text-center">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 12 : 13} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 11 : 12} className="text-center text-muted-foreground">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 12 : 13} className="text-center text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
@@ -416,7 +417,42 @@ export const OrdersDataTable = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {order.order_lines?.length || 0} item(s)
+                      <div className="space-y-1">
+                        {order.order_lines?.map((line: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {line.products?.product_type || "Unknown"}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                              {line.products?.name || "N/A"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {order.order_lines?.some((line: any) => line.prescription_url) ? (
+                        <div className="space-y-1">
+                          {order.order_lines?.map((line: any, idx: number) => 
+                            line.prescription_url ? (
+                              <Button
+                                key={idx}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  window.open(line.prescription_url, '_blank');
+                                }}
+                                className="h-7 px-2 text-xs"
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Rx
+                              </Button>
+                            ) : null
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
