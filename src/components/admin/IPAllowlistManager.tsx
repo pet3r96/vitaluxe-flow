@@ -24,9 +24,9 @@ const IPAllowlistManager = () => {
   const { data: currentIP } = useQuery({
     queryKey: ['current-ip'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_client_ip');
+      const { data, error } = await supabase.rpc('get_client_ip' as any);
       if (error) throw error;
-      return data;
+      return data as string;
     }
   });
 
@@ -138,7 +138,7 @@ const IPAllowlistManager = () => {
       return;
     }
     addIPMutation.mutate({
-      ip: currentIP,
+      ip: String(currentIP),
       description: "Added via 'Add My IP' button"
     });
   };
