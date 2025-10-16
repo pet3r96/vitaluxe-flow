@@ -22,13 +22,13 @@ export const AuditLogsViewer = () => {
   const [actionFilter, setActionFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("24h");
 
-  // Check if admin IP is allowed
-  const { data: ipAllowed, isLoading: ipCheckLoading } = useQuery({
-    queryKey: ['ip-check'],
+  // Check if admin IP is banned
+  const { data: ipBanned, isLoading: ipCheckLoading } = useQuery({
+    queryKey: ['admin-ip-banned'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('is_admin_ip_allowed' as any);
+      const { data, error } = await supabase.rpc('is_admin_ip_banned' as any);
       if (error) throw error;
-      return data;
+      return data as boolean;
     }
   });
 
@@ -127,15 +127,15 @@ export const AuditLogsViewer = () => {
     toast.success("Audit logs exported");
   };
 
-  // Show access restricted message if IP not allowed
-  if (ipAllowed === false) {
+  // Show access restricted message if IP is banned
+  if (ipBanned === true) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Access Restricted</AlertTitle>
         <AlertDescription>
-          Your IP address is not authorized to access audit logs. 
-          Contact your system administrator to add your IP to the allowlist, or go to the IP Access tab to manage allowed IPs.
+          Your IP address has been banned from accessing audit logs.
+          Please contact a system administrator for assistance.
         </AlertDescription>
       </Alert>
     );

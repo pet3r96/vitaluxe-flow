@@ -13,8 +13,8 @@ import { EncryptionStatusManager } from "@/components/security/EncryptionStatusM
 import { PaymentMethodAuditLog } from "@/components/security/PaymentMethodAuditLog";
 import { PrescriptionAccessAudit } from "@/components/security/PrescriptionAccessAudit";
 import { CartSecurityMonitor } from "@/components/security/CartSecurityMonitor";
-import IPAllowlistManager from "@/components/admin/IPAllowlistManager";
-import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard, ShoppingCart, Network } from "lucide-react";
+import { IPBanlistManager } from "@/components/admin/IPBanlistManager";
+import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard, ShoppingCart, Ban } from "lucide-react";
 
 const Security = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -82,9 +82,9 @@ const Security = () => {
             <Lock className="h-4 w-4" />
             <span className="hidden sm:inline">Lockouts</span>
           </TabsTrigger>
-          <TabsTrigger value="ip-allowlist" className="gap-2">
-            <Network className="h-4 w-4" />
-            <span className="hidden sm:inline">IP Access</span>
+          <TabsTrigger value="ip-banlist" className="gap-2">
+            <Ban className="h-4 w-4" />
+            <span className="hidden sm:inline">IP Ban List</span>
           </TabsTrigger>
         </TabsList>
 
@@ -140,8 +140,8 @@ const Security = () => {
           <AccountSecurityManager />
         </TabsContent>
 
-        <TabsContent value="ip-allowlist">
-          <IPAllowlistManager />
+        <TabsContent value="ip-banlist">
+          <IPBanlistManager />
         </TabsContent>
       </Tabs>
     </div>
