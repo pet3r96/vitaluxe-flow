@@ -64,22 +64,20 @@ serve(async (req) => {
       throw new Error('Email and password are required');
     }
 
-    // Get target user
-    const { data: { users }, error: getUserError } = await supabaseAdmin.auth.admin.listUsers();
+    // Get target user from profiles table by email
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
     
-    if (getUserError) {
-      throw getUserError;
-    }
-
-    const targetUser = users.find(u => u.email === email);
-    
-    if (!targetUser) {
+    if (profileError || !profile) {
       throw new Error('User not found');
     }
 
     // Update password
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      targetUser.id,
+      profile.id,
       { password }
     );
 
@@ -88,13 +86,13 @@ serve(async (req) => {
     }
 
     // Set must_change_password flag in profiles
-    const { error: profileError } = await supabaseAdmin
+    const { error: updateProfileError } = await supabaseAdmin
       .from('profiles')
       .update({ must_change_password: true })
-      .eq('id', targetUser.id);
+      .eq('id', profile.id);
 
-    if (profileError) {
-      console.error('Error setting must_change_password flag:', profileError);
+    if (updateProfileError) {
+      console.error('Error setting must_change_password flag:', updateProfileError);
     }
 
     console.log(`Test password set for user: ${email} by admin: ${user.email}`);
