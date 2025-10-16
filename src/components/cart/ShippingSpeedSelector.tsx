@@ -16,7 +16,7 @@ export const ShippingSpeedSelector = ({
   patientName 
 }: ShippingSpeedSelectorProps) => {
   return (
-    <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+    <div className="space-y-1.5 p-3 border rounded-lg bg-muted/30">
       <Label className="text-sm font-semibold flex items-center gap-2">
         <Truck className="h-4 w-4" />
         Shipping Speed for {patientName}
