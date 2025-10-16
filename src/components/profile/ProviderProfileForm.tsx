@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, KeyRound } from "lucide-react";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
+import { sanitizeEncrypted } from "@/lib/utils";
 
 const providerFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required").max(100),
@@ -60,9 +61,9 @@ export const ProviderProfileForm = () => {
       full_name: profile.full_name || "",
       email: profile.email || "",
       phone: profile.phone || "",
-      npi: profile.npi || "",
-      dea: profile.dea || "",
-      license_number: profile.license_number || "",
+      npi: sanitizeEncrypted(profile.npi),
+      dea: sanitizeEncrypted(profile.dea),
+      license_number: sanitizeEncrypted(profile.license_number),
     } : undefined,
   });
 

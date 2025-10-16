@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { ExternalLink, Copy, Pencil, Check, ChevronsUpDown, X } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeEncrypted } from "@/lib/utils";
 
 interface PracticeDetailsDialogProps {
   open: boolean;
@@ -163,9 +163,9 @@ export const PracticeDetailsDialog = ({
         email: provider.email || "",
         phone: provider.phone || "",
         address: provider.address || "",
-        npi: provider.npi || "",
-        license_number: provider.license_number || "",
-        dea: provider.dea || "",
+        npi: sanitizeEncrypted(provider.npi),
+        license_number: sanitizeEncrypted(provider.license_number),
+        dea: sanitizeEncrypted(provider.dea),
         selectedRepId: provider.linked_topline_id || "",
       });
     }
@@ -362,8 +362,8 @@ export const PracticeDetailsDialog = ({
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <p className="font-mono font-medium">{provider.npi || "-"}</p>
-                      {provider.npi && (
+                      <p className="font-mono font-medium">{sanitizeEncrypted(provider.npi) || "-"}</p>
+                      {sanitizeEncrypted(provider.npi) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -384,8 +384,8 @@ export const PracticeDetailsDialog = ({
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <p className="font-mono font-medium">{provider.license_number || "-"}</p>
-                      {provider.license_number && (
+                      <p className="font-mono font-medium">{sanitizeEncrypted(provider.license_number) || "-"}</p>
+                      {sanitizeEncrypted(provider.license_number) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -405,7 +405,7 @@ export const PracticeDetailsDialog = ({
                       onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
                     />
                   ) : (
-                    <p className="font-mono font-medium">{provider.dea || "-"}</p>
+                    <p className="font-mono font-medium">{sanitizeEncrypted(provider.dea) || "-"}</p>
                   )}
                 </div>
               </div>

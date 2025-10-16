@@ -29,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Save, KeyRound } from "lucide-react";
 import { AddressInput } from "@/components/ui/address-input";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
+import { sanitizeEncrypted } from "@/lib/utils";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Practice name is required").max(100),

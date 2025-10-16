@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Edit2, Save, X, Loader2 } from "lucide-react";
+import { sanitizeEncrypted } from "@/lib/utils";
 
 interface ProviderDetailsDialogProps {
   open: boolean;
@@ -28,9 +29,9 @@ export const ProviderDetailsDialog = ({
   const [formData, setFormData] = useState({
     fullName: provider.profiles?.full_name || provider.profiles?.name || "",
     prescriberName: provider.profiles?.full_name || "",
-    npi: provider.profiles?.npi || "",
-    dea: provider.profiles?.dea || "",
-    licenseNumber: provider.profiles?.license_number || "",
+    npi: sanitizeEncrypted(provider.profiles?.npi),
+    dea: sanitizeEncrypted(provider.profiles?.dea),
+    licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
     phone: provider.profiles?.phone || "",
   });
 
@@ -159,7 +160,7 @@ export const ProviderDetailsDialog = ({
                     </div>
                   ) : (
                     <div className="p-2 bg-muted rounded-md">
-                      {provider.profiles?.npi || "Not set"}
+                      {sanitizeEncrypted(provider.profiles?.npi) || "Not set"}
                     </div>
                   )}
                 </div>
@@ -189,7 +190,7 @@ export const ProviderDetailsDialog = ({
                     </div>
                   ) : (
                     <div className="p-2 bg-muted rounded-md">
-                      {provider.profiles?.dea || "Not set"}
+                      {sanitizeEncrypted(provider.profiles?.dea) || "Not set"}
                     </div>
                   )}
                 </div>
@@ -207,7 +208,7 @@ export const ProviderDetailsDialog = ({
                   </div>
                 ) : (
                   <div className="p-2 bg-muted rounded-md">
-                    {provider.profiles?.license_number || "Not set"}
+                    {sanitizeEncrypted(provider.profiles?.license_number) || "Not set"}
                   </div>
                 )}
               </div>
@@ -235,9 +236,9 @@ export const ProviderDetailsDialog = ({
                   setFormData({
                     fullName: provider.profiles?.full_name || provider.profiles?.name || "",
                     prescriberName: provider.profiles?.full_name || "",
-                    npi: provider.profiles?.npi || "",
-                    dea: provider.profiles?.dea || "",
-                    licenseNumber: provider.profiles?.license_number || "",
+                    npi: sanitizeEncrypted(provider.profiles?.npi),
+                    dea: sanitizeEncrypted(provider.profiles?.dea),
+                    licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
                     phone: provider.profiles?.phone || "",
                   });
                 }}

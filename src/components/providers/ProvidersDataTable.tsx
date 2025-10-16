@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { sanitizeEncrypted } from "@/lib/utils";
 
 export const ProvidersDataTable = () => {
   const { effectiveUserId, effectiveRole } = useAuth();
@@ -180,17 +181,17 @@ export const ProvidersDataTable = () => {
                     <>
                       <TableCell>
                         <span className="font-mono text-sm">
-                          {provider.profiles?.npi || <span className="text-muted-foreground italic">Not set</span>}
+                          {sanitizeEncrypted(provider.profiles?.npi) || <span className="text-muted-foreground italic">Not set</span>}
                         </span>
                       </TableCell>
                       <TableCell>
                         <span className="font-mono text-sm">
-                          {provider.profiles?.dea || <span className="text-muted-foreground italic">Not set</span>}
+                          {sanitizeEncrypted(provider.profiles?.dea) || <span className="text-muted-foreground italic">Not set</span>}
                         </span>
                       </TableCell>
                       <TableCell>
                         <span className="font-mono text-sm">
-                          {provider.profiles?.license_number || <span className="text-muted-foreground italic">Not set</span>}
+                          {sanitizeEncrypted(provider.profiles?.license_number) || <span className="text-muted-foreground italic">Not set</span>}
                         </span>
                       </TableCell>
                     </>
