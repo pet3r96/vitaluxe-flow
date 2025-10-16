@@ -1850,13 +1850,16 @@ export type Database = {
           contract_url: string | null
           created_at: string | null
           dea: string | null
+          dea_encrypted: string | null
           email: string
           full_name: string | null
           id: string
           license_number: string | null
+          license_number_encrypted: string | null
           linked_topline_id: string | null
           name: string
           npi: string | null
+          npi_encrypted: string | null
           parent_id: string | null
           phone: string | null
           practice_npi: string | null
@@ -1887,13 +1890,16 @@ export type Database = {
           contract_url?: string | null
           created_at?: string | null
           dea?: string | null
+          dea_encrypted?: string | null
           email: string
           full_name?: string | null
           id: string
           license_number?: string | null
+          license_number_encrypted?: string | null
           linked_topline_id?: string | null
           name: string
           npi?: string | null
+          npi_encrypted?: string | null
           parent_id?: string | null
           phone?: string | null
           practice_npi?: string | null
@@ -1924,13 +1930,16 @@ export type Database = {
           contract_url?: string | null
           created_at?: string | null
           dea?: string | null
+          dea_encrypted?: string | null
           email?: string
           full_name?: string | null
           id?: string
           license_number?: string | null
+          license_number_encrypted?: string | null
           linked_topline_id?: string | null
           name?: string
           npi?: string | null
+          npi_encrypted?: string | null
           parent_id?: string | null
           phone?: string | null
           practice_npi?: string | null
@@ -2750,6 +2759,10 @@ export type Database = {
       }
       decrypt_plaid_token: {
         Args: { p_encrypted_token: string }
+        Returns: string
+      }
+      decrypt_prescriber_credential: {
+        Args: { p_encrypted_data: string; p_field_type: string }
         Returns: string
       }
       encrypt_plaid_token: {
