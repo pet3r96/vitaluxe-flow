@@ -166,10 +166,10 @@ export function validateSendWelcomeEmailRequest(data: any) {
 
 export function validateValidateAddressRequest(data: any) {
   const validations = [
-    validateString(data.address, 'address', { required: true, maxLength: 500 }),
+    validateString(data.street, 'street', { required: true, maxLength: 500 }),
     validateString(data.city, 'city', { maxLength: 100 }),
     validateString(data.state, 'state', { maxLength: 2 }),
-    validateString(data.zipCode, 'zipCode', { maxLength: 10 })
+    validateString(data.zip, 'zip', { maxLength: 10 })
   ];
   
   return validateInput(validations);

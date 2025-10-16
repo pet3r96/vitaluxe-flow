@@ -1886,7 +1886,7 @@ export type Database = {
           payment_type: string
           plaid_access_token: string | null
           plaid_access_token_encrypted: string | null
-          plaid_account_id: string
+          plaid_account_id: string | null
           practice_id: string
           routing_number_last_four: string | null
           updated_at: string | null
@@ -1913,7 +1913,7 @@ export type Database = {
           payment_type?: string
           plaid_access_token?: string | null
           plaid_access_token_encrypted?: string | null
-          plaid_account_id: string
+          plaid_account_id?: string | null
           practice_id: string
           routing_number_last_four?: string | null
           updated_at?: string | null
@@ -1940,7 +1940,7 @@ export type Database = {
           payment_type?: string
           plaid_access_token?: string | null
           plaid_access_token_encrypted?: string | null
-          plaid_account_id?: string
+          plaid_account_id?: string | null
           practice_id?: string
           routing_number_last_four?: string | null
           updated_at?: string | null
