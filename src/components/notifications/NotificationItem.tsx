@@ -77,10 +77,10 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 -mt-1 -mr-1 shrink-0"
+              className="h-8 w-8 -mt-1 -mr-1 shrink-0 hover:bg-destructive/10 hover:text-destructive"
               onClick={handleDelete}
             >
-              <X className="h-3 w-3" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
 
