@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Edit2, Save, X } from "lucide-react";
+import { Edit2, Save, X, Loader2 } from "lucide-react";
 import { logCredentialAccess } from "@/lib/auditLogger";
 
 interface ProviderDetailsDialogProps {
@@ -26,6 +26,8 @@ export const ProviderDetailsDialog = ({
   const { effectiveRole, effectiveUserId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [decryptedCreds, setDecryptedCreds] = useState<{ npi?: string; dea?: string; license_number?: string } | null>(null);
+  const [isLoadingCreds, setIsLoadingCreds] = useState(false);
   const [formData, setFormData] = useState({
     fullName: provider.profiles?.full_name || provider.profiles?.name || "",
     prescriberName: provider.profiles?.full_name || "",
@@ -38,31 +40,58 @@ export const ProviderDetailsDialog = ({
   const isPractice = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
   const isOwnProvider = effectiveRole === "provider" && effectiveUserId === provider.user_id;
   const isAdmin = effectiveRole === "admin";
+  const canViewCredentials = ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole || '');
 
-  // Log credential access when dialog opens
+  // Fetch and decrypt provider credentials when dialog opens (for authorized roles)
   useEffect(() => {
-    if (open && provider?.profiles && (provider.profiles.npi || provider.profiles.dea || provider.profiles.license_number)) {
-      const relationship = 
-        isOwnProvider ? 'self' :
-        isAdmin ? 'admin' :
-        isPractice ? 'practice_admin' :
-        effectiveRole === 'topline' ? 'topline' :
-        'downline';
+    const fetchDecryptedCredentials = async () => {
+      if (!open || !provider?.id || !canViewCredentials) {
+        setDecryptedCreds(null);
+        return;
+      }
 
-      logCredentialAccess({
-        profileId: provider.user_id,
-        profileName: provider.profiles.full_name || provider.profiles.name,
-        accessedFields: {
-          npi: !!provider.profiles.npi,
-          dea: !!provider.profiles.dea,
-          license: !!provider.profiles.license_number,
-        },
-        viewerRole: effectiveRole || 'unknown',
-        relationship,
-        componentContext: 'ProviderDetailsDialog'
-      });
-    }
-  }, [open, provider, effectiveRole, isOwnProvider, isPractice, isAdmin]);
+      setIsLoadingCreds(true);
+      try {
+        const { data, error } = await supabase.rpc('get_decrypted_provider_credentials', {
+          p_provider_id: provider.id
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setDecryptedCreds(data[0]);
+
+          // Log credential access
+          const relationship = 
+            isOwnProvider ? 'self' :
+            isAdmin ? 'admin' :
+            isPractice ? 'practice_admin' :
+            effectiveRole === 'topline' ? 'topline' :
+            'downline';
+
+          await logCredentialAccess({
+            profileId: provider.user_id,
+            profileName: provider.profiles?.full_name || provider.profiles?.name || 'Unknown',
+            accessedFields: {
+              npi: !!data[0].npi,
+              dea: !!data[0].dea,
+              license: !!data[0].license_number,
+            },
+            viewerRole: effectiveRole || 'unknown',
+            relationship,
+            componentContext: 'ProviderDetailsDialog'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to decrypt provider credentials:', error);
+        setDecryptedCreds(null);
+      } finally {
+        setIsLoadingCreds(false);
+      }
+    };
+
+    fetchDecryptedCredentials();
+  }, [open, provider?.id, canViewCredentials, effectiveRole, isOwnProvider, isPractice, isAdmin]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -157,43 +186,68 @@ export const ProviderDetailsDialog = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Provider NPI #</Label>
-              {isEditing && (isPractice || isAdmin) ? (
-                <Input
-                  value={formData.npi}
-                  onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
-                />
-              ) : (
-                <div className="p-2 bg-muted rounded-md">{provider.profiles?.npi}</div>
-              )}
-            </div>
+          {canViewCredentials && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Provider NPI #</Label>
+                  {isEditing && (isPractice || isAdmin) ? (
+                    <Input
+                      value={formData.npi}
+                      onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
+                    />
+                  ) : (
+                    <div className="p-2 bg-muted rounded-md flex items-center gap-2">
+                      {isLoadingCreds ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span className="text-sm text-muted-foreground">Decrypting...</span>
+                        </>
+                      ) : decryptedCreds?.npi || "N/A"}
+                    </div>
+                  )}
+                </div>
 
-            <div className="space-y-2">
-              <Label>Provider DEA #</Label>
-              {isEditing && (isPractice || isAdmin) ? (
-                <Input
-                  value={formData.dea}
-                  onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
-                />
-              ) : (
-                <div className="p-2 bg-muted rounded-md">{provider.profiles?.dea || "N/A"}</div>
-              )}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  <Label>Provider DEA #</Label>
+                  {isEditing && (isPractice || isAdmin) ? (
+                    <Input
+                      value={formData.dea}
+                      onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
+                    />
+                  ) : (
+                    <div className="p-2 bg-muted rounded-md flex items-center gap-2">
+                      {isLoadingCreds ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span className="text-sm text-muted-foreground">Decrypting...</span>
+                        </>
+                      ) : decryptedCreds?.dea || "N/A"}
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <Label>License Number</Label>
-            {isEditing && (isPractice || isAdmin) ? (
-              <Input
-                value={formData.licenseNumber}
-                onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-              />
-            ) : (
-              <div className="p-2 bg-muted rounded-md">{provider.profiles?.license_number}</div>
-            )}
-          </div>
+              <div className="space-y-2">
+                <Label>License Number</Label>
+                {isEditing && (isPractice || isAdmin) ? (
+                  <Input
+                    value={formData.licenseNumber}
+                    onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                  />
+                ) : (
+                  <div className="p-2 bg-muted rounded-md flex items-center gap-2">
+                    {isLoadingCreds ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="text-sm text-muted-foreground">Decrypting...</span>
+                      </>
+                    ) : decryptedCreds?.license_number || "N/A"}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label>Phone</Label>

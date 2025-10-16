@@ -61,8 +61,11 @@ export function PrescriptionWriterDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [decryptedAllergies, setDecryptedAllergies] = useState<string | null>(null);
   const [isLoadingAllergies, setIsLoadingAllergies] = useState(false);
+  const [decryptedPrescriberCreds, setDecryptedPrescriberCreds] = useState<{ npi?: string; dea?: string; license_number?: string } | null>(null);
+  const [isLoadingCreds, setIsLoadingCreds] = useState(false);
 
   const canViewPHI = ['doctor', 'provider', 'admin'].includes(effectiveRole || '');
+  const canViewCredentials = ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole || '');
 
   // Fetch and decrypt patient allergies when dialog opens
   useEffect(() => {
@@ -107,6 +110,36 @@ export function PrescriptionWriterDialog({
 
     fetchDecryptedAllergies();
   }, [open, patient?.id, canViewPHI, effectiveRole]);
+
+  // Fetch and decrypt prescriber credentials when dialog opens (for authorized roles)
+  useEffect(() => {
+    const fetchDecryptedCredentials = async () => {
+      if (!open || !provider?.id || !canViewCredentials) {
+        setDecryptedPrescriberCreds(null);
+        return;
+      }
+
+      setIsLoadingCreds(true);
+      try {
+        const { data, error } = await supabase.rpc('get_decrypted_provider_credentials', {
+          p_provider_id: provider.id
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setDecryptedPrescriberCreds(data[0]);
+        }
+      } catch (error) {
+        console.error('Failed to decrypt prescriber credentials:', error);
+        setDecryptedPrescriberCreds(null);
+      } finally {
+        setIsLoadingCreds(false);
+      }
+    };
+
+    fetchDecryptedCredentials();
+  }, [open, provider?.id, canViewCredentials]);
 
   // Sync state with prop changes
   useEffect(() => {
@@ -274,9 +307,24 @@ export function PrescriptionWriterDialog({
             <h3 className="font-semibold mb-2">Prescriber Information</h3>
             <div className="text-sm space-y-1 text-muted-foreground">
               <p><strong>Provider:</strong> {provider.name}</p>
-              <p className="text-xs text-muted-foreground italic">
-                Prescriber credentials will be verified and included server-side
-              </p>
+              {canViewCredentials && (
+                <div className="pt-2 mt-2 border-t">
+                  {isLoadingCreds ? (
+                    <p className="text-xs italic flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading credentials...
+                    </p>
+                  ) : decryptedPrescriberCreds ? (
+                    <>
+                      {decryptedPrescriberCreds.npi && <p className="text-xs"><strong>NPI:</strong> {decryptedPrescriberCreds.npi}</p>}
+                      {decryptedPrescriberCreds.dea && <p className="text-xs"><strong>DEA:</strong> {decryptedPrescriberCreds.dea}</p>}
+                      {decryptedPrescriberCreds.license_number && <p className="text-xs"><strong>License:</strong> {decryptedPrescriberCreds.license_number}</p>}
+                    </>
+                  ) : (
+                    <p className="text-xs italic">Unable to load credentials</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

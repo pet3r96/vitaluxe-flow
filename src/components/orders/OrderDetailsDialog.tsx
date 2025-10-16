@@ -38,29 +38,35 @@ export const OrderDetailsDialog = ({
   const { toast } = useToast();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [decryptedPatientPHI, setDecryptedPatientPHI] = useState<Map<string, { allergies?: string | null, notes?: string | null }>>(new Map());
+  const [decryptedContactInfo, setDecryptedContactInfo] = useState<Map<string, { patient_email?: string | null, patient_phone?: string | null, patient_address?: string | null }>>(new Map());
 
   // Determine if user can view PHI (HIPAA compliance)
   const canViewPHI = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
 
-  // Fetch and decrypt patient allergies when dialog opens
+  // Fetch and decrypt patient allergies and contact info when dialog opens
   useEffect(() => {
-    const fetchDecryptedAllergies = async () => {
+    const fetchDecryptedData = async () => {
       if (!open || !canViewPHI || !order?.order_lines || order.ship_to !== 'patient') {
         return;
       }
 
-      // Collect unique patient IDs
+      // Collect unique patient IDs and order line IDs
       const patientIds = new Set<string>();
+      const orderLineIds: string[] = [];
+      
       order.order_lines.forEach((line: any) => {
         if (line.patient_id) {
           patientIds.add(line.patient_id);
         }
+        orderLineIds.push(line.id);
       });
 
-      // Fetch decrypted PHI for each patient
+      // Fetch PHI and contact info in parallel
       const phiCache = new Map<string, { allergies?: string | null, notes?: string | null }>();
+      const contactCache = new Map<string, { patient_email?: string | null, patient_phone?: string | null, patient_address?: string | null }>();
       
-      for (const patientId of patientIds) {
+      // Fetch PHI for each patient
+      const phiPromises = Array.from(patientIds).map(async (patientId) => {
         try {
           const { data, error } = await supabase.rpc('get_decrypted_patient_phi', {
             p_patient_id: patientId
@@ -69,37 +75,102 @@ export const OrderDetailsDialog = ({
           if (error) throw error;
 
           if (data && data.length > 0) {
-            phiCache.set(patientId, {
-              allergies: data[0].allergies,
-              notes: data[0].notes
-            });
-
-            // Log PHI access
-            const line = order.order_lines.find((l: any) => l.patient_id === patientId);
-            if (line) {
-              const relationship = effectiveRole === 'admin' ? 'admin' :
-                                 effectiveRole === 'pharmacy' ? 'admin' :
-                                 'practice_admin';
-
-              await logPatientPHIAccess({
-                patientId,
-                patientName: line.patient_name,
-                accessedFields: { allergies: true },
-                viewerRole: effectiveRole || 'unknown',
-                relationship,
-                componentContext: 'OrderDetailsDialog'
-              });
-            }
+            return {
+              patientId,
+              phi: {
+                allergies: data[0].allergies,
+                notes: data[0].notes
+              }
+            };
           }
         } catch (error) {
-          console.error(`Failed to decrypt allergies for patient ${patientId}:`, error);
+          console.error(`Failed to decrypt PHI for patient ${patientId}:`, error);
         }
-      }
+        return null;
+      });
+
+      // Fetch contact info for each order line
+      const contactPromises = orderLineIds.map(async (lineId) => {
+        try {
+          const { data, error } = await supabase.rpc('get_decrypted_order_line_contact', {
+            p_order_line_id: lineId
+          });
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            return {
+              lineId,
+              contact: data[0]
+            };
+          }
+        } catch (error) {
+          console.error(`Failed to decrypt contact info for order line ${lineId}:`, error);
+        }
+        return null;
+      });
+
+      // Wait for all fetches to complete
+      const [phiResults, contactResults] = await Promise.all([
+        Promise.all(phiPromises),
+        Promise.all(contactPromises)
+      ]);
+
+      // Build PHI cache and log access
+      phiResults.forEach(result => {
+        if (result) {
+          phiCache.set(result.patientId, result.phi);
+
+          // Log PHI access
+          const line = order.order_lines.find((l: any) => l.patient_id === result.patientId);
+          if (line) {
+            const relationship = effectiveRole === 'admin' ? 'admin' :
+                               effectiveRole === 'pharmacy' ? 'admin' :
+                               'practice_admin';
+
+            logPatientPHIAccess({
+              patientId: result.patientId,
+              patientName: line.patient_name,
+              accessedFields: { allergies: true },
+              viewerRole: effectiveRole || 'unknown',
+              relationship,
+              componentContext: 'OrderDetailsDialog'
+            });
+          }
+        }
+      });
+
+      // Build contact cache and log access
+      contactResults.forEach(result => {
+        if (result) {
+          contactCache.set(result.lineId, result.contact);
+
+          // Log PHI access for contact info (address only, as email/phone are not in the PHI interface)
+          const line = order.order_lines.find((l: any) => l.id === result.lineId);
+          if (line && line.patient_id && result.contact.patient_address) {
+            const relationship = effectiveRole === 'admin' ? 'admin' :
+                               effectiveRole === 'pharmacy' ? 'admin' :
+                               'practice_admin';
+
+            logPatientPHIAccess({
+              patientId: line.patient_id,
+              patientName: line.patient_name,
+              accessedFields: {
+                address: true
+              },
+              viewerRole: effectiveRole || 'unknown',
+              relationship,
+              componentContext: 'OrderDetailsDialog - Contact Info'
+            });
+          }
+        }
+      });
 
       setDecryptedPatientPHI(phiCache);
+      setDecryptedContactInfo(contactCache);
     };
 
-    fetchDecryptedAllergies();
+    fetchDecryptedData();
   }, [open, order, canViewPHI, effectiveRole]);
 
   const handleDownloadPrescription = async (prescriptionUrl: string, patientName: string) => {
@@ -402,24 +473,30 @@ export const OrderDetailsDialog = ({
                           <p className="text-xs text-muted-foreground">Name</p>
                           <p className="text-sm font-medium">{line.patient_name}</p>
                         </div>
-                        {line.patient_email && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Email</p>
-                            <p className="text-sm">{line.patient_email}</p>
-                          </div>
-                        )}
-                        {line.patient_phone && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Phone</p>
-                            <p className="text-sm">{line.patient_phone}</p>
-                          </div>
-                        )}
-                        {line.patient_address && (
-                          <div className="col-span-2">
-                            <p className="text-xs text-muted-foreground">Address</p>
-                            <p className="text-sm">{line.patient_address}</p>
-                          </div>
-                        )}
+                        <div>
+                          <p className="text-xs text-muted-foreground">Email</p>
+                          <p className="text-sm">
+                            {decryptedContactInfo.has(line.id) 
+                              ? (decryptedContactInfo.get(line.id)?.patient_email || "N/A")
+                              : "Loading..."}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Phone</p>
+                          <p className="text-sm">
+                            {decryptedContactInfo.has(line.id) 
+                              ? (decryptedContactInfo.get(line.id)?.patient_phone || "N/A")
+                              : "Loading..."}
+                          </p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground">Address</p>
+                          <p className="text-sm">
+                            {decryptedContactInfo.has(line.id) 
+                              ? (decryptedContactInfo.get(line.id)?.patient_address || "N/A")
+                              : "Loading..."}
+                          </p>
+                        </div>
                         {canViewPHI && line.patient_id && (
                           <div className="col-span-2 pt-2 border-t border-primary/30">
                             <p className="text-xs font-semibold text-primary flex items-center gap-1">

@@ -3142,6 +3142,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_decrypted_order_line_contact: {
+        Args: { p_order_line_id: string }
+        Returns: {
+          patient_address: string
+          patient_email: string
+          patient_phone: string
+        }[]
+      }
       get_decrypted_patient_phi: {
         Args: { p_patient_id: string }
         Returns: {

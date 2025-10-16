@@ -88,8 +88,8 @@ export const ProvidersDataTable = () => {
     enabled: !!effectiveUserId
   });
 
-  // Fetch decrypted credentials for authorized users
-  const { data: decryptedCredentials } = useQuery({
+  // Fetch decrypted credentials for authorized users (parallel for performance)
+  const { data: decryptedCredentials, isLoading: isDecrypting } = useQuery({
     queryKey: ["decrypted-provider-credentials", providers?.map(p => p.id)],
     enabled: !!providers && providers.length > 0 && canViewCredentials,
     queryFn: async () => {
@@ -97,20 +97,29 @@ export const ProvidersDataTable = () => {
       
       const credMap = new Map();
       
-      // Fetch decrypted credentials for each provider
-      for (const provider of providers) {
+      // Fetch all decryptions in parallel for better performance
+      const decryptionPromises = providers.map(async (provider) => {
         try {
           const { data, error } = await supabase.rpc('get_decrypted_provider_credentials', {
             p_provider_id: provider.id
           });
           
           if (!error && data && data.length > 0) {
-            credMap.set(provider.id, data[0]);
+            return { providerId: provider.id, credentials: data[0] };
           }
         } catch (error) {
           console.error(`Error decrypting credentials for provider ${provider.id}:`, error);
         }
-      }
+        return null;
+      });
+
+      const results = await Promise.all(decryptionPromises);
+      
+      results.forEach(result => {
+        if (result) {
+          credMap.set(result.providerId, result.credentials);
+        }
+      });
       
       return credMap;
     }
@@ -227,22 +236,34 @@ export const ProvidersDataTable = () => {
                   <TableCell className="font-medium">{provider.profiles?.full_name || provider.profiles?.name}</TableCell>
                   <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
                   <TableCell>{provider.profiles?.email}</TableCell>
-                  {canViewCredentials && (
+                   {canViewCredentials && (
                     <>
                       <TableCell>
-                        <span className="font-mono text-sm">
-                          {decryptedCredentials?.get(provider.id)?.npi || "N/A"}
-                        </span>
+                        {isDecrypting ? (
+                          <span className="text-xs text-muted-foreground">Decrypting...</span>
+                        ) : (
+                          <span className="font-mono text-sm">
+                            {decryptedCredentials?.get(provider.id)?.npi || "N/A"}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono text-sm">
-                          {decryptedCredentials?.get(provider.id)?.dea || "N/A"}
-                        </span>
+                        {isDecrypting ? (
+                          <span className="text-xs text-muted-foreground">Decrypting...</span>
+                        ) : (
+                          <span className="font-mono text-sm">
+                            {decryptedCredentials?.get(provider.id)?.dea || "N/A"}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono text-sm">
-                          {decryptedCredentials?.get(provider.id)?.license_number || "N/A"}
-                        </span>
+                        {isDecrypting ? (
+                          <span className="text-xs text-muted-foreground">Decrypting...</span>
+                        ) : (
+                          <span className="font-mono text-sm">
+                            {decryptedCredentials?.get(provider.id)?.license_number || "N/A"}
+                          </span>
+                        )}
                       </TableCell>
                     </>
                   )}
