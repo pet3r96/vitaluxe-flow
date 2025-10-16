@@ -62,6 +62,12 @@ serve(async (req) => {
       refills_total = 0
     } = requestData;
 
+    // Normalize helper: convert falsy or [ENCRYPTED] to fallback
+    const norm = (value: any, fallback: string): string => {
+      if (!value || value === '[ENCRYPTED]' || value === 'null') return fallback;
+      return String(value);
+    };
+
     // Fetch and decrypt provider credentials server-side
     const { data: providerData, error: providerError } = await supabase
       .rpc('get_decrypted_provider_credentials', { p_provider_id: provider_id });
@@ -71,10 +77,10 @@ serve(async (req) => {
       throw new Error('Failed to fetch provider credentials');
     }
 
-    // Use decrypted values
-    const provider_npi = providerData[0].npi || 'N/A';
-    const provider_dea = providerData[0].dea || 'N/A';
-    const provider_license = providerData[0].license_number || 'N/A';
+    // Use normalized decrypted values
+    const provider_npi = norm(providerData[0].npi, 'N/A');
+    const provider_dea = norm(providerData[0].dea, 'N/A');
+    const provider_license = norm(providerData[0].license_number, 'N/A');
 
     // Log if credentials are missing for debugging
     if (!providerData[0].npi || !providerData[0].dea || !providerData[0].license_number) {
@@ -93,7 +99,7 @@ serve(async (req) => {
         .rpc('get_decrypted_patient_phi', { p_patient_id: patient_id });
       
       if (!patientError && patientData && patientData.length > 0) {
-        patient_allergies = patientData[0].allergies || 'NKDA';
+        patient_allergies = norm(patientData[0].allergies, 'NKDA');
       }
     }
 
@@ -117,11 +123,30 @@ serve(async (req) => {
     doc.rect(0.5, 0.5, 7.5, 10, 'S');
 
     // Top credentials bar - compact single line with better spacing
+    // Measure text widths to prevent overlap
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(`DEA# ${provider_dea}`, 0.75, 0.75);
-    doc.text(`License # ${provider_license}`, 3.25, 0.75);
-    doc.text(`NPI # ${provider_npi}`, 6.0, 0.75);
+    
+    const deaText = `DEA# ${provider_dea}`;
+    const licenseText = `License # ${provider_license}`;
+    const npiText = `NPI # ${provider_npi}`;
+    
+    const deaWidth = doc.getTextWidth(deaText);
+    const licenseWidth = doc.getTextWidth(licenseText);
+    
+    // Position with proper spacing
+    let xPos = 0.75;
+    doc.text(deaText, xPos, 0.75);
+    xPos += deaWidth + 0.3;
+    
+    // Adjust spacing if needed
+    if (xPos + licenseWidth > 5.5) {
+      xPos = 3.0;
+    }
+    doc.text(licenseText, xPos, 0.75);
+    
+    // NPI on the right
+    doc.text(npiText, 6.0, 0.75);
     doc.line(0.5, 0.85, 8, 0.85); // Line below credentials
 
     // Provider/Practice info (centered)
