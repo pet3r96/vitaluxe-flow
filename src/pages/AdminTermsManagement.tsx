@@ -210,7 +210,7 @@ export default function AdminTermsManagement() {
       </div>
 
       <Tabs defaultValue="editor" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid-cols-1 sm:grid-cols-2">
           <TabsTrigger value="editor">Terms Editor</TabsTrigger>
           <TabsTrigger value="acceptances">User Acceptances</TabsTrigger>
         </TabsList>
