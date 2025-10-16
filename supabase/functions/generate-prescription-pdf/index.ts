@@ -68,26 +68,62 @@ serve(async (req) => {
       return String(value);
     };
 
-    // Fetch and decrypt provider credentials server-side
-    const { data: providerData, error: providerError } = await supabase
-      .rpc('get_decrypted_provider_credentials', { p_provider_id: provider_id });
+    // Fetch provider credentials directly from profiles (no longer encrypted)
+    const { data: providerRecord, error: providerError } = await supabase
+      .from('providers')
+      .select('user_id')
+      .eq('id', provider_id)
+      .single();
 
-    if (providerError || !providerData || providerData.length === 0) {
-      console.error('Failed to fetch provider credentials:', providerError);
+    if (providerError || !providerRecord) {
+      console.error('Failed to fetch provider record:', providerError);
+      throw new Error('Provider not found');
+    }
+
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('npi, dea, license_number')
+      .eq('id', providerRecord.user_id)
+      .single();
+
+    console.log('Provider credentials response:', {
+      profileError,
+      hasData: !!profileData,
+      rawData: profileData
+    });
+
+    if (profileError || !profileData) {
+      console.error('Failed to fetch provider profile:', profileError);
       throw new Error('Failed to fetch provider credentials');
     }
 
-    // Use normalized decrypted values
-    const provider_npi = norm(providerData[0].npi, 'N/A');
-    const provider_dea = norm(providerData[0].dea, 'N/A');
-    const provider_license = norm(providerData[0].license_number, 'N/A');
+    // Log raw values before normalization
+    console.log('Provider credentials (raw):', {
+      npi: profileData.npi,
+      dea: profileData.dea,
+      license_number: profileData.license_number,
+      npi_type: typeof profileData.npi,
+      dea_type: typeof profileData.dea,
+      license_type: typeof profileData.license_number
+    });
+
+    // Use normalized values
+    const provider_npi = norm(profileData.npi, 'N/A');
+    const provider_dea = norm(profileData.dea, 'N/A');
+    const provider_license = norm(profileData.license_number, 'N/A');
+
+    console.log('Normalized provider credentials:', {
+      npi: provider_npi,
+      dea: provider_dea,
+      license: provider_license
+    });
 
     // Log if credentials are missing for debugging
-    if (!providerData[0].npi || !providerData[0].dea || !providerData[0].license_number) {
-      console.warn(`Provider ${provider_id} missing encrypted credentials:`, {
-        npi: !!providerData[0].npi,
-        dea: !!providerData[0].dea,
-        license: !!providerData[0].license_number,
+    if (!profileData.npi || !profileData.dea || !profileData.license_number) {
+      console.warn(`Provider ${provider_id} missing credentials:`, {
+        npi: !!profileData.npi,
+        dea: !!profileData.dea,
+        license: !!profileData.license_number,
         provider_name
       });
     }
