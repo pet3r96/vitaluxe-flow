@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Save, KeyRound } from "lucide-react";
 import { AddressInput } from "@/components/ui/address-input";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
+import { logCredentialAccess } from "@/lib/auditLogger";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Practice name is required").max(100),
@@ -74,9 +75,40 @@ export const PracticeProfileForm = () => {
     enabled: !!effectiveUserId,
   });
 
+  const { data: decryptedCreds, isLoading: isLoadingCreds } = useQuery({
+    queryKey: ["practice-credentials", effectiveUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_decrypted_practice_credentials', {
+        p_practice_id: effectiveUserId
+      });
+
+      if (error) throw error;
+      return data && data.length > 0 ? data[0] : null;
+    },
+    enabled: !!effectiveUserId,
+  });
+
+  // Log credential access
+  useEffect(() => {
+    if (decryptedCreds && effectiveUserId && profile) {
+      logCredentialAccess({
+        profileId: effectiveUserId,
+        profileName: profile.name || 'Unknown',
+        accessedFields: {
+          npi: !!decryptedCreds.npi,
+          dea: false, // DEA not returned by get_decrypted_practice_credentials
+          license: !!decryptedCreds.license_number,
+        },
+        viewerRole: 'doctor',
+        relationship: 'self',
+        componentContext: 'PracticeProfileForm'
+      });
+    }
+  }, [decryptedCreds, effectiveUserId, profile]);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    values: profile ? {
+    values: (profile && decryptedCreds !== undefined) ? {
       name: profile.name || "",
       email: profile.email || "",
       phone: profile.phone || "",
@@ -86,9 +118,9 @@ export const PracticeProfileForm = () => {
         state: profile.address_state || "",
         zip: profile.address_zip || "",
       },
-      practice_npi: profile.practice_npi || "",
-      dea: profile.dea || "",
-      license_number: profile.license_number || "",
+      practice_npi: decryptedCreds?.npi || "",
+      dea: profile.dea || "", // DEA not encrypted for practices, read from profile
+      license_number: decryptedCreds?.license_number || "",
       shipping_address: {
         street: profile.shipping_address_street || "",
         city: profile.shipping_address_city || "",
@@ -179,7 +211,7 @@ export const PracticeProfileForm = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingCreds) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

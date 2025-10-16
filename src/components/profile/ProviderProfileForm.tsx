@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, KeyRound } from "lucide-react";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
+import { logCredentialAccess } from "@/lib/auditLogger";
 
 const providerFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required").max(100),
@@ -53,15 +54,55 @@ export const ProviderProfileForm = () => {
     enabled: !!effectiveUserId,
   });
 
+  const { data: decryptedCreds, isLoading: isLoadingCreds } = useQuery({
+    queryKey: ["provider-credentials", effectiveUserId],
+    queryFn: async () => {
+      // First get the provider record to get the provider.id
+      const { data: providerData } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", effectiveUserId)
+        .maybeSingle();
+      
+      if (!providerData?.id) return null;
+
+      const { data, error } = await supabase.rpc('get_decrypted_provider_credentials', {
+        p_provider_id: providerData.id
+      });
+
+      if (error) throw error;
+      return data && data.length > 0 ? data[0] : null;
+    },
+    enabled: !!effectiveUserId,
+  });
+
+  // Log credential access
+  useEffect(() => {
+    if (decryptedCreds && effectiveUserId && profile) {
+      logCredentialAccess({
+        profileId: effectiveUserId,
+        profileName: profile.full_name || 'Unknown',
+        accessedFields: {
+          npi: !!decryptedCreds.npi,
+          dea: !!decryptedCreds.dea,
+          license: !!decryptedCreds.license_number,
+        },
+        viewerRole: 'provider',
+        relationship: 'self',
+        componentContext: 'ProviderProfileForm'
+      });
+    }
+  }, [decryptedCreds, effectiveUserId, profile]);
+
   const form = useForm<ProviderFormValues>({
     resolver: zodResolver(providerFormSchema),
-    values: profile ? {
+    values: (profile && decryptedCreds !== undefined) ? {
       full_name: profile.full_name || "",
       email: profile.email || "",
       phone: profile.phone || "",
-      npi: profile.npi || "",
-      dea: profile.dea || "",
-      license_number: profile.license_number || "",
+      npi: decryptedCreds?.npi || "",
+      dea: decryptedCreds?.dea || "",
+      license_number: decryptedCreds?.license_number || "",
     } : undefined,
   });
 
@@ -127,7 +168,7 @@ export const ProviderProfileForm = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingCreds) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
