@@ -353,6 +353,28 @@ export const OrdersDataTable = () => {
     return `${labels[status] || status} (${count})`;
   };
 
+  const getPaymentStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      paid: "bg-green-500 text-white",
+      payment_failed: "bg-destructive text-destructive-foreground",
+      pending: "bg-muted text-muted-foreground",
+      refunded: "bg-purple-500 text-white",
+      partially_refunded: "bg-amber-500 text-white",
+    };
+    return colors[status] || "bg-muted";
+  };
+
+  const getPaymentStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      paid: "Approved",
+      payment_failed: "Declined",
+      pending: "Pending",
+      refunded: "Refunded",
+      partially_refunded: "Partial Refund",
+    };
+    return labels[status] || status;
+  };
+
   const handlePrescriptionDownload = async (prescriptionUrl: string, productName: string) => {
     try {
       const response = await fetch(prescriptionUrl);
@@ -425,6 +447,7 @@ export const OrdersDataTable = () => {
               <TableHead>Carrier</TableHead>
               {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
               <TableHead>Status</TableHead>
+              <TableHead>Payment Status</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -432,13 +455,13 @@ export const OrdersDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 12 : 13} className="text-center">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 13 : 14} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 12 : 13} className="text-center text-muted-foreground">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 13 : 14} className="text-center text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
@@ -555,6 +578,11 @@ export const OrdersDataTable = () => {
                     <TableCell>
                       <Badge className={getStatusColor(order.status)}>
                         {order.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getPaymentStatusColor(order.payment_status)}>
+                        {getPaymentStatusLabel(order.payment_status)}
                       </Badge>
                     </TableCell>
                     <TableCell>
