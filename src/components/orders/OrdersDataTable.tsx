@@ -56,7 +56,7 @@ export const OrdersDataTable = () => {
         }
 
         const { data: orderLinesData, error: orderLinesError } = await supabase
-          .from("order_lines_masked" as any)
+          .from("order_lines")
           .select(`
             id,
             order_id,
@@ -92,7 +92,7 @@ export const OrdersDataTable = () => {
             patient_email,
             patient_phone,
             patient_address,
-            prescription_url_indicator,
+            prescription_url,
             custom_dosage,
             custom_sig,
             products(name, product_type),
@@ -497,11 +497,15 @@ export const OrdersDataTable = () => {
                     </TableCell>
                     <TableCell>
                       {effectiveRole === "pharmacy" ? (
-                        // For pharmacies, show indicator only (no download)
+                        // For pharmacies, show Yes/No badge (no download)
                         <div className="space-y-1">
                           {order.order_lines?.map((line: any, idx: number) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {line.prescription_url_indicator || 'N/A'}
+                            <Badge 
+                              key={idx} 
+                              variant={line.prescription_url ? "default" : "outline"} 
+                              className="text-xs"
+                            >
+                              {line.prescription_url ? 'Yes' : 'No'}
                             </Badge>
                           ))}
                         </div>
