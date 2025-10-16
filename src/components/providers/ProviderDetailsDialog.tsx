@@ -31,9 +31,9 @@ export const ProviderDetailsDialog = ({
   const [formData, setFormData] = useState({
     fullName: provider.profiles?.full_name || provider.profiles?.name || "",
     prescriberName: provider.profiles?.full_name || "",
-    npi: provider.profiles?.npi || "",
-    dea: provider.profiles?.dea || "",
-    licenseNumber: provider.profiles?.license_number || "",
+    npi: "",
+    dea: "",
+    licenseNumber: "",
     phone: provider.profiles?.phone || "",
   });
 
@@ -60,6 +60,14 @@ export const ProviderDetailsDialog = ({
 
         if (data && data.length > 0) {
           setDecryptedCreds(data[0]);
+          
+          // Prefill form with decrypted values (or empty if missing/encrypted)
+          setFormData(prev => ({
+            ...prev,
+            npi: (data[0].npi && data[0].npi !== '[ENCRYPTED]') ? data[0].npi : "",
+            dea: (data[0].dea && data[0].dea !== '[ENCRYPTED]') ? data[0].dea : "",
+            licenseNumber: (data[0].license_number && data[0].license_number !== '[ENCRYPTED]') ? data[0].license_number : "",
+          }));
 
           // Log credential access
           const relationship = 
@@ -199,10 +207,16 @@ export const ProviderDetailsDialog = ({
                 <div className="space-y-2">
                   <Label>Provider NPI #</Label>
                   {isEditing && (isPractice || isAdmin) ? (
-                    <Input
-                      value={formData.npi}
-                      onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        value={formData.npi}
+                        onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
+                        placeholder="Enter NPI number"
+                      />
+                      {(!decryptedCreds?.npi || decryptedCreds.npi === '[ENCRYPTED]') && (
+                        <p className="text-xs text-amber-600">⚠️ Credential missing - please enter the real value</p>
+                      )}
+                    </div>
                   ) : (
                     <div className="p-2 bg-muted rounded-md flex items-center gap-2">
                       {isLoadingCreds ? (
@@ -210,7 +224,13 @@ export const ProviderDetailsDialog = ({
                           <Loader2 className="h-3 w-3 animate-spin" />
                           <span className="text-sm text-muted-foreground">Decrypting...</span>
                         </>
-                      ) : decryptedCreds?.npi || "N/A"}
+                      ) : (
+                        <>
+                          {(!decryptedCreds?.npi || decryptedCreds.npi === '[ENCRYPTED]') ? (
+                            <span className="text-muted-foreground italic">Not set</span>
+                          ) : decryptedCreds.npi}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -218,10 +238,16 @@ export const ProviderDetailsDialog = ({
                 <div className="space-y-2">
                   <Label>Provider DEA #</Label>
                   {isEditing && (isPractice || isAdmin) ? (
-                    <Input
-                      value={formData.dea}
-                      onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        value={formData.dea}
+                        onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
+                        placeholder="Enter DEA number"
+                      />
+                      {(!decryptedCreds?.dea || decryptedCreds.dea === '[ENCRYPTED]') && (
+                        <p className="text-xs text-amber-600">⚠️ Credential missing - please enter the real value</p>
+                      )}
+                    </div>
                   ) : (
                     <div className="p-2 bg-muted rounded-md flex items-center gap-2">
                       {isLoadingCreds ? (
@@ -229,7 +255,13 @@ export const ProviderDetailsDialog = ({
                           <Loader2 className="h-3 w-3 animate-spin" />
                           <span className="text-sm text-muted-foreground">Decrypting...</span>
                         </>
-                      ) : decryptedCreds?.dea || "N/A"}
+                      ) : (
+                        <>
+                          {(!decryptedCreds?.dea || decryptedCreds.dea === '[ENCRYPTED]') ? (
+                            <span className="text-muted-foreground italic">Not set</span>
+                          ) : decryptedCreds.dea}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -238,10 +270,16 @@ export const ProviderDetailsDialog = ({
               <div className="space-y-2">
                 <Label>License Number</Label>
                 {isEditing && (isPractice || isAdmin) ? (
-                  <Input
-                    value={formData.licenseNumber}
-                    onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-                  />
+                  <div className="space-y-1">
+                    <Input
+                      value={formData.licenseNumber}
+                      onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                      placeholder="Enter license number"
+                    />
+                    {(!decryptedCreds?.license_number || decryptedCreds.license_number === '[ENCRYPTED]') && (
+                      <p className="text-xs text-amber-600">⚠️ Credential missing - please enter the real value</p>
+                    )}
+                  </div>
                 ) : (
                   <div className="p-2 bg-muted rounded-md flex items-center gap-2">
                     {isLoadingCreds ? (
@@ -249,7 +287,13 @@ export const ProviderDetailsDialog = ({
                         <Loader2 className="h-3 w-3 animate-spin" />
                         <span className="text-sm text-muted-foreground">Decrypting...</span>
                       </>
-                    ) : decryptedCreds?.license_number || "N/A"}
+                    ) : (
+                      <>
+                        {(!decryptedCreds?.license_number || decryptedCreds.license_number === '[ENCRYPTED]') ? (
+                          <span className="text-muted-foreground italic">Not set</span>
+                        ) : decryptedCreds.license_number}
+                      </>
+                    )}
                   </div>
                 )}
               </div>

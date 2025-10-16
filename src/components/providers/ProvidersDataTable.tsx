@@ -243,7 +243,13 @@ export const ProvidersDataTable = () => {
                           <span className="text-xs text-muted-foreground">Decrypting...</span>
                         ) : (
                           <span className="font-mono text-sm">
-                            {decryptedCredentials?.get(provider.id)?.npi || "N/A"}
+                            {(() => {
+                              const npi = decryptedCredentials?.get(provider.id)?.npi;
+                              if (!npi || npi === '[ENCRYPTED]') {
+                                return <span className="text-muted-foreground italic">Not set</span>;
+                              }
+                              return npi;
+                            })()}
                           </span>
                         )}
                       </TableCell>
@@ -252,7 +258,13 @@ export const ProvidersDataTable = () => {
                           <span className="text-xs text-muted-foreground">Decrypting...</span>
                         ) : (
                           <span className="font-mono text-sm">
-                            {decryptedCredentials?.get(provider.id)?.dea || "N/A"}
+                            {(() => {
+                              const dea = decryptedCredentials?.get(provider.id)?.dea;
+                              if (!dea || dea === '[ENCRYPTED]') {
+                                return <span className="text-muted-foreground italic">Not set</span>;
+                              }
+                              return dea;
+                            })()}
                           </span>
                         )}
                       </TableCell>
@@ -261,7 +273,13 @@ export const ProvidersDataTable = () => {
                           <span className="text-xs text-muted-foreground">Decrypting...</span>
                         ) : (
                           <span className="font-mono text-sm">
-                            {decryptedCredentials?.get(provider.id)?.license_number || "N/A"}
+                            {(() => {
+                              const license = decryptedCredentials?.get(provider.id)?.license_number;
+                              if (!license || license === '[ENCRYPTED]') {
+                                return <span className="text-muted-foreground italic">Not set</span>;
+                              }
+                              return license;
+                            })()}
                           </span>
                         )}
                       </TableCell>
