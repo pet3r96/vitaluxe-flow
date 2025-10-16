@@ -82,7 +82,7 @@ serve(async (req) => {
 
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('npi, dea, license_number')
+      .select('npi, dea, license_number, full_name, address_street, address_city, address_state, address_zip')
       .eq('id', providerRecord.user_id)
       .single();
 
@@ -185,13 +185,33 @@ serve(async (req) => {
     doc.text(npiText, 6.0, 0.75);
     doc.line(0.5, 0.85, 8, 0.85); // Line below credentials
 
+    // Helper to check if string is an email
+    const isEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str || '');
+    
+    // Helper to format address from components
+    const formatAddress = (street: string | null, city: string | null, state: string | null, zip: string | null) => {
+      const parts = [street, city, state, zip].filter(p => p && p.trim());
+      return parts.length > 0 ? parts.join(', ') : null;
+    };
+
+    // Determine display values - never show email addresses
+    const validPracticeName = practice_name && !isEmail(practice_name) ? practice_name : null;
+    const validPracticeAddress = practice_address && practice_address !== 'N/A' && practice_address.trim() ? practice_address : null;
+
+    // Fallback to provider data if practice data is invalid
+    const displayName = validPracticeName || profileData.full_name || provider_name;
+    const displayAddress = validPracticeAddress || 
+                          formatAddress(profileData.address_street, profileData.address_city, 
+                                       profileData.address_state, profileData.address_zip) ||
+                          'Address on file';
+
     // Provider/Practice info (centered)
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(provider_name, 4.25, 1.2, { align: 'center' });
+    doc.text(displayName, 4.25, 1.2, { align: 'center' });
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(practice_address, 4.25, 1.5, { align: 'center' });
+    doc.text(displayAddress, 4.25, 1.5, { align: 'center' });
 
     // Patient information section
     doc.setFontSize(11);
