@@ -108,7 +108,7 @@ export const PracticeProfileForm = () => {
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    values: (profile && decryptedCreds !== undefined) ? {
+    values: profile ? {
       name: profile.name || "",
       email: profile.email || "",
       phone: profile.phone || "",
@@ -118,9 +118,9 @@ export const PracticeProfileForm = () => {
         state: profile.address_state || "",
         zip: profile.address_zip || "",
       },
-      npi: decryptedCreds?.npi || "",
-      dea: decryptedCreds?.dea || "",
-      license_number: decryptedCreds?.license_number || "",
+      npi: profile.npi || "",
+      dea: profile.dea || "",
+      license_number: profile.license_number || "",
       shipping_address: {
         street: profile.shipping_address_street || "",
         city: profile.shipping_address_city || "",
@@ -171,7 +171,6 @@ export const PracticeProfileForm = () => {
         description: "Your profile information has been saved successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["practice-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["practice-credentials"] });
     },
     onError: (error: any) => {
       toast({
@@ -212,7 +211,7 @@ export const PracticeProfileForm = () => {
     }
   };
 
-  if (isLoading || isLoadingCreds) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

@@ -91,8 +91,8 @@ export const PatientDialog = ({
           patientId: patient.id,
           patientName: patient.name,
           accessedFields: {
-            allergies: !!patient.allergies && patient.allergies !== '[ENCRYPTED]',
-            notes: !!patient.notes && patient.notes !== '[ENCRYPTED]',
+            allergies: !!patient.allergies,
+            notes: !!patient.notes,
             address: !!patient.address_formatted,
           },
           viewerRole: effectiveRole || 'doctor',

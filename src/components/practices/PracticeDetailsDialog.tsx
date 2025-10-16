@@ -29,7 +29,6 @@ import {
 import { ExternalLink, Copy, Pencil, Check, ChevronsUpDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { logCredentialAccess } from "@/lib/auditLogger";
 
 interface PracticeDetailsDialogProps {
   open: boolean;

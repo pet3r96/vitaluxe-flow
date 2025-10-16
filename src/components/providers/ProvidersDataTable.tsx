@@ -20,7 +20,6 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { logCredentialAccess } from "@/lib/auditLogger";
 
 export const ProvidersDataTable = () => {
   const { effectiveUserId, effectiveRole } = useAuth();
@@ -54,11 +53,11 @@ export const ProvidersDataTable = () => {
         return [];
       }
 
-      // Step 2: Fetch all user profiles for these providers
+      // Step 2: Fetch all user profiles for these providers (include credentials)
       const userIds = providersData.map(p => p.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, name, email, phone, full_name")
+        .select("id, name, email, phone, full_name, npi, dea, license_number")
         .in("id", userIds);
 
       if (profilesError) throw profilesError;
@@ -88,42 +87,7 @@ export const ProvidersDataTable = () => {
     enabled: !!effectiveUserId
   });
 
-  // Fetch decrypted credentials for authorized users (parallel for performance)
-  const { data: decryptedCredentials, isLoading: isDecrypting } = useQuery({
-    queryKey: ["decrypted-provider-credentials", providers?.map(p => p.id)],
-    enabled: !!providers && providers.length > 0 && canViewCredentials,
-    queryFn: async () => {
-      if (!providers || !canViewCredentials) return new Map();
-      
-      const credMap = new Map();
-      
-      // Fetch all decryptions in parallel for better performance
-      const decryptionPromises = providers.map(async (provider) => {
-        try {
-          const { data, error } = await supabase.rpc('get_decrypted_provider_credentials', {
-            p_provider_id: provider.id
-          });
-          
-          if (!error && data && data.length > 0) {
-            return { providerId: provider.id, credentials: data[0] };
-          }
-        } catch (error) {
-          console.error(`Error decrypting credentials for provider ${provider.id}:`, error);
-        }
-        return null;
-      });
-
-      const results = await Promise.all(decryptionPromises);
-      
-      results.forEach(result => {
-        if (result) {
-          credMap.set(result.providerId, result.credentials);
-        }
-      });
-      
-      return credMap;
-    }
-  });
+  // No longer need decryption - credentials stored in profiles table
 
   const toggleStatus = async (providerId: string, currentStatus: boolean) => {
     const { data, error } = await supabase.functions.invoke('manage-provider-status', {
@@ -162,31 +126,7 @@ export const ProvidersDataTable = () => {
 
   const paginatedProviders = filteredProviders?.slice(startIndex, endIndex);
 
-  // Log credential access when providers with decrypted credentials are displayed
-  useEffect(() => {
-    if (paginatedProviders && paginatedProviders.length > 0 && canViewCredentials && decryptedCredentials) {
-      paginatedProviders.forEach(provider => {
-        const creds = decryptedCredentials.get(provider.id);
-        if (creds && (creds.npi || creds.dea || creds.license_number)) {
-          const isPracticeView = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
-          const isOwnProvider = effectiveUserId === provider.user_id;
-          
-          logCredentialAccess({
-            profileId: provider.user_id,
-            profileName: provider.profiles?.full_name || provider.profiles?.name || 'Unknown',
-            accessedFields: {
-              npi: !!creds.npi,
-              dea: !!creds.dea,
-              license: !!creds.license_number,
-            },
-            viewerRole: effectiveRole || 'unknown',
-            relationship: isOwnProvider ? 'self' : isPracticeView ? 'practice_admin' : 'admin',
-            componentContext: 'ProvidersDataTable'
-          });
-        }
-      });
-    }
-  }, [paginatedProviders, effectiveRole, effectiveUserId, canViewCredentials, decryptedCredentials]);
+  // No longer need credential access logging - encryption removed
 
   if (isLoading) {
     return <div className="text-center py-12 text-muted-foreground">Loading providers...</div>;
@@ -239,49 +179,19 @@ export const ProvidersDataTable = () => {
                    {canViewCredentials && (
                     <>
                       <TableCell>
-                        {isDecrypting ? (
-                          <span className="text-xs text-muted-foreground">Decrypting...</span>
-                        ) : (
-                          <span className="font-mono text-sm">
-                            {(() => {
-                              const npi = decryptedCredentials?.get(provider.id)?.npi;
-                              if (!npi || npi === '[ENCRYPTED]') {
-                                return <span className="text-muted-foreground italic">Not set</span>;
-                              }
-                              return npi;
-                            })()}
-                          </span>
-                        )}
+                        <span className="font-mono text-sm">
+                          {provider.profiles?.npi || <span className="text-muted-foreground italic">Not set</span>}
+                        </span>
                       </TableCell>
                       <TableCell>
-                        {isDecrypting ? (
-                          <span className="text-xs text-muted-foreground">Decrypting...</span>
-                        ) : (
-                          <span className="font-mono text-sm">
-                            {(() => {
-                              const dea = decryptedCredentials?.get(provider.id)?.dea;
-                              if (!dea || dea === '[ENCRYPTED]') {
-                                return <span className="text-muted-foreground italic">Not set</span>;
-                              }
-                              return dea;
-                            })()}
-                          </span>
-                        )}
+                        <span className="font-mono text-sm">
+                          {provider.profiles?.dea || <span className="text-muted-foreground italic">Not set</span>}
+                        </span>
                       </TableCell>
                       <TableCell>
-                        {isDecrypting ? (
-                          <span className="text-xs text-muted-foreground">Decrypting...</span>
-                        ) : (
-                          <span className="font-mono text-sm">
-                            {(() => {
-                              const license = decryptedCredentials?.get(provider.id)?.license_number;
-                              if (!license || license === '[ENCRYPTED]') {
-                                return <span className="text-muted-foreground italic">Not set</span>;
-                              }
-                              return license;
-                            })()}
-                          </span>
-                        )}
+                        <span className="font-mono text-sm">
+                          {provider.profiles?.license_number || <span className="text-muted-foreground italic">Not set</span>}
+                        </span>
                       </TableCell>
                     </>
                   )}

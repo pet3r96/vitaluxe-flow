@@ -20,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, KeyRound } from "lucide-react";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
-import { logCredentialAccess } from "@/lib/auditLogger";
 
 const providerFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required").max(100),
@@ -96,13 +95,13 @@ export const ProviderProfileForm = () => {
 
   const form = useForm<ProviderFormValues>({
     resolver: zodResolver(providerFormSchema),
-    values: (profile && decryptedCreds !== undefined) ? {
+    values: profile ? {
       full_name: profile.full_name || "",
       email: profile.email || "",
       phone: profile.phone || "",
-      npi: decryptedCreds?.npi || "",
-      dea: decryptedCreds?.dea || "",
-      license_number: decryptedCreds?.license_number || "",
+      npi: profile.npi || "",
+      dea: profile.dea || "",
+      license_number: profile.license_number || "",
     } : undefined,
   });
 
@@ -168,7 +167,7 @@ export const ProviderProfileForm = () => {
     }
   };
 
-  if (isLoading || isLoadingCreds) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

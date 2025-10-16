@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { formatPhoneNumber } from "@/lib/validators";
-import { logCredentialAccess } from "@/lib/auditLogger";
 
 export const PracticesDataTable = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -64,33 +63,7 @@ export const PracticesDataTable = () => {
     },
   });
 
-  // Fetch decrypted credentials for authorized users
-  const { data: decryptedCredentials } = useQuery({
-    queryKey: ["decrypted-practice-credentials", practices?.map(p => p.id)],
-    enabled: !!practices && practices.length > 0 && canViewCredentials,
-    queryFn: async () => {
-      if (!practices || !canViewCredentials) return new Map();
-      
-      const credMap = new Map();
-      
-      // Fetch decrypted credentials for each practice
-      for (const practice of practices) {
-        try {
-          const { data, error } = await supabase.rpc('get_decrypted_practice_credentials', {
-            p_practice_id: practice.id
-          });
-          
-          if (!error && data && data.length > 0) {
-            credMap.set(practice.id, data[0]);
-          }
-        } catch (error) {
-          console.error(`Error decrypting credentials for practice ${practice.id}:`, error);
-        }
-      }
-      
-      return credMap;
-    }
-  });
+  // No longer need decryption - credentials stored in profiles table
 
   const { data: providerCounts } = useQuery({
     queryKey: ["provider-counts"],
@@ -284,28 +257,7 @@ export const PracticesDataTable = () => {
 
   const paginatedPractices = filteredPractices?.slice(startIndex, endIndex);
 
-  // Log credential access when practices with decrypted credentials are displayed
-  useEffect(() => {
-    if (paginatedPractices && paginatedPractices.length > 0 && canViewCredentials && decryptedCredentials) {
-      paginatedPractices.forEach(practice => {
-        const creds = decryptedCredentials.get(practice.id);
-        if (creds && (creds.npi || creds.license_number)) {
-          logCredentialAccess({
-            profileId: practice.id,
-            profileName: practice.name,
-            accessedFields: {
-              npi: !!creds.npi,
-              license: !!creds.license_number,
-              dea: false,
-            },
-            viewerRole: effectiveRole || 'admin',
-            relationship: effectiveUserId === practice.id ? 'self' : 'admin',
-            componentContext: 'PracticesDataTable'
-          });
-        }
-      });
-    }
-  }, [paginatedPractices, effectiveRole, effectiveUserId, canViewCredentials, decryptedCredentials]);
+  // No longer need credential access logging - encryption removed
 
   return (
     <div className="space-y-4">
@@ -366,12 +318,12 @@ export const PracticesDataTable = () => {
                     <>
                       <TableCell>
                         <span className="font-mono text-sm">
-                          {decryptedCredentials?.get(practice.id)?.npi || "-"}
+                          {practice.npi || "-"}
                         </span>
                       </TableCell>
                       <TableCell>
                         <span className="font-mono text-sm">
-                          {decryptedCredentials?.get(practice.id)?.license_number || "-"}
+                          {practice.license_number || "-"}
                         </span>
                       </TableCell>
                     </>

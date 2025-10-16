@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Edit2, Save, X, Loader2 } from "lucide-react";
-import { logCredentialAccess } from "@/lib/auditLogger";
 
 interface ProviderDetailsDialogProps {
   open: boolean;
@@ -26,14 +25,12 @@ export const ProviderDetailsDialog = ({
   const { effectiveRole, effectiveUserId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [decryptedCreds, setDecryptedCreds] = useState<{ npi?: string; dea?: string; license_number?: string } | null>(null);
-  const [isLoadingCreds, setIsLoadingCreds] = useState(false);
   const [formData, setFormData] = useState({
     fullName: provider.profiles?.full_name || provider.profiles?.name || "",
     prescriberName: provider.profiles?.full_name || "",
-    npi: "",
-    dea: "",
-    licenseNumber: "",
+    npi: provider.profiles?.npi || "",
+    dea: provider.profiles?.dea || "",
+    licenseNumber: provider.profiles?.license_number || "",
     phone: provider.profiles?.phone || "",
   });
 
@@ -41,65 +38,6 @@ export const ProviderDetailsDialog = ({
   const isOwnProvider = effectiveRole === "provider" && effectiveUserId === provider.user_id;
   const isAdmin = effectiveRole === "admin";
   const canViewCredentials = ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole || '');
-
-  // Fetch and decrypt provider credentials when dialog opens (for authorized roles)
-  useEffect(() => {
-    const fetchDecryptedCredentials = async () => {
-      if (!open || !provider?.id || !canViewCredentials) {
-        setDecryptedCreds(null);
-        return;
-      }
-
-      setIsLoadingCreds(true);
-      try {
-        const { data, error } = await supabase.rpc('get_decrypted_provider_credentials', {
-          p_provider_id: provider.id
-        });
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          setDecryptedCreds(data[0]);
-          
-          // Prefill form with decrypted values (or empty if missing/encrypted)
-          setFormData(prev => ({
-            ...prev,
-            npi: (data[0].npi && data[0].npi !== '[ENCRYPTED]') ? data[0].npi : "",
-            dea: (data[0].dea && data[0].dea !== '[ENCRYPTED]') ? data[0].dea : "",
-            licenseNumber: (data[0].license_number && data[0].license_number !== '[ENCRYPTED]') ? data[0].license_number : "",
-          }));
-
-          // Log credential access
-          const relationship = 
-            isOwnProvider ? 'self' :
-            isAdmin ? 'admin' :
-            isPractice ? 'practice_admin' :
-            effectiveRole === 'topline' ? 'topline' :
-            'downline';
-
-          await logCredentialAccess({
-            profileId: provider.user_id,
-            profileName: provider.profiles?.full_name || provider.profiles?.name || 'Unknown',
-            accessedFields: {
-              npi: !!data[0].npi,
-              dea: !!data[0].dea,
-              license: !!data[0].license_number,
-            },
-            viewerRole: effectiveRole || 'unknown',
-            relationship,
-            componentContext: 'ProviderDetailsDialog'
-          });
-        }
-      } catch (error) {
-        console.error('Failed to decrypt provider credentials:', error);
-        setDecryptedCreds(null);
-      } finally {
-        setIsLoadingCreds(false);
-      }
-    };
-
-    fetchDecryptedCredentials();
-  }, [open, provider?.id, canViewCredentials, effectiveRole, isOwnProvider, isPractice, isAdmin]);
 
   const handleSave = async () => {
     setLoading(true);
