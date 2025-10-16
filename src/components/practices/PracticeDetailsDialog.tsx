@@ -29,6 +29,18 @@ import {
 import { ExternalLink, Copy, Pencil, Check, ChevronsUpDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn, sanitizeEncrypted } from "@/lib/utils";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface PracticeDetailsDialogProps {
   open: boolean;
@@ -36,6 +48,18 @@ interface PracticeDetailsDialogProps {
   provider: any;
   onSuccess: () => void;
 }
+
+const practiceEditSchema = z.object({
+  name: z.string().min(1, "Practice name is required").max(100),
+  phone: phoneSchema,
+  address: z.string().optional(),
+  npi: npiSchema,
+  license_number: z.string().optional(),
+  dea: deaSchema,
+  selectedRepId: z.string().optional(),
+});
+
+type PracticeEditFormValues = z.infer<typeof practiceEditSchema>;
 
 export const PracticeDetailsDialog = ({
   open,
@@ -46,15 +70,18 @@ export const PracticeDetailsDialog = ({
   const { effectiveRole, effectiveUserId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [repComboboxOpen, setRepComboboxOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    npi: "",
-    license_number: "",
-    dea: "",
-    selectedRepId: "",
+  
+  const form = useForm<PracticeEditFormValues>({
+    resolver: zodResolver(practiceEditSchema),
+    defaultValues: {
+      name: "",
+      phone: "",
+      address: "",
+      npi: "",
+      license_number: "",
+      dea: "",
+      selectedRepId: "",
+    },
   });
 
 
@@ -158,31 +185,30 @@ export const PracticeDetailsDialog = ({
   // Initialize form data when provider changes
   useEffect(() => {
     if (provider) {
-      setFormData({
+      form.reset({
         name: provider.name || "",
-        email: provider.email || "",
-        phone: provider.phone || "",
+        phone: sanitizeEncrypted(provider.phone) || "",
         address: provider.address || "",
-        npi: sanitizeEncrypted(provider.npi),
-        license_number: sanitizeEncrypted(provider.license_number),
-        dea: sanitizeEncrypted(provider.dea),
+        npi: sanitizeEncrypted(provider.npi) || "",
+        license_number: sanitizeEncrypted(provider.license_number) || "",
+        dea: sanitizeEncrypted(provider.dea) || "",
         selectedRepId: provider.linked_topline_id || "",
       });
     }
-  }, [provider]);
+  }, [provider, form]);
 
-  const handleSave = async () => {
+  const handleSave = async (values: PracticeEditFormValues) => {
     try {
       const { error } = await supabase
         .from("profiles")
         .update({
-          name: formData.name,
-          phone: formData.phone,
-          address: formData.address,
-          npi: formData.npi,
-          license_number: formData.license_number,
-          dea: formData.dea,
-          linked_topline_id: formData.selectedRepId || null,
+          name: values.name,
+          phone: values.phone || null,
+          address: values.address || null,
+          npi: values.npi || null,
+          license_number: values.license_number || null,
+          dea: values.dea || null,
+          linked_topline_id: values.selectedRepId || null,
         })
         .eq("id", provider.id);
 
@@ -190,6 +216,7 @@ export const PracticeDetailsDialog = ({
 
       toast.success("Practice updated successfully");
       setIsEditing(false);
+      form.reset(values);
       onSuccess();
     } catch (error) {
       toast.error("Failed to update practice");
@@ -299,11 +326,18 @@ export const PracticeDetailsDialog = ({
               )}
               {isAdmin && isEditing && (
                 <>
-                  <Button size="sm" onClick={handleSave}>
+                  <Button 
+                    size="sm" 
+                    onClick={form.handleSubmit(handleSave)}
+                    disabled={!form.formState.isValid || form.formState.isSubmitting}
+                  >
                     <Check className="h-4 w-4 mr-2" />
                     Save
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    setIsEditing(false);
+                    form.reset();
+                  }}>
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
@@ -313,25 +347,36 @@ export const PracticeDetailsDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Name</p>
-                  {isEditing ? (
-                    <Input
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        <Form {...form}>
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-muted-foreground">Name</FormLabel>
+                          {isEditing ? (
+                            <>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </>
+                          ) : (
+                            <p className="font-medium">{provider.name}</p>
+                          )}
+                        </FormItem>
+                      )}
                     />
-                  ) : (
-                    <p className="font-medium">{provider.name}</p>
-                  )}
-                </div>
+                  </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
                   <p className="font-medium">{provider.email}</p>
@@ -354,59 +399,98 @@ export const PracticeDetailsDialog = ({
             <CardContent className="space-y-2">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">NPI Number</p>
-                  {isEditing ? (
-                    <Input
-                      value={formData.npi}
-                      onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p className="font-mono font-medium">{sanitizeEncrypted(provider.npi) || "-"}</p>
-                      {sanitizeEncrypted(provider.npi) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(provider.npi, "NPI")}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="npi"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-muted-foreground">NPI Number</FormLabel>
+                        {isEditing ? (
+                          <>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="10 digits"
+                                maxLength={10}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <p className="font-mono font-medium">{sanitizeEncrypted(provider.npi) || "-"}</p>
+                            {sanitizeEncrypted(provider.npi) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(provider.npi, "NPI")}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">License Number</p>
-                  {isEditing ? (
-                    <Input
-                      value={formData.license_number}
-                      onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p className="font-mono font-medium">{sanitizeEncrypted(provider.license_number) || "-"}</p>
-                      {sanitizeEncrypted(provider.license_number) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(provider.license_number, "License")}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="license_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-muted-foreground">License Number</FormLabel>
+                        {isEditing ? (
+                          <>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <p className="font-mono font-medium">{sanitizeEncrypted(provider.license_number) || "-"}</p>
+                            {sanitizeEncrypted(provider.license_number) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(provider.license_number, "License")}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">DEA Number</p>
-                  {isEditing ? (
-                    <Input
-                      value={formData.dea}
-                      onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
-                    />
-                  ) : (
-                    <p className="font-mono font-medium">{sanitizeEncrypted(provider.dea) || "-"}</p>
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="dea"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-muted-foreground">DEA Number</FormLabel>
+                        {isEditing ? (
+                          <>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="XX1234567"
+                                maxLength={9}
+                                style={{ textTransform: 'uppercase' }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </>
+                        ) : (
+                          <p className="font-mono font-medium">{sanitizeEncrypted(provider.dea) || "-"}</p>
+                        )}
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -420,97 +504,129 @@ export const PracticeDetailsDialog = ({
             <CardContent className="space-y-2">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
-                  {isEditing ? (
-                    <Input
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
-                  ) : (
-                    <p className="font-medium">{provider.phone || "-"}</p>
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-muted-foreground">Phone</FormLabel>
+                        {isEditing ? (
+                          <>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="10 digits (no formatting)"
+                                maxLength={10}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </>
+                        ) : (
+                          <p className="font-medium">{provider.phone || "-"}</p>
+                        )}
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Address</p>
-                  {isEditing ? (
-                    <Input
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    />
-                  ) : (
-                    <p className="font-medium">{provider.address || "-"}</p>
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-muted-foreground">Address</FormLabel>
+                        {isEditing ? (
+                          <>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </>
+                        ) : (
+                          <p className="font-medium">{provider.address || "-"}</p>
+                        )}
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 {isAdmin && (
                   <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Assigned Representative (Optional)</p>
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <Popover open={repComboboxOpen} onOpenChange={setRepComboboxOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              size="sm"
-                              aria-expanded={repComboboxOpen}
-                              className="w-full justify-between"
-                            >
-                              {formData.selectedRepId
-                                ? allReps?.find((rep) => rep.id === formData.selectedRepId)?.name
-                                : "Select representative (optional)..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0" align="start">
-                            <Command>
-                              <CommandInput placeholder="Search reps..." />
-                              <CommandList>
-                                <CommandEmpty>No representative found.</CommandEmpty>
-                                <CommandGroup>
-                                  {allReps?.map((rep) => (
-                                    <CommandItem
-                                      key={rep.id}
-                                      value={`${rep.name} ${rep.email}`}
-                                      onSelect={() => {
-                                        setFormData({ ...formData, selectedRepId: rep.id });
-                                        setRepComboboxOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          formData.selectedRepId === rep.id ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      <div className="flex flex-col">
-                                        <span>{rep.name}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {rep.email} • {rep.user_roles[0].role}
-                                        </span>
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                        {formData.selectedRepId && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setFormData({ ...formData, selectedRepId: "" })}
-                          >
-                            Clear selection
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="font-medium">
-                        {assignedRep ? `${assignedRep.name} (${assignedRep.user_roles[0].role})` : "None (Admin managed)"}
-                      </p>
-                    )}
+                    <FormField
+                      control={form.control}
+                      name="selectedRepId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-muted-foreground">Assigned Representative (Optional)</FormLabel>
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <Popover open={repComboboxOpen} onOpenChange={setRepComboboxOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    size="sm"
+                                    aria-expanded={repComboboxOpen}
+                                    className="w-full justify-between"
+                                  >
+                                    {field.value
+                                      ? allReps?.find((rep) => rep.id === field.value)?.name
+                                      : "Select representative (optional)..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0" align="start">
+                                  <Command>
+                                    <CommandInput placeholder="Search reps..." />
+                                    <CommandList>
+                                      <CommandEmpty>No representative found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {allReps?.map((rep) => (
+                                          <CommandItem
+                                            key={rep.id}
+                                            value={`${rep.name} ${rep.email}`}
+                                            onSelect={() => {
+                                              field.onChange(rep.id);
+                                              setRepComboboxOpen(false);
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                field.value === rep.id ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div className="flex flex-col">
+                                              <span>{rep.name}</span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {rep.email} • {rep.user_roles[0].role}
+                                              </span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                               {field.value && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => field.onChange("")}
+                                >
+                                  Clear selection
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="font-medium">
+                              {assignedRep ? `${assignedRep.name} (${assignedRep.user_roles[0].role})` : "None (Admin managed)"}
+                            </p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 )}
               </div>
@@ -629,6 +745,7 @@ export const PracticeDetailsDialog = ({
             </Card>
           )}
         </div>
+        </Form>
       </DialogContent>
     </Dialog>
   );
