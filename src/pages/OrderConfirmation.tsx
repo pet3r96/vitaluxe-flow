@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck, CreditCard, Building2, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck, CreditCard, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -17,7 +17,6 @@ import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PaymentRetryDialog } from "@/components/orders/PaymentRetryDialog";
 import { AddCreditCardDialog } from "@/components/profile/AddCreditCardDialog";
-import { AddBankAccountDialog } from "@/components/profile/AddBankAccountDialog";
 import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
 
@@ -45,7 +44,6 @@ export default function OrderConfirmation() {
   const [paymentErrors, setPaymentErrors] = useState<any[]>([]);
   const [failedOrderIds, setFailedOrderIds] = useState<string[]>([]);
   const [showAddCardDialog, setShowAddCardDialog] = useState(false);
-  const [showAddBankDialog, setShowAddBankDialog] = useState(false);
   
   // Get discount from navigation state - use useState to persist during async operations
   const location = useLocation();
@@ -109,7 +107,7 @@ export default function OrderConfirmation() {
     enabled: !!effectiveUserId && hasPracticeOrder,
   });
 
-  // Fetch payment methods
+  // Fetch payment methods (credit cards only)
   const { data: paymentMethods } = useQuery({
     queryKey: ["payment-methods", effectiveUserId],
     queryFn: async () => {
@@ -117,6 +115,7 @@ export default function OrderConfirmation() {
         .from("practice_payment_methods")
         .select("*")
         .eq("practice_id", effectiveUserId)
+        .eq("payment_type", "credit_card")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
 
@@ -1044,41 +1043,21 @@ export default function OrderConfirmation() {
                   >
                     <RadioGroupItem value={method.id} id={method.id} />
                     <Label htmlFor={method.id} className="flex-1 cursor-pointer flex items-center gap-3">
-                      {method.payment_type === 'credit_card' ? (
-                        <CreditCard className="h-5 w-5 text-muted-foreground" />
-                      ) : (
-                        <Building2 className="h-5 w-5 text-muted-foreground" />
-                      )}
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
                       <div className="flex-1">
-                        {method.payment_type === 'credit_card' ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">
-                              {method.card_type} ••••{method.card_last_five}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {method.card_type} ••••{method.card_last_five}
+                          </span>
+                          {method.card_expiry && (
+                            <span className="text-sm text-muted-foreground">
+                              Exp: {method.card_expiry}
                             </span>
-                            {method.card_expiry && (
-                              <span className="text-sm text-muted-foreground">
-                                Exp: {method.card_expiry}
-                              </span>
-                            )}
-                            {method.is_default && (
-                              <Badge variant="secondary" className="text-xs">Default</Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">
-                              {method.bank_name || 'Bank Account'} ••••{method.account_last_five}
-                            </span>
-                            {method.account_type && (
-                              <span className="text-sm text-muted-foreground capitalize">
-                                {method.account_type}
-                              </span>
-                            )}
-                            {method.is_default && (
-                              <Badge variant="secondary" className="text-xs">Default</Badge>
-                            )}
-                          </div>
-                        )}
+                          )}
+                          {method.is_default && (
+                            <Badge variant="secondary" className="text-xs">Default</Badge>
+                          )}
+                        </div>
                       </div>
                     </Label>
                   </div>
@@ -1097,15 +1076,6 @@ export default function OrderConfirmation() {
                   <CreditCard className="h-4 w-4 mr-2" />
                   Add Card
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAddBankDialog(true)}
-                  className="flex-1"
-                >
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Add Bank
-                </Button>
               </div>
             </>
           ) : (
@@ -1119,16 +1089,10 @@ export default function OrderConfirmation() {
                 <p className="font-medium text-foreground mb-1">No payment methods added</p>
                 <p className="text-sm text-muted-foreground">Add a payment method to continue</p>
               </div>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={() => setShowAddCardDialog(true)}>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Add Credit Card
-                </Button>
-                <Button variant="outline" onClick={() => setShowAddBankDialog(true)}>
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Add Bank Account
-                </Button>
-              </div>
+              <Button onClick={() => setShowAddCardDialog(true)}>
+                <CreditCard className="h-4 w-4 mr-2" />
+                Add Credit Card
+              </Button>
             </div>
           )}
         </CardContent>
@@ -1236,21 +1200,6 @@ export default function OrderConfirmation() {
         practiceId={effectiveUserId}
       />
 
-      <AddBankAccountDialog
-        open={showAddBankDialog}
-        onOpenChange={setShowAddBankDialog}
-        defaultBillingAddress={
-          providerProfile
-            ? {
-                street: providerProfile.shipping_address_street,
-                city: providerProfile.shipping_address_city,
-                state: providerProfile.shipping_address_state,
-                zip: providerProfile.shipping_address_zip,
-              }
-            : undefined
-        }
-        practiceId={effectiveUserId}
-      />
     </div>
   );
 }
