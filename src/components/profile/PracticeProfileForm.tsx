@@ -29,7 +29,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Save, KeyRound } from "lucide-react";
 import { AddressInput } from "@/components/ui/address-input";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
-import { logCredentialAccess } from "@/lib/auditLogger";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Practice name is required").max(100),
@@ -75,36 +74,6 @@ export const PracticeProfileForm = () => {
     enabled: !!effectiveUserId,
   });
 
-  const { data: decryptedCreds, isLoading: isLoadingCreds } = useQuery({
-    queryKey: ["practice-credentials", effectiveUserId],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_decrypted_practice_credentials', {
-        p_practice_id: effectiveUserId
-      });
-
-      if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
-    },
-    enabled: !!effectiveUserId,
-  });
-
-  // Log credential access
-  useEffect(() => {
-    if (decryptedCreds && effectiveUserId && profile) {
-      logCredentialAccess({
-        profileId: effectiveUserId,
-        profileName: profile.name || 'Unknown',
-      accessedFields: {
-        npi: !!decryptedCreds.npi,
-        dea: !!decryptedCreds.dea,
-        license: !!decryptedCreds.license_number,
-      },
-        viewerRole: 'doctor',
-        relationship: 'self',
-        componentContext: 'PracticeProfileForm'
-      });
-    }
-  }, [decryptedCreds, effectiveUserId, profile]);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),

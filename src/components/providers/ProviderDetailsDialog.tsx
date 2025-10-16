@@ -156,24 +156,10 @@ export const ProviderDetailsDialog = ({
                         }}
                         placeholder="1234567890"
                       />
-                      {(!decryptedCreds?.npi || decryptedCreds.npi === '[ENCRYPTED]') && (
-                        <p className="text-xs text-amber-600">⚠️ Credential missing - please enter the real value</p>
-                      )}
                     </div>
                   ) : (
-                    <div className="p-2 bg-muted rounded-md flex items-center gap-2">
-                      {isLoadingCreds ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="text-sm text-muted-foreground">Decrypting...</span>
-                        </>
-                      ) : (
-                        <>
-                          {(!decryptedCreds?.npi || decryptedCreds.npi === '[ENCRYPTED]') ? (
-                            <span className="text-muted-foreground italic">Not set</span>
-                          ) : decryptedCreds.npi}
-                        </>
-                      )}
+                    <div className="p-2 bg-muted rounded-md">
+                      {provider.profiles?.npi || "Not set"}
                     </div>
                   )}
                 </div>
@@ -200,24 +186,10 @@ export const ProviderDetailsDialog = ({
                         }}
                         placeholder="AB1234567"
                       />
-                      {(!decryptedCreds?.dea || decryptedCreds.dea === '[ENCRYPTED]') && (
-                        <p className="text-xs text-amber-600">⚠️ Credential missing - please enter the real value</p>
-                      )}
                     </div>
                   ) : (
-                    <div className="p-2 bg-muted rounded-md flex items-center gap-2">
-                      {isLoadingCreds ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="text-sm text-muted-foreground">Decrypting...</span>
-                        </>
-                      ) : (
-                        <>
-                          {(!decryptedCreds?.dea || decryptedCreds.dea === '[ENCRYPTED]') ? (
-                            <span className="text-muted-foreground italic">Not set</span>
-                          ) : decryptedCreds.dea}
-                        </>
-                      )}
+                    <div className="p-2 bg-muted rounded-md">
+                      {provider.profiles?.dea || "Not set"}
                     </div>
                   )}
                 </div>
@@ -232,24 +204,10 @@ export const ProviderDetailsDialog = ({
                       onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
                       placeholder="Enter license number"
                     />
-                    {(!decryptedCreds?.license_number || decryptedCreds.license_number === '[ENCRYPTED]') && (
-                      <p className="text-xs text-amber-600">⚠️ Credential missing - please enter the real value</p>
-                    )}
                   </div>
                 ) : (
-                  <div className="p-2 bg-muted rounded-md flex items-center gap-2">
-                    {isLoadingCreds ? (
-                      <>
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span className="text-sm text-muted-foreground">Decrypting...</span>
-                      </>
-                    ) : (
-                      <>
-                        {(!decryptedCreds?.license_number || decryptedCreds.license_number === '[ENCRYPTED]') ? (
-                          <span className="text-muted-foreground italic">Not set</span>
-                        ) : decryptedCreds.license_number}
-                      </>
-                    )}
+                  <div className="p-2 bg-muted rounded-md">
+                    {provider.profiles?.license_number || "Not set"}
                   </div>
                 )}
               </div>

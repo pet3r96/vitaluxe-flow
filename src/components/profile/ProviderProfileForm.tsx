@@ -53,45 +53,6 @@ export const ProviderProfileForm = () => {
     enabled: !!effectiveUserId,
   });
 
-  const { data: decryptedCreds, isLoading: isLoadingCreds } = useQuery({
-    queryKey: ["provider-credentials", effectiveUserId],
-    queryFn: async () => {
-      // First get the provider record to get the provider.id
-      const { data: providerData } = await supabase
-        .from("providers")
-        .select("id")
-        .eq("user_id", effectiveUserId)
-        .maybeSingle();
-      
-      if (!providerData?.id) return null;
-
-      const { data, error } = await supabase.rpc('get_decrypted_provider_credentials', {
-        p_provider_id: providerData.id
-      });
-
-      if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
-    },
-    enabled: !!effectiveUserId,
-  });
-
-  // Log credential access
-  useEffect(() => {
-    if (decryptedCreds && effectiveUserId && profile) {
-      logCredentialAccess({
-        profileId: effectiveUserId,
-        profileName: profile.full_name || 'Unknown',
-        accessedFields: {
-          npi: !!decryptedCreds.npi,
-          dea: !!decryptedCreds.dea,
-          license: !!decryptedCreds.license_number,
-        },
-        viewerRole: 'provider',
-        relationship: 'self',
-        componentContext: 'ProviderProfileForm'
-      });
-    }
-  }, [decryptedCreds, effectiveUserId, profile]);
 
   const form = useForm<ProviderFormValues>({
     resolver: zodResolver(providerFormSchema),
