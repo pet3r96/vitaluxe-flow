@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tokenizeCard, detectCardType } from "@/lib/authorizenet-acceptjs";
 import { BillingAddress } from "@/types/payment";
+import { AddressInput } from "@/components/ui/address-input";
 
 interface AddCreditCardDialogProps {
   open: boolean;
@@ -32,7 +33,12 @@ export const AddCreditCardDialog = ({
   const [expiryYear, setExpiryYear] = useState("");
   const [cvv, setCvv] = useState("");
   const [cardholderName, setCardholderName] = useState("");
-  const [billingAddress, setBillingAddress] = useState<BillingAddress>({
+  const [billingAddress, setBillingAddress] = useState<BillingAddress & {
+    formatted?: string;
+    status?: string;
+    verified_at?: string;
+    source?: string;
+  }>({
     street: defaultBillingAddress?.street || "",
     city: defaultBillingAddress?.city || "",
     state: defaultBillingAddress?.state || "",
@@ -101,6 +107,19 @@ export const AddCreditCardDialog = ({
     setExpiryYear("");
     setCvv("");
     setCardholderName("");
+  };
+
+  const handleAddressChange = (address: any) => {
+    setBillingAddress({
+      street: address.street || "",
+      city: address.city || "",
+      state: address.state || "",
+      zip: address.zip || "",
+      formatted: address.formatted,
+      status: address.status,
+      verified_at: address.verified_at,
+      source: address.source,
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -188,48 +207,13 @@ export const AddCreditCardDialog = ({
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="billingStreet">Billing Address</Label>
-            <Input
-              id="billingStreet"
-              placeholder="123 Main St"
-              value={billingAddress.street}
-              onChange={(e) => setBillingAddress({...billingAddress, street: e.target.value})}
-              required
-            />
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="billingCity">City</Label>
-              <Input
-                id="billingCity"
-                value={billingAddress.city}
-                onChange={(e) => setBillingAddress({...billingAddress, city: e.target.value})}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="billingState">State</Label>
-              <Input
-                id="billingState"
-                maxLength={2}
-                value={billingAddress.state}
-                onChange={(e) => setBillingAddress({...billingAddress, state: e.target.value})}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="billingZip">ZIP</Label>
-              <Input
-                id="billingZip"
-                maxLength={10}
-                value={billingAddress.zip}
-                onChange={(e) => setBillingAddress({...billingAddress, zip: e.target.value})}
-                required
-              />
-            </div>
-          </div>
+          <AddressInput
+            value={billingAddress}
+            onChange={handleAddressChange}
+            label="Billing Address"
+            required={true}
+            autoValidate={true}
+          />
           
           <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
             <ShieldCheck className="h-4 w-4 mt-0.5 text-green-600" />
