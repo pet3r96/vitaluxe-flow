@@ -12,7 +12,7 @@ const corsHeaders = {
 
 interface SignupRequest {
   email: string;
-  password: string;
+  password?: string; // Optional - will be generated if not provided
   name: string;
   fullName?: string;
   prescriberName?: string;
@@ -150,9 +150,10 @@ serve(async (req) => {
     }
 
 
-    // Get authorization header to check if caller is authenticated
+    // Get authorization header to check if caller is authenticated and their role
     const authHeader = req.headers.get('Authorization');
     let callerUserId: string | null = null;
+    let isAdminCaller = false;
     
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
@@ -165,6 +166,14 @@ serve(async (req) => {
       
       if (user) {
         callerUserId = user.id;
+        
+        // Check if caller is an admin
+        const { data: callerRoles } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', callerUserId);
+        
+        isAdminCaller = callerRoles?.some(r => r.role === 'admin') || false;
       }
     }
 
@@ -189,13 +198,17 @@ serve(async (req) => {
       }
     }
 
-    // Validate required fields
-    if (!signupData.email || !signupData.password || !signupData.name || !signupData.role) {
+    // Validate required fields (password is optional - will be generated if not provided)
+    if (!signupData.email || !signupData.name || !signupData.role) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: email, password, name, or role' }),
+        JSON.stringify({ error: 'Missing required fields: email, name, or role' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Generate password if not provided
+    const initialPassword = signupData.password || generateSecurePassword();
+    console.log(`Password ${signupData.password ? 'provided' : 'generated'} for user creation`);
 
     // Validate role-specific fields
     if (signupData.role === 'doctor') {
@@ -243,7 +256,7 @@ serve(async (req) => {
     // Create user using admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: signupData.email,
-      password: signupData.password,
+      password: initialPassword,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
         name: signupData.name
@@ -596,23 +609,12 @@ serve(async (req) => {
     }
 
 
-    // Generate temporary password and send welcome email (non-admin only)
-    const mustChangePassword = signupData.role !== 'admin';
-    
-    if (mustChangePassword) {
-      const temporaryPassword = generateSecurePassword();
-
-      // Update user password in auth
-      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
-        userId,
-        { password: temporaryPassword }
-      );
-
-      if (passwordError) {
-        console.error('Error setting temporary password:', passwordError);
-      }
-
-      // Insert password status record
+    // Send welcome email with credentials only for admin-created accounts
+    // Admin-created accounts require password change on first login
+    if (isAdminCaller && signupData.role !== 'admin') {
+      console.log(`Admin-created account: sending welcome email with password to ${signupData.email}`);
+      
+      // Insert password status record for forced password change
       const { error: statusError } = await supabaseAdmin
         .from('user_password_status')
         .insert({
@@ -626,13 +628,13 @@ serve(async (req) => {
         console.error('Error creating password status:', statusError);
       }
 
-      // Send welcome email
+      // Send welcome email with the initial password
       try {
         const { error: emailError } = await supabaseAdmin.functions.invoke('send-welcome-email', {
           body: {
             email: signupData.email,
             name: signupData.name,
-            temporaryPassword: temporaryPassword,
+            temporaryPassword: initialPassword,
             role: signupData.role
           }
         });
@@ -648,7 +650,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: mustChangePassword 
+        message: (isAdminCaller && signupData.role !== 'admin')
           ? 'Account created successfully! A welcome email with login credentials has been sent.'
           : 'Account created successfully! You can now sign in.',
         userId: userId
