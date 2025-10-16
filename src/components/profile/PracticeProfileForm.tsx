@@ -80,17 +80,17 @@ export const PracticeProfileForm = () => {
     resolver: zodResolver(profileFormSchema),
     values: profile ? {
       name: profile.name || "",
-      email: profile.email || "",
-      phone: profile.phone || "",
+      email: sanitizeEncrypted(profile.email) || "",
+      phone: sanitizeEncrypted(profile.phone) || "",
       address: {
         street: profile.address_street || "",
         city: profile.address_city || "",
         state: profile.address_state || "",
         zip: profile.address_zip || "",
       },
-      npi: profile.npi || "",
-      dea: profile.dea || "",
-      license_number: profile.license_number || "",
+      npi: sanitizeEncrypted(profile.npi) || "",
+      dea: sanitizeEncrypted(profile.dea) || "",
+      license_number: sanitizeEncrypted(profile.license_number) || "",
       shipping_address: {
         street: profile.shipping_address_street || "",
         city: profile.shipping_address_city || "",
