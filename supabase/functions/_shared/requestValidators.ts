@@ -202,6 +202,7 @@ export function validateGenerateReceiptRequest(data: any) {
 
 export function validateGeneratePrescriptionRequest(data: any) {
   const validations = [
+    validateUUID(data.provider_id, 'provider_id'),
     validateString(data.product_name, 'product_name', { required: true, maxLength: 200 }),
     validateString(data.dosage, 'dosage', { maxLength: 100 }),
     validateString(data.sig, 'sig', { maxLength: 500 }),
@@ -209,7 +210,6 @@ export function validateGeneratePrescriptionRequest(data: any) {
     validateString(data.patient_dob, 'patient_dob', { maxLength: 50 }),
     validateString(data.patient_address, 'patient_address', { maxLength: 500 }),
     validateString(data.provider_name, 'provider_name', { required: true, maxLength: 200 }),
-    validateString(data.provider_npi, 'provider_npi', { required: true, maxLength: 50 }),
     validateString(data.practice_name, 'practice_name', { maxLength: 200 }),
     validateString(data.notes, 'notes', { maxLength: 1000 }),
     validateNumber(data.quantity, 'quantity', { min: 1, max: 1000 }),
@@ -217,6 +217,11 @@ export function validateGeneratePrescriptionRequest(data: any) {
     validateBoolean(data.refills_allowed, 'refills_allowed'),
     validateNumber(data.refills_total, 'refills_total', { min: 0, max: 12 })
   ];
+  
+  // Optional patient_id validation (only if provided)
+  if (data.patient_id) {
+    validations.push(validateUUID(data.patient_id, 'patient_id'));
+  }
   
   return validateInput(validations);
 }

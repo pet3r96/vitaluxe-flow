@@ -2904,6 +2904,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_decrypted_patient_phi: {
+        Args: { p_patient_id: string }
+        Returns: {
+          allergies: string
+          notes: string
+        }[]
+      }
+      get_decrypted_provider_credentials: {
+        Args: { p_provider_id: string }
+        Returns: {
+          dea: string
+          license_number: string
+          npi: string
+        }[]
+      }
       get_discount_code_stats: {
         Args: { p_code: string }
         Returns: {

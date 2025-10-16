@@ -39,6 +39,8 @@ serve(async (req) => {
     }
 
     const {
+      provider_id,
+      patient_id,
       product_name,
       dosage,
       sig,
@@ -46,13 +48,9 @@ serve(async (req) => {
       patient_dob,
       patient_age,
       patient_address,
-      patient_allergies,
       patient_sex,
       is_office_dispensing,
       provider_name,
-      provider_npi,
-      provider_dea,
-      provider_license,
       practice_name,
       practice_address,
       date,
@@ -63,6 +61,31 @@ serve(async (req) => {
       refills_allowed = false,
       refills_total = 0
     } = requestData;
+
+    // Fetch and decrypt provider credentials server-side
+    const { data: providerData, error: providerError } = await supabase
+      .rpc('get_decrypted_provider_credentials', { p_provider_id: provider_id });
+
+    if (providerError || !providerData || providerData.length === 0) {
+      console.error('Failed to fetch provider credentials:', providerError);
+      throw new Error('Failed to fetch provider credentials');
+    }
+
+    // Use decrypted values
+    const provider_npi = providerData[0].npi || 'N/A';
+    const provider_dea = providerData[0].dea || 'N/A';
+    const provider_license = providerData[0].license_number || 'N/A';
+
+    // Fetch and decrypt patient allergies if patient_id is provided
+    let patient_allergies = 'NKDA';
+    if (patient_id && !is_office_dispensing) {
+      const { data: patientData, error: patientError } = await supabase
+        .rpc('get_decrypted_patient_phi', { p_patient_id: patient_id });
+      
+      if (!patientError && patientData && patientData.length > 0) {
+        patient_allergies = patientData[0].allergies || 'NKDA';
+      }
+    }
 
     console.log('Generating prescription PDF for:', product_name, 'with dispensing option:', dispensing_option);
 
@@ -88,7 +111,7 @@ serve(async (req) => {
     doc.setFont('helvetica', 'bold');
     doc.text(`DEA# ${provider_dea || 'N/A'}`, 1.5, 0.75);
     doc.text(`License # ${provider_license || 'N/A'}`, 4.25, 0.75);
-    doc.text(`NPI # ${provider_npi}`, 7, 0.75);
+    doc.text(`NPI # ${provider_npi}`, 7.5, 0.75, { align: 'right' });
     doc.line(0.5, 0.85, 8, 0.85); // Line below credentials
 
     // Provider/Practice info (centered)

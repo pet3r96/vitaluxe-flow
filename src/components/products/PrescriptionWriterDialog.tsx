@@ -129,6 +129,11 @@ export function PrescriptionWriterDialog({
 
       const { data, error } = await supabase.functions.invoke('generate-prescription-pdf', {
         body: {
+          // Pass IDs instead of credentials for server-side decryption
+          provider_id: provider.id,
+          patient_id: patient?.id || null,
+          
+          // Non-sensitive data
           product_name: product.name,
           dosage: customDosage,
           sig: customSig,
@@ -136,13 +141,9 @@ export function PrescriptionWriterDialog({
           patient_dob: patient?.birth_date ? format(new Date(patient.birth_date), 'MM/dd/yyyy') : null,
           patient_age: patient?.birth_date ? calculateAge(patient.birth_date) : null,
           patient_address: patient ? (patient.address_formatted || patient.address) : null,
-          patient_allergies: patient?.allergies || null,
           patient_sex: null,
           is_office_dispensing: !patient,
           provider_name: provider.name,
-          provider_npi: provider.npi,
-          provider_dea: provider.dea,
-          provider_license: provider.license_number,
           practice_name: practice.name,
           practice_address: practice.address_formatted || practice.address,
           date: format(new Date(), 'MM/dd/yyyy'),
