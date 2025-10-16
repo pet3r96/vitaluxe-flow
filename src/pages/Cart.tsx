@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,30 +121,35 @@ export default function Cart() {
   const cartLines = cart?.lines || [];
   const isEmpty = cartLines.length === 0;
 
-  const calculateSubtotal = () => {
+  const calculateSubtotal = useCallback(() => {
     return (cartLines as any[]).reduce<number>(
       (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
       0
     );
-  };
+  }, [cartLines]);
 
-  const calculateDiscountAmount = () => {
+  const calculateDiscountAmount = useCallback(() => {
     return calculateSubtotal() * (discountPercentage / 100);
-  };
+  }, [calculateSubtotal, discountPercentage]);
 
-  const calculateTotal = () => {
+  const calculateTotal = useCallback(() => {
     return calculateSubtotal() - calculateDiscountAmount();
-  };
+  }, [calculateSubtotal, calculateDiscountAmount]);
 
-  const calculateShippingPreview = () => {
+  const getShippingRate = useCallback((speed: string) => {
     const rates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
-    return patientGroups.reduce((total, group) => {
-      return total + (rates[group.shipping_speed as keyof typeof rates] || 9.99);
-    }, 0);
-  };
+    return rates[speed as keyof typeof rates] || 9.99;
+  }, []);
 
-  const shippingPreview = calculateShippingPreview();
-  const totalWithShipping = calculateTotal() + shippingPreview;
+  const shippingPreview = useMemo(() => {
+    return patientGroups.reduce((total, group) => {
+      return total + getShippingRate(group.shipping_speed);
+    }, 0);
+  }, [patientGroups, getShippingRate]);
+
+  const totalWithShipping = useMemo(() => {
+    return calculateTotal() + shippingPreview;
+  }, [calculateTotal, shippingPreview]);
 
   if (isLoading) {
     return (
@@ -261,7 +266,7 @@ export default function Cart() {
                   );
                 })}
                 
-                <Separator className="my-4" />
+                <Separator className="my-3" />
                 
                 <ShippingSpeedSelector
                   value={group.shipping_speed}
@@ -273,11 +278,8 @@ export default function Cart() {
                   disabled={updateShippingSpeedMutation.isPending}
                 />
                 
-                <div className="text-sm text-muted-foreground pt-2">
-                  Estimated shipping: ${(() => {
-                    const rates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
-                    return (rates[group.shipping_speed as keyof typeof rates] || 9.99).toFixed(2);
-                  })()}
+                <div className="text-sm text-muted-foreground pt-1">
+                  Estimated shipping: ${getShippingRate(group.shipping_speed).toFixed(2)}
                 </div>
               </CardContent>
             </Card>

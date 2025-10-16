@@ -16,14 +16,14 @@ export const ShippingSpeedSelector = ({
   patientName 
 }: ShippingSpeedSelectorProps) => {
   return (
-    <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+    <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
       <Label className="text-sm font-semibold flex items-center gap-2">
         <Truck className="h-4 w-4" />
         Shipping Speed for {patientName}
       </Label>
       
       <RadioGroup value={value} onValueChange={onChange} disabled={disabled}>
-        <div className="flex items-center space-x-2 p-3 rounded border hover:bg-accent/50 cursor-pointer">
+        <div className="flex items-center space-x-2 p-2 rounded border hover:bg-accent/50 cursor-pointer">
           <RadioGroupItem value="ground" id={`ground-${patientName}`} />
           <Label 
             htmlFor={`ground-${patientName}`} 
@@ -37,7 +37,7 @@ export const ShippingSpeedSelector = ({
           </Label>
         </div>
 
-        <div className="flex items-center space-x-2 p-3 rounded border hover:bg-accent/50 cursor-pointer">
+        <div className="flex items-center space-x-2 p-2 rounded border hover:bg-accent/50 cursor-pointer">
           <RadioGroupItem value="2day" id={`2day-${patientName}`} />
           <Label 
             htmlFor={`2day-${patientName}`} 
@@ -51,7 +51,7 @@ export const ShippingSpeedSelector = ({
           </Label>
         </div>
 
-        <div className="flex items-center space-x-2 p-3 rounded border hover:bg-accent/50 cursor-pointer">
+        <div className="flex items-center space-x-2 p-2 rounded border hover:bg-accent/50 cursor-pointer">
           <RadioGroupItem value="overnight" id={`overnight-${patientName}`} />
           <Label 
             htmlFor={`overnight-${patientName}`} 
