@@ -132,6 +132,13 @@ export default function OrderConfirmation() {
       }
 
       const allLines = [...practiceLines, ...patientLines];
+      
+      // Validate shipping speed is selected for all lines
+      const missingShippingSpeed = allLines.filter((line: any) => !line.shipping_speed);
+      if (missingShippingSpeed.length > 0) {
+        throw new Error("Please select shipping speed for all items in your cart before confirming your order");
+      }
+      
       const missingPrescriptions = allLines.filter((line: any) => 
         line.product?.requires_prescription && !line.prescription_url
       );
@@ -147,39 +154,58 @@ export default function OrderConfirmation() {
 
       const doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
       const createdOrders = [];
+      
+      // Helper function to create shipping groups
+      interface ShippingGroup {
+        patient_id: string;
+        patient_name: string;
+        pharmacy_id: string;
+        shipping_speed: string;
+        cart_line_ids: string[];
+        shipping_cost: number;
+      }
+      
+      const createShippingGroups = (lines: any[], pharmacyAssignments: Map<string, string>): ShippingGroup[] => {
+        const groups: Record<string, ShippingGroup> = {};
+        
+        for (const line of lines) {
+          const assignedPharmacyId = pharmacyAssignments.get(line.id);
+          if (!assignedPharmacyId) continue;
+          
+          const groupKey = `${line.patient_id || 'practice'}_${assignedPharmacyId}_${line.shipping_speed}`;
+          
+          if (!groups[groupKey]) {
+            groups[groupKey] = {
+              patient_id: line.patient_id || 'practice',
+              patient_name: line.patient_name || 'Practice Order',
+              pharmacy_id: assignedPharmacyId,
+              shipping_speed: line.shipping_speed,
+              cart_line_ids: [],
+              shipping_cost: 0
+            };
+          }
+          
+          groups[groupKey].cart_line_ids.push(line.id);
+        }
+        
+        return Object.values(groups);
+      };
+      
+      const getShippingCostForLine = (lineId: string, shippingGroups: ShippingGroup[]): number => {
+        const group = shippingGroups.find(g => g.cart_line_ids.includes(lineId));
+        // Only the first line in each group gets charged shipping
+        return group && group.cart_line_ids[0] === lineId ? group.shipping_cost : 0;
+      };
 
       // Process each practice line separately - create one order per line
       if (practiceLines.length > 0) {
         const practiceAddress = providerProfile?.shipping_address_formatted || 
           `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
 
+        // First, route all lines to pharmacies
+        const pharmacyAssignments = new Map<string, string>();
+        
         for (const line of practiceLines) {
-          // Calculate total for THIS SINGLE LINE only
-          const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
-          const discountAmount = lineTotal * (discountPercentage / 100);
-          const totalAfterDiscount = lineTotal - discountAmount;
-          
-          // Create ONE order for THIS line
-          const { data: practiceOrder, error: practiceOrderError } = await supabase
-            .from("orders")
-            .insert({
-              doctor_id: doctorIdForOrder,
-              total_amount: totalAfterDiscount,
-              subtotal_before_discount: lineTotal,
-              discount_code: discountCode || null,
-              discount_percentage: discountPercentage || 0,
-              discount_amount: discountAmount || 0,
-              status: "pending",
-              ship_to: "practice",
-              practice_address: practiceAddress,
-            })
-            .select()
-            .single();
-
-          if (practiceOrderError) throw practiceOrderError;
-
-          // Route this single line to pharmacy
-          let assignedPharmacyId = null;
           const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
           
           try {
@@ -194,8 +220,7 @@ export default function OrderConfirmation() {
             );
             
             if (!routingError && routingResult?.pharmacy_id) {
-              assignedPharmacyId = routingResult.pharmacy_id;
-              console.log(`Routed to pharmacy: ${routingResult.reason}`);
+              pharmacyAssignments.set(line.id, routingResult.pharmacy_id);
             } else {
               const productName = line.product?.name || 'Unknown product';
               throw new Error(
@@ -206,6 +231,64 @@ export default function OrderConfirmation() {
             console.error('Pharmacy routing failed:', error);
             throw error;
           }
+        }
+        
+        // Create shipping groups and calculate costs
+        const practiceShippingGroups = createShippingGroups(practiceLines, pharmacyAssignments);
+        
+        for (const group of practiceShippingGroups) {
+          try {
+            const { data: shippingData, error: shippingError } = await supabase.functions.invoke(
+              'calculate-shipping',
+              {
+                body: {
+                  pharmacy_id: group.pharmacy_id,
+                  shipping_speed: group.shipping_speed
+                }
+              }
+            );
+            
+            if (!shippingError && shippingData?.shipping_cost) {
+              group.shipping_cost = shippingData.shipping_cost;
+            }
+          } catch (error) {
+            console.error('Shipping calculation failed:', error);
+            // Use default rates as fallback
+            const defaultRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
+            group.shipping_cost = defaultRates[group.shipping_speed as keyof typeof defaultRates] || 9.99;
+          }
+        }
+
+        for (const line of practiceLines) {
+          // Calculate total for THIS SINGLE LINE only
+          const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
+          const discountAmount = lineTotal * (discountPercentage / 100);
+          const lineShippingCost = getShippingCostForLine(line.id, practiceShippingGroups);
+          const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost;
+          
+          // Create ONE order for THIS line
+          const { data: practiceOrder, error: practiceOrderError } = await supabase
+            .from("orders")
+            .insert({
+              doctor_id: doctorIdForOrder,
+              total_amount: totalAfterDiscount,
+              subtotal_before_discount: lineTotal,
+              discount_code: discountCode || null,
+              discount_percentage: discountPercentage || 0,
+              discount_amount: discountAmount || 0,
+              shipping_total: lineShippingCost,
+              status: "pending",
+              ship_to: "practice",
+              practice_address: practiceAddress,
+            })
+            .select()
+            .single();
+
+          if (practiceOrderError) throw practiceOrderError;
+
+          // Get assigned pharmacy from our map
+          const assignedPharmacyId = pharmacyAssignments.get(line.id);
+          const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
           
           // Create ONE order_line for this order
           const discountedPrice = line.price_snapshot * (1 - discountPercentage / 100);
@@ -217,6 +300,8 @@ export default function OrderConfirmation() {
             price_before_discount: line.price_snapshot,
             discount_percentage: discountPercentage || 0,
             discount_amount: ((line.price_snapshot - discountedPrice) * (line.quantity || 1)) || 0,
+            shipping_speed: line.shipping_speed,
+            shipping_cost: lineShippingCost,
             patient_id: line.patient_id,
             patient_name: line.patient_name,
             patient_email: line.patient_email,
@@ -248,33 +333,10 @@ export default function OrderConfirmation() {
 
       // Process each patient line separately - create one order per line
       if (patientLines.length > 0) {
+        // First, route all lines to pharmacies
+        const pharmacyAssignments = new Map<string, string>();
+        
         for (const line of patientLines) {
-          // Calculate total for THIS SINGLE LINE only
-          const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
-          const discountAmount = lineTotal * (discountPercentage / 100);
-          const totalAfterDiscount = lineTotal - discountAmount;
-          
-          // Create ONE order for THIS line
-          const { data: patientOrder, error: patientOrderError } = await supabase
-            .from("orders")
-            .insert({
-              doctor_id: doctorIdForOrder,
-              total_amount: totalAfterDiscount,
-              subtotal_before_discount: lineTotal,
-              discount_code: discountCode || null,
-              discount_percentage: discountPercentage || 0,
-              discount_amount: discountAmount || 0,
-              status: "pending",
-              ship_to: "patient",
-              practice_address: null,
-            })
-            .select()
-            .single();
-
-          if (patientOrderError) throw patientOrderError;
-
-          // Route this single line to pharmacy
-          let assignedPharmacyId = null;
           const destinationState = extractStateFromAddress(line.patient_address);
           
           try {
@@ -289,8 +351,7 @@ export default function OrderConfirmation() {
             );
             
             if (!routingError && routingResult?.pharmacy_id) {
-              assignedPharmacyId = routingResult.pharmacy_id;
-              console.log(`Routed to pharmacy: ${routingResult.reason}`);
+              pharmacyAssignments.set(line.id, routingResult.pharmacy_id);
             } else {
               const productName = line.product?.name || 'Unknown product';
               throw new Error(
@@ -301,6 +362,64 @@ export default function OrderConfirmation() {
             console.error('Pharmacy routing failed:', error);
             throw error;
           }
+        }
+        
+        // Create shipping groups and calculate costs
+        const patientShippingGroups = createShippingGroups(patientLines, pharmacyAssignments);
+        
+        for (const group of patientShippingGroups) {
+          try {
+            const { data: shippingData, error: shippingError } = await supabase.functions.invoke(
+              'calculate-shipping',
+              {
+                body: {
+                  pharmacy_id: group.pharmacy_id,
+                  shipping_speed: group.shipping_speed
+                }
+              }
+            );
+            
+            if (!shippingError && shippingData?.shipping_cost) {
+              group.shipping_cost = shippingData.shipping_cost;
+            }
+          } catch (error) {
+            console.error('Shipping calculation failed:', error);
+            // Use default rates as fallback
+            const defaultRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
+            group.shipping_cost = defaultRates[group.shipping_speed as keyof typeof defaultRates] || 9.99;
+          }
+        }
+        
+        for (const line of patientLines) {
+          // Calculate total for THIS SINGLE LINE only
+          const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
+          const discountAmount = lineTotal * (discountPercentage / 100);
+          const lineShippingCost = getShippingCostForLine(line.id, patientShippingGroups);
+          const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost;
+          
+          // Create ONE order for THIS line
+          const { data: patientOrder, error: patientOrderError } = await supabase
+            .from("orders")
+            .insert({
+              doctor_id: doctorIdForOrder,
+              total_amount: totalAfterDiscount,
+              subtotal_before_discount: lineTotal,
+              discount_code: discountCode || null,
+              discount_percentage: discountPercentage || 0,
+              discount_amount: discountAmount || 0,
+              shipping_total: lineShippingCost,
+              status: "pending",
+              ship_to: "patient",
+              practice_address: null,
+            })
+            .select()
+            .single();
+
+          if (patientOrderError) throw patientOrderError;
+
+          // Get assigned pharmacy from our map
+          const assignedPharmacyId = pharmacyAssignments.get(line.id);
+          const destinationState = extractStateFromAddress(line.patient_address);
           
           // Create ONE order_line for this order
           const discountedPrice = line.price_snapshot * (1 - discountPercentage / 100);
@@ -312,6 +431,8 @@ export default function OrderConfirmation() {
             price_before_discount: line.price_snapshot,
             discount_percentage: discountPercentage || 0,
             discount_amount: ((line.price_snapshot - discountedPrice) * (line.quantity || 1)) || 0,
+            shipping_speed: line.shipping_speed,
+            shipping_cost: lineShippingCost,
             patient_id: line.patient_id,
             patient_name: line.patient_name,
             patient_email: line.patient_email,

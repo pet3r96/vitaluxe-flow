@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Search, Edit, UserPlus, AlertCircle } from "lucide-react";
 import { PharmacyDialog } from "./PharmacyDialog";
+import { PharmacyShippingRatesDialog } from "./PharmacyShippingRatesDialog";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
@@ -23,6 +24,8 @@ export const PharmaciesDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPharmacy, setSelectedPharmacy] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [shippingRatesDialogOpen, setShippingRatesDialogOpen] = useState(false);
+  const [selectedPharmacyForRates, setSelectedPharmacyForRates] = useState<any>(null);
   const [fixingPharmacyId, setFixingPharmacyId] = useState<string | null>(null);
 
   const { data: pharmacies, isLoading, refetch } = useQuery({
@@ -143,6 +146,7 @@ export const PharmaciesDataTable = () => {
               <TableHead>Name</TableHead>
               <TableHead>Contact Email</TableHead>
               <TableHead>Account Status</TableHead>
+              <TableHead>Shipping Rates</TableHead>
               <TableHead>States Serviced</TableHead>
               <TableHead>Priority Map</TableHead>
               <TableHead>Active</TableHead>
@@ -152,13 +156,13 @@ export const PharmaciesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
+                <TableCell colSpan={8} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPharmacies?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   No pharmacies found
                 </TableCell>
               </TableRow>
@@ -178,6 +182,18 @@ export const PharmaciesDataTable = () => {
                         Active
                       </Badge>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPharmacyForRates(pharmacy);
+                        setShippingRatesDialogOpen(true);
+                      }}
+                    >
+                      Configure Rates
+                    </Button>
                   </TableCell>
                   <TableCell>
                     {pharmacy.states_serviced && pharmacy.states_serviced.length > 0 ? (
@@ -281,6 +297,14 @@ export const PharmaciesDataTable = () => {
         pharmacy={selectedPharmacy}
         onSuccess={() => refetch()}
       />
+
+      {selectedPharmacyForRates && (
+        <PharmacyShippingRatesDialog
+          open={shippingRatesDialogOpen}
+          onOpenChange={setShippingRatesDialogOpen}
+          pharmacy={selectedPharmacyForRates}
+        />
+      )}
     </div>
   );
 };

@@ -362,6 +362,7 @@ export type Database = {
           refills_allowed: boolean | null
           refills_remaining: number | null
           refills_total: number | null
+          shipping_speed: Database["public"]["Enums"]["shipping_speed"] | null
         }
         Insert: {
           cart_id: string
@@ -392,6 +393,7 @@ export type Database = {
           refills_allowed?: boolean | null
           refills_remaining?: number | null
           refills_total?: number | null
+          shipping_speed?: Database["public"]["Enums"]["shipping_speed"] | null
         }
         Update: {
           cart_id?: string
@@ -422,6 +424,7 @@ export type Database = {
           refills_allowed?: boolean | null
           refills_remaining?: number | null
           refills_total?: number | null
+          shipping_speed?: Database["public"]["Enums"]["shipping_speed"] | null
         }
         Relationships: [
           {
@@ -1034,6 +1037,8 @@ export type Database = {
           shipping_carrier:
             | Database["public"]["Enums"]["shipping_carrier"]
             | null
+          shipping_cost: number | null
+          shipping_speed: Database["public"]["Enums"]["shipping_speed"]
           status: Database["public"]["Enums"]["order_status"] | null
           tracking_number: string | null
           updated_at: string | null
@@ -1079,6 +1084,8 @@ export type Database = {
           shipping_carrier?:
             | Database["public"]["Enums"]["shipping_carrier"]
             | null
+          shipping_cost?: number | null
+          shipping_speed?: Database["public"]["Enums"]["shipping_speed"]
           status?: Database["public"]["Enums"]["order_status"] | null
           tracking_number?: string | null
           updated_at?: string | null
@@ -1124,6 +1131,8 @@ export type Database = {
           shipping_carrier?:
             | Database["public"]["Enums"]["shipping_carrier"]
             | null
+          shipping_cost?: number | null
+          shipping_speed?: Database["public"]["Enums"]["shipping_speed"]
           status?: Database["public"]["Enums"]["order_status"] | null
           tracking_number?: string | null
           updated_at?: string | null
@@ -1283,6 +1292,7 @@ export type Database = {
           practice_address: string | null
           report_notes: string | null
           ship_to: string | null
+          shipping_total: number | null
           shipping_verification_status: string | null
           status: string | null
           stripe_payment_id: string | null
@@ -1304,6 +1314,7 @@ export type Database = {
           practice_address?: string | null
           report_notes?: string | null
           ship_to?: string | null
+          shipping_total?: number | null
           shipping_verification_status?: string | null
           status?: string | null
           stripe_payment_id?: string | null
@@ -1325,6 +1336,7 @@ export type Database = {
           practice_address?: string | null
           report_notes?: string | null
           ship_to?: string | null
+          shipping_total?: number | null
           shipping_verification_status?: string | null
           status?: string | null
           stripe_payment_id?: string | null
@@ -1650,6 +1662,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_shipping_rates: {
+        Row: {
+          created_at: string | null
+          id: string
+          pharmacy_id: string
+          rate: number
+          shipping_speed: Database["public"]["Enums"]["shipping_speed"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          pharmacy_id: string
+          rate: number
+          shipping_speed: Database["public"]["Enums"]["shipping_speed"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          pharmacy_id?: string
+          rate?: number
+          shipping_speed?: Database["public"]["Enums"]["shipping_speed"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_shipping_rates_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
             referencedColumns: ["id"]
           },
         ]
@@ -3005,6 +3052,7 @@ export type Database = {
         | "Supplies"
         | "Vitamin IV's"
       shipping_carrier: "fedex" | "ups" | "usps"
+      shipping_speed: "ground" | "2day" | "overnight"
       verification_code_type: "2fa_setup" | "2fa_login"
     }
     CompositeTypes: {
@@ -3173,6 +3221,7 @@ export const Constants = {
         "Vitamin IV's",
       ],
       shipping_carrier: ["fedex", "ups", "usps"],
+      shipping_speed: ["ground", "2day", "overnight"],
       verification_code_type: ["2fa_setup", "2fa_login"],
     },
   },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { DiscountCodeInput } from "@/components/orders/DiscountCodeInput";
+import { ShippingSpeedSelector } from "@/components/cart/ShippingSpeedSelector";
+import { Separator } from "@/components/ui/separator";
 
 export default function Cart() {
   const { effectiveUserId, user } = useAuth();
@@ -71,6 +73,51 @@ export default function Cart() {
     },
   });
 
+  const updateShippingSpeedMutation = useMutation({
+    mutationFn: async ({ lineIds, shipping_speed }: { lineIds: string[], shipping_speed: 'ground' | '2day' | 'overnight' }) => {
+      const { error } = await supabase
+        .from('cart_lines')
+        .update({ shipping_speed })
+        .in('id', lineIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update shipping speed",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Group cart lines by patient
+  const patientGroups = useMemo(() => {
+    if (!cart?.lines) return [];
+    
+    const groups: Record<string, any> = {};
+    
+    cart.lines.forEach((line: any) => {
+      const patientKey = line.patient_id || `practice_${line.id}`;
+      
+      if (!groups[patientKey]) {
+        groups[patientKey] = {
+          patient_name: line.patient_name || 'Practice Order',
+          patient_id: line.patient_id,
+          lines: [],
+          shipping_speed: line.shipping_speed || 'ground'
+        };
+      }
+      
+      groups[patientKey].lines.push(line);
+    });
+    
+    return Object.values(groups);
+  }, [cart]);
+
   const calculateSubtotal = () => {
     return (cartLines as any[]).reduce<number>(
       (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
@@ -85,6 +132,16 @@ export default function Cart() {
   const calculateTotal = () => {
     return calculateSubtotal() - calculateDiscountAmount();
   };
+
+  const calculateShippingPreview = () => {
+    const rates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
+    return patientGroups.reduce((total, group) => {
+      return total + (rates[group.shipping_speed as keyof typeof rates] || 9.99);
+    }, 0);
+  };
+
+  const shippingPreview = calculateShippingPreview();
+  const totalWithShipping = calculateTotal() + shippingPreview;
 
   if (isLoading) {
     return (
@@ -120,85 +177,111 @@ export default function Cart() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {cartLines.map((line: any) => {
+        <div className="space-y-6">
+          {patientGroups.map((group: any, groupIndex: number) => (
+            <Card key={`group-${group.patient_id || groupIndex}`} className="overflow-hidden">
+              <CardHeader className="bg-muted/50 p-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  {group.patient_name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                {group.lines.map((line: any) => {
             const expiresAt = line.expires_at ? new Date(line.expires_at) : null;
             const now = new Date();
             const timeUntilExpiry = expiresAt ? expiresAt.getTime() - now.getTime() : null;
-            const hoursUntilExpiry = timeUntilExpiry ? timeUntilExpiry / (1000 * 60 * 60) : null;
-            const isExpiringSoon = hoursUntilExpiry && hoursUntilExpiry <= 48;
-            
-            return (
-            <Card key={line.id} className={isExpiringSoon ? "border-yellow-500" : ""}>
-              <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-6">
+                  const hoursUntilExpiry = timeUntilExpiry ? timeUntilExpiry / (1000 * 60 * 60) : null;
+                  const isExpiringSoon = hoursUntilExpiry && hoursUntilExpiry <= 48;
+                  
+                  return (
+                    <div key={line.id} className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-lg border ${isExpiringSoon ? "border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20" : "bg-card"}`}>
                 {line.product?.image_url && (
-                  <img
-                    src={line.product.image_url}
-                    alt={line.product.name}
-                    className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded"
-                  />
-                )}
-                <div className="flex-1 w-full">
-                  <h3 className="font-semibold text-base sm:text-lg">{line.product?.name}</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    {line.product?.dosage}
-                  </p>
-                  <p className="text-xs sm:text-sm mt-2">
-                    <span className="font-medium">Patient:</span> {line.patient_name}
-                  </p>
-                  {isExpiringSoon && expiresAt && (
-                    <div className="flex items-center gap-2 mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded border border-yellow-200 dark:border-yellow-800">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                      <span className="text-xs text-yellow-700 dark:text-yellow-400">
-                        This cart item will expire {formatDistanceToNow(expiresAt, { addSuffix: true })}
-                      </span>
+                      <img
+                        src={line.product.image_url}
+                        alt={line.product.name}
+                        className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded"
+                      />
+                    )}
+                    <div className="flex-1 w-full">
+                      <h3 className="font-semibold text-base sm:text-lg">{line.product?.name}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {line.product?.dosage}
+                      </p>
+                      {isExpiringSoon && expiresAt && (
+                        <div className="flex items-center gap-2 mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded border border-yellow-200 dark:border-yellow-800">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                          <span className="text-xs text-yellow-700 dark:text-yellow-400">
+                            This cart item will expire {formatDistanceToNow(expiresAt, { addSuffix: true })}
+                          </span>
+                        </div>
+                      )}
+                      {line.provider?.profiles && (
+                        <p className="text-xs sm:text-sm">
+                          <span className="font-medium">Provider:</span> {line.provider.profiles.name}
+                        </p>
+                      )}
+                      <p className="text-xs sm:text-sm">
+                        <span className="font-medium">Quantity:</span> {line.quantity}
+                      </p>
+                      {line.custom_sig && line.patient_name !== "Practice Order" && (
+                        <div className="text-xs sm:text-sm mt-2 bg-blue-50 dark:bg-blue-950/30 p-2 rounded border border-blue-200 dark:border-blue-800">
+                          <span className="font-medium text-blue-700 dark:text-blue-300">SIG:</span>
+                          <p className="text-blue-600 dark:text-blue-400 mt-1">{line.custom_sig}</p>
+                        </div>
+                      )}
+                      {line.order_notes && (
+                        <div className="text-xs sm:text-sm mt-2 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+                          <span className="font-medium text-amber-700 dark:text-amber-300">Notes:</span>
+                          <p className="text-amber-600 dark:text-amber-400 mt-1">{line.order_notes}</p>
+                        </div>
+                      )}
+                      {line.prescription_url && (
+                        <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
+                          <FileCheck className="h-3 w-3" />
+                          <span>Prescription uploaded</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {line.provider?.profiles && (
-                    <p className="text-xs sm:text-sm">
-                      <span className="font-medium">Provider:</span> {line.provider.profiles.name}
-                    </p>
-                  )}
-                  <p className="text-xs sm:text-sm">
-                    <span className="font-medium">Quantity:</span> {line.quantity}
-                  </p>
-                  {line.custom_sig && line.patient_name !== "Practice Order" && (
-                    <div className="text-xs sm:text-sm mt-2 bg-blue-50 dark:bg-blue-950/30 p-2 rounded border border-blue-200 dark:border-blue-800">
-                      <span className="font-medium text-blue-700 dark:text-blue-300">SIG:</span>
-                      <p className="text-blue-600 dark:text-blue-400 mt-1">{line.custom_sig}</p>
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-4">
+                      <p className="text-lg sm:text-xl font-bold text-primary">
+                        ${line.price_snapshot?.toFixed(2)}
+                      </p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-destructive min-h-[44px] min-w-[44px]"
+                        onClick={() => removeMutation.mutate(line.id)}
+                        disabled={removeMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  )}
-                  {line.order_notes && (
-                    <div className="text-xs sm:text-sm mt-2 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
-                      <span className="font-medium text-amber-700 dark:text-amber-300">Notes:</span>
-                      <p className="text-amber-600 dark:text-amber-400 mt-1">{line.order_notes}</p>
-                    </div>
-                  )}
-                  {line.prescription_url && (
-                    <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
-                      <FileCheck className="h-3 w-3" />
-                      <span>Prescription uploaded</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-4">
-                  <p className="text-lg sm:text-xl font-bold text-primary">
-                    ${line.price_snapshot?.toFixed(2)}
-                  </p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-destructive min-h-[44px] min-w-[44px]"
-                    onClick={() => removeMutation.mutate(line.id)}
-                    disabled={removeMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </div>
+                  );
+                })}
+                
+                <Separator className="my-4" />
+                
+                <ShippingSpeedSelector
+                  value={group.shipping_speed}
+                  onChange={(speed) => {
+                    const lineIds = group.lines.map((l: any) => l.id);
+                    updateShippingSpeedMutation.mutate({ lineIds, shipping_speed: speed });
+                  }}
+                  patientName={group.patient_name}
+                  disabled={updateShippingSpeedMutation.isPending}
+                />
+                
+                <div className="text-sm text-muted-foreground pt-2">
+                  Estimated shipping: ${(() => {
+                    const rates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
+                    return (rates[group.shipping_speed as keyof typeof rates] || 9.99).toFixed(2);
+                  })()}
                 </div>
               </CardContent>
             </Card>
-            );
-          })}
+          ))}
 
           <Card>
             <CardHeader className="p-4 sm:p-6">
@@ -236,9 +319,16 @@ export default function Cart() {
                   </div>
                 )}
                 
-                <div className="flex justify-between text-base sm:text-lg font-bold border-t pt-2">
-                  <span>Total Amount:</span>
-                  <span className="text-primary">${calculateTotal().toFixed(2)}</span>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-muted-foreground">Estimated Shipping:</span>
+                  <span className="font-medium">${shippingPreview.toFixed(2)}</span>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between text-base sm:text-lg font-bold">
+                  <span>Estimated Total:</span>
+                  <span className="text-primary">${totalWithShipping.toFixed(2)}</span>
                 </div>
               </div>
               <Button 
