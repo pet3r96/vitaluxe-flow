@@ -50,8 +50,11 @@ Deno.serve(async (req) => {
     if (pmError || !paymentMethod) {
       console.error('Payment method not found:', pmError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Payment method not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'Payment method not found. Please select a valid payment method or add a new one.' 
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -77,8 +80,11 @@ Deno.serve(async (req) => {
       if (updateError) {
         console.error('Error updating order:', updateError);
         return new Response(
-          JSON.stringify({ success: false, error: 'Failed to update order' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ 
+            success: false, 
+            error: 'Unable to process payment. Please try again or contact support.' 
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -105,6 +111,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
+          error: 'Your card was declined. Please try a different payment method or contact your bank.',
           message: 'Payment declined',
           authorizenet_response: {
             messages: {
@@ -120,8 +127,12 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Unexpected error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: false, 
+        error: 'Payment processing error. Please try again or use a different payment method.',
+        details: error instanceof Error ? error.message : String(error) 
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
