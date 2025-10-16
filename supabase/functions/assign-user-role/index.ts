@@ -2,7 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from '../_shared/validators.ts';
-import { validateAssignRoleRequest } from '../_shared/requestValidators.ts';
+import { validateCreateAccountRequest } from '../_shared/requestValidators.ts';
 import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
@@ -94,8 +94,7 @@ serve(async (req) => {
     }
 
     // Basic validation for required signup fields
-    const basicValidation = validateAssignRoleRequest({
-      userId: signupData.roleData?.practiceId || '00000000-0000-0000-0000-000000000000',  // Nil UUID for new users
+    const basicValidation = validateCreateAccountRequest({
       role: signupData.role,
       name: signupData.name,
       email: signupData.email

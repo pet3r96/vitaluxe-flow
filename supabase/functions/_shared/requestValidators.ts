@@ -123,6 +123,16 @@ export function validateApproveUserRequest(data: any) {
   return validateInput(validations);
 }
 
+export function validateCreateAccountRequest(data: any) {
+  const validations = [
+    validateEnum(data.role, 'role', ['admin', 'doctor', 'provider', 'pharmacy', 'practice', 'topline', 'downline'], true),
+    validateString(data.name, 'name', { required: true, maxLength: 255 }),
+    validateEmail(data.email)
+  ];
+  
+  return validateInput(validations);
+}
+
 export function validateAssignRoleRequest(data: any) {
   const validations = [
     validateUUID(data.userId, 'userId'),
@@ -155,10 +165,11 @@ export function validateSendNotificationRequest(data: any) {
 }
 
 export function validateSendWelcomeEmailRequest(data: any) {
+  const pwd = data.password || data.temporaryPassword;
   const validations = [
     validateEmail(data.email),
     validateString(data.name, 'name', { required: true, maxLength: 255 }),
-    validateString(data.password, 'password', { required: true, minLength: 8, maxLength: 100 })
+    validateString(pwd, 'password/temporaryPassword', { required: true, minLength: 8, maxLength: 100 })
   ];
   
   return validateInput(validations);
