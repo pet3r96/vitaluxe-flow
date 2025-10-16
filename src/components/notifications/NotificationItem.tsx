@@ -94,10 +94,17 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             </span>
 
             {notification.action_url && (
-              <Button variant="ghost" size="sm" className="h-6 text-xs" asChild>
-                <span>
-                  View <ExternalLink className="h-3 w-3 ml-1" />
-                </span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClick();
+                }}
+              >
+                {notification.notification_type.replace("_", " ")}
+                <ExternalLink className="h-3 w-3 ml-1" />
               </Button>
             )}
           </div>
