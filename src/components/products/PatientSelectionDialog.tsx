@@ -847,6 +847,7 @@ export const PatientSelectionDialog = ({
             product={product}
             patient={shipTo === 'practice' ? null : selectedPatient}
             provider={selectedProviderData ? {
+              id: selectedProviderData.id,
               name: selectedProviderData.profiles?.name || 'Unknown',
               npi: selectedProviderData.profiles?.npi || 'N/A',
               dea: selectedProviderData.profiles?.dea || 'N/A',

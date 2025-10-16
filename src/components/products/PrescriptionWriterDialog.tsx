@@ -274,8 +274,9 @@ export function PrescriptionWriterDialog({
             <h3 className="font-semibold mb-2">Prescriber Information</h3>
             <div className="text-sm space-y-1 text-muted-foreground">
               <p><strong>Provider:</strong> {provider.name}</p>
-              <p><strong>NPI:</strong> {provider.npi}</p>
-              {provider.dea && <p><strong>DEA:</strong> {provider.dea}</p>}
+              <p className="text-xs text-muted-foreground italic">
+                Prescriber credentials will be verified and included server-side
+              </p>
             </div>
           </div>
 

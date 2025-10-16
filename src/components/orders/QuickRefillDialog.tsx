@@ -51,11 +51,32 @@ export function QuickRefillDialog({ open, onOpenChange, orderLine, onSuccess }: 
     queryFn: async () => {
       const { data } = await supabase
         .from("providers")
-        .select("*")
+        .select(`
+          id,
+          user_id,
+          profiles!inner(
+            id,
+            name,
+            npi,
+            dea,
+            license_number
+          )
+        `)
         .eq("id", orderLine.provider_id)
         .single();
 
-      return data;
+      // Flatten the structure for easier access
+      if (data) {
+        return {
+          id: data.id,
+          user_id: data.user_id,
+          name: data.profiles?.name || 'Unknown',
+          npi: data.profiles?.npi || 'N/A',
+          dea: data.profiles?.dea || 'N/A',
+          license: data.profiles?.license_number || 'N/A'
+        };
+      }
+      return null;
     },
     enabled: open && !!orderLine?.provider_id,
   });
