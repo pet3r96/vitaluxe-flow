@@ -94,11 +94,11 @@ export const PracticeProfileForm = () => {
       logCredentialAccess({
         profileId: effectiveUserId,
         profileName: profile.name || 'Unknown',
-        accessedFields: {
-          npi: !!decryptedCreds.npi,
-          dea: false, // DEA not returned by get_decrypted_practice_credentials
-          license: !!decryptedCreds.license_number,
-        },
+      accessedFields: {
+        npi: !!decryptedCreds.npi,
+        dea: !!decryptedCreds.dea,
+        license: !!decryptedCreds.license_number,
+      },
         viewerRole: 'doctor',
         relationship: 'self',
         componentContext: 'PracticeProfileForm'
@@ -119,7 +119,7 @@ export const PracticeProfileForm = () => {
         zip: profile.address_zip || "",
       },
       practice_npi: decryptedCreds?.npi || "",
-      dea: profile.dea || "", // DEA not encrypted for practices, read from profile
+      dea: decryptedCreds?.dea || "",
       license_number: decryptedCreds?.license_number || "",
       shipping_address: {
         street: profile.shipping_address_street || "",

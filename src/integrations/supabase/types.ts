@@ -3160,6 +3160,7 @@ export type Database = {
       get_decrypted_practice_credentials: {
         Args: { p_practice_id: string }
         Returns: {
+          dea: string
           license_number: string
           npi: string
         }[]
