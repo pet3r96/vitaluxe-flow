@@ -114,13 +114,17 @@ export const PatientSelectionDialog = ({
       const mappedData = (data || []).map((p: any) => {
         if (import.meta.env.DEV) {
           console.log('Mapping provider:', p);
+          console.log('  - NPI value:', p.profiles?.npi);
+          console.log('  - DEA value:', p.profiles?.dea);
         }
         return {
           id: p.id,
           user_id: p.user_id,
           prescriber_name: p.profiles?.name || 'Unknown Provider',
-          npi: p.profiles?.npi || 'N/A',
-          dea: p.profiles?.dea || 'N/A'
+          // Show actual NPI or hide if null - don't show 'N/A'
+          npi: p.profiles?.npi || '',
+          // Show actual DEA or hide if null - don't show 'N/A'
+          dea: p.profiles?.dea || ''
         };
       });
       if (import.meta.env.DEV) {
@@ -552,7 +556,9 @@ export const PatientSelectionDialog = ({
                   {providers.length === 1 ? (
                     <div className="p-3 border rounded-md bg-muted">
                       <p className="text-sm font-medium">{providers[0].prescriber_name}</p>
-                      <p className="text-xs text-muted-foreground">Provider NPI: {providers[0].npi}</p>
+                      {providers[0].npi && (
+                        <p className="text-xs text-muted-foreground">Provider NPI: {providers[0].npi}</p>
+                      )}
                     </div>
                   ) : (
                     <RadioGroup value={selectedProviderId || ""} onValueChange={setSelectedProviderId}>
@@ -561,7 +567,9 @@ export const PatientSelectionDialog = ({
                           <RadioGroupItem value={provider.id} id={provider.id} />
                           <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
                             <span className="font-medium">{provider.prescriber_name}</span>
-                            <span className="text-xs text-muted-foreground ml-2">NPI: {provider.npi}</span>
+                            {provider.npi && (
+                              <span className="text-xs text-muted-foreground ml-2">NPI: {provider.npi}</span>
+                            )}
                           </Label>
                         </div>
                       ))}
