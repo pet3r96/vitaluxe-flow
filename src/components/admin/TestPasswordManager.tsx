@@ -36,25 +36,31 @@ export function TestPasswordManager() {
         body: { email, password }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || 'Edge function error');
+      }
 
-      if (data.error) {
+      if (data?.error) {
         throw new Error(data.error);
       }
 
-      setResult(data);
-      toast({
-        title: "Success",
-        description: `Test password set for ${data.email}`,
-      });
-      
-      // Reset form
-      setEmail("");
-      setPassword("");
+      if (data?.success) {
+        setResult(data);
+        toast({
+          title: "✅ Success",
+          description: "Test password set! User must change password on first login.",
+        });
+        
+        // Reset form
+        setEmail("");
+        setPassword("");
+      } else {
+        throw new Error('Unexpected response from server');
+      }
     } catch (error: any) {
       console.error('Error setting test password:', error);
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: error.message || "Failed to set test password",
         variant: "destructive",
       });

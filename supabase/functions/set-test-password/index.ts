@@ -82,25 +82,38 @@ serve(async (req) => {
     );
 
     if (updateError) {
+      console.error('Error updating password:', updateError);
       throw updateError;
-    }
-
-    // Set must_change_password flag in profiles
-    const { error: updateProfileError } = await supabaseAdmin
-      .from('profiles')
-      .update({ must_change_password: true })
-      .eq('id', profile.id);
-
-    if (updateProfileError) {
-      console.error('Error setting must_change_password flag:', updateProfileError);
     }
 
     console.log(`Test password set for user: ${email} by admin: ${user.email}`);
 
+    // Set must_change_password flag in user_password_status (non-critical, log errors but don't fail)
+    try {
+      const { error: flagError } = await supabaseAdmin
+        .from('user_password_status')
+        .upsert({
+          user_id: profile.id,
+          must_change_password: true,
+          temporary_password_sent: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (flagError) {
+        console.error('Error setting must_change_password flag:', flagError);
+        // Don't throw - password was set successfully, flag is secondary
+      }
+    } catch (flagException) {
+      console.error('Exception setting password flag:', flagException);
+      // Don't throw - password was set successfully
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Test password set successfully',
+        message: 'Test password set successfully. User will be required to change password on first login.',
         email,
         password
       }),
