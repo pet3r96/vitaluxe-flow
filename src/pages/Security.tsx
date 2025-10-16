@@ -13,7 +13,8 @@ import { EncryptionStatusManager } from "@/components/security/EncryptionStatusM
 import { PaymentMethodAuditLog } from "@/components/security/PaymentMethodAuditLog";
 import { PrescriptionAccessAudit } from "@/components/security/PrescriptionAccessAudit";
 import { CartSecurityMonitor } from "@/components/security/CartSecurityMonitor";
-import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard, ShoppingCart } from "lucide-react";
+import { IPBanlistManager } from "@/components/admin/IPBanlistManager";
+import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard, ShoppingCart, ShieldBan } from "lucide-react";
 
 const Security = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -28,7 +29,7 @@ const Security = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-12 pt-2">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6 xl:grid-cols-13">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6 xl:grid-cols-14">
           <TabsTrigger value="overview" className="gap-2">
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">Overview</span>
@@ -80,6 +81,10 @@ const Security = () => {
           <TabsTrigger value="account-security" className="gap-2">
             <Lock className="h-4 w-4" />
             <span className="hidden sm:inline">Lockouts</span>
+          </TabsTrigger>
+          <TabsTrigger value="ip-banlist" className="gap-2">
+            <ShieldBan className="h-4 w-4" />
+            <span className="hidden sm:inline">IP Ban List</span>
           </TabsTrigger>
         </TabsList>
 
@@ -133,6 +138,10 @@ const Security = () => {
 
         <TabsContent value="account-security">
           <AccountSecurityManager />
+        </TabsContent>
+
+        <TabsContent value="ip-banlist">
+          <IPBanlistManager />
         </TabsContent>
       </Tabs>
     </div>

@@ -86,6 +86,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_ip_banlist: {
+        Row: {
+          banned: boolean
+          banned_at: string
+          banned_by: string | null
+          banned_reason: string
+          created_at: string
+          description: string | null
+          id: string
+          ip_address: string
+          updated_at: string
+        }
+        Insert: {
+          banned?: boolean
+          banned_at?: string
+          banned_by?: string | null
+          banned_reason: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          ip_address: string
+          updated_at?: string
+        }
+        Update: {
+          banned?: boolean
+          banned_at?: string
+          banned_by?: string | null
+          banned_reason?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          ip_address?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       alert_rules: {
         Row: {
           created_at: string
@@ -3138,6 +3174,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: string
       }
+      get_client_ip: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_current_user_rep_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -3226,6 +3266,10 @@ export type Database = {
       increment_discount_usage: {
         Args: { p_code: string }
         Returns: undefined
+      }
+      is_admin_ip_banned: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       is_cart_owner: {
         Args: { _cart_id: string; _user_id: string }
