@@ -22,18 +22,6 @@ export function ImpersonationLogsView() {
   const { userRole, isImpersonating, effectiveUserId, user } = useAuth();
   const isAdminNotImpersonating = userRole === 'admin' && !isImpersonating;
 
-  // Check if admin IP is banned (only for admins)
-  const { data: ipBanned, isLoading: ipCheckLoading } = useQuery({
-    queryKey: ['admin-ip-banned'],
-    queryFn: async () => {
-      if (!isAdminNotImpersonating) return false; // Non-admins always allowed to view their own logs
-      const { data, error } = await supabase.rpc('is_admin_ip_banned' as any);
-      if (error) throw error;
-      return data as boolean;
-    },
-    enabled: !!effectiveUserId
-  });
-
   const { data: logs, isLoading } = useQuery({
     queryKey: ["impersonation-logs", isAdminNotImpersonating ? "admin" : effectiveUserId],
     staleTime: 0,
@@ -80,20 +68,6 @@ export function ImpersonationLogsView() {
     const seconds = Math.floor((durationMs % 60000) / 1000);
     return `${minutes}m ${seconds}s`;
   };
-
-  // Show access restricted message if admin IP is banned
-  if (isAdminNotImpersonating && ipBanned === true) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Access Restricted</AlertTitle>
-        <AlertDescription>
-          Your IP address has been banned from accessing impersonation logs.
-          Please contact a system administrator for assistance.
-        </AlertDescription>
-      </Alert>
-    );
-  }
 
   return (
     <Card>

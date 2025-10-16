@@ -9,16 +9,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export const EncryptionStatusManager = () => {
-  // Check if admin IP is banned
-  const { data: ipBanned, isLoading: ipCheckLoading } = useQuery({
-    queryKey: ['admin-ip-banned'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('is_admin_ip_banned' as any);
-      if (error) throw error;
-      return data as boolean;
-    }
-  });
-
   const { data: encryptionKeys, isLoading: keysLoading } = useQuery({
     queryKey: ["encryption-keys"],
     queryFn: async () => {
@@ -59,21 +49,7 @@ export const EncryptionStatusManager = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const isLoading = keysLoading || coverageLoading || ipCheckLoading;
-
-  // Show access restricted message if IP is banned
-  if (ipBanned === true) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Access Restricted</AlertTitle>
-        <AlertDescription>
-          Your IP address has been banned from accessing encryption keys.
-          Please contact a system administrator for assistance.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  const isLoading = keysLoading || coverageLoading;
 
   const getKeyStatus = (key: any) => {
     if (!key) return { status: "unknown", message: "No key found", variant: "secondary" as const };

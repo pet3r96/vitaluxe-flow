@@ -22,16 +22,6 @@ export const AuditLogsViewer = () => {
   const [actionFilter, setActionFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("24h");
 
-  // Check if admin IP is banned
-  const { data: ipBanned, isLoading: ipCheckLoading } = useQuery({
-    queryKey: ['admin-ip-banned'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('is_admin_ip_banned' as any);
-      if (error) throw error;
-      return data as boolean;
-    }
-  });
-
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["audit-logs", searchTerm, actionFilter, dateFilter],
     staleTime: 0,
@@ -126,20 +116,6 @@ export const AuditLogsViewer = () => {
     a.click();
     toast.success("Audit logs exported");
   };
-
-  // Show access restricted message if IP is banned
-  if (ipBanned === true) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Access Restricted</AlertTitle>
-        <AlertDescription>
-          Your IP address has been banned from accessing audit logs.
-          Please contact a system administrator for assistance.
-        </AlertDescription>
-      </Alert>
-    );
-  }
 
   return (
     <>
