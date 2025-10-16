@@ -54,13 +54,14 @@ serve(async (req) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     
     // Store code with 10-minute expiration
+    // Note: phone_number will be auto-encrypted by database trigger
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     
     const { error: insertError } = await supabase
       .from('two_fa_verification_codes')
       .insert({
         user_id: user.id,
-        phone_number: phoneNumber,
+        phone_number: phoneNumber, // Will be encrypted by trigger
         code,
         code_type: codeType,
         expires_at: expiresAt

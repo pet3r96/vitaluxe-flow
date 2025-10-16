@@ -15,6 +15,7 @@ import { AddressInput } from "@/components/ui/address-input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validatePhone } from "@/lib/validators";
+import { logPatientPHIAccess } from "@/lib/auditLogger";
 
 interface PatientDialogProps {
   open: boolean;
@@ -29,7 +30,7 @@ export const PatientDialog = ({
   patient,
   onSuccess,
 }: PatientDialogProps) => {
-  const { user, effectivePracticeId } = useAuth();
+  const { user, effectivePracticeId, effectiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({
     phone: "",
@@ -71,6 +72,36 @@ export const PatientDialog = ({
       resetForm();
     }
   }, [patient, open]);
+
+  // HIPAA Compliance: Log PHI access when viewing patient with sensitive data
+  useEffect(() => {
+    if (patient && open && user) {
+      const hasPHI = patient.allergies || patient.notes || patient.address_formatted;
+      
+      if (hasPHI) {
+        // Determine relationship based on role
+        let relationship: 'practice_admin' | 'provider' | 'admin' = 'practice_admin';
+        if (effectiveRole === 'admin') {
+          relationship = 'admin';
+        } else if (effectiveRole === 'provider') {
+          relationship = 'provider';
+        }
+
+        logPatientPHIAccess({
+          patientId: patient.id,
+          patientName: patient.name,
+          accessedFields: {
+            allergies: !!patient.allergies && patient.allergies !== '[ENCRYPTED]',
+            notes: !!patient.notes && patient.notes !== '[ENCRYPTED]',
+            address: !!patient.address_formatted,
+          },
+          viewerRole: effectiveRole || 'doctor',
+          relationship,
+          componentContext: 'PatientDialog',
+        });
+      }
+    }
+  }, [patient, open, user, effectiveRole]);
 
   const resetForm = () => {
     setFormData({

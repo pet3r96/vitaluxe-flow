@@ -104,10 +104,11 @@ serve(async (req) => {
 
     if (existingSettings) {
       // Update existing settings
+      // Note: phone_number will be auto-encrypted by database trigger
       const { error: updateError } = await supabase
         .from('user_2fa_settings')
         .update({
-          phone_number: phoneNumber,
+          phone_number: phoneNumber, // Will be encrypted by trigger
           phone_verified: true,
           phone_verified_at: now,
           is_enrolled: true,
@@ -119,11 +120,12 @@ serve(async (req) => {
       if (updateError) throw updateError;
     } else {
       // Insert new settings
+      // Note: phone_number will be auto-encrypted by database trigger
       const { error: insertError } = await supabase
         .from('user_2fa_settings')
         .insert({
           user_id: user.id,
-          phone_number: phoneNumber,
+          phone_number: phoneNumber, // Will be encrypted by trigger
           phone_verified: true,
           phone_verified_at: now,
           is_enrolled: true,

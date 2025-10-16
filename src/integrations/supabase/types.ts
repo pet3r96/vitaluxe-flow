@@ -1848,6 +1848,7 @@ export type Database = {
           active: boolean | null
           address: string | null
           address_city: string | null
+          address_encrypted: string | null
           address_formatted: string | null
           address_state: string | null
           address_street: string | null
@@ -1861,6 +1862,7 @@ export type Database = {
           dea: string | null
           dea_encrypted: string | null
           email: string
+          email_encrypted: string | null
           full_name: string | null
           id: string
           license_number: string | null
@@ -1871,6 +1873,7 @@ export type Database = {
           npi_encrypted: string | null
           parent_id: string | null
           phone: string | null
+          phone_encrypted: string | null
           practice_npi: string | null
           shipping_address: string | null
           shipping_address_city: string | null
@@ -1888,6 +1891,7 @@ export type Database = {
           active?: boolean | null
           address?: string | null
           address_city?: string | null
+          address_encrypted?: string | null
           address_formatted?: string | null
           address_state?: string | null
           address_street?: string | null
@@ -1901,6 +1905,7 @@ export type Database = {
           dea?: string | null
           dea_encrypted?: string | null
           email: string
+          email_encrypted?: string | null
           full_name?: string | null
           id: string
           license_number?: string | null
@@ -1911,6 +1916,7 @@ export type Database = {
           npi_encrypted?: string | null
           parent_id?: string | null
           phone?: string | null
+          phone_encrypted?: string | null
           practice_npi?: string | null
           shipping_address?: string | null
           shipping_address_city?: string | null
@@ -1928,6 +1934,7 @@ export type Database = {
           active?: boolean | null
           address?: string | null
           address_city?: string | null
+          address_encrypted?: string | null
           address_formatted?: string | null
           address_state?: string | null
           address_street?: string | null
@@ -1941,6 +1948,7 @@ export type Database = {
           dea?: string | null
           dea_encrypted?: string | null
           email?: string
+          email_encrypted?: string | null
           full_name?: string | null
           id?: string
           license_number?: string | null
@@ -1951,6 +1959,7 @@ export type Database = {
           npi_encrypted?: string | null
           parent_id?: string | null
           phone?: string | null
+          phone_encrypted?: string | null
           practice_npi?: string | null
           shipping_address?: string | null
           shipping_address_city?: string | null
@@ -2444,6 +2453,7 @@ export type Database = {
           is_enrolled: boolean
           last_verified_at: string | null
           phone_number: string
+          phone_number_encrypted: string | null
           phone_verified: boolean
           phone_verified_at: string | null
           reset_at: string | null
@@ -2458,6 +2468,7 @@ export type Database = {
           is_enrolled?: boolean
           last_verified_at?: string | null
           phone_number: string
+          phone_number_encrypted?: string | null
           phone_verified?: boolean
           phone_verified_at?: string | null
           reset_at?: string | null
@@ -2472,6 +2483,7 @@ export type Database = {
           is_enrolled?: boolean
           last_verified_at?: string | null
           phone_number?: string
+          phone_number_encrypted?: string | null
           phone_verified?: boolean
           phone_verified_at?: string | null
           reset_at?: string | null
@@ -2762,6 +2774,10 @@ export type Database = {
         }
         Returns: Json
       }
+      decrypt_2fa_phone: {
+        Args: { p_encrypted_phone: string }
+        Returns: string
+      }
       decrypt_cart_phi: {
         Args: { p_encrypted_data: string; p_field_type: string }
         Returns: string
@@ -2775,6 +2791,10 @@ export type Database = {
         Returns: string
       }
       decrypt_prescriber_credential: {
+        Args: { p_encrypted_data: string; p_field_type: string }
+        Returns: string
+      }
+      decrypt_profile_contact: {
         Args: { p_encrypted_data: string; p_field_type: string }
         Returns: string
       }
@@ -2862,6 +2882,17 @@ export type Database = {
           p_details?: Json
           p_entity_id?: string
           p_entity_type?: string
+        }
+        Returns: string
+      }
+      log_patient_phi_access: {
+        Args: {
+          p_accessed_fields: Json
+          p_component_context: string
+          p_patient_id: string
+          p_patient_name: string
+          p_relationship: string
+          p_viewer_role: string
         }
         Returns: string
       }
