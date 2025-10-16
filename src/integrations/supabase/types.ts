@@ -1884,7 +1884,7 @@ export type Database = {
           id: string
           is_default: boolean | null
           payment_type: string
-          plaid_access_token: string
+          plaid_access_token: string | null
           plaid_access_token_encrypted: string | null
           plaid_account_id: string
           practice_id: string
@@ -1911,7 +1911,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           payment_type?: string
-          plaid_access_token: string
+          plaid_access_token?: string | null
           plaid_access_token_encrypted?: string | null
           plaid_account_id: string
           practice_id: string
@@ -1938,7 +1938,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           payment_type?: string
-          plaid_access_token?: string
+          plaid_access_token?: string | null
           plaid_access_token_encrypted?: string | null
           plaid_account_id?: string
           practice_id?: string
