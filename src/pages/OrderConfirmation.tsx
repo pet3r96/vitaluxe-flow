@@ -121,6 +121,13 @@ export default function OrderConfirmation() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      
+      // Auto-select default payment method
+      if (data && data.length > 0 && !selectedPaymentMethodId) {
+        const defaultMethod = data.find(pm => pm.is_default) || data[0];
+        setSelectedPaymentMethodId(defaultMethod.id);
+      }
+      
       return data || [];
     },
     enabled: !!effectiveUserId,
@@ -1012,6 +1019,118 @@ export default function OrderConfirmation() {
               <span className="text-2xl text-primary">${calculateFinalTotal().toFixed(2)}</span>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment Method Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Payment Method
+          </CardTitle>
+          <CardDescription>
+            Select a payment method for this order
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {paymentMethods && paymentMethods.length > 0 ? (
+            <>
+              <RadioGroup value={selectedPaymentMethodId} onValueChange={setSelectedPaymentMethodId}>
+                {paymentMethods.map((method) => (
+                  <div
+                    key={method.id}
+                    className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+                  >
+                    <RadioGroupItem value={method.id} id={method.id} />
+                    <Label htmlFor={method.id} className="flex-1 cursor-pointer flex items-center gap-3">
+                      {method.payment_type === 'credit_card' ? (
+                        <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      ) : (
+                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                      )}
+                      <div className="flex-1">
+                        {method.payment_type === 'credit_card' ? (
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              {method.card_type} ••••{method.card_last_five}
+                            </span>
+                            {method.card_expiry && (
+                              <span className="text-sm text-muted-foreground">
+                                Exp: {method.card_expiry}
+                              </span>
+                            )}
+                            {method.is_default && (
+                              <Badge variant="secondary" className="text-xs">Default</Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              {method.bank_name || 'Bank Account'} ••••{method.account_last_five}
+                            </span>
+                            {method.account_type && (
+                              <span className="text-sm text-muted-foreground capitalize">
+                                {method.account_type}
+                              </span>
+                            )}
+                            {method.is_default && (
+                              <Badge variant="secondary" className="text-xs">Default</Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              
+              <Separator />
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddCardDialog(true)}
+                  className="flex-1"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Add Card
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddBankDialog(true)}
+                  className="flex-1"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Add Bank
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8 space-y-4">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-muted p-3">
+                  <CreditCard className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-1">No payment methods added</p>
+                <p className="text-sm text-muted-foreground">Add a payment method to continue</p>
+              </div>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={() => setShowAddCardDialog(true)}>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Add Credit Card
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddBankDialog(true)}>
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Add Bank Account
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
