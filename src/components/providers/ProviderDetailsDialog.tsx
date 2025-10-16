@@ -96,6 +96,13 @@ export const ProviderDetailsDialog = ({
   const handleSave = async () => {
     setLoading(true);
     try {
+      // Validate no "[ENCRYPTED]" placeholders
+      if (formData.npi === '[ENCRYPTED]' || formData.dea === '[ENCRYPTED]' || formData.licenseNumber === '[ENCRYPTED]') {
+        toast.error("Please enter actual credential values, not [ENCRYPTED] placeholders");
+        setLoading(false);
+        return;
+      }
+
       // Update profiles table (where most provider data lives)
       const profileUpdateData: any = {};
 

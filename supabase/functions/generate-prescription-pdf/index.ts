@@ -76,6 +76,16 @@ serve(async (req) => {
     const provider_dea = providerData[0].dea || 'N/A';
     const provider_license = providerData[0].license_number || 'N/A';
 
+    // Log if credentials are missing for debugging
+    if (!providerData[0].npi || !providerData[0].dea || !providerData[0].license_number) {
+      console.warn(`Provider ${provider_id} missing encrypted credentials:`, {
+        npi: !!providerData[0].npi,
+        dea: !!providerData[0].dea,
+        license: !!providerData[0].license_number,
+        provider_name
+      });
+    }
+
     // Fetch and decrypt patient allergies if patient_id is provided
     let patient_allergies = 'NKDA';
     if (patient_id && !is_office_dispensing) {
@@ -106,12 +116,12 @@ serve(async (req) => {
     doc.setLineWidth(0.02);
     doc.rect(0.5, 0.5, 7.5, 10, 'S');
 
-    // Top credentials bar
-    doc.setFontSize(12);
+    // Top credentials bar - compact single line with better spacing
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(`DEA# ${provider_dea || 'N/A'}`, 1.5, 0.75);
-    doc.text(`License # ${provider_license || 'N/A'}`, 4.25, 0.75);
-    doc.text(`NPI # ${provider_npi}`, 7.5, 0.75, { align: 'right' });
+    doc.text(`DEA# ${provider_dea}`, 0.75, 0.75);
+    doc.text(`License # ${provider_license}`, 3.25, 0.75);
+    doc.text(`NPI # ${provider_npi}`, 6.0, 0.75);
     doc.line(0.5, 0.85, 8, 0.85); // Line below credentials
 
     // Provider/Practice info (centered)
