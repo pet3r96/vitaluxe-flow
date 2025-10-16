@@ -59,8 +59,25 @@ Deno.serve(async (req) => {
     }
 
     // TODO: Replace with actual Authorize.Net API call when keys are available
-    // Simulate payment processing (90% success, 10% failure for testing)
-    const isSuccess = Math.random() > 0.1;
+    // Test card support for reliable testing:
+    // - Cards ending in 0000 = always succeed
+    // - Cards ending in 1111 = always fail (declined)
+    // - Other cards = 90% success for realistic testing
+    const lastFour = paymentMethod.card_last_five?.slice(-4) || '';
+    let isSuccess;
+
+    if (lastFour === '0000') {
+      // Test card - guaranteed success
+      isSuccess = true;
+      console.log('Test card detected (0000) - forcing success');
+    } else if (lastFour === '1111') {
+      // Test card - guaranteed failure
+      isSuccess = false;
+      console.log('Test card detected (1111) - forcing failure');
+    } else {
+      // Real cards - simulate 90% success rate
+      isSuccess = Math.random() > 0.1;
+    }
     
     if (isSuccess) {
       const mockTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
