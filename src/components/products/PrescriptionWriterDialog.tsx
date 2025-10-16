@@ -9,6 +9,8 @@ import { FileText, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { logPatientPHIAccess } from "@/lib/auditLogger";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PrescriptionWriterDialogProps {
   open: boolean;
@@ -48,6 +50,7 @@ export function PrescriptionWriterDialog({
   initialDispensingOption,
   onPrescriptionGenerated,
 }: PrescriptionWriterDialogProps) {
+  const { effectiveRole } = useAuth();
   const [customDosage, setCustomDosage] = useState(initialDosage || product?.dosage || "");
   const [customSig, setCustomSig] = useState(initialSig || product?.sig || "");
   const [notes, setNotes] = useState(initialNotes || "");
@@ -56,6 +59,54 @@ export function PrescriptionWriterDialog({
     initialDispensingOption || "dispense_as_written"
   );
   const [isGenerating, setIsGenerating] = useState(false);
+  const [decryptedAllergies, setDecryptedAllergies] = useState<string | null>(null);
+  const [isLoadingAllergies, setIsLoadingAllergies] = useState(false);
+
+  const canViewPHI = ['doctor', 'provider', 'admin'].includes(effectiveRole || '');
+
+  // Fetch and decrypt patient allergies when dialog opens
+  useEffect(() => {
+    const fetchDecryptedAllergies = async () => {
+      if (!open || !patient?.id || !canViewPHI) {
+        setDecryptedAllergies(null);
+        return;
+      }
+
+      setIsLoadingAllergies(true);
+      try {
+        const { data, error } = await supabase.rpc('get_decrypted_patient_phi', {
+          p_patient_id: patient.id
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setDecryptedAllergies(data[0].allergies);
+
+          // Log PHI access
+          const relationship = effectiveRole === 'admin' ? 'admin' : 
+                             effectiveRole === 'doctor' ? 'practice_admin' : 
+                             'provider';
+
+          await logPatientPHIAccess({
+            patientId: patient.id,
+            patientName: patient.name,
+            accessedFields: { allergies: true },
+            viewerRole: effectiveRole || 'unknown',
+            relationship,
+            componentContext: 'PrescriptionWriterDialog'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to decrypt patient allergies:', error);
+        setDecryptedAllergies(null);
+      } finally {
+        setIsLoadingAllergies(false);
+      }
+    };
+
+    fetchDecryptedAllergies();
+  }, [open, patient?.id, canViewPHI, effectiveRole]);
 
   // Sync state with prop changes
   useEffect(() => {
@@ -239,19 +290,23 @@ export function PrescriptionWriterDialog({
                 )}
                 
                 {/* Patient Allergies Display */}
-                <div className="pt-2 border-t border-primary/30 mt-2">
-                  <p className="text-xs font-semibold text-primary flex items-center gap-1 mb-1">
-                    <AlertCircle className="h-3 w-3" />
-                    Patient Allergies (PHI)
-                  </p>
-                  {patient.allergies ? (
-                    <p className="text-sm text-foreground bg-primary/10 p-2 rounded border border-primary/30">
-                      {patient.allergies}
+                {canViewPHI && (
+                  <div className="pt-2 border-t border-primary/30 mt-2">
+                    <p className="text-xs font-semibold text-primary flex items-center gap-1 mb-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Patient Allergies (PHI)
                     </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">No known allergies recorded</p>
-                  )}
-                </div>
+                    {isLoadingAllergies ? (
+                      <p className="text-xs text-muted-foreground italic">Loading...</p>
+                    ) : decryptedAllergies ? (
+                      <p className="text-sm text-foreground bg-primary/10 p-2 rounded border border-primary/30">
+                        {decryptedAllergies}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No known allergies recorded</p>
+                    )}
+                  </div>
+                )}
                 
                 {patient.address_formatted && (
                   <p className="mt-2"><strong>Address:</strong> {patient.address_formatted}</p>

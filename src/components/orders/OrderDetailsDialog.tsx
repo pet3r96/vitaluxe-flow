@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
+import { logPatientPHIAccess } from "@/lib/auditLogger";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -36,9 +37,70 @@ export const OrderDetailsDialog = ({
   const { effectiveRole, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [decryptedPatientPHI, setDecryptedPatientPHI] = useState<Map<string, { allergies?: string | null, notes?: string | null }>>(new Map());
 
   // Determine if user can view PHI (HIPAA compliance)
   const canViewPHI = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
+
+  // Fetch and decrypt patient allergies when dialog opens
+  useEffect(() => {
+    const fetchDecryptedAllergies = async () => {
+      if (!open || !canViewPHI || !order?.order_lines || order.ship_to !== 'patient') {
+        return;
+      }
+
+      // Collect unique patient IDs
+      const patientIds = new Set<string>();
+      order.order_lines.forEach((line: any) => {
+        if (line.patient_id) {
+          patientIds.add(line.patient_id);
+        }
+      });
+
+      // Fetch decrypted PHI for each patient
+      const phiCache = new Map<string, { allergies?: string | null, notes?: string | null }>();
+      
+      for (const patientId of patientIds) {
+        try {
+          const { data, error } = await supabase.rpc('get_decrypted_patient_phi', {
+            p_patient_id: patientId
+          });
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            phiCache.set(patientId, {
+              allergies: data[0].allergies,
+              notes: data[0].notes
+            });
+
+            // Log PHI access
+            const line = order.order_lines.find((l: any) => l.patient_id === patientId);
+            if (line) {
+              const relationship = effectiveRole === 'admin' ? 'admin' :
+                                 effectiveRole === 'pharmacy' ? 'admin' :
+                                 'practice_admin';
+
+              await logPatientPHIAccess({
+                patientId,
+                patientName: line.patient_name,
+                accessedFields: { allergies: true },
+                viewerRole: effectiveRole || 'unknown',
+                relationship,
+                componentContext: 'OrderDetailsDialog'
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to decrypt allergies for patient ${patientId}:`, error);
+        }
+      }
+
+      setDecryptedPatientPHI(phiCache);
+    };
+
+    fetchDecryptedAllergies();
+  }, [open, order, canViewPHI, effectiveRole]);
 
   const handleDownloadPrescription = async (prescriptionUrl: string, patientName: string) => {
     try {
@@ -358,20 +420,23 @@ export const OrderDetailsDialog = ({
                             <p className="text-sm">{line.patient_address}</p>
                           </div>
                         )}
-                        {canViewPHI && line.patients?.allergies && (
+                        {canViewPHI && line.patient_id && (
                           <div className="col-span-2 pt-2 border-t border-primary/30">
                             <p className="text-xs font-semibold text-primary flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
                               Patient Allergies (PHI)
                             </p>
-                            <p className="text-sm text-primary-foreground bg-primary/25 p-2 rounded mt-1 border border-primary/40 shadow-inner">
-                              {line.patients.allergies}
-                            </p>
-                          </div>
-                        )}
-                        {canViewPHI && line.patients?.allergies === null && (
-                          <div className="col-span-2 pt-2 border-t">
-                            <p className="text-xs text-muted-foreground italic">No known allergies recorded</p>
+                            {decryptedPatientPHI.get(line.patient_id)?.allergies ? (
+                              <p className="text-sm text-primary-foreground bg-primary/25 p-2 rounded mt-1 border border-primary/40 shadow-inner">
+                                {decryptedPatientPHI.get(line.patient_id)?.allergies}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground italic mt-1">
+                                {decryptedPatientPHI.has(line.patient_id) 
+                                  ? 'No known allergies recorded' 
+                                  : 'Loading...'}
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
