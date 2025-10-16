@@ -82,15 +82,44 @@ export default function Cart() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+    onMutate: async ({ lineIds, shipping_speed }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["cart", effectiveUserId] });
+      
+      // Snapshot the previous value
+      const previousCart = queryClient.getQueryData(["cart", effectiveUserId]);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
+        if (!old) return old;
+        
+        return {
+          ...old,
+          lines: old.lines.map((line: any) => 
+            lineIds.includes(line.id) 
+              ? { ...line, shipping_speed }
+              : line
+          )
+        };
+      });
+      
+      // Return context with previous value for rollback
+      return { previousCart };
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Rollback on error
+      if (context?.previousCart) {
+        queryClient.setQueryData(["cart", effectiveUserId], context.previousCart);
+      }
       toast({
         title: "Error",
         description: "Failed to update shipping speed",
         variant: "destructive"
       });
+    },
+    onSettled: () => {
+      // Always refetch after error or success (background sync)
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
     }
   });
 
