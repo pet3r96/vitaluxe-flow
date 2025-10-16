@@ -71,6 +71,7 @@ serve(async (req) => {
         discount_code,
         discount_percentage,
         discount_amount,
+        shipping_total,
         status,
         doctor_id,
         profiles (
@@ -289,9 +290,16 @@ serve(async (req) => {
       yPos += 6;
     }
 
+    // Shipping & Handling
+    if (order.shipping_total && order.shipping_total > 0) {
+      doc.text('Shipping & Handling:', pageWidth - 100, yPos);
+      doc.text(`$${order.shipping_total.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+      yPos += 6;
+    }
+
     yPos += 2;
 
-    // Total
+    // Total (includes shipping)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL:', pageWidth - 100, yPos);

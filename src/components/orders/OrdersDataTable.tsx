@@ -354,6 +354,7 @@ export const OrdersDataTable = () => {
               <TableHead>Patient Name</TableHead>
               <TableHead>Fulfillment Type</TableHead>
               <TableHead>Products</TableHead>
+              <TableHead>Shipping</TableHead>
               <TableHead>Shipping Status</TableHead>
               <TableHead>Carrier</TableHead>
               {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
@@ -365,13 +366,13 @@ export const OrdersDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 11 : 12} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center text-muted-foreground">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 11 : 12} className="text-center text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
@@ -416,6 +417,13 @@ export const OrdersDataTable = () => {
                     </TableCell>
                     <TableCell>
                       {order.order_lines?.length || 0} item(s)
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {order.order_lines?.[0]?.shipping_speed === '2day' ? '2-Day' : 
+                         order.order_lines?.[0]?.shipping_speed === 'overnight' ? 'Overnight' : 
+                         'Ground'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(shippingStatus)}>

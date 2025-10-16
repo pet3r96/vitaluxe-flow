@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -621,8 +621,30 @@ export default function OrderConfirmation() {
     return calculateSubtotal() * (discountPercentage / 100);
   };
 
+  const calculateShipping = () => {
+    // Group cart lines by patient + shipping speed to calculate shipping costs
+    const shippingGroups = new Map<string, { speed: string; count: number }>();
+    
+    (cart?.lines || []).forEach((line: any) => {
+      const key = `${line.patient_id || 'practice'}_${line.shipping_speed}`;
+      if (!shippingGroups.has(key)) {
+        shippingGroups.set(key, { speed: line.shipping_speed, count: 1 });
+      }
+    });
+    
+    // Calculate shipping based on groups (one charge per patient/speed combination)
+    const shippingRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
+    let total = 0;
+    
+    shippingGroups.forEach(group => {
+      total += shippingRates[group.speed as keyof typeof shippingRates] || 9.99;
+    });
+    
+    return total;
+  };
+
   const calculateFinalTotal = () => {
-    return calculateSubtotal() - calculateDiscountAmount();
+    return calculateSubtotal() - calculateDiscountAmount() + calculateShipping();
   };
 
   if (isLoading) {
@@ -720,6 +742,12 @@ export default function OrderConfirmation() {
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline">
                       Qty: {line.quantity}
+                    </Badge>
+                    <Badge variant="outline" className="capitalize">
+                      <Truck className="h-3 w-3 mr-1" />
+                      {line.shipping_speed === '2day' ? '2-Day' : 
+                       line.shipping_speed === 'overnight' ? 'Overnight' : 
+                       'Ground'} Shipping
                     </Badge>
                     {line.patient_name === "Practice Order" ? (
                       <Badge variant="secondary">Practice Order</Badge>
@@ -848,6 +876,12 @@ export default function OrderConfirmation() {
                 <Separator />
               </>
             )}
+            
+            <div className="flex justify-between items-center text-base">
+              <span className="text-muted-foreground">Shipping & Handling:</span>
+              <span className="font-semibold">${calculateShipping().toFixed(2)}</span>
+            </div>
+            <Separator />
             
             <div className="flex justify-between items-center text-lg font-bold">
               <span>Total Amount:</span>

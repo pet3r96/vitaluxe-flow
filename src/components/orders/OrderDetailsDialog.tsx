@@ -284,6 +284,18 @@ export const OrderDetailsDialog = ({
                       <p className="text-sm text-muted-foreground">Quantity</p>
                       <p className="font-medium">{line.quantity}</p>
                     </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Shipping Speed</p>
+                      <Badge variant="outline" className="capitalize w-fit">
+                        {line.shipping_speed === '2day' ? '2-Day Shipping' :
+                         line.shipping_speed === 'overnight' ? 'Overnight Shipping' :
+                         'Ground (5-7 days)'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Shipping Cost</p>
+                      <p className="font-medium">${line.shipping_cost?.toFixed(2) || '0.00'}</p>
+                    </div>
                     {effectiveRole !== "pharmacy" && (
                       <div>
                         <p className="text-sm text-muted-foreground">Price</p>
