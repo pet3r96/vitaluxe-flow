@@ -15,12 +15,14 @@ interface AddCreditCardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultBillingAddress?: Partial<BillingAddress>;
+  onSuccess?: () => void;
 }
 
 export const AddCreditCardDialog = ({ 
   open, 
   onOpenChange,
-  defaultBillingAddress 
+  defaultBillingAddress,
+  onSuccess
 }: AddCreditCardDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -82,6 +84,7 @@ export const AddCreditCardDialog = ({
       });
       onOpenChange(false);
       resetForm();
+      onSuccess?.();
     },
     onError: (error: Error) => {
       toast({

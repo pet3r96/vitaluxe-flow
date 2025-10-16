@@ -14,12 +14,14 @@ interface AddBankAccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultBillingAddress?: Partial<BillingAddress>;
+  onSuccess?: () => void;
 }
 
 export const AddBankAccountDialog = ({ 
   open, 
   onOpenChange,
-  defaultBillingAddress 
+  defaultBillingAddress,
+  onSuccess
 }: AddBankAccountDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -64,6 +66,7 @@ export const AddBankAccountDialog = ({
       });
       onOpenChange(false);
       resetForm();
+      onSuccess?.();
     },
     onError: (error: Error) => {
       toast({
