@@ -74,21 +74,28 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { email }: ResetPasswordRequest = requestData;
 
-    console.log(`Password reset requested for: ${email}`);
+    // Generic logging - never log user existence information
+    console.log('Password reset request received');
 
+    // Add constant-time delay to prevent timing attacks
+    const baseDelay = 200;
+    const jitter = Math.random() * 100;
+    
     // Check if user exists
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (userError) {
-      console.error("Error fetching users:", userError);
+      console.error("Error fetching users");
       throw userError;
     }
 
     const user = userData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
     if (!user) {
-      // For security, return generic success message even if user doesn't exist
-      console.log(`User not found for email: ${email}`);
+      // Add delay to prevent timing-based enumeration
+      await new Promise(r => setTimeout(r, baseDelay + jitter));
+      
+      console.log('Password reset request processed');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -106,7 +113,10 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (!profile?.active) {
-      console.log(`Inactive account: ${email}`);
+      // Add delay to prevent timing-based enumeration
+      await new Promise(r => setTimeout(r, baseDelay + jitter));
+      
+      console.log('Password reset request processed');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -177,10 +187,13 @@ const handler = async (req: Request): Promise<Response> => {
       p_action_type: 'password_reset_requested',
       p_entity_type: 'user',
       p_entity_id: user.id,
-      p_details: { email: email, reset_method: 'forgot_password' }
+      p_details: { reset_method: 'forgot_password' }
     });
 
-    console.log(`Password reset successful for: ${email}`);
+    // Add delay to match timing of non-existent user path
+    await new Promise(r => setTimeout(r, baseDelay + jitter));
+
+    console.log('Password reset request processed');
 
     return new Response(
       JSON.stringify({ 

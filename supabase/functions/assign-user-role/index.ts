@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from '../_shared/validators.ts';
 import { validateAssignRoleRequest } from '../_shared/requestValidators.ts';
+import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,6 +64,23 @@ serve(async (req) => {
         persistSession: false
       }
     });
+
+    // Rate limiting to prevent abuse
+    const limiter = new RateLimiter();
+    const clientIP = getClientIP(req);
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      clientIP,
+      'assign-user-role',
+      RATE_LIMITS.AUTH_SIGN_UP // 3 signups per hour per IP
+    );
+
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Too many signup attempts. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Parse and validate JSON
     let signupData: SignupRequest;
