@@ -7,13 +7,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck, CreditCard, Building2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PaymentRetryDialog } from "@/components/orders/PaymentRetryDialog";
+import { AddCreditCardDialog } from "@/components/profile/AddCreditCardDialog";
+import { AddBankAccountDialog } from "@/components/profile/AddBankAccountDialog";
+import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
 
 // Helper function to extract state from address string
 const extractStateFromAddress = (address: string): string => {
@@ -32,6 +37,14 @@ export default function OrderConfirmation() {
   const [uploadingPrescriptions, setUploadingPrescriptions] = useState<Record<string, boolean>>({});
   const [prescriptionFiles, setPrescriptionFiles] = useState<Record<string, File>>({});
   const [prescriptionPreviews, setPrescriptionPreviews] = useState<Record<string, string>>({});
+  
+  // Payment method state
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>("");
+  const [showPaymentRetryDialog, setShowPaymentRetryDialog] = useState(false);
+  const [paymentErrors, setPaymentErrors] = useState<any[]>([]);
+  const [failedOrderIds, setFailedOrderIds] = useState<string[]>([]);
+  const [showAddCardDialog, setShowAddCardDialog] = useState(false);
+  const [showAddBankDialog, setShowAddBankDialog] = useState(false);
   
   // Get discount from navigation state - use useState to persist during async operations
   const location = useLocation();
@@ -85,6 +98,23 @@ export default function OrderConfirmation() {
     enabled: !!effectiveUserId && hasPracticeOrder,
   });
 
+  // Fetch payment methods
+  const { data: paymentMethods } = useQuery({
+    queryKey: ["payment-methods", effectiveUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_payment_methods")
+        .select("*")
+        .eq("practice_id", effectiveUserId)
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!effectiveUserId,
+  });
+
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       if (!cart?.id || !cart.lines || cart.lines.length === 0) {
@@ -93,6 +123,11 @@ export default function OrderConfirmation() {
 
       if (!agreed) {
         throw new Error("You must agree to the terms before confirming your order");
+      }
+
+      // Validate payment method selected
+      if (!selectedPaymentMethodId) {
+        throw new Error("Please select a payment method before confirming your order");
       }
 
       // Validate CSRF token before order placement
@@ -462,6 +497,53 @@ export default function OrderConfirmation() {
         }
       }
 
+      // Process payments for all created orders (NO ROLLBACK on failure)
+      const failedPayments: any[] = [];
+      const failedOrders: string[] = [];
+
+      for (const order of createdOrders) {
+        try {
+          const { data: paymentResult, error: paymentError } = await supabase.functions.invoke(
+            "authorizenet-charge-payment",
+            {
+              body: {
+                order_id: order.id,
+                payment_method_id: selectedPaymentMethodId,
+                amount: order.total_amount,
+              },
+            }
+          );
+
+          if (paymentError || !paymentResult?.success) {
+            // Mark order as payment_failed but don't delete it
+            await supabase
+              .from("orders")
+              .update({ payment_status: "payment_failed", status: "pending" })
+              .eq("id", order.id);
+
+            failedPayments.push({
+              orderId: order.id,
+              error: paymentResult?.error || paymentError?.message || "Payment processing failed",
+              orderTotal: order.total_amount,
+            });
+            failedOrders.push(order.id);
+          }
+        } catch (error: any) {
+          // Payment exception - mark order as failed
+          await supabase
+            .from("orders")
+            .update({ payment_status: "payment_failed", status: "pending" })
+            .eq("id", order.id);
+
+          failedPayments.push({
+            orderId: order.id,
+            error: error.message || "Payment processing exception",
+            orderTotal: order.total_amount,
+          });
+          failedOrders.push(order.id);
+        }
+      }
+
         // Increment discount code usage
         if (discountCode) {
           await supabase.rpc('increment_discount_usage' as any, { 
@@ -478,16 +560,33 @@ export default function OrderConfirmation() {
 
       if (deleteError) throw deleteError;
 
-      return createdOrders;
+      return { createdOrders, failedPayments, failedOrders };
     },
-    onSuccess: (orders) => {
-      const orderCount = orders.length;
-      toast({
-        title: "Order Confirmed Successfully! 🎉",
-        description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      navigate("/orders");
+    onSuccess: (result) => {
+      const { createdOrders, failedPayments, failedOrders } = result;
+      
+      if (failedPayments.length === 0) {
+        // All payments succeeded
+        const orderCount = createdOrders.length;
+        toast({
+          title: "Order Confirmed Successfully! 🎉",
+          description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["cart"] });
+        navigate("/orders");
+      } else {
+        // Some payments failed - show retry dialog
+        setPaymentErrors(failedPayments);
+        setFailedOrderIds(failedOrders);
+        setShowPaymentRetryDialog(true);
+        queryClient.invalidateQueries({ queryKey: ["cart"] });
+        
+        toast({
+          title: "Orders Created - Payment Issues",
+          description: `${failedPayments.length} order${failedPayments.length > 1 ? 's' : ''} created but payment failed. Please retry payment.`,
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -969,6 +1068,31 @@ export default function OrderConfirmation() {
           Please agree to the medical attestation to proceed
         </p>
       )}
+
+      <PaymentRetryDialog
+        open={showPaymentRetryDialog}
+        onOpenChange={setShowPaymentRetryDialog}
+        paymentErrors={paymentErrors}
+        failedOrderIds={failedOrderIds}
+      />
+
+      <AddCreditCardDialog
+        open={showAddCardDialog}
+        onOpenChange={setShowAddCardDialog}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["payment-methods"] });
+          setShowAddCardDialog(false);
+        }}
+      />
+
+      <AddBankAccountDialog
+        open={showAddBankDialog}
+        onOpenChange={setShowAddBankDialog}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["payment-methods"] });
+          setShowAddBankDialog(false);
+        }}
+      />
     </div>
   );
 }

@@ -50,6 +50,12 @@ const profileFormSchema = z.object({
     state: z.string().optional(),
     zip: z.string().optional(),
   }).optional(),
+  billing_address: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip: z.string().optional(),
+  }).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -97,6 +103,12 @@ export const PracticeProfileForm = () => {
         state: profile.shipping_address_state || "",
         zip: profile.shipping_address_zip || "",
       },
+      billing_address: {
+        street: profile.billing_street || "",
+        city: profile.billing_city || "",
+        state: profile.billing_state || "",
+        zip: profile.billing_zip || "",
+      },
     } : undefined,
   });
 
@@ -104,6 +116,7 @@ export const PracticeProfileForm = () => {
     mutationFn: async (values: ProfileFormValues & { 
       address?: any;
       shipping_address?: any;
+      billing_address?: any;
     }) => {
       const { error } = await supabase
         .from("profiles")
@@ -130,6 +143,10 @@ export const PracticeProfileForm = () => {
           shipping_address_verification_status: values.shipping_address?.status || 'unverified',
           shipping_address_verified_at: values.shipping_address?.verified_at,
           shipping_address_verification_source: values.shipping_address?.source,
+          billing_street: values.billing_address?.street,
+          billing_city: values.billing_address?.city,
+          billing_state: values.billing_address?.state,
+          billing_zip: values.billing_address?.zip,
         })
         .eq("id", effectiveUserId);
 
@@ -377,6 +394,52 @@ export const PracticeProfileForm = () => {
           </FormItem>
         )}
       />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium">Billing Address</h3>
+            <p className="text-sm text-muted-foreground">
+              This will be your default billing address for payment methods
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const shippingAddr = form.getValues('shipping_address');
+              if (shippingAddr) {
+                form.setValue('billing_address', {
+                  street: shippingAddr.street,
+                  city: shippingAddr.city,
+                  state: shippingAddr.state,
+                  zip: shippingAddr.zip,
+                });
+              }
+            }}
+          >
+            Copy from Shipping
+          </Button>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="billing_address"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <AddressInput
+                  label="Billing Address"
+                  value={field.value || {}}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
       <Button
               type="submit" 

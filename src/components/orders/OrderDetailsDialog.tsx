@@ -15,11 +15,14 @@ import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
 import { CancelOrderDialog } from "./CancelOrderDialog";
 import { ReportNotesSection } from "./ReportNotesSection";
+import { RefundOrderDialog } from "./RefundOrderDialog";
+import { RefundHistory } from "./RefundHistory";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
+import { CreditCard, Building2, DollarSign } from "lucide-react";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -37,6 +40,7 @@ export const OrderDetailsDialog = ({
   const { effectiveRole, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [decryptedPatientPHI, setDecryptedPatientPHI] = useState<Map<string, { allergies?: string | null, notes?: string | null }>>(new Map());
   const [decryptedContactInfo, setDecryptedContactInfo] = useState<Map<string, { patient_email?: string | null, patient_phone?: string | null, patient_address?: string | null }>>(new Map());
 
@@ -411,7 +415,54 @@ export const OrderDetailsDialog = ({
                 {order.ship_to === 'practice' ? '🏢 Practice Order' : '👤 Patient Order'}
               </Badge>
             </div>
+            {order.payment_status && (
+              <div>
+                <p className="text-sm text-muted-foreground">Payment Status</p>
+                <Badge
+                  variant={
+                    order.payment_status === 'paid' ? 'default' :
+                    order.payment_status === 'refunded' ? 'secondary' :
+                    order.payment_status === 'partially_refunded' ? 'outline' :
+                    order.payment_status === 'payment_failed' ? 'destructive' :
+                    'secondary'
+                  }
+                >
+                  {order.payment_status.replace(/_/g, ' ').toUpperCase()}
+                </Badge>
+              </div>
+            )}
           </div>
+
+          {order.authorizenet_transaction_id && (
+            <div className="p-4 bg-muted rounded-lg space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                {order.payment_method_used === 'credit_card' ? (
+                  <CreditCard className="h-4 w-4" />
+                ) : (
+                  <Building2 className="h-4 w-4" />
+                )}
+                <span className="font-medium">
+                  {order.payment_method_used === 'credit_card' ? 'Credit Card' : 'Bank Account'}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground font-mono">
+                Txn: {order.authorizenet_transaction_id.slice(0, 12)}...
+              </p>
+               {effectiveRole === 'admin' && 
+                order.authorizenet_transaction_id && 
+                (order.payment_status === 'paid' || order.payment_status === 'partially_refunded') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRefundDialogOpen(true)}
+                  className="mt-2"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Process Refund
+                </Button>
+              )}
+            </div>
+          )}
 
           {order.ship_to === 'practice' && order.practice_address && (
             <div className="p-4 bg-muted rounded-lg">
@@ -592,6 +643,9 @@ export const OrderDetailsDialog = ({
               ))}
             </div>
           </div>
+
+          {/* Refund History Section */}
+          <RefundHistory orderId={order.id} />
         </div>
       </DialogContent>
       
@@ -602,6 +656,13 @@ export const OrderDetailsDialog = ({
         canCancel={canCancelOrder()}
         isAdmin={effectiveRole === 'admin'}
         orderCreatedAt={order.created_at}
+        onSuccess={onSuccess}
+      />
+
+      <RefundOrderDialog
+        open={refundDialogOpen}
+        onOpenChange={setRefundDialogOpen}
+        order={order}
         onSuccess={onSuccess}
       />
     </Dialog>
