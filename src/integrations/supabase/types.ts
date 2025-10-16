@@ -292,6 +292,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cart_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cart_access_log: {
@@ -495,6 +502,13 @@ export type Database = {
             columns: ["rep_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -897,6 +911,13 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
           {
@@ -1352,6 +1373,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       patients: {
@@ -1658,10 +1686,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pharmacies_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pharmacies_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -1747,6 +1789,13 @@ export type Database = {
             columns: ["practice_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_payment_methods_provider_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -2080,10 +2129,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "profiles_linked_topline_id_fkey"
+            columns: ["linked_topline_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "profiles_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -2119,6 +2182,13 @@ export type Database = {
             columns: ["practice_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "providers_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -2158,6 +2228,13 @@ export type Database = {
             columns: ["practice_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_practice_links_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
           {
@@ -2210,6 +2287,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -2308,6 +2392,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "shipping_audit_logs_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       statuses: {
@@ -2397,6 +2488,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sync_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       terms_and_conditions: {
@@ -2467,6 +2565,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -2651,6 +2756,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_sessions: {
@@ -2827,6 +2939,128 @@ export type Database = {
           },
         ]
       }
+      profiles_masked_for_reps: {
+        Row: {
+          active: boolean | null
+          address: string | null
+          address_city: string | null
+          address_encrypted: string | null
+          address_formatted: string | null
+          address_state: string | null
+          address_street: string | null
+          address_verification_status: string | null
+          address_zip: string | null
+          company: string | null
+          created_at: string | null
+          dea: string | null
+          dea_encrypted: string | null
+          email: string | null
+          email_encrypted: string | null
+          full_name: string | null
+          id: string | null
+          license_number: string | null
+          license_number_encrypted: string | null
+          linked_topline_id: string | null
+          name: string | null
+          npi: string | null
+          npi_encrypted: string | null
+          parent_id: string | null
+          phone: string | null
+          phone_encrypted: string | null
+          prescriber_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          address?: string | null
+          address_city?: string | null
+          address_encrypted?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_status?: string | null
+          address_zip?: string | null
+          company?: string | null
+          created_at?: string | null
+          dea?: never
+          dea_encrypted?: never
+          email?: string | null
+          email_encrypted?: string | null
+          full_name?: never
+          id?: string | null
+          license_number?: never
+          license_number_encrypted?: never
+          linked_topline_id?: string | null
+          name?: string | null
+          npi?: never
+          npi_encrypted?: never
+          parent_id?: string | null
+          phone?: string | null
+          phone_encrypted?: string | null
+          prescriber_name?: never
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          address?: string | null
+          address_city?: string | null
+          address_encrypted?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_status?: string | null
+          address_zip?: string | null
+          company?: string | null
+          created_at?: string | null
+          dea?: never
+          dea_encrypted?: never
+          email?: string | null
+          email_encrypted?: string | null
+          full_name?: never
+          id?: string | null
+          license_number?: never
+          license_number_encrypted?: never
+          linked_topline_id?: string | null
+          name?: string | null
+          npi?: never
+          npi_encrypted?: never
+          parent_id?: string | null
+          phone?: string | null
+          phone_encrypted?: string | null
+          prescriber_name?: never
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_linked_topline_id_fkey"
+            columns: ["linked_topline_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_linked_topline_id_fkey"
+            columns: ["linked_topline_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       archive_old_audit_logs: {
@@ -2846,6 +3080,10 @@ export type Database = {
         Returns: boolean
       }
       can_user_impersonate: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      can_view_credentials: {
         Args: { _user_id: string }
         Returns: boolean
       }
@@ -2909,6 +3147,13 @@ export type Database = {
         Returns: {
           allergies: string
           notes: string
+        }[]
+      }
+      get_decrypted_practice_credentials: {
+        Args: { p_practice_id: string }
+        Returns: {
+          license_number: string
+          npi: string
         }[]
       }
       get_decrypted_provider_credentials: {

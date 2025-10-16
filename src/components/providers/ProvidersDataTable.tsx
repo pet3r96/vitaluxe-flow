@@ -29,6 +29,9 @@ export const ProvidersDataTable = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
+  // Check if user can view credentials
+  const canViewCredentials = effectiveRole && ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole);
+
   const { data: providers, isLoading, refetch } = useQuery({
     queryKey: ["providers", effectiveUserId, effectiveRole],
     staleTime: 0,
@@ -55,7 +58,7 @@ export const ProvidersDataTable = () => {
       const userIds = providersData.map(p => p.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, name, email, npi, dea, license_number, phone, full_name")
+        .select("id, name, email, phone, full_name")
         .in("id", userIds);
 
       if (profilesError) throw profilesError;
@@ -85,6 +88,34 @@ export const ProvidersDataTable = () => {
     enabled: !!effectiveUserId
   });
 
+  // Fetch decrypted credentials for authorized users
+  const { data: decryptedCredentials } = useQuery({
+    queryKey: ["decrypted-provider-credentials", providers?.map(p => p.id)],
+    enabled: !!providers && providers.length > 0 && canViewCredentials,
+    queryFn: async () => {
+      if (!providers || !canViewCredentials) return new Map();
+      
+      const credMap = new Map();
+      
+      // Fetch decrypted credentials for each provider
+      for (const provider of providers) {
+        try {
+          const { data, error } = await supabase.rpc('get_decrypted_provider_credentials', {
+            p_provider_id: provider.id
+          });
+          
+          if (!error && data && data.length > 0) {
+            credMap.set(provider.id, data[0]);
+          }
+        } catch (error) {
+          console.error(`Error decrypting credentials for provider ${provider.id}:`, error);
+        }
+      }
+      
+      return credMap;
+    }
+  });
+
   const toggleStatus = async (providerId: string, currentStatus: boolean) => {
     const { data, error } = await supabase.functions.invoke('manage-provider-status', {
       body: { providerId, active: !currentStatus }
@@ -104,7 +135,6 @@ export const ProvidersDataTable = () => {
     provider.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     provider.profiles?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     provider.profiles?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    provider.profiles?.npi?.includes(searchQuery) ||
     provider.practice?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -123,21 +153,22 @@ export const ProvidersDataTable = () => {
 
   const paginatedProviders = filteredProviders?.slice(startIndex, endIndex);
 
-  // Log credential access when providers with credentials are displayed
+  // Log credential access when providers with decrypted credentials are displayed
   useEffect(() => {
-    if (paginatedProviders && paginatedProviders.length > 0) {
+    if (paginatedProviders && paginatedProviders.length > 0 && canViewCredentials && decryptedCredentials) {
       paginatedProviders.forEach(provider => {
-        if (provider.profiles && (provider.profiles.npi || provider.profiles.dea || provider.profiles.license_number)) {
+        const creds = decryptedCredentials.get(provider.id);
+        if (creds && (creds.npi || creds.dea || creds.license_number)) {
           const isPracticeView = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
           const isOwnProvider = effectiveUserId === provider.user_id;
           
           logCredentialAccess({
             profileId: provider.user_id,
-            profileName: provider.profiles.full_name || provider.profiles.name,
+            profileName: provider.profiles?.full_name || provider.profiles?.name || 'Unknown',
             accessedFields: {
-              npi: !!provider.profiles.npi,
-              dea: !!provider.profiles.dea,
-              license: !!provider.profiles.license_number,
+              npi: !!creds.npi,
+              dea: !!creds.dea,
+              license: !!creds.license_number,
             },
             viewerRole: effectiveRole || 'unknown',
             relationship: isOwnProvider ? 'self' : isPracticeView ? 'practice_admin' : 'admin',
@@ -146,7 +177,7 @@ export const ProvidersDataTable = () => {
         }
       });
     }
-  }, [paginatedProviders, effectiveRole, effectiveUserId]);
+  }, [paginatedProviders, effectiveRole, effectiveUserId, canViewCredentials, decryptedCredentials]);
 
   if (isLoading) {
     return <div className="text-center py-12 text-muted-foreground">Loading providers...</div>;
@@ -178,9 +209,13 @@ export const ProvidersDataTable = () => {
               <TableHead>Full Name</TableHead>
               <TableHead>Practice</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Provider NPI #</TableHead>
-              <TableHead>Provider DEA #</TableHead>
-              <TableHead>License</TableHead>
+              {canViewCredentials && (
+                <>
+                  <TableHead>Provider NPI #</TableHead>
+                  <TableHead>Provider DEA #</TableHead>
+                  <TableHead>License</TableHead>
+                </>
+              )}
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -192,9 +227,25 @@ export const ProvidersDataTable = () => {
                   <TableCell className="font-medium">{provider.profiles?.full_name || provider.profiles?.name}</TableCell>
                   <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
                   <TableCell>{provider.profiles?.email}</TableCell>
-                  <TableCell>{provider.profiles?.npi}</TableCell>
-                  <TableCell>{provider.profiles?.dea || "N/A"}</TableCell>
-                  <TableCell>{provider.profiles?.license_number}</TableCell>
+                  {canViewCredentials && (
+                    <>
+                      <TableCell>
+                        <span className="font-mono text-sm">
+                          {decryptedCredentials?.get(provider.id)?.npi || "N/A"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">
+                          {decryptedCredentials?.get(provider.id)?.dea || "N/A"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">
+                          {decryptedCredentials?.get(provider.id)?.license_number || "N/A"}
+                        </span>
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell>
                     <Badge variant={provider.active ? "default" : "secondary"}>
                       {provider.active ? "Active" : "Inactive"}
@@ -222,7 +273,7 @@ export const ProvidersDataTable = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={canViewCredentials ? 8 : 5} className="text-center text-muted-foreground">
                   No providers found. Add your first provider to get started.
                 </TableCell>
               </TableRow>

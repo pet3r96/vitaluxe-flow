@@ -30,6 +30,9 @@ export const PracticesDataTable = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
+  // Check if user can view credentials
+  const canViewCredentials = effectiveRole && ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole);
+
   const { data: practices, isLoading, refetch } = useQuery({
     queryKey: ["practices"],
     staleTime: 0,
@@ -59,6 +62,34 @@ export const PracticesDataTable = () => {
 
       return practicesOnly;
     },
+  });
+
+  // Fetch decrypted credentials for authorized users
+  const { data: decryptedCredentials } = useQuery({
+    queryKey: ["decrypted-practice-credentials", practices?.map(p => p.id)],
+    enabled: !!practices && practices.length > 0 && canViewCredentials,
+    queryFn: async () => {
+      if (!practices || !canViewCredentials) return new Map();
+      
+      const credMap = new Map();
+      
+      // Fetch decrypted credentials for each practice
+      for (const practice of practices) {
+        try {
+          const { data, error } = await supabase.rpc('get_decrypted_practice_credentials', {
+            p_practice_id: practice.id
+          });
+          
+          if (!error && data && data.length > 0) {
+            credMap.set(practice.id, data[0]);
+          }
+        } catch (error) {
+          console.error(`Error decrypting credentials for practice ${practice.id}:`, error);
+        }
+      }
+      
+      return credMap;
+    }
   });
 
   const { data: providerCounts } = useQuery({
@@ -233,9 +264,7 @@ export const PracticesDataTable = () => {
     const matchesSearch = 
       practice.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       practice.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      practice.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      practice.npi?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      practice.license_number?.toLowerCase().includes(searchQuery.toLowerCase());
+      practice.company?.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesSearch;
   });
@@ -255,17 +284,18 @@ export const PracticesDataTable = () => {
 
   const paginatedPractices = filteredPractices?.slice(startIndex, endIndex);
 
-  // Log credential access when practices with credentials are displayed
+  // Log credential access when practices with decrypted credentials are displayed
   useEffect(() => {
-    if (paginatedPractices && paginatedPractices.length > 0) {
+    if (paginatedPractices && paginatedPractices.length > 0 && canViewCredentials && decryptedCredentials) {
       paginatedPractices.forEach(practice => {
-        if (practice.npi || practice.license_number) {
+        const creds = decryptedCredentials.get(practice.id);
+        if (creds && (creds.npi || creds.license_number)) {
           logCredentialAccess({
             profileId: practice.id,
             profileName: practice.name,
             accessedFields: {
-              npi: !!practice.npi,
-              license: !!practice.license_number,
+              npi: !!creds.npi,
+              license: !!creds.license_number,
               dea: false,
             },
             viewerRole: effectiveRole || 'admin',
@@ -275,7 +305,7 @@ export const PracticesDataTable = () => {
         }
       });
     }
-  }, [paginatedPractices, effectiveRole, effectiveUserId]);
+  }, [paginatedPractices, effectiveRole, effectiveUserId, canViewCredentials, decryptedCredentials]);
 
   return (
     <div className="space-y-4">
@@ -301,8 +331,12 @@ export const PracticesDataTable = () => {
               <TableRow>
                 <TableHead>Practice Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>NPI</TableHead>
-                <TableHead>License #</TableHead>
+                {canViewCredentials && (
+                  <>
+                    <TableHead>NPI</TableHead>
+                    <TableHead>License #</TableHead>
+                  </>
+                )}
                 <TableHead>Phone</TableHead>
                 <TableHead>Providers</TableHead>
               <TableHead>Assigned Rep</TableHead>
@@ -313,13 +347,13 @@ export const PracticesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={canViewCredentials ? 9 : 7} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPractices?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={canViewCredentials ? 9 : 7} className="text-center text-muted-foreground">
                   No practices found
                 </TableCell>
               </TableRow>
@@ -328,12 +362,20 @@ export const PracticesDataTable = () => {
                 <TableRow key={practice.id}>
                   <TableCell className="font-medium">{practice.name}</TableCell>
                   <TableCell>{practice.email}</TableCell>
-                  <TableCell>
-                    <span className="font-mono text-sm">{practice.npi || "-"}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-mono text-sm">{practice.license_number || "-"}</span>
-                  </TableCell>
+                  {canViewCredentials && (
+                    <>
+                      <TableCell>
+                        <span className="font-mono text-sm">
+                          {decryptedCredentials?.get(practice.id)?.npi || "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">
+                          {decryptedCredentials?.get(practice.id)?.license_number || "-"}
+                        </span>
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell>{formatPhoneNumber(practice.phone)}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{providerCounts?.[practice.id] || 0}</Badge>
