@@ -1,4 +1,4 @@
-import { useNotifications, Notification } from "@/hooks/useNotifications";
+import { Notification } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, ExternalLink, AlertCircle, CheckCircle, Info, AlertTriangle } from "lucide-react";
@@ -8,6 +8,8 @@ import { useNavigate } from "react-router-dom";
 
 interface NotificationItemProps {
   notification: Notification;
+  onMarkAsRead: (id: string) => Promise<void> | void;
+  onDelete: (id: string) => Promise<void> | void;
 }
 
 const severityConfig = {
@@ -29,8 +31,8 @@ const severityConfig = {
   },
 };
 
-export function NotificationItem({ notification }: NotificationItemProps) {
-  const { markAsRead, deleteNotification } = useNotifications();
+export function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
+  
   const navigate = useNavigate();
 
   const config = severityConfig[notification.severity];
@@ -38,7 +40,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 
   const handleClick = () => {
     if (!notification.read) {
-      markAsRead(notification.id);
+      onMarkAsRead(notification.id);
     }
     if (notification.action_url) {
       navigate(notification.action_url);
@@ -46,8 +48,9 @@ export function NotificationItem({ notification }: NotificationItemProps) {
   };
 
   const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    deleteNotification(notification.id);
+    onDelete(notification.id);
   };
 
   return (
@@ -79,6 +82,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
               size="icon"
               className="h-8 w-8 -mt-1 -mr-1 shrink-0 hover:bg-destructive/10 hover:text-destructive"
               onClick={handleDelete}
+              aria-label="Delete notification"
             >
               <X className="h-4 w-4" />
             </Button>

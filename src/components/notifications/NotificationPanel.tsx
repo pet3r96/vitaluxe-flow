@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function NotificationPanel() {
-  const { notifications, loading, markAllAsRead, unreadCount } = useNotifications();
+  const { notifications, loading, markAllAsRead, unreadCount, markAsRead, deleteNotification } = useNotifications();
 
   const unreadNotifications = notifications.filter((n) => !n.read);
   const readNotifications = notifications.filter((n) => n.read);
@@ -67,7 +67,12 @@ export function NotificationPanel() {
             <ScrollArea className="h-full">
               <div className="space-y-2 pr-4">
                 {unreadNotifications.map((notification) => (
-                  <NotificationItem key={notification.id} notification={notification} />
+                  <NotificationItem
+                    key={notification.id}
+                    notification={notification}
+                    onMarkAsRead={markAsRead}
+                    onDelete={deleteNotification}
+                  />
                 ))}
               </div>
             </ScrollArea>
@@ -78,7 +83,12 @@ export function NotificationPanel() {
           <ScrollArea className="h-full">
             <div className="space-y-2 pr-4">
               {notifications.map((notification) => (
-                <NotificationItem key={notification.id} notification={notification} />
+                <NotificationItem
+                  key={notification.id}
+                  notification={notification}
+                  onMarkAsRead={markAsRead}
+                  onDelete={deleteNotification}
+                />
               ))}
             </div>
           </ScrollArea>
