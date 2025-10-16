@@ -19,15 +19,15 @@ const Security = () => {
   const [activeTab, setActiveTab] = useState("overview");
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-8">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold text-foreground">Security & Monitoring</h1>
         <p className="text-muted-foreground mt-2">
           Comprehensive security monitoring, audit logs, and HIPAA compliance management
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-12 pt-2">
         <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6 xl:grid-cols-13">
           <TabsTrigger value="overview" className="gap-2">
             <Shield className="h-4 w-4" />
