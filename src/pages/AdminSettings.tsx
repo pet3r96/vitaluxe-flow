@@ -9,6 +9,7 @@ import { PendingPracticesApproval } from "@/components/admin/PendingPracticesApp
 import { ProductTypeManager } from "@/components/admin/ProductTypeManager";
 import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
+import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered } from "lucide-react";
 
@@ -183,6 +184,7 @@ const AdminSettings = () => {
         </TabsContent>
 
         <TabsContent value="utilities" className="space-y-4">
+          <TestPasswordManager />
           <OrphanedUserFixer />
         </TabsContent>
       </Tabs>
