@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { validateResetPasswordRequest } from "../_shared/requestValidators.ts";
 import { generateSecurePassword } from "../_shared/validators.ts";
+import { RateLimiter, RATE_LIMITS, getClientIP } from "../_shared/rateLimiter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +19,34 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+
+    // Rate limiting
+    const limiter = new RateLimiter();
+    const clientIP = getClientIP(req);
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      clientIP,
+      'reset-password',
+      RATE_LIMITS.PASSWORD_RESET
+    );
+
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Too many reset attempts. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse JSON with error handling
     let requestData;
     try {
@@ -46,17 +75,6 @@ const handler = async (req: Request): Promise<Response> => {
     const { email }: ResetPasswordRequest = requestData;
 
     console.log(`Password reset requested for: ${email}`);
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
 
     // Check if user exists
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();

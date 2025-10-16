@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 
 export default function AcceptTerms() {
   const { user, effectiveRole, effectiveUserId, isImpersonating, impersonatedUserName, checkPasswordStatus } = useAuth();

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { validateValidateAddressRequest } from "../_shared/requestValidators.ts";
+import { RateLimiter, RATE_LIMITS, getClientIP } from "../_shared/rateLimiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -90,6 +91,22 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting
+    const limiter = new RateLimiter();
+    const clientIP = getClientIP(req);
+    const { allowed } = await limiter.checkLimit(
+      null,
+      clientIP,
+      'validate-address',
+      { maxRequests: 100, windowSeconds: 3600 } // 100 per hour
+    );
+
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     let requestData;
     try {
       requestData = await req.json();

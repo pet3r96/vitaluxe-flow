@@ -684,6 +684,54 @@ export type Database = {
         }
         Relationships: []
       }
+      file_upload_logs: {
+        Row: {
+          bucket_name: string
+          created_at: string | null
+          file_name: string
+          file_size: number
+          id: string
+          ip_address: string | null
+          mime_type: string
+          storage_path: string
+          user_agent: string | null
+          user_id: string | null
+          validation_errors: Json | null
+          validation_status: string
+          virus_scan_status: string | null
+        }
+        Insert: {
+          bucket_name: string
+          created_at?: string | null
+          file_name: string
+          file_size: number
+          id?: string
+          ip_address?: string | null
+          mime_type: string
+          storage_path: string
+          user_agent?: string | null
+          user_id?: string | null
+          validation_errors?: Json | null
+          validation_status: string
+          virus_scan_status?: string | null
+        }
+        Update: {
+          bucket_name?: string
+          created_at?: string | null
+          file_name?: string
+          file_size?: number
+          id?: string
+          ip_address?: string | null
+          mime_type?: string
+          storage_path?: string
+          user_agent?: string | null
+          user_id?: string | null
+          validation_errors?: Json | null
+          validation_status?: string
+          virus_scan_status?: string | null
+        }
+        Relationships: []
+      }
       impersonation_logs: {
         Row: {
           created_at: string
@@ -1615,6 +1663,7 @@ export type Database = {
           id: string
           is_default: boolean | null
           plaid_access_token: string
+          plaid_access_token_encrypted: string | null
           plaid_account_id: string
           practice_id: string
           updated_at: string | null
@@ -1627,6 +1676,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           plaid_access_token: string
+          plaid_access_token_encrypted?: string | null
           plaid_account_id: string
           practice_id: string
           updated_at?: string | null
@@ -1639,6 +1689,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           plaid_access_token?: string
+          plaid_access_token_encrypted?: string | null
           plaid_account_id?: string
           practice_id?: string
           updated_at?: string | null

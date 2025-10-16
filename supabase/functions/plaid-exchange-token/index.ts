@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePlaidExchangeRequest } from "../_shared/requestValidators.ts";
 import { validateCSRFToken } from "../_shared/csrfValidator.ts";
+import { RateLimiter, RATE_LIMITS, getClientIP } from "../_shared/rateLimiter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,22 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting
+    const limiter = new RateLimiter();
+    const clientIP = getClientIP(req);
+    const { allowed } = await limiter.checkLimit(
+      null,
+      clientIP,
+      'plaid-exchange-token',
+      { maxRequests: 10, windowSeconds: 3600 } // 10 per hour
+    );
+
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     // Parse JSON with error handling
     let requestData;
     try {
@@ -132,17 +149,32 @@ serve(async (req) => {
 
     const isFirstMethod = !existingMethods || existingMethods.length === 0;
 
-    // Store in database
+    // Encrypt access token using database function
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const { data: encryptedToken, error: encryptError } = await serviceClient.rpc('encrypt_plaid_token', {
+      p_token: access_token
+    });
+
+    if (encryptError || !encryptedToken) {
+      console.error('Failed to encrypt Plaid access token:', encryptError);
+      throw new Error('Failed to secure payment method');
+    }
+
+    // Store encrypted token in database
     const { error: insertError } = await supabaseClient
       .from("practice_payment_methods")
       .insert({
         practice_id,
-        plaid_access_token: access_token,
+        plaid_access_token_encrypted: encryptedToken,
         plaid_account_id: account.account_id,
         account_name: account.name,
         account_mask: account.mask,
         bank_name: authData.item.institution_id,
-        is_default: isFirstMethod, // Set as default if it's the first one
+        is_default: isFirstMethod,
       });
 
     if (insertError) {
