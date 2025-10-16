@@ -17,13 +17,15 @@ interface AddCreditCardDialogProps {
   onOpenChange: (open: boolean) => void;
   defaultBillingAddress?: Partial<BillingAddress>;
   onSuccess?: () => void;
+  practiceId?: string;
 }
 
 export const AddCreditCardDialog = ({ 
   open, 
   onOpenChange,
   defaultBillingAddress,
-  onSuccess
+  onSuccess,
+  practiceId
 }: AddCreditCardDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -83,7 +85,7 @@ export const AddCreditCardDialog = ({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-methods', practiceId] });
       toast({
         title: "Card Added",
         description: "Your credit card has been added successfully.",

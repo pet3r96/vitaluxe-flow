@@ -1223,19 +1223,33 @@ export default function OrderConfirmation() {
       <AddCreditCardDialog
         open={showAddCardDialog}
         onOpenChange={setShowAddCardDialog}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["payment-methods"] });
-          setShowAddCardDialog(false);
-        }}
+        defaultBillingAddress={
+          providerProfile
+            ? {
+                street: providerProfile.shipping_address_street,
+                city: providerProfile.shipping_address_city,
+                state: providerProfile.shipping_address_state,
+                zip: providerProfile.shipping_address_zip,
+              }
+            : undefined
+        }
+        practiceId={effectiveUserId}
       />
 
       <AddBankAccountDialog
         open={showAddBankDialog}
         onOpenChange={setShowAddBankDialog}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["payment-methods"] });
-          setShowAddBankDialog(false);
-        }}
+        defaultBillingAddress={
+          providerProfile
+            ? {
+                street: providerProfile.shipping_address_street,
+                city: providerProfile.shipping_address_city,
+                state: providerProfile.shipping_address_state,
+                zip: providerProfile.shipping_address_zip,
+              }
+            : undefined
+        }
+        practiceId={effectiveUserId}
       />
     </div>
   );

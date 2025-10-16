@@ -15,13 +15,15 @@ interface AddBankAccountDialogProps {
   onOpenChange: (open: boolean) => void;
   defaultBillingAddress?: Partial<BillingAddress>;
   onSuccess?: () => void;
+  practiceId?: string;
 }
 
 export const AddBankAccountDialog = ({ 
   open, 
   onOpenChange,
   defaultBillingAddress,
-  onSuccess
+  onSuccess,
+  practiceId
 }: AddBankAccountDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -59,7 +61,7 @@ export const AddBankAccountDialog = ({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-methods', practiceId] });
       toast({
         title: "Bank Account Added",
         description: "Your bank account has been added successfully.",
