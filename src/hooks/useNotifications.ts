@@ -28,9 +28,18 @@ export function useNotifications() {
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setNotifications([]);
+        setUnreadCount(0);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("notifications")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -123,6 +132,9 @@ export function useNotifications() {
       if (notification && !notification.read) {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
+      
+      // Refresh count for robustness
+      fetchUnreadCount();
     } catch (error) {
       console.error("Error deleting notification:", error);
       toast({
