@@ -27,7 +27,7 @@ const Security = () => {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6 xl:grid-cols-13">
           <TabsTrigger value="overview" className="gap-2">
             <Shield className="h-4 w-4" />
