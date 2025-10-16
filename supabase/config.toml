@@ -1,5 +1,8 @@
 project_id = "qbtsfajshnrwwlfzkeog"
 
+[functions.set-test-password]
+verify_jwt = true
+
 [functions.send-2fa-code]
 verify_jwt = true
 
