@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { Download, XCircle, AlertCircle } from "lucide-react";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
@@ -239,9 +240,32 @@ export const OrderDetailsDialog = ({
               <p className="font-medium">{order.profiles?.name || "N/A"}</p>
             </div>
             {effectiveRole !== "pharmacy" && (
-              <div>
-                <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="font-medium">${order.total_amount}</p>
+              <div className="col-span-2">
+                <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span className="font-medium">${order.subtotal_before_discount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  
+                  {order.discount_amount && order.discount_amount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                      <span>Discount ({order.discount_percentage}%):</span>
+                      <span className="font-medium">-${order.discount_amount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Shipping & Handling:</span>
+                    <span className="font-medium">${order.shipping_total?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex justify-between text-base font-bold">
+                    <span>Total Amount:</span>
+                    <span className="text-primary">${order.total_amount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                </div>
               </div>
             )}
             <div>
