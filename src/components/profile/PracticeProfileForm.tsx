@@ -41,7 +41,7 @@ const profileFormSchema = z.object({
     state: z.string().optional(),
     zip: z.string().optional(),
   }).optional(),
-  practice_npi: npiSchema,
+  npi: npiSchema,
   dea: deaSchema,
   license_number: z.string().optional(),
   shipping_address: z.object({
@@ -118,7 +118,7 @@ export const PracticeProfileForm = () => {
         state: profile.address_state || "",
         zip: profile.address_zip || "",
       },
-      practice_npi: decryptedCreds?.npi || "",
+      npi: decryptedCreds?.npi || "",
       dea: decryptedCreds?.dea || "",
       license_number: decryptedCreds?.license_number || "",
       shipping_address: {
@@ -149,7 +149,7 @@ export const PracticeProfileForm = () => {
           address_verification_status: values.address?.status || 'unverified',
           address_verified_at: values.address?.verified_at,
           address_verification_source: values.address?.source,
-          practice_npi: values.practice_npi,
+          npi: values.npi,
           dea: values.dea,
           license_number: values.license_number,
           shipping_address_street: values.shipping_address?.street,
@@ -171,6 +171,7 @@ export const PracticeProfileForm = () => {
         description: "Your profile information has been saved successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["practice-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["practice-credentials"] });
     },
     onError: (error: any) => {
       toast({
@@ -313,7 +314,7 @@ export const PracticeProfileForm = () => {
 
             <FormField
               control={form.control}
-              name="practice_npi"
+              name="npi"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Practice NPI Number</FormLabel>
