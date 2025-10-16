@@ -28,6 +28,7 @@ interface CreateProfileRequest {
     zip: string;
   };
   is_default?: boolean;
+  practice_id?: string;
 }
 
 Deno.serve(async (req) => {
@@ -56,7 +57,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Creating payment profile for user ${user.id}, type: ${requestData.payment_type}`);
+    // Determine which practice to save to (for impersonation support)
+    const targetPracticeId = requestData.practice_id || user.id;
+    
+    console.log(`Creating payment profile for user ${user.id}, target practice: ${targetPracticeId}, type: ${requestData.payment_type}`);
 
     // TODO: Replace with actual Authorize.Net API call when keys are available
     // For now, simulate successful profile creation
@@ -65,7 +69,7 @@ Deno.serve(async (req) => {
 
     // Prepare payment method data
     const paymentMethodData: any = {
-      practice_id: user.id,
+      practice_id: targetPracticeId,
       payment_type: requestData.payment_type,
       authorizenet_profile_id: mockCustomerProfileId,
       authorizenet_payment_profile_id: mockPaymentProfileId,
@@ -96,7 +100,7 @@ Deno.serve(async (req) => {
       await supabase
         .from('practice_payment_methods')
         .update({ is_default: false })
-        .eq('practice_id', user.id);
+        .eq('practice_id', targetPracticeId);
     }
 
     // Insert payment method

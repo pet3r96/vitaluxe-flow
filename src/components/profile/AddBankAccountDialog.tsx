@@ -52,6 +52,7 @@ export const AddBankAccountDialog = ({
           account_holder_name: accountHolderName,
           billing_address: billingAddress,
           is_default: false,
+          practice_id: practiceId,
         },
       });
 
@@ -62,6 +63,7 @@ export const AddBankAccountDialog = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods', practiceId] });
+      queryClient.refetchQueries({ queryKey: ['payment-methods', practiceId] });
       toast({
         title: "Bank Account Added",
         description: "Your bank account has been added successfully.",

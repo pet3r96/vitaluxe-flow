@@ -76,6 +76,7 @@ export const AddCreditCardDialog = ({
           cardholder_name: cardholderName,
           billing_address: billingAddress,
           is_default: false,
+          practice_id: practiceId,
         },
       });
 
@@ -86,6 +87,7 @@ export const AddCreditCardDialog = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods', practiceId] });
+      queryClient.refetchQueries({ queryKey: ['payment-methods', practiceId] });
       toast({
         title: "Card Added",
         description: "Your credit card has been added successfully.",

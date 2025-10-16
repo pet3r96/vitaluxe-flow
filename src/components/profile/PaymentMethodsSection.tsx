@@ -100,7 +100,7 @@ export const PaymentMethodsSection = () => {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payment-methods"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-methods", effectiveUserId] });
       toast({
         title: "Success",
         description: "Bank account connected successfully via Plaid",
@@ -126,7 +126,7 @@ export const PaymentMethodsSection = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payment-methods"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-methods", effectiveUserId] });
       toast({
         title: "Success",
         description: "Payment method removed successfully",
@@ -159,7 +159,7 @@ export const PaymentMethodsSection = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payment-methods"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-methods", effectiveUserId] });
       toast({
         title: "Success",
         description: "Default payment method updated",
@@ -312,6 +312,7 @@ export const PaymentMethodsSection = () => {
           state: profile.billing_state,
           zip: profile.billing_zip,
         } : undefined}
+        practiceId={effectiveUserId}
       />
       
       <AddBankAccountDialog
@@ -323,6 +324,7 @@ export const PaymentMethodsSection = () => {
           state: profile.billing_state,
           zip: profile.billing_zip,
         } : undefined}
+        practiceId={effectiveUserId}
       />
     </>
   );
