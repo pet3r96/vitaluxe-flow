@@ -200,6 +200,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
             <Label htmlFor="npi">Provider NPI # *</Label>
             <Input
               id="npi"
+              type="tel"
               value={formData.npi}
               onChange={(e) => {
                 const value = e.target.value.replace(/\D/g, '');
@@ -224,9 +225,18 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
             <Label htmlFor="dea">Provider DEA #</Label>
             <Input
               id="dea"
+              type="text"
               value={formData.dea}
               onChange={(e) => {
-                const value = e.target.value.toUpperCase();
+                let value = e.target.value.toUpperCase();
+                value = value.replace(/[^A-Z0-9]/g, '');
+                if (value.length <= 2) {
+                  value = value.replace(/[^A-Z]/g, '');
+                } else {
+                  const letters = value.slice(0, 2).replace(/[^A-Z]/g, '');
+                  const digits = value.slice(2).replace(/\D/g, '');
+                  value = letters + digits;
+                }
                 setFormData({ ...formData, dea: value });
                 setValidationErrors({ ...validationErrors, dea: "" });
               }}

@@ -286,10 +286,19 @@ export const PracticeProfileForm = () => {
                 <FormItem>
                   <FormLabel>Practice NPI Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="1234567890" {...field} />
+                    <Input 
+                      type="tel"
+                      placeholder="1234567890" 
+                      maxLength={10}
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(value);
+                      }}
+                    />
                   </FormControl>
                   <FormDescription>
-                    Your practice or organization's National Provider Identifier
+                    Your practice's National Provider Identifier (10 digits)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -303,10 +312,27 @@ export const PracticeProfileForm = () => {
                 <FormItem>
                   <FormLabel>Practice DEA Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="AB1234567" {...field} />
+                    <Input 
+                      type="text"
+                      placeholder="AB1234567" 
+                      maxLength={9}
+                      {...field}
+                      onChange={(e) => {
+                        let value = e.target.value.toUpperCase();
+                        value = value.replace(/[^A-Z0-9]/g, '');
+                        if (value.length <= 2) {
+                          value = value.replace(/[^A-Z]/g, '');
+                        } else {
+                          const letters = value.slice(0, 2).replace(/[^A-Z]/g, '');
+                          const digits = value.slice(2).replace(/\D/g, '');
+                          value = letters + digits;
+                        }
+                        field.onChange(value);
+                      }}
+                    />
                   </FormControl>
                   <FormDescription>
-                    Practice's Drug Enforcement Administration registration
+                    Practice DEA registration (2 letters + 7 digits)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

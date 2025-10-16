@@ -209,9 +209,14 @@ export const ProviderDetailsDialog = ({
                   {isEditing && (isPractice || isAdmin) ? (
                     <div className="space-y-1">
                       <Input
+                        type="tel"
+                        maxLength={10}
                         value={formData.npi}
-                        onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
-                        placeholder="Enter NPI number"
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          setFormData({ ...formData, npi: value });
+                        }}
+                        placeholder="1234567890"
                       />
                       {(!decryptedCreds?.npi || decryptedCreds.npi === '[ENCRYPTED]') && (
                         <p className="text-xs text-amber-600">⚠️ Credential missing - please enter the real value</p>
@@ -240,9 +245,22 @@ export const ProviderDetailsDialog = ({
                   {isEditing && (isPractice || isAdmin) ? (
                     <div className="space-y-1">
                       <Input
+                        type="text"
+                        maxLength={9}
                         value={formData.dea}
-                        onChange={(e) => setFormData({ ...formData, dea: e.target.value })}
-                        placeholder="Enter DEA number"
+                        onChange={(e) => {
+                          let value = e.target.value.toUpperCase();
+                          value = value.replace(/[^A-Z0-9]/g, '');
+                          if (value.length <= 2) {
+                            value = value.replace(/[^A-Z]/g, '');
+                          } else {
+                            const letters = value.slice(0, 2).replace(/[^A-Z]/g, '');
+                            const digits = value.slice(2).replace(/\D/g, '');
+                            value = letters + digits;
+                          }
+                          setFormData({ ...formData, dea: value });
+                        }}
+                        placeholder="AB1234567"
                       />
                       {(!decryptedCreds?.dea || decryptedCreds.dea === '[ENCRYPTED]') && (
                         <p className="text-xs text-amber-600">⚠️ Credential missing - please enter the real value</p>

@@ -214,10 +214,19 @@ export const ProviderProfileForm = () => {
                 <FormItem>
                   <FormLabel>Provider NPI Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="1234567890" {...field} />
+                    <Input 
+                      type="tel"
+                      placeholder="1234567890" 
+                      maxLength={10}
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(value);
+                      }}
+                    />
                   </FormControl>
                   <FormDescription>
-                    Your personal National Provider Identifier
+                    Your personal National Provider Identifier (10 digits)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -231,10 +240,27 @@ export const ProviderProfileForm = () => {
                 <FormItem>
                   <FormLabel>DEA Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="BJ1234567" {...field} />
+                    <Input 
+                      type="text"
+                      placeholder="AB1234567" 
+                      maxLength={9}
+                      {...field}
+                      onChange={(e) => {
+                        let value = e.target.value.toUpperCase();
+                        value = value.replace(/[^A-Z0-9]/g, '');
+                        if (value.length <= 2) {
+                          value = value.replace(/[^A-Z]/g, '');
+                        } else {
+                          const letters = value.slice(0, 2).replace(/[^A-Z]/g, '');
+                          const digits = value.slice(2).replace(/\D/g, '');
+                          value = letters + digits;
+                        }
+                        field.onChange(value);
+                      }}
+                    />
                   </FormControl>
                   <FormDescription>
-                    Your Drug Enforcement Administration registration number
+                    Your DEA registration (2 letters + 7 digits)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
