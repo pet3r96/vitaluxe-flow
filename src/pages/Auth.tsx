@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/vitaluxe-logo-dark-bg.png";
 import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
+import { validatePasswordStrength } from "@/lib/passwordStrength";
+import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -68,6 +70,20 @@ const Auth = () => {
       });
       setLoading(false);
       return;
+    }
+
+    // Validate password strength for signup
+    if (!isLogin) {
+      const passwordValidation = validatePasswordStrength(password, email);
+      if (!passwordValidation.valid) {
+        toast({
+          title: "Weak Password",
+          description: passwordValidation.feedback || "Password does not meet security requirements",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
     }
 
     // Validate role-specific fields for signup
@@ -403,6 +419,11 @@ const Auth = () => {
               className="bg-input border-border text-foreground"
               required
             />
+            {!isLogin && password && (
+              <PasswordStrengthIndicator 
+                validation={validatePasswordStrength(password, email)}
+              />
+            )}
           </div>
 
           {isLogin && (

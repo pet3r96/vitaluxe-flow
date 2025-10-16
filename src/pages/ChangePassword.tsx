@@ -172,8 +172,15 @@ export default function ChangePassword() {
               </div>
             </div>
 
-            {/* Password Requirements */}
+            {/* Password Strength Indicator */}
             {formData.newPassword && (
+              <PasswordStrengthIndicator 
+                validation={validation}
+              />
+            )}
+
+            {/* Original Password Requirements kept for backwards compatibility */}
+            {formData.newPassword && false && (
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                 <h4 className="font-semibold text-sm">Password Requirements:</h4>
                 <div className="space-y-2">

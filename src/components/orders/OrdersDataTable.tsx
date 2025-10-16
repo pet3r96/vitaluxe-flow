@@ -56,7 +56,7 @@ export const OrdersDataTable = () => {
         }
 
         const { data: orderLinesData, error: orderLinesError } = await supabase
-          .from("order_lines")
+          .from("order_lines_masked" as any)
           .select(`
             *,
             products(name, product_type),
@@ -78,7 +78,7 @@ export const OrdersDataTable = () => {
 
         // Transform data to match expected format - group order_lines by order
         const ordersMap = new Map();
-        orderLinesData?.forEach((line) => {
+        (orderLinesData as any)?.forEach((line: any) => {
           const orderId = line.orders.id;
           if (!ordersMap.has(orderId)) {
             ordersMap.set(orderId, {

@@ -3,12 +3,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Key, Shield, AlertTriangle, CheckCircle2, Loader2, Info } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Key, Shield, AlertTriangle, CheckCircle2, Loader2, Info, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export const EncryptionStatusManager = () => {
+  // Check if admin IP is allowed
+  const { data: ipAllowed, isLoading: ipCheckLoading } = useQuery({
+    queryKey: ['ip-check'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('is_admin_ip_allowed' as any);
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: encryptionKeys, isLoading: keysLoading } = useQuery({
     queryKey: ["encryption-keys"],
     queryFn: async () => {
@@ -49,7 +59,21 @@ export const EncryptionStatusManager = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const isLoading = keysLoading || coverageLoading;
+  const isLoading = keysLoading || coverageLoading || ipCheckLoading;
+
+  // Show access restricted message if IP not allowed
+  if (ipAllowed === false) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Access Restricted</AlertTitle>
+        <AlertDescription>
+          Your IP address is not authorized to access encryption keys. 
+          Contact your system administrator to add your IP to the allowlist, or go to the IP Access tab to manage allowed IPs.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   const getKeyStatus = (key: any) => {
     if (!key) return { status: "unknown", message: "No key found", variant: "secondary" as const };

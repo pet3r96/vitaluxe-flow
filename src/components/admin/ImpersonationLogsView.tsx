@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
-import { Shield, Clock, User } from "lucide-react";
+import { Shield, Clock, User, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
@@ -20,6 +21,18 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 export function ImpersonationLogsView() {
   const { userRole, isImpersonating, effectiveUserId, user } = useAuth();
   const isAdminNotImpersonating = userRole === 'admin' && !isImpersonating;
+
+  // Check if admin IP is allowed (only for admins)
+  const { data: ipAllowed, isLoading: ipCheckLoading } = useQuery({
+    queryKey: ['ip-check'],
+    queryFn: async () => {
+      if (!isAdminNotImpersonating) return true; // Non-admins always allowed to view their own logs
+      const { data, error } = await supabase.rpc('is_admin_ip_allowed' as any);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!effectiveUserId
+  });
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ["impersonation-logs", isAdminNotImpersonating ? "admin" : effectiveUserId],
@@ -67,6 +80,20 @@ export function ImpersonationLogsView() {
     const seconds = Math.floor((durationMs % 60000) / 1000);
     return `${minutes}m ${seconds}s`;
   };
+
+  // Show access restricted message if admin IP not allowed
+  if (isAdminNotImpersonating && ipAllowed === false) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Access Restricted</AlertTitle>
+        <AlertDescription>
+          Your IP address is not authorized to access impersonation logs. 
+          Contact your system administrator to add your IP to the allowlist, or go to the IP Access tab to manage allowed IPs.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <Card>

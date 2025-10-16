@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Activity, Eye, Search, Download, Loader2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Activity, Eye, Search, Download, Loader2, AlertCircle } from "lucide-react";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,6 +21,16 @@ export const AuditLogsViewer = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("24h");
+
+  // Check if admin IP is allowed
+  const { data: ipAllowed, isLoading: ipCheckLoading } = useQuery({
+    queryKey: ['ip-check'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('is_admin_ip_allowed' as any);
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["audit-logs", searchTerm, actionFilter, dateFilter],
@@ -115,6 +126,20 @@ export const AuditLogsViewer = () => {
     a.click();
     toast.success("Audit logs exported");
   };
+
+  // Show access restricted message if IP not allowed
+  if (ipAllowed === false) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Access Restricted</AlertTitle>
+        <AlertDescription>
+          Your IP address is not authorized to access audit logs. 
+          Contact your system administrator to add your IP to the allowlist, or go to the IP Access tab to manage allowed IPs.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <>
