@@ -238,7 +238,7 @@ export const PendingPracticesApproval = () => {
   return (
     <div className="space-y-4">
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-        <TabsList>
+        <TabsList className="inline-flex">
           <TabsTrigger value="pending">Pending</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
           <TabsTrigger value="rejected">Rejected</TabsTrigger>
