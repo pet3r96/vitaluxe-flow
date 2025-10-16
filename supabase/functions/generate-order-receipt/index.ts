@@ -72,6 +72,8 @@ serve(async (req) => {
         discount_percentage,
         discount_amount,
         shipping_total,
+        merchant_fee_amount,
+        merchant_fee_percentage,
         status,
         doctor_id,
         profiles (
@@ -297,9 +299,16 @@ serve(async (req) => {
       yPos += 6;
     }
 
+    // Merchant Processing Fee (if applicable)
+    if (order.merchant_fee_amount && order.merchant_fee_amount > 0) {
+      doc.text(`Merchant Processing Fee (${order.merchant_fee_percentage}%):`, pageWidth - 100, yPos);
+      doc.text(`$${order.merchant_fee_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+      yPos += 6;
+    }
+
     yPos += 2;
 
-    // Total (includes shipping)
+    // Total (includes shipping and merchant fee)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL:', pageWidth - 100, yPos);

@@ -7,8 +7,9 @@ import { RepsManagement } from "@/components/admin/RepsManagement";
 import { PendingRepsApproval } from "@/components/admin/PendingRepsApproval";
 import { PendingPracticesApproval } from "@/components/admin/PendingPracticesApproval";
 import { ProductTypeManager } from "@/components/admin/ProductTypeManager";
+import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Building2, Users, Wrench, Package } from "lucide-react";
+import { MapPin, Building2, Users, Wrench, Package, Settings } from "lucide-react";
 
 const AdminSettings = () => {
   return (
@@ -49,6 +50,10 @@ const AdminSettings = () => {
           <TabsTrigger value="product-types" className="gap-2">
             <Package className="h-4 w-4" />
             Product Types
+          </TabsTrigger>
+          <TabsTrigger value="system" className="gap-2">
+            <Settings className="h-4 w-4" />
+            System Settings
           </TabsTrigger>
           <TabsTrigger value="utilities" className="gap-2">
             <Wrench className="h-4 w-4" />
@@ -152,6 +157,10 @@ const AdminSettings = () => {
               <ProductTypeManager />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-4">
+          <MerchantFeeSettings />
         </TabsContent>
 
         <TabsContent value="utilities" className="space-y-4">

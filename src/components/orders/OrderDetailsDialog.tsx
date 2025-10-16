@@ -396,10 +396,19 @@ export const OrderDetailsDialog = ({
                     <span className="font-medium">${order.shipping_total?.toFixed(2) || '0.00'}</span>
                   </div>
                   
+                  {order.merchant_fee_amount && order.merchant_fee_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Merchant Processing Fee ({order.merchant_fee_percentage}%):
+                      </span>
+                      <span className="font-medium">${order.merchant_fee_amount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
                   <Separator />
                   
                   <div className="flex justify-between text-base font-bold">
-                    <span>Total Amount:</span>
+                    <span>Grand Total:</span>
                     <span className="text-primary">${order.total_amount?.toFixed(2) || '0.00'}</span>
                   </div>
                 </div>

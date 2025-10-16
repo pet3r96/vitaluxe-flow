@@ -1401,6 +1401,8 @@ export type Database = {
           doctor_id: string
           formatted_shipping_address: string | null
           id: string
+          merchant_fee_amount: number | null
+          merchant_fee_percentage: number | null
           payment_method_id: string | null
           payment_method_used: string | null
           payment_status: string | null
@@ -1429,6 +1431,8 @@ export type Database = {
           doctor_id: string
           formatted_shipping_address?: string | null
           id?: string
+          merchant_fee_amount?: number | null
+          merchant_fee_percentage?: number | null
           payment_method_id?: string | null
           payment_method_used?: string | null
           payment_status?: string | null
@@ -1457,6 +1461,8 @@ export type Database = {
           doctor_id?: string
           formatted_shipping_address?: string | null
           id?: string
+          merchant_fee_amount?: number | null
+          merchant_fee_percentage?: number | null
           payment_method_id?: string | null
           payment_method_used?: string | null
           payment_status?: string | null
@@ -2667,6 +2673,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      system_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       terms_and_conditions: {
         Row: {

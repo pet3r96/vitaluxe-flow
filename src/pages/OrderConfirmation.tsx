@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import { PaymentRetryDialog } from "@/components/orders/PaymentRetryDialog";
 import { AddCreditCardDialog } from "@/components/profile/AddCreditCardDialog";
 import { AddBankAccountDialog } from "@/components/profile/AddBankAccountDialog";
 import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
+import { useMerchantFee } from "@/hooks/useMerchantFee";
 
 // Helper function to extract state from address string
 const extractStateFromAddress = (address: string): string => {
@@ -50,6 +51,16 @@ export default function OrderConfirmation() {
   const location = useLocation();
   const [discountCode, setDiscountCode] = useState<string | null>(location.state?.discountCode || null);
   const [discountPercentage, setDiscountPercentage] = useState<number>(location.state?.discountPercentage || 0);
+  
+  // Get merchant fee
+  const { calculateMerchantFee } = useMerchantFee();
+  const merchantFeePercentage = location.state?.merchantFeePercentage || 3.75;
+  const merchantFeeAmount = useMemo(() => {
+    if (location.state?.merchantFeeAmount) {
+      return location.state.merchantFeeAmount;
+    }
+    return calculateMerchantFee(calculateSubtotal() - calculateDiscountAmount(), calculateShipping());
+  }, [location.state, calculateMerchantFee]);
 
   const { data: cart, isLoading} = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -299,7 +310,8 @@ export default function OrderConfirmation() {
           const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
           const discountAmount = lineTotal * (discountPercentage / 100);
           const lineShippingCost = getShippingCostForLine(line.id, practiceShippingGroups);
-          const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost;
+          const lineMerchantFee = calculateMerchantFee(lineTotal - discountAmount, lineShippingCost);
+          const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost + lineMerchantFee;
           
           // Create ONE order for THIS line
           const { data: practiceOrder, error: practiceOrderError } = await supabase
@@ -312,6 +324,8 @@ export default function OrderConfirmation() {
               discount_percentage: discountPercentage || 0,
               discount_amount: discountAmount || 0,
               shipping_total: lineShippingCost,
+              merchant_fee_amount: lineMerchantFee,
+              merchant_fee_percentage: merchantFeePercentage,
               status: "pending",
               ship_to: "practice",
               practice_address: practiceAddress,
@@ -430,7 +444,8 @@ export default function OrderConfirmation() {
           const lineTotal = (line.price_snapshot || 0) * (line.quantity || 1);
           const discountAmount = lineTotal * (discountPercentage / 100);
           const lineShippingCost = getShippingCostForLine(line.id, patientShippingGroups);
-          const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost;
+          const lineMerchantFee = calculateMerchantFee(lineTotal - discountAmount, lineShippingCost);
+          const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost + lineMerchantFee;
           
           // Create ONE order for THIS line
           const { data: patientOrder, error: patientOrderError } = await supabase
@@ -443,6 +458,8 @@ export default function OrderConfirmation() {
               discount_percentage: discountPercentage || 0,
               discount_amount: discountAmount || 0,
               shipping_total: lineShippingCost,
+              merchant_fee_amount: lineMerchantFee,
+              merchant_fee_percentage: merchantFeePercentage,
               status: "pending",
               ship_to: "patient",
               practice_address: null,
@@ -743,7 +760,7 @@ export default function OrderConfirmation() {
   };
 
   const calculateFinalTotal = () => {
-    return calculateSubtotal() - calculateDiscountAmount() + calculateShipping();
+    return calculateSubtotal() - calculateDiscountAmount() + calculateShipping() + merchantFeeAmount;
   };
 
   if (isLoading) {
@@ -980,10 +997,18 @@ export default function OrderConfirmation() {
               <span className="text-muted-foreground">Shipping & Handling:</span>
               <span className="font-semibold">${calculateShipping().toFixed(2)}</span>
             </div>
+            
+            <div className="flex justify-between items-center text-base">
+              <span className="text-muted-foreground">
+                Merchant Processing Fee ({merchantFeePercentage.toFixed(2)}%):
+              </span>
+              <span className="font-semibold">${merchantFeeAmount.toFixed(2)}</span>
+            </div>
+            
             <Separator />
             
             <div className="flex justify-between items-center text-lg font-bold">
-              <span>Total Amount:</span>
+              <span>Grand Total:</span>
               <span className="text-2xl text-primary">${calculateFinalTotal().toFixed(2)}</span>
             </div>
           </div>

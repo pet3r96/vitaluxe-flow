@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { DiscountCodeInput } from "@/components/orders/DiscountCodeInput";
 import { ShippingSpeedSelector } from "@/components/cart/ShippingSpeedSelector";
 import { Separator } from "@/components/ui/separator";
+import { useMerchantFee } from "@/hooks/useMerchantFee";
 
 export default function Cart() {
   const { effectiveUserId, user } = useAuth();
@@ -19,6 +20,7 @@ export default function Cart() {
   const queryClient = useQueryClient();
   const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  const { feePercentage, calculateMerchantFee } = useMerchantFee();
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -176,9 +178,13 @@ export default function Cart() {
     }, 0);
   }, [patientGroups, getShippingRate]);
 
-  const totalWithShipping = useMemo(() => {
-    return calculateTotal() + shippingPreview;
-  }, [calculateTotal, shippingPreview]);
+  const merchantFee = useMemo(() => {
+    return calculateMerchantFee(calculateTotal(), shippingPreview);
+  }, [calculateMerchantFee, calculateTotal, shippingPreview]);
+
+  const grandTotal = useMemo(() => {
+    return calculateTotal() + shippingPreview + merchantFee;
+  }, [calculateTotal, shippingPreview, merchantFee]);
 
   if (isLoading) {
     return (
@@ -355,18 +361,30 @@ export default function Cart() {
                   <span className="font-medium">${shippingPreview.toFixed(2)}</span>
                 </div>
                 
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-muted-foreground">
+                    Merchant Processing Fee ({feePercentage.toFixed(2)}%):
+                  </span>
+                  <span className="font-medium">${merchantFee.toFixed(2)}</span>
+                </div>
+                
                 <Separator />
                 
                 <div className="flex justify-between text-base sm:text-lg font-bold">
-                  <span>Estimated Total:</span>
-                  <span className="text-primary">${totalWithShipping.toFixed(2)}</span>
+                  <span>Grand Total:</span>
+                  <span className="text-primary">${grandTotal.toFixed(2)}</span>
                 </div>
               </div>
               <Button 
                 className="w-full min-h-[48px] text-base" 
                 size="lg"
                 onClick={() => navigate("/order-confirmation", { 
-                  state: { discountCode, discountPercentage } 
+                  state: { 
+                    discountCode, 
+                    discountPercentage,
+                    merchantFeePercentage: feePercentage,
+                    merchantFeeAmount: merchantFee
+                  } 
                 })}
               >
                 Proceed to Confirmation
