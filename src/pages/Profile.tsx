@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { PracticeProfileForm } from "@/components/profile/PracticeProfileForm";
 import { ProviderProfileForm } from "@/components/profile/ProviderProfileForm";
 import { RepProfileForm } from "@/components/profile/RepProfileForm";
-import { BankAccountsSection } from "@/components/profile/BankAccountsSection";
+import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSection";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -83,7 +83,7 @@ const Profile = () => {
         ) : (
           <>
             <PracticeProfileForm />
-            <BankAccountsSection />
+            <PaymentMethodsSection />
           </>
         )}
       </div>

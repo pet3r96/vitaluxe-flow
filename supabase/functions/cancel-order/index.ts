@@ -121,6 +121,29 @@ Deno.serve(async (req) => {
 
     console.log(`Order ${orderId} successfully cancelled by ${user.id}`);
 
+    // Trigger automatic refund if order was paid
+    if (order && order.authorizenet_transaction_id && order.payment_status === 'paid') {
+      console.log(`Triggering automatic refund for cancelled order ${orderId}`);
+      
+      try {
+        const refundResponse = await supabase.functions.invoke('authorizenet-refund-transaction', {
+          body: {
+            order_id: orderId,
+            refund_reason: `Order cancelled by user: ${reason || 'No reason provided'}`,
+            is_automatic: true
+          }
+        });
+        
+        if (refundResponse.error) {
+          console.error('Automatic refund failed:', refundResponse.error);
+        } else {
+          console.log(`Automatic refund initiated: ${refundResponse.data?.refund?.id}`);
+        }
+      } catch (error) {
+        console.error('Automatic refund exception:', error);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

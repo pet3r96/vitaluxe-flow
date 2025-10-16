@@ -1334,8 +1334,63 @@ export type Database = {
           },
         ]
       }
+      order_refunds: {
+        Row: {
+          authorizenet_response: Json | null
+          created_at: string
+          id: string
+          order_id: string
+          original_transaction_id: string
+          refund_amount: number
+          refund_reason: string | null
+          refund_status: string
+          refund_transaction_id: string
+          refund_type: string
+          refunded_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          authorizenet_response?: Json | null
+          created_at?: string
+          id?: string
+          order_id: string
+          original_transaction_id: string
+          refund_amount: number
+          refund_reason?: string | null
+          refund_status?: string
+          refund_transaction_id: string
+          refund_type: string
+          refunded_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          authorizenet_response?: Json | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          original_transaction_id?: string
+          refund_amount?: number
+          refund_reason?: string | null
+          refund_status?: string
+          refund_transaction_id?: string
+          refund_type?: string
+          refunded_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_refunds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
+          authorizenet_profile_id: string | null
+          authorizenet_transaction_id: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1346,6 +1401,9 @@ export type Database = {
           doctor_id: string
           formatted_shipping_address: string | null
           id: string
+          payment_method_id: string | null
+          payment_method_used: string | null
+          payment_status: string | null
           practice_address: string | null
           report_notes: string | null
           ship_to: string | null
@@ -1355,9 +1413,12 @@ export type Database = {
           stripe_payment_id: string | null
           subtotal_before_discount: number | null
           total_amount: number
+          total_refunded_amount: number
           updated_at: string | null
         }
         Insert: {
+          authorizenet_profile_id?: string | null
+          authorizenet_transaction_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -1368,6 +1429,9 @@ export type Database = {
           doctor_id: string
           formatted_shipping_address?: string | null
           id?: string
+          payment_method_id?: string | null
+          payment_method_used?: string | null
+          payment_status?: string | null
           practice_address?: string | null
           report_notes?: string | null
           ship_to?: string | null
@@ -1377,9 +1441,12 @@ export type Database = {
           stripe_payment_id?: string | null
           subtotal_before_discount?: number | null
           total_amount: number
+          total_refunded_amount?: number
           updated_at?: string | null
         }
         Update: {
+          authorizenet_profile_id?: string | null
+          authorizenet_transaction_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -1390,6 +1457,9 @@ export type Database = {
           doctor_id?: string
           formatted_shipping_address?: string | null
           id?: string
+          payment_method_id?: string | null
+          payment_method_used?: string | null
+          payment_status?: string | null
           practice_address?: string | null
           report_notes?: string | null
           ship_to?: string | null
@@ -1399,6 +1469,7 @@ export type Database = {
           stripe_payment_id?: string | null
           subtotal_before_discount?: number | null
           total_amount?: number
+          total_refunded_amount?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -1414,6 +1485,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "practice_payment_methods"
             referencedColumns: ["id"]
           },
         ]
@@ -1781,42 +1859,84 @@ export type Database = {
       }
       practice_payment_methods: {
         Row: {
+          account_last_five: string | null
           account_mask: string | null
           account_name: string | null
+          account_type: string | null
+          authorizenet_payment_profile_id: string | null
+          authorizenet_profile_id: string | null
           bank_name: string | null
+          billing_city: string | null
+          billing_country: string | null
+          billing_state: string | null
+          billing_street: string | null
+          billing_zip: string | null
+          card_expiry: string | null
+          card_last_five: string | null
+          card_type: string | null
           created_at: string | null
           id: string
           is_default: boolean | null
+          payment_type: string
           plaid_access_token: string
           plaid_access_token_encrypted: string | null
           plaid_account_id: string
           practice_id: string
+          routing_number_last_four: string | null
           updated_at: string | null
         }
         Insert: {
+          account_last_five?: string | null
           account_mask?: string | null
           account_name?: string | null
+          account_type?: string | null
+          authorizenet_payment_profile_id?: string | null
+          authorizenet_profile_id?: string | null
           bank_name?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_state?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
+          card_expiry?: string | null
+          card_last_five?: string | null
+          card_type?: string | null
           created_at?: string | null
           id?: string
           is_default?: boolean | null
+          payment_type?: string
           plaid_access_token: string
           plaid_access_token_encrypted?: string | null
           plaid_account_id: string
           practice_id: string
+          routing_number_last_four?: string | null
           updated_at?: string | null
         }
         Update: {
+          account_last_five?: string | null
           account_mask?: string | null
           account_name?: string | null
+          account_type?: string | null
+          authorizenet_payment_profile_id?: string | null
+          authorizenet_profile_id?: string | null
           bank_name?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_state?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
+          card_expiry?: string | null
+          card_last_five?: string | null
+          card_type?: string | null
           created_at?: string | null
           id?: string
           is_default?: boolean | null
+          payment_type?: string
           plaid_access_token?: string
           plaid_access_token_encrypted?: string | null
           plaid_account_id?: string
           practice_id?: string
+          routing_number_last_four?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2039,6 +2159,11 @@ export type Database = {
           address_verification_status: string | null
           address_verified_at: string | null
           address_zip: string | null
+          billing_city: string | null
+          billing_country: string | null
+          billing_state: string | null
+          billing_street: string | null
+          billing_zip: string | null
           company: string | null
           contract_url: string | null
           created_at: string | null
@@ -2082,6 +2207,11 @@ export type Database = {
           address_verification_status?: string | null
           address_verified_at?: string | null
           address_zip?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_state?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
           company?: string | null
           contract_url?: string | null
           created_at?: string | null
@@ -2125,6 +2255,11 @@ export type Database = {
           address_verification_status?: string | null
           address_verified_at?: string | null
           address_zip?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_state?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
           company?: string | null
           contract_url?: string | null
           created_at?: string | null
