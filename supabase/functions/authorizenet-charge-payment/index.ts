@@ -39,12 +39,33 @@ Deno.serve(async (req) => {
 
     console.log(`Charging payment for order ${order_id}, amount: $${amount}`);
 
-    // Fetch payment method
+    // Fetch the order to get the doctor_id (practice owner)
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('id, doctor_id')
+      .eq('id', order_id)
+      .single();
+
+    if (orderError || !order) {
+      console.error('Order not found:', orderError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Order not found. Please try again or contact support.' 
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Order ${order_id} placed by practice ${order.doctor_id}`);
+    console.log(`Verifying payment method ${payment_method_id} belongs to practice ${order.doctor_id}`);
+
+    // Fetch payment method - verify it belongs to the practice that placed the order
     const { data: paymentMethod, error: pmError } = await supabase
       .from('practice_payment_methods')
       .select('*')
       .eq('id', payment_method_id)
-      .eq('practice_id', user.id)
+      .eq('practice_id', order.doctor_id)
       .single();
 
     if (pmError || !paymentMethod) {
