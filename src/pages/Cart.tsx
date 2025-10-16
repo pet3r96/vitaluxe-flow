@@ -118,6 +118,9 @@ export default function Cart() {
     return Object.values(groups);
   }, [cart]);
 
+  const cartLines = cart?.lines || [];
+  const isEmpty = cartLines.length === 0;
+
   const calculateSubtotal = () => {
     return (cartLines as any[]).reduce<number>(
       (sum, line) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
@@ -150,9 +153,6 @@ export default function Cart() {
       </div>
     );
   }
-
-  const cartLines = cart?.lines || [];
-  const isEmpty = cartLines.length === 0;
 
   return (
     <div className="space-y-6">
