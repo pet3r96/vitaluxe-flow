@@ -156,27 +156,30 @@ export const PriceOverrideManager = () => {
     }));
   };
 
-  // Validate price hierarchy
+  // Validate price hierarchy based on rep type
   const validatePrices = (productId: string): string | null => {
     const product = products?.find(p => p.id === productId);
     if (!product) return "Product not found";
 
     const values = getOverrideValues(productId);
+    const selectedRep = reps?.find(r => r.id === selectedRepId);
     
     const topline = parseFloat(values.topline) || product.topline_price;
     const downline = parseFloat(values.downline) || product.downline_price;
     const retail = parseFloat(values.retail) || product.retail_price;
 
-    if (values.topline && topline <= product.base_price) {
-      return "Override Topline price must be greater than Base price";
+    // For topline reps: only validate topline < retail
+    if (selectedRep?.role === 'topline') {
+      if (values.topline && values.retail && topline >= retail) {
+        return "Topline price must be less than practice price";
+      }
     }
 
-    if (values.downline && downline <= topline) {
-      return "Override Downline price must be greater than Override Topline price";
-    }
-
-    if (values.retail && retail < downline) {
-      return "Override Practice price must be >= Override Downline price";
+    // For downline reps: only validate downline < retail
+    if (selectedRep?.role === 'downline') {
+      if (values.downline && values.retail && downline >= retail) {
+        return "Downline price must be less than practice price";
+      }
     }
 
     return null;
@@ -189,16 +192,26 @@ export const PriceOverrideManager = () => {
       if (validationError) throw new Error(validationError);
 
       const values = getOverrideValues(productId);
+      const selectedRep = reps?.find(r => r.id === selectedRepId);
+      
+      // Only save relevant price fields based on rep type
+      const overrideData: any = {
+        rep_id: selectedRepId,
+        product_id: productId,
+        override_retail_price: values.retail ? parseFloat(values.retail) : null,
+      };
+
+      if (selectedRep?.role === 'topline') {
+        overrideData.override_topline_price = values.topline ? parseFloat(values.topline) : null;
+        overrideData.override_downline_price = null;
+      } else if (selectedRep?.role === 'downline') {
+        overrideData.override_downline_price = values.downline ? parseFloat(values.downline) : null;
+        overrideData.override_topline_price = null;
+      }
       
       const { error } = await supabase
         .from('rep_product_price_overrides')
-        .upsert({
-          rep_id: selectedRepId,
-          product_id: productId,
-          override_topline_price: values.topline ? parseFloat(values.topline) : null,
-          override_downline_price: values.downline ? parseFloat(values.downline) : null,
-          override_retail_price: values.retail ? parseFloat(values.retail) : null,
-        }, {
+        .upsert(overrideData, {
           onConflict: 'rep_id,product_id'
         });
       
@@ -280,6 +293,8 @@ export const PriceOverrideManager = () => {
   });
 
   const selectedRep = reps?.find(r => r.id === selectedRepId);
+  const isToplineRep = selectedRep?.role === 'topline';
+  const isDownlineRep = selectedRep?.role === 'downline';
   const overrideCount = existingOverrides?.length || 0;
 
   if (repsLoading) {
@@ -396,10 +411,21 @@ export const PriceOverrideManager = () => {
                       <TableRow>
                         <TableHead className="w-[250px]">Product</TableHead>
                         <TableHead className="w-[120px]">Type</TableHead>
-                        <TableHead className="text-right">Default Topline</TableHead>
-                        <TableHead className="text-right">Override Topline</TableHead>
-                        <TableHead className="text-right">Default Downline</TableHead>
-                        <TableHead className="text-right">Override Downline</TableHead>
+                        
+                        {isToplineRep && (
+                          <>
+                            <TableHead className="text-right">Default Topline</TableHead>
+                            <TableHead className="text-right">Override Topline</TableHead>
+                          </>
+                        )}
+                        
+                        {isDownlineRep && (
+                          <>
+                            <TableHead className="text-right">Default Downline</TableHead>
+                            <TableHead className="text-right">Override Downline</TableHead>
+                          </>
+                        )}
+                        
                         <TableHead className="text-right">Default Practice</TableHead>
                         <TableHead className="text-right">Override Practice</TableHead>
                         <TableHead className="text-center">Actions</TableHead>
@@ -408,7 +434,7 @@ export const PriceOverrideManager = () => {
                     <TableBody>
                       {paginatedProducts.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                             No products found
                           </TableCell>
                         </TableRow>
@@ -439,42 +465,53 @@ export const PriceOverrideManager = () => {
                               <TableCell>
                                 <Badge variant="outline">{product.product_types?.name || 'N/A'}</Badge>
                               </TableCell>
-                              <TableCell className="text-right text-muted-foreground">
-                                ${product.topline_price.toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Input
-                                  type="text"
-                                  inputMode="decimal"
-                                  placeholder={product.topline_price.toFixed(2)}
-                                  value={values.topline}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                      handleOverrideChange(product.id, 'override_topline_price', val);
-                                    }
-                                  }}
-                                  className="w-24 text-right"
-                                />
-                              </TableCell>
-                              <TableCell className="text-right text-muted-foreground">
-                                ${product.downline_price.toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Input
-                                  type="text"
-                                  inputMode="decimal"
-                                  placeholder={product.downline_price.toFixed(2)}
-                                  value={values.downline}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                      handleOverrideChange(product.id, 'override_downline_price', val);
-                                    }
-                                  }}
-                                  className="w-24 text-right"
-                                />
-                              </TableCell>
+                              
+                              {isToplineRep && (
+                                <>
+                                  <TableCell className="text-right text-muted-foreground">
+                                    ${product.topline_price.toFixed(2)}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Input
+                                      type="text"
+                                      inputMode="decimal"
+                                      placeholder={product.topline_price.toFixed(2)}
+                                      value={values.topline}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                          handleOverrideChange(product.id, 'override_topline_price', val);
+                                        }
+                                      }}
+                                      className="w-24 text-right"
+                                    />
+                                  </TableCell>
+                                </>
+                              )}
+                              
+                              {isDownlineRep && (
+                                <>
+                                  <TableCell className="text-right text-muted-foreground">
+                                    ${product.downline_price.toFixed(2)}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Input
+                                      type="text"
+                                      inputMode="decimal"
+                                      placeholder={product.downline_price.toFixed(2)}
+                                      value={values.downline}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                          handleOverrideChange(product.id, 'override_downline_price', val);
+                                        }
+                                      }}
+                                      className="w-24 text-right"
+                                    />
+                                  </TableCell>
+                                </>
+                              )}
+                              
                               <TableCell className="text-right text-muted-foreground">
                                 ${product.retail_price.toFixed(2)}
                               </TableCell>
