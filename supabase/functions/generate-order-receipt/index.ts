@@ -335,39 +335,84 @@ serve(async (req) => {
 
     // Generate PDF buffer
     const pdfBuffer = doc.output('arraybuffer');
+    const pdfData = new Uint8Array(pdfBuffer);
     const fileName = `receipt_${order.id}_${Date.now()}.pdf`;
     const filePath = `${order.doctor_id}/${fileName}`;
 
-    // Upload to storage
-    const { error: uploadError } = await supabase.storage
-      .from('receipts')
-      .upload(filePath, pdfBuffer, {
-        contentType: 'application/pdf',
-        upsert: true
+    // Try uploading to S3 first, fallback to Supabase Storage
+    let receiptUrl = '';
+    let uploadMethod = 'supabase';
+
+    try {
+      const { data: s3Data, error: s3Error } = await supabase.functions.invoke('upload-to-s3', {
+        body: {
+          fileBuffer: Array.from(pdfData),
+          fileName: filePath,
+          contentType: 'application/pdf',
+          metadata: {
+            document_type: 'receipt',
+            phi: 'false',
+            order_id: order.id,
+            practice_id: order.doctor_id
+          }
+        }
       });
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw new Error('Failed to upload receipt');
+      if (!s3Error && s3Data?.success && s3Data.s3_key) {
+        // Get signed URL from S3
+        const { data: urlData } = await supabase.functions.invoke('get-s3-signed-url', {
+          body: {
+            s3_key: s3Data.s3_key,
+            expires_in: 3600 // 1 hour
+          }
+        });
+
+        if (urlData?.signed_url) {
+          receiptUrl = urlData.signed_url;
+          uploadMethod = 's3';
+          console.log('Receipt uploaded to S3:', s3Data.s3_key);
+        }
+      }
+    } catch (s3Error) {
+      console.warn('S3 upload failed, falling back to Supabase Storage:', s3Error);
     }
 
-    // Generate signed URL (valid for 1 hour)
-    const { data: signedUrlData, error: urlError } = await supabase.storage
-      .from('receipts')
-      .createSignedUrl(filePath, 3600);
+    // Fallback to Supabase Storage if S3 upload failed
+    if (!receiptUrl) {
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(filePath, pdfBuffer, {
+          contentType: 'application/pdf',
+          upsert: true
+        });
 
-    if (urlError || !signedUrlData) {
-      console.error('Signed URL error:', urlError);
-      throw new Error('Failed to generate download URL');
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Failed to upload receipt');
+      }
+
+      // Generate signed URL (valid for 1 hour)
+      const { data: signedUrlData, error: urlError } = await supabase.storage
+        .from('receipts')
+        .createSignedUrl(filePath, 3600);
+
+      if (urlError || !signedUrlData) {
+        console.error('Signed URL error:', urlError);
+        throw new Error('Failed to generate download URL');
+      }
+
+      receiptUrl = signedUrlData.signedUrl;
+      console.log('Receipt uploaded to Supabase Storage:', fileName);
     }
 
-    console.log('Receipt generated successfully:', fileName);
+    console.log(`Receipt generated successfully via ${uploadMethod}:`, fileName);
 
     return new Response(
       JSON.stringify({
         success: true,
-        url: signedUrlData.signedUrl,
-        fileName
+        url: receiptUrl,
+        fileName,
+        upload_method: uploadMethod
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

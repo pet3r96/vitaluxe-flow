@@ -104,3 +104,9 @@ verify_jwt = true
 
 [functions.send-notification]
 verify_jwt = true
+
+[functions.upload-to-s3]
+verify_jwt = true
+
+[functions.get-s3-signed-url]
+verify_jwt = true

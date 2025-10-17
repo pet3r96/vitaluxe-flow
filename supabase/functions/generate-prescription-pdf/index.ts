@@ -378,31 +378,76 @@ serve(async (req) => {
       : `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
     const prescriptionData = new Uint8Array(pdfOutput);
 
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('prescriptions')
-        .upload(fileName, prescriptionData, {
-          contentType: 'application/pdf',
-          upsert: false
+      // Try uploading to S3 first, fallback to Supabase Storage
+      let prescriptionUrl = '';
+      let uploadMethod = 'supabase';
+
+      try {
+        const { data: s3Data, error: s3Error } = await supabase.functions.invoke('upload-to-s3', {
+          body: {
+            fileBuffer: Array.from(prescriptionData),
+            fileName,
+            contentType: 'application/pdf',
+            metadata: {
+              document_type: 'prescription',
+              phi: 'true',
+              patient_name,
+              provider_id,
+              is_office_dispensing: is_office_dispensing.toString()
+            }
+          }
         });
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw new Error(`Failed to upload prescription: ${uploadError.message}`);
+        if (!s3Error && s3Data?.success && s3Data.s3_key) {
+          // Get signed URL from S3
+          const { data: urlData } = await supabase.functions.invoke('get-s3-signed-url', {
+            body: {
+              s3_key: s3Data.s3_key,
+              expires_in: 31536000 // 1 year
+            }
+          });
+
+          if (urlData?.signed_url) {
+            prescriptionUrl = urlData.signed_url;
+            uploadMethod = 's3';
+            console.log('Prescription uploaded to S3:', s3Data.s3_key);
+          }
+        }
+      } catch (s3Error) {
+        console.warn('S3 upload failed, falling back to Supabase Storage:', s3Error);
       }
 
-      // Get signed URL
-      const { data: signedUrlData } = await supabase.storage
-        .from('prescriptions')
-        .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
+      // Fallback to Supabase Storage if S3 upload failed
+      if (!prescriptionUrl) {
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('prescriptions')
+          .upload(fileName, prescriptionData, {
+            contentType: 'application/pdf',
+            upsert: false
+          });
 
-      console.log('Prescription generated successfully:', fileName);
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error(`Failed to upload prescription: ${uploadError.message}`);
+        }
+
+        // Get signed URL
+        const { data: signedUrlData } = await supabase.storage
+          .from('prescriptions')
+          .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
+
+        prescriptionUrl = signedUrlData?.signedUrl || uploadData.path;
+        console.log('Prescription uploaded to Supabase Storage:', fileName);
+      }
+
+      console.log(`Prescription generated successfully via ${uploadMethod}:`, fileName);
 
       return new Response(
         JSON.stringify({
           success: true,
-          prescription_url: signedUrlData?.signedUrl || uploadData.path,
-          file_name: fileName
+          prescription_url: prescriptionUrl,
+          file_name: fileName,
+          upload_method: uploadMethod
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

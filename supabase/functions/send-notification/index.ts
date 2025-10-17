@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { SESClient, SendEmailCommand } from "https://esm.sh/@aws-sdk/client-ses@3.485.0";
 import { validateSendNotificationRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
@@ -106,39 +107,51 @@ serve(async (req) => {
       errors: [] as string[],
     };
 
-    // Send email if enabled
+    // Send email via Amazon SES if enabled
     if (send_email && preferences?.email_notifications && profile?.email) {
-      try {
-        const resendKey = Deno.env.get("RESEND_API_KEY");
-        if (!resendKey) {
-          console.log("RESEND_API_KEY not configured, skipping email");
-        } else {
-          const emailResponse = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${resendKey}`,
+      const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
+      const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
+      const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
+      const sesFromEmail = Deno.env.get('SES_FROM_EMAIL') || 'notifications@vitaluxeservice.com';
+
+      if (!awsAccessKeyId || !awsSecretAccessKey) {
+        console.log("AWS SES not configured, skipping email");
+      } else {
+        try {
+          const sesClient = new SESClient({
+            region: awsRegion,
+            credentials: {
+              accessKeyId: awsAccessKeyId,
+              secretAccessKey: awsSecretAccessKey,
             },
-            body: JSON.stringify({
-              from: "VitaLuxe <notifications@vitaluxeservice.com>",
-              to: [profile.email],
-              subject: emailSubject,
-              html: emailBody,
-            }),
           });
 
-          if (!emailResponse.ok) {
-            const error = await emailResponse.text();
-            console.error("Email send failed:", error);
-            results.errors.push(`Email failed: ${error}`);
-          } else {
-            results.email_sent = true;
-            console.log("Email sent successfully to:", profile.email);
-          }
+          const command = new SendEmailCommand({
+            Source: sesFromEmail,
+            Destination: {
+              ToAddresses: [profile.email],
+            },
+            Message: {
+              Subject: {
+                Data: emailSubject,
+                Charset: 'UTF-8',
+              },
+              Body: {
+                Html: {
+                  Data: emailBody,
+                  Charset: 'UTF-8',
+                },
+              },
+            },
+          });
+
+          await sesClient.send(command);
+          results.email_sent = true;
+          console.log("Email sent successfully via Amazon SES to:", profile.email);
+        } catch (error) {
+          console.error("Email error:", error);
+          results.errors.push(`Email error: ${error instanceof Error ? error.message : String(error)}`);
         }
-      } catch (error) {
-        console.error("Email error:", error);
-        results.errors.push(`Email error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 

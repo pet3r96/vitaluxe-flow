@@ -356,16 +356,49 @@ serve(async (req) => {
 
     // Upload to storage (use target user's folder)
     const fileName = `${targetUserId}/terms_${Date.now()}.pdf`;
-    const { error: uploadError } = await supabase.storage
-      .from('terms-signed')
-      .upload(fileName, pdfBytes, {
-        contentType: 'application/pdf',
-        upsert: false
+    
+    // Try uploading to S3 first, fallback to Supabase Storage
+    let termsUrl = '';
+    let uploadMethod = 'supabase';
+
+    try {
+      const { data: s3Data, error: s3Error } = await supabase.functions.invoke('upload-to-s3', {
+        body: {
+          fileBuffer: Array.from(pdfBytes),
+          fileName,
+          contentType: 'application/pdf',
+          metadata: {
+            document_type: 'terms',
+            phi: 'false',
+            user_id: targetUserId,
+            terms_id,
+            terms_version: terms.version
+          }
+        }
       });
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw new Error('Failed to upload PDF');
+      if (!s3Error && s3Data?.success && s3Data.s3_key) {
+        uploadMethod = 's3';
+        console.log('Terms PDF uploaded to S3:', s3Data.s3_key);
+      }
+    } catch (s3Error) {
+      console.warn('S3 upload failed, falling back to Supabase Storage:', s3Error);
+    }
+
+    // Fallback to Supabase Storage if S3 upload failed
+    if (uploadMethod !== 's3') {
+      const { error: uploadError } = await supabase.storage
+        .from('terms-signed')
+        .upload(fileName, pdfBytes, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Failed to upload PDF');
+      }
+      console.log('Terms PDF uploaded to Supabase Storage:', fileName);
     }
 
     // Record acceptance in database (for target user)
@@ -396,16 +429,28 @@ serve(async (req) => {
       .eq('user_id', targetUserId);
 
     // Get signed URL for download
-    const { data: signedUrl } = await supabase.storage
-      .from('terms-signed')
-      .createSignedUrl(fileName, 3600);
+    if (uploadMethod === 's3') {
+      const { data: urlData } = await supabase.functions.invoke('get-s3-signed-url', {
+        body: {
+          s3_key: fileName,
+          expires_in: 3600
+        }
+      });
+      termsUrl = urlData?.signed_url || '';
+    } else {
+      const { data: signedUrl } = await supabase.storage
+        .from('terms-signed')
+        .createSignedUrl(fileName, 3600);
+      termsUrl = signedUrl?.signedUrl || '';
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         acceptance_id: acceptance.id,
-        signed_pdf_url: signedUrl?.signedUrl,
-        accepted_at: acceptance.accepted_at
+        signed_pdf_url: termsUrl,
+        accepted_at: acceptance.accepted_at,
+        upload_method: uploadMethod
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
