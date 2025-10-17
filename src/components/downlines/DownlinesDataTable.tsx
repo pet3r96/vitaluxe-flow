@@ -41,16 +41,49 @@ export function DownlinesDataTable() {
     queryFn: async () => {
       if (!effectiveUserId) return [];
 
-      // Get downlines for this topline
-      const { data: downlinesData, error: downlinesError } = await supabase
-        .from("profiles")
-        .select("id, name, email, phone, company, active")
-        .eq("linked_topline_id", effectiveUserId)
+      // First, get the current user's rep record to get their rep ID
+      const { data: currentRep, error: repError } = await supabase
+        .from("reps")
+        .select("id")
+        .eq("user_id", effectiveUserId)
+        .eq("role", "topline")
+        .single();
+
+      if (repError) throw repError;
+      if (!currentRep) return [];
+
+      // Get downline REPS assigned to this topline (from reps table - source of truth)
+      const { data: downlineReps, error: repsError } = await supabase
+        .from("reps")
+        .select(`
+          id,
+          user_id,
+          active,
+          profiles!inner(
+            name,
+            email,
+            phone,
+            company,
+            active
+          )
+        `)
+        .eq("assigned_topline_id", currentRep.id)
+        .eq("role", "downline")
         .eq("active", true)
         .order("created_at", { ascending: false });
 
-      if (downlinesError) throw downlinesError;
-      if (!downlinesData || downlinesData.length === 0) return [];
+      if (repsError) throw repsError;
+      if (!downlineReps || downlineReps.length === 0) return [];
+
+      // Flatten the data structure
+      const downlinesData = downlineReps.map(rep => ({
+        id: rep.user_id,
+        name: rep.profiles.name,
+        email: rep.profiles.email,
+        phone: rep.profiles.phone,
+        company: rep.profiles.company,
+        active: rep.active && rep.profiles.active,
+      }));
 
       // Get practice counts for each downline
       const downlineIds = downlinesData.map((d) => d.id);
@@ -66,7 +99,7 @@ export function DownlinesDataTable() {
       const practiceCountsMap: Record<string, number> = {};
       practices?.forEach((practice) => {
         const downlineId = practice.linked_topline_id;
-        if (downlineId) {
+        if (downlineId && downlineIds.includes(downlineId)) {
           practiceCountsMap[downlineId] = (practiceCountsMap[downlineId] || 0) + 1;
         }
       });
