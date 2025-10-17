@@ -1,15 +1,31 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { Tag } from "lucide-react";
+import { Tag, RefreshCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const AdminProfitReports = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   // Get profit details with order and product information
   const { data: profitDetails, isLoading } = useQuery({
     queryKey: ["admin-profit-details"],
@@ -76,13 +92,65 @@ const AdminProfitReports = () => {
 
   const paginatedProfitDetails = profitDetails?.slice(startIndex, endIndex);
 
+  // Recompute profits mutation
+  const recomputeProfitsMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('recompute_order_profits', {
+        p_order_ids: null,
+        p_status_filter: ['pending', 'processing']
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-profit-details'] });
+      toast({
+        title: "Profits recomputed",
+        description: data?.[0]?.message || "Successfully recomputed order profits",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error recomputing profits",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Profit Reports</h1>
-        <p className="text-muted-foreground mt-2">
-          Detailed breakdown of platform earnings
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Profit Reports</h1>
+          <p className="text-muted-foreground mt-2">
+            Detailed breakdown of platform earnings
+          </p>
+        </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Recompute Profits
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Recompute Order Profits?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will recalculate profits for all pending and processing orders using the current price overrides.
+                This is useful after updating rep pricing to ensure accurate profit calculations.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => recomputeProfitsMutation.mutate()}>
+                Recompute
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

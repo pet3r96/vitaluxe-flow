@@ -41,9 +41,15 @@ export const ProductCard = memo(({
 }: ProductCardProps) => {
   const { effectiveUserId, effectiveRole } = useAuth();
 
-  // Fetch effective price for current user
+  // Helper to format prices consistently
+  const formatPrice = (value: any) => {
+    if (value == null) return '-';
+    return Number(value).toFixed(2);
+  };
+
+  // Fetch effective price for current user with immediate refresh
   const { data: effectivePrice } = useQuery({
-    queryKey: ['effective-price', product.id, effectiveUserId],
+    queryKey: ['effective-price', product.id, effectiveUserId, effectiveRole],
     queryFn: async () => {
       const { data, error } = await supabase.rpc(
         'get_effective_product_price',
@@ -58,8 +64,10 @@ export const ProductCard = memo(({
       }
       return data?.[0];
     },
-    enabled: !!effectiveUserId && effectiveRole !== 'admin',
-    staleTime: 60000,
+    enabled: !!effectiveUserId && (isToplineRep || isDownlineRep || isProvider),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   const getPriceDisplay = () => {
@@ -87,15 +95,12 @@ export const ProductCard = memo(({
     }
 
     if (isToplineRep) {
-      const displayToplinePrice = effectivePrice?.effective_topline_price ?? product.topline_price;
-      const displayRetailPrice = effectivePrice?.effective_retail_price ?? product.retail_price;
-      
       return (
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Your Price:</span>
             <span className="font-bold text-primary text-lg">
-              ${displayToplinePrice?.toFixed(2) || "-"}
+              ${formatPrice(effectivePrice?.effective_topline_price ?? product.topline_price)}
             </span>
           </div>
           {effectivePrice?.has_override && (
@@ -105,22 +110,19 @@ export const ProductCard = memo(({
           )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Practice Price:</span>
-            <span>${displayRetailPrice?.toFixed(2) || "-"}</span>
+            <span>${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price)}</span>
           </div>
         </div>
       );
     }
 
     if (isDownlineRep) {
-      const displayDownlinePrice = effectivePrice?.effective_downline_price ?? product.downline_price;
-      const displayRetailPrice = effectivePrice?.effective_retail_price ?? product.retail_price;
-      
       return (
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Your Price:</span>
             <span className="font-bold text-primary text-lg">
-              ${displayDownlinePrice?.toFixed(2) || "-"}
+              ${formatPrice(effectivePrice?.effective_downline_price ?? product.downline_price)}
             </span>
           </div>
           {effectivePrice?.has_override && (
@@ -130,7 +132,7 @@ export const ProductCard = memo(({
           )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Practice Price:</span>
-            <span>${displayRetailPrice?.toFixed(2) || "-"}</span>
+            <span>${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price)}</span>
           </div>
         </div>
       );
@@ -140,7 +142,7 @@ export const ProductCard = memo(({
       return (
         <div className="text-center">
           <div className="text-3xl font-bold text-primary">
-            ${(effectivePrice?.effective_retail_price || product.retail_price || product.base_price).toFixed(2)}
+            ${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price ?? product.base_price)}
           </div>
           {effectivePrice?.has_override && (
             <Badge variant="secondary" className="mt-2 text-xs">

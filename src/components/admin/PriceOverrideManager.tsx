@@ -219,6 +219,11 @@ export const PriceOverrideManager = () => {
     },
     onSuccess: (_, productId) => {
       queryClient.invalidateQueries({ queryKey: ['price-overrides', selectedRepId] });
+      // Invalidate all effective price queries to refresh UI immediately
+      queryClient.invalidateQueries({ 
+        predicate: ({ queryKey }) => queryKey?.[0] === 'effective-price' 
+      });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setPendingChanges(prev => {
         const updated = { ...prev };
         delete updated[productId];
@@ -251,6 +256,11 @@ export const PriceOverrideManager = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['price-overrides', selectedRepId] });
+      // Invalidate all effective price queries to refresh UI immediately
+      queryClient.invalidateQueries({ 
+        predicate: ({ queryKey }) => queryKey?.[0] === 'effective-price' 
+      });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: "Override cleared",
         description: "Product reverted to default pricing",

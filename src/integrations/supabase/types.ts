@@ -3763,6 +3763,13 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: undefined
       }
+      recompute_order_profits: {
+        Args: { p_order_ids?: string[]; p_status_filter?: string[] }
+        Returns: {
+          message: string
+          recomputed_count: number
+        }[]
+      }
       refresh_security_events_summary: {
         Args: Record<PropertyKey, never>
         Returns: undefined

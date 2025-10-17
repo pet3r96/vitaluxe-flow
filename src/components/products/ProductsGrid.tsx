@@ -227,6 +227,17 @@ export const ProductsGrid = () => {
         }
       }
 
+      // Fetch effective price with overrides for this user
+      const { data: effectivePriceData } = await supabase.rpc('get_effective_product_price', {
+        p_product_id: productForCart.id,
+        p_user_id: effectiveUserId
+      });
+
+      const effectiveRetailPrice = effectivePriceData?.[0]?.effective_retail_price;
+      
+      // Use effective retail price (with overrides) or fallback to product defaults
+      correctPrice = effectiveRetailPrice ?? productForCart.retail_price ?? productForCart.base_price;
+
       // Get or create cart
       let { data: cart } = await supabase
         .from("cart")
