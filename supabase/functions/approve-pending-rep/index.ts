@@ -133,8 +133,13 @@ serve(async (req) => {
       });
 
       if (createUserError) {
-        // Check if error is "already registered"
-        if (createUserError.status === 422 && createUserError.message?.includes('already registered')) {
+        // Check if this is an "already registered" error (be flexible with error format)
+        const errorMsg = createUserError.message?.toLowerCase() || '';
+        const isAlreadyRegistered = 
+          (createUserError.status === 422 || createUserError.status === 400) &&
+          (errorMsg.includes('already registered') || errorMsg.includes('already been registered') || errorMsg.includes('user with this email'));
+        
+        if (isAlreadyRegistered) {
           console.log(`User already exists for email: ${pendingRep.email}, fetching ID via SQL helper`);
           
           // Fetch existing user ID using SQL helper
@@ -153,7 +158,8 @@ serve(async (req) => {
           console.log(`Resolved existing user ID: ${newUserId}, ensuring records are complete`);
           
         } else {
-          console.error('Failed to create user:', createUserError);
+          // Non-recoverable error
+          console.error('Failed to create user (non-recoverable):', createUserError);
           throw new Error(`Failed to create user: ${createUserError.message}`);
         }
       } else if (newUser?.user) {
@@ -161,6 +167,11 @@ serve(async (req) => {
         console.log(`Created new user: ${newUserId}`);
       } else {
         throw new Error('User creation returned no user object');
+      }
+
+      // Safety check: ensure we have a userId before proceeding
+      if (!newUserId) {
+        throw new Error('Could not determine user ID after user creation/resolution');
       }
 
       // Ensure profile exists (for both new and existing users)
