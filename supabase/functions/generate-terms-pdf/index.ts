@@ -142,31 +142,84 @@ serve(async (req) => {
     const titleY = 1.25 + 0.5;
     doc.text(wrappedTitle, 4.25, titleY, { align: 'center' });
 
-    // Parse markdown content with enhanced formatting
+    // Parse markdown content with enhanced formatting for BAA and sub-bullets
     const contentLines: string[] = [];
-    const sections = terms.content.split(/(?=^## )/gm);
+    const allSections = terms.content.split(/(?=^#+ )/gm);
     
-    sections.forEach((section: string) => {
+    allSections.forEach((section: string, sectionIndex: number) => {
       if (section.trim()) {
-        // Extract section header
+        // Check for major section header (single #) - like BAA
+        const majorHeaderMatch = section.match(/^# (.+)/);
+        if (majorHeaderMatch) {
+          // Add extra spacing before major sections (except first section)
+          if (sectionIndex > 0) {
+            contentLines.push('MAJOR_SPACING');
+          }
+          contentLines.push(`MAJOR_HEADER:${majorHeaderMatch[1]}`);
+          const body = section.replace(/^# .+\n/, '').trim();
+          processBodyContent(body, contentLines);
+          contentLines.push('SPACING');
+          return;
+        }
+        
+        // Check for regular section header (##)
         const headerMatch = section.match(/^## (.+)/);
         if (headerMatch) {
           contentLines.push(`SECTION_HEADER:${headerMatch[1]}`);
           const body = section.replace(/^## .+\n/, '').trim();
-          
-          // Process bullets and regular text
-          const bodyLines = body.split('\n');
-          bodyLines.forEach((line: string) => {
-            if (line.trim().startsWith('-')) {
-              contentLines.push(`BULLET:${line.trim().substring(1).trim()}`);
-            } else if (line.trim()) {
-              contentLines.push(`TEXT:${line.trim()}`);
-            }
-          });
+          processBodyContent(body, contentLines);
           contentLines.push('SPACING');
         }
       }
     });
+    
+    // Helper function to process body content with sub-bullet detection
+    function processBodyContent(body: string, lines: string[]) {
+      const bodyLines = body.split('\n');
+      let inSubBulletContext = false;
+      
+      bodyLines.forEach((line: string) => {
+        const trimmedLine = line.trim();
+        
+        if (!trimmedLine) {
+          return;
+        }
+        
+        // Detect sub-bullets: lines starting with lowercase letter + period
+        // Also handle patterns like "(a.", "(b.", etc.
+        const subBulletMatch = trimmedLine.match(/^(\()?([a-z])\.\s*(.+)/);
+        
+        if (trimmedLine.startsWith('- ')) {
+          // Regular bullet point
+          const bulletContent = trimmedLine.substring(2).trim();
+          
+          // Check if this bullet contains sub-items inline (e.g., "text. a. more text")
+          const inlineSplit = bulletContent.split(/\s+([a-z])\.\s+/);
+          if (inlineSplit.length > 1) {
+            // Split inline sub-bullets into separate lines
+            lines.push(`BULLET:${inlineSplit[0].trim()}`);
+            for (let i = 1; i < inlineSplit.length; i += 2) {
+              if (inlineSplit[i] && inlineSplit[i + 1]) {
+                lines.push(`SUB_BULLET:(${inlineSplit[i]}.) ${inlineSplit[i + 1].trim()}`);
+              }
+            }
+          } else {
+            lines.push(`BULLET:${bulletContent}`);
+          }
+          inSubBulletContext = true;
+        } else if (subBulletMatch) {
+          // Explicit sub-bullet (a., b., c., etc.)
+          const letter = subBulletMatch[2];
+          const content = subBulletMatch[3].trim();
+          lines.push(`SUB_BULLET:(${letter}.) ${content}`);
+          inSubBulletContext = true;
+        } else {
+          // Regular text
+          lines.push(`TEXT:${trimmedLine}`);
+          inSubBulletContext = false;
+        }
+      });
+    }
 
     let yPos = 2.75;
     const pageHeight = 10.5;
@@ -184,7 +237,21 @@ serve(async (req) => {
         yPos = 0.75;
       }
 
-      if (line.startsWith('SECTION_HEADER:')) {
+      if (line.startsWith('MAJOR_HEADER:')) {
+        // Major section header (like BAA) - larger, more prominent
+        const headerText = line.replace('MAJOR_HEADER:', '');
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text(headerText, leftMargin, yPos);
+        
+        // Thicker underline with gold color
+        doc.setDrawColor(200, 166, 75);
+        doc.setLineWidth(0.025);
+        doc.line(leftMargin, yPos + 0.1, rightMargin, yPos + 0.1);
+        yPos += 0.45;
+        
+      } else if (line.startsWith('SECTION_HEADER:')) {
         const headerText = line.replace('SECTION_HEADER:', '');
         doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
@@ -203,9 +270,20 @@ serve(async (req) => {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(51, 51, 51);
         
-        const wrappedLines = doc.splitTextToSize(bulletText, 7.0);
+        const wrappedLines = doc.splitTextToSize(bulletText, 6.8);
         doc.text('•', leftMargin + 0.1, yPos);
         doc.text(wrappedLines, leftMargin + 0.3, yPos);
+        yPos += wrappedLines.length * 0.18;
+        
+      } else if (line.startsWith('SUB_BULLET:')) {
+        // Sub-bullet (a., b., c., d.) - indented further
+        const subBulletText = line.replace('SUB_BULLET:', '');
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 51, 51);
+        
+        const wrappedLines = doc.splitTextToSize(subBulletText, 6.4);
+        doc.text(wrappedLines, leftMargin + 0.5, yPos);
         yPos += wrappedLines.length * 0.18;
         
       } else if (line.startsWith('TEXT:')) {
@@ -214,12 +292,15 @@ serve(async (req) => {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(51, 51, 51);
         
-        const wrappedLines = doc.splitTextToSize(text, 7.5);
+        const wrappedLines = doc.splitTextToSize(text, 7.4);
         doc.text(wrappedLines, leftMargin, yPos);
         yPos += wrappedLines.length * 0.18;
         
       } else if (line === 'SPACING') {
         yPos += 0.25;
+      } else if (line === 'MAJOR_SPACING') {
+        // Extra spacing before major sections (like BAA)
+        yPos += 0.5;
       }
     });
 
