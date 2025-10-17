@@ -24,7 +24,7 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
     email: "",
     phone: "",
     company: "",
-    role: effectiveRole === "downline" ? "downline" : "topline",
+    role: "downline", // Toplines can only add downlines under them
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,6 +38,12 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
         toast.error("Please fix validation errors before submitting");
         return;
       }
+    }
+
+    // Security check: toplines can only add downlines
+    if (effectiveRole === "topline" && formData.role !== "downline") {
+      toast.error("Topline representatives can only request downline representatives");
+      return;
     }
     
     setLoading(true);
@@ -97,7 +103,7 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
         email: "",
         phone: "",
         company: "",
-        role: effectiveRole === "downline" ? "downline" : "topline",
+        role: "downline",
       });
     } catch (error: any) {
       console.error("Error submitting rep request:", error);
@@ -113,7 +119,9 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
         <DialogHeader>
           <DialogTitle>Request New Representative</DialogTitle>
           <DialogDescription>
-            Submit a request for a new representative. An admin will review and approve it.
+            {effectiveRole === "topline" 
+              ? "Submit a request for a new downline representative who will be assigned under you. An admin will review and approve it."
+              : "Submit a request for a new downline representative. An admin will review and approve it."}
           </DialogDescription>
         </DialogHeader>
 
@@ -173,24 +181,6 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
             />
           </div>
-
-          {effectiveRole === "topline" && (
-            <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value as "topline" | "downline" })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="topline">Topline</SelectItem>
-                  <SelectItem value="downline">Downline</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
