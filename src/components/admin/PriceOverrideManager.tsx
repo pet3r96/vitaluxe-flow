@@ -444,11 +444,16 @@ export const PriceOverrideManager = () => {
                               </TableCell>
                               <TableCell className="text-right">
                                 <Input
-                                  type="number"
-                                  step="0.01"
+                                  type="text"
+                                  inputMode="decimal"
                                   placeholder={product.topline_price.toFixed(2)}
                                   value={values.topline}
-                                  onChange={(e) => handleOverrideChange(product.id, 'override_topline_price', e.target.value)}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                      handleOverrideChange(product.id, 'override_topline_price', val);
+                                    }
+                                  }}
                                   className="w-24 text-right"
                                 />
                               </TableCell>
@@ -457,11 +462,16 @@ export const PriceOverrideManager = () => {
                               </TableCell>
                               <TableCell className="text-right">
                                 <Input
-                                  type="number"
-                                  step="0.01"
+                                  type="text"
+                                  inputMode="decimal"
                                   placeholder={product.downline_price.toFixed(2)}
                                   value={values.downline}
-                                  onChange={(e) => handleOverrideChange(product.id, 'override_downline_price', e.target.value)}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                      handleOverrideChange(product.id, 'override_downline_price', val);
+                                    }
+                                  }}
                                   className="w-24 text-right"
                                 />
                               </TableCell>
@@ -470,11 +480,16 @@ export const PriceOverrideManager = () => {
                               </TableCell>
                               <TableCell className="text-right">
                                 <Input
-                                  type="number"
-                                  step="0.01"
+                                  type="text"
+                                  inputMode="decimal"
                                   placeholder={product.retail_price.toFixed(2)}
                                   value={values.retail}
-                                  onChange={(e) => handleOverrideChange(product.id, 'override_retail_price', e.target.value)}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                      handleOverrideChange(product.id, 'override_retail_price', val);
+                                    }
+                                  }}
                                   className="w-24 text-right"
                                 />
                               </TableCell>
