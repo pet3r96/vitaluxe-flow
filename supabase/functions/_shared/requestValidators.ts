@@ -241,7 +241,7 @@ export function validateGenerateTermsRequest(data: any) {
   const validations = [
     validateUUID(data.terms_id, 'terms_id'),
     validateString(data.signature_name, 'signature_name', { required: true, maxLength: 200 }),
-    validateUUID(data.target_user_id, 'target_user_id')
+    validateUUID(data.target_user_id, 'target_user_id', false) // Optional - for impersonation only
   ];
   
   return validateInput(validations);
