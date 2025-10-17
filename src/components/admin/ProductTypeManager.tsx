@@ -26,8 +26,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface ProductTypeUsage {
-  product_type: string;
+interface ProductType {
+  id: string;
+  name: string;
+  active: boolean;
   count: number;
 }
 
@@ -37,40 +39,16 @@ export const ProductTypeManager = () => {
   const [deletingType, setDeletingType] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch product type usage
+  // Fetch product type usage from edge function
   const { data: typeUsage, isLoading } = useQuery({
     queryKey: ["product-type-usage"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("product_type");
-
-      if (error) throw error;
-
-      // Count occurrences of each type
-      const counts: Record<string, number> = {};
-      data?.forEach((product) => {
-        if (product.product_type) {
-          counts[product.product_type] = (counts[product.product_type] || 0) + 1;
-        }
+      const { data, error } = await supabase.functions.invoke("manage-product-type", {
+        body: { operation: "getUsage" },
       });
 
-      // Get all possible enum values by querying the database
-      const allTypes = [
-        "Vitamins",
-        "R & D Products",
-        "Peptides",
-        "GLP 1",
-        "GLP 2",
-        "GLP 3",
-        "Supplies",
-        "Vitamin IV's",
-      ];
-
-      return allTypes.map((type) => ({
-        product_type: type,
-        count: counts[type] || 0,
-      }));
+      if (error) throw error;
+      return data.usage as ProductType[];
     },
   });
 
@@ -81,11 +59,18 @@ export const ProductTypeManager = () => {
       });
 
       if (error) throw error;
+      
+      // Check if operation was unsuccessful
+      if (!data.success) {
+        throw new Error(data.error || "Operation failed");
+      }
+      
       return data;
     },
     onSuccess: () => {
       toast.success("Product type deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["product-type-usage"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       setDeletingType(null);
     },
     onError: (error: Error) => {
@@ -93,11 +78,7 @@ export const ProductTypeManager = () => {
     },
   });
 
-  const handleDelete = (typeName: string, count: number) => {
-    if (count > 0) {
-      toast.error("Cannot delete product type that is in use");
-      return;
-    }
+  const handleDelete = (typeName: string) => {
     setDeletingType(typeName);
   };
 
@@ -141,9 +122,9 @@ export const ProductTypeManager = () => {
               </TableRow>
             ) : typeUsage && typeUsage.length > 0 ? (
               typeUsage.map((type) => (
-                <TableRow key={type.product_type}>
+                <TableRow key={type.id}>
                   <TableCell className="font-medium">
-                    {type.product_type}
+                    {type.name}
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant="secondary">{type.count}</Badge>
@@ -157,15 +138,14 @@ export const ProductTypeManager = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setEditingType(type.product_type)}
+                      onClick={() => setEditingType(type.name)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(type.product_type, type.count)}
-                      disabled={type.count > 0}
+                      onClick={() => handleDelete(type.name)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -192,7 +172,7 @@ export const ProductTypeManager = () => {
         <EditProductTypeDialog
           typeName={editingType}
           productCount={
-            typeUsage?.find((t) => t.product_type === editingType)?.count || 0
+            typeUsage?.find((t) => t.name === editingType)?.count || 0
           }
           open={!!editingType}
           onOpenChange={(open) => !open && setEditingType(null)}

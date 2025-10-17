@@ -95,7 +95,7 @@ export const OrdersDataTable = () => {
             prescription_url,
             custom_dosage,
             custom_sig,
-            products(name, product_type),
+            products(name, product_types(name)),
             pharmacies:assigned_pharmacy_id(name),
             providers!order_lines_provider_id_fkey(
               id,
@@ -138,7 +138,7 @@ export const OrdersDataTable = () => {
         .select(`
           *,
           order_lines(*,
-            products(name, product_type),
+            products(name, product_types(name)),
             pharmacies:assigned_pharmacy_id(name),
             providers!order_lines_provider_id_fkey(
               id,
@@ -509,7 +509,7 @@ export const OrdersDataTable = () => {
                         {order.order_lines?.map((line: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-2">
                             <Badge variant="secondary" className="text-xs">
-                              {line.products?.product_type || "Unknown"}
+                              {line.products?.product_types?.name || "Unknown"}
                             </Badge>
                             <span className="text-xs text-muted-foreground truncate max-w-[150px]">
                               {line.products?.name || "N/A"}

@@ -37,6 +37,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [pharmacies, setPharmacies] = useState<any[]>([]);
+  const [productTypes, setProductTypes] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
@@ -47,10 +48,10 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     retail_price: "",
     assigned_pharmacies: [] as string[],
     requires_prescription: false,
-    product_type: "Peptides" as "Vitamins" | "R & D Products" | "Peptides" | "GLP 1" | "GLP 2" | "GLP 3" | "Supplies" | "Vitamin IV's",
+    product_type_id: "",
   });
 
-  // Fetch available pharmacies with their states and priorities
+  // Fetch available pharmacies and product types
   useEffect(() => {
     const fetchPharmacies = async () => {
       const { data, error } = await supabase
@@ -63,7 +64,21 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         setPharmacies(data);
       }
     };
+
+    const fetchProductTypes = async () => {
+      const { data, error } = await supabase
+        .from("product_types")
+        .select("id, name")
+        .eq("active", true)
+        .order("name");
+      
+      if (!error && data) {
+        setProductTypes(data);
+      }
+    };
+
     fetchPharmacies();
+    fetchProductTypes();
   }, [product]);
 
   // Fetch existing pharmacy assignments when editing
@@ -98,7 +113,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         retail_price: product.retail_price?.toString() || "",
         assigned_pharmacies: [],
         requires_prescription: product.requires_prescription || false,
-        product_type: product.product_type || "Peptides",
+        product_type_id: product.product_type_id || "",
       });
       setImagePreview(product.image_url || "");
     } else {
@@ -188,7 +203,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         image_url: imageUrl,
         active: true,
         requires_prescription: formData.requires_prescription,
-        product_type: formData.product_type,
+        product_type_id: formData.product_type_id,
       };
 
       let productId = product?.id;
@@ -253,7 +268,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       retail_price: "",
       assigned_pharmacies: [],
       requires_prescription: false,
-      product_type: "Peptides",
+      product_type_id: "",
     });
     setImageFile(null);
     setImagePreview("");
@@ -333,11 +348,11 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="product_type">Product Type *</Label>
+              <Label htmlFor="product_type_id">Product Type *</Label>
               <Select
-                value={formData.product_type}
-                onValueChange={(value: "Vitamins" | "R & D Products" | "Peptides" | "GLP 1" | "GLP 2" | "GLP 3" | "Supplies" | "Vitamin IV's") =>
-                  setFormData({ ...formData, product_type: value })
+                value={formData.product_type_id}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, product_type_id: value })
                 }
                 required
               >
@@ -345,14 +360,11 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                   <SelectValue placeholder="Select product type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Vitamins">Vitamins</SelectItem>
-                  <SelectItem value="R & D Products">R & D Products</SelectItem>
-                  <SelectItem value="Peptides">Peptides</SelectItem>
-                  <SelectItem value="GLP 1">GLP 1</SelectItem>
-                  <SelectItem value="GLP 2">GLP 2</SelectItem>
-                  <SelectItem value="GLP 3">GLP 3</SelectItem>
-                  <SelectItem value="Supplies">Supplies</SelectItem>
-                  <SelectItem value="Vitamin IV's">Vitamin IV's</SelectItem>
+                  {productTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

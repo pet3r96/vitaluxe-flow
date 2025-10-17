@@ -489,9 +489,9 @@ export const OrderDetailsDialog = ({
                       <p className="text-sm text-muted-foreground">Product</p>
                       <div className="flex flex-col gap-1">
                         <p className="font-medium">{line.products?.name || "N/A"}</p>
-                        {line.products?.product_type && (
+                        {line.products?.product_types?.name && (
                           <Badge variant="outline" className="text-xs w-fit">
-                            {line.products.product_type}
+                            {line.products.product_types.name}
                           </Badge>
                         )}
                       </div>

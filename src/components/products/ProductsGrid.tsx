@@ -62,6 +62,7 @@ export const ProductsGrid = () => {
         .from("products")
         .select(`
           *,
+          product_types(id, name),
           product_pharmacies (
             pharmacy:pharmacies (
               id,
@@ -132,7 +133,7 @@ export const ProductsGrid = () => {
         product.dosage?.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesType = productTypeFilter === "all" || 
-        product.product_type === productTypeFilter;
+        product.product_type_id === productTypeFilter;
       
       return matchesSearch && matchesType;
     }), 

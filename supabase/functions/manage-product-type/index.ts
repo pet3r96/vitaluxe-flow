@@ -13,6 +13,13 @@ interface RequestBody {
   newTypeName?: string;
 }
 
+interface ProductType {
+  id: string;
+  name: string;
+  active: boolean;
+  count: number;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -80,13 +87,39 @@ Deno.serve(async (req) => {
           throw new Error('Type name is required');
         }
 
-        // Note: Adding enum values requires a database migration
+        const trimmedName = typeName.trim();
+        
+        if (trimmedName.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Type name cannot be empty' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (trimmedName.length > 50) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Type name must be less than 50 characters' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { error: insertError } = await supabaseClient
+          .from('product_types')
+          .insert({ name: trimmedName });
+
+        if (insertError) {
+          if (insertError.code === '23505') { // Unique constraint violation
+            return new Response(
+              JSON.stringify({ success: false, error: 'A product type with this name already exists' }),
+              { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          throw insertError;
+        }
+
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'Adding new product types requires a database migration. Please contact an administrator to add new product types to the system.' 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -95,23 +128,49 @@ Deno.serve(async (req) => {
           throw new Error('Type name is required');
         }
 
+        // Find the product type ID
+        const { data: productType, error: typeError } = await supabaseClient
+          .from('product_types')
+          .select('id')
+          .eq('name', typeName)
+          .single();
+
+        if (typeError || !productType) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Product type not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         // Check if type is in use
         const { count } = await supabaseClient
           .from('products')
           .select('*', { count: 'exact', head: true })
-          .eq('product_type', typeName);
+          .eq('product_type_id', productType.id);
 
         if (count && count > 0) {
-          throw new Error(`Cannot delete product type that is in use by ${count} product(s)`);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: `Cannot delete product type that is in use by ${count} product(s)` 
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
-        // Note: PostgreSQL doesn't support DROP VALUE for enums
+        // Delete the product type
+        const { error: deleteError } = await supabaseClient
+          .from('product_types')
+          .delete()
+          .eq('id', productType.id);
+
+        if (deleteError) {
+          throw deleteError;
+        }
+
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'Direct deletion of enum values is not supported in PostgreSQL. The type will remain in the database but can be left unused.' 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -120,35 +179,91 @@ Deno.serve(async (req) => {
           throw new Error('Both old and new type names are required');
         }
 
-        // Note: Renaming enum values requires adding the new value via migration first
-        // For now, we'll just inform the user this isn't supported through the UI
+        const trimmedNewName = newTypeName.trim();
+
+        if (trimmedNewName.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'New type name cannot be empty' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (trimmedNewName.length > 50) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Type name must be less than 50 characters' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check if new name already exists (and it's not the same as the old one)
+        if (trimmedNewName !== oldTypeName) {
+          const { data: existing } = await supabaseClient
+            .from('product_types')
+            .select('id')
+            .eq('name', trimmedNewName)
+            .single();
+
+          if (existing) {
+            return new Response(
+              JSON.stringify({ success: false, error: 'A product type with this name already exists' }),
+              { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        // Update the product type
+        const { error: updateError } = await supabaseClient
+          .from('product_types')
+          .update({ name: trimmedNewName, updated_at: new Date().toISOString() })
+          .eq('name', oldTypeName);
+
+        if (updateError) {
+          throw updateError;
+        }
+
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'Renaming product types requires a database migration. Please contact an administrator to rename product types.' 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       case 'getUsage': {
-        const { data, error } = await supabaseClient
-          .from('products')
-          .select('product_type');
+        // Get all product types with usage counts
+        const { data: productTypes, error: typesError } = await supabaseClient
+          .from('product_types')
+          .select('id, name, active');
 
-        if (error) {
-          throw error;
+        if (typesError) {
+          throw typesError;
         }
 
+        // Get usage counts
+        const { data: products, error: productsError } = await supabaseClient
+          .from('products')
+          .select('product_type_id');
+
+        if (productsError) {
+          throw productsError;
+        }
+
+        // Count products per type
         const counts: Record<string, number> = {};
-        data?.forEach((product) => {
-          if (product.product_type) {
-            counts[product.product_type] = (counts[product.product_type] || 0) + 1;
+        products?.forEach((product) => {
+          if (product.product_type_id) {
+            counts[product.product_type_id] = (counts[product.product_type_id] || 0) + 1;
           }
         });
 
+        // Build response with counts
+        const usage: ProductType[] = (productTypes || []).map(type => ({
+          id: type.id,
+          name: type.name,
+          active: type.active,
+          count: counts[type.id] || 0
+        }));
+
         return new Response(
-          JSON.stringify({ success: true, usage: counts }),
+          JSON.stringify({ success: true, usage }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

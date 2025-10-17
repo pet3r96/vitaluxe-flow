@@ -2217,6 +2217,30 @@ export type Database = {
           },
         ]
       }
+      product_types: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active: boolean | null
@@ -2228,7 +2252,7 @@ export type Database = {
           image_url: string | null
           name: string
           pharmacy_id: string | null
-          product_type: Database["public"]["Enums"]["product_type"]
+          product_type_id: string
           requires_prescription: boolean
           retail_price: number | null
           sig: string | null
@@ -2245,7 +2269,7 @@ export type Database = {
           image_url?: string | null
           name: string
           pharmacy_id?: string | null
-          product_type?: Database["public"]["Enums"]["product_type"]
+          product_type_id: string
           requires_prescription?: boolean
           retail_price?: number | null
           sig?: string | null
@@ -2262,7 +2286,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           pharmacy_id?: string | null
-          product_type?: Database["public"]["Enums"]["product_type"]
+          product_type_id?: string
           requires_prescription?: boolean
           retail_price?: number | null
           sig?: string | null
@@ -2275,6 +2299,13 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_product_type_fk"
+            columns: ["product_type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
             referencedColumns: ["id"]
           },
         ]
@@ -3657,15 +3688,6 @@ export type Database = {
         | "denied"
         | "change_requested"
         | "delivered"
-      product_type:
-        | "Vitamins"
-        | "R & D Products"
-        | "Peptides"
-        | "GLP 1"
-        | "GLP 2"
-        | "GLP 3"
-        | "Supplies"
-        | "Vitamin IV's"
       shipping_carrier: "fedex" | "ups" | "usps"
       shipping_speed: "ground" | "2day" | "overnight"
       verification_code_type: "2fa_setup" | "2fa_login"
@@ -3824,16 +3846,6 @@ export const Constants = {
         "denied",
         "change_requested",
         "delivered",
-      ],
-      product_type: [
-        "Vitamins",
-        "R & D Products",
-        "Peptides",
-        "GLP 1",
-        "GLP 2",
-        "GLP 3",
-        "Supplies",
-        "Vitamin IV's",
       ],
       shipping_carrier: ["fedex", "ups", "usps"],
       shipping_speed: ["ground", "2day", "overnight"],
