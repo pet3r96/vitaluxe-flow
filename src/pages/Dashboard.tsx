@@ -83,7 +83,6 @@ const Dashboard = () => {
     staleTime: 0,
     queryFn: async () => {
       if (effectiveRole === "pharmacy") {
-        // Get pharmacy ID first
         const { data: pharmacyData } = await supabase
           .from("pharmacies")
           .select("id")
@@ -91,7 +90,6 @@ const Dashboard = () => {
           .maybeSingle();
         
         if (pharmacyData) {
-          // Count products assigned to this pharmacy through product_pharmacies
           const { count } = await supabase
             .from("product_pharmacies")
             .select("*", { count: "exact", head: true })
@@ -100,13 +98,37 @@ const Dashboard = () => {
           return count || 0;
         }
         return 0;
-      } else {
-        // Admin, doctor, provider - show all active products
+      } else if (effectiveRole === "admin") {
         const { count } = await supabase
           .from("products")
           .select("*", { count: "exact", head: true })
           .eq("active", true);
         return count || 0;
+      } else {
+        // Doctor, provider, topline, downline - use visibility filter
+        try {
+          const { data: visibleProducts, error } = await supabase.rpc(
+            'get_visible_products_for_user' as any
+          ) as { data: Array<{ id: string }> | null; error: any };
+          
+          if (error) {
+            console.error('Visibility RPC error:', error);
+            const { count } = await supabase
+              .from("products")
+              .select("*", { count: "exact", head: true })
+              .eq("active", true);
+            return count || 0;
+          }
+          
+          return visibleProducts?.length || 0;
+        } catch (error) {
+          console.error('Error checking product visibility:', error);
+          const { count } = await supabase
+            .from("products")
+            .select("*", { count: "exact", head: true })
+            .eq("active", true);
+          return count || 0;
+        }
       }
     },
   });
