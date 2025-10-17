@@ -8,33 +8,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to get all auth user IDs with pagination
+// Helper function to get all auth user IDs
 async function getAllAuthUserIds(supabaseAdmin: any): Promise<Set<string>> {
   const allUserIds = new Set<string>();
-  let page = 0;
-  const perPage = 1000; // Max allowed by Supabase
   
-  while (true) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      page,
-      perPage,
-    });
+  try {
+    // Use the listUsers without pagination parameters
+    // The API returns all users by default
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {
       console.error('Error fetching auth users:', error);
       throw error;
     }
     
-    if (!data.users || data.users.length === 0) break;
+    if (data?.users) {
+      data.users.forEach((u: any) => allUserIds.add(u.id));
+      console.log(`Fetched ${allUserIds.size} total auth users`);
+    } else {
+      console.log('No users found in auth system');
+    }
     
-    data.users.forEach((u: any) => allUserIds.add(u.id));
-    
-    if (data.users.length < perPage) break; // Last page
-    page++;
+    return allUserIds;
+  } catch (err) {
+    console.error('Failed to fetch auth users:', err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to fetch auth users: ${errorMessage}`);
   }
-  
-  console.log(`Fetched ${allUserIds.size} total auth users`);
-  return allUserIds;
 }
 
 interface OrphanedPharmacy {
