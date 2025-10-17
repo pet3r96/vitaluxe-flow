@@ -197,7 +197,7 @@ export const PendingRepsApproval = () => {
   return (
     <div className="space-y-4">
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-        <TabsList>
+        <TabsList className="inline-flex w-auto">
           <TabsTrigger value="pending">Pending</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
           <TabsTrigger value="rejected">Rejected</TabsTrigger>
