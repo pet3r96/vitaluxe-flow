@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 
 export default function ChangePassword() {
-  const { user, checkPasswordStatus } = useAuth();
+  const { user, isImpersonating, clearImpersonation, signOut } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -70,14 +70,12 @@ export default function ChangePassword() {
 
       toast.success("Password changed successfully!");
       
-      // Get fresh status directly from checkPasswordStatus
-      const { termsAccepted } = await checkPasswordStatus();
-      
-      // Navigate based on the FRESH values, not context state
-      if (!termsAccepted) {
-        navigate("/accept-terms");
+      // After changing password, end session to avoid redirect loops
+      if (isImpersonating) {
+        await clearImpersonation();
+        navigate("/");
       } else {
-        navigate("/dashboard");
+        await signOut();
       }
     } catch (error: any) {
       logger.error("Password change failed", error, { user_id: user?.id });
