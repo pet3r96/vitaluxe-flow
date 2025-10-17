@@ -3472,6 +3472,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: string
       }
+      get_auth_user_id_by_email: {
+        Args: { p_email: string }
+        Returns: string
+      }
       get_client_ip: {
         Args: Record<PropertyKey, never>
         Returns: string

@@ -8,32 +8,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to get all auth user IDs
-async function getAllAuthUserIds(supabaseAdmin: any): Promise<Set<string>> {
-  const allUserIds = new Set<string>();
-  
+// Helper: Check if a specific auth user ID exists using getUserById
+async function existsAuthUserId(supabaseAdmin: any, userId: string): Promise<boolean> {
   try {
-    // Use the listUsers without pagination parameters
-    // The API returns all users by default
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
     
     if (error) {
-      console.error('Error fetching auth users:', error);
-      throw error;
+      if (error.status === 404) {
+        return false; // User not found
+      }
+      // For 500 or other unexpected errors, we want to bubble up
+      console.error(`Unexpected error checking user ${userId}:`, error);
+      throw new Error(`Failed to check user existence: ${error.message}`);
     }
     
-    if (data?.users) {
-      data.users.forEach((u: any) => allUserIds.add(u.id));
-      console.log(`Fetched ${allUserIds.size} total auth users`);
-    } else {
-      console.log('No users found in auth system');
-    }
-    
-    return allUserIds;
+    return !!data?.user;
   } catch (err) {
-    console.error('Failed to fetch auth users:', err);
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    throw new Error(`Failed to fetch auth users: ${errorMessage}`);
+    console.error(`Exception checking user ${userId}:`, err);
+    throw err;
   }
 }
 
@@ -515,11 +507,19 @@ serve(async (req) => {
         .eq('role', 'doctor');
 
       const doctorIds = doctorRoles?.map(r => r.user_id) || [];
+      console.log(`Checking ${doctorIds.length} doctor IDs for orphaned auth users`);
 
-      // Then check which profiles exist with those IDs but aren't in auth.users
-      const authUserIds = await getAllAuthUserIds(supabaseAdmin);
-      
-      const orphanedDoctorIds = doctorIds.filter(id => !authUserIds.has(id));
+      // Check which ones don't have auth users
+      const orphanedDoctorIds: string[] = [];
+      for (const id of doctorIds) {
+        if (entityId && id !== entityId) continue;
+        const exists = await existsAuthUserId(supabaseAdmin, id);
+        if (!exists) {
+          orphanedDoctorIds.push(id);
+        }
+      }
+
+      console.log(`Found ${orphanedDoctorIds.length} orphaned practices`);
 
       if (orphanedDoctorIds.length > 0) {
         const { data: orphanedPractices } = await supabaseAdmin
@@ -529,10 +529,8 @@ serve(async (req) => {
         
         if (orphanedPractices && orphanedPractices.length > 0) {
           summary.practices.total = orphanedPractices.length;
-          console.log(`Found ${orphanedPractices.length} orphaned practices`);
 
           for (const practice of orphanedPractices) {
-            if (entityId && practice.id !== entityId) continue;
             const result = await fixOrphanedPractice(supabaseAdmin, practice);
             results.push(result);
             if (result.success) summary.practices.fixed++;
@@ -543,33 +541,27 @@ serve(async (req) => {
 
     // Fix Orphaned Topline Reps
     if (!roleType || roleType === 'topline') {
-      // Get all auth user IDs with pagination
-      const authUserIds = await getAllAuthUserIds(supabaseAdmin);
-
       // Get all topline reps
       const { data: allToplines } = await supabaseAdmin
         .from('reps')
         .select('id, user_id')
         .eq('role', 'topline');
 
-      // Filter to only orphaned ones
-      const orphanedToplineIds = allToplines?.filter(r => !authUserIds.has(r.user_id)).map(r => r.id) || [];
+      console.log(`Checking ${allToplines?.length || 0} topline reps for orphaned auth users`);
 
-      let orphanedToplines: any[] = [];
-      if (orphanedToplineIds.length > 0) {
-        const { data } = await supabaseAdmin
-          .from('reps')
-          .select('id, user_id')
-          .in('id', orphanedToplineIds);
-        
-        // Get profile data separately
-        if (data) {
-          for (const rep of data) {
+      // Check which ones don't have auth users
+      const orphanedToplines: any[] = [];
+      if (allToplines) {
+        for (const rep of allToplines) {
+          if (entityId && rep.id !== entityId) continue;
+          const exists = await existsAuthUserId(supabaseAdmin, rep.user_id);
+          if (!exists) {
+            // Get profile data
             const { data: profile } = await supabaseAdmin
               .from('profiles')
               .select('name, email, company, phone')
               .eq('id', rep.user_id)
-              .single();
+              .maybeSingle();
             
             if (profile) {
               orphanedToplines.push({
@@ -578,22 +570,20 @@ serve(async (req) => {
                 email: profile.email,
                 company: profile.company,
                 phone: profile.phone,
+                role: 'topline',
               });
             }
           }
         }
       }
 
-      if (orphanedToplines && orphanedToplines.length > 0) {
+      console.log(`Found ${orphanedToplines.length} orphaned topline reps`);
+
+      if (orphanedToplines.length > 0) {
         summary.topline_reps.total = orphanedToplines.length;
-        console.log(`Found ${orphanedToplines.length} orphaned topline reps`);
 
         for (const rep of orphanedToplines) {
-          if (entityId && rep.id !== entityId) continue;
-          const result = await fixOrphanedRep(supabaseAdmin, {
-            ...rep,
-            role: 'topline',
-          });
+          const result = await fixOrphanedRep(supabaseAdmin, rep);
           results.push(result);
           if (result.success) summary.topline_reps.fixed++;
         }
@@ -602,33 +592,27 @@ serve(async (req) => {
 
     // Fix Orphaned Downline Reps
     if (!roleType || roleType === 'downline') {
-      // Get all auth user IDs with pagination
-      const authUserIds = await getAllAuthUserIds(supabaseAdmin);
-
       // Get all downline reps
       const { data: allDownlines } = await supabaseAdmin
         .from('reps')
         .select('id, user_id, assigned_topline_id')
         .eq('role', 'downline');
 
-      // Filter to only orphaned ones
-      const orphanedDownlineIds = allDownlines?.filter(r => !authUserIds.has(r.user_id)).map(r => r.id) || [];
+      console.log(`Checking ${allDownlines?.length || 0} downline reps for orphaned auth users`);
 
-      let orphanedDownlines: any[] = [];
-      if (orphanedDownlineIds.length > 0) {
-        const { data } = await supabaseAdmin
-          .from('reps')
-          .select('id, user_id, assigned_topline_id')
-          .in('id', orphanedDownlineIds);
-        
-        // Get profile data separately
-        if (data) {
-          for (const rep of data) {
+      // Check which ones don't have auth users
+      const orphanedDownlines: any[] = [];
+      if (allDownlines) {
+        for (const rep of allDownlines) {
+          if (entityId && rep.id !== entityId) continue;
+          const exists = await existsAuthUserId(supabaseAdmin, rep.user_id);
+          if (!exists) {
+            // Get profile data
             const { data: profile } = await supabaseAdmin
               .from('profiles')
               .select('name, email, company, phone')
               .eq('id', rep.user_id)
-              .single();
+              .maybeSingle();
             
             if (profile) {
               orphanedDownlines.push({
@@ -637,22 +621,20 @@ serve(async (req) => {
                 email: profile.email,
                 company: profile.company,
                 phone: profile.phone,
+                role: 'downline',
               });
             }
           }
         }
       }
 
-      if (orphanedDownlines && orphanedDownlines.length > 0) {
+      console.log(`Found ${orphanedDownlines.length} orphaned downline reps`);
+
+      if (orphanedDownlines.length > 0) {
         summary.downline_reps.total = orphanedDownlines.length;
-        console.log(`Found ${orphanedDownlines.length} orphaned downline reps`);
 
         for (const rep of orphanedDownlines) {
-          if (entityId && rep.id !== entityId) continue;
-          const result = await fixOrphanedRep(supabaseAdmin, {
-            ...rep,
-            role: 'downline',
-          });
+          const result = await fixOrphanedRep(supabaseAdmin, rep);
           results.push(result);
           if (result.success) summary.downline_reps.fixed++;
         }
@@ -661,32 +643,26 @@ serve(async (req) => {
 
     // Fix Orphaned Providers
     if (!roleType || roleType === 'provider') {
-      // Get all auth user IDs with pagination
-      const authUserIds = await getAllAuthUserIds(supabaseAdmin);
-
       // Get all providers
       const { data: allProviders } = await supabaseAdmin
         .from('providers')
         .select('id, user_id, npi, license_number, practice_id');
 
-      // Filter to only orphaned ones
-      const orphanedProviderIds = allProviders?.filter(p => !authUserIds.has(p.user_id)).map(p => p.id) || [];
+      console.log(`Checking ${allProviders?.length || 0} providers for orphaned auth users`);
 
-      let orphanedProviders: any[] = [];
-      if (orphanedProviderIds.length > 0) {
-        const { data } = await supabaseAdmin
-          .from('providers')
-          .select('id, user_id, npi, license_number, practice_id')
-          .in('id', orphanedProviderIds);
-        
-        // Get profile data separately
-        if (data) {
-          for (const provider of data) {
+      // Check which ones don't have auth users
+      const orphanedProviders: any[] = [];
+      if (allProviders) {
+        for (const provider of allProviders) {
+          if (entityId && provider.id !== entityId) continue;
+          const exists = await existsAuthUserId(supabaseAdmin, provider.user_id);
+          if (!exists) {
+            // Get profile data
             const { data: profile } = await supabaseAdmin
               .from('profiles')
               .select('name, email')
               .eq('id', provider.user_id)
-              .single();
+              .maybeSingle();
             
             if (profile) {
               orphanedProviders.push({
@@ -699,12 +675,12 @@ serve(async (req) => {
         }
       }
 
-      if (orphanedProviders && orphanedProviders.length > 0) {
+      console.log(`Found ${orphanedProviders.length} orphaned providers`);
+
+      if (orphanedProviders.length > 0) {
         summary.providers.total = orphanedProviders.length;
-        console.log(`Found ${orphanedProviders.length} orphaned providers`);
 
         for (const provider of orphanedProviders) {
-          if (entityId && provider.id !== entityId) continue;
           const result = await fixOrphanedProvider(supabaseAdmin, provider);
           results.push(result);
           if (result.success) summary.providers.fixed++;

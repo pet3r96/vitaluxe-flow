@@ -114,130 +114,64 @@ serve(async (req) => {
         }
       }
 
-      // Check if user already exists with this email
-      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = existingUsers?.users?.find((u: any) => u.email === pendingRep.email);
-
+      // Create-first approach: try to create user, handle "already exists" gracefully
       let newUserId: string;
       let temporaryPassword: string | null = null;
+      let userAlreadyExisted = false;
 
-      if (existingUser) {
-        console.log(`User already exists for email: ${pendingRep.email}`);
-        
-        // Verify this user is associated with this pending request via profile
-        const { data: existingProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('id, email')
-          .eq('id', existingUser.id)
-          .eq('email', pendingRep.email)
-          .maybeSingle();
-        
-        if (!existingProfile) {
-          throw new Error('User exists but profile mismatch - contact administrator');
+      temporaryPassword = generateSecurePassword();
+      
+      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+        email: pendingRep.email,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: {
+          name: pendingRep.full_name,
+          phone: pendingRep.phone,
+          company: pendingRep.company
         }
-        
-        newUserId = existingUser.id;
-        
-        // Check if user_roles already exists
-        const { data: existingRole } = await supabaseAdmin
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', newUserId)
-          .eq('role', pendingRep.role)
-          .maybeSingle();
-        
-        if (!existingRole) {
-          // Add missing role
-          const { error: roleError } = await supabaseAdmin
-            .from('user_roles')
-            .insert({
-              user_id: newUserId,
-              role: pendingRep.role
-            });
-          
-          if (roleError) {
-            console.error('Failed to add missing role:', roleError);
-            throw new Error(`Failed to add role: ${roleError.message}`);
-          }
-        }
-        
-        // Check if rep record exists
-        const { data: existingRep } = await supabaseAdmin
-          .from('reps')
-          .select('id')
-          .eq('user_id', newUserId)
-          .maybeSingle();
-        
-        if (!existingRep) {
-          // Create missing rep record
-          let assigned_topline_id = null;
-          if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
-            const { data: toplineRep } = await supabaseAdmin
-              .from('reps')
-              .select('id')
-              .eq('user_id', pendingRep.assigned_topline_user_id)
-              .eq('role', 'topline')
-              .maybeSingle();
-            
-            assigned_topline_id = toplineRep?.id || null;
-          }
-          
-          const { error: repError } = await supabaseAdmin
-            .from('reps')
-            .insert({
-              user_id: newUserId,
-              role: pendingRep.role,
-              assigned_topline_id: assigned_topline_id,
-              active: true
-            });
-          
-          if (repError) {
-            console.error('Failed to create missing rep record:', repError);
-            throw new Error(`Failed to create rep record: ${repError.message}`);
-          }
-        }
-        
-        // Check if password status exists
-        const { data: existingPasswordStatus } = await supabaseAdmin
-          .from('user_password_status')
-          .select('user_id')
-          .eq('user_id', newUserId)
-          .maybeSingle();
-        
-        if (!existingPasswordStatus) {
-          await supabaseAdmin.from('user_password_status').insert({
-            user_id: newUserId,
-            must_change_password: true,
-            temporary_password_sent: true,
-            first_login_completed: false
-          });
-        }
-        
-        // Skip welcome email since user already exists
-        
-      } else {
-        // User doesn't exist - proceed with normal creation
-        temporaryPassword = generateSecurePassword();
-        
-        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          email: pendingRep.email,
-          password: temporaryPassword,
-          email_confirm: true,
-          user_metadata: {
-            name: pendingRep.full_name,
-            phone: pendingRep.phone,
-            company: pendingRep.company
-          }
-        });
+      });
 
-        if (createUserError || !newUser.user) {
+      if (createUserError) {
+        // Check if error is "already registered"
+        if (createUserError.status === 422 && createUserError.message?.includes('already registered')) {
+          console.log(`User already exists for email: ${pendingRep.email}, fetching ID via SQL helper`);
+          
+          // Fetch existing user ID using SQL helper
+          const { data: existingUserIdData, error: fetchIdError } = await supabaseAdmin
+            .rpc('get_auth_user_id_by_email', { p_email: pendingRep.email });
+          
+          if (fetchIdError || !existingUserIdData) {
+            console.error('Failed to fetch existing user ID:', fetchIdError);
+            throw new Error('User already registered but could not resolve account. Please contact administrator.');
+          }
+          
+          newUserId = existingUserIdData;
+          userAlreadyExisted = true;
+          temporaryPassword = null; // Don't expose password for existing users
+          
+          console.log(`Resolved existing user ID: ${newUserId}, ensuring records are complete`);
+          
+        } else {
           console.error('Failed to create user:', createUserError);
-          throw new Error(`Failed to create user: ${createUserError?.message}`);
+          throw new Error(`Failed to create user: ${createUserError.message}`);
         }
-
+      } else if (newUser?.user) {
         newUserId = newUser.user.id;
+        console.log(`Created new user: ${newUserId}`);
+      } else {
+        throw new Error('User creation returned no user object');
+      }
 
-        // Create profile
+      // Ensure profile exists (for both new and existing users)
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('id', newUserId)
+        .maybeSingle();
+      
+      if (!existingProfile) {
+
         const { error: profileError } = await supabaseAdmin
           .from('profiles')
           .insert({
@@ -254,8 +188,17 @@ serve(async (req) => {
           console.error('Failed to create profile:', profileError);
           throw new Error(`Failed to create profile: ${profileError.message}`);
         }
+      }
 
-        // Add role
+      // Ensure user_roles record exists
+      const { data: existingRole } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', newUserId)
+        .eq('role', pendingRep.role)
+        .maybeSingle();
+      
+      if (!existingRole) {
         const { error: roleError } = await supabaseAdmin
           .from('user_roles')
           .insert({
@@ -267,11 +210,18 @@ serve(async (req) => {
           console.error('Failed to add role:', roleError);
           throw new Error(`Failed to add role: ${roleError.message}`);
         }
+      }
 
-        // Create rep record
+      // Ensure reps record exists
+      const { data: existingRep } = await supabaseAdmin
+        .from('reps')
+        .select('id')
+        .eq('user_id', newUserId)
+        .maybeSingle();
+      
+      if (!existingRep) {
         let assigned_topline_id = null;
         if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
-          // Get topline's rep.id
           const { data: toplineRep } = await supabaseAdmin
             .from('reps')
             .select('id')
@@ -295,16 +245,26 @@ serve(async (req) => {
           console.error('Failed to create rep record:', repError);
           throw new Error(`Failed to create rep record: ${repError.message}`);
         }
+      }
 
-        // Insert password status record
+      // Ensure password status record exists
+      const { data: existingPasswordStatus } = await supabaseAdmin
+        .from('user_password_status')
+        .select('user_id')
+        .eq('user_id', newUserId)
+        .maybeSingle();
+      
+      if (!existingPasswordStatus) {
         await supabaseAdmin.from('user_password_status').insert({
           user_id: newUserId,
           must_change_password: true,
           temporary_password_sent: true,
           first_login_completed: false
         });
+      }
 
-        // Send welcome email
+      // Send welcome email only for newly created users
+      if (!userAlreadyExisted && temporaryPassword) {
         try {
           await supabaseAdmin.functions.invoke('send-welcome-email', {
             body: {
@@ -338,11 +298,11 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: existingUser 
+          message: userAlreadyExisted 
             ? 'Representative request completed (user already existed)' 
             : 'Representative approved and welcome email sent',
           userId: newUserId,
-          temporaryPassword: temporaryPassword
+          temporaryPassword: userAlreadyExisted ? null : temporaryPassword
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
