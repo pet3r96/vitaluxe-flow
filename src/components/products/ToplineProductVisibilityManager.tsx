@@ -18,7 +18,7 @@ import { Eye, EyeOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export const ToplineProductVisibilityManager = () => {
-  const { effectiveRole } = useAuth();
+  const { effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [isResetting, setIsResetting] = useState(false);
 
@@ -35,11 +35,12 @@ export const ToplineProductVisibilityManager = () => {
     );
   }
 
-  // Get current topline rep's ID using backend function
+  // Get impersonated topline rep's ID (works during admin impersonation)
   const { data: toplineRepId, isLoading: isRepLoading, error: repIdError } = useQuery({
-    queryKey: ["topline-rep-id"],
+    queryKey: ["topline-rep-id", effectiveUserId],
+    enabled: !!effectiveUserId && effectiveRole === "topline",
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_current_user_rep_id" as any);
+      const { data, error } = await supabase.rpc("get_user_rep_id" as any, { _user_id: effectiveUserId });
       if (error) throw error;
       return data as string | null;
     },
@@ -150,24 +151,28 @@ export const ToplineProductVisibilityManager = () => {
   const visibleCount = products?.filter(p => p.visible).length || 0;
   const hiddenCount = products?.filter(p => !p.visible).length || 0;
 
-  // Show error if rep ID couldn't be fetched
-  if (repIdError) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Product Visibility Settings</CardTitle>
-          <CardDescription>
-            We couldn't determine your rep profile. Please try refreshing the page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-destructive">
-            Error loading rep profile. Please contact support if this persists.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+// Rep profile error or missing
+if (repIdError || (!isRepLoading && toplineRepId === null)) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Product Visibility Settings</CardTitle>
+        <CardDescription>
+          {repIdError
+            ? "We couldn't determine your rep profile. Please try refreshing the page."
+            : "We couldn’t find a rep profile for this user. Please contact support."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center py-8 text-destructive">
+          {repIdError
+            ? "Error loading rep profile. Please contact support if this persists."
+            : "No rep profile found for the selected user."}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
   // Show error if products couldn't be fetched
   if (isProductsError) {
