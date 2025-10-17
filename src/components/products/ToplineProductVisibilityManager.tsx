@@ -67,7 +67,6 @@ export const ToplineProductVisibilityManager = () => {
           active,
           product_types(name)
         `)
-        .eq("active", true)
         .order("name");
 
       if (productsError) throw productsError;
@@ -188,54 +187,66 @@ export const ToplineProductVisibilityManager = () => {
           <div className="text-center py-8 text-muted-foreground">
             Loading products...
           </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Dosage</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Visibility</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products?.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.dosage || "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {product.product_types?.name || "Uncategorized"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {product.visible ? (
-                        <Badge variant="default" className="gap-1">
-                          <Eye className="h-3 w-3" />
-                          Visible
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="gap-1">
-                          <EyeOff className="h-3 w-3" />
-                          Hidden
-                        </Badge>
-                      )}
-                      <Switch
-                        checked={product.visible}
-                        onCheckedChange={() =>
-                          toggleVisibility.mutate({
-                            productId: product.id,
-                            currentVisible: product.visible,
-                          })
-                        }
-                      />
-                    </div>
-                  </TableCell>
+        ) : (<>
+          {!products || products.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No products found.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead>Dosage</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Visibility</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {products.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell className="font-medium">
+                      {product.name}
+                      {!product.active && (
+                        <Badge variant="outline" className="ml-2">Inactive</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{product.dosage || "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {product.product_types?.name || "Uncategorized"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {product.visible ? (
+                          <Badge variant="default" className="gap-1">
+                            <Eye className="h-3 w-3" />
+                            Visible
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1">
+                            <EyeOff className="h-3 w-3" />
+                            Hidden
+                          </Badge>
+                        )}
+                        <Switch
+                          checked={product.visible}
+                          onCheckedChange={() =>
+                            toggleVisibility.mutate({
+                              productId: product.id,
+                              currentVisible: product.visible,
+                            })
+                          }
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          </>
         )}
       </CardContent>
     </Card>
