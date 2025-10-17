@@ -51,12 +51,20 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
   // Fetch topline reps
   useEffect(() => {
     const fetchToplineReps = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("reps")
-        .select("id, profiles!inner(name, email)")
-        .eq("role", "topline")
-        .order("profiles.name");
+        .select(`
+          id,
+          profiles:user_id (
+            name,
+            email
+          )
+        `)
+        .eq("role", "topline");
       
+      if (error) {
+        console.error("Error fetching topline reps:", error);
+      }
       if (data) setToplineReps(data);
     };
     fetchToplineReps();
