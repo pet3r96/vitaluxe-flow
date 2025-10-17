@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,13 +14,17 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Eye, EyeOff, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const ToplineProductVisibilityManager = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [isResetting, setIsResetting] = useState(false);
+  const [search, setSearch] = useState("");
 
   // Only topline reps can access this component
   if (effectiveRole !== "topline") {
@@ -148,6 +152,32 @@ export const ToplineProductVisibilityManager = () => {
     }
   };
 
+  // Filter products by search
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    if (!search) return products;
+    
+    const searchLower = search.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(searchLower) ||
+      p.dosage?.toLowerCase().includes(searchLower) ||
+      p.product_types?.name?.toLowerCase().includes(searchLower)
+    );
+  }, [products, search]);
+
+  // Pagination for filtered products
+  const { currentPage, totalPages, startIndex, endIndex, goToPage, hasNextPage, hasPrevPage } = usePagination({
+    totalItems: filteredProducts.length,
+    itemsPerPage: 25,
+  });
+
+  // Get paginated slice
+  const paginatedProducts = useMemo(() => 
+    filteredProducts.slice(startIndex, endIndex),
+    [filteredProducts, startIndex, endIndex]
+  );
+
+  // Calculate visible/hidden counts from ALL products (not filtered)
   const visibleCount = products?.filter(p => p.visible).length || 0;
   const hiddenCount = products?.filter(p => !p.visible).length || 0;
 
@@ -184,34 +214,37 @@ if (repIdError || (!isRepLoading && toplineRepId === null)) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Product Visibility Control</CardTitle>
-            <CardDescription>
-              Control which products your network can see and order
-            </CardDescription>
+        <CardTitle>Product Visibility Control</CardTitle>
+        <CardDescription>
+          Control which products your network can see and order
+        </CardDescription>
+        <div className="flex items-center gap-4 mt-4 flex-wrap">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Eye className="h-3 w-3" />
-                {visibleCount} Visible
-              </Badge>
-              <Badge variant="outline" className="flex items-center gap-1">
-                <EyeOff className="h-3 w-3" />
-                {hiddenCount} Hidden
-              </Badge>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResetAll}
-              disabled={isResetting || hiddenCount === 0}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Show All Products
-            </Button>
-          </div>
+          <Badge variant="secondary" className="flex items-center gap-2">
+            <Eye className="h-3 w-3" />
+            {visibleCount} Visible
+          </Badge>
+          <Badge variant="outline" className="flex items-center gap-2">
+            <EyeOff className="h-3 w-3" />
+            {hiddenCount} Hidden
+          </Badge>
+          <Button
+            onClick={handleResetAll}
+            disabled={isResetting || hiddenCount === 0}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isResetting ? "animate-spin" : ""}`} />
+            Show All Products
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -219,12 +252,8 @@ if (repIdError || (!isRepLoading && toplineRepId === null)) {
           <div className="text-center py-8 text-muted-foreground">
             Loading products...
           </div>
-        ) : (<>
-          {!products || products.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No products found.
-            </div>
-          ) : (
+        ) : (
+          <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -235,49 +264,70 @@ if (repIdError || (!isRepLoading && toplineRepId === null)) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">
-                      {product.name}
-                      {!product.active && (
-                        <Badge variant="outline" className="ml-2">Inactive</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{product.dosage || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {product.product_types?.name || "Uncategorized"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {product.visible ? (
-                          <Badge variant="default" className="gap-1">
-                            <Eye className="h-3 w-3" />
-                            Visible
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="gap-1">
-                            <EyeOff className="h-3 w-3" />
-                            Hidden
-                          </Badge>
-                        )}
-                        <Switch
-                          checked={product.visible}
-                          onCheckedChange={() =>
-                            toggleVisibility.mutate({
-                              productId: product.id,
-                              currentVisible: product.visible,
-                            })
-                          }
-                        />
-                      </div>
+                {paginatedProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      {search ? "No products match your search" : "No products found"}
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  paginatedProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">
+                        {product.name}
+                        {!product.active && (
+                          <Badge variant="outline" className="ml-2">Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{product.dosage || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {product.product_types?.name || "Uncategorized"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {product.visible ? (
+                            <Badge variant="default" className="gap-1">
+                              <Eye className="h-3 w-3" />
+                              Visible
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="gap-1">
+                              <EyeOff className="h-3 w-3" />
+                              Hidden
+                            </Badge>
+                          )}
+                          <Switch
+                            checked={product.visible}
+                            onCheckedChange={() =>
+                              toggleVisibility.mutate({
+                                productId: product.id,
+                                currentVisible: product.visible,
+                              })
+                            }
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
-          )}
+            {filteredProducts.length > 0 && (
+              <div className="mt-4">
+                <DataTablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
+                  hasNextPage={hasNextPage}
+                  hasPrevPage={hasPrevPage}
+                  totalItems={filteredProducts.length}
+                  startIndex={startIndex}
+                  endIndex={Math.min(endIndex, filteredProducts.length)}
+                />
+              </div>
+            )}
           </>
         )}
       </CardContent>
