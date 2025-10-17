@@ -174,7 +174,7 @@ export const ProductsGrid = () => {
     hasPrevPage
   } = usePagination({
     totalItems: filteredProducts?.length || 0,
-    itemsPerPage: 15
+    itemsPerPage: 25
   });
 
   const paginatedProducts = filteredProducts?.slice(startIndex, endIndex);
