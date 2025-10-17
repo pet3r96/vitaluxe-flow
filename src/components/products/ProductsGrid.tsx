@@ -55,10 +55,10 @@ export const ProductsGrid = () => {
   const { data: cartCount } = useCartCount(effectiveUserId);
 
   const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ["products"],
+    queryKey: ["products", effectiveUserId, effectiveRole],
     staleTime: 0,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("products")
         .select(`
           *,
@@ -75,6 +75,25 @@ export const ProductsGrid = () => {
         `)
         .order("created_at", { ascending: false });
 
+      // For non-admins, filter by visibility
+      if (!isAdmin) {
+        const { data: visibleProducts, error: visError } = await supabase.rpc(
+          'get_visible_products_for_user' as any
+        ) as { data: Array<{ id: string }> | null; error: any };
+        
+        if (visError) throw visError;
+        
+        const visibleProductIds = visibleProducts?.map((p) => p.id) || [];
+        
+        if (visibleProductIds.length > 0) {
+          query = query.in('id', visibleProductIds);
+        } else {
+          // No visible products - return empty array
+          return [];
+        }
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
