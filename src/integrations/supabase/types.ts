@@ -2581,6 +2581,45 @@ export type Database = {
           },
         ]
       }
+      rep_product_visibility: {
+        Row: {
+          created_at: string
+          product_id: string
+          topline_rep_id: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          created_at?: string
+          product_id: string
+          topline_rep_id: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          created_at?: string
+          product_id?: string
+          topline_rep_id?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_product_visibility_product_fk"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_product_visibility_topline_fk"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reps: {
         Row: {
           active: boolean | null
@@ -3588,6 +3627,12 @@ export type Database = {
       get_user_rep_id: {
         Args: { _user_id: string }
         Returns: string
+      }
+      get_visible_products_for_user: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+        }[]
       }
       has_role: {
         Args: {
