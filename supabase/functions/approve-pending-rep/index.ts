@@ -89,6 +89,18 @@ serve(async (req) => {
 
     pendingRep = fetchedRep;
 
+    // Idempotency check - if already approved, just return success
+    if (pendingRep.status === 'approved') {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Request already approved',
+          alreadyProcessed: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (pendingRep.status !== 'pending') {
       throw new Error('Request already processed');
     }
@@ -102,108 +114,212 @@ serve(async (req) => {
         }
       }
 
-      // Generate secure temporary password
-      const temporaryPassword = generateSecurePassword();
+      // Check if user already exists with this email
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find((u: any) => u.email === pendingRep.email);
 
-      // Create user with admin client
-      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-        email: pendingRep.email,
-        password: temporaryPassword,
-        email_confirm: true,
-        user_metadata: {
-          name: pendingRep.full_name,
-          phone: pendingRep.phone,
-          company: pendingRep.company
-        }
-      });
+      let newUserId: string;
+      let temporaryPassword: string | null = null;
 
-      if (createUserError || !newUser.user) {
-        console.error('Failed to create user:', createUserError);
-        throw new Error(`Failed to create user: ${createUserError?.message}`);
-      }
-
-      // Create profile
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          id: newUser.user.id,
-          name: pendingRep.full_name,
-          email: pendingRep.email,
-          phone: pendingRep.phone,
-          company: pendingRep.company,
-          active: true,
-          linked_topline_id: pendingRep.role === 'downline' ? pendingRep.assigned_topline_user_id : null
-        });
-
-      if (profileError) {
-        console.error('Failed to create profile:', profileError);
-        throw new Error(`Failed to create profile: ${profileError.message}`);
-      }
-
-      // Add role
-      const { error: roleError } = await supabaseAdmin
-        .from('user_roles')
-        .insert({
-          user_id: newUser.user.id,
-          role: pendingRep.role
-        });
-
-      if (roleError) {
-        console.error('Failed to add role:', roleError);
-        throw new Error(`Failed to add role: ${roleError.message}`);
-      }
-
-      // Create rep record
-      let assigned_topline_id = null;
-      if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
-        // Get topline's rep.id
-        const { data: toplineRep } = await supabaseAdmin
-          .from('reps')
-          .select('id')
-          .eq('user_id', pendingRep.assigned_topline_user_id)
-          .eq('role', 'topline')
+      if (existingUser) {
+        console.log(`User already exists for email: ${pendingRep.email}`);
+        
+        // Verify this user is associated with this pending request via profile
+        const { data: existingProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('id, email')
+          .eq('id', existingUser.id)
+          .eq('email', pendingRep.email)
           .maybeSingle();
         
-        assigned_topline_id = toplineRep?.id || null;
-      }
-
-      const { error: repError } = await supabaseAdmin
-        .from('reps')
-        .insert({
-          user_id: newUser.user.id,
-          role: pendingRep.role,
-          assigned_topline_id: assigned_topline_id,
-          active: true
-        });
-
-      if (repError) {
-        console.error('Failed to create rep record:', repError);
-        throw new Error(`Failed to create rep record: ${repError.message}`);
-      }
-
-      // Insert password status record
-      await supabaseAdmin.from('user_password_status').insert({
-        user_id: newUser.user.id,
-        must_change_password: true,
-        temporary_password_sent: true,
-        first_login_completed: false
-      });
-
-      // Send welcome email
-      try {
-        await supabaseAdmin.functions.invoke('send-welcome-email', {
-          body: {
-            email: pendingRep.email,
+        if (!existingProfile) {
+          throw new Error('User exists but profile mismatch - contact administrator');
+        }
+        
+        newUserId = existingUser.id;
+        
+        // Check if user_roles already exists
+        const { data: existingRole } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', newUserId)
+          .eq('role', pendingRep.role)
+          .maybeSingle();
+        
+        if (!existingRole) {
+          // Add missing role
+          const { error: roleError } = await supabaseAdmin
+            .from('user_roles')
+            .insert({
+              user_id: newUserId,
+              role: pendingRep.role
+            });
+          
+          if (roleError) {
+            console.error('Failed to add missing role:', roleError);
+            throw new Error(`Failed to add role: ${roleError.message}`);
+          }
+        }
+        
+        // Check if rep record exists
+        const { data: existingRep } = await supabaseAdmin
+          .from('reps')
+          .select('id')
+          .eq('user_id', newUserId)
+          .maybeSingle();
+        
+        if (!existingRep) {
+          // Create missing rep record
+          let assigned_topline_id = null;
+          if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
+            const { data: toplineRep } = await supabaseAdmin
+              .from('reps')
+              .select('id')
+              .eq('user_id', pendingRep.assigned_topline_user_id)
+              .eq('role', 'topline')
+              .maybeSingle();
+            
+            assigned_topline_id = toplineRep?.id || null;
+          }
+          
+          const { error: repError } = await supabaseAdmin
+            .from('reps')
+            .insert({
+              user_id: newUserId,
+              role: pendingRep.role,
+              assigned_topline_id: assigned_topline_id,
+              active: true
+            });
+          
+          if (repError) {
+            console.error('Failed to create missing rep record:', repError);
+            throw new Error(`Failed to create rep record: ${repError.message}`);
+          }
+        }
+        
+        // Check if password status exists
+        const { data: existingPasswordStatus } = await supabaseAdmin
+          .from('user_password_status')
+          .select('user_id')
+          .eq('user_id', newUserId)
+          .maybeSingle();
+        
+        if (!existingPasswordStatus) {
+          await supabaseAdmin.from('user_password_status').insert({
+            user_id: newUserId,
+            must_change_password: true,
+            temporary_password_sent: true,
+            first_login_completed: false
+          });
+        }
+        
+        // Skip welcome email since user already exists
+        
+      } else {
+        // User doesn't exist - proceed with normal creation
+        temporaryPassword = generateSecurePassword();
+        
+        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+          email: pendingRep.email,
+          password: temporaryPassword,
+          email_confirm: true,
+          user_metadata: {
             name: pendingRep.full_name,
-            temporaryPassword: temporaryPassword,
-            role: pendingRep.role
+            phone: pendingRep.phone,
+            company: pendingRep.company
           }
         });
-      } catch (emailErr) {
-        console.error('Failed to send welcome email:', emailErr);
+
+        if (createUserError || !newUser.user) {
+          console.error('Failed to create user:', createUserError);
+          throw new Error(`Failed to create user: ${createUserError?.message}`);
+        }
+
+        newUserId = newUser.user.id;
+
+        // Create profile
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .insert({
+            id: newUserId,
+            name: pendingRep.full_name,
+            email: pendingRep.email,
+            phone: pendingRep.phone,
+            company: pendingRep.company,
+            active: true,
+            linked_topline_id: pendingRep.role === 'downline' ? pendingRep.assigned_topline_user_id : null
+          });
+
+        if (profileError) {
+          console.error('Failed to create profile:', profileError);
+          throw new Error(`Failed to create profile: ${profileError.message}`);
+        }
+
+        // Add role
+        const { error: roleError } = await supabaseAdmin
+          .from('user_roles')
+          .insert({
+            user_id: newUserId,
+            role: pendingRep.role
+          });
+
+        if (roleError) {
+          console.error('Failed to add role:', roleError);
+          throw new Error(`Failed to add role: ${roleError.message}`);
+        }
+
+        // Create rep record
+        let assigned_topline_id = null;
+        if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
+          // Get topline's rep.id
+          const { data: toplineRep } = await supabaseAdmin
+            .from('reps')
+            .select('id')
+            .eq('user_id', pendingRep.assigned_topline_user_id)
+            .eq('role', 'topline')
+            .maybeSingle();
+          
+          assigned_topline_id = toplineRep?.id || null;
+        }
+
+        const { error: repError } = await supabaseAdmin
+          .from('reps')
+          .insert({
+            user_id: newUserId,
+            role: pendingRep.role,
+            assigned_topline_id: assigned_topline_id,
+            active: true
+          });
+
+        if (repError) {
+          console.error('Failed to create rep record:', repError);
+          throw new Error(`Failed to create rep record: ${repError.message}`);
+        }
+
+        // Insert password status record
+        await supabaseAdmin.from('user_password_status').insert({
+          user_id: newUserId,
+          must_change_password: true,
+          temporary_password_sent: true,
+          first_login_completed: false
+        });
+
+        // Send welcome email
+        try {
+          await supabaseAdmin.functions.invoke('send-welcome-email', {
+            body: {
+              email: pendingRep.email,
+              name: pendingRep.full_name,
+              temporaryPassword: temporaryPassword,
+              role: pendingRep.role
+            }
+          });
+        } catch (emailErr) {
+          console.error('Failed to send welcome email:', emailErr);
+        }
       }
 
-      // Update pending request
+      // Update pending request status
       const { error: updateError } = await supabaseAdmin
         .from('pending_reps')
         .update({
@@ -222,8 +338,11 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Representative approved and welcome email sent',
-          userId: newUser.user.id
+          message: existingUser 
+            ? 'Representative request completed (user already existed)' 
+            : 'Representative approved and welcome email sent',
+          userId: newUserId,
+          temporaryPassword: temporaryPassword
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
