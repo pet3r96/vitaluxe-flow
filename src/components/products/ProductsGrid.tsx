@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsGrid = () => {
-  const { effectiveRole, effectiveUserId } = useAuth();
+  const { effectiveRole, effectiveUserId, isImpersonating } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
@@ -51,6 +51,7 @@ export const ProductsGrid = () => {
   const isToplineRep = effectiveRole === "topline";
   const isDownlineRep = effectiveRole === "downline";
   const isRep = isToplineRep || isDownlineRep;
+  const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
 
   const { data: cartCount } = useCartCount(effectiveUserId);
 
@@ -75,8 +76,8 @@ export const ProductsGrid = () => {
         `)
         .order("created_at", { ascending: false });
 
-      // For non-admins, filter by visibility
-      if (!isAdmin) {
+      // For non-admin viewing or when impersonating, filter by visibility
+      if (!viewingAsAdmin) {
         try {
           const { data: visibleProducts, error: visError } = await supabase.rpc(
             'get_visible_products_for_effective_user' as any,
@@ -86,12 +87,14 @@ export const ProductsGrid = () => {
           console.info('Visibility RPC (effective)', {
             effectiveUserId,
             effectiveRole,
+            isImpersonating,
             count: visibleProducts?.length || 0
           });
           
           if (visError) {
             console.error('Visibility RPC error:', visError);
-            // Fallback: show all active products if RPC fails
+            toast.error('Could not determine product visibility');
+            return [];
           } else if (visibleProducts && visibleProducts.length > 0) {
             const visibleProductIds = visibleProducts.map((p) => p.id);
             query = query.in('id', visibleProductIds);
@@ -101,7 +104,8 @@ export const ProductsGrid = () => {
           }
         } catch (error) {
           console.error('Error checking product visibility:', error);
-          // Fallback: continue to show all products if visibility check fails
+          toast.error('Could not determine product visibility');
+          return [];
         }
       }
 
