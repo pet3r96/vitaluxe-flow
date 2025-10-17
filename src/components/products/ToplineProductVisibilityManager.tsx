@@ -56,6 +56,8 @@ export const ToplineProductVisibilityManager = () => {
     queryKey: ["products-with-visibility", repData?.id],
     enabled: !!repData?.id,
     queryFn: async () => {
+      const toplineRepId = repData!.id; // Capture ID for closure
+      
       const { data: allProducts, error: productsError } = await supabase
         .from("products")
         .select(`
@@ -70,19 +72,17 @@ export const ToplineProductVisibilityManager = () => {
 
       if (productsError) throw productsError;
 
-      // Get visibility settings
+      // Get visibility settings for this topline rep
       const { data: visibilitySettings, error: visError } = await supabase
         .from("rep_product_visibility" as any)
-        .select("product_id, visible") as any;
+        .select("product_id, visible")
+        .eq("topline_rep_id", toplineRepId) as any;
 
       if (visError) throw visError;
 
-      // Filter by topline_rep_id manually since types aren't updated yet
-      const filteredSettings = visibilitySettings?.filter((v: any) => v.topline_rep_id === repData.id) || [];
-
       // Merge visibility data
       const visibilityMap = new Map<string, boolean>(
-        filteredSettings.map((v: any) => [v.product_id, v.visible as boolean])
+        (visibilitySettings || []).map((v: any) => [v.product_id, v.visible as boolean])
       );
 
       return allProducts.map(product => ({
