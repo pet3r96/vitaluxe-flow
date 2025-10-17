@@ -79,8 +79,15 @@ export const ProductsGrid = () => {
       if (!isAdmin) {
         try {
           const { data: visibleProducts, error: visError } = await supabase.rpc(
-            'get_visible_products_for_user' as any
+            'get_visible_products_for_effective_user' as any,
+            { p_effective_user_id: effectiveUserId }
           ) as { data: Array<{ id: string }> | null; error: any };
+          
+          console.info('Visibility RPC (effective)', {
+            effectiveUserId,
+            effectiveRole,
+            count: visibleProducts?.length || 0
+          });
           
           if (visError) {
             console.error('Visibility RPC error:', visError);

@@ -108,8 +108,15 @@ const Dashboard = () => {
         // Doctor, provider, topline, downline - use visibility filter
         try {
           const { data: visibleProducts, error } = await supabase.rpc(
-            'get_visible_products_for_user' as any
+            'get_visible_products_for_effective_user' as any,
+            { p_effective_user_id: effectiveUserId }
           ) as { data: Array<{ id: string }> | null; error: any };
+
+          console.info('Dashboard visible products', {
+            effectiveUserId,
+            effectiveRole,
+            count: visibleProducts?.length || 0
+          });
           
           if (error) {
             console.error('Visibility RPC error:', error);
