@@ -70,21 +70,11 @@ export default function ChangePassword() {
 
       toast.success("Password changed successfully!");
       
-      // Refresh password status and wait for state update
-      await checkPasswordStatus();
+      // Get fresh status directly from checkPasswordStatus
+      const { termsAccepted } = await checkPasswordStatus();
       
-      // Small delay to ensure React state has propagated
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Get fresh password status to check terms
-      const { data: freshStatus } = await supabase
-        .from('user_password_status')
-        .select('terms_accepted')
-        .eq('user_id', user?.id)
-        .single();
-      
-      // Navigate to terms if not accepted, otherwise dashboard
-      if (!freshStatus?.terms_accepted) {
+      // Navigate based on the FRESH values, not context state
+      if (!termsAccepted) {
         navigate("/accept-terms");
       } else {
         navigate("/dashboard");

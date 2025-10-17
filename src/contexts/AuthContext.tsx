@@ -25,7 +25,7 @@ interface AuthContextType {
   requires2FASetup: boolean;
   requires2FAVerify: boolean;
   user2FAPhone: string | null;
-  checkPasswordStatus: () => Promise<void>;
+  checkPasswordStatus: () => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -333,14 +333,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const checkPasswordStatus = async () => {
-    if (!user) return;
+  const checkPasswordStatus = async (): Promise<{ mustChangePassword: boolean; termsAccepted: boolean }> => {
+    if (!user) {
+      return { mustChangePassword: false, termsAccepted: true };
+    }
 
     // Only real admins (not impersonating) are exempt from both password change and terms acceptance
     if (effectiveRole === 'admin' && !isImpersonating) {
       setMustChangePassword(false);
       setTermsAccepted(true);
-      return;
+      return { mustChangePassword: false, termsAccepted: true };
     }
 
     try {
@@ -352,13 +354,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Error checking password status:', error);
-        return;
+        return { mustChangePassword: false, termsAccepted: false };
       }
 
-      setMustChangePassword(data?.must_change_password || false);
-      setTermsAccepted(data?.terms_accepted || false);
+      const mustChange = data?.must_change_password || false;
+      const termsAccept = data?.terms_accepted || false;
+      
+      setMustChangePassword(mustChange);
+      setTermsAccepted(termsAccept);
+      
+      return { mustChangePassword: mustChange, termsAccepted: termsAccept };
     } catch (error) {
       console.error('Error in checkPasswordStatus:', error);
+      return { mustChangePassword: false, termsAccepted: false };
     }
   };
 
