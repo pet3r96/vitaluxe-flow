@@ -182,7 +182,6 @@ serve(async (req) => {
         .maybeSingle();
       
       if (!existingProfile) {
-
         const { error: profileError } = await supabaseAdmin
           .from('profiles')
           .insert({
@@ -198,6 +197,21 @@ serve(async (req) => {
         if (profileError) {
           console.error('Failed to create profile:', profileError);
           throw new Error(`Failed to create profile: ${profileError.message}`);
+        }
+      } else if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
+        // Update existing profile's topline assignment
+        const { error: profileUpdateError } = await supabaseAdmin
+          .from('profiles')
+          .update({ 
+            linked_topline_id: pendingRep.assigned_topline_user_id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', newUserId);
+        
+        if (profileUpdateError) {
+          console.error('Failed to update profile topline assignment:', profileUpdateError);
+        } else {
+          console.log(`Updated existing profile's topline assignment for user ${newUserId}`);
         }
       }
 
@@ -241,6 +255,9 @@ serve(async (req) => {
             .maybeSingle();
           
           assigned_topline_id = toplineRep?.id || null;
+          if (!assigned_topline_id) {
+            console.warn(`Topline rep record not found for user_id: ${pendingRep.assigned_topline_user_id}`);
+          }
         }
 
         const { error: repError } = await supabaseAdmin
@@ -255,6 +272,32 @@ serve(async (req) => {
         if (repError) {
           console.error('Failed to create rep record:', repError);
           throw new Error(`Failed to create rep record: ${repError.message}`);
+        }
+      } else if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
+        // Update existing reps record's topline assignment
+        const { data: toplineRep } = await supabaseAdmin
+          .from('reps')
+          .select('id')
+          .eq('user_id', pendingRep.assigned_topline_user_id)
+          .eq('role', 'topline')
+          .maybeSingle();
+        
+        if (toplineRep) {
+          const { error: repUpdateError } = await supabaseAdmin
+            .from('reps')
+            .update({ 
+              assigned_topline_id: toplineRep.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', newUserId);
+          
+          if (repUpdateError) {
+            console.error('Failed to update rep topline assignment:', repUpdateError);
+          } else {
+            console.log(`Updated existing rep's topline assignment to: ${toplineRep.id}`);
+          }
+        } else {
+          console.warn(`Topline rep record not found for user_id: ${pendingRep.assigned_topline_user_id} - cannot update assignment`);
         }
       }
 
