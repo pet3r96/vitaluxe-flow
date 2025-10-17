@@ -103,11 +103,6 @@ export const ProductCard = memo(({
               ${formatPrice(effectivePrice?.effective_topline_price ?? product.topline_price)}
             </span>
           </div>
-          {effectivePrice?.has_override && (
-            <Badge variant="secondary" className="mt-2 text-xs">
-              Custom Price
-            </Badge>
-          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Practice Price:</span>
             <span>${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price)}</span>
@@ -125,11 +120,6 @@ export const ProductCard = memo(({
               ${formatPrice(effectivePrice?.effective_downline_price ?? product.downline_price)}
             </span>
           </div>
-          {effectivePrice?.has_override && (
-            <Badge variant="secondary" className="mt-2 text-xs">
-              Custom Price
-            </Badge>
-          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Practice Price:</span>
             <span>${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price)}</span>
@@ -144,11 +134,6 @@ export const ProductCard = memo(({
           <div className="text-3xl font-bold text-primary">
             ${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price ?? product.base_price)}
           </div>
-          {effectivePrice?.has_override && (
-            <Badge variant="secondary" className="mt-2 text-xs">
-              Custom Price
-            </Badge>
-          )}
         </div>
       );
     }
@@ -192,6 +177,11 @@ export const ProductCard = memo(({
             <Badge variant={product.active ? "secondary" : "outline"} className="text-xs">
               {product.active ? "Active" : "Inactive"}
             </Badge>
+            {effectivePrice?.has_override && (isToplineRep || isDownlineRep || isProvider) && (
+              <Badge variant="secondary" className="text-xs bg-amber-500 hover:bg-amber-600 text-white">
+                Custom Price
+              </Badge>
+            )}
           </div>
 
           {/* Spacer to push price to bottom */}
