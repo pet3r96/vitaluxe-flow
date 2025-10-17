@@ -87,30 +87,50 @@ export const ProductCard = memo(({
     }
 
     if (isToplineRep) {
+      const displayToplinePrice = effectivePrice?.effective_topline_price ?? product.topline_price;
+      const displayRetailPrice = effectivePrice?.effective_retail_price ?? product.retail_price;
+      
       return (
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Your Price:</span>
-            <span className="font-bold text-primary text-lg">${product.topline_price || "-"}</span>
+            <span className="font-bold text-primary text-lg">
+              ${displayToplinePrice?.toFixed(2) || "-"}
+            </span>
           </div>
+          {effectivePrice?.has_override && (
+            <Badge variant="secondary" className="mt-2 text-xs">
+              Custom Price
+            </Badge>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Practice Price:</span>
-            <span>${product.retail_price || "-"}</span>
+            <span>${displayRetailPrice?.toFixed(2) || "-"}</span>
           </div>
         </div>
       );
     }
 
     if (isDownlineRep) {
+      const displayDownlinePrice = effectivePrice?.effective_downline_price ?? product.downline_price;
+      const displayRetailPrice = effectivePrice?.effective_retail_price ?? product.retail_price;
+      
       return (
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Your Price:</span>
-            <span className="font-bold text-primary text-lg">${product.downline_price || "-"}</span>
+            <span className="font-bold text-primary text-lg">
+              ${displayDownlinePrice?.toFixed(2) || "-"}
+            </span>
           </div>
+          {effectivePrice?.has_override && (
+            <Badge variant="secondary" className="mt-2 text-xs">
+              Custom Price
+            </Badge>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Practice Price:</span>
-            <span>${product.retail_price || "-"}</span>
+            <span>${displayRetailPrice?.toFixed(2) || "-"}</span>
           </div>
         </div>
       );
