@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -45,6 +45,7 @@ export const AccountDetailsDialog = ({
   account,
   onSuccess,
 }: AccountDetailsDialogProps) => {
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [selectedParentId, setSelectedParentId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
@@ -86,6 +87,7 @@ export const AccountDetailsDialog = ({
   // Fetch potential parent options based on role
   const { data: potentialParents } = useQuery({
     queryKey: ["potential-parents", role],
+    staleTime: 0, // Always consider data stale
     queryFn: async () => {
       if (!isRep) return [];
 
@@ -102,6 +104,8 @@ export const AccountDetailsDialog = ({
           .eq("user_roles.role", "topline")
           .eq("active", true)
           .order("name", { ascending: true });
+        
+        console.log('Fetched toplines for dropdown:', toplines?.length);
         
         return toplines?.map(t => ({
           id: t.id,  // This is user_id, matching profiles.linked_topline_id
@@ -121,8 +125,10 @@ export const AccountDetailsDialog = ({
       if (isDownline) {
         setSelectedParentId(account.linked_topline_id || "none");
       }
+      // Refetch potential parents when dialog opens
+      queryClient.invalidateQueries({ queryKey: ["potential-parents"] });
     }
-  }, [open, account, isDownline]);
+  }, [open, account, isDownline, queryClient]);
 
   const handleReset2FA = async () => {
     setIsResetting2FA(true);
@@ -199,6 +205,11 @@ export const AccountDetailsDialog = ({
 
       toast.success("Account updated successfully");
       setIsEditing(false);
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["potential-parents"] });
+      
       onSuccess();
     } catch (error: any) {
       console.error("Error updating account:", error);
