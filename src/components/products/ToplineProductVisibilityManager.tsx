@@ -18,7 +18,7 @@ import { Eye, EyeOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export const ToplineProductVisibilityManager = () => {
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const [isResetting, setIsResetting] = useState(false);
 
@@ -35,29 +35,22 @@ export const ToplineProductVisibilityManager = () => {
     );
   }
 
-  // Get current rep's ID
-  const { data: repData } = useQuery({
-    queryKey: ["current-rep", effectiveUserId],
+  // Get current topline rep's ID using backend function
+  const { data: toplineRepId, isLoading: isRepLoading, error: repIdError } = useQuery({
+    queryKey: ["topline-rep-id"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reps")
-        .select("id")
-        .eq("user_id", effectiveUserId)
-        .eq("role", "topline")
-        .single();
-      
+      const { data, error } = await supabase.rpc("get_current_user_rep_id" as any);
       if (error) throw error;
-      return data;
+      return data as string | null;
     },
   });
 
-  // Get all products with visibility settings
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["products-with-visibility", repData?.id],
-    enabled: !!repData?.id,
+  // Fetch all products and their visibility settings for this topline
+  const { data: products, isLoading: isProductsLoading, isError: isProductsError } = useQuery({
+    queryKey: ["products-with-visibility", toplineRepId],
+    enabled: !!toplineRepId,
     queryFn: async () => {
-      const toplineRepId = repData!.id; // Capture ID for closure
-      
+      // Fetch all products (no active filter - show everything)
       const { data: allProducts, error: productsError } = await supabase
         .from("products")
         .select(`
@@ -71,7 +64,7 @@ export const ToplineProductVisibilityManager = () => {
 
       if (productsError) throw productsError;
 
-      // Get visibility settings for this topline rep
+      // Fetch visibility settings for this topline
       const { data: visibilitySettings, error: visError } = await supabase
         .from("rep_product_visibility" as any)
         .select("product_id, visible")
@@ -79,14 +72,14 @@ export const ToplineProductVisibilityManager = () => {
 
       if (visError) throw visError;
 
-      // Merge visibility data
+      // Merge the data - default ALL products to visible
       const visibilityMap = new Map<string, boolean>(
         (visibilitySettings || []).map((v: any) => [v.product_id, v.visible as boolean])
       );
 
       return allProducts.map(product => ({
         ...product,
-        visible: visibilityMap.get(product.id) ?? true, // Default to visible
+        visible: visibilityMap.get(product.id) ?? true, // Default to visible if no setting exists
       })) as Array<{
         id: string;
         name: string;
@@ -98,19 +91,19 @@ export const ToplineProductVisibilityManager = () => {
     },
   });
 
-  // Toggle visibility mutation
+  // Toggle visibility for a product
   const toggleVisibility = useMutation({
     mutationFn: async ({ productId, currentVisible }: { productId: string; currentVisible: boolean }) => {
+      if (!toplineRepId) throw new Error("Rep ID not found");
+
       const { error } = await supabase
         .from("rep_product_visibility" as any)
         .upsert({
-          topline_rep_id: repData!.id,
+          topline_rep_id: toplineRepId,
           product_id: productId,
           visible: !currentVisible,
           updated_at: new Date().toISOString(),
-        } as any, {
-          onConflict: "topline_rep_id,product_id"
-        } as any);
+        }, { onConflict: "topline_rep_id,product_id" } as any);
 
       if (error) throw error;
     },
@@ -126,21 +119,29 @@ export const ToplineProductVisibilityManager = () => {
 
   // Reset all to visible
   const handleResetAll = async () => {
+    if (!toplineRepId) {
+      toast.error("Rep ID not found");
+      return;
+    }
+
     setIsResetting(true);
     try {
-      // Delete all visibility records for this topline (defaults to visible)
+      // Delete all visibility settings for this topline
       const { error } = await supabase
         .from("rep_product_visibility" as any)
         .delete()
-        .eq("topline_rep_id", repData!.id);
+        .eq("topline_rep_id", toplineRepId) as any;
 
       if (error) throw error;
 
+      // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ["products-with-visibility"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast.success("All products set to visible");
+      
+      toast.success("All products are now visible to your network");
     } catch (error: any) {
-      toast.error(error.message || "Failed to reset visibility");
+      console.error("Error resetting visibility:", error);
+      toast.error("Failed to reset product visibility");
     } finally {
       setIsResetting(false);
     }
@@ -148,6 +149,32 @@ export const ToplineProductVisibilityManager = () => {
 
   const visibleCount = products?.filter(p => p.visible).length || 0;
   const hiddenCount = products?.filter(p => !p.visible).length || 0;
+
+  // Show error if rep ID couldn't be fetched
+  if (repIdError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Visibility Settings</CardTitle>
+          <CardDescription>
+            We couldn't determine your rep profile. Please try refreshing the page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-destructive">
+            Error loading rep profile. Please contact support if this persists.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error if products couldn't be fetched
+  if (isProductsError) {
+    toast.error("Failed to load products");
+  }
+
+  const isLoading = isRepLoading || isProductsLoading;
 
   return (
     <Card>
