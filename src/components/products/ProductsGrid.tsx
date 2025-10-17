@@ -77,19 +77,24 @@ export const ProductsGrid = () => {
 
       // For non-admins, filter by visibility
       if (!isAdmin) {
-        const { data: visibleProducts, error: visError } = await supabase.rpc(
-          'get_visible_products_for_user' as any
-        ) as { data: Array<{ id: string }> | null; error: any };
-        
-        if (visError) throw visError;
-        
-        const visibleProductIds = visibleProducts?.map((p) => p.id) || [];
-        
-        if (visibleProductIds.length > 0) {
-          query = query.in('id', visibleProductIds);
-        } else {
-          // No visible products - return empty array
-          return [];
+        try {
+          const { data: visibleProducts, error: visError } = await supabase.rpc(
+            'get_visible_products_for_user' as any
+          ) as { data: Array<{ id: string }> | null; error: any };
+          
+          if (visError) {
+            console.error('Visibility RPC error:', visError);
+            // Fallback: show all active products if RPC fails
+          } else if (visibleProducts && visibleProducts.length > 0) {
+            const visibleProductIds = visibleProducts.map((p) => p.id);
+            query = query.in('id', visibleProductIds);
+          } else {
+            // No visible products found
+            return [];
+          }
+        } catch (error) {
+          console.error('Error checking product visibility:', error);
+          // Fallback: continue to show all products if visibility check fails
         }
       }
 
