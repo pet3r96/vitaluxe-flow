@@ -3649,7 +3649,7 @@ export type Database = {
         }[]
       }
       get_effective_product_price: {
-        Args: { p_practice_user_id: string; p_product_id: string }
+        Args: { p_product_id: string; p_user_id: string }
         Returns: {
           effective_downline_price: number
           effective_retail_price: number

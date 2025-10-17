@@ -49,7 +49,7 @@ export const ProductCard = memo(({
         'get_effective_product_price',
         { 
           p_product_id: product.id,
-          p_practice_user_id: effectiveUserId 
+          p_user_id: effectiveUserId 
         }
       );
       if (error) {
