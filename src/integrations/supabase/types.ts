@@ -2581,6 +2581,60 @@ export type Database = {
           },
         ]
       }
+      rep_product_price_overrides: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          override_downline_price: number | null
+          override_retail_price: number | null
+          override_topline_price: number | null
+          product_id: string
+          rep_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          override_downline_price?: number | null
+          override_retail_price?: number | null
+          override_topline_price?: number | null
+          product_id: string
+          rep_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          override_downline_price?: number | null
+          override_retail_price?: number | null
+          override_topline_price?: number | null
+          product_id?: string
+          rep_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_product_price_overrides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_product_price_overrides_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rep_product_visibility: {
         Row: {
           created_at: string
@@ -3592,6 +3646,16 @@ export type Database = {
           total_discount_amount: number
           total_orders: number
           total_uses: number
+        }[]
+      }
+      get_effective_product_price: {
+        Args: { p_practice_user_id: string; p_product_id: string }
+        Returns: {
+          effective_downline_price: number
+          effective_retail_price: number
+          effective_topline_price: number
+          has_override: boolean
+          override_source: string
         }[]
       }
       get_encryption_coverage: {

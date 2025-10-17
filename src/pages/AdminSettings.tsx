@@ -11,7 +11,8 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered } from "lucide-react";
+import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign } from "lucide-react";
+import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 
 const AdminSettings = () => {
   return (
@@ -64,6 +65,10 @@ const AdminSettings = () => {
           <TabsTrigger value="utilities" className="gap-2">
             <Wrench className="h-4 w-4" />
             Utilities
+          </TabsTrigger>
+          <TabsTrigger value="price-overrides" className="gap-2">
+            <DollarSign className="h-4 w-4" />
+            Price Overrides
           </TabsTrigger>
         </TabsList>
 
@@ -186,6 +191,20 @@ const AdminSettings = () => {
         <TabsContent value="utilities" className="space-y-4">
           <TestPasswordManager />
           <OrphanedUserFixer />
+        </TabsContent>
+
+        <TabsContent value="price-overrides" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Rep Price Overrides</CardTitle>
+              <CardDescription>
+                Set custom pricing for specific representatives that overrides default product prices
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PriceOverrideManager />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

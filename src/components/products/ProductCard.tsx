@@ -1,4 +1,7 @@
 import { memo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +39,29 @@ export const ProductCard = memo(({
   onAddToCart,
   onToggleStatus,
 }: ProductCardProps) => {
+  const { effectiveUserId, effectiveRole } = useAuth();
+
+  // Fetch effective price for current user
+  const { data: effectivePrice } = useQuery({
+    queryKey: ['effective-price', product.id, effectiveUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc(
+        'get_effective_product_price',
+        { 
+          p_product_id: product.id,
+          p_practice_user_id: effectiveUserId 
+        }
+      );
+      if (error) {
+        console.error('Error fetching effective price:', error);
+        return null;
+      }
+      return data?.[0];
+    },
+    enabled: !!effectiveUserId && effectiveRole !== 'admin',
+    staleTime: 60000,
+  });
+
   const getPriceDisplay = () => {
     if (isAdmin) {
       return (
@@ -94,8 +120,13 @@ export const ProductCard = memo(({
       return (
         <div className="text-center">
           <div className="text-3xl font-bold text-primary">
-            ${product.retail_price || product.base_price}
+            ${(effectivePrice?.effective_retail_price || product.retail_price || product.base_price).toFixed(2)}
           </div>
+          {effectivePrice?.has_override && (
+            <Badge variant="secondary" className="mt-2 text-xs">
+              Custom Price
+            </Badge>
+          )}
         </div>
       );
     }
