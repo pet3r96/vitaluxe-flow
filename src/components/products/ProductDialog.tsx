@@ -38,6 +38,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
   const [imagePreview, setImagePreview] = useState<string>("");
   const [pharmacies, setPharmacies] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<{ id: string; name: string }[]>([]);
+  const [toplineReps, setToplineReps] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
@@ -49,9 +50,11 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     assigned_pharmacies: [] as string[],
     requires_prescription: false,
     product_type_id: "",
+    scope_type: "global" as "global" | "scoped",
+    assigned_topline_reps: [] as string[],
   });
 
-  // Fetch available pharmacies and product types
+  // Fetch available pharmacies, product types, and topline reps
   useEffect(() => {
     const fetchPharmacies = async () => {
       const { data, error } = await supabase
@@ -76,29 +79,54 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         setProductTypes(data);
       }
     };
+    
+    const fetchToplineReps = async () => {
+      const { data } = await supabase
+        .from("reps")
+        .select("id, profiles!inner(name, email)")
+        .eq("role", "topline")
+        .order("profiles.name");
+      
+      if (data) setToplineReps(data);
+    };
 
     fetchPharmacies();
     fetchProductTypes();
+    fetchToplineReps();
   }, [product]);
 
-  // Fetch existing pharmacy assignments when editing
+  // Fetch existing pharmacy and rep assignments when editing
   useEffect(() => {
-    const fetchProductPharmacies = async () => {
+    const fetchAssignments = async () => {
       if (product) {
-        const { data, error } = await supabase
+        // Fetch pharmacy assignments
+        const { data: pharmacyData, error } = await supabase
           .from("product_pharmacies")
           .select("pharmacy_id")
           .eq("product_id", product.id);
         
-        if (!error && data) {
+        if (!error && pharmacyData) {
           setFormData(prev => ({
             ...prev,
-            assigned_pharmacies: data.map(pp => pp.pharmacy_id)
+            assigned_pharmacies: pharmacyData.map(pp => pp.pharmacy_id)
           }));
         }
+        
+        // Fetch rep assignments
+        const { data: repData } = await supabase
+          .from("product_rep_assignments")
+          .select("topline_rep_id")
+          .eq("product_id", product.id);
+        
+        const assignedReps = repData?.map(a => a.topline_rep_id) || [];
+        setFormData(prev => ({
+          ...prev,
+          scope_type: assignedReps.length > 0 ? "scoped" : "global",
+          assigned_topline_reps: assignedReps,
+        }));
       }
     };
-    fetchProductPharmacies();
+    fetchAssignments();
   }, [product]);
 
   useEffect(() => {
@@ -114,6 +142,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         assigned_pharmacies: [],
         requires_prescription: product.requires_prescription || false,
         product_type_id: product.product_type_id || "",
+        scope_type: "global",
+        assigned_topline_reps: [],
       });
       setImagePreview(product.image_url || "");
     } else {
@@ -246,6 +276,27 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         .insert(assignments);
 
       if (assignmentError) throw assignmentError;
+      
+      // Handle product rep assignments
+      // Delete existing assignments
+      await supabase
+        .from("product_rep_assignments")
+        .delete()
+        .eq("product_id", productId);
+      
+      // Insert new assignments if scoped
+      if (formData.scope_type === "scoped" && formData.assigned_topline_reps.length > 0) {
+        const repAssignments = formData.assigned_topline_reps.map(rep_id => ({
+          product_id: productId,
+          topline_rep_id: rep_id
+        }));
+        
+        const { error: repAssignError } = await supabase
+          .from("product_rep_assignments")
+          .insert(repAssignments);
+        
+        if (repAssignError) throw repAssignError;
+      }
 
       onSuccess();
       onOpenChange(false);
@@ -269,6 +320,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       assigned_pharmacies: [],
       requires_prescription: false,
       product_type_id: "",
+      scope_type: "global",
+      assigned_topline_reps: [],
     });
     setImageFile(null);
     setImagePreview("");
@@ -368,6 +421,59 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Rep Assignment Section */}
+          <div className="space-y-3 p-4 border rounded-lg bg-primary/5">
+            <Label className="text-base font-semibold">Rep Assignment</Label>
+            <p className="text-sm text-muted-foreground">Control which topline reps can see this product</p>
+            
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <input type="radio" id="product-scope-global" checked={formData.scope_type === "global"}
+                  onChange={() => setFormData({ ...formData, scope_type: "global", assigned_topline_reps: [] })}
+                  className="h-4 w-4" />
+                <Label htmlFor="product-scope-global" className="cursor-pointer font-normal">
+                  Available to All Reps (Global)
+                </Label>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input type="radio" id="product-scope-specific" checked={formData.scope_type === "scoped"}
+                    onChange={() => setFormData({ ...formData, scope_type: "scoped" })} className="h-4 w-4" />
+                  <Label htmlFor="product-scope-specific" className="cursor-pointer font-normal">
+                    Assign to Specific Topline Rep(s)
+                  </Label>
+                </div>
+                
+                {formData.scope_type === "scoped" && (
+                  <div className="ml-6 space-y-2 border rounded-md p-3 max-h-48 overflow-y-auto bg-background">
+                    {toplineReps.map((rep) => (
+                      <div key={rep.id} className="flex items-center space-x-2">
+                        <Checkbox id={`prod-rep-${rep.id}`}
+                          checked={formData.assigned_topline_reps.includes(rep.id)}
+                          onCheckedChange={(checked) => {
+                            setFormData({
+                              ...formData,
+                              assigned_topline_reps: checked
+                                ? [...formData.assigned_topline_reps, rep.id]
+                                : formData.assigned_topline_reps.filter(id => id !== rep.id)
+                            });
+                          }} />
+                        <Label htmlFor={`prod-rep-${rep.id}`} className="text-sm cursor-pointer">
+                          {rep.profiles.name} ({rep.profiles.email})
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {formData.scope_type === "scoped" && formData.assigned_topline_reps.length > 0 && (
+              <Badge variant="secondary">Assigned to {formData.assigned_topline_reps.length} topline rep(s)</Badge>
+            )}
           </div>
 
           {/* Multi-Pharmacy Assignment */}

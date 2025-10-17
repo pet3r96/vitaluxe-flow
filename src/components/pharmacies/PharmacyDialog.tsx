@@ -34,6 +34,7 @@ interface PharmacyDialogProps {
 
 export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: PharmacyDialogProps) => {
   const [loading, setLoading] = useState(false);
+  const [toplineReps, setToplineReps] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     contact_email: "",
@@ -43,23 +44,52 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
     address_zip: "",
     states_serviced: [] as string[],
     priority_map: {} as Record<string, number>,
+    scope_type: "global" as "global" | "scoped",
+    assigned_topline_reps: [] as string[],
   });
 
+  // Fetch topline reps
   useEffect(() => {
-    if (pharmacy) {
-      setFormData({
-        name: pharmacy.name || "",
-        contact_email: pharmacy.contact_email || "",
-        address_street: pharmacy.address_street || "",
-        address_city: pharmacy.address_city || "",
-        address_state: pharmacy.address_state || "",
-        address_zip: pharmacy.address_zip || "",
-        states_serviced: pharmacy.states_serviced || [],
-        priority_map: pharmacy.priority_map || {},
-      });
-    } else {
-      resetForm();
-    }
+    const fetchToplineReps = async () => {
+      const { data } = await supabase
+        .from("reps")
+        .select("id, profiles!inner(name, email)")
+        .eq("role", "topline")
+        .order("profiles.name");
+      
+      if (data) setToplineReps(data);
+    };
+    fetchToplineReps();
+  }, []);
+
+  // Fetch pharmacy assignments when editing
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      if (pharmacy) {
+        const { data: assignments } = await supabase
+          .from("pharmacy_rep_assignments")
+          .select("topline_rep_id")
+          .eq("pharmacy_id", pharmacy.id);
+        
+        const assignedReps = assignments?.map(a => a.topline_rep_id) || [];
+        
+        setFormData({
+          name: pharmacy.name || "",
+          contact_email: pharmacy.contact_email || "",
+          address_street: pharmacy.address_street || "",
+          address_city: pharmacy.address_city || "",
+          address_state: pharmacy.address_state || "",
+          address_zip: pharmacy.address_zip || "",
+          states_serviced: pharmacy.states_serviced || [],
+          priority_map: pharmacy.priority_map || {},
+          scope_type: assignedReps.length > 0 ? "scoped" : "global",
+          assigned_topline_reps: assignedReps,
+        });
+      } else {
+        resetForm();
+      }
+    };
+    fetchAssignments();
   }, [pharmacy]);
 
   const handleStateToggle = (state: string) => {
@@ -145,10 +175,54 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           .eq('active', true);
 
         if (updateError) throw updateError;
+        
+        // Get the newly created pharmacy ID to set up scope assignments
+        const { data: newPharmacy } = await supabase
+          .from("pharmacies")
+          .select("id")
+          .eq("contact_email", formData.contact_email)
+          .single();
 
         toast.success(`Pharmacy created! Temporary password: ${tempPassword}`, {
           duration: 10000,
         });
+        
+        // Handle scope assignments for new pharmacy
+        if (newPharmacy && formData.scope_type === "scoped" && formData.assigned_topline_reps.length > 0) {
+          const assignments = formData.assigned_topline_reps.map(rep_id => ({
+            pharmacy_id: newPharmacy.id,
+            topline_rep_id: rep_id
+          }));
+          
+          const { error: assignError } = await supabase
+            .from("pharmacy_rep_assignments")
+            .insert(assignments);
+          
+          if (assignError) throw assignError;
+        }
+      }
+      
+      // Handle scope assignments for existing pharmacy
+      if (pharmacy) {
+        // Delete existing assignments
+        await supabase
+          .from("pharmacy_rep_assignments")
+          .delete()
+          .eq("pharmacy_id", pharmacy.id);
+        
+        // Insert new assignments if scoped
+        if (formData.scope_type === "scoped" && formData.assigned_topline_reps.length > 0) {
+          const assignments = formData.assigned_topline_reps.map(rep_id => ({
+            pharmacy_id: pharmacy.id,
+            topline_rep_id: rep_id
+          }));
+          
+          const { error: assignError } = await supabase
+            .from("pharmacy_rep_assignments")
+            .insert(assignments);
+          
+          if (assignError) throw assignError;
+        }
       }
 
       onSuccess();
@@ -172,6 +246,8 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       address_zip: "",
       states_serviced: [],
       priority_map: {},
+      scope_type: "global",
+      assigned_topline_reps: [],
     });
   };
 
@@ -247,6 +323,74 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             <p className="text-xs text-muted-foreground">
               Selected: {formData.states_serviced.length} state(s)
             </p>
+          </div>
+
+          {/* Scope Assignment Section */}
+          <div className="space-y-3 p-4 border rounded-lg bg-primary/5">
+            <Label className="text-base font-semibold">Scope Assignment</Label>
+            <p className="text-sm text-muted-foreground">
+              Control which topline rep groups can see and use this pharmacy
+            </p>
+            
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="scope-global"
+                  checked={formData.scope_type === "global"}
+                  onChange={() => setFormData({ ...formData, scope_type: "global", assigned_topline_reps: [] })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="scope-global" className="cursor-pointer font-normal">
+                  Available to All Reps (Global)
+                </Label>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="scope-specific"
+                    checked={formData.scope_type === "scoped"}
+                    onChange={() => setFormData({ ...formData, scope_type: "scoped" })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="scope-specific" className="cursor-pointer font-normal">
+                    Assign to Specific Topline Rep(s)
+                  </Label>
+                </div>
+                
+                {formData.scope_type === "scoped" && (
+                  <div className="ml-6 space-y-2 border rounded-md p-3 max-h-48 overflow-y-auto bg-background">
+                    {toplineReps.map((rep) => (
+                      <div key={rep.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`rep-${rep.id}`}
+                          checked={formData.assigned_topline_reps.includes(rep.id)}
+                          onCheckedChange={(checked) => {
+                            setFormData({
+                              ...formData,
+                              assigned_topline_reps: checked
+                                ? [...formData.assigned_topline_reps, rep.id]
+                                : formData.assigned_topline_reps.filter(id => id !== rep.id)
+                            });
+                          }}
+                        />
+                        <Label htmlFor={`rep-${rep.id}`} className="text-sm cursor-pointer">
+                          {rep.profiles.name} ({rep.profiles.email})
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {formData.scope_type === "scoped" && formData.assigned_topline_reps.length > 0 && (
+              <Badge variant="secondary">
+                Assigned to {formData.assigned_topline_reps.length} topline rep(s)
+              </Badge>
+            )}
           </div>
 
           {/* Priority Configuration Section */}

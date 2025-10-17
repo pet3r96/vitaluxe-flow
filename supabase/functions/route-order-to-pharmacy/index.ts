@@ -19,9 +19,10 @@ interface RoutingResult {
 async function routeOrderToPharmacy(
   supabase: any,
   product_id: string,
-  destination_state: string
+  destination_state: string,
+  user_topline_rep_id?: string | null
 ): Promise<RoutingResult> {
-  console.log(`Routing order for product ${product_id} to state ${destination_state}`);
+  console.log(`Routing order for product ${product_id} to state ${destination_state}, topline: ${user_topline_rep_id || 'N/A'}`);
 
   // 1. Get all pharmacies assigned to this product
   const { data: assignments, error } = await supabase
@@ -54,11 +55,40 @@ async function routeOrderToPharmacy(
   }
 
   // 2. Filter pharmacies that serve the destination state AND are active
-  const eligiblePharmacies = assignments
+  let eligiblePharmacies = assignments
     .map((a: any) => a.pharmacy)
     .filter((p: any) => 
       p && p.active && p.states_serviced?.includes(destination_state)
     );
+
+  // 3. Apply topline scoping filter if user has a topline
+  if (user_topline_rep_id) {
+    const pharmacyIds = eligiblePharmacies.map((p: any) => p.id);
+    
+    // Get pharmacy scope assignments
+    const { data: scopeData } = await supabase
+      .from("pharmacy_rep_assignments")
+      .select("pharmacy_id")
+      .in("pharmacy_id", pharmacyIds);
+    
+    // Build sets for efficient lookups
+    const scopedPharmacyIds = new Set(scopeData?.map((s: any) => s.pharmacy_id) || []);
+    
+    // Get user's assigned pharmacies
+    const { data: userAssignments } = await supabase
+      .from("pharmacy_rep_assignments")
+      .select("pharmacy_id")
+      .eq("topline_rep_id", user_topline_rep_id);
+    
+    const userPharmacyIds = new Set(userAssignments?.map((a: any) => a.pharmacy_id) || []);
+    
+    // Filter: include pharmacy if it's global (not scoped) OR user has access
+    eligiblePharmacies = eligiblePharmacies.filter((p: any) => 
+      !scopedPharmacyIds.has(p.id) || userPharmacyIds.has(p.id)
+    );
+    
+    console.log(`After topline scoping: ${eligiblePharmacies.length} pharmacies available`);
+  }
 
   console.log(`Found ${eligiblePharmacies.length} eligible pharmacies for state ${destination_state}`);
 
@@ -134,7 +164,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { product_id, destination_state } = requestData;
+    const { product_id, destination_state, user_topline_rep_id } = requestData;
 
     if (!product_id || !destination_state) {
       return new Response(
@@ -146,7 +176,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const result = await routeOrderToPharmacy(supabaseClient, product_id, destination_state);
+    const result = await routeOrderToPharmacy(
+      supabaseClient, 
+      product_id, 
+      destination_state,
+      user_topline_rep_id
+    );
 
     return new Response(
       JSON.stringify(result),
