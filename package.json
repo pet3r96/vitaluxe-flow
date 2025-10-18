@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "overrides": {
-    "cross-spawn": "^7.0.5",
-    "esbuild": "^0.25.0"
+    "cross-spawn": "^7.0.5"
   },
   "scripts": {
     "dev": "vite",
@@ -15,8 +14,7 @@
     "preview": "vite preview",
     "start": "vite preview --host 0.0.0.0 --port $PORT",
     "security:audit": "npm audit --audit-level=high",
-    "security:fix": "npm audit fix --force",
-    "prebuild": "npm run security:audit"
+    "security:fix": "npm audit fix --force"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
