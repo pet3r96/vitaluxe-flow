@@ -22,6 +22,9 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
+# Install wget for health checks and serve for static file serving
+RUN apk add --no-cache wget
+
 # Create non-root user
 RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
 
@@ -29,9 +32,8 @@ RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
 ENV NODE_ENV=production
 ENV PORT=80
 
-# Copy package files and install production dependencies
-COPY package*.json ./
-RUN npm install --omit=dev
+# Install serve globally for static file serving
+RUN npm install -g serve
 
 # Copy built assets from builder
 COPY --from=builder /app/dist ./dist
@@ -49,5 +51,5 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 1
 
-# Start the application
-CMD ["npm", "start"]
+# Start the application with serve
+CMD ["serve", "-s", "dist", "-l", "80"]
