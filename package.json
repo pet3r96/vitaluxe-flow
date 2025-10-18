@@ -12,7 +12,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "serve -s dist -l 80",
+    "start": "serve -s dist -l 8080",
     "security:audit": "npm audit --audit-level=high",
     "security:fix": "npm audit fix --force"
   },

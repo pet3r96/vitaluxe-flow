@@ -27,6 +27,48 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ✅ Step 2: Validate Required Secrets
+      - name: Validate Required Secrets
+        run: |
+          echo "Validating required secrets are present..."
+          MISSING_SECRETS=false
+          
+          if [ -z "${{ secrets.AWS_ROLE_ARN }}" ]; then
+            echo "ERROR: AWS_ROLE_ARN secret is missing"
+            MISSING_SECRETS=true
+          fi
+          
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            echo "ERROR: AWS_REGION secret is missing"
+            MISSING_SECRETS=true
+          fi
+          
+          if [ -z "${{ secrets.ECR_REPOSITORY }}" ]; then
+            echo "ERROR: ECR_REPOSITORY secret is missing"
+            MISSING_SECRETS=true
+          fi
+          
+          if [ -z "${{ secrets.LIGHTSAIL_SERVICE_NAME }}" ]; then
+            echo "ERROR: LIGHTSAIL_SERVICE_NAME secret is missing"
+            MISSING_SECRETS=true
+          fi
+          
+          if [ -z "${{ secrets.VITE_SUPABASE_URL }}" ]; then
+            echo "ERROR: VITE_SUPABASE_URL secret is missing"
+            MISSING_SECRETS=true
+          fi
+          
+          if [ -z "${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}" ]; then
+            echo "ERROR: VITE_SUPABASE_PUBLISHABLE_KEY secret is missing"
+            MISSING_SECRETS=true
+          fi
+          
+          if [ "$MISSING_SECRETS" = true ]; then
+            echo "Deployment aborted due to missing secrets"
+            exit 1
+          fi
+          
+          echo "All required secrets are present"
 
       # 🔐 Step 3: Configure AWS credentials via OIDC
       - name: Configure AWS Credentials (OIDC)
@@ -147,12 +189,19 @@ jobs:
             --containers "{
               \"vitaluxe\": {
                 \"image\": \"${ECR_REPOSITORY}:latest\",
-                \"ports\": {\"80\": \"HTTP\"}
+                \"ports\": {\"8080\": \"HTTP\"}
               }
             }" \
             --public-endpoint "{
               \"containerName\": \"vitaluxe\",
-              \"containerPort\": 80
+              \"containerPort\": 8080,
+              \"healthCheck\": {
+                \"path\": \"/\",
+                \"intervalSeconds\": 30,
+                \"timeoutSeconds\": 10,
+                \"healthyThreshold\": 2,
+                \"unhealthyThreshold\": 2
+              }
             }"
 
       # ⏳ Step 7: Wait for Deployment to Complete

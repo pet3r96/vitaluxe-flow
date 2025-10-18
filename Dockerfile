@@ -30,7 +30,7 @@ RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
 
 # Set production environment
 ENV NODE_ENV=production
-ENV PORT=80
+ENV PORT=8080
 
 # Install serve globally for static file serving
 RUN npm install -g serve
@@ -45,11 +45,11 @@ RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 # Expose correct port (matching deploy.yml)
-EXPOSE 80
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
 
 # Start the application with serve
-CMD ["serve", "-s", "dist", "-l", "80"]
+CMD ["serve", "-s", "dist", "-l", "8080"]
