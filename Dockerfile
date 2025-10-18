@@ -2,11 +2,11 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Accept build arguments for Supabase credentials
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_PUBLISHABLE_KEY
+# Accept build arguments for Supabase credentials (optional)
+ARG VITE_SUPABASE_URL="https://placeholder.supabase.co"
+ARG VITE_SUPABASE_PUBLISHABLE_KEY="placeholder-key"
 
-# Set environment variables for build process
+# Set environment variables for build process (with defaults)
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
 
