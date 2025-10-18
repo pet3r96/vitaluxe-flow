@@ -230,7 +230,17 @@ jobs:
           
           echo "\n📝 Recent Container Logs:"
           # Get container logs (last 50 lines)
-          aws logs describe-log-groups --log-group-name-prefix "/aws/lightsail/$LIGHTSAIL_SERVICE_NAME" --query "logGroups[0].logGroupName" --output text | xargs -I {} aws logs get-log-events --log-group-name {} --start-time $(date -d '5 minutes ago' +%s)000 --query "events[-50:].message" --output text || echo "No recent logs found"
+          LOG_GROUP=$(aws logs describe-log-groups --log-group-name-prefix "/aws/lightsail/$LIGHTSAIL_SERVICE_NAME" --query "logGroups[0].logGroupName" --output text 2>/dev/null || echo "")
+          if [ ! -z "$LOG_GROUP" ] && [ "$LOG_GROUP" != "None" ]; then
+            LOG_STREAM=$(aws logs describe-log-streams --log-group-name "$LOG_GROUP" --order-by LastEventTime --descending --max-items 1 --query "logStreams[0].logStreamName" --output text 2>/dev/null || echo "")
+            if [ ! -z "$LOG_STREAM" ] && [ "$LOG_STREAM" != "None" ]; then
+              aws logs get-log-events --log-group-name "$LOG_GROUP" --log-stream-name "$LOG_STREAM" --start-time $(date -d '5 minutes ago' +%s)000 --query "events[-50:].message" --output text 2>/dev/null || echo "No recent log events found"
+            else
+              echo "No log streams found"
+            fi
+          else
+            echo "No log groups found"
+          fi
           
           echo "\n🌐 Testing Service Health:"
           URL=$(aws lightsail get-container-services \
