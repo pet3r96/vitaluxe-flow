@@ -176,26 +176,47 @@ jobs:
 
           SUCCESS=false
           for i in {1..30}; do
-            STATUS=$(aws lightsail get-container-services \
-              --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].state" \
-              --output text)
-
-            echo "Current status: $STATUS"
-            if [[ "$STATUS" == "RUNNING" ]]; then
+            # Get the full service details to better understand the state
+            SERVICE_DETAILS=$(aws lightsail get-container-services \
+              --service-names "$LIGHTSAIL_SERVICE_NAME" \
+              --output json)
+            
+            # Extract current state and next deployment state
+            CURRENT_STATE=$(echo "$SERVICE_DETAILS" | jq -r '.containerServices[0].state // "UNKNOWN"')
+            NEXT_DEPLOYMENT_STATE=$(echo "$SERVICE_DETAILS" | jq -r '.containerServices[0].nextDeployment.state // "UNKNOWN"')
+            
+            echo "Current service state: $CURRENT_STATE"
+            echo "Next deployment state: $NEXT_DEPLOYMENT_STATE"
+            
+            # Check if deployment is successful
+            if [[ "$CURRENT_STATE" == "RUNNING" && "$NEXT_DEPLOYMENT_STATE" == "ACTIVE" ]]; then
               SUCCESS=true
               echo "✅ Deployment successful! Service is running."
               break
-            elif [[ "$STATUS" == "DEPLOYING" ]]; then
-              echo "Still deploying... waiting 20s"
+            elif [[ "$CURRENT_STATE" == "DEPLOYING" || "$NEXT_DEPLOYMENT_STATE" == "ACTIVATING" ]]; then
+              echo "Still deploying... waiting 20s (attempt $i/30)"
+              sleep 20
+            elif [[ "$CURRENT_STATE" == "PENDING" ]]; then
+              echo "Service is pending... waiting 20s (attempt $i/30)"
               sleep 20
             else
-              echo "⚠️ Unexpected status: $STATUS"
-              break
+              echo "⚠️ Unexpected state: $CURRENT_STATE (next: $NEXT_DEPLOYMENT_STATE)"
+              # Wait a bit more to see if it resolves
+              if [ $i -lt 10 ]; then
+                echo "Waiting a bit more to see if state resolves..."
+                sleep 20
+              else
+                break
+              fi
             fi
           done
 
           if [ "$SUCCESS" = false ]; then
-            echo "❌ Deployment failed or timed out — rolling back to previous version..."
+            echo "❌ Deployment failed or timed out — attempting rollback..."
+            
+            # Wait a bit more to ensure the current deployment has fully failed
+            echo "Waiting 30s to ensure current deployment has failed..."
+            sleep 30
             
             # Get the list of deployments and find the previous version
             DEPLOYMENTS=$(aws lightsail get-container-service-deployments \
@@ -207,6 +228,8 @@ jobs:
             
             if [ -z "$PREV_VERSION" ] || [ "$PREV_VERSION" == "null" ]; then
               echo "⚠️ No previous deployment found to rollback to."
+              echo "Current deployment status:"
+              aws lightsail get-container-services --service-names "$LIGHTSAIL_SERVICE_NAME"
               exit 1
             fi
             
@@ -226,11 +249,14 @@ jobs:
             echo "🌀 Rollback initiated. Waiting 60s before verifying..."
             sleep 60
             
-            STATUS=$(aws lightsail get-container-services \
-              --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].state" \
-              --output text)
-            echo "Post-rollback status: $STATUS"
-            if [[ "$STATUS" == "RUNNING" ]]; then
+            # Check rollback status
+            ROLLBACK_DETAILS=$(aws lightsail get-container-services \
+              --service-names "$LIGHTSAIL_SERVICE_NAME" \
+              --output json)
+            ROLLBACK_STATE=$(echo "$ROLLBACK_DETAILS" | jq -r '.containerServices[0].state // "UNKNOWN"')
+            echo "Post-rollback status: $ROLLBACK_STATE"
+            
+            if [[ "$ROLLBACK_STATE" == "RUNNING" ]]; then
               echo "✅ Rollback successful. Service restored to version $PREV_VERSION."
             else
               echo "⚠️ Rollback executed but service not yet running. Check Lightsail console."
