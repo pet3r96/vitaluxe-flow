@@ -1,5 +1,8 @@
 project_id = "qbtsfajshnrwwlfzkeog"
 
+[functions.amazon-get-tracking]
+verify_jwt = true
+
 [functions.set-test-password]
 verify_jwt = true
 

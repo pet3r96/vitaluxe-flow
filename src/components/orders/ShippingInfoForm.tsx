@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Truck, Package } from "lucide-react";
+import { Truck, Package, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 
 interface ShippingInfoFormProps {
@@ -33,6 +33,12 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
   const [carrier, setCarrier] = useState(initialCarrier);
   const [status, setStatus] = useState(initialStatus);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Tracking refresh state
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [callsRemaining, setCallsRemaining] = useState<number | null>(null);
+  const [isCached, setIsCached] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -65,6 +71,39 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
       toast.error(error.message || "Failed to update shipping information");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRefreshTracking = async () => {
+    if (!orderLine.tracking_number) {
+      toast.error("No tracking number available");
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('amazon-get-tracking', {
+        body: { 
+          orderLineId: orderLine.id,
+          trackingNumber: orderLine.tracking_number 
+        }
+      });
+
+      if (error) throw error;
+
+      setTrackingData(data.data);
+      setIsCached(data.cached || false);
+      setCallsRemaining(data.calls_remaining_today);
+
+      if (data.cached) {
+        toast.info(data.rate_limit_message, { duration: 5000 });
+      } else {
+        toast.success(`Tracking updated (${data.calls_remaining_today} refreshes left today)`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to refresh tracking");
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -159,6 +198,58 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
             </SelectContent>
           </Select>
         </div>
+
+        {orderLine.tracking_number && (
+          <div className="space-y-2 pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRefreshTracking}
+              disabled={isRefreshing}
+              className="w-full"
+            >
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Tracking
+                  {callsRemaining !== null && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({callsRemaining}/3 left today)
+                    </span>
+                  )}
+                </>
+              )}
+            </Button>
+
+            {isCached && (
+              <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400 p-2 rounded">
+                ⚠️ Daily limit reached. Showing cached tracking data.
+              </div>
+            )}
+
+            {trackingData && (
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <p className="text-xs font-medium mb-2">Latest Tracking Status:</p>
+                <p className="text-sm capitalize">{trackingData.status?.replace('_', ' ') || 'No updates'}</p>
+                {trackingData.estimated_delivery && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Est. Delivery: {trackingData.estimated_delivery}
+                  </p>
+                )}
+                {trackingData.events && trackingData.events.length > 0 && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Latest: {trackingData.events[0].description}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <Button onClick={handleSave} disabled={isSaving} className="w-full">
           {isSaving ? "Saving..." : "Save Changes"}

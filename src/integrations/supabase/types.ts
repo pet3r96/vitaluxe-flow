@@ -214,6 +214,80 @@ export type Database = {
           },
         ]
       }
+      amazon_tracking_api_calls: {
+        Row: {
+          api_response: Json | null
+          called_at: string
+          called_by: string | null
+          created_at: string
+          id: string
+          order_line_id: string
+          response_status: string
+          tracking_number: string
+        }
+        Insert: {
+          api_response?: Json | null
+          called_at?: string
+          called_by?: string | null
+          created_at?: string
+          id?: string
+          order_line_id: string
+          response_status?: string
+          tracking_number: string
+        }
+        Update: {
+          api_response?: Json | null
+          called_at?: string
+          called_by?: string | null
+          created_at?: string
+          id?: string
+          order_line_id?: string
+          response_status?: string
+          tracking_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amazon_tracking_api_calls_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_rate_limits_config: {
+        Row: {
+          api_name: string
+          cost_per_call: number | null
+          created_at: string
+          id: string
+          max_calls_per_day: number
+          max_calls_per_hour: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_name: string
+          cost_per_call?: number | null
+          created_at?: string
+          id?: string
+          max_calls_per_day?: number
+          max_calls_per_hour?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_name?: string
+          cost_per_call?: number | null
+          created_at?: string
+          id?: string
+          max_calls_per_day?: number
+          max_calls_per_hour?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action_type: string
