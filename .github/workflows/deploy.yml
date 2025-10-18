@@ -184,7 +184,8 @@ jobs:
             fi
           done
 
-          aws lightsail create-container-service-deployment \
+          echo "🚀 Creating Lightsail container service deployment..."
+          DEPLOYMENT_RESULT=$(aws lightsail create-container-service-deployment \
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --containers "{
               \"vitaluxe\": {
@@ -195,7 +196,16 @@ jobs:
             --public-endpoint "{
               \"containerName\": \"vitaluxe\",
               \"containerPort\": 8080
-            }"
+            }" 2>&1)
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to create deployment:"
+            echo "$DEPLOYMENT_RESULT"
+            exit 1
+          fi
+          
+          echo "✅ Deployment created successfully"
+          echo "$DEPLOYMENT_RESULT"
 
       # ⏳ Step 7: Wait for Deployment to Complete
       - name: Wait for Lightsail Deployment
@@ -241,6 +251,11 @@ jobs:
 
           if [ "$SUCCESS" = false ]; then
             echo "❌ Deployment did not complete successfully within timeout period"
+            echo "🔍 Checking final deployment status for debugging..."
+            aws lightsail get-container-services \
+              --service-name "$LIGHTSAIL_SERVICE_NAME" \
+              --query "containerServices[0].{State:state,NextDeployment:nextDeployment.state,CurrentDeployment:currentDeployment.state}" \
+              --output table
             exit 1
           fi
 
@@ -248,6 +263,17 @@ jobs:
           URL=$(aws lightsail get-container-services \
             --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].url" \
             --output text)
+          
+          if [ -z "$URL" ] || [ "$URL" = "None" ]; then
+            echo "❌ Could not retrieve service URL"
+            echo "🔍 Checking service status for debugging..."
+            aws lightsail get-container-services \
+              --service-name "$LIGHTSAIL_SERVICE_NAME" \
+              --query "containerServices[0].{State:state,Url:url,NextDeployment:nextDeployment.state}" \
+              --output table
+            exit 1
+          fi
+          
           echo "🌍 Service URL: $URL"
 
       # 🔍 Step 8: Comprehensive Diagnostics
