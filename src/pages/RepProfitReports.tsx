@@ -69,13 +69,17 @@ const RepProfitReports = () => {
       return sum + (parseFloat(profit?.toString() || '0'));
     }, 0) || 0;
 
-  const pendingProfit = profitDetails?.filter(item => item.orders?.status === 'pending' || item.orders?.status === 'processing')
+  const unpaidProfit = profitDetails
+    ?.filter(item => item.orders?.status !== 'cancelled')
+    ?.filter(item => item.payment_status === 'pending')
     .reduce((sum, item) => {
       const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
       return sum + (parseFloat(profit?.toString() || '0'));
     }, 0) || 0;
 
-  const collectedProfit = profitDetails?.filter(item => item.orders?.status === 'shipped' || item.orders?.status === 'delivered')
+  const paidProfit = profitDetails
+    ?.filter(item => item.orders?.status !== 'cancelled')
+    ?.filter(item => item.payment_status === 'completed')
     .reduce((sum, item) => {
       const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
       return sum + (parseFloat(profit?.toString() || '0'));
@@ -135,21 +139,21 @@ const RepProfitReports = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Pending Profit</CardTitle>
+            <CardTitle className="text-sm font-medium">Unpaid Profits</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">${pendingProfit.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Not yet delivered</p>
+            <div className="text-2xl font-bold text-yellow-600">${unpaidProfit.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Awaiting payment</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Collected Profit</CardTitle>
+            <CardTitle className="text-sm font-medium">Paid Profits</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${collectedProfit.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Delivered orders</p>
+            <div className="text-2xl font-bold text-green-600">${paidProfit.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Completed payments</p>
           </CardContent>
         </Card>
 
@@ -190,6 +194,7 @@ const RepProfitReports = () => {
                 <TableHead>Order ID</TableHead>
                 {effectiveRole === 'topline' && <TableHead>Sale Type</TableHead>}
                 <TableHead>Status</TableHead>
+                {effectiveRole === 'topline' && <TableHead>Payment Status</TableHead>}
                 <TableHead className="text-right">Your Profit</TableHead>
               </TableRow>
             </TableHeader>
@@ -240,6 +245,21 @@ const RepProfitReports = () => {
                           {profit.orders?.status || 'unknown'}
                         </Badge>
                       </TableCell>
+                      {effectiveRole === 'topline' && (
+                        <TableCell>
+                          <Badge 
+                            variant={profit.payment_status === 'completed' ? 'default' : 'secondary'}
+                            className={profit.payment_status === 'completed' ? 'bg-green-600' : 'bg-yellow-600'}
+                          >
+                            {profit.payment_status === 'completed' ? 'Paid' : 'Pending'}
+                          </Badge>
+                          {profit.paid_at && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {format(new Date(profit.paid_at), "MMM d, yyyy")}
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right font-medium">
                         ${parseFloat(myProfit?.toString() || '0').toFixed(2)}
                       </TableCell>

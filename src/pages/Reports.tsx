@@ -1,13 +1,15 @@
 import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView";
 import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminProfitReports from "./AdminProfitReports";
 import RepProfitReports from "./RepProfitReports";
 import PracticeProfitReports from "./PracticeProfitReports";
+import ToplinePaymentManager from "@/components/admin/ToplinePaymentManager";
 
 const Reports = () => {
   const { userRole, effectiveRole, isImpersonating } = useAuth();
 
-  // Admin (not impersonating) → Admin Profit Report
+  // Admin (not impersonating) → Admin Profit Report with Tabs
   const showAdminReport = userRole === 'admin' && !isImpersonating;
   
   // Rep or Admin impersonating as rep → Rep Profit Report
@@ -17,7 +19,22 @@ const Reports = () => {
   const showPracticeReport = effectiveRole === 'doctor';
 
   if (showAdminReport) {
-    return <AdminProfitReports />;
+    return (
+      <Tabs defaultValue="profit-reports" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="profit-reports">Profit Reports</TabsTrigger>
+          <TabsTrigger value="rep-payments">Rep Payments</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="profit-reports">
+          <AdminProfitReports />
+        </TabsContent>
+        
+        <TabsContent value="rep-payments">
+          <ToplinePaymentManager />
+        </TabsContent>
+      </Tabs>
+    );
   }
 
   if (showRepReport) {

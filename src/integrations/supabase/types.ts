@@ -1328,6 +1328,9 @@ export type Database = {
           id: string
           order_id: string
           order_line_id: string
+          paid_at: string | null
+          payment_id: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
           practice_price: number
           quantity: number
           topline_id: string | null
@@ -1349,6 +1352,9 @@ export type Database = {
           id?: string
           order_id: string
           order_line_id: string
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
           practice_price: number
           quantity?: number
           topline_id?: string | null
@@ -1370,6 +1376,9 @@ export type Database = {
           id?: string
           order_id?: string
           order_line_id?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
           practice_price?: number
           quantity?: number
           topline_id?: string | null
@@ -1397,6 +1406,13 @@ export type Database = {
             columns: ["order_line_id"]
             isOneToOne: false
             referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_profits_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "rep_payments"
             referencedColumns: ["id"]
           },
           {
@@ -2676,6 +2692,90 @@ export type Database = {
             columns: ["practice_id"]
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rep_payment_batches: {
+        Row: {
+          batch_number: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          paid_by: string
+          payment_date: string
+          payment_method: string | null
+          total_amount: number
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_by: string
+          payment_date?: string
+          payment_method?: string | null
+          total_amount: number
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_by?: string
+          payment_date?: string
+          payment_method?: string | null
+          total_amount?: number
+        }
+        Relationships: []
+      }
+      rep_payments: {
+        Row: {
+          amount_paid: number
+          batch_id: string | null
+          created_at: string | null
+          date_range_end: string
+          date_range_start: string
+          id: string
+          paid_at: string
+          profit_ids: string[]
+          topline_rep_id: string
+        }
+        Insert: {
+          amount_paid: number
+          batch_id?: string | null
+          created_at?: string | null
+          date_range_end: string
+          date_range_start: string
+          id?: string
+          paid_at?: string
+          profit_ids: string[]
+          topline_rep_id: string
+        }
+        Update: {
+          amount_paid?: number
+          batch_id?: string | null
+          created_at?: string | null
+          date_range_end?: string
+          date_range_start?: string
+          id?: string
+          paid_at?: string
+          profit_ids?: string[]
+          topline_rep_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_payments_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "rep_payment_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_payments_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
             referencedColumns: ["id"]
           },
         ]
@@ -3962,6 +4062,7 @@ export type Database = {
         | "denied"
         | "change_requested"
         | "delivered"
+      payment_status: "pending" | "completed"
       shipping_carrier: "fedex" | "ups" | "usps"
       shipping_speed: "ground" | "2day" | "overnight"
       verification_code_type: "2fa_setup" | "2fa_login"
@@ -4121,6 +4222,7 @@ export const Constants = {
         "change_requested",
         "delivered",
       ],
+      payment_status: ["pending", "completed"],
       shipping_carrier: ["fedex", "ups", "usps"],
       shipping_speed: ["ground", "2day", "overnight"],
       verification_code_type: ["2fa_setup", "2fa_login"],
