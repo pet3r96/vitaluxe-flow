@@ -109,6 +109,33 @@ jobs:
           echo "🚀 Deploying new container version to Lightsail..."
           LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
           echo "Using Lightsail service: $LIGHTSAIL_SERVICE_NAME"
+          
+          # Wait for any existing deployment to complete before starting new one
+          echo "⏳ Checking for existing deployments..."
+          for i in {1..30}; do
+            CURRENT_DEPLOYMENT_STATUS=$(aws lightsail get-container-services \
+              --service-name "$LIGHTSAIL_SERVICE_NAME" \
+              --query "containerServices[0].nextDeployment.state" \
+              --output text)
+            
+            echo "Current deployment status: $CURRENT_DEPLOYMENT_STATUS"
+            
+            if [[ "$CURRENT_DEPLOYMENT_STATUS" == "ACTIVE" || "$CURRENT_DEPLOYMENT_STATUS" == "FAILED" || "$CURRENT_DEPLOYMENT_STATUS" == "None" ]]; then
+              echo "✅ No deployment in progress, proceeding with new deployment..."
+              break
+            elif [[ "$CURRENT_DEPLOYMENT_STATUS" == "ACTIVATING" || "$CURRENT_DEPLOYMENT_STATUS" == "IN_PROGRESS" ]]; then
+              echo "⏳ Deployment $i in progress, waiting 15s (attempt $i/30)..."
+              sleep 15
+            else
+              echo "⏳ Deployment in unknown state ($CURRENT_DEPLOYMENT_STATUS), waiting 15s..."
+              sleep 15
+            fi
+            
+            if [ $i -eq 30 ]; then
+              echo "❌ Timeout waiting for existing deployment to complete"
+              exit 1
+            fi
+          done
 
           aws lightsail create-container-service-deployment \
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
