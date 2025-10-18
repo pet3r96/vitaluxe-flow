@@ -150,14 +150,53 @@ jobs:
               \"containerPort\": 80
             }"
 
-      # ⏳ Step 7: Verify Deployment & Get Service URL
-      - name: Verify Deployment
+      # ⏳ Step 7: Wait for Deployment to Complete
+      - name: Wait for Lightsail Deployment
         env:
           LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
         run: |
-          echo "✅ Deployment completed successfully!"
+          echo "⏳ Waiting for deployment to complete..."
           LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
-          
+
+          SUCCESS=false
+          for i in {1..30}; do
+            # Check deployment status
+            DEPLOYMENT_STATE=$(aws lightsail get-container-services \
+              --service-name "$LIGHTSAIL_SERVICE_NAME" \
+              --query "containerServices[0].nextDeployment.state" \
+              --output text)
+            
+            SERVICE_STATE=$(aws lightsail get-container-services \
+              --service-name "$LIGHTSAIL_SERVICE_NAME" \
+              --query "containerServices[0].state" \
+              --output text)
+            
+            echo "Service state: $SERVICE_STATE | Deployment state: $DEPLOYMENT_STATE (attempt $i/30)"
+            
+            # Success conditions:
+            # - nextDeployment.state = "None" means deployment completed and became active
+            # - service.state = "RUNNING" or "READY" confirms service is operational
+            if [[ "$DEPLOYMENT_STATE" == "None" && ("$SERVICE_STATE" == "RUNNING" || "$SERVICE_STATE" == "READY") ]]; then
+              SUCCESS=true
+              echo "✅ Deployment completed successfully! Service is $SERVICE_STATE."
+              break
+            elif [[ "$DEPLOYMENT_STATE" == "ACTIVATING" || "$SERVICE_STATE" == "DEPLOYING" ]]; then
+              echo "Still deploying... waiting 15s"
+              sleep 15
+            elif [[ "$DEPLOYMENT_STATE" == "FAILED" ]]; then
+              echo "❌ Deployment failed!"
+              break
+            else
+              echo "Waiting for deployment to progress... (15s)"
+              sleep 15
+            fi
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "❌ Deployment did not complete successfully within timeout period"
+            exit 1
+          fi
+
           echo "🔗 Fetching service URL..."
           URL=$(aws lightsail get-container-services \
             --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].url" \
