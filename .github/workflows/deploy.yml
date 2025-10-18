@@ -193,6 +193,10 @@ jobs:
               SUCCESS=true
               echo "✅ Deployment successful! Service is running."
               break
+            elif [[ "$CURRENT_STATE" == "READY" ]]; then
+              SUCCESS=true
+              echo "✅ Deployment successful! Service is ready."
+              break
             elif [[ "$CURRENT_STATE" == "DEPLOYING" || "$NEXT_DEPLOYMENT_STATE" == "ACTIVATING" ]]; then
               echo "Still deploying... waiting 20s (attempt $i/30)"
               sleep 20
