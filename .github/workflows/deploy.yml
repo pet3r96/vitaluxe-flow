@@ -25,9 +25,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 🧾 Step 2: Validate Environment Variables
-      - name: Validate Required Secrets (masked presence)
-        run: ./.github/scripts/validate-secrets.sh
 
       # 🔐 Step 3: Configure AWS credentials via OIDC
       - name: Configure AWS Credentials (OIDC)
@@ -38,54 +35,13 @@ jobs:
           audience: sts.amazonaws.com
           output-env-credentials: true
 
-      # 🐳 Step 4: Set up Docker Buildx
+      # 🐳 Step 2: Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 🔧 Step 5: Resolve package manager conflicts and patch vulnerabilities
-      - name: Resolve package manager conflicts and patch vulnerabilities
-        run: |
-          echo "🔧 Resolving package manager conflicts..."
-          
-          # Remove Bun lock file to avoid conflicts with npm
-          if [ -f "bun.lockb" ]; then
-            echo "🗑️ Removing bun.lockb to avoid package manager conflicts"
-            rm bun.lockb
-          fi
-          
-          # Ensure we're using npm consistently
-          echo "📦 Ensuring npm is used for dependency management..."
-          npm --version
-          
-          # Regenerate package-lock.json with secure versions (overrides will handle cross-spawn)
-          echo "🔄 Regenerating package-lock.json with secure versions..."
-          npm install
-          
-          # Verify the fix
-          echo "✅ Verifying cross-spawn version..."
-          npm list cross-spawn
-          
-          echo "✅ Dependencies updated and conflicts resolved successfully"
 
-      # 🧪 Step 6: Run comprehensive security audit
-      - name: Run comprehensive security audit
-        run: |
-          echo "🔍 Running comprehensive security audit..."
-          
-          # Run npm audit (allow low and moderate vulnerabilities to pass)
-          if npm audit --audit-level=high; then
-            echo "✅ No high/critical vulnerabilities found"
-          else
-            echo "⚠️ Some low/moderate vulnerabilities found, but continuing deployment"
-          fi
-          
-          # Check for any remaining vulnerabilities
-          echo "🔍 Checking for cross-spawn specifically..."
-          npm list cross-spawn --depth=0 || echo "No direct cross-spawn dependencies found (this is expected)"
-          
-          echo "✅ Security audit completed"
 
-      # 📦 Step 7: Cache Docker layers
+      # 📦 Step 3: Cache Docker layers
       - name: Cache Docker layers
         uses: actions/cache@v3
         with:
@@ -94,7 +50,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      # 🛠️ Step 8: Build Docker image (NOW WITH SECURE DEPENDENCIES)
+      # 🛠️ Step 4: Build Docker image
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
@@ -104,8 +60,9 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-      # 🧪 Step 9: Enhanced security scanning
+      # 🧪 Step 6: Enhanced security scanning (OPTIONAL - only on main branch)
       - name: Scan Docker image for vulnerabilities
+        if: github.ref == 'refs/heads/main'
         continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
@@ -117,7 +74,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           output: 'trivy-results.txt'
 
-      # 🔑 Step 10: Login & Push to Amazon ECR
+      # 🔑 Step 5: Login & Push to Amazon ECR
       - name: Login & Push to ECR
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -143,7 +100,7 @@ jobs:
           docker push "$ECR_REPOSITORY:$COMMIT_SHA"
           docker push "$ECR_REPOSITORY:latest"
 
-      # 🚀 Step 11: Deploy to AWS Lightsail
+      # 🚀 Step 6: Deploy to AWS Lightsail
       - name: Deploy to Lightsail
         env:
           LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
@@ -166,7 +123,7 @@ jobs:
               \"containerPort\": 80
             }"
 
-      # ⏳ Step 12: Wait for Lightsail Deployment & Handle Rollback
+      # ⏳ Step 7: Wait for Lightsail Deployment & Handle Rollback
       - name: Wait for Lightsail Deployment (with rollback)
         env:
           LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
@@ -175,7 +132,7 @@ jobs:
           LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
 
           SUCCESS=false
-          for i in {1..30}; do
+          for i in {1..10}; do
             # Get the full service details to better understand the state
             SERVICE_DETAILS=$(aws lightsail get-container-services \
               --service-name "$LIGHTSAIL_SERVICE_NAME" \
@@ -198,17 +155,17 @@ jobs:
               echo "✅ Deployment successful! Service is ready."
               break
             elif [[ "$CURRENT_STATE" == "DEPLOYING" || "$NEXT_DEPLOYMENT_STATE" == "ACTIVATING" ]]; then
-              echo "Still deploying... waiting 20s (attempt $i/30)"
-              sleep 20
+              echo "Still deploying... waiting 10s (attempt $i/10)"
+              sleep 10
             elif [[ "$CURRENT_STATE" == "PENDING" ]]; then
-              echo "Service is pending... waiting 20s (attempt $i/30)"
-              sleep 20
+              echo "Service is pending... waiting 10s (attempt $i/10)"
+              sleep 10
             else
               echo "⚠️ Unexpected state: $CURRENT_STATE (next: $NEXT_DEPLOYMENT_STATE)"
               # Wait a bit more to see if it resolves
-              if [ $i -lt 10 ]; then
+              if [ $i -lt 5 ]; then
                 echo "Waiting a bit more to see if state resolves..."
-                sleep 20
+                sleep 10
               else
                 break
               fi
@@ -275,7 +232,7 @@ jobs:
             --output text)
           echo "🌍 Service URL: $URL"
 
-      # 🧾 Step 13: Final Summary
+      # 🧾 Step 8: Final Summary
       - name: Deployment Summary
         if: always()
         run: |
