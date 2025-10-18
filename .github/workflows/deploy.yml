@@ -14,36 +14,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧩 Checkout Repository
+      # 🧩 Step 1: Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: ✅ Validate Required Secrets
-        run: |
-          required_secrets=("AWS_ROLE_ARN" "AWS_REGION" "ECR_REPOSITORY" "LIGHTSAIL_SERVICE_NAME")
-          missing=false
-          for secret in "${required_secrets[@]}"; do
-            if [ -z "${!secret}" ]; then
-              echo "::error::Missing required secret: $secret"
-              missing=true
-            else
-              echo "$secret: ✓"
-            fi
-          done
-          if [ "$missing" = true ]; then
-            echo "::error::One or more required secrets are missing. Aborting."
-            exit 1
-          fi
+      # � Step 2: Validate Environment Variables
+      - name: Validate Required Secrets (masked presence)
+        run: ./.github/scripts/validate-secrets.sh
 
-      - name: 🔐 Configure AWS Credentials (OIDC)
+      # �🔐 Step 3: Configure AWS credentials via OIDC
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: 🐳 Set up Docker Buildx
+      # 🐳 Step 4: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 💾 Cache Docker Layers
+      # 📦 Step 5: Cache Docker layers
+      - name: Cache Docker layers
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
@@ -51,7 +42,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: 🧱 Build Docker Image
+      # 🛡️ Step 6: Build Docker image
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -60,44 +52,54 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-      - name: 🔍 Scan Docker Image
+      # 🔒 Step 7: Scan Docker image for vulnerabilities
+      - name: Scan Docker image
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'vitaluxe-app:latest'
           format: 'table'
-          exit-code: '0'
+          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-      - name: 🚀 Login & Push to Amazon ECR
+      # 🔑 Step 8: Login & Push to Amazon ECR
+      - name: Login & Push to ECR
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
           echo "🔐 Logging into Amazon ECR..."
+
+          # Extract account ID and region from ECR_REPOSITORY
           ACCOUNT_ID=$(echo "$ECR_REPOSITORY" | cut -d'.' -f1)
           REGION=$(echo "$ECR_REPOSITORY" | cut -d'.' -f4)
           echo "Using AWS account: $ACCOUNT_ID"
           echo "Using region: $REGION"
 
+          # Login to ECR using the extracted region
           aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
 
+          echo "🏗️ Tagging Docker image..."
           COMMIT_SHA=$(echo "${GITHUB_SHA::7}")
           docker tag vitaluxe-app:latest "$ECR_REPOSITORY:$COMMIT_SHA"
           docker tag vitaluxe-app:latest "$ECR_REPOSITORY:latest"
 
-          echo "📦 Pushing Docker image to ECR..."
+          echo "📦 Pushing image to ECR..."
           docker push "$ECR_REPOSITORY:$COMMIT_SHA"
           docker push "$ECR_REPOSITORY:latest"
 
-      - name: ☁️ Deploy to AWS Lightsail
+      # 🚀 Step 9: Deploy to AWS Lightsail
+      - name: Deploy to Lightsail
         env:
           LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
-          LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n\r' | xargs)
-          echo "🚀 Deploying image to Lightsail service: $LIGHTSAIL_SERVICE_NAME"
+          echo "🚀 Deploying new container version to Lightsail..."
+          
+          # Clean any trailing spaces/newlines
+          LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
+          echo "Using Lightsail service: $LIGHTSAIL_SERVICE_NAME"
 
           aws lightsail create-container-service-deployment \
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
@@ -112,24 +114,27 @@ jobs:
               \"containerPort\": 80
             }"
 
-      - name: ⏳ Wait for Lightsail Deployment (Rollback on Failure)
+      # ✅ Step 10: Wait for Lightsail Deployment & Handle Rollback
+      - name: Wait for Lightsail Deployment (with rollback)
         env:
           LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
         run: |
-          echo "⏳ Waiting for Lightsail deployment to finish..."
-          SERVICE=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n\r' | xargs)
+          echo "⏳ Waiting for deployment to finish..."
+          LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
+
           SUCCESS=false
           for i in {1..30}; do
             STATUS=$(aws lightsail get-container-services \
-              --query "containerServices[?serviceName=='$SERVICE'].state" \
+              --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].state" \
               --output text)
+
             echo "Current status: $STATUS"
             if [[ "$STATUS" == "RUNNING" ]]; then
-              echo "✅ Deployment successful!"
               SUCCESS=true
+              echo "✅ Deployment successful! Service is running."
               break
             elif [[ "$STATUS" == "DEPLOYING" ]]; then
-              echo "⌛ Still deploying... waiting 20s"
+              echo "Still deploying... waiting 20s"
               sleep 20
             else
               echo "⚠️ Unexpected status: $STATUS"
@@ -138,26 +143,34 @@ jobs:
           done
 
           if [ "$SUCCESS" = false ]; then
-            echo "❌ Deployment failed or timed out. Rolling back..."
+            echo "❌ Deployment failed or timed out — rolling back to previous version..."
             aws lightsail create-container-service-deployment \
-              --service-name "$SERVICE" \
+              --service-name "$LIGHTSAIL_SERVICE_NAME" \
               --use-previous-deployment
-            echo "🌀 Rollback triggered. Waiting 60s..."
+
+            echo "🌀 Rollback initiated. Waiting 60s before verifying..."
             sleep 60
+
             STATUS=$(aws lightsail get-container-services \
-              --query "containerServices[?serviceName=='$SERVICE'].state" \
+              --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].state" \
               --output text)
             echo "Post-rollback status: $STATUS"
+            if [[ "$STATUS" == "RUNNING" ]]; then
+              echo "✅ Rollback successful. Service restored to last working version."
+            else
+              echo "⚠️ Rollback executed but service not yet running. Check Lightsail console."
+            fi
           fi
 
-          echo "🔗 Fetching public service URL..."
+          echo "🔗 Fetching service URL..."
           URL=$(aws lightsail get-container-services \
-            --query "containerServices[?serviceName=='$SERVICE'].url" \
+            --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].url" \
             --output text)
           echo "🌍 Service URL: $URL"
 
-      - name: 🧾 Deployment Summary
+      # 🧾 Step 11: Final Summary
+      - name: Deployment Summary
         if: always()
         run: |
-          echo "✅ Vitaluxe deployment complete."
-          echo "Check AWS Lightsail console for details or rollback confirmation."
+          echo "✅ Vitaluxe deployment process complete."
+          echo "If any rollback occurred, review the Lightsail console for details."
