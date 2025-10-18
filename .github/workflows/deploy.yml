@@ -194,14 +194,7 @@ jobs:
             }" \
             --public-endpoint "{
               \"containerName\": \"vitaluxe\",
-              \"containerPort\": 8080,
-              \"healthCheck\": {
-                \"path\": \"/\",
-                \"intervalSeconds\": 30,
-                \"timeoutSeconds\": 10,
-                \"healthyThreshold\": 2,
-                \"unhealthyThreshold\": 2
-              }
+              \"containerPort\": 8080
             }"
 
       # ⏳ Step 7: Wait for Deployment to Complete
