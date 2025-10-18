@@ -57,11 +57,7 @@ jobs:
           echo "📦 Ensuring npm is used for dependency management..."
           npm --version
           
-          # Update vulnerable dependencies
-          echo "🔒 Updating vulnerable dependencies..."
-          npm install cross-spawn@^7.0.5 --save
-          
-          # Regenerate package-lock.json with secure versions
+          # Regenerate package-lock.json with secure versions (overrides will handle cross-spawn)
           echo "🔄 Regenerating package-lock.json with secure versions..."
           npm install
           
