@@ -175,9 +175,27 @@ jobs:
           if [ "$SUCCESS" = false ]; then
             echo "❌ Deployment failed or timed out — attempting rollback..."
             
-            # Wait a bit more to ensure the current deployment has fully failed
-            echo "Waiting 30s to ensure current deployment has failed..."
-            sleep 30
+            # Wait for current deployment to complete before attempting rollback
+            echo "Waiting for current deployment to complete before rollback..."
+            for j in {1..20}; do
+              CURRENT_DEPLOYMENT_STATUS=$(aws lightsail get-container-services \
+                --service-name "$LIGHTSAIL_SERVICE_NAME" \
+                --query "containerServices[0].nextDeployment.state" \
+                --output text)
+              
+              echo "Current deployment status: $CURRENT_DEPLOYMENT_STATUS"
+              
+              if [[ "$CURRENT_DEPLOYMENT_STATUS" == "ACTIVE" || "$CURRENT_DEPLOYMENT_STATUS" == "FAILED" ]]; then
+                echo "Current deployment completed, proceeding with rollback..."
+                break
+              elif [[ "$CURRENT_DEPLOYMENT_STATUS" == "ACTIVATING" || "$CURRENT_DEPLOYMENT_STATUS" == "IN_PROGRESS" ]]; then
+                echo "Current deployment still in progress, waiting 15s (attempt $j/20)..."
+                sleep 15
+              else
+                echo "Current deployment in unknown state, waiting 15s..."
+                sleep 15
+              fi
+            done
             
             # Get the list of deployments and find the previous version
             DEPLOYMENTS=$(aws lightsail get-container-service-deployments \
@@ -189,6 +207,16 @@ jobs:
             
             if [ -z "$PREV_VERSION" ] || [ "$PREV_VERSION" == "null" ]; then
               echo "⚠️ No previous deployment found to rollback to."
+              echo "Current deployment status:"
+              aws lightsail get-container-services --service-name "$LIGHTSAIL_SERVICE_NAME"
+              echo "❌ Cannot rollback - no previous deployment available"
+              exit 1
+            fi
+            
+            # Double-check that we're not trying to rollback to the same version
+            CURRENT_VERSION=$(echo "$DEPLOYMENTS" | jq -r '.deployments | sort_by(.createdAt) | reverse | .[0].version' || echo "")
+            if [ "$PREV_VERSION" == "$CURRENT_VERSION" ]; then
+              echo "⚠️ Previous version is the same as current version, no rollback needed"
               echo "Current deployment status:"
               aws lightsail get-container-services --service-name "$LIGHTSAIL_SERVICE_NAME"
               exit 1
