@@ -1,0 +1,46 @@
+name: Deploy Vitaluxe to AWS Lightsail
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Build Docker Image
+        run: docker build -t vitaluxe-app .
+
+      - name: Login & Push to ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+            | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+          docker tag vitaluxe-app:latest ${{ secrets.ECR_REPOSITORY }}:latest
+          docker push ${{ secrets.ECR_REPOSITORY }}:latest
+
+      - name: Deploy to Lightsail
+        run: |
+          aws lightsail create-container-service-deployment \
+            --service-name ${{ secrets.LIGHTSAIL_SERVICE_NAME }} \
+            --containers "{
+              \"vitaluxe\": {
+                \"image\": \"${{ secrets.ECR_REPOSITORY }}:latest\",
+                \"ports\": {\"80\": \"HTTP\"}
+              }
+            }" \
+            --public-endpoint "{
+              \"containerName\": \"vitaluxe\",
+              \"containerPort\": 80
+            }"
