@@ -42,13 +42,50 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 🔧 Step 5: Patch vulnerable dependency (temporary hotfix)
-      - name: Patch vulnerable dependency
+      # 🔧 Step 5: Resolve package manager conflicts and patch vulnerabilities
+      - name: Resolve package manager conflicts and patch vulnerabilities
         run: |
-          echo "🔧 Updating vulnerable dependencies..."
+          echo "🔧 Resolving package manager conflicts..."
+          
+          # Remove Bun lock file to avoid conflicts with npm
+          if [ -f "bun.lockb" ]; then
+            echo "🗑️ Removing bun.lockb to avoid package manager conflicts"
+            rm bun.lockb
+          fi
+          
+          # Ensure we're using npm consistently
+          echo "📦 Ensuring npm is used for dependency management..."
+          npm --version
+          
+          # Update vulnerable dependencies
+          echo "🔒 Updating vulnerable dependencies..."
           npm install cross-spawn@^7.0.5 --save
+          
+          # Regenerate package-lock.json with secure versions
+          echo "🔄 Regenerating package-lock.json with secure versions..."
+          npm install
+          
+          # Verify the fix
+          echo "✅ Verifying cross-spawn version..."
+          npm list cross-spawn
+          
+          echo "✅ Dependencies updated and conflicts resolved successfully"
 
-      # 📦 Step 6: Cache Docker layers
+      # 🧪 Step 6: Run comprehensive security audit
+      - name: Run comprehensive security audit
+        run: |
+          echo "🔍 Running comprehensive security audit..."
+          
+          # Run npm audit
+          npm audit --audit-level=high
+          
+          # Check for any remaining vulnerabilities
+          echo "🔍 Checking for cross-spawn specifically..."
+          npm list cross-spawn --depth=0
+          
+          echo "✅ Security audit completed"
+
+      # 📦 Step 7: Cache Docker layers
       - name: Cache Docker layers
         uses: actions/cache@v3
         with:
@@ -57,7 +94,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      # 🛠️ Step 7: Build Docker image
+      # 🛠️ Step 8: Build Docker image (NOW WITH SECURE DEPENDENCIES)
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
@@ -67,19 +104,20 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-      # 🧪 Step 8: Scan Docker image for vulnerabilities
-      - name: Scan Docker image
-        continue-on-error: true # 👈 Keeps deployment running even if Trivy finds issues
+      # 🧪 Step 9: Enhanced security scanning
+      - name: Scan Docker image for vulnerabilities
+        continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'vitaluxe-app:latest'
           format: 'table'
           exit-code: '1'
-          ignore-unfixed: true
+          ignore-unfixed: false
           vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          output: 'trivy-results.txt'
 
-      # 🔑 Step 9: Login & Push to Amazon ECR
+      # 🔑 Step 10: Login & Push to Amazon ECR
       - name: Login & Push to ECR
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -105,7 +143,7 @@ jobs:
           docker push "$ECR_REPOSITORY:$COMMIT_SHA"
           docker push "$ECR_REPOSITORY:latest"
 
-      # 🚀 Step 10: Deploy to AWS Lightsail
+      # 🚀 Step 11: Deploy to AWS Lightsail
       - name: Deploy to Lightsail
         env:
           LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
@@ -128,7 +166,7 @@ jobs:
               \"containerPort\": 80
             }"
 
-      # ⏳ Step 11: Wait for Lightsail Deployment & Handle Rollback
+      # ⏳ Step 12: Wait for Lightsail Deployment & Handle Rollback
       - name: Wait for Lightsail Deployment (with rollback)
         env:
           LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
@@ -207,7 +245,7 @@ jobs:
             --output text)
           echo "🌍 Service URL: $URL"
 
-      # 🧾 Step 12: Final Summary
+      # 🧾 Step 13: Final Summary
       - name: Deployment Summary
         if: always()
         run: |
