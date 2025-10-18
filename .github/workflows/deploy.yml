@@ -1,7 +1,9 @@
 name: Deploy Vitaluxe to AWS Lightsail
+
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 permissions:
   id-token: write
@@ -11,30 +13,43 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      # 🧩 Step 1: Checkout your code
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      # 🔐 Step 2: Configure AWS credentials via OIDC
       - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Build Docker Image
-        run: docker build -t vitaluxe-app .
+      # 🐳 Step 3: Build Docker image
+      - name: Build Docker image
+        run: |
+          echo "Building Docker image..."
+          docker build -t vitaluxe-app .
 
+      # 🔑 Step 4: Login to ECR and push image
       - name: Login & Push to ECR
         run: |
-          echo "Logging in to Amazon ECR..."
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
-          docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+          echo "Logging into Amazon ECR..."
+          PASSWORD=$(aws ecr get-login-password --region ${{ secrets.AWS_REGION }})
+          echo "$PASSWORD" | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
 
-          echo "Tagging and pushing image..."
+          # Tag image with commit SHA and latest
+          COMMIT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          docker tag vitaluxe-app:latest ${{ secrets.ECR_REPOSITORY }}:$COMMIT_SHA
           docker tag vitaluxe-app:latest ${{ secrets.ECR_REPOSITORY }}:latest
+
+          echo "Pushing image to ECR..."
+          docker push ${{ secrets.ECR_REPOSITORY }}:$COMMIT_SHA
           docker push ${{ secrets.ECR_REPOSITORY }}:latest
 
+      # 🚀 Step 5: Deploy to AWS Lightsail
       - name: Deploy to Lightsail
         run: |
+          echo "Deploying image to Lightsail service..."
           aws lightsail create-container-service-deployment \
             --service-name ${{ secrets.LIGHTSAIL_SERVICE_NAME }} \
             --containers "{
@@ -47,3 +62,9 @@ jobs:
               \"containerName\": \"vitaluxe\",
               \"containerPort\": 80
             }"
+
+      # ✅ Step 6: Confirm deployment status
+      - name: Verify Lightsail Deployment
+        run: |
+          echo "Checking deployment status..."
+          aws lightsail get-container-services --query "containerServices[?serviceName=='${{ secrets.LIGHTSAIL_SERVICE_NAME }}']"
