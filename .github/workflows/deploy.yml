@@ -13,7 +13,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
-
+    env:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+      LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
+    
     steps:
       # 🧩 Step 1: Checkout repository
       - name: Checkout repository
