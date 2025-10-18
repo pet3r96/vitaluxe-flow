@@ -32,7 +32,7 @@ jobs:
           docker build -t vitaluxe-app .
 
       # 🔑 Step 4: Login & Push to Amazon ECR
-           - name: Login & Push to ECR
+      - name: Login & Push to ECR
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
@@ -57,7 +57,6 @@ jobs:
           docker push "$ECR_REPOSITORY:$COMMIT_SHA"
           docker push "$ECR_REPOSITORY:latest"
           
-
       # 🚀 Step 5: Deploy to AWS Lightsail
       - name: Deploy to Lightsail
         env:
