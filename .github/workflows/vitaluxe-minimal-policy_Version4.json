@@ -1,0 +1,37 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ECRGetAuth",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECRRepositoryPushPull",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:DescribeImages",
+        "ecr:DescribeRepositories"
+      ],
+      "Resource": "arn:aws:ecr:us-west-2:382806778137:repository/vitaluxe-app"
+    },
+    {
+      "Sid": "LightsailContainerService",
+      "Effect": "Allow",
+      "Action": [
+        "lightsail:CreateContainerServiceDeployment",
+        "lightsail:GetContainerServices",
+        "lightsail:GetContainerService"
+      ],
+      "Resource": "arn:aws:lightsail:us-west-2:382806778137:ContainerService/vitaluxe-app"
+    }
+  ]
+}
