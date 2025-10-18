@@ -12,7 +12,7 @@ ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
 
 # Install dependencies first (better caching)
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -48,7 +48,7 @@ USER nodejs
 EXPOSE 80
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 1
 
 # Start the application with serve
