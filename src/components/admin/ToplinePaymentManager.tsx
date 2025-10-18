@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ const ToplinePaymentManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedReps, setSelectedReps] = useState<string[]>([]);
+  const [selectedToplineFilter, setSelectedToplineFilter] = useState<string>("all");
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [paymentNotes, setPaymentNotes] = useState("");
@@ -119,9 +120,22 @@ const ToplinePaymentManager = () => {
     return Array.from(repMap.values()).filter(rep => rep.total_unpaid > 0);
   }, [unpaidProfits, repsData]);
 
+  // Filter by selected topline rep
+  const filteredAggregatedByRep = useMemo(() => {
+    if (selectedToplineFilter === "all") {
+      return aggregatedByRep;
+    }
+    return aggregatedByRep.filter(rep => rep.topline_rep_id === selectedToplineFilter);
+  }, [aggregatedByRep, selectedToplineFilter]);
+
+  // Clear selected reps when filter changes
+  useEffect(() => {
+    setSelectedReps([]);
+  }, [selectedToplineFilter]);
+
   // Summary calculations
-  const totalUnpaid = aggregatedByRep.reduce((sum, rep) => sum + rep.total_unpaid, 0);
-  const selectedAmount = aggregatedByRep
+  const totalUnpaid = filteredAggregatedByRep.reduce((sum, rep) => sum + rep.total_unpaid, 0);
+  const selectedAmount = filteredAggregatedByRep
     .filter(rep => selectedReps.includes(rep.topline_rep_id))
     .reduce((sum, rep) => sum + rep.total_unpaid, 0);
 
@@ -135,11 +149,11 @@ const ToplinePaymentManager = () => {
     hasNextPage,
     hasPrevPage
   } = usePagination({
-    totalItems: aggregatedByRep.length,
+    totalItems: filteredAggregatedByRep.length,
     itemsPerPage: 25
   });
 
-  const paginatedReps = aggregatedByRep.slice(startIndex, endIndex);
+  const paginatedReps = filteredAggregatedByRep.slice(startIndex, endIndex);
 
   // Mark as paid mutation
   const markAsPaidMutation = useMutation({
@@ -230,7 +244,7 @@ const ToplinePaymentManager = () => {
 
   // Export unpaid profits
   const exportUnpaidProfits = () => {
-    if (aggregatedByRep.length === 0) {
+    if (filteredAggregatedByRep.length === 0) {
       toast({
         title: "No Data",
         description: "No unpaid profits to export",
@@ -249,7 +263,7 @@ const ToplinePaymentManager = () => {
       "Date Range (Days)"
     ];
 
-    const rows = aggregatedByRep.map(rep => [
+    const rows = filteredAggregatedByRep.map(rep => [
       rep.rep_name,
       rep.rep_email,
       `$${rep.total_unpaid.toFixed(2)}`,
@@ -276,7 +290,7 @@ const ToplinePaymentManager = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedReps(aggregatedByRep.map(rep => rep.topline_rep_id));
+      setSelectedReps(filteredAggregatedByRep.map(rep => rep.topline_rep_id));
     } else {
       setSelectedReps([]);
     }
@@ -300,11 +314,35 @@ const ToplinePaymentManager = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Topline Rep Payments</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage payments to topline sales representatives
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold text-foreground">Topline Rep Payments</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage payments to topline sales representatives
+          </p>
+        </div>
+        
+        <div className="w-[280px]">
+          <Label htmlFor="topline-filter" className="text-sm font-medium mb-2 block">
+            Filter by Rep
+          </Label>
+          <Select value={selectedToplineFilter} onValueChange={setSelectedToplineFilter}>
+            <SelectTrigger id="topline-filter">
+              <SelectValue placeholder="Select a topline rep" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Topline Reps ({aggregatedByRep.length})</SelectItem>
+              {repsData
+                ?.filter(rep => aggregatedByRep.some(agg => agg.topline_rep_id === rep.id))
+                ?.map(rep => (
+                  <SelectItem key={rep.id} value={rep.id}>
+                    {rep.profiles?.name || rep.profiles?.email || "Unknown"}
+                  </SelectItem>
+                ))
+              }
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -330,7 +368,9 @@ const ToplinePaymentManager = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{aggregatedByRep.length}</div>
+            <div className="text-2xl font-bold">
+              {selectedToplineFilter === "all" ? aggregatedByRep.length : "1 selected"}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Topline representatives</p>
           </CardContent>
         </Card>
@@ -352,11 +392,11 @@ const ToplinePaymentManager = () => {
       </div>
 
       {/* Bulk Actions Toolbar */}
-      {aggregatedByRep.length > 0 && (
+      {filteredAggregatedByRep.length > 0 && (
         <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
           <div className="flex items-center gap-4">
             <Checkbox
-              checked={selectedReps.length === aggregatedByRep.length && aggregatedByRep.length > 0}
+              checked={selectedReps.length === filteredAggregatedByRep.length && filteredAggregatedByRep.length > 0}
               onCheckedChange={handleSelectAll}
             />
             <span className="text-sm">
@@ -368,7 +408,7 @@ const ToplinePaymentManager = () => {
               variant="outline"
               size="sm"
               onClick={exportUnpaidProfits}
-              disabled={aggregatedByRep.length === 0}
+              disabled={filteredAggregatedByRep.length === 0}
             >
               <Download className="h-4 w-4 mr-2" />
               Export Unpaid
@@ -439,16 +479,16 @@ const ToplinePaymentManager = () => {
         </CardContent>
       </Card>
 
-      {aggregatedByRep.length > 0 && (
+      {filteredAggregatedByRep.length > 0 && (
         <DataTablePagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={goToPage}
           hasNextPage={hasNextPage}
           hasPrevPage={hasPrevPage}
-          totalItems={aggregatedByRep.length}
+          totalItems={filteredAggregatedByRep.length}
           startIndex={startIndex}
-          endIndex={Math.min(endIndex, aggregatedByRep.length)}
+          endIndex={Math.min(endIndex, filteredAggregatedByRep.length)}
         />
       )}
 
