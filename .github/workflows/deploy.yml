@@ -189,7 +189,7 @@ jobs:
             --containers "{
               \"vitaluxe\": {
                 \"image\": \"${ECR_REPOSITORY}:latest\",
-                \"ports\": {\"80\": \"HTTP\"}
+                \"ports\": {\"8080\": \"HTTP\"}
               }
             }" \
             --public-endpoint "{
