@@ -32,15 +32,23 @@ jobs:
           docker build -t vitaluxe-app .
 
       # 🔑 Step 4: Login & Push to Amazon ECR
-      - name: Login & Push to ECR
+           - name: Login & Push to ECR
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
           echo "🔐 Logging into Amazon ECR..."
-          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REPOSITORY"
 
-          echo "🏷️ Tagging image..."
+          # Extract account ID and region from ECR_REPOSITORY
+          ACCOUNT_ID=$(echo "$ECR_REPOSITORY" | cut -d'.' -f1)
+          REGION=$(echo "$ECR_REPOSITORY" | cut -d'.' -f4)
+          echo "Using AWS account: $ACCOUNT_ID"
+          echo "Using region: $REGION"
+
+          # Login to ECR using the extracted region
+          aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
+
+          echo "🏗️ Tagging Docker image..."
           COMMIT_SHA=$(echo "${GITHUB_SHA::7}")
           docker tag vitaluxe-app:latest "$ECR_REPOSITORY:$COMMIT_SHA"
           docker tag vitaluxe-app:latest "$ECR_REPOSITORY:latest"
@@ -48,6 +56,7 @@ jobs:
           echo "📦 Pushing image to ECR..."
           docker push "$ECR_REPOSITORY:$COMMIT_SHA"
           docker push "$ECR_REPOSITORY:latest"
+          
 
       # 🚀 Step 5: Deploy to AWS Lightsail
       - name: Deploy to Lightsail
