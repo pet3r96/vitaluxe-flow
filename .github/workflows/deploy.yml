@@ -19,6 +19,8 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
       LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
       # 🧩 Step 1: Checkout repository
@@ -57,6 +59,9 @@ jobs:
           context: .
           load: true
           tags: vitaluxe-app:latest
+          build-args: |
+            VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
@@ -202,6 +207,51 @@ jobs:
             --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].url" \
             --output text)
           echo "🌍 Service URL: $URL"
+
+      # 🔍 Step 8: Comprehensive Diagnostics
+      - name: Service Diagnostics
+        env:
+          LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
+        run: |
+          echo "🔍 Running comprehensive service diagnostics..."
+          LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
+          
+          echo "📊 Service Status:"
+          aws lightsail get-container-services \
+            --service-name "$LIGHTSAIL_SERVICE_NAME" \
+            --query "containerServices[0].{State:state,NextDeployment:nextDeployment.state,Url:url,Power:power,Scale:scale}" \
+            --output table
+          
+          echo "\n📋 Container Details:"
+          aws lightsail get-container-services \
+            --service-name "$LIGHTSAIL_SERVICE_NAME" \
+            --query "containerServices[0].currentDeployment.containers" \
+            --output json
+          
+          echo "\n📝 Recent Container Logs:"
+          # Get container logs (last 50 lines)
+          aws logs describe-log-groups --log-group-name-prefix "/aws/lightsail/$LIGHTSAIL_SERVICE_NAME" --query "logGroups[0].logGroupName" --output text | xargs -I {} aws logs get-log-events --log-group-name {} --start-time $(date -d '5 minutes ago' +%s)000 --query "events[-50:].message" --output text || echo "No recent logs found"
+          
+          echo "\n🌐 Testing Service Health:"
+          URL=$(aws lightsail get-container-services \
+            --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].url" \
+            --output text)
+          
+          if [ ! -z "$URL" ]; then
+            echo "Testing URL: $URL"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 "$URL" || echo "000")
+            echo "HTTP Status: $HTTP_STATUS"
+            
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ Service is responding with HTTP 200"
+            elif [ "$HTTP_STATUS" = "000" ]; then
+              echo "❌ Service is not responding (connection timeout or DNS issue)"
+            else
+              echo "⚠️  Service responded with HTTP $HTTP_STATUS"
+            fi
+          else
+            echo "❌ Could not retrieve service URL"
+          fi
 
       # 🧾 Step 8: Final Summary
       - name: Deployment Summary

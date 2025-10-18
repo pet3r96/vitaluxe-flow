@@ -62,7 +62,63 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/c3f5b3e3-6069-4d4f-99ce-8809fbc21ade) and click on Share -> Publish.
+This project is automatically deployed to AWS Lightsail via GitHub Actions when you push to the main branch.
+
+### Required GitHub Secrets
+
+Before deployment, ensure these secrets are configured in your GitHub repository settings:
+
+- `AWS_ROLE_ARN` - AWS IAM role ARN for deployment
+- `AWS_REGION` - AWS region (e.g., us-west-2)
+- `ECR_REPOSITORY` - ECR repository URL
+- `LIGHTSAIL_SERVICE_NAME` - Lightsail container service name
+- `VITE_SUPABASE_URL` - Your Supabase project URL
+- `VITE_SUPABASE_PUBLISHABLE_KEY` - Your Supabase publishable key
+
+### Deployment Process
+
+1. Push changes to the main branch
+2. GitHub Actions automatically builds and deploys to Lightsail
+3. Check the Actions tab for deployment status and diagnostics
+
+## Troubleshooting Deployment Issues
+
+### Check Service Status
+
+```bash
+# Check Lightsail service status
+aws lightsail get-container-services --service-name vitaluxe-app
+
+# Get detailed service information
+aws lightsail get-container-services --service-name vitaluxe-app --query "containerServices[0].{State:state,NextDeployment:nextDeployment.state,Url:url,Power:power,Scale:scale}" --output table
+```
+
+### View Container Logs
+
+```bash
+# List log groups
+aws logs describe-log-groups --log-group-name-prefix "/aws/lightsail/vitaluxe-app"
+
+# Get recent logs (replace LOG_GROUP_NAME with actual group name)
+aws logs get-log-events --log-group-name LOG_GROUP_NAME --start-time $(date -d '1 hour ago' +%s)000
+```
+
+### Test Service Health
+
+```bash
+# Test if service is responding
+curl -I https://vitaluxe-app.rdeacw2yw3h2y.us-west-2.cs.amazonlightsail.com/
+
+# Check HTTP status
+curl -s -o /dev/null -w "%{http_code}" https://vitaluxe-app.rdeacw2yw3h2y.us-west-2.cs.amazonlightsail.com/
+```
+
+### Common Issues
+
+1. **Service not responding**: Check if environment variables are properly set in GitHub secrets
+2. **Build failures**: Verify all required secrets are present
+3. **Container crashes**: Check container logs for runtime errors
+4. **DNS issues**: Verify the Lightsail service URL is correct
 
 ## Can I connect a custom domain to my Lovable project?
 
