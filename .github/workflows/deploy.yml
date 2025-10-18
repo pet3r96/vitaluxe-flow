@@ -81,7 +81,7 @@ jobs:
           
           # Check for any remaining vulnerabilities
           echo "🔍 Checking for cross-spawn specifically..."
-          npm list cross-spawn --depth=0
+          npm list cross-spawn --depth=0 || echo "No direct cross-spawn dependencies found (this is expected)"
           
           echo "✅ Security audit completed"
 
