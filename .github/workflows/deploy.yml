@@ -188,13 +188,13 @@ jobs:
           DEPLOYMENT_RESULT=$(aws lightsail create-container-service-deployment \
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --containers "{
-              \"vitaluxe\": {
+              \"vitaluxe-app\": {
                 \"image\": \"${ECR_REPOSITORY}:latest\",
                 \"ports\": {\"8080\": \"HTTP\"}
               }
             }" \
             --public-endpoint "{
-              \"containerName\": \"vitaluxe\",
+              \"containerName\": \"vitaluxe-app\",
               \"containerPort\": 8080
             }" 2>&1)
           
