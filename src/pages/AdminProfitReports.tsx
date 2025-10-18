@@ -77,6 +77,31 @@ const AdminProfitReports = () => {
     [profitDetails]
   );
 
+  // Channel-specific profit calculations
+  const directProfit = useMemo(() => 
+    profitDetails
+      ?.filter(item => item.orders?.status !== 'cancelled')
+      .filter(item => !item.topline_id && !item.downline_id)
+      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    [profitDetails]
+  );
+
+  const toplineOnlyProfit = useMemo(() => 
+    profitDetails
+      ?.filter(item => item.orders?.status !== 'cancelled')
+      .filter(item => item.topline_id && !item.downline_id)
+      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    [profitDetails]
+  );
+
+  const fullNetworkProfit = useMemo(() => 
+    profitDetails
+      ?.filter(item => item.orders?.status !== 'cancelled')
+      .filter(item => item.topline_id && item.downline_id)
+      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    [profitDetails]
+  );
+
   const {
     currentPage,
     totalPages,
@@ -153,7 +178,7 @@ const AdminProfitReports = () => {
         </AlertDialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Total Admin Revenue</CardTitle>
@@ -183,6 +208,31 @@ const AdminProfitReports = () => {
             <p className="text-xs text-muted-foreground mt-1">Delivered orders</p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Profit by Channel
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Direct:</span>
+                <span className="font-semibold">${directProfit.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Via Topline:</span>
+                <span className="font-semibold">${toplineOnlyProfit.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Full Network:</span>
+                <span className="font-semibold">${fullNetworkProfit.toFixed(2)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -197,7 +247,7 @@ const AdminProfitReports = () => {
                 <TableHead>Practice</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Order ID</TableHead>
-                <TableHead>Discount</TableHead>
+                <TableHead>Sales Chain</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Admin Profit</TableHead>
               </TableRow>
@@ -225,6 +275,21 @@ const AdminProfitReports = () => {
                     <TableCell>{profit.order_lines?.products?.name || "-"}</TableCell>
                     <TableCell className="font-mono text-sm">
                       {profit.order_id?.slice(0, 8)}...
+                    </TableCell>
+                    <TableCell>
+                      {profit.downline_id ? (
+                        <Badge variant="default" className="text-xs">
+                          Admin → Topline → Downline → Practice
+                        </Badge>
+                      ) : profit.topline_id ? (
+                        <Badge variant="secondary" className="text-xs">
+                          Admin → Topline → Practice
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          Admin → Practice (Direct)
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -80,6 +81,23 @@ const RepProfitReports = () => {
       return sum + (parseFloat(profit?.toString() || '0'));
     }, 0) || 0;
 
+  // Topline-specific profit breakdowns
+  const directSalesProfit = useMemo(() => {
+    if (effectiveRole !== 'topline') return 0;
+    return profitDetails
+      ?.filter(item => item.orders?.status !== 'cancelled')
+      .filter(item => !item.downline_id)
+      .reduce((sum, item) => sum + parseFloat(item.topline_profit?.toString() || '0'), 0) || 0;
+  }, [profitDetails, effectiveRole]);
+
+  const networkSalesProfit = useMemo(() => {
+    if (effectiveRole !== 'topline') return 0;
+    return profitDetails
+      ?.filter(item => item.orders?.status !== 'cancelled')
+      .filter(item => !!item.downline_id)
+      .reduce((sum, item) => sum + parseFloat(item.topline_profit?.toString() || '0'), 0) || 0;
+  }, [profitDetails, effectiveRole]);
+
   const {
     currentPage,
     totalPages,
@@ -104,7 +122,7 @@ const RepProfitReports = () => {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className={`grid gap-4 ${effectiveRole === 'topline' ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Total Billed Revenue</CardTitle>
@@ -134,6 +152,29 @@ const RepProfitReports = () => {
             <p className="text-xs text-muted-foreground mt-1">Delivered orders</p>
           </CardContent>
         </Card>
+
+        {effectiveRole === 'topline' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Sales Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Direct Sales:</span>
+                  <span className="font-semibold">${directSalesProfit.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Network Sales:</span>
+                  <span className="font-semibold">${networkSalesProfit.toFixed(2)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card>
@@ -147,7 +188,7 @@ const RepProfitReports = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Practice</TableHead>
                 <TableHead>Order ID</TableHead>
-                <TableHead>Discount</TableHead>
+                {effectiveRole === 'topline' && <TableHead>Sale Type</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Your Profit</TableHead>
               </TableRow>
@@ -177,6 +218,19 @@ const RepProfitReports = () => {
                       <TableCell className="font-mono text-sm">
                         {profit.order_id?.slice(0, 8)}...
                       </TableCell>
+                      {effectiveRole === 'topline' && (
+                        <TableCell>
+                          {profit.downline_id ? (
+                            <Badge variant="outline" className="text-xs">
+                              Via Downline
+                            </Badge>
+                          ) : (
+                            <Badge variant="default" className="text-xs">
+                              Direct Sale
+                            </Badge>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge variant={
                           profit.orders?.status === 'shipped' || profit.orders?.status === 'delivered' 
