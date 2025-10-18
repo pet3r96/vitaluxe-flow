@@ -64,6 +64,11 @@ jobs:
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
           echo "🚀 Deploying new container version to Lightsail..."
+          
+          # Trim accidental whitespace or newlines from service name
+          LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
+          echo "Using Lightsail service: $LIGHTSAIL_SERVICE_NAME"
+
           aws lightsail create-container-service-deployment \
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --containers "{
@@ -77,12 +82,60 @@ jobs:
               \"containerPort\": 80
             }"
 
-      # ✅ Step 6: Verify deployment
-      - name: Verify Lightsail Deployment
+      # ✅ Step 6: Wait for Lightsail Deployment & Handle Rollback
+      - name: Wait for Lightsail Deployment (with rollback)
         env:
           LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME }}
         run: |
-          echo "🔍 Checking deployment status..."
-          aws lightsail get-container-services \
-            --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].[serviceName, state, url]" \
-            --output table
+          echo "⏳ Waiting for deployment to finish..."
+          LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
+
+          SUCCESS=false
+          for i in {1..30}; do
+            STATUS=$(aws lightsail get-container-services \
+              --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].state" \
+              --output text)
+
+            echo "Current status: $STATUS"
+            if [[ "$STATUS" == "RUNNING" ]]; then
+              SUCCESS=true
+              echo "✅ Deployment successful! Service is running."
+              break
+            elif [[ "$STATUS" == "DEPLOYING" ]]; then
+              echo "Still deploying... waiting 20s"
+              sleep 20
+            else
+              echo "⚠️ Unexpected status: $STATUS"
+              break
+            fi
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "❌ Deployment failed or timed out — rolling back to previous version..."
+            aws lightsail rollback-container-service \
+              --service-name "$LIGHTSAIL_SERVICE_NAME"
+            echo "🌀 Rollback initiated. Waiting 60s before verifying..."
+            sleep 60
+
+            STATUS=$(aws lightsail get-container-services \
+              --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].state" \
+              --output text)
+            echo "Post-rollback status: $STATUS"
+            if [[ "$STATUS" == "RUNNING" ]]; then
+              echo "✅ Rollback successful. Service restored to last working version."
+            else
+              echo "⚠️ Rollback executed but service not yet running. Check Lightsail console."
+            fi
+          fi
+
+          echo "🔗 Fetching service URL..."
+          URL=$(aws lightsail get-container-services \
+            --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].url" \
+            --output text)
+          echo "🌍 Service URL: $URL"
+
+      # 🧾 Step 7: Final summary
+      - name: Deployment Summary
+        run: |
+          echo "✅ Vitaluxe deployment process complete."
+          echo "If any rollback occurred, review the Lightsail console for details."
