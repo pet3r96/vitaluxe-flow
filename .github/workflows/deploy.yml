@@ -158,22 +158,47 @@ jobs:
 
           if [ "$SUCCESS" = false ]; then
             echo "❌ Deployment failed or timed out — rolling back to previous version..."
+            
+            # Get the list of deployments and find the previous version
+            DEPLOYMENTS=$(aws lightsail get-container-service-deployments \
+              --service-name "$LIGHTSAIL_SERVICE_NAME" \
+              --output json)
+            
+            # Get the second most recent deployment version (previous working version)
+            PREV_VERSION=$(echo "$DEPLOYMENTS" | jq -r '.deployments | sort_by(.createdAt) | reverse | .[1].version' || echo "")
+            
+            if [ -z "$PREV_VERSION" ] || [ "$PREV_VERSION" == "null" ]; then
+              echo "⚠️ No previous deployment found to rollback to."
+              exit 1
+            fi
+            
+            echo "🔄 Rolling back to deployment version: $PREV_VERSION"
+            
+            # Get the previous deployment configuration
+            PREV_CONFIG=$(echo "$DEPLOYMENTS" | jq -r ".deployments[] | select(.version == $PREV_VERSION)")
+            PREV_CONTAINERS=$(echo "$PREV_CONFIG" | jq -r '.containers')
+            PREV_ENDPOINT=$(echo "$PREV_CONFIG" | jq -r '.publicEndpoint')
+            
+            # Redeploy using the previous configuration
             aws lightsail create-container-service-deployment \
               --service-name "$LIGHTSAIL_SERVICE_NAME" \
-              --use-previous-deployment
-
+              --containers "$PREV_CONTAINERS" \
+              --public-endpoint "$PREV_ENDPOINT"
+            
             echo "🌀 Rollback initiated. Waiting 60s before verifying..."
             sleep 60
-
+            
             STATUS=$(aws lightsail get-container-services \
               --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].state" \
               --output text)
             echo "Post-rollback status: $STATUS"
             if [[ "$STATUS" == "RUNNING" ]]; then
-              echo "✅ Rollback successful. Service restored to last working version."
+              echo "✅ Rollback successful. Service restored to version $PREV_VERSION."
             else
               echo "⚠️ Rollback executed but service not yet running. Check Lightsail console."
             fi
+            
+            exit 1
           fi
 
           echo "🔗 Fetching service URL..."
