@@ -234,7 +234,8 @@ jobs:
 
           echo "🔗 Fetching service URL..."
           URL=$(aws lightsail get-container-services \
-            --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].url" \
+            --service-name "$LIGHTSAIL_SERVICE_NAME" \
+            --query "containerServices[0].url" \
             --output text)
           
           if [ -z "$URL" ] || [ "$URL" = "None" ]; then
@@ -285,7 +286,8 @@ jobs:
           
           echo "\n🌐 Testing Service Health:"
           URL=$(aws lightsail get-container-services \
-            --query "containerServices[?serviceName=='$LIGHTSAIL_SERVICE_NAME'].url" \
+            --service-name "$LIGHTSAIL_SERVICE_NAME" \
+            --query "containerServices[0].url" \
             --output text)
           
           if [ ! -z "$URL" ]; then
