@@ -4,6 +4,7 @@ import { Package, ShoppingCart, Users, DollarSign, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 // Dashboard component with real-time stats
 const Dashboard = () => {
@@ -112,16 +113,16 @@ const Dashboard = () => {
             { p_effective_user_id: effectiveUserId }
           ) as { data: Array<{ id: string }> | null; error: any };
 
-          console.info('Dashboard visible products', { effectiveUserId, effectiveRole, isImpersonating, count: visibleProducts?.length || 0 });
+          logger.info('Dashboard visible products', logger.sanitize({ effectiveUserId, effectiveRole, isImpersonating, count: visibleProducts?.length || 0 }));
           
           if (error) {
-            console.error('Visibility RPC error:', error);
+            logger.error('Visibility RPC error', error, logger.sanitize({ operation: 'get_visible_products' }));
             return 0;
           }
           
           return visibleProducts?.length || 0;
         } catch (error) {
-          console.error('Error checking product visibility:', error);
+          logger.error('Error checking product visibility', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'product_visibility_check' }));
           return 0;
         }
       }

@@ -19,6 +19,7 @@ import { PaymentRetryDialog } from "@/components/orders/PaymentRetryDialog";
 import { AddCreditCardDialog } from "@/components/profile/AddCreditCardDialog";
 import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
+import { logger } from "@/lib/logger";
 
 // Helper function to extract state from address string
 const extractStateFromAddress = (address: string): string => {
@@ -280,7 +281,7 @@ export default function OrderConfirmation() {
               );
             }
           } catch (error) {
-            console.error('Pharmacy routing failed:', error);
+            logger.error('Pharmacy routing failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'route_practice_order' }));
             throw error;
           }
         }
@@ -304,7 +305,7 @@ export default function OrderConfirmation() {
               group.shipping_cost = shippingData.shipping_cost;
             }
           } catch (error) {
-            console.error('Shipping calculation failed:', error);
+            logger.error('Shipping calculation failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'calculate_practice_shipping' }));
             // Use default rates as fallback
             const defaultRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
             group.shipping_cost = defaultRates[group.shipping_speed as keyof typeof defaultRates] || 9.99;
@@ -414,7 +415,7 @@ export default function OrderConfirmation() {
               );
             }
           } catch (error) {
-            console.error('Pharmacy routing failed:', error);
+            logger.error('Pharmacy routing failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'route_patient_order' }));
             throw error;
           }
         }
@@ -438,7 +439,7 @@ export default function OrderConfirmation() {
               group.shipping_cost = shippingData.shipping_cost;
             }
           } catch (error) {
-            console.error('Shipping calculation failed:', error);
+            logger.error('Shipping calculation failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'calculate_patient_shipping' }));
             // Use default rates as fallback
             const defaultRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
             group.shipping_cost = defaultRates[group.shipping_speed as keyof typeof defaultRates] || 9.99;
