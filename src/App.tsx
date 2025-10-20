@@ -7,7 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { ImpersonationBanner } from "./components/layout/ImpersonationBanner";
+import { GlobalImpersonationBanner } from "@/components/layout/GlobalImpersonationBanner";
 import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonationDropdown";
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -59,8 +59,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <ImpersonationBanner />
-            <Routes>
+            <GlobalImpersonationBanner>
+              <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/change-password" element={<ChangePassword />} />
               <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
@@ -113,6 +113,7 @@ const App = () => (
               }
             />
           </Routes>
+            </GlobalImpersonationBanner>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
