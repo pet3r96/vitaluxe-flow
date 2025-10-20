@@ -54,6 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [practiceParentId, setPracticeParentId] = useState<string | null>(null);
   const [currentLogId, setCurrentLogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true); // Tracks if user data is still loading
   const [isProviderAccount, setIsProviderAccount] = useState(false);
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
@@ -108,6 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, 'has session:', !!session);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -126,17 +128,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCurrentLogId(null);
           sessionStorage.removeItem('vitaluxe_impersonation');
           clearCSRFToken();
+          setDataLoading(false);
         }
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         fetchUserRole(session.user.id);
+      } else {
+        setDataLoading(false);
       }
       setLoading(false);
     });
@@ -282,6 +288,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserRole = async (userId: string) => {
     try {
+      setDataLoading(true);
+      console.log('Fetching user role for userId:', userId);
+      
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
@@ -290,6 +299,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       const role = data?.role ?? null;
+      console.log('User role fetched:', role);
       setUserRole(role);
 
       // If provider role, fetch practice_id from providers table
@@ -327,9 +337,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       }
+
+      // Now that role is loaded, check password status and 2FA
+      console.log('Checking password status and 2FA for role:', role);
+      await checkPasswordStatus();
+      await check2FAStatus(userId);
+      
+      console.log('All user data loaded, setting dataLoading to false');
+      setDataLoading(false);
     } catch (error) {
       console.error("Error fetching user role:", error);
       setUserRole(null);
+      setDataLoading(false);
     }
   };
 
@@ -370,12 +389,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Re-check password status when impersonation changes
+  // Re-check password status when impersonation changes (but not on initial load)
   useEffect(() => {
-    if (user && effectiveUserId && effectiveRole) {
+    if (user && effectiveUserId && effectiveRole && !dataLoading) {
+      console.log('Re-checking password status due to impersonation change');
       checkPasswordStatus();
     }
-  }, [user, effectiveUserId, effectiveRole]);
+  }, [effectiveUserId, effectiveRole]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -598,12 +618,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate("/auth");
   };
 
+  // Combine loading states - only ready when both auth and data are loaded
+  const isFullyLoaded = !loading && !dataLoading;
+  
+  console.log('AuthContext state:', { 
+    loading, 
+    dataLoading, 
+    isFullyLoaded,
+    effectiveRole, 
+    mustChangePassword, 
+    termsAccepted,
+    user: !!user 
+  });
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       session, 
       userRole, 
-      loading, 
+      loading: !isFullyLoaded, // Combined loading state
       actualRole,
       impersonatedRole,
       impersonatedUserId,
