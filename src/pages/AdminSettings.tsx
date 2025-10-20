@@ -13,6 +13,7 @@ import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
+import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 
 const AdminSettings = () => {
   return (
@@ -189,6 +190,7 @@ const AdminSettings = () => {
         </TabsContent>
 
         <TabsContent value="utilities" className="space-y-4">
+          <AdminPasswordChange />
           <TestPasswordManager />
           <OrphanedUserFixer />
         </TabsContent>
