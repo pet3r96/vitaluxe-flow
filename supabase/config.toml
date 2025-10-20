@@ -1,5 +1,8 @@
 project_id = "qbtsfajshnrwwlfzkeog"
 
+[functions.emergency-admin-reset]
+verify_jwt = false
+
 [functions.amazon-get-tracking]
 verify_jwt = true
 
