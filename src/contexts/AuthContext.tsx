@@ -630,7 +630,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     mustChangePassword, 
     termsAccepted,
     user: !!user 
-  });
+  }));
 
   return (
     <AuthContext.Provider value={{ 
