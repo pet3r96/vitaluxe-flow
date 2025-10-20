@@ -185,6 +185,25 @@ export default function AcceptTerms() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Admin Impersonation Notice */}
+          {isImpersonating && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="flex items-center justify-between">
+                  <span>You are viewing as {impersonatedUserName || 'an impersonated user'}</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate('/')}
+                  >
+                    Skip Terms (Admin)
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Scroll Progress Indicator */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
