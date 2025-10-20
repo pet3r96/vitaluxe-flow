@@ -483,9 +483,10 @@ serve(async (req) => {
     }
 
     // Record acceptance in database (for target user)
+    // Use upsert to handle cases where user re-accepts terms
     const { data: acceptance, error: acceptanceError } = await supabase
       .from('user_terms_acceptances')
-      .insert({
+      .upsert({
         user_id: targetUserId,
         terms_id: terms.id,
         role: terms.role,
@@ -493,7 +494,11 @@ serve(async (req) => {
         signature_name,
         signed_pdf_url: fileName,
         ip_address: ipAddress,
-        user_agent: userAgent
+        user_agent: userAgent,
+        accepted_at: new Date().toISOString() // Explicitly update timestamp
+      }, {
+        onConflict: 'user_id,terms_id', // Handle duplicate key constraint
+        ignoreDuplicates: false // Update existing records
       })
       .select()
       .single();
