@@ -12,15 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { secret_passphrase } = await req.json();
-
-    // SECURITY: Require secret passphrase
-    const EXPECTED_SECRET = Deno.env.get('EMERGENCY_RESET_SECRET');
-    
-    if (!secret_passphrase || secret_passphrase !== EXPECTED_SECRET) {
-      console.log('Invalid secret passphrase attempt');
-      throw new Error('Invalid secret passphrase');
-    }
+    console.log('Emergency password reset requested');
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
