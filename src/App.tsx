@@ -59,6 +59,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <ImpersonationBanner />
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/change-password" element={<ChangePassword />} />
@@ -67,7 +68,6 @@ const App = () => (
               path="/*"
               element={
                 <ProtectedRoute>
-                  <ImpersonationBanner />
                   <SidebarProvider>
                     <div className="flex min-h-screen w-full bg-background overflow-hidden">
                       <AppSidebar />
