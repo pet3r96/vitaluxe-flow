@@ -34,7 +34,9 @@ export const ReceiptDownloadButton = ({
       });
 
       if (error) {
-        console.error('Error generating receipt:', error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Error generating receipt', error);
+        });
         throw new Error(error.message || 'Failed to generate receipt');
       }
 
@@ -64,7 +66,9 @@ export const ReceiptDownloadButton = ({
       });
 
     } catch (error: any) {
-      console.error('Receipt download error:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Receipt download error', error, logger.sanitize({ orderId }));
+      });
       
       // Log to admin error logs
       await logApplicationError('receipt_download', error, {

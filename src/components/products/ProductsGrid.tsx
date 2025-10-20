@@ -84,15 +84,10 @@ export const ProductsGrid = () => {
             { p_effective_user_id: effectiveUserId }
           ) as { data: Array<{ id: string }> | null; error: any };
           
-          console.info('Visibility RPC (effective)', {
-            effectiveUserId,
-            effectiveRole,
-            isImpersonating,
-            count: visibleProducts?.length || 0
-          });
-          
           if (visError) {
-            console.error('Visibility RPC error:', visError);
+            import('@/lib/logger').then(({ logger }) => {
+              logger.error('Visibility RPC error', visError);
+            });
             toast.error('Could not determine product visibility');
             return [];
           } else if (visibleProducts && visibleProducts.length > 0) {
@@ -103,7 +98,9 @@ export const ProductsGrid = () => {
             return [];
           }
         } catch (error) {
-          console.error('Error checking product visibility:', error);
+          import('@/lib/logger').then(({ logger }) => {
+            logger.error('Error checking product visibility', error);
+          });
           toast.error('Could not determine product visibility');
           return [];
         }
@@ -320,7 +317,9 @@ export const ProductsGrid = () => {
       queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
       queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
     } catch (error: any) {
-      console.error("Error adding to cart:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error adding to cart", error);
+      });
       toast.error(error.message || "Failed to add product to cart");
     }
   };

@@ -58,7 +58,9 @@ export function TestPasswordManager() {
         throw new Error('Unexpected response from server');
       }
     } catch (error: any) {
-      console.error('Error setting test password:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error setting test password', error);
+      });
       toast({
         title: "❌ Error",
         description: error.message || "Failed to set test password",

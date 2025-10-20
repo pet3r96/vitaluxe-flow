@@ -41,16 +41,15 @@ export const RepPracticesDataTable = () => {
         .maybeSingle();
       
       if (repError) {
-        console.error("Error fetching rep record:", repError);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error("Error fetching rep record", repError);
+        });
         throw repError;
       }
       
       if (!repRecord) {
-        console.log("No rep record found for user");
         return [];
       }
-      
-      console.log("Rep record found:", repRecord.id);
       
       // Query practices via rep_practice_links
       const { data: practiceLinks, error: linksError } = await supabase
@@ -59,12 +58,12 @@ export const RepPracticesDataTable = () => {
         .eq("rep_id", repRecord.id);
       
       if (linksError) {
-        console.error("Error fetching practice links:", linksError);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error("Error fetching practice links", linksError);
+        });
         throw linksError;
       }
       
-      console.log("Practice links found:", practiceLinks?.length || 0);
-
       if (!practiceLinks || practiceLinks.length === 0) {
         return [];
       }
@@ -84,7 +83,9 @@ export const RepPracticesDataTable = () => {
         .order("created_at", { ascending: false });
 
       if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error("Error fetching profiles", profilesError);
+        });
         throw profilesError;
       }
 

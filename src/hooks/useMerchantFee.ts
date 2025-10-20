@@ -12,7 +12,9 @@ export const useMerchantFee = () => {
         .single();
 
       if (error) {
-        console.error("Error fetching merchant fee:", error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error("Error fetching merchant fee", error);
+        });
         return 3.75; // Fallback default
       }
 

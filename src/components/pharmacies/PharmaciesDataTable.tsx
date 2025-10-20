@@ -87,7 +87,9 @@ export const PharmaciesDataTable = () => {
         throw new Error(result?.error || 'Failed to create account');
       }
     } catch (error: any) {
-      console.error('Error creating account:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error creating pharmacy account', error);
+      });
       toast.error(`Failed to create account for ${pharmacyName}`, {
         description: error.message,
       });

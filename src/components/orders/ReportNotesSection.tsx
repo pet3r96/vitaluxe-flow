@@ -52,7 +52,9 @@ export const ReportNotesSection = ({
       setIsEditing(false);
       onSuccess();
     } catch (error: any) {
-      console.error('Error saving notes:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error saving report notes', error);
+      });
       toast({
         title: "Save Failed",
         description: error.message || "Failed to save notes. Please try again.",

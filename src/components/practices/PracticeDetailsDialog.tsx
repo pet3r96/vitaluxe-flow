@@ -220,7 +220,9 @@ export const PracticeDetailsDialog = ({
       onSuccess();
     } catch (error) {
       toast.error("Failed to update practice");
-      console.error(error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Failed to update practice", error);
+      });
     }
   };
 

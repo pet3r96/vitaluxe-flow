@@ -93,7 +93,9 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         .eq("role", "topline");
       
       if (error) {
-        console.error("Error fetching topline reps:", error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error("Error fetching topline reps", error);
+        });
       }
       if (data) setToplineReps(data);
     };

@@ -46,7 +46,9 @@ export default function AcceptTerms() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching terms:', error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Error fetching terms', error);
+        });
         toast.error("Failed to load terms and conditions");
         setTerms(null);
         setLoading(false);
@@ -138,7 +140,9 @@ export default function AcceptTerms() {
         throw new Error(data.error || "Failed to accept terms");
       }
     } catch (error: any) {
-      console.error('Error accepting terms:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error accepting terms', error);
+      });
       toast.error(error.message || "Failed to accept terms");
     } finally {
       setSubmitting(false);

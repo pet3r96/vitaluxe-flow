@@ -67,7 +67,9 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
       toast.success("Shipping information updated successfully");
       onSuccess();
     } catch (error: any) {
-      console.error('Error updating shipping info:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error updating shipping info', error);
+      });
       toast.error(error.message || "Failed to update shipping information");
     } finally {
       setIsSaving(false);

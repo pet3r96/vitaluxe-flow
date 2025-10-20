@@ -80,7 +80,9 @@ export const OrphanedUserFixer = () => {
         });
       }
     } catch (error: any) {
-      console.error('Error fixing orphaned users:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error fixing orphaned users', error);
+      });
       toast({
         title: "Error",
         description: error.message || "Failed to fix orphaned users",

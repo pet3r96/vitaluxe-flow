@@ -196,7 +196,9 @@ export const PatientDialog = ({
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
-      console.error("Error saving patient:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error saving patient", error);
+      });
       toast.error(error.message || "Failed to save patient");
     } finally {
       setLoading(false);

@@ -103,7 +103,9 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
         address_zip: "",
       });
     } catch (error: any) {
-      console.error("Error submitting practice request:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error submitting practice request", error);
+      });
       toast.error(error.message || "Failed to submit request");
     } finally {
       setLoading(false);

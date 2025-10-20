@@ -138,8 +138,6 @@ export const AccountsDataTable = () => {
         };
       });
 
-      // Debug logging for data verification
-      console.log('Sample account data:', enrichedData?.[0]);
 
       return enrichedData;
     },

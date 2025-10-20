@@ -93,7 +93,9 @@ export const AdminPasswordChange = () => {
         .eq('user_id', user.id);
 
       if (statusError) {
-        console.error('Failed to clear password change flag:', statusError);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Failed to clear password change flag', statusError);
+        });
       }
 
       toast({

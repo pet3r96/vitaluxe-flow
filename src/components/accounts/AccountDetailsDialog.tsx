@@ -105,7 +105,7 @@ export const AccountDetailsDialog = ({
           .eq("active", true)
           .order("name", { ascending: true });
         
-        console.log('Fetched toplines for dropdown:', toplines?.length);
+        
         
         return toplines?.map(t => ({
           id: t.id,  // This is user_id, matching profiles.linked_topline_id
@@ -212,7 +212,9 @@ export const AccountDetailsDialog = ({
       
       onSuccess();
     } catch (error: any) {
-      console.error("Error updating account:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error updating account", error);
+      });
       toast.error(error.message || "Failed to update account");
     } finally {
       setIsSaving(false);

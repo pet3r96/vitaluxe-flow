@@ -47,7 +47,9 @@ export default function ForgotPasswordDialog({ open, onOpenChange }: ForgotPassw
         throw new Error(data?.error || "Failed to send reset email");
       }
     } catch (error: any) {
-      console.error("Error resetting password:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error resetting password", error);
+      });
       toast.error(error.message || "Unable to process request. Please try again later.");
     } finally {
       setLoading(false);

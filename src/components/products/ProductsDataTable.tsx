@@ -266,7 +266,9 @@ export const ProductsDataTable = () => {
 
       toast.success("Product added to cart");
     } catch (error: any) {
-      console.error("Error adding to cart:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error adding to cart", error);
+      });
       toast.error(error.message || "Failed to add product to cart");
     }
   };

@@ -48,7 +48,9 @@ export function useNotifications() {
       setNotifications(data || []);
       setUnreadCount(data?.filter((n) => !n.read).length || 0);
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error fetching notifications", error);
+      });
     } finally {
       setLoading(false);
     }
@@ -61,7 +63,9 @@ export function useNotifications() {
       if (error) throw error;
       setUnreadCount(data || 0);
     } catch (error) {
-      console.error("Error fetching unread count:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error fetching unread count", error);
+      });
     }
   };
 
@@ -81,7 +85,9 @@ export function useNotifications() {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error marking notification as read", error);
+      });
       toast({
         title: "Error",
         description: "Failed to mark notification as read",
@@ -107,7 +113,9 @@ export function useNotifications() {
         description: `Marked ${data} notifications as read`,
       });
     } catch (error) {
-      console.error("Error marking all as read:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error marking all as read", error);
+      });
       toast({
         title: "Error",
         description: "Failed to mark all notifications as read",
@@ -136,7 +144,9 @@ export function useNotifications() {
       // Refresh count for robustness
       fetchUnreadCount();
     } catch (error) {
-      console.error("Error deleting notification:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error deleting notification", error);
+      });
       toast({
         title: "Error",
         description: "Failed to delete notification",

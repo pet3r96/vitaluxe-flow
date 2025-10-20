@@ -16,7 +16,9 @@ export const generateCSRFToken = async (): Promise<string | null> => {
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.error('Cannot generate CSRF token: No authenticated user');
+      import('@/lib/logger').then(({ logger }) => {
+        logger.warn('Cannot generate CSRF token: No authenticated user');
+      });
       return null;
     }
     
@@ -30,17 +32,23 @@ export const generateCSRFToken = async (): Promise<string | null> => {
       });
       
       if (error) {
-        console.error('Failed to store CSRF token:', error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Failed to store CSRF token', error);
+        });
         return null;
       }
     } catch (err) {
-      console.error('Error storing CSRF token:', err);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error storing CSRF token', err);
+      });
       return null;
     }
     
     return token;
   } catch (error) {
-    console.error('Error generating CSRF token:', error);
+    import('@/lib/logger').then(({ logger }) => {
+      logger.error('Error generating CSRF token', error);
+    });
     return null;
   }
 };
@@ -54,13 +62,17 @@ export const validateCSRFToken = async (token: string): Promise<boolean> => {
     const storedToken = sessionStorage.getItem('csrf_token');
     
     if (token !== storedToken) {
-      console.error('CSRF token mismatch with session storage');
+      import('@/lib/logger').then(({ logger }) => {
+        logger.warn('CSRF token mismatch with session storage');
+      });
       return false;
     }
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.error('Cannot validate CSRF token: No authenticated user');
+      import('@/lib/logger').then(({ logger }) => {
+        logger.warn('Cannot validate CSRF token: No authenticated user');
+      });
       return false;
     }
     
@@ -76,17 +88,23 @@ export const validateCSRFToken = async (token: string): Promise<boolean> => {
         .single();
       
       if (error || !data) {
-        console.error('CSRF token validation failed:', error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('CSRF token validation failed', error);
+        });
         return false;
       }
       
       return true;
     } catch (err) {
-      console.error('Error validating CSRF token:', err);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error validating CSRF token', err);
+      });
       return false;
     }
   } catch (error) {
-    console.error('Error validating CSRF token:', error);
+    import('@/lib/logger').then(({ logger }) => {
+      logger.error('Error validating CSRF token', error);
+    });
     return false;
   }
 };

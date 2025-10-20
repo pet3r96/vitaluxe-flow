@@ -67,7 +67,9 @@ export function TrackingApiUsageMonitor() {
       setStats(Array.from(statsByDate.values()).sort((a, b) => b.date.localeCompare(a.date)));
       setTotalCost(totalCallCount * costPerCall);
     } catch (error: any) {
-      console.error('Error fetching usage stats:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error fetching usage stats', error);
+      });
       toast.error('Failed to load API usage statistics');
     } finally {
       setLoading(false);

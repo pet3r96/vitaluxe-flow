@@ -30,10 +30,14 @@ export async function logPatientPHIAccess(params: PatientPHIAccessLog): Promise<
     });
 
     if (error) {
-      console.error('Failed to log patient PHI access:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Failed to log patient PHI access', error);
+      });
     }
   } catch (error) {
     // Silent fail - don't block UI for logging errors
-    console.error('Patient PHI access logging error:', error);
+    import('@/lib/logger').then(({ logger }) => {
+      logger.error('Patient PHI access logging error', error);
+    });
   }
 }

@@ -63,7 +63,9 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         .eq("role", "topline");
       
       if (error) {
-        console.error("Error fetching topline reps:", error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error("Error fetching topline reps", error);
+        });
       }
       if (data) setToplineReps(data);
     };
@@ -237,7 +239,9 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
-      console.error("Error saving pharmacy:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error saving pharmacy", error);
+      });
       toast.error(error.message || "Failed to save pharmacy");
     } finally {
       setLoading(false);

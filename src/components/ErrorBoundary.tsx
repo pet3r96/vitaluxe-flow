@@ -24,7 +24,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    import('@/lib/logger').then(({ logger }) => {
+      logger.error('ErrorBoundary caught an error', error, logger.sanitize({
+        componentStack: errorInfo.componentStack,
+        browser: navigator.userAgent,
+        url: window.location.href
+      }));
+    });
 
     // Log error to database via edge function
     supabase.functions
@@ -43,7 +49,9 @@ export class ErrorBoundary extends Component<Props, State> {
         },
       })
       .catch((logError) => {
-        console.error('Failed to log error:', logError);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Failed to log error to backend', logError);
+        });
       });
   }
 

@@ -32,18 +32,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Redirect non-admin users who must change password
   useEffect(() => {
     if (!loading && user) {
-      console.log('ProtectedRoute password check:', { 
-        mustChangePassword, 
-        effectiveRole, 
-        pathname: location.pathname 
-      });
-      
       if (
         mustChangePassword &&
         effectiveRole !== 'admin' &&
         location.pathname !== '/change-password'
       ) {
-        console.log('Redirecting to change-password');
+        
         navigate("/change-password");
       }
     }
@@ -52,18 +46,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Redirect non-admin users who haven't accepted terms (after password change)
   useEffect(() => {
     if (!loading && user && !mustChangePassword && effectiveRole) {
-      console.log('ProtectedRoute terms check:', { 
-        termsAccepted, 
-        effectiveRole, 
-        pathname: location.pathname 
-      });
-      
       if (
         !termsAccepted &&
         effectiveRole !== 'admin' &&
         location.pathname !== '/accept-terms'
       ) {
-        console.log('Redirecting to accept-terms');
+        
         navigate("/accept-terms");
       }
     }

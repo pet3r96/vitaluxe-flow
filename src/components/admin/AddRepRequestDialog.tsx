@@ -106,7 +106,9 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
         role: "downline",
       });
     } catch (error: any) {
-      console.error("Error submitting rep request:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error submitting rep request", error);
+      });
       toast.error(error.message || "Failed to submit request");
     } finally {
       setLoading(false);

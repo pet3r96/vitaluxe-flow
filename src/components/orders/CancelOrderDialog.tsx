@@ -79,7 +79,9 @@ export const CancelOrderDialog = ({
       onOpenChange(false);
       setReason("");
     } catch (error: any) {
-      console.error('Cancellation error:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Order cancellation error', error);
+      });
       toast({
         title: "Cancellation Failed",
         description: error.message || "Failed to cancel order. Please try again.",

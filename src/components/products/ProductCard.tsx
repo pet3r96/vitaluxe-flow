@@ -59,7 +59,9 @@ export const ProductCard = memo(({
         }
       );
       if (error) {
-        console.error('Error fetching effective price:', error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Error fetching effective price', error);
+        });
         return null;
       }
       return data?.[0];

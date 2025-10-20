@@ -76,7 +76,9 @@ export function RepsManagement() {
     },
     onError: (error) => {
       toast.error("Failed to update rep status");
-      console.error(error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Failed to update rep status", error);
+      });
     },
   });
 

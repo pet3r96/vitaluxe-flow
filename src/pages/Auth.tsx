@@ -188,7 +188,9 @@ const Auth = () => {
               },
             });
           } catch (trackError) {
-            console.error("Failed to track login attempt:", trackError);
+            import('@/lib/logger').then(({ logger }) => {
+              logger.error("Failed to track login attempt", trackError);
+            });
           }
           
           toast({

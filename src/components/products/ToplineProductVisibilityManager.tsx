@@ -145,7 +145,9 @@ export const ToplineProductVisibilityManager = () => {
       
       toast.success("All products are now visible to your network");
     } catch (error: any) {
-      console.error("Error resetting visibility:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error resetting visibility", error);
+      });
       toast.error("Failed to reset product visibility");
     } finally {
       setIsResetting(false);

@@ -49,7 +49,9 @@ export const DataSyncButton = ({ onSyncComplete }: DataSyncButtonProps) => {
         onSyncComplete();
       }
     } catch (error: any) {
-      console.error("Sync error:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Data sync error", error);
+      });
       toast.error(error.message || "Failed to sync data");
     } finally {
       setLoading(false);

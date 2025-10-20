@@ -66,7 +66,9 @@ export const AlertRulesManager = () => {
     },
     onError: (error) => {
       toast.error("Failed to create alert rule");
-      console.error(error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Failed to create alert rule", error);
+      });
     },
   });
 

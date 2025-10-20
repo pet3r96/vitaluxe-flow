@@ -82,7 +82,9 @@ export const AddressInput = ({
         setShowSuggestion(true);
       }
     } catch (error: any) {
-      console.error('Validation error:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Address validation error', error);
+      });
       toast.error("Failed to validate address");
     } finally {
       setValidating(false);

@@ -49,7 +49,9 @@ export default function AdminTermsManagement() {
       .single();
 
     if (error) {
-      console.error('Error loading terms:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error loading terms', error);
+      });
       toast.error("Failed to load terms");
       return;
     }
@@ -69,7 +71,9 @@ export default function AdminTermsManagement() {
         .order('accepted_at', { ascending: false });
 
       if (aErr) {
-        console.error('Error loading acceptances:', aErr);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Error loading acceptances', aErr);
+        });
         toast.error('Failed to load acceptances');
         setAcceptances([]);
         return;
@@ -91,7 +95,9 @@ export default function AdminTermsManagement() {
           .in('id', userIds as string[]);
 
         if (pErr) {
-          console.warn('Could not load profiles for acceptances:', pErr);
+          import('@/lib/logger').then(({ logger }) => {
+            logger.warn('Could not load profiles for acceptances', pErr);
+          });
         } else if (profiles) {
           profilesMap = Object.fromEntries(profiles.map((p: any) => [p.id, p]));
         }
@@ -105,7 +111,9 @@ export default function AdminTermsManagement() {
 
       setAcceptances(enriched);
     } catch (e) {
-      console.error('Unexpected error loading acceptances:', e);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Unexpected error loading acceptances', e);
+      });
       toast.error('Failed to load acceptances');
       setAcceptances([]);
     } finally {
@@ -159,7 +167,9 @@ export default function AdminTermsManagement() {
       toast.success("Terms updated successfully");
       await loadTerms();
     } catch (error: any) {
-      console.error('Error saving terms:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error saving terms', error);
+      });
       toast.error(error.message || "Failed to save terms");
     } finally {
       setSaving(false);
@@ -197,7 +207,9 @@ export default function AdminTermsManagement() {
         toast.success("PDF downloaded successfully");
       }
     } catch (error: any) {
-      console.error('Error downloading PDF:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error downloading PDF', error);
+      });
       toast.error("Failed to download PDF");
     }
   };
