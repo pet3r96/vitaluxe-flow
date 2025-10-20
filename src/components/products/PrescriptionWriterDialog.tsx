@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 interface PrescriptionWriterDialogProps {
   open: boolean;
@@ -101,7 +102,7 @@ export function PrescriptionWriterDialog({
           });
         }
       } catch (error) {
-        console.error('Failed to decrypt patient allergies:', error);
+        logger.error('Failed to decrypt patient allergies', error, logger.sanitize({ patientId: patient.id }));
         setDecryptedAllergies(null);
       } finally {
         setIsLoadingAllergies(false);
@@ -131,9 +132,9 @@ export function PrescriptionWriterDialog({
           setDecryptedPrescriberCreds(data[0]);
         }
       } catch (error) {
-        console.error('Failed to decrypt prescriber credentials:', error);
+        logger.error('Failed to decrypt prescriber credentials', error, logger.sanitize({ providerId: provider.id }));
         setDecryptedPrescriberCreds(null);
-      } finally {
+      } finally{
         setIsLoadingCreds(false);
       }
     };
@@ -270,7 +271,7 @@ export function PrescriptionWriterDialog({
           }
         });
       } catch (logError) {
-        console.error('Failed to log error:', logError);
+        logger.error('Failed to log error to backend', logError);
       }
       
       toast.error(error.message || "Failed to generate prescription");

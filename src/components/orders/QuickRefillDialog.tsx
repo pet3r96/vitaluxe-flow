@@ -7,6 +7,7 @@ import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PrescriptionWriterDialog } from "@/components/products/PrescriptionWriterDialog";
 import { useQuery } from "@tanstack/react-query";
+import { logger } from "@/lib/logger";
 
 interface QuickRefillDialogProps {
   open: boolean;
@@ -129,7 +130,7 @@ export function QuickRefillDialog({ open, onOpenChange, orderLine, onSuccess }: 
         }
       }
     } catch (error) {
-      console.error("Error checking eligibility:", error);
+      logger.error("Error checking eligibility", error, logger.sanitize({ orderLineId: orderLine.id }));
       toast({
         title: "Error",
         description: "Failed to check refill eligibility. Please try again.",
@@ -235,7 +236,7 @@ export function QuickRefillDialog({ open, onOpenChange, orderLine, onSuccess }: 
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error("Error creating refill:", error);
+      logger.error("Error creating refill", error, logger.sanitize({ orderLineId: orderLine.id }));
       toast({
         title: "Error",
         description: "Failed to create refill order. Please try again.",

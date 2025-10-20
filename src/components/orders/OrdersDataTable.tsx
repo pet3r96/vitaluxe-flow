@@ -25,6 +25,7 @@ import { OrderDetailsDialog } from "./OrderDetailsDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
+import { logger } from "@/lib/logger";
 
 export const OrdersDataTable = () => {
   const { effectiveRole, effectiveUserId, user } = useAuth();
@@ -37,11 +38,11 @@ export const OrdersDataTable = () => {
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
     staleTime: 0,
     queryFn: async () => {
-      if (import.meta.env.DEV) {
-        console.log('OrdersDataTable - effectiveRole:', effectiveRole);
-        console.log('OrdersDataTable - effectiveUserId:', effectiveUserId);
-        console.log('OrdersDataTable - auth.uid:', user?.id);
-      }
+      logger.info('OrdersDataTable query', logger.sanitize({ 
+        effectiveRole, 
+        effectiveUserId,
+        authUid: user?.id 
+      }));
 
       // Special handling for pharmacy users - fetch from order_lines
       if (effectiveRole === "pharmacy") {
@@ -111,7 +112,7 @@ export const OrdersDataTable = () => {
           .order("created_at", { ascending: false });
 
         if (orderLinesError) {
-          console.error('Pharmacy order lines query error:', orderLinesError);
+          logger.error('Pharmacy order lines query error', orderLinesError);
           throw orderLinesError;
         }
 
@@ -265,9 +266,7 @@ export const OrdersDataTable = () => {
           filter: effectiveRole === 'doctor' ? `doctor_id=eq.${effectiveUserId}` : undefined
         },
         () => {
-          if (import.meta.env.DEV) {
-            console.log('Order update detected, refetching...');
-          }
+          logger.info('Order update detected, refetching');
           refetch();
         }
       )
@@ -279,9 +278,7 @@ export const OrdersDataTable = () => {
           table: 'order_lines'
         },
         () => {
-          if (import.meta.env.DEV) {
-            console.log('Order line update detected, refetching...');
-          }
+          logger.info('Order line update detected, refetching');
           refetch();
         }
       )
@@ -397,7 +394,7 @@ export const OrdersDataTable = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Prescription download error:', error);
+      logger.error('Prescription download error', error);
     }
   };
 

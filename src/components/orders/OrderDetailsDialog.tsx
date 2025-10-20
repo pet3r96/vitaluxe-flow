@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { CreditCard, Building2, DollarSign } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -90,7 +91,7 @@ export const OrderDetailsDialog = ({
             };
           }
         } catch (error) {
-          console.error(`Failed to decrypt PHI for patient ${patientId}:`, error);
+          logger.error(`Failed to decrypt PHI for patient`, error, logger.sanitize({ patientId }));
         }
         return null;
       });
@@ -111,7 +112,7 @@ export const OrderDetailsDialog = ({
             };
           }
         } catch (error) {
-          console.error(`Failed to decrypt contact info for order line ${lineId}:`, error);
+          logger.error(`Failed to decrypt contact info for order line`, error, logger.sanitize({ lineId }));
         }
         return null;
       });
@@ -181,9 +182,7 @@ export const OrderDetailsDialog = ({
 
   const handleDownloadPrescription = async (prescriptionUrl: string, patientName: string) => {
     try {
-      if (import.meta.env.DEV) {
-        console.log('Starting prescription download:', { prescriptionUrl, patientName });
-      }
+      logger.info('Starting prescription download', logger.sanitize({ prescriptionUrl, patientName }));
       
       // Extract the full file path from the signed URL
       // URL format: https://.../storage/v1/object/sign/prescriptions/{path}?token=...
@@ -194,9 +193,7 @@ export const OrderDetailsDialog = ({
       }
       
       const filePath = decodeURIComponent(match[1]); // Decode any URL encoding
-      if (import.meta.env.DEV) {
-        console.log('Extracted file path:', filePath);
-      }
+      logger.info('Extracted file path', { filePath });
       
       // Use Supabase client to download - handles auth and CORS properly
       const { data, error } = await supabase.storage
@@ -204,7 +201,7 @@ export const OrderDetailsDialog = ({
         .download(filePath);
       
       if (error) {
-        console.error('Supabase storage download error:', error);
+        logger.error('Supabase storage download error', error);
         throw new Error(`Storage error: ${error.message}`);
       }
       
@@ -263,9 +260,7 @@ export const OrderDetailsDialog = ({
         document.body.removeChild(a);
       }, 200);
       
-      if (import.meta.env.DEV) {
-        console.log('Prescription downloaded successfully');
-      }
+      logger.info('Prescription downloaded successfully');
       
       toast({
         title: "Download Complete",
@@ -273,7 +268,7 @@ export const OrderDetailsDialog = ({
       });
       
     } catch (error) {
-      console.error('Error downloading prescription:', error);
+      logger.error('Error downloading prescription', error);
       
       // Log to backend error system
       await supabase.functions.invoke('log-error', {

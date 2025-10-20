@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { logger } from "@/lib/logger";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole } = useAuth();
@@ -241,7 +242,7 @@ export const MessagesView = () => {
 
     if (threadError) {
       toast.error("Failed to create ticket: " + threadError.message);
-      console.error("Thread creation error:", threadError);
+      logger.error("Thread creation error", threadError);
       return;
     }
 
@@ -280,16 +281,16 @@ export const MessagesView = () => {
       );
       
       if (!allSamePharmacy) {
-        console.warn("Order has multiple pharmacies assigned - this should not happen");
+        logger.warn("Order has multiple pharmacies assigned", { orderId: selectedOrderId });
       }
     }
 
-    console.log("Creating ticket with participants:", {
+    logger.info("Creating ticket with participants", logger.sanitize({
       creator: effectiveUserId,
       participants: Array.from(participantIds),
       threadType: threadType,
       orderId: selectedOrderId
-    });
+    }));
 
     const participants = Array.from(participantIds).map(userId => ({
       thread_id: thread.id,
@@ -302,7 +303,7 @@ export const MessagesView = () => {
 
     if (participantsError) {
       toast.error("Failed to add participants");
-      console.error("Participants error:", participantsError);
+      logger.error("Participants error", participantsError);
       return;
     }
 
@@ -317,7 +318,7 @@ export const MessagesView = () => {
 
     if (messageError) {
       toast.error("Failed to send initial message");
-      console.error("Message error:", messageError);
+      logger.error("Message error", messageError);
       return;
     }
 
@@ -358,7 +359,7 @@ export const MessagesView = () => {
     
     if (error) {
       toast.error("Failed to mark as resolved");
-      console.error("Mark resolved error:", error);
+      logger.error("Mark resolved error", error);
     } else {
       toast.success("Ticket marked as resolved");
       // Clear selection if on unresolved filter
@@ -409,7 +410,7 @@ export const MessagesView = () => {
     
     if (error) {
       toast.error("Failed to reopen ticket");
-      console.error("Reopen error:", error);
+      logger.error("Reopen error", error);
     } else {
       toast.success("Ticket reopened");
       // Clear selection if on resolved filter

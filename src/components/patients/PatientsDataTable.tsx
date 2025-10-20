@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { formatPhoneNumber } from "@/lib/validators";
+import { logger } from "@/lib/logger";
 
 export const PatientsDataTable = () => {
   const { effectiveRole, effectivePracticeId } = useAuth();
@@ -30,9 +31,7 @@ export const PatientsDataTable = () => {
     queryKey: ["patients", effectiveRole, effectivePracticeId],
     staleTime: 0,
     queryFn: async () => {
-      if (import.meta.env.DEV) {
-        console.debug('Patients query params', { effectiveRole, effectivePracticeId });
-      }
+      logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
       let patientsQuery = supabase
         .from("patients")
         .select("*")
@@ -45,13 +44,11 @@ export const PatientsDataTable = () => {
 
       const { data: patientsData, error: patientsError } = await patientsQuery;
       if (patientsError) {
-        console.error("Error fetching patients:", patientsError);
+        logger.error("Error fetching patients", patientsError);
         throw patientsError;
       }
 
-      if (import.meta.env.DEV) {
-        console.debug('Patients fetched', patientsData?.length || 0);
-      }
+      logger.info('Patients fetched', { count: patientsData?.length || 0 });
 
       // Fetch practice details for all patients
       if (patientsData && patientsData.length > 0) {

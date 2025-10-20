@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { generateCSRFToken, clearCSRFToken } from "@/lib/csrf";
+import { logger } from "@/lib/logger";
 
 interface AuthContextType {
   user: User | null;
@@ -99,7 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser2FAPhone(null);
       }
     } catch (error) {
-      console.error('Error checking 2FA status:', error);
+      logger.error('Error checking 2FA status', error);
       setRequires2FASetup(false);
       setRequires2FAVerify(false);
     }
@@ -109,7 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, 'has session:', !!session);
+        logger.info('Auth state changed', { event, hasSession: !!session });
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -135,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', !!session);
+      logger.info('Initial session check', { hasSession: !!session });
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -169,7 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCanImpersonateDb(false);
         }
       } catch (error) {
-        console.error('Error checking impersonation permission:', error);
+        logger.error('Error checking impersonation permission', error, logger.sanitize({ userId: user.id }));
         setCanImpersonateDb(false);
       }
     };
@@ -216,7 +217,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } else {
             setEffectivePracticeId(null);
             setIsProviderAccount(false);
-            if (error) console.debug('Auth: provider practice lookup error', error);
+            if (error) logger.info('Auth: provider practice lookup', logger.sanitize({ error: error.message }));
           }
         } else {
           // Admin or other roles
@@ -224,7 +225,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsProviderAccount(false);
         }
       } catch (error) {
-        console.error('Error checking provider status and practice:', error);
+        logger.error('Error checking provider status and practice', error);
         setIsProviderAccount(false);
         setEffectivePracticeId(null);
       }
@@ -261,11 +262,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                       .from('impersonation_logs')
                       .update({ end_time: new Date().toISOString() })
                       .eq('id', logId);
-                  }
-                } catch (e) {
-                  console.error('Error ending impersonation log on deactivation:', e);
                 }
+              } catch (e) {
+                logger.error('Error ending impersonation log on deactivation', e);
               }
+            }
               
               await supabase.auth.signOut();
               setUserRole(null);
@@ -289,7 +290,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserRole = async (userId: string) => {
     try {
       setDataLoading(true);
-      console.log('Fetching user role for userId:', userId);
+      logger.info('Fetching user role', logger.sanitize({ userId }));
       
       const { data, error } = await supabase
         .from("user_roles")
@@ -299,7 +300,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       const role = data?.role ?? null;
-      console.log('User role fetched:', role);
+      logger.info('User role fetched', { role });
       setUserRole(role);
 
       // If provider role, fetch practice_id from providers table
@@ -339,14 +340,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Now that role is loaded, check password status and 2FA
-      console.log('Checking password status and 2FA for role:', role);
+      logger.info('Checking password status and 2FA', { role });
       await checkPasswordStatus();
       await check2FAStatus(userId);
       
-      console.log('All user data loaded, setting dataLoading to false');
+      logger.info('All user data loaded');
       setDataLoading(false);
     } catch (error) {
-      console.error("Error fetching user role:", error);
+      logger.error("Error fetching user role", error);
       setUserRole(null);
       setDataLoading(false);
     }
@@ -372,7 +373,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .maybeSingle();
 
       if (error) {
-        console.error('Error checking password status:', error);
+        logger.error('Error checking password status', error);
         return { mustChangePassword: false, termsAccepted: false };
       }
 
@@ -384,7 +385,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       return { mustChangePassword: mustChange, termsAccepted: termsAccept };
     } catch (error) {
-      console.error('Error in checkPasswordStatus:', error);
+      logger.error('Error in checkPasswordStatus', error);
       return { mustChangePassword: false, termsAccepted: false };
     }
   };
@@ -392,7 +393,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Re-check password status when impersonation changes (but not on initial load)
   useEffect(() => {
     if (user && effectiveUserId && effectiveRole && !dataLoading) {
-      console.log('Re-checking password status due to impersonation change');
+      logger.info('Re-checking password status due to impersonation change');
       checkPasswordStatus();
     }
   }, [effectiveUserId, effectiveRole]);
@@ -414,7 +415,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (profileError) {
-        console.error("Error checking account status:", profileError);
+        logger.error("Error checking account status", profileError);
         await supabase.auth.signOut();
         return { error: { message: "Unable to verify account status" } };
       }
@@ -437,7 +438,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Generate CSRF token after successful authentication
       const csrfToken = await generateCSRFToken();
       if (!csrfToken) {
-        console.warn('Failed to generate CSRF token - some operations may be restricted');
+        logger.warn('Failed to generate CSRF token - some operations may be restricted');
       }
 
       navigate("/dashboard");
@@ -482,18 +483,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        console.error('Edge function error:', error);
+        logger.error('Edge function error', error);
         return { error: { message: error.message } };
       }
 
       if (data?.error) {
-        console.error('Signup error:', data.error);
+        logger.error('Signup error', new Error(data.error));
         return { error: { message: data.error } };
       }
 
       return { error: null };
     } catch (error: any) {
-      console.error('Unexpected signup error:', error);
+      logger.error('Unexpected signup error', error);
       return { error: { message: error.message || 'An unexpected error occurred' } };
     }
   };
@@ -514,7 +515,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('id', currentLogId);
         setCurrentLogId(null);
       } catch (error) {
-        console.error('Error updating impersonation log:', error);
+        logger.error('Error updating impersonation log', error);
       }
     }
     
@@ -536,7 +537,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .single();
 
         if (logError) {
-          console.error('Error creating impersonation log:', logError);
+          logger.error('Error creating impersonation log', logError);
           toast.error("Failed to log impersonation session");
           return;
         }
@@ -552,7 +553,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }));
         }
       } catch (error) {
-        console.error('Error logging impersonation:', error);
+        logger.error('Error logging impersonation', error);
         toast.error("Failed to start impersonation session");
         return;
       }
@@ -580,7 +581,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .update({ end_time: new Date().toISOString() })
           .eq('id', currentLogId);
       } catch (error) {
-        console.error('Error updating impersonation log:', error);
+        logger.error('Error updating impersonation log', error);
       }
     }
     
@@ -601,7 +602,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .update({ end_time: new Date().toISOString() })
           .eq('id', currentLogId);
       } catch (error) {
-        console.error('Error updating impersonation log on signout:', error);
+        logger.error('Error updating impersonation log on signout', error);
       }
     }
     
@@ -621,8 +622,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Combine loading states - only ready when both auth and data are loaded
   const isFullyLoaded = !loading && !dataLoading;
   
-  console.log('AuthContext state:', { 
-    loading, 
+  logger.info('AuthContext state', logger.sanitize({ 
+    loading,
     dataLoading, 
     isFullyLoaded,
     effectiveRole, 
