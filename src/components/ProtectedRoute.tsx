@@ -91,8 +91,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return null;
   }
 
-  // Show 2FA dialogs if needed (admins not impersonating are exempt)
-  if (effectiveRole !== 'admin' || isImpersonating) {
+  // Show 2FA dialogs if needed (admins never need 2FA, even when impersonating)
+  if (effectiveRole !== 'admin' && !isImpersonating) {
     if (requires2FASetup) {
       return <TwoFactorSetupDialog open={true} userId={user.id} />;
     }

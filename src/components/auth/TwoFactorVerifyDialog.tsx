@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, LogOut } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TwoFactorVerifyDialogProps {
   open: boolean;
@@ -14,6 +15,7 @@ interface TwoFactorVerifyDialogProps {
 
 export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDialogProps) => {
   const { toast } = useToast();
+  const { isImpersonating, clearImpersonation } = useAuth();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -168,6 +170,17 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
               Verify
             </Button>
           </div>
+
+          {isImpersonating && (
+            <Button
+              variant="outline"
+              onClick={clearImpersonation}
+              className="w-full"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Return to Admin
+            </Button>
+          )}
 
           <p className="text-xs text-center text-muted-foreground">
             Need help? Contact support

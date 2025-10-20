@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, LogOut } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TwoFactorSetupDialogProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface TwoFactorSetupDialogProps {
 
 export const TwoFactorSetupDialog = ({ open, userId }: TwoFactorSetupDialogProps) => {
   const { toast } = useToast();
+  const { isImpersonating, clearImpersonation } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"phone" | "verify">("phone");
@@ -169,6 +171,17 @@ export const TwoFactorSetupDialog = ({ open, userId }: TwoFactorSetupDialogProps
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Send Verification Code
             </Button>
+
+            {isImpersonating && (
+              <Button
+                variant="outline"
+                onClick={clearImpersonation}
+                className="w-full"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Return to Admin
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4 py-4">
@@ -220,6 +233,17 @@ export const TwoFactorSetupDialog = ({ open, userId }: TwoFactorSetupDialogProps
             >
               Change Phone Number
             </Button>
+
+            {isImpersonating && (
+              <Button
+                variant="outline"
+                onClick={clearImpersonation}
+                className="w-full"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Return to Admin
+              </Button>
+            )}
           </div>
         )}
       </DialogContent>
