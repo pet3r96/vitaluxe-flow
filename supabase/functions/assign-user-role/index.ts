@@ -11,6 +11,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-csrf-token',
 };
 
+function isTrustedOrigin(url: string): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return host === 'app.vitaluxeservices.com'
+      || host.endsWith('.lovableproject.com')
+      || host.endsWith('.lovable.app');
+  } catch {
+    return false;
+  }
+}
+
 interface SignupRequest {
   email: string;
   password?: string; // Optional - will be generated if not provided
@@ -173,16 +186,38 @@ serve(async (req) => {
         const headerToken = req.headers.get('x-csrf-token') || undefined;
         const bodyToken = signupData.csrfToken || undefined;
         const effectiveToken = headerToken || bodyToken;
+
+        // Diagnostics: log header names and body keys (no values)
+        try {
+          const headerNames = Array.from(req.headers.keys());
+          console.log('Headers received:', headerNames);
+          console.log('Body keys:', Object.keys(signupData || {}));
+        } catch (_) {}
         
         console.log(`CSRF token source: ${headerToken ? 'header' : bodyToken ? 'body' : 'none'}`);
         
-        const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, effectiveToken);
-        if (!csrfValidation.valid) {
-          console.error('CSRF validation failed:', csrfValidation.error);
-          return new Response(
-            JSON.stringify({ error: csrfValidation.error || 'Invalid CSRF token' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+        if (effectiveToken) {
+          const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, effectiveToken);
+          if (!csrfValidation.valid) {
+            console.error('CSRF validation failed:', csrfValidation.error);
+            return new Response(
+              JSON.stringify({ error: csrfValidation.error || 'Invalid CSRF token' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } else {
+          const originHeader = req.headers.get('origin') || '';
+          const refererHeader = req.headers.get('referer') || '';
+          const trusted = isTrustedOrigin(originHeader || refererHeader);
+          if (trusted) {
+            console.warn('No CSRF token; proceeding due to trusted origin and bearer auth', { origin: originHeader, referer: refererHeader });
+          } else {
+            console.error('CSRF validation failed: CSRF token is required');
+            return new Response(
+              JSON.stringify({ error: 'CSRF token is required' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
         
         // Check if caller is an admin
