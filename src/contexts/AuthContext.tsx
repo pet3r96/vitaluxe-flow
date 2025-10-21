@@ -166,6 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         hasBootstrapped.current = true;
         await fetchUserRole(session.user.id);
         await generateCSRFToken();
+        setDataLoading(false);
       } else {
         setDataLoading(false);
       }
@@ -314,7 +315,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      setDataLoading(true);
       logger.info('Fetching user role', logger.sanitize({ userId }));
       
       const { data, error } = await supabase
@@ -370,11 +370,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await check2FAStatus(userId);
       
       logger.info('All user data loaded');
-      setDataLoading(false);
     } catch (error) {
       logger.error("Error fetching user role", error);
       setUserRole(null);
-      setDataLoading(false);
     }
   };
 
