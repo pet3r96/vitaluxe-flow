@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { validateManageStatusConfigRequest } from '../_shared/requestValidators.ts';
+import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,24 +13,23 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    {
+      global: {
+        headers: { Authorization: req.headers.get('Authorization')! },
+      },
+    }
+  );
 
+  let requestData: any;
+
+  try {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse('Unauthorized', 401, null, undefined, corsHeaders);
     }
 
     // Check if user is admin
@@ -39,30 +40,38 @@ serve(async (req) => {
       .single();
 
     if (!roleData || roleData.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse('Admin access required', 403, null, undefined, corsHeaders);
     }
 
-    const { operation, statusConfig } = await req.json();
-
-    if (!operation) {
-      return new Response(JSON.stringify({ error: 'Missing operation' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Parse request body
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return createErrorResponse('Invalid JSON in request body', 400, null, undefined, corsHeaders);
     }
+
+    // Validate input
+    const validation = validateManageStatusConfigRequest(requestData);
+    if (!validation.valid) {
+      console.error('Status config validation failed:', validation.errors);
+      return createErrorResponse(
+        'Invalid status configuration data',
+        400,
+        null,
+        validation.errors,
+        corsHeaders
+      );
+    }
+
+    const { operation, statusConfig, statusConfigId } = requestData;
 
     let result;
 
     switch (operation) {
       case 'create': {
         if (!statusConfig?.status_key || !statusConfig?.display_name || !statusConfig?.color_class || !statusConfig?.sort_order) {
-          return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          return createErrorResponse('Missing required fields for create operation', 400, null, undefined, corsHeaders);
         }
 
         const { data, error } = await supabaseClient
@@ -82,11 +91,15 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          console.error('Failed to create status config:', error);
-          return new Response(JSON.stringify({ error: 'Failed to create status' }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          console.error('Failed to create status config:', error.message);
+          return handleError(
+            supabaseClient,
+            error,
+            'manage-status-configs',
+            'database',
+            corsHeaders,
+            { operation: 'create', status_key: statusConfig.status_key }
+          );
         }
 
         result = data;
@@ -95,10 +108,7 @@ serve(async (req) => {
 
       case 'update': {
         if (!statusConfig?.id) {
-          return new Response(JSON.stringify({ error: 'Missing status config ID' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          return createErrorResponse('Missing status config ID for update operation', 400, null, undefined, corsHeaders);
         }
 
         const updateData: any = {
@@ -120,11 +130,15 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          console.error('Failed to update status config:', error);
-          return new Response(JSON.stringify({ error: 'Failed to update status' }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          console.error('Failed to update status config:', error.message);
+          return handleError(
+            supabaseClient,
+            error,
+            'manage-status-configs',
+            'database',
+            corsHeaders,
+            { operation: 'update', status_config_id: statusConfig.id }
+          );
         }
 
         result = data;
@@ -133,10 +147,7 @@ serve(async (req) => {
 
       case 'delete': {
         if (!statusConfig?.id) {
-          return new Response(JSON.stringify({ error: 'Missing status config ID' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          return createErrorResponse('Missing status config ID for delete operation', 400, null, undefined, corsHeaders);
         }
 
         // Check if it's a system default
@@ -147,10 +158,7 @@ serve(async (req) => {
           .single();
 
         if (existingConfig?.is_system_default) {
-          return new Response(JSON.stringify({ error: 'Cannot delete system default status' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          return createErrorResponse('Cannot delete system default status', 400, null, undefined, corsHeaders);
         }
 
         // Soft delete by setting is_active to false
@@ -160,11 +168,15 @@ serve(async (req) => {
           .eq('id', statusConfig.id);
 
         if (error) {
-          console.error('Failed to deactivate status config:', error);
-          return new Response(JSON.stringify({ error: 'Failed to delete status' }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          console.error('Failed to deactivate status config:', error.message);
+          return handleError(
+            supabaseClient,
+            error,
+            'manage-status-configs',
+            'database',
+            corsHeaders,
+            { operation: 'delete', status_config_id: statusConfig.id }
+          );
         }
 
         result = { success: true };
@@ -172,10 +184,7 @@ serve(async (req) => {
       }
 
       default:
-        return new Response(JSON.stringify({ error: 'Invalid operation' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return createErrorResponse('Invalid operation. Must be create, update, or delete', 400, null, undefined, corsHeaders);
     }
 
     return new Response(
@@ -187,13 +196,14 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in manage-status-configs:', error);
-    return new Response(
-      JSON.stringify({ error: (error as Error).message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+    console.error('Status config management error:', error);
+    return handleError(
+      supabaseClient,
+      error,
+      'manage-status-configs',
+      'internal',
+      corsHeaders,
+      { operation: requestData?.operation }
     );
   }
 });

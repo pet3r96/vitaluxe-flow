@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGeneratePrescriptionRequest } from '../_shared/requestValidators.ts';
+import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,10 +32,13 @@ serve(async (req) => {
 
     const validation = validateGeneratePrescriptionRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
-      return new Response(
-        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      console.error('Prescription validation failed:', validation.errors);
+      return createErrorResponse(
+        'Invalid prescription data',
+        400,
+        null,
+        validation.errors,
+        corsHeaders
       );
     }
 
@@ -460,16 +464,14 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Error generating prescription:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'An error occurred generating the prescription'
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+    console.error('Prescription PDF generation error:', error);
+    return handleError(
+      supabase,
+      error,
+      'generate-prescription-pdf',
+      'internal',
+      corsHeaders,
+      { provider_id: requestData?.provider_id, product_name: requestData?.product_name }
     );
   }
 });

@@ -303,3 +303,68 @@ export function validateFixOrphanedUsersRequest(data: any) {
   
   return validateInput(validations);
 }
+
+export function validateWebhookRequest(data: any) {
+  const validations = [
+    validateString(data.eventType, 'eventType', { required: true, maxLength: 100 }),
+  ];
+  
+  // Validate payload structure if present
+  if (data.payload) {
+    if (data.payload.id) {
+      validations.push(validateString(data.payload.id, 'payload.id', { maxLength: 100 }));
+    }
+  }
+  
+  return validateInput(validations);
+}
+
+export function validateCalculateShippingRequest(data: any) {
+  const validations = [
+    validateUUID(data.pharmacy_id, 'pharmacy_id'),
+    validateEnum(data.shipping_speed, 'shipping_speed', ['ground', '2day', 'overnight'], true)
+  ];
+  
+  return validateInput(validations);
+}
+
+export function validateManageStatusConfigRequest(data: any) {
+  const validations = [
+    validateEnum(data.operation, 'operation', ['create', 'update', 'delete', 'get'], true),
+  ];
+  
+  // Validate config fields based on operation
+  if (data.operation === 'create' || data.operation === 'update') {
+    validations.push(
+      validateString(data.statusConfig?.status_key, 'statusConfig.status_key', { 
+        required: true, 
+        maxLength: 50
+      }),
+      validateString(data.statusConfig?.display_name, 'statusConfig.display_name', { 
+        required: true, 
+        maxLength: 100 
+      }),
+      validateString(data.statusConfig?.color_class, 'statusConfig.color_class', { 
+        maxLength: 50
+      }),
+      validateNumber(data.statusConfig?.sort_order, 'statusConfig.sort_order', { 
+        min: 0, 
+        max: 1000 
+      })
+    );
+    
+    // Additional pattern validation
+    if (data.statusConfig?.status_key && !/^[a-z0-9_]+$/.test(data.statusConfig.status_key)) {
+      return { valid: false, errors: ['status_key must contain only lowercase letters, numbers, and underscores'] };
+    }
+    if (data.statusConfig?.color_class && !/^[a-z0-9-]+$/.test(data.statusConfig.color_class)) {
+      return { valid: false, errors: ['color_class must contain only lowercase letters, numbers, and hyphens'] };
+    }
+  }
+  
+  if (data.operation === 'update' || data.operation === 'delete') {
+    validations.push(validateUUID(data.statusConfigId, 'statusConfigId'));
+  }
+  
+  return validateInput(validations);
+}

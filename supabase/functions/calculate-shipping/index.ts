@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { validateCalculateShippingRequest } from '../_shared/requestValidators.ts';
+import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,18 +18,40 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
-    );
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+    {
+      global: {
+        headers: { Authorization: req.headers.get("Authorization")! },
+      },
+    }
+  );
 
-    const { pharmacy_id, shipping_speed } = await req.json() as CalculateShippingRequest;
+  try {
+    // Parse request body
+    let requestData: CalculateShippingRequest;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return createErrorResponse('Invalid JSON in request body', 400, null, undefined, corsHeaders);
+    }
+
+    // Validate input
+    const validation = validateCalculateShippingRequest(requestData);
+    if (!validation.valid) {
+      console.error('Shipping calculation validation failed:', validation.errors);
+      return createErrorResponse(
+        'Invalid shipping calculation parameters',
+        400,
+        null,
+        validation.errors,
+        corsHeaders
+      );
+    }
+
+    const { pharmacy_id, shipping_speed } = requestData;
 
     console.info(`Calculating shipping for pharmacy ${pharmacy_id} with speed ${shipping_speed}`);
 
@@ -40,7 +64,15 @@ serve(async (req) => {
       .maybeSingle();
 
     if (error) {
-      console.error("Error fetching shipping rate:", error);
+      console.error("Database error fetching shipping rate:", error.message);
+      return handleError(
+        supabase,
+        error,
+        'calculate-shipping',
+        'database',
+        corsHeaders,
+        { pharmacy_id, shipping_speed }
+      );
     }
 
     // Default fallback rates if pharmacy hasn't configured
@@ -55,15 +87,22 @@ serve(async (req) => {
     console.info(`Shipping cost calculated: $${shipping_cost}`);
 
     return new Response(
-      JSON.stringify({ shipping_cost }),
+      JSON.stringify({ 
+        success: true,
+        shipping_cost,
+        pharmacy_id,
+        shipping_speed
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in calculate-shipping:", error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    console.error("Shipping calculation error:", error);
+    return handleError(
+      supabase,
+      error,
+      'calculate-shipping',
+      'internal',
+      corsHeaders
     );
   }
 });

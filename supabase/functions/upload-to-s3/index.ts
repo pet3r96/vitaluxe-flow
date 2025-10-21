@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.485.0";
+import { handleError, mapExternalApiError } from '../_shared/errorHandler.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,17 +130,14 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error uploading to S3:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Failed to upload to S3',
-        details: error.message
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
+    console.error('S3 upload error:', error);
+    return handleError(
+      supabase,
+      error,
+      'upload-to-s3',
+      'external_api',
+      corsHeaders,
+      { file_name: fileName, content_type: contentType }
     );
   }
 });

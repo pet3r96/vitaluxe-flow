@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePlaidExchangeRequest } from "../_shared/requestValidators.ts";
 import { validateCSRFToken } from "../_shared/csrfValidator.ts";
 import { RateLimiter, RATE_LIMITS, getClientIP } from "../_shared/rateLimiter.ts";
+import { handleError, createErrorResponse, mapExternalApiError } from '../_shared/errorHandler.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,13 +47,13 @@ serve(async (req) => {
     // Validate input
     const validation = validatePlaidExchangeRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid request data', 
-          details: validation.errors 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      console.error('Plaid exchange validation failed:', validation.errors);
+      return createErrorResponse(
+        'Invalid payment setup parameters',
+        400,
+        null,
+        validation.errors,
+        corsHeaders
       );
     }
 
@@ -195,14 +196,13 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error exchanging token:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+    console.error('Plaid exchange token error:', error);
+    return handleError(
+      supabaseClient,
+      error,
+      'plaid-exchange-token',
+      'external_api',
+      corsHeaders
     );
   }
 });
