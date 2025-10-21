@@ -81,20 +81,16 @@ const handler = async (req: Request): Promise<Response> => {
     const baseDelay = 200;
     const jitter = Math.random() * 100;
     
-    // Check if user exists
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+    // Check if profile exists by email
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, active, name, email')
+      .eq('email', email)
+      .maybeSingle();
     
-    if (userError) {
-      console.error("Error fetching users");
-      throw userError;
-    }
-
-    const user = userData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-
-    if (!user) {
-      // Add delay to prevent timing-based enumeration
+    if (profileError || !profile) {
+      // Profile doesn't exist - return success to prevent enumeration
       await new Promise(r => setTimeout(r, baseDelay + jitter));
-      
       console.log('Password reset request processed');
       return new Response(
         JSON.stringify({ 
@@ -106,13 +102,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Check if user is active
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('active, name')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.active) {
+    if (!profile.active) {
       // Add delay to prevent timing-based enumeration
       await new Promise(r => setTimeout(r, baseDelay + jitter));
       
@@ -125,6 +115,24 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Get auth user by ID
+    const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+    
+    if (userError || !authUser.user) {
+      // Auth user not found - return success to prevent enumeration
+      await new Promise(r => setTimeout(r, baseDelay + jitter));
+      console.log('Password reset request processed');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "If an account exists with this email, a password reset email has been sent." 
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const user = authUser.user;
 
     // Generate new temporary password
     const temporaryPassword = generateSecurePassword();
