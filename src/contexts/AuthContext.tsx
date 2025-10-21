@@ -585,12 +585,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Check 2FA status after successful login
-      // Emergency navigation timeout - ensure user gets redirected even if post-login operations hang
-      const navigationTimeout = setTimeout(() => {
-        logger.warn('Emergency navigation timeout triggered - forcing redirect');
-        navigate("/dashboard");
-      }, 2000);
-      
       // Perform post-login setup in background (don't block navigation)
       Promise.all([
         check2FAStatus(user.id).catch(err => logger.error('2FA check failed', err)),
@@ -598,9 +592,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         generateCSRFToken().catch(err => logger.error('CSRF generation failed', err))
       ]).catch(err => logger.error('Post-login setup failed', err));
       
-      // Clear emergency timeout and navigate immediately
-      clearTimeout(navigationTimeout);
-      navigate("/dashboard");
+      // Navigate after a tiny delay to allow Auth.tsx finally block to execute
+      // This prevents the loading timeout from triggering
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 100);
       return { error: null };
     } catch (error: any) {
       return { error };
