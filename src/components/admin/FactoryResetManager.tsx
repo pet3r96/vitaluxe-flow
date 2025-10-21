@@ -181,20 +181,31 @@ export const FactoryResetManager = () => {
         body: { confirm: "DELETE ALL ORDERS" },
       });
 
-      if (error) throw error;
+      // Check if we have valid data even if there's an error reported
+      const hasValidData = data && typeof data.total_deleted === 'number';
+      
+      if (!hasValidData && error) {
+        throw error;
+      }
 
-      setDeleteOrdersResult(data);
+      // Use data even if error is present (edge function might succeed but report error)
+      const resultData = data || { total_deleted: 0, execution_time_seconds: 0, deleted_counts: {} };
+      
+      setDeleteOrdersResult(resultData);
       setShowDeleteOrdersDialog(false);
       setDeleteOrdersConfirmText("");
       
       // Invalidate orders-related queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["order-lines"] });
-      queryClient.invalidateQueries({ queryKey: ["order-profits"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-lines"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-profits"] }),
+        queryClient.invalidateQueries({ queryKey: ["commissions"] }),
+      ]);
       
       toast({
         title: "Success",
-        description: `Deleted ${data.total_deleted} order records in ${data.execution_time_seconds}s`,
+        description: `Deleted ${resultData.total_deleted} order records in ${resultData.execution_time_seconds}s`,
       });
     } catch (error: any) {
       console.error("Delete orders error:", error);

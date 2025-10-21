@@ -131,34 +131,41 @@ serve(async (req) => {
     const totalDeleted = Object.values(deletedCounts).reduce((sum, count) => sum + count, 0);
     const executionTimeSeconds = (Date.now() - startTime) / 1000;
 
-    // Log to audit_logs (using admin client to bypass RLS)
-    await supabaseAdmin.from("audit_logs").insert({
-      action_type: "delete_all_orders",
-      entity_type: "orders",
-      entity_id: null,
-      user_id: user.id,
-      user_email: user.email,
-      user_role: "admin",
-      details: {
-        deleted_counts: deletedCounts,
-        total_deleted: totalDeleted,
-        execution_time_seconds: executionTimeSeconds,
-        errors: Object.keys(errors).length > 0 ? errors : undefined,
-      },
-      ip_address: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip"),
-      user_agent: req.headers.get("user-agent"),
-    });
-
     console.log(`Deletion complete. Total deleted: ${totalDeleted} records in ${executionTimeSeconds}s`);
 
+    // Prepare response data
+    const responseData = {
+      success: true,
+      deleted_counts: deletedCounts,
+      total_deleted: totalDeleted,
+      execution_time_seconds: executionTimeSeconds,
+      errors: Object.keys(errors).length > 0 ? errors : undefined,
+    };
+
+    // Log to audit_logs (using admin client to bypass RLS) - non-blocking
+    try {
+      await supabaseAdmin.from("audit_logs").insert({
+        action_type: "delete_all_orders",
+        entity_type: "orders",
+        entity_id: null,
+        user_id: user.id,
+        user_email: user.email,
+        user_role: "admin",
+        details: {
+          deleted_counts: deletedCounts,
+          total_deleted: totalDeleted,
+          execution_time_seconds: executionTimeSeconds,
+          errors: Object.keys(errors).length > 0 ? errors : undefined,
+        },
+        ip_address: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip"),
+        user_agent: req.headers.get("user-agent"),
+      });
+    } catch (auditError) {
+      console.error("Failed to log audit entry (non-fatal):", auditError);
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        deleted_counts: deletedCounts,
-        total_deleted: totalDeleted,
-        execution_time_seconds: executionTimeSeconds,
-        errors: Object.keys(errors).length > 0 ? errors : undefined,
-      }),
+      JSON.stringify(responseData),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
