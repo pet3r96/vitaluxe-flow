@@ -190,10 +190,6 @@ const Auth = () => {
           });
         } else {
           setShowVerificationMessage(true);
-          toast({
-            title: "Success",
-            description: "Account created! Please check your email to verify your address.",
-          });
         }
       }
     } catch (error: any) {
@@ -207,6 +203,63 @@ const Auth = () => {
     }
   };
 
+  // Full-screen verification message
+  if (showVerificationMessage && !isLogin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-2xl text-center space-y-6">
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="w-6 h-6 text-primary" />
+            </div>
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+          
+          <h1 className="text-4xl font-bold text-foreground">
+            Verification Email Sent!
+          </h1>
+          
+          <div className="space-y-4 text-lg text-muted-foreground">
+            <p>
+              We've sent a verification link to{" "}
+              <span className="text-foreground font-semibold">{email}</span>. 
+              Please check your inbox and click the link to activate your account.
+            </p>
+            
+            <p className="text-base">
+              Didn't receive the email? Check your spam folder or{" "}
+              <button
+                onClick={() => setShowVerificationMessage(false)}
+                className="text-primary hover:underline font-medium"
+              >
+                try signing up again
+              </button>.
+            </p>
+          </div>
+
+          <div className="pt-8">
+            <p className="text-sm text-muted-foreground mb-3">
+              Already verified your email?
+            </p>
+            <Button
+              onClick={() => {
+                setIsLogin(true);
+                setShowVerificationMessage(false);
+              }}
+              variant="outline"
+              size="lg"
+              className="gap-2"
+            >
+              Sign In with Your Account
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md p-8 bg-card border-border shadow-gold">
@@ -217,33 +270,6 @@ const Auth = () => {
         <p className="text-center text-muted-foreground mb-8">
           {isLogin ? "Sign in to your account" : "Create your account"}
         </p>
-
-        {showVerificationMessage && !isLogin && (
-          <Alert className="mb-4 bg-success/10 border-success/20">
-            <Mail className="h-4 w-4 text-success" />
-            <AlertDescription className="text-sm space-y-2">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-semibold text-success">Verification Email Sent!</p>
-                  <p className="text-muted-foreground mt-1">
-                    We've sent a verification link to <strong>{email}</strong>. 
-                    Please check your inbox and click the link to activate your account.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Didn't receive the email? Check your spam folder or{' '}
-                    <button 
-                      onClick={() => setShowVerificationMessage(false)}
-                      className="text-primary hover:underline"
-                    >
-                      try signing up again
-                    </button>.
-                  </p>
-                </div>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
 
         {isLogin && !showVerificationMessage && (
           <Alert className="mb-4 bg-primary/10 border-primary/20">
