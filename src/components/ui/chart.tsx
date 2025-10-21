@@ -66,12 +66,12 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   }
 
   // Color sanitization to prevent CSS injection
-  const sanitizeColor = (color: string | undefined): string => {
-    if (!color) return '#000000';
+  const sanitizeColor = (color: string | undefined): string | null => {
+    if (!color) return '#000000'; // Safe default for missing config
     const trimmed = color.trim();
     // Allow valid CSS color formats: hex, rgb/rgba, hsl/hsla
     const colorRegex = /^(#[0-9A-Fa-f]{3,8}|rgb(a)?\([0-9,\s.]+\)|hsl(a)?\([0-9,\s.%]+\))$/;
-    return colorRegex.test(trimmed) ? trimmed : '#000000';
+    return colorRegex.test(trimmed) ? trimmed : null; // Return null for invalid formats
   };
 
   return (
