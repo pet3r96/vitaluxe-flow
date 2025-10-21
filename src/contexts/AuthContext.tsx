@@ -111,11 +111,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Bootstrap timeout failsafe - prevent stuck loading screen
+    // Increased to 8000ms to allow for slow connections and prevent false-positives
     const bootstrapTimeout = window.setTimeout(() => {
-      logger.warn('Auth bootstrap timeout: forcing loading state to clear');
+      logger.warn('Auth bootstrap timeout (8s): forcing loading state to clear');
       setDataLoading(false);
       setLoading(false);
-    }, 4000);
+    }, 8000);
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

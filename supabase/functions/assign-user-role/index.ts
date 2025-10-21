@@ -306,6 +306,18 @@ serve(async (req) => {
       }
     }
 
+    // Check if user already exists by email
+    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
+    const userExists = existingUser?.users?.some(u => u.email?.toLowerCase() === signupData.email.toLowerCase());
+    
+    if (userExists) {
+      console.warn('User already exists with email:', signupData.email);
+      return new Response(
+        JSON.stringify({ error: 'A user with this email already exists. Please use a different email address.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create user using admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: signupData.email,
@@ -367,11 +379,24 @@ serve(async (req) => {
 
     if (creationError || !creationResult?.success) {
       console.error('User creation error:', creationError || creationResult?.error);
+      
+      // Check if it's a duplicate key constraint violation (profile already exists)
+      const isDuplicateKey = creationError?.code === '23505' || 
+                            creationError?.message?.includes('duplicate key') ||
+                            creationError?.message?.includes('profiles_pkey');
+      
       // Clean up: delete the auth user if profile/role creation fails
+      console.log('Cleaning up auth user due to profile creation failure...');
       await supabaseAdmin.auth.admin.deleteUser(userId);
+      console.log('Auth user cleanup complete');
+      
+      const errorMessage = isDuplicateKey 
+        ? 'A profile with this information already exists. Please contact support if you believe this is an error.'
+        : (creationResult?.error || 'Failed to create user profile and role');
+      
       return new Response(
-        JSON.stringify({ error: creationResult?.error || 'Failed to create user profile and role' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: errorMessage }),
+        { status: isDuplicateKey ? 409 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
