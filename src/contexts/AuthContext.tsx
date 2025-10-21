@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { generateCSRFToken, clearCSRFToken, getCurrentCSRFToken } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
+import { SESSION_CONFIG } from "@/config/session";
+import { updateActivity } from "@/lib/sessionManager";
+import { IdleWarningDialog } from "@/components/auth/IdleWarningDialog";
 
 interface AuthContextType {
   user: User | null;
@@ -64,6 +67,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [requires2FASetup, setRequires2FASetup] = useState(false);
   const [requires2FAVerify, setRequires2FAVerify] = useState(false);
   const [user2FAPhone, setUser2FAPhone] = useState<string | null>(null);
+  
+  // Idle timeout state
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [showIdleWarning, setShowIdleWarning] = useState(false);
+  const [idleSecondsRemaining, setIdleSecondsRemaining] = useState(0);
+  
   const navigate = useNavigate();
   
   // Prevent double initial load
@@ -493,6 +502,115 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [effectiveUserId, effectiveRole]);
 
+  // Idle timeout: Track user activity
+  useEffect(() => {
+    if (!user) return;
+
+    const handleActivity = () => {
+      setLastActivityTime(Date.now());
+      setShowIdleWarning(false);
+      updateActivity(); // Update database (throttled)
+    };
+
+    // Register activity listeners
+    SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
+      window.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    return () => {
+      SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
+        window.removeEventListener(event, handleActivity);
+      });
+    };
+  }, [user]);
+
+  // Idle timeout: Check for inactivity
+  useEffect(() => {
+    if (!user) return;
+
+    const checkIdleTimeout = () => {
+      const now = Date.now();
+      const idleMinutes = (now - lastActivityTime) / 60000;
+      const warningThreshold = SESSION_CONFIG.IDLE_TIMEOUT_MINUTES - SESSION_CONFIG.WARNING_BEFORE_LOGOUT_MINUTES;
+
+      // Show warning at 28 minutes idle
+      if (idleMinutes >= warningThreshold && idleMinutes < SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
+        const secondsRemaining = Math.floor((SESSION_CONFIG.IDLE_TIMEOUT_MINUTES - idleMinutes) * 60);
+        setIdleSecondsRemaining(secondsRemaining);
+        setShowIdleWarning(true);
+      }
+
+      // Force logout at 30 minutes idle
+      if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
+        forceLogout('idle_timeout');
+      }
+    };
+
+    // Check every 60 seconds
+    const interval = setInterval(checkIdleTimeout, SESSION_CONFIG.SESSION_CHECK_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [user, lastActivityTime]);
+
+  // Idle timeout: Check on tab visibility change
+  useEffect(() => {
+    if (!user) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        // Tab became visible - check if session expired while hidden
+        const idleMinutes = (Date.now() - lastActivityTime) / 60000;
+        if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
+          forceLogout('idle_timeout');
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, lastActivityTime]);
+
+  const forceLogout = async (reason: 'idle_timeout' | 'session_expired') => {
+    logger.info('Force logout triggered', { reason });
+
+    // Log security event
+    try {
+      await supabase.from('audit_logs').insert({
+        user_id: user?.id,
+        user_email: user?.email,
+        user_role: effectiveRole,
+        action_type: 'force_logout',
+        entity_type: 'auth',
+        details: {
+          reason,
+          idle_time_minutes: (Date.now() - lastActivityTime) / 60000,
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to log force logout', error);
+    }
+
+    // Clear session and redirect
+    setShowIdleWarning(false);
+    await signOut();
+    toast.error('Your session expired due to inactivity. Please log in again.');
+  };
+
+  const handleStayLoggedIn = () => {
+    setLastActivityTime(Date.now());
+    setShowIdleWarning(false);
+    updateActivity();
+    toast.success('Session extended - you can continue working');
+  };
+
+  const handleLogoutNow = () => {
+    setShowIdleWarning(false);
+    forceLogout('idle_timeout');
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       // Mark this as a critical operation so loading state is shown
@@ -769,6 +887,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signOut 
     }}>
       {children}
+      <IdleWarningDialog
+        open={showIdleWarning}
+        secondsRemaining={idleSecondsRemaining}
+        onStayLoggedIn={handleStayLoggedIn}
+        onLogoutNow={handleLogoutNow}
+      />
     </AuthContext.Provider>
   );
 };

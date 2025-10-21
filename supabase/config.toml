@@ -128,3 +128,9 @@ verify_jwt = true
 
 [functions.factory-reset]
 verify_jwt = true
+
+[functions.cleanup-stale-sessions]
+verify_jwt = false
+
+[functions.cleanup-stale-sessions.schedule]
+cron = "*/15 * * * *"
