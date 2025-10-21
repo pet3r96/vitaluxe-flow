@@ -242,13 +242,14 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
           parentId: user?.id, // Set current admin as parent
           roleData,
           contractFile: contractFileData,
+          csrfToken, // Include in body as fallback
         },
         headers: {
           'x-csrf-token': csrfToken
         }
       });
 
-      if (error) throw error;
+      if (error) throw new Error((data as any)?.error || error.message);
 
       toast.success(`Account created! Welcome email with login credentials sent to ${formData.email}`);
       onSuccess();

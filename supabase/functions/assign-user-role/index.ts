@@ -19,6 +19,7 @@ interface SignupRequest {
   prescriberName?: string;
   role: 'admin' | 'doctor' | 'practice' | 'pharmacy' | 'topline' | 'downline' | 'provider';
   parentId?: string;
+  csrfToken?: string; // Optional - fallback if header is stripped
   roleData: {
     // Doctor/Practice fields
     licenseNumber?: string;
@@ -168,8 +169,14 @@ serve(async (req) => {
         callerUserId = user.id;
 
         // Validate CSRF token for authenticated requests
-        const csrfToken = req.headers.get('x-csrf-token') || undefined;
-        const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
+        // Accept token from header OR body (fallback if header is stripped by browser/proxy)
+        const headerToken = req.headers.get('x-csrf-token') || undefined;
+        const bodyToken = signupData.csrfToken || undefined;
+        const effectiveToken = headerToken || bodyToken;
+        
+        console.log(`CSRF token source: ${headerToken ? 'header' : bodyToken ? 'body' : 'none'}`);
+        
+        const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, effectiveToken);
         if (!csrfValidation.valid) {
           console.error('CSRF validation failed:', csrfValidation.error);
           return new Response(

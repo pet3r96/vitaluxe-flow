@@ -118,6 +118,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
           fullName: formData.fullName,
           prescriberName: formData.prescriberName,
           role: 'provider',
+          csrfToken, // Include in body as fallback
           roleData: {
             practiceId: targetPracticeId,
             npi: formData.npi,
@@ -131,8 +132,8 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
         }
       });
 
-      if (error || data?.error) {
-        throw new Error(data?.error || error.message);
+      if (error) {
+        throw new Error((data as any)?.error || error.message);
       }
 
       toast.success(`Provider added! Welcome email with login credentials sent to ${formData.email}`);

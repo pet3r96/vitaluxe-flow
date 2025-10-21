@@ -170,6 +170,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             password: tempPassword,
             name: formData.name,
             role: 'pharmacy',
+            csrfToken, // Include in body as fallback
             roleData: {
               contactEmail: formData.contact_email,
               statesServiced: formData.states_serviced,
@@ -181,7 +182,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           }
         });
 
-        if (error) throw error;
+        if (error) throw new Error((data as any)?.error || error.message);
 
         // Update the pharmacy record with additional fields
         const { error: updateError } = await supabase

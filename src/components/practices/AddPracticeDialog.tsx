@@ -176,6 +176,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
           email: formData.email,
           name: formData.name,
           role: "doctor", // Practice account role in database
+          csrfToken, // Include in body as fallback
           roleData: {
             npi: formData.npi,
             licenseNumber: formData.licenseNumber,
@@ -194,7 +195,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
         }
       });
 
-      if (error) throw error;
+      if (error) throw new Error((data as any)?.error || error.message);
 
       toast.success("✅ Practice account created! Welcome email with login credentials sent to " + formData.email);
       onSuccess();

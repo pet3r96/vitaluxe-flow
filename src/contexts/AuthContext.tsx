@@ -482,6 +482,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           prescriberName,
           role,
           roleData,
+          csrfToken, // Include in body as fallback
         },
         headers: csrfToken ? {
           'x-csrf-token': csrfToken
@@ -490,7 +491,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         logger.error('Edge function error', error);
-        return { error: { message: error.message } };
+        return { error: { message: (data as any)?.error || error.message } };
       }
 
       if (data?.error) {
