@@ -68,6 +68,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Prevent double initial load
   const hasBootstrapped = useRef(false);
+  
+  // Track visibility to prevent loading on tab switches
+  const isTabVisible = useRef(true);
+  const lastVisibilityChange = useRef(Date.now());
+  
+  // Track if we're in a critical user-initiated operation (not background refresh)
+  const isCriticalOperation = useRef(false);
 
   const actualRole = userRole;
   const isImpersonating = impersonatedRole !== null;
@@ -110,6 +117,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // Track browser visibility to prevent loading on tab switches
+    const handleVisibilityChange = () => {
+      isTabVisible.current = document.visibilityState === 'visible';
+      lastVisibilityChange.current = Date.now();
+      logger.info('Visibility changed', { visible: isTabVisible.current });
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     // Bootstrap timeout failsafe - prevent stuck loading screen
     // Increased to 15000ms for slow preview environments with retry mechanism
     const bootstrapTimeout = window.setTimeout(async () => {
@@ -141,6 +157,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (event, session) => {
         logger.info('Auth state changed', { event, hasSession: !!session });
         
+        // Check if this event happened within 1 second of a visibility change
+        // If so, it's likely a background validation, not a user action
+        const timeSinceVisibilityChange = Date.now() - lastVisibilityChange.current;
+        const isBackgroundOperation = timeSinceVisibilityChange < 1000;
+        
         // Only update session state for meaningful auth events, NOT for token refresh
         if (event !== 'TOKEN_REFRESHED') {
           setSession(session);
@@ -149,24 +170,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Gate heavy reinitialization by event type
         if (event === 'SIGNED_IN' && session?.user) {
-          // User just signed in - fetch role and generate CSRF
+          // User just signed in - this is a critical operation
+          isCriticalOperation.current = true;
           setDataLoading(true);
           await fetchUserRole(session.user.id);
           await generateCSRFToken();
           setDataLoading(false);
           setLoading(false);
+          isCriticalOperation.current = false;
           logger.info('SIGNED_IN: loading states cleared');
           
         } else if (event === 'USER_UPDATED' && session?.user) {
-          // User data updated - refetch role
-          setDataLoading(true);
+          // User data updated - only show loading if not a background operation
+          if (!isBackgroundOperation) {
+            setDataLoading(true);
+          }
           await fetchUserRole(session.user.id);
           setDataLoading(false);
           setLoading(false);
-          logger.info('USER_UPDATED: loading states cleared');
+          logger.info('USER_UPDATED: loading states cleared', { wasBackground: isBackgroundOperation });
           
         } else if (event === 'SIGNED_OUT') {
-          // Clear all state on sign out
+          // Clear all state on sign out - this is a critical operation
+          isCriticalOperation.current = true;
           setUserRole(null);
           setImpersonatedRole(null);
           setImpersonatedUserId(null);
@@ -176,11 +202,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           clearCSRFToken();
           setDataLoading(false);
           setLoading(false);
+          isCriticalOperation.current = false;
           logger.info('SIGNED_OUT: loading states cleared');
           
         } else if (event === 'TOKEN_REFRESHED') {
           // Do nothing - no need to refetch data or show loading
-          logger.info('Token refreshed - no action needed');
+          logger.info('Token refreshed - no action needed', { isBackgroundOperation });
           
         } else if (event === 'INITIAL_SESSION') {
           // Do nothing here - handled by getSession below
@@ -218,6 +245,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       clearTimeout(bootstrapTimeout);
       subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -467,6 +495,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Mark this as a critical operation so loading state is shown
+      isCriticalOperation.current = true;
+      
       const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -668,6 +699,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    // Mark this as a critical operation so loading state is shown if needed
+    isCriticalOperation.current = true;
+    
     // End impersonation log if active
     if (currentLogId) {
       try {
