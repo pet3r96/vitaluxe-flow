@@ -142,11 +142,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Only show loading for actual sign in/out, not background operations
         if (event === 'SIGNED_IN' && session?.user) {
-          setLoading(true);
-          await fetchUserRole(session.user.id);
-          await generateCSRFToken();
-          setLoading(false);
-          logger.info('SIGNED_IN: loading cleared');
+          // Don't show loading for SIGNED_IN from tab refresh/navigation
+          // Only the login form should trigger loading
+          Promise.all([
+            fetchUserRole(session.user.id).catch(err => logger.error('Role fetch failed', err)),
+            generateCSRFToken().catch(err => logger.error('CSRF generation failed', err))
+          ]);
+          logger.info('SIGNED_IN: non-blocking background operations triggered');
           
         } else if (event === 'SIGNED_OUT') {
           setLoading(true);
@@ -161,9 +163,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logger.info('SIGNED_OUT: loading cleared');
           
         } else if (event === 'USER_UPDATED' && session?.user) {
-          // Silently update role without showing loading
-          await fetchUserRole(session.user.id);
-          logger.info('USER_UPDATED: silent role update');
+          // Silently update role without showing loading (non-blocking)
+          fetchUserRole(session.user.id).catch(err => 
+            logger.error('Silent role update failed', err)
+          );
+          logger.info('USER_UPDATED: non-blocking role update triggered');
           
         } else if (event === 'TOKEN_REFRESHED') {
           // Do nothing - no need to refetch data or show loading
