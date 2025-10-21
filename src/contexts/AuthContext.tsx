@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -65,6 +65,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [requires2FAVerify, setRequires2FAVerify] = useState(false);
   const [user2FAPhone, setUser2FAPhone] = useState<string | null>(null);
   const navigate = useNavigate();
+  
+  // Prevent double initial load
+  const hasBootstrapped = useRef(false);
 
   const actualRole = userRole;
   const isImpersonating = impersonatedRole !== null;
@@ -109,19 +112,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         logger.info('Auth state changed', { event, hasSession: !!session });
+        
+        // Always update session and user state
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
-          // Fetch user role in a deferred manner
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-            // Regenerate CSRF token on auth state restoration
-            generateCSRFToken();
-          }, 0);
-        } else {
+        // Gate heavy reinitialization by event type
+        if (event === 'SIGNED_IN' && session?.user) {
+          // User just signed in - fetch role and generate CSRF
+          setDataLoading(true);
+          await fetchUserRole(session.user.id);
+          await generateCSRFToken();
+          setDataLoading(false);
+          
+        } else if (event === 'USER_UPDATED' && session?.user) {
+          // User data updated - refetch role
+          setDataLoading(true);
+          await fetchUserRole(session.user.id);
+          setDataLoading(false);
+          
+        } else if (event === 'SIGNED_OUT') {
+          // Clear all state on sign out
           setUserRole(null);
           setImpersonatedRole(null);
           setImpersonatedUserId(null);
@@ -130,21 +143,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           sessionStorage.removeItem('vitaluxe_impersonation');
           clearCSRFToken();
           setDataLoading(false);
+          
+        } else if (event === 'TOKEN_REFRESHED') {
+          // Do nothing - no need to refetch data or show loading
+          logger.info('Token refreshed - no action needed');
+          
+        } else if (event === 'INITIAL_SESSION') {
+          // Do nothing here - handled by getSession below
+          logger.info('Initial session event - handled by getSession');
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check for existing session on mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       logger.info('Initial session check', { hasSession: !!session });
       setSession(session);
       setUser(session?.user ?? null);
       
-      if (session?.user) {
-        fetchUserRole(session.user.id);
+      if (session?.user && !hasBootstrapped.current) {
+        // First time bootstrap - fetch role and generate CSRF
+        hasBootstrapped.current = true;
+        await fetchUserRole(session.user.id);
+        await generateCSRFToken();
       } else {
         setDataLoading(false);
       }
+      
       setLoading(false);
     });
 
