@@ -15,6 +15,9 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Declare supabaseClient outside try block for error handler access
+  let supabaseClient: any;
+
   try {
     // Rate limiting
     const limiter = new RateLimiter();
@@ -57,7 +60,7 @@ serve(async (req) => {
       );
     }
 
-    const supabaseClient = createClient(
+    supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {

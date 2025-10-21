@@ -13,11 +13,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  // Declare variables outside try block for error handler access
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  let fileName: string = 'unknown';
+  let contentType: string = 'unknown';
 
+  try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
@@ -31,7 +34,11 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { fileBuffer, fileName, contentType, metadata = {} } = await req.json();
+    const requestBody = await req.json();
+    fileName = requestBody.fileName;
+    contentType = requestBody.contentType;
+    const fileBuffer = requestBody.fileBuffer;
+    const metadata = requestBody.metadata || {};
 
     if (!fileBuffer || !fileName || !contentType) {
       throw new Error('Missing required fields: fileBuffer, fileName, contentType');
