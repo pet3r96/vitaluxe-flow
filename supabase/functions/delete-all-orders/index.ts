@@ -14,14 +14,21 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
+    // Client for auth verification (with user JWT)
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {
         global: {
           headers: { Authorization: req.headers.get("Authorization")! },
         },
       }
+    );
+
+    // Admin client for deletions (service role, NO JWT - bypasses RLS)
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     // Get authenticated user
@@ -64,8 +71,8 @@ serve(async (req) => {
     // Helper function to delete from a table
     async function deleteFromTable(tableName: string): Promise<number> {
       try {
-        // Count before
-        const { count: beforeCount, error: countError } = await supabaseClient
+        // Count before (using admin client to bypass RLS)
+        const { count: beforeCount, error: countError } = await supabaseAdmin
           .from(tableName)
           .select("*", { count: "exact", head: true });
 
@@ -82,8 +89,8 @@ serve(async (req) => {
           return 0;
         }
 
-        // Delete using universal filter (required by PostgREST)
-        const { error: deleteError } = await supabaseClient
+        // Delete using universal filter (using admin client to bypass RLS)
+        const { error: deleteError } = await supabaseAdmin
           .from(tableName)
           .delete()
           .not("id", "is", null);
@@ -94,8 +101,8 @@ serve(async (req) => {
           return 0;
         }
 
-        // Count after
-        const { count: afterCount } = await supabaseClient
+        // Count after (using admin client to bypass RLS)
+        const { count: afterCount } = await supabaseAdmin
           .from(tableName)
           .select("*", { count: "exact", head: true });
 
@@ -124,8 +131,8 @@ serve(async (req) => {
     const totalDeleted = Object.values(deletedCounts).reduce((sum, count) => sum + count, 0);
     const executionTimeSeconds = (Date.now() - startTime) / 1000;
 
-    // Log to audit_logs
-    await supabaseClient.from("audit_logs").insert({
+    // Log to audit_logs (using admin client to bypass RLS)
+    await supabaseAdmin.from("audit_logs").insert({
       action_type: "delete_all_orders",
       entity_type: "orders",
       entity_id: null,
