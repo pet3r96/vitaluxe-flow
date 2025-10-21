@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertTriangle, AlertCircle, Eye, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, AlertCircle, Eye, Trash2, Loader2, CheckCircle2, UserX } from "lucide-react";
 
 interface DryRunResponse {
   mode: 'dryRun';
@@ -102,6 +102,12 @@ export const FactoryResetManager = () => {
   const [showClearStorageDialog, setShowClearStorageDialog] = useState(false);
   const [clearStorageConfirmText, setClearStorageConfirmText] = useState("");
   const [clearStorageResult, setClearStorageResult] = useState<any>(null);
+  
+  // Bulk delete users state
+  const [bulkDeleteEmails, setBulkDeleteEmails] = useState("");
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [bulkDeleteResult, setBulkDeleteResult] = useState<any>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -266,6 +272,60 @@ export const FactoryResetManager = () => {
       });
     } finally {
       setIsClearingStorage(false);
+    }
+  };
+
+  const handleBulkDeleteUsers = async () => {
+    setBulkDeleteLoading(true);
+    setBulkDeleteResult(null);
+
+    try {
+      // Parse emails from textarea (comma or newline separated)
+      const emails = bulkDeleteEmails
+        .split(/[,\n]/)
+        .map(e => e.trim())
+        .filter(e => e.length > 0);
+
+      if (emails.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please enter at least one email address",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('cleanup-test-data', {
+        body: { emails }
+      });
+      
+      if (error) throw error;
+      
+      setBulkDeleteResult(data);
+      setShowBulkDeleteConfirm(false);
+      
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: `Successfully deleted ${data.totals.deleted} user(s)`
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `Deleted ${data.totals.deleted} user(s) with ${data.totals.errors} error(s)`,
+          variant: "default"
+        });
+      }
+    } catch (error: any) {
+      console.error('Error deleting users:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete users",
+        variant: "destructive"
+      });
+      setBulkDeleteResult({ error: error.message });
+    } finally {
+      setBulkDeleteLoading(false);
     }
   };
 
@@ -635,6 +695,110 @@ export const FactoryResetManager = () => {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {isClearingStorage ? "Clearing..." : "Clear Storage"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bulk Delete Users Section */}
+        <Card className="border-destructive/50 mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <UserX className="h-5 w-5" />
+              Bulk Delete Users by Email
+            </CardTitle>
+            <CardDescription>
+              Delete test users by providing their email addresses
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Users with orders or patients will not be deleted (safety check enabled). 
+                Only test accounts without data can be removed.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email Addresses (one per line or comma-separated)</label>
+              <textarea
+                className="w-full min-h-[120px] p-3 rounded-md border bg-background text-sm font-mono"
+                placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"
+                value={bulkDeleteEmails}
+                onChange={(e) => setBulkDeleteEmails(e.target.value)}
+                disabled={bulkDeleteLoading}
+              />
+            </div>
+
+            <Button
+              variant="destructive"
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              disabled={bulkDeleteLoading || !bulkDeleteEmails.trim()}
+            >
+              {bulkDeleteLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting Users...
+                </>
+              ) : (
+                <>
+                  <UserX className="mr-2 h-4 w-4" />
+                  Delete Users
+                </>
+              )}
+            </Button>
+
+            {bulkDeleteResult && (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                  <span className="font-semibold">Summary:</span>
+                  <div className="flex gap-4 text-sm">
+                    <span className="text-green-600">✓ Deleted: {bulkDeleteResult.totals?.deleted || 0}</span>
+                    <span className="text-red-600">✗ Errors: {bulkDeleteResult.totals?.errors || 0}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {bulkDeleteResult.results?.map((result: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-md text-sm ${
+                        result.success ? 'bg-green-50 dark:bg-green-950 border border-green-200' : 'bg-red-50 dark:bg-red-950 border border-red-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <span className="font-mono font-semibold">{result.email}</span>
+                        <span className={result.success ? 'text-green-600' : 'text-red-600'}>
+                          {result.success ? '✓' : '✗'}
+                        </span>
+                      </div>
+                      <p className="text-xs mt-1 text-muted-foreground">{result.message}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Bulk Delete Confirmation Dialog */}
+        <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Delete These Users?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <p>This will permanently delete the specified user accounts and their associated data (reps, providers, roles, carts).</p>
+                <p className="text-sm text-muted-foreground">Users with orders or patients will be skipped for safety.</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleBulkDeleteUsers} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Yes, Delete Users
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
