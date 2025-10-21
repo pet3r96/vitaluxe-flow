@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { 
     user, 
-    loading, 
+    initializing, 
     mustChangePassword, 
     termsAccepted, 
     effectiveRole, 
@@ -24,14 +24,14 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const location = useLocation();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!initializing && !user) {
       navigate("/auth");
     }
-  }, [user, loading, navigate]);
+  }, [user, initializing, navigate]);
 
   // Redirect non-admin users who must change password
   useEffect(() => {
-    if (!loading && user) {
+    if (!initializing && user) {
       if (
         mustChangePassword &&
         effectiveRole !== 'admin' &&
@@ -41,11 +41,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         navigate("/change-password");
       }
     }
-  }, [user, loading, mustChangePassword, effectiveRole, location.pathname, navigate]);
+  }, [user, initializing, mustChangePassword, effectiveRole, location.pathname, navigate]);
 
   // Redirect non-admin users who haven't accepted terms (after password change)
   useEffect(() => {
-    if (!loading && user && !mustChangePassword && effectiveRole) {
+    if (!initializing && user && !mustChangePassword && effectiveRole) {
       if (
         !termsAccepted &&
         effectiveRole !== 'admin' &&
@@ -55,16 +55,16 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         navigate("/accept-terms");
       }
     }
-  }, [user, loading, mustChangePassword, termsAccepted, effectiveRole, location.pathname, navigate]);
+  }, [user, initializing, mustChangePassword, termsAccepted, effectiveRole, location.pathname, navigate]);
 
   // Prevent admins from accessing the terms page (unless impersonating)
   useEffect(() => {
-    if (!loading && user && effectiveRole === 'admin' && !isImpersonating && location.pathname === '/accept-terms') {
+    if (!initializing && user && effectiveRole === 'admin' && !isImpersonating && location.pathname === '/accept-terms') {
       navigate('/');
     }
-  }, [loading, user, effectiveRole, isImpersonating, location.pathname, navigate]);
+  }, [initializing, user, effectiveRole, isImpersonating, location.pathname, navigate]);
 
-  if (loading) {
+  if (initializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -80,7 +80,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // If auth loaded but role never populated, redirect to auth page
-  if (!loading && user && !effectiveRole) {
+  if (!initializing && user && !effectiveRole) {
     navigate('/auth');
     return null;
   }

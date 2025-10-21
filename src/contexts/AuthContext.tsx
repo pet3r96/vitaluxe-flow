@@ -11,6 +11,7 @@ interface AuthContextType {
   session: Session | null;
   userRole: string | null;
   loading: boolean;
+  initializing: boolean;
   actualRole: string | null;
   impersonatedRole: string | null;
   impersonatedUserId: string | null;
@@ -54,8 +55,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [impersonatedUserName, setImpersonatedUserName] = useState<string | null>(null);
   const [practiceParentId, setPracticeParentId] = useState<string | null>(null);
   const [currentLogId, setCurrentLogId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(true); // Tracks if user data is still loading
+  const [loading, setLoading] = useState(false); // Only for critical operations (sign in/out)
+  const [initializing, setInitializing] = useState(true); // Only for first-time bootstrap
   const [isProviderAccount, setIsProviderAccount] = useState(false);
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
@@ -68,13 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Prevent double initial load
   const hasBootstrapped = useRef(false);
-  
-  // Track visibility to prevent loading on tab switches
-  const isTabVisible = useRef(true);
-  const lastVisibilityChange = useRef(Date.now());
-  
-  // Track if we're in a critical user-initiated operation (not background refresh)
-  const isCriticalOperation = useRef(false);
 
   const actualRole = userRole;
   const isImpersonating = impersonatedRole !== null;
@@ -117,17 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Track browser visibility to prevent loading on tab switches
-    const handleVisibilityChange = () => {
-      isTabVisible.current = document.visibilityState === 'visible';
-      lastVisibilityChange.current = Date.now();
-      logger.info('Visibility changed', { visible: isTabVisible.current });
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
     // Bootstrap timeout failsafe - prevent stuck loading screen
-    // Increased to 15000ms for slow preview environments with retry mechanism
     const bootstrapTimeout = window.setTimeout(async () => {
       logger.warn('Auth bootstrap timeout (15s): attempting retry');
       
@@ -136,8 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         try {
           await fetchUserRole(session.user.id);
-          setDataLoading(false);
-          setLoading(false);
+          setInitializing(false);
           logger.info('Retry successful: role fetched');
           return;
         } catch (error) {
@@ -147,8 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // If retry fails, force clear and let ProtectedRoute handle redirect
       logger.error('Auth bootstrap failed after retry');
-      setDataLoading(false);
-      setLoading(false);
+      setInitializing(false);
       setUserRole(null);
     }, 15000);
 
@@ -157,42 +139,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (event, session) => {
         logger.info('Auth state changed', { event, hasSession: !!session });
         
-        // Check if this event happened within 1 second of a visibility change
-        // If so, it's likely a background validation, not a user action
-        const timeSinceVisibilityChange = Date.now() - lastVisibilityChange.current;
-        const isBackgroundOperation = timeSinceVisibilityChange < 1000;
-        
         // Only update session state for meaningful auth events, NOT for token refresh
         if (event !== 'TOKEN_REFRESHED') {
           setSession(session);
           setUser(session?.user ?? null);
         }
         
-        // Gate heavy reinitialization by event type
+        // Handle different auth events
         if (event === 'SIGNED_IN' && session?.user) {
-          // User just signed in - this is a critical operation
-          isCriticalOperation.current = true;
-          setDataLoading(true);
+          // User just signed in - fetch role silently
           await fetchUserRole(session.user.id);
           await generateCSRFToken();
-          setDataLoading(false);
-          setLoading(false);
-          isCriticalOperation.current = false;
-          logger.info('SIGNED_IN: loading states cleared');
+          logger.info('SIGNED_IN: user data loaded');
           
         } else if (event === 'USER_UPDATED' && session?.user) {
-          // User data updated - only show loading if not a background operation
-          if (!isBackgroundOperation) {
-            setDataLoading(true);
-          }
+          // User data updated - refresh role data silently (no loading state)
           await fetchUserRole(session.user.id);
-          setDataLoading(false);
-          setLoading(false);
-          logger.info('USER_UPDATED: loading states cleared', { wasBackground: isBackgroundOperation });
+          logger.info('USER_UPDATED: user data refreshed silently');
           
         } else if (event === 'SIGNED_OUT') {
-          // Clear all state on sign out - this is a critical operation
-          isCriticalOperation.current = true;
+          // Clear all state on sign out
           setUserRole(null);
           setImpersonatedRole(null);
           setImpersonatedUserId(null);
@@ -200,14 +166,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCurrentLogId(null);
           sessionStorage.removeItem('vitaluxe_impersonation');
           clearCSRFToken();
-          setDataLoading(false);
-          setLoading(false);
-          isCriticalOperation.current = false;
-          logger.info('SIGNED_OUT: loading states cleared');
+          logger.info('SIGNED_OUT: state cleared');
           
         } else if (event === 'TOKEN_REFRESHED') {
           // Do nothing - no need to refetch data or show loading
-          logger.info('Token refreshed - no action needed', { isBackgroundOperation });
+          logger.info('Token refreshed - no action needed');
           
         } else if (event === 'INITIAL_SESSION') {
           // Do nothing here - handled by getSession below
@@ -227,25 +190,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         hasBootstrapped.current = true;
         await fetchUserRole(session.user.id);
         await generateCSRFToken();
-        setDataLoading(false);
-      } else {
-        setDataLoading(false);
       }
       
-      setLoading(false);
+      setInitializing(false);
       clearTimeout(bootstrapTimeout);
-      logger.info('Bootstrap complete: loading states cleared');
+      logger.info('Bootstrap complete: initializing cleared');
     }).catch((error) => {
       logger.error('Error during initial session check', error);
-      setDataLoading(false);
-      setLoading(false);
+      setInitializing(false);
       clearTimeout(bootstrapTimeout);
     });
 
     return () => {
       clearTimeout(bootstrapTimeout);
       subscription.unsubscribe();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -487,7 +445,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Re-check password status when impersonation changes (but not on initial load)
   useEffect(() => {
-    if (user && effectiveUserId && effectiveRole && !dataLoading) {
+    if (user && effectiveUserId && effectiveRole && !initializing) {
       logger.info('Re-checking password status due to impersonation change');
       checkPasswordStatus();
     }
@@ -495,15 +453,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Mark this as a critical operation so loading state is shown
-      isCriticalOperation.current = true;
+      setLoading(true);
       
       const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) return { error };
+      if (error) {
+        setLoading(false);
+        return { error };
+      }
 
       // Check if account is active before allowing login
       const { data: profile, error: profileError } = await supabase
@@ -515,11 +475,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (profileError) {
         logger.error("Error checking account status", profileError);
         await supabase.auth.signOut();
+        setLoading(false);
         return { error: { message: "Unable to verify account status" } };
       }
 
       if (!profile?.active) {
         await supabase.auth.signOut();
+        setLoading(false);
         return { 
           error: { 
             message: "🚫 Your account has been disabled. Please contact support at support@vitaluxe.com" 
@@ -539,9 +501,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logger.warn('Failed to generate CSRF token - some operations may be restricted');
       }
 
+      setLoading(false);
       navigate("/dashboard");
       return { error: null };
     } catch (error: any) {
+      setLoading(false);
       return { error };
     }
   };
@@ -699,8 +663,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    // Mark this as a critical operation so loading state is shown if needed
-    isCriticalOperation.current = true;
+    setLoading(true);
     
     // End impersonation log if active
     if (currentLogId) {
@@ -724,28 +687,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setImpersonatedUserName(null);
     setCurrentLogId(null);
     sessionStorage.removeItem('vitaluxe_impersonation');
+    setLoading(false);
     navigate("/auth");
   };
-
-  // Combine loading states - only ready when both auth and data are loaded
-  const isFullyLoaded = !loading && !dataLoading;
-  
-  logger.info('AuthContext state', logger.sanitize({ 
-    loading,
-    dataLoading, 
-    isFullyLoaded,
-    effectiveRole, 
-    mustChangePassword, 
-    termsAccepted,
-    user: !!user 
-  }));
 
   return (
     <AuthContext.Provider value={{ 
       user, 
       session, 
       userRole, 
-      loading: !isFullyLoaded, // Combined loading state
+      loading,
+      initializing,
       actualRole,
       impersonatedRole,
       impersonatedUserId,
