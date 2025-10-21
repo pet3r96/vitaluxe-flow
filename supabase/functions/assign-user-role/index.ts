@@ -338,16 +338,30 @@ serve(async (req) => {
     const parentId = signupData.parentId || 
       (signupData.role === 'downline' ? signupData.roleData.linkedToplineId : null);
 
+    // Build roleData for RPC, including parentId if it exists
+    const roleDataForRpc: any = { ...signupData.roleData };
+    if (parentId) {
+      roleDataForRpc.parentId = parentId;
+    }
+
+    // Log RPC args keys for debugging
+    console.log('RPC args keys:', Object.keys({ 
+      p_user_id: userId, 
+      p_email: signupData.email, 
+      p_name: signupData.name, 
+      p_role: signupData.role, 
+      p_role_data: roleDataForRpc 
+    }));
+
     // Use atomic function to create user with role
     const { data: creationResult, error: creationError } = await supabaseAdmin.rpc(
       'create_user_with_role',
       {
         p_user_id: userId,
-        p_name: signupData.name,
         p_email: signupData.email,
+        p_name: signupData.name,
         p_role: signupData.role,
-        p_parent_id: parentId,
-        p_role_data: signupData.roleData
+        p_role_data: roleDataForRpc
       }
     );
 
