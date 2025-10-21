@@ -37,6 +37,7 @@ import ChangePassword from "./pages/ChangePassword";
 import AcceptTerms from "@/pages/AcceptTerms";
 import AdminTermsManagement from "@/pages/AdminTermsManagement";
 import AdminDiscountCodes from "@/pages/AdminDiscountCodes";
+import EmergencyAdminRecovery from "./pages/EmergencyAdminRecovery";
 
 import { DashboardRouter } from "./components/DashboardRouter";
 
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/change-password" element={<ChangePassword />} />
               <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
+              <Route path="/emergency-admin-recovery" element={<EmergencyAdminRecovery />} />
             <Route
               path="/*"
               element={
