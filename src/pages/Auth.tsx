@@ -13,7 +13,7 @@ import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
 import { validatePasswordStrength } from "@/lib/passwordStrength";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, Mail, CheckCircle2 } from "lucide-react";
+import { Info, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -24,6 +24,8 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [showVerificationReminder, setShowVerificationReminder] = useState(false);
+  const [reminderEmail, setReminderEmail] = useState("");
   const [emergencyResetStatus, setEmergencyResetStatus] = useState<{
     triggered: boolean;
     loading: boolean;
@@ -143,6 +145,14 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
+          // Check if this is an email verification error
+          if ((error as any).code === 'email_not_verified') {
+            setReminderEmail((error as any).email || email);
+            setShowVerificationReminder(true);
+            setLoading(false);
+            return;
+          }
+          
           // Track failed login attempt
           try {
             await supabase.functions.invoke("track-failed-login", {
@@ -203,7 +213,86 @@ const Auth = () => {
     }
   };
 
-  // Full-screen verification message
+  // Full-screen verification reminder (for login attempts with unverified email)
+  if (showVerificationReminder) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-2xl text-center space-y-6">
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="w-6 h-6 text-primary" />
+            </div>
+            <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-warning" />
+            </div>
+          </div>
+          
+          <h1 className="text-4xl font-bold text-foreground">
+            Please Verify Your Email
+          </h1>
+          
+          <div className="space-y-4 text-lg text-muted-foreground">
+            <p>
+              Your account with{" "}
+              <span className="text-foreground font-semibold">{reminderEmail}</span>{" "}
+              needs to be verified before you can sign in.
+            </p>
+            
+            <p className="text-base">
+              Please check your inbox (and spam folder) for the verification email we sent when you created your account.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
+            <Button
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  const { error } = await supabase.functions.invoke('send-verification-email', {
+                    body: { email: reminderEmail }
+                  });
+                  
+                  if (error) throw error;
+                  
+                  toast({
+                    title: "Email Sent",
+                    description: "A new verification email has been sent. Please check your inbox.",
+                  });
+                } catch (error: any) {
+                  toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: error.message || "Failed to resend verification email",
+                  });
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              size="lg"
+              className="gap-2"
+            >
+              <Mail className="w-4 h-4" />
+              Resend Verification Email
+            </Button>
+            
+            <Button
+              onClick={() => {
+                setShowVerificationReminder(false);
+                setReminderEmail("");
+              }}
+              variant="outline"
+              size="lg"
+            >
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full-screen verification message (for successful signup)
   if (showVerificationMessage && !isLogin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">

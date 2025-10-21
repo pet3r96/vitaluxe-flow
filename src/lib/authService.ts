@@ -200,15 +200,17 @@ export const authService = {
         };
       }
 
-      // Check if account is verified
-      if (profile?.status === 'pending_verification') {
-        await supabase.auth.signOut();
-        return { 
-          error: { 
-            message: "⚠️ Please verify your email address before logging in. Check your inbox for the verification link." 
-          } 
-        };
-      }
+    // Check if account is verified
+    if (profile?.status === 'pending_verification') {
+      await supabase.auth.signOut();
+      return {
+        error: {
+          code: 'email_not_verified',
+          email: email,
+          message: "Email not verified",
+        },
+      };
+    }
 
       // Login successful
       return { error: null };
