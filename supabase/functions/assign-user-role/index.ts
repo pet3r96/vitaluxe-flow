@@ -347,14 +347,13 @@ serve(async (req) => {
 
     const userId = authData.user.id;
 
-    // Determine parent_id - only use explicit parentId, not downline's linkedToplineId
-    // (linkedToplineId is a profiles.id, but RPC expects reps.id for parentId)
-    const parentId = (signupData.role !== 'downline' && signupData.parentId) ? signupData.parentId : null;
-
-    // Build roleData for RPC, including parentId if it exists
+    // Build roleData for RPC - NEVER include parentId here
+    // Downlines will be linked via separate upsert after user creation
     const roleDataForRpc: any = { ...signupData.roleData };
-    if (parentId) {
-      roleDataForRpc.parentId = parentId;
+    delete roleDataForRpc.parentId; // Ensure parentId is never sent to RPC
+    
+    if (signupData.role === 'topline') {
+      console.log('Topline creation: ensuring no parentId is sent to RPC');
     }
 
     // Log RPC args keys for debugging
