@@ -586,7 +586,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Check 2FA status after successful login
       // Perform post-login setup in background (don't block navigation)
-      Promise.all([
+      void Promise.all([
         check2FAStatus(user.id).catch(err => logger.error('2FA check failed', err)),
         checkPasswordStatus().catch(err => logger.error('Password check failed', err)),
         generateCSRFToken().catch(err => logger.error('CSRF generation failed', err))
