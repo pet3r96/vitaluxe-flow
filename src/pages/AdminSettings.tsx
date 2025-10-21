@@ -11,9 +11,10 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign } from "lucide-react";
+import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
+import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
 
 const AdminSettings = () => {
   return (
@@ -70,6 +71,11 @@ const AdminSettings = () => {
           <TabsTrigger value="price-overrides" className="gap-2">
             <DollarSign className="h-4 w-4" />
             Price Overrides
+          </TabsTrigger>
+          
+          <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            Danger Zone
           </TabsTrigger>
         </TabsList>
 
@@ -207,6 +213,10 @@ const AdminSettings = () => {
               <PriceOverrideManager />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="danger-zone" className="space-y-4">
+          <FactoryResetManager />
         </TabsContent>
       </Tabs>
     </div>
