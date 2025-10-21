@@ -387,9 +387,18 @@ const Auth = () => {
                       value={npi}
                       onChange={(e) => setNpi(e.target.value)}
                       placeholder="10-digit NPI number"
-                      className="bg-input border-border text-foreground"
+                      className={`bg-input border-border text-foreground ${
+                        npi && npi.length !== 10 && npi.length > 0 ? 'border-destructive' : ''
+                      }`}
+                      maxLength={10}
                       required
                     />
+                    {npi && npi.length > 0 && npi.length !== 10 && (
+                      <p className="text-xs text-destructive">NPI must be exactly 10 digits</p>
+                    )}
+                    {(!npi || npi.length === 0) && (
+                      <p className="text-xs text-muted-foreground">Enter your 10-digit National Provider Identifier</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
