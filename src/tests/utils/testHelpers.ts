@@ -55,6 +55,14 @@ export class MockDatabase {
   private sessions: Map<string, any> = new Map();
   
   async insertUser(userData: any) {
+    // Validate required fields
+    if (!userData.email) {
+      throw new Error('Email is required');
+    }
+    if (!userData.role) {
+      throw new Error('Role is required');
+    }
+    
     const id = userData.id || crypto.randomUUID();
     const user = { ...userData, id };
     this.users.set(id, user);

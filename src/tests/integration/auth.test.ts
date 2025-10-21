@@ -170,7 +170,7 @@ describe('Authentication Flow Integration Tests', () => {
       expect(existing).toBeDefined();
       
       // Simulate duplicate signup
-      expect(async () => {
+      await expect(async () => {
         const duplicate = await mockDB.findUserByEmail(email);
         if (duplicate) {
           throw new Error('Email already exists');

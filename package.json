@@ -14,7 +14,11 @@
     "preview": "vite preview",
     "start": "serve -s dist -l 8080",
     "security:audit": "npm audit --audit-level=high",
-    "security:fix": "npm audit fix --force"
+    "security:fix": "npm audit fix --force",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -85,6 +89,7 @@
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^5.0.4",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
