@@ -757,6 +757,33 @@ export type Database = {
         }
         Relationships: []
       }
+      email_verification_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          token: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          token: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       encryption_keys: {
         Row: {
           active: boolean | null
@@ -2499,6 +2526,7 @@ export type Database = {
           company: string | null
           contract_url: string | null
           created_at: string | null
+          created_by: string | null
           dea: string | null
           dea_encrypted: string | null
           email: string
@@ -2525,7 +2553,10 @@ export type Database = {
           shipping_address_verified_at: string | null
           shipping_address_zip: string | null
           shipping_preference: string | null
+          status: string | null
+          temp_password: boolean | null
           updated_at: string | null
+          verified_at: string | null
         }
         Insert: {
           active?: boolean | null
@@ -2547,6 +2578,7 @@ export type Database = {
           company?: string | null
           contract_url?: string | null
           created_at?: string | null
+          created_by?: string | null
           dea?: string | null
           dea_encrypted?: string | null
           email: string
@@ -2573,7 +2605,10 @@ export type Database = {
           shipping_address_verified_at?: string | null
           shipping_address_zip?: string | null
           shipping_preference?: string | null
+          status?: string | null
+          temp_password?: boolean | null
           updated_at?: string | null
+          verified_at?: string | null
         }
         Update: {
           active?: boolean | null
@@ -2595,6 +2630,7 @@ export type Database = {
           company?: string | null
           contract_url?: string | null
           created_at?: string | null
+          created_by?: string | null
           dea?: string | null
           dea_encrypted?: string | null
           email?: string
@@ -2621,7 +2657,10 @@ export type Database = {
           shipping_address_verified_at?: string | null
           shipping_address_zip?: string | null
           shipping_preference?: string | null
+          status?: string | null
+          temp_password?: boolean | null
           updated_at?: string | null
+          verified_at?: string | null
         }
         Relationships: [
           {
