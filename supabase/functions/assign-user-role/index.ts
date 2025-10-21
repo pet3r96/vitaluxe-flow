@@ -4,10 +4,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from '../_shared/validators.ts';
 import { validateCreateAccountRequest } from '../_shared/requestValidators.ts';
 import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-csrf-token',
 };
 
 interface SignupRequest {
@@ -165,6 +166,17 @@ serve(async (req) => {
       
       if (user) {
         callerUserId = user.id;
+
+        // Validate CSRF token for authenticated requests
+        const csrfToken = req.headers.get('x-csrf-token') || undefined;
+        const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
+        if (!csrfValidation.valid) {
+          console.error('CSRF validation failed:', csrfValidation.error);
+          return new Response(
+            JSON.stringify({ error: csrfValidation.error || 'Invalid CSRF token' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         
         // Check if caller is an admin
         const { data: callerRoles } = await supabaseAdmin

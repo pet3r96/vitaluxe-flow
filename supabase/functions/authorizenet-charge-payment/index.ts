@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-csrf-token',
 }
 
 interface ChargeRequest {
@@ -34,6 +35,17 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return new Response(
+        JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

@@ -2,10 +2,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePhone, generateSecurePassword } from '../_shared/validators.ts';
 import { validateApprovePendingRepRequest } from '../_shared/requestValidators.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-csrf-token',
 };
 
 serve(async (req) => {
@@ -71,6 +72,18 @@ serve(async (req) => {
     if (!adminRole) {
       throw new Error('Unauthorized - Admin access required');
     }
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
+    if (!csrfValidation.valid) {
+      console.error('CSRF validation failed:', csrfValidation.error);
+      return new Response(
+        JSON.stringify({ error: csrfValidation.error || 'Invalid CSRF token' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     requestId = requestData.requestId;
     action = requestData.action;
     const rejectionReason = requestData.rejectionReason;

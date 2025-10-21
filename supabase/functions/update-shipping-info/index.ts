@@ -1,10 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { validateUpdateShippingRequest } from "../_shared/requestValidators.ts";
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-csrf-token',
 };
 
 interface UpdateShippingRequest {
@@ -95,6 +96,17 @@ serve(async (req: Request) => {
     }
 
     console.log('Authenticated user:', user.id);
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return new Response(
+        JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get user role
     const { data: roleData } = await supabase
