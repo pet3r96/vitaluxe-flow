@@ -3813,7 +3813,6 @@ export type Database = {
         Args: {
           p_email: string
           p_name: string
-          p_parent_id?: string
           p_role: Database["public"]["Enums"]["app_role"]
           p_role_data?: Json
           p_user_id: string
