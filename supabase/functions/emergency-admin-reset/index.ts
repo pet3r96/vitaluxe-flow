@@ -66,7 +66,7 @@ serve(async (req) => {
     );
 
     // Hardcoded admin email for security (emergency lookup only)
-    const ADMIN_EMAIL = 'admin@vitaluxeservice.com';
+    const ADMIN_EMAIL = 'admin@vitaluxeservices.com';
     const TEMP_PASSWORD = 'TempAdmin2025!';
 
     // Get admin user from profiles table
