@@ -111,12 +111,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Bootstrap timeout failsafe - prevent stuck loading screen
-    // Increased to 8000ms to allow for slow connections and prevent false-positives
-    const bootstrapTimeout = window.setTimeout(() => {
-      logger.warn('Auth bootstrap timeout (8s): forcing loading state to clear');
+    // Increased to 15000ms for slow preview environments with retry mechanism
+    const bootstrapTimeout = window.setTimeout(async () => {
+      logger.warn('Auth bootstrap timeout (15s): attempting retry');
+      
+      // Try ONE more time to fetch role
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        try {
+          await fetchUserRole(session.user.id);
+          setDataLoading(false);
+          setLoading(false);
+          logger.info('Retry successful: role fetched');
+          return;
+        } catch (error) {
+          logger.error('Retry failed:', error);
+        }
+      }
+      
+      // If retry fails, force clear and redirect to auth
+      logger.error('Auth bootstrap failed after retry: redirecting to auth');
       setDataLoading(false);
       setLoading(false);
-    }, 8000);
+      setUserRole(null);
+    }, 15000);
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

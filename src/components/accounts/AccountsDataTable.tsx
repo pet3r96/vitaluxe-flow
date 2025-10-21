@@ -36,9 +36,11 @@ import { AccountDetailsDialog } from "./AccountDetailsDialog";
 import { DataSyncButton } from "./DataSyncButton";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const AccountsDataTable = () => {
   const { toast } = useToast();
+  const { effectiveRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
@@ -48,7 +50,8 @@ export const AccountsDataTable = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: accounts, isLoading, refetch } = useQuery({
-    queryKey: ["accounts", roleFilter],
+    queryKey: ["accounts", roleFilter, effectiveRole],
+    enabled: !!effectiveRole,
     staleTime: 0,
     queryFn: async () => {
       // First, get all profiles with their roles
@@ -243,6 +246,15 @@ export const AccountsDataTable = () => {
     };
     return colors[role] || "bg-muted";
   };
+
+  // Don't run queries until auth is ready
+  if (!effectiveRole) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-muted-foreground">Verifying authentication...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
