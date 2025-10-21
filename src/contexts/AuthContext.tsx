@@ -110,6 +110,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // Bootstrap timeout failsafe - prevent stuck loading screen
+    const bootstrapTimeout = window.setTimeout(() => {
+      logger.warn('Auth bootstrap timeout: forcing loading state to clear');
+      setDataLoading(false);
+      setLoading(false);
+    }, 4000);
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -126,12 +133,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await fetchUserRole(session.user.id);
           await generateCSRFToken();
           setDataLoading(false);
+          setLoading(false);
+          logger.info('SIGNED_IN: loading states cleared');
           
         } else if (event === 'USER_UPDATED' && session?.user) {
           // User data updated - refetch role
           setDataLoading(true);
           await fetchUserRole(session.user.id);
           setDataLoading(false);
+          setLoading(false);
+          logger.info('USER_UPDATED: loading states cleared');
           
         } else if (event === 'SIGNED_OUT') {
           // Clear all state on sign out
@@ -143,6 +154,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           sessionStorage.removeItem('vitaluxe_impersonation');
           clearCSRFToken();
           setDataLoading(false);
+          setLoading(false);
+          logger.info('SIGNED_OUT: loading states cleared');
           
         } else if (event === 'TOKEN_REFRESHED') {
           // Do nothing - no need to refetch data or show loading
@@ -172,9 +185,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       setLoading(false);
+      clearTimeout(bootstrapTimeout);
+      logger.info('Bootstrap complete: loading states cleared');
+    }).catch((error) => {
+      logger.error('Error during initial session check', error);
+      setDataLoading(false);
+      setLoading(false);
+      clearTimeout(bootstrapTimeout);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(bootstrapTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Check impersonation permission from database
