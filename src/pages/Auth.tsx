@@ -13,7 +13,7 @@ import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
 import { validatePasswordStrength } from "@/lib/passwordStrength";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { Info, Mail, CheckCircle2 } from "lucide-react";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,6 +23,7 @@ const Auth = () => {
   const [role, setRole] = useState<"doctor" | "pharmacy">("doctor"); // "doctor" = Practice in the database
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [emergencyResetStatus, setEmergencyResetStatus] = useState<{
     triggered: boolean;
     loading: boolean;
@@ -188,11 +189,11 @@ const Auth = () => {
             variant: "destructive",
           });
         } else {
+          setShowVerificationMessage(true);
           toast({
             title: "Success",
-            description: "Account created successfully! You can now sign in.",
+            description: "Account created! Please check your email to verify your address.",
           });
-          setIsLogin(true);
         }
       }
     } catch (error: any) {
@@ -217,7 +218,34 @@ const Auth = () => {
           {isLogin ? "Sign in to your account" : "Create your account"}
         </p>
 
-        {isLogin && (
+        {showVerificationMessage && !isLogin && (
+          <Alert className="mb-4 bg-success/10 border-success/20">
+            <Mail className="h-4 w-4 text-success" />
+            <AlertDescription className="text-sm space-y-2">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-success">Verification Email Sent!</p>
+                  <p className="text-muted-foreground mt-1">
+                    We've sent a verification link to <strong>{email}</strong>. 
+                    Please check your inbox and click the link to activate your account.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Didn't receive the email? Check your spam folder or{' '}
+                    <button 
+                      onClick={() => setShowVerificationMessage(false)}
+                      className="text-primary hover:underline"
+                    >
+                      try signing up again
+                    </button>.
+                  </p>
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isLogin && !showVerificationMessage && (
           <Alert className="mb-4 bg-primary/10 border-primary/20">
             <Info className="h-4 w-4 text-primary" />
             <AlertDescription className="text-sm">

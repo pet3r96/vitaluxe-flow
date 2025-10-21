@@ -3,11 +3,12 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { generateCSRFToken, clearCSRFToken, getCurrentCSRFToken } from "@/lib/csrf";
+import { generateCSRFToken, clearCSRFToken } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
 import { SESSION_CONFIG } from "@/config/session";
 import { updateActivity } from "@/lib/sessionManager";
 import { IdleWarningDialog } from "@/components/auth/IdleWarningDialog";
+import { authService } from "@/lib/authService";
 
 interface AuthContextType {
   user: User | null;
@@ -573,50 +574,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       
-      const { data: { user }, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Delegate to authService
+      const { error } = await authService.loginUser(email, password);
       
       if (error) {
         setLoading(false);
         return { error };
       }
 
-      // Check if account is active before allowing login
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('active')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        logger.error("Error checking account status", profileError);
-        await supabase.auth.signOut();
-        setLoading(false);
-        return { error: { message: "Unable to verify account status" } };
-      }
-
-      if (!profile?.active) {
-        await supabase.auth.signOut();
-        setLoading(false);
-        return { 
-          error: { 
-            message: "🚫 Your account has been disabled. Please contact support at support@vitaluxe.com" 
-          } 
-        };
-      }
-
-      // Check 2FA status after successful login
-      await check2FAStatus(user.id);
-
-      // Check password status after successful login
-      await checkPasswordStatus();
-
-      // Generate CSRF token after successful authentication
+      // Auth state change will handle the rest
       const csrfToken = await generateCSRFToken();
       if (!csrfToken) {
-        logger.warn('Failed to generate CSRF token - some operations may be restricted');
+        logger.warn('Failed to generate CSRF token');
       }
 
       setLoading(false);
@@ -637,53 +606,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fullName?: string,
     prescriberName?: string
   ) => {
-    try {
-      // Check if email already exists
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('email')
-        .ilike('email', email)
-        .single();
-
-      if (existingProfile) {
-        return { error: { message: 'User already exists in the system. Please use a different email address.' } };
-      }
-
-      // Get CSRF token for authenticated requests
-      const csrfToken = await getCurrentCSRFToken();
-      
-      // Call the edge function to handle user creation and role assignment
-      const { data, error } = await supabase.functions.invoke('assign-user-role', {
-        body: {
-          email,
-          password,
-          name,
-          fullName,
-          prescriberName,
-          role,
-          roleData,
-          csrfToken, // Include in body as fallback
-        },
-        headers: csrfToken ? {
-          'x-csrf-token': csrfToken
-        } : {}
-      });
-
-      if (error) {
-        logger.error('Edge function error', error);
-        return { error: { message: (data as any)?.error || error.message } };
-      }
-
-      if (data?.error) {
-        logger.error('Signup error', new Error(data.error));
-        return { error: { message: data.error } };
-      }
-
-      return { error: null };
-    } catch (error: any) {
-      logger.error('Unexpected signup error', error);
-      return { error: { message: error.message || 'An unexpected error occurred' } };
-    }
+    // Delegate to authService for self-signup flow
+    return authService.signupUser({
+      email,
+      password,
+      name,
+      role,
+      roleData,
+      fullName,
+      prescriberName,
+    });
   };
 
   const setImpersonation = async (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => {

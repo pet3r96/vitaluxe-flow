@@ -39,6 +39,7 @@ import AcceptTerms from "@/pages/AcceptTerms";
 import AdminTermsManagement from "@/pages/AdminTermsManagement";
 import AdminDiscountCodes from "@/pages/AdminDiscountCodes";
 import EmergencyAdminRecovery from "./pages/EmergencyAdminRecovery";
+import VerifyEmail from "./pages/VerifyEmail";
 
 import { DashboardRouter } from "./components/DashboardRouter";
 
@@ -65,6 +66,7 @@ const App = () => (
             <GlobalImpersonationBanner>
               <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/change-password" element={<ChangePassword />} />
               <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
               <Route path="/emergency-admin-recovery" element={<EmergencyAdminRecovery />} />
