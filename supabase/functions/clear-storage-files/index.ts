@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +16,65 @@ interface BucketResult {
   errors: string[];
 }
 
+interface FileObject {
+  name: string;
+  id?: string;
+  metadata?: any;
+}
+
+// Recursive function to list all files in a bucket, including nested folders
+async function listAllFiles(
+  supabaseAdmin: any,
+  bucketName: string,
+  prefix: string = ""
+): Promise<string[]> {
+  const allFiles: string[] = [];
+  let offset = 0;
+  const limit = 1000;
+
+  while (true) {
+    const { data: items, error } = await supabaseAdmin
+      .storage
+      .from(bucketName)
+      .list(prefix, {
+        limit,
+        offset,
+        sortBy: { column: 'name', order: 'asc' }
+      });
+
+    if (error) {
+      console.error(`Error listing ${bucketName}/${prefix}:`, error);
+      break;
+    }
+
+    if (!items || items.length === 0) {
+      break;
+    }
+
+    for (const item of items) {
+      const fullPath = prefix ? `${prefix}/${item.name}` : item.name;
+      
+      // Check if it's a folder (no id/metadata) or a file
+      if (!item.id && !item.metadata) {
+        // It's a folder, recurse into it
+        const nestedFiles = await listAllFiles(supabaseAdmin, bucketName, fullPath);
+        allFiles.push(...nestedFiles);
+      } else {
+        // It's a file
+        allFiles.push(fullPath);
+      }
+    }
+
+    // Check if there are more items to fetch
+    if (items.length < limit) {
+      break;
+    }
+    offset += limit;
+  }
+
+  return allFiles;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -27,33 +86,17 @@ Deno.serve(async (req) => {
     // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Missing authorization header');
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    // Extract token from Bearer header
+    const token = authHeader.replace('Bearer ', '');
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      throw new Error('Unauthorized');
-    }
-
-    // Admin-only check
-    if (user.email !== 'admin@vitaluxeservice.com') {
-      throw new Error('Only admin@vitaluxeservice.com can clear storage files');
-    }
-
-    // Parse request body
-    const requestBody = await req.json() as ClearStorageRequest;
-
-    if (requestBody.confirm !== 'CLEAR ALL STORAGE') {
-      throw new Error('Invalid confirmation text');
-    }
-
-    // Create admin client for storage operations
+    // Create admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -64,6 +107,44 @@ Deno.serve(async (req) => {
         }
       }
     );
+
+    // Verify user with service role client
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error('Authentication failed:', userError?.message || 'No user found');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Unauthorized: Invalid or expired token' 
+        }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`User authenticated: ${user.email}`);
+
+    // Admin-only check
+    if (user.email !== 'admin@vitaluxeservice.com') {
+      console.error(`Access denied for user: ${user.email}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Only admin@vitaluxeservice.com can clear storage files' 
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse request body
+    const requestBody = await req.json() as ClearStorageRequest;
+
+    if (requestBody.confirm !== 'CLEAR ALL STORAGE') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid confirmation text' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Default buckets to clear (excluding product-images)
     const bucketsToClean = requestBody.buckets || [
@@ -88,49 +169,39 @@ Deno.serve(async (req) => {
       };
 
       try {
-        // List all files in bucket
-        const { data: files, error: listError } = await supabaseAdmin
-          .storage
-          .from(bucketName)
-          .list('', {
-            limit: 1000,
-            sortBy: { column: 'name', order: 'asc' }
-          });
-
-        if (listError) {
-          bucketResult.errors.push(`List error: ${listError.message}`);
-          results[bucketName] = bucketResult;
-          continue;
-        }
-
-        if (!files || files.length === 0) {
+        console.log(`Processing bucket: ${bucketName}`);
+        
+        // Recursively list all files in bucket (including nested folders)
+        const allFilePaths = await listAllFiles(supabaseAdmin, bucketName);
+        
+        bucketResult.files_found = allFilePaths.length;
+        
+        if (allFilePaths.length === 0) {
           console.log(`Bucket ${bucketName} is empty`);
           results[bucketName] = bucketResult;
           continue;
         }
 
-        bucketResult.files_found = files.length;
-        console.log(`Found ${files.length} files in ${bucketName}`);
+        console.log(`Found ${allFilePaths.length} files in ${bucketName} (including nested)`);
 
         // Delete files in batches of 100
         const batchSize = 100;
-        for (let i = 0; i < files.length; i += batchSize) {
-          const batch = files.slice(i, i + batchSize);
-          const filePaths = batch.map(file => file.name);
+        for (let i = 0; i < allFilePaths.length; i += batchSize) {
+          const batch = allFilePaths.slice(i, i + batchSize);
 
           const { data: deleteData, error: deleteError } = await supabaseAdmin
             .storage
             .from(bucketName)
-            .remove(filePaths);
+            .remove(batch);
 
           if (deleteError) {
             bucketResult.errors.push(`Batch delete error: ${deleteError.message}`);
             console.error(`Error deleting batch in ${bucketName}:`, deleteError);
           } else {
-            const deletedCount = deleteData?.length || filePaths.length;
+            const deletedCount = deleteData?.length || batch.length;
             bucketResult.files_deleted += deletedCount;
             totalFilesDeleted += deletedCount;
-            console.log(`Deleted ${deletedCount} files from ${bucketName} (batch ${i / batchSize + 1})`);
+            console.log(`Deleted ${deletedCount} files from ${bucketName} (batch ${Math.floor(i / batchSize) + 1})`);
           }
         }
 
