@@ -79,6 +79,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return null;
   }
 
+  // If auth loaded but role never populated, redirect to auth page
+  if (!loading && user && !effectiveRole) {
+    navigate('/auth');
+    return null;
+  }
+
   // Show 2FA dialogs if needed (admins never need 2FA, even when impersonating)
   if (effectiveRole !== 'admin' && !isImpersonating) {
     if (requires2FASetup) {

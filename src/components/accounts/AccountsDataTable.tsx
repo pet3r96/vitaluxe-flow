@@ -50,7 +50,7 @@ export const AccountsDataTable = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: accounts, isLoading, refetch } = useQuery({
-    queryKey: ["accounts", roleFilter, effectiveRole],
+    queryKey: ["accounts", roleFilter],
     enabled: !!effectiveRole,
     staleTime: 0,
     queryFn: async () => {

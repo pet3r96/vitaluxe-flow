@@ -129,8 +129,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       
-      // If retry fails, force clear and redirect to auth
-      logger.error('Auth bootstrap failed after retry: redirecting to auth');
+      // If retry fails, force clear and let ProtectedRoute handle redirect
+      logger.error('Auth bootstrap failed after retry');
       setDataLoading(false);
       setLoading(false);
       setUserRole(null);
@@ -141,9 +141,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (event, session) => {
         logger.info('Auth state changed', { event, hasSession: !!session });
         
-        // Always update session and user state
-        setSession(session);
-        setUser(session?.user ?? null);
+        // Only update session state for meaningful auth events, NOT for token refresh
+        if (event !== 'TOKEN_REFRESHED') {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
         
         // Gate heavy reinitialization by event type
         if (event === 'SIGNED_IN' && session?.user) {
