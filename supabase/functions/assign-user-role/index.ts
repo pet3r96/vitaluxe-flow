@@ -18,7 +18,8 @@ function isTrustedOrigin(url: string): boolean {
     const host = u.hostname.toLowerCase();
     return host === 'app.vitaluxeservices.com'
       || host.endsWith('.lovableproject.com')
-      || host.endsWith('.lovable.app');
+      || host.endsWith('.lovable.app')
+      || host.endsWith('.lovable.dev');
   } catch {
     return false;
   }
@@ -346,9 +347,9 @@ serve(async (req) => {
 
     const userId = authData.user.id;
 
-    // Determine parent_id
-    const parentId = signupData.parentId || 
-      (signupData.role === 'downline' ? signupData.roleData.linkedToplineId : null);
+    // Determine parent_id - only use explicit parentId, not downline's linkedToplineId
+    // (linkedToplineId is a profiles.id, but RPC expects reps.id for parentId)
+    const parentId = (signupData.role !== 'downline' && signupData.parentId) ? signupData.parentId : null;
 
     // Build roleData for RPC, including parentId if it exists
     const roleDataForRpc: any = { ...signupData.roleData };
@@ -560,25 +561,9 @@ serve(async (req) => {
       }
     }
 
-    // If topline or downline role, create rep record
+    // Topline rep record is already created by the RPC function
     if (signupData.role === 'topline') {
-      const { error: repError } = await supabaseAdmin
-        .from('reps')
-        .insert({
-          user_id: userId,
-          role: 'topline',
-          assigned_topline_id: null, // Toplines don't have an assigned topline
-          active: true
-        });
-
-      if (repError) {
-        console.error('Rep creation error:', repError);
-        await supabaseAdmin.auth.admin.deleteUser(userId);
-        return new Response(
-          JSON.stringify({ error: 'Failed to create rep record' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      console.log('Topline rep already created by RPC, skipping manual insert');
     }
 
     if (signupData.role === 'downline') {
@@ -628,21 +613,24 @@ serve(async (req) => {
         }
       }
 
-      // Create the downline rep record
+      // Upsert the downline rep record to ensure assigned_topline_id is set correctly
       const { error: repError } = await supabaseAdmin
         .from('reps')
-        .insert({
-          user_id: userId,
-          role: 'downline',
-          assigned_topline_id: toplineRepsId,
-          active: true
-        });
+        .upsert(
+          {
+            user_id: userId,
+            role: 'downline',
+            assigned_topline_id: toplineRepsId,
+            active: true
+          },
+          { onConflict: 'user_id' }
+        );
 
       if (repError) {
-        console.error('Rep creation error:', repError);
+        console.error('Rep creation/update error:', repError);
         await supabaseAdmin.auth.admin.deleteUser(userId);
         return new Response(
-          JSON.stringify({ error: 'Failed to create rep record' }),
+          JSON.stringify({ error: 'Failed to create or link rep record' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
