@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -89,7 +90,15 @@ export const FactoryResetManager = () => {
   const [confirmText, setConfirmText] = useState("");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [executeResult, setExecuteResult] = useState<ExecuteResponse | null>(null);
+  
+  // Delete Orders state
+  const [isDeletingOrders, setIsDeletingOrders] = useState(false);
+  const [showDeleteOrdersDialog, setShowDeleteOrdersDialog] = useState(false);
+  const [deleteOrdersConfirmText, setDeleteOrdersConfirmText] = useState("");
+  const [deleteOrdersResult, setDeleteOrdersResult] = useState<any>(null);
+  
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleDryRun = async () => {
     setIsLoadingDryRun(true);
@@ -120,38 +129,82 @@ export const FactoryResetManager = () => {
   };
 
   const handleExecute = async () => {
-    if (confirmText !== "ERASE ALL") return;
+    if (confirmText !== "ERASE ALL") {
+      toast({
+        title: "Error",
+        description: "Please type ERASE ALL to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsExecuting(true);
-    setShowConfirmDialog(false);
-
     try {
-      const { data, error } = await supabase.functions.invoke('factory-reset', {
-        body: {
-          mode: 'execute',
-          confirm: 'ERASE ALL'
-        }
+      const { data, error } = await supabase.functions.invoke("factory-reset", {
+        body: { mode: "execute" },
       });
 
       if (error) throw error;
 
       setExecuteResult(data);
+      setShowConfirmDialog(false);
       setConfirmText("");
-      setDryRunData(null);
-
       toast({
-        title: "Factory Reset Complete",
-        description: `Deleted ${data.total_deleted.toLocaleString()} records in ${data.execution_time_seconds}s`,
+        title: "Success",
+        description: `Factory reset complete! Deleted ${data.total_deleted} records in ${data.execution_time_seconds}s`,
       });
     } catch (error: any) {
-      console.error('Execute error:', error);
+      console.error("Execution error:", error);
       toast({
         title: "Error",
-        description: error.message || 'Failed to execute factory reset',
+        description: error.message || "Failed to execute factory reset",
         variant: "destructive",
       });
     } finally {
       setIsExecuting(false);
+    }
+  };
+
+  const handleDeleteOrders = async () => {
+    if (deleteOrdersConfirmText !== "DELETE ALL ORDERS") {
+      toast({
+        title: "Error",
+        description: "Please type DELETE ALL ORDERS to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeletingOrders(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-all-orders", {
+        body: { confirm: "DELETE ALL ORDERS" },
+      });
+
+      if (error) throw error;
+
+      setDeleteOrdersResult(data);
+      setShowDeleteOrdersDialog(false);
+      setDeleteOrdersConfirmText("");
+      
+      // Invalidate orders-related queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order-lines"] });
+      queryClient.invalidateQueries({ queryKey: ["order-profits"] });
+      
+      toast({
+        title: "Success",
+        description: `Deleted ${data.total_deleted} order records in ${data.execution_time_seconds}s`,
+      });
+    } catch (error: any) {
+      console.error("Delete orders error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete orders",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingOrders(false);
     }
   };
 
@@ -320,6 +373,89 @@ export const FactoryResetManager = () => {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Confirm Deletion
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Orders Section */}
+        <Card className="border-destructive/50 mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete All Orders
+            </CardTitle>
+            <CardDescription>
+              Remove all order data while preserving users, products, and other entities
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This will permanently delete all orders, order lines, shipping logs, and related data. 
+                Users, products, pharmacies, and other entities will be preserved.
+              </AlertDescription>
+            </Alert>
+
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteOrdersDialog(true)}
+              disabled={isDeletingOrders}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {isDeletingOrders ? "Deleting..." : "Delete All Orders"}
+            </Button>
+
+            {deleteOrdersResult && (
+              <div className="space-y-4 mt-4">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Deletion completed in {deleteOrdersResult.execution_time_seconds}s
+                  </AlertDescription>
+                </Alert>
+
+                <CountsTable data={deleteOrdersResult.deleted_counts} title="Deleted Records" />
+                <p className="text-sm text-muted-foreground">
+                  Total deleted: <strong>{deleteOrdersResult.total_deleted}</strong> records
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Delete Orders Confirmation Dialog */}
+        <AlertDialog open={showDeleteOrdersDialog} onOpenChange={setShowDeleteOrdersDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Confirm Order Deletion
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <p>This action will permanently delete all orders and related data. This cannot be undone.</p>
+                <p className="font-semibold mt-4">Type "DELETE ALL ORDERS" to confirm:</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <Input
+              value={deleteOrdersConfirmText}
+              onChange={(e) => setDeleteOrdersConfirmText(e.target.value)}
+              placeholder="DELETE ALL ORDERS"
+              className="font-mono"
+            />
+
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeleteOrdersConfirmText("")}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteOrders}
+                disabled={isDeletingOrders || deleteOrdersConfirmText !== "DELETE ALL ORDERS"}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeletingOrders ? "Deleting..." : "Delete Orders"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
