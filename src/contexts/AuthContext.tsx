@@ -3,7 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { generateCSRFToken, clearCSRFToken } from "@/lib/csrf";
+import { generateCSRFToken, clearCSRFToken, getCurrentCSRFToken } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
 
 interface AuthContextType {
@@ -469,6 +469,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: { message: 'User already exists in the system. Please use a different email address.' } };
       }
 
+      // Get CSRF token for authenticated requests
+      const csrfToken = await getCurrentCSRFToken();
+      
       // Call the edge function to handle user creation and role assignment
       const { data, error } = await supabase.functions.invoke('assign-user-role', {
         body: {
@@ -480,6 +483,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role,
           roleData,
         },
+        headers: csrfToken ? {
+          'x-csrf-token': csrfToken
+        } : {}
       });
 
       if (error) {

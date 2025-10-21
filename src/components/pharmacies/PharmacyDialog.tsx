@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getCurrentCSRFToken } from "@/lib/csrf";
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -155,6 +156,14 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         // Create new pharmacy with complete user account
         const tempPassword = generateSecurePassword();
 
+        // Fetch CSRF token
+        const csrfToken = await getCurrentCSRFToken();
+        if (!csrfToken) {
+          toast.error("Session expired. Please refresh the page and try again.");
+          setLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase.functions.invoke('assign-user-role', {
           body: {
             email: formData.contact_email,
@@ -166,6 +175,9 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
               statesServiced: formData.states_serviced,
               address: `${formData.address_street}, ${formData.address_city}, ${formData.address_state} ${formData.address_zip}`.trim()
             }
+          },
+          headers: {
+            'x-csrf-token': csrfToken
           }
         });
 

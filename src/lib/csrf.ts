@@ -118,6 +118,45 @@ export const getCSRFToken = (): string | null => {
 };
 
 /**
+ * Gets the current user's CSRF token from the database
+ * This is used when calling edge functions that require CSRF protection
+ */
+export const getCurrentCSRFToken = async (): Promise<string | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      import('@/lib/logger').then(({ logger }) => {
+        logger.warn('Cannot get CSRF token: No authenticated user');
+      });
+      return null;
+    }
+    
+    const { data, error } = await supabase
+      .from('user_sessions' as any)
+      .select('csrf_token')
+      .eq('user_id', user.id)
+      .gte('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error || !data) {
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Failed to fetch CSRF token', error);
+      });
+      return null;
+    }
+    
+    return (data as any).csrf_token || null;
+  } catch (error) {
+    import('@/lib/logger').then(({ logger }) => {
+      logger.error('Error fetching CSRF token', error);
+    });
+    return null;
+  }
+};
+
+/**
  * Clears the CSRF token from sessionStorage
  * Call this on logout or session expiration
  */

@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { getCurrentCSRFToken } from "@/lib/csrf";
 
 interface AddProviderDialogProps {
   open: boolean;
@@ -102,6 +103,14 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
     setLoading(true);
 
     try {
+      // Fetch CSRF token
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        toast.error("Session expired. Please refresh the page and try again.");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('assign-user-role', {
         body: {
           email: formData.email,
@@ -116,6 +125,9 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
             licenseNumber: formData.licenseNumber,
             phone: formData.phone,
           }
+        },
+        headers: {
+          'x-csrf-token': csrfToken
         }
       });
 

@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { Loader2, Upload, Check, ChevronsUpDown, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { getCurrentCSRFToken } from "@/lib/csrf";
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -225,6 +226,14 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
       // Get current admin user for parent_id
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Fetch CSRF token
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        toast.error("Session expired. Please refresh the page and try again.");
+        setLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase.functions.invoke("assign-user-role", {
         body: {
           email: formData.email,
@@ -234,6 +243,9 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
           roleData,
           contractFile: contractFileData,
         },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       });
 
       if (error) throw error;

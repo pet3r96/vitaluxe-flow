@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { Loader2, Upload, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { getCurrentCSRFToken } from "@/lib/csrf";
 
 interface AddPracticeDialogProps {
   open: boolean;
@@ -161,6 +162,14 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
         };
       }
 
+      // Fetch CSRF token
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        toast.error("Session expired. Please refresh the page and try again.");
+        setLoading(false);
+        return;
+      }
+
       // Call edge function
       const { data, error } = await supabase.functions.invoke("assign-user-role", {
         body: {
@@ -180,6 +189,9 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
           },
           contractFile: contractFileData,
         },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       });
 
       if (error) throw error;
