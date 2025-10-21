@@ -117,7 +117,7 @@ serve(async (req) => {
       }
     };
 
-    // DRY RUN MODE
+    // DRY RUN MODE - Role-based authorization
     if (mode === 'dryRun') {
       console.log('Factory reset dry run initiated by', user.email);
 
