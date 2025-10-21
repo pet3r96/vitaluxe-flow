@@ -223,9 +223,6 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
         roleData.address_zip = formData.address_zip;
       }
 
-      // Get current admin user for parent_id
-      const { data: { user } } = await supabase.auth.getUser();
-      
       // Fetch CSRF token
       const csrfToken = await getCurrentCSRFToken();
       if (!csrfToken) {
@@ -234,16 +231,23 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
         return;
       }
       
+      // Build request body - only include parentId for downline reps
+      const requestBody: any = {
+        email: formData.email,
+        name: formData.name,
+        role,
+        roleData,
+        contractFile: contractFileData,
+        csrfToken, // Include in body as fallback
+      };
+
+      // Only downline reps need a parentId (which comes from formData.linkedToplineId)
+      if (role === 'downline' && formData.linkedToplineId) {
+        requestBody.parentId = formData.linkedToplineId;
+      }
+      
       const { data, error } = await supabase.functions.invoke("assign-user-role", {
-        body: {
-          email: formData.email,
-          name: formData.name,
-          role,
-          parentId: user?.id, // Set current admin as parent
-          roleData,
-          contractFile: contractFileData,
-          csrfToken, // Include in body as fallback
-        },
+        body: requestBody,
         headers: {
           'x-csrf-token': csrfToken
         }
