@@ -20,7 +20,7 @@ export const DataSyncButton = ({ onSyncComplete }: DataSyncButtonProps) => {
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [syncResults, setSyncResults] = useState<any>(null);
-  const { user } = useAuth();
+  const { userRole } = useAuth();
 
   const handleSync = async () => {
     setLoading(true);
@@ -58,8 +58,8 @@ export const DataSyncButton = ({ onSyncComplete }: DataSyncButtonProps) => {
     }
   };
 
-  // Only show for authorized admin
-  if (user?.email !== 'admin@vitaluxeservice.com') {
+  // Only show for admin role
+  if (userRole !== 'admin') {
     return null;
   }
 

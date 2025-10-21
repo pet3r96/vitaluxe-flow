@@ -54,62 +54,8 @@ const Auth = () => {
     "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
   ];
 
-  // Auto-trigger emergency reset for admin email
-  useEffect(() => {
-    const trimmedEmail = email.trim().toLowerCase();
-    const ADMIN_EMAIL = 'admin@vitaluxeservice.com';
-    
-    if (isLogin && trimmedEmail === ADMIN_EMAIL && !emergencyResetStatus?.triggered) {
-      handleEmergencyReset();
-    }
-  }, [email, isLogin, emergencyResetStatus?.triggered]);
+  // Emergency reset removed - use admin role-based checks instead
 
-  const handleEmergencyReset = async () => {
-    setEmergencyResetStatus({
-      triggered: true,
-      loading: true,
-      message: 'Initiating emergency password reset...',
-      success: false
-    });
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('emergency-admin-reset');
-      
-      if (error) throw error;
-      
-      if (data?.success && data?.temporary_password) {
-        setEmergencyResetStatus({
-          triggered: true,
-          loading: true,
-          message: '✅ Password reset successful! Signing you in...',
-          success: true
-        });
-        
-        // Auto-fill password
-        setPassword(data.temporary_password);
-        
-        // Wait 1 second then auto-login
-        setTimeout(async () => {
-          const { error: signInError } = await signIn(email.trim(), data.temporary_password);
-          if (signInError) {
-            setEmergencyResetStatus({
-              triggered: true,
-              loading: false,
-              message: `❌ Sign-in failed: ${signInError.message}`,
-              success: false
-            });
-          }
-        }, 1000);
-      }
-    } catch (error: any) {
-      setEmergencyResetStatus({
-        triggered: true,
-        loading: false,
-        message: `❌ Reset failed: ${error.message}`,
-        success: false
-      });
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,27 +199,6 @@ const Auth = () => {
           {isLogin ? "Sign in to your account" : "Create your account"}
         </p>
 
-        {emergencyResetStatus && (
-          <div className={`mb-4 p-4 rounded-lg border ${
-            emergencyResetStatus.success 
-              ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800' 
-              : emergencyResetStatus.loading
-              ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
-              : 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800'
-          }`}>
-            <p className="text-sm font-medium text-foreground">{emergencyResetStatus.message}</p>
-            {!emergencyResetStatus.loading && !emergencyResetStatus.success && (
-              <Button
-                onClick={handleEmergencyReset}
-                className="mt-2"
-                size="sm"
-                type="button"
-              >
-                Retry Reset
-              </Button>
-            )}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (

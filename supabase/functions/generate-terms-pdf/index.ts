@@ -75,12 +75,6 @@ serve(async (req) => {
       if (roleError || !roleData) {
         throw new Error('Unauthorized: Only admins can accept terms on behalf of other users');
       }
-
-      // Additional check: only allow the specific authorized admin
-      const { data: userData } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-      if (userData?.user?.email !== 'admin@vitaluxeservice.com') {
-        throw new Error('Unauthorized: You are not authorized to perform impersonation');
-      }
     }
 
     // Fetch terms content

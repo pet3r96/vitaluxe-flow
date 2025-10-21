@@ -42,16 +42,17 @@ serve(async (req) => {
       );
     }
 
-    // Verify admin access
-    const { data: adminUser, error: adminError } = await supabaseAdmin
-      .from('profiles')
-      .select('email')
-      .eq('id', user.id)
+    // Verify admin role
+    const { data: roleCheck, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
       .single();
 
-    if (adminError || adminUser?.email !== 'admin@vitaluxeservice.com') {
+    if (roleError || !roleCheck) {
       return new Response(
-        JSON.stringify({ error: 'Access denied. Only admin@vitaluxeservice.com can run sync.' }),
+        JSON.stringify({ error: 'Access denied: admin role required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

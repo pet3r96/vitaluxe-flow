@@ -125,12 +125,19 @@ Deno.serve(async (req) => {
     console.log(`User authenticated: ${user.email}`);
 
     // Admin-only check
-    if (user.email !== 'admin@vitaluxeservice.com') {
+    const { data: roleCheck, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .single();
+
+    if (roleError || !roleCheck) {
       console.error(`Access denied for user: ${user.email}`);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Only admin@vitaluxeservice.com can clear storage files' 
+          error: 'Access denied: admin role required' 
         }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

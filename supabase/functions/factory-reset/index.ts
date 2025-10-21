@@ -64,27 +64,22 @@ serve(async (req) => {
       );
     }
 
-    // Verify admin email
-    const ADMIN_EMAIL = 'admin@vitaluxeservice.com';
-    if (user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    // Verify admin role
+    const { data: roleCheck, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .single();
+
+    if (roleError || !roleCheck) {
       return new Response(
-        JSON.stringify({ error: 'Access denied: admin only' }),
+        JSON.stringify({ error: 'Access denied: admin role required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get admin profile
-    const { data: adminProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('email', ADMIN_EMAIL)
-      .single();
-
-    if (profileError || !adminProfile) {
-      throw new Error('Admin profile not found');
-    }
-
-    const adminUserId = adminProfile.id;
+    const adminUserId = user.id;
 
     // Parse request
     const { mode, confirm } = await req.json();

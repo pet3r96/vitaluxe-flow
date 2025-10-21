@@ -343,7 +343,7 @@ export const FactoryResetManager = () => {
           Factory Reset (Danger Zone)
         </CardTitle>
         <CardDescription>
-          Permanently delete all test data and users (except admin@vitaluxeservice.com). 
+          Permanently delete all test data and users (except admin users). 
           This preserves system configuration but cannot be undone.
         </CardDescription>
       </CardHeader>
@@ -469,7 +469,7 @@ export const FactoryResetManager = () => {
                 <p>This action will:</p>
                 <ul className="list-disc list-inside space-y-1 text-sm">
                   <li>Delete ALL orders, products, and inventory</li>
-                  <li>Remove ALL users except admin@vitaluxeservice.com</li>
+                  <li>Remove ALL users except admin users</li>
                   <li>Erase ALL logs and security events (except admin)</li>
                   <li>Cannot be undone or reversed</li>
                 </ul>

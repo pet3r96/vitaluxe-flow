@@ -14,6 +14,46 @@ serve(async (req) => {
   try {
     console.log('Emergency password reset requested');
 
+    // Verify emergency secret
+    const emergencySecret = req.headers.get('x-emergency-secret');
+    const expectedSecret = Deno.env.get('EMERGENCY_RESET_SECRET');
+
+    if (!expectedSecret || emergencySecret !== expectedSecret) {
+      console.error('Unauthorized emergency reset attempt');
+      
+      // Log failed attempt
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+            },
+          }
+        );
+        
+        await supabaseAdmin
+          .from('security_events')
+          .insert({
+            event_type: 'unauthorized_emergency_reset_attempt',
+            ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+            details: {
+              timestamp: new Date().toISOString(),
+              user_agent: req.headers.get('user-agent')
+            }
+          });
+      } catch (logError) {
+        console.error('Error logging unauthorized attempt:', logError);
+      }
+      
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -25,7 +65,7 @@ serve(async (req) => {
       }
     );
 
-    // Hardcoded admin email for security
+    // Hardcoded admin email for security (emergency lookup only)
     const ADMIN_EMAIL = 'admin@vitaluxeservice.com';
     const TEMP_PASSWORD = 'TempAdmin2025!';
 
