@@ -300,31 +300,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         (payload) => {
           if (payload.new.active === false && payload.old.active === true) {
             toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
-            setTimeout(async () => {
-              // End impersonation log if active
-              const storedImpersonation = sessionStorage.getItem('vitaluxe_impersonation');
-              if (storedImpersonation) {
-                try {
-                  const { logId } = JSON.parse(storedImpersonation);
-                  if (logId) {
-                    await supabase
-                      .from('impersonation_logs')
-                      .update({ end_time: new Date().toISOString() })
-                      .eq('id', logId);
+            setTimeout(() => {
+              void (async () => {
+                // End impersonation log if active
+                const storedImpersonation = sessionStorage.getItem('vitaluxe_impersonation');
+                if (storedImpersonation) {
+                  try {
+                    const { logId } = JSON.parse(storedImpersonation);
+                    if (logId) {
+                      await supabase
+                        .from('impersonation_logs')
+                        .update({ end_time: new Date().toISOString() })
+                        .eq('id', logId);
+                    }
+                  } catch (e) {
+                    logger.error('Error ending impersonation log on deactivation', e);
+                  }
                 }
-              } catch (e) {
-                logger.error('Error ending impersonation log on deactivation', e);
-              }
-            }
-              
-              await supabase.auth.signOut();
-              setUserRole(null);
-              setImpersonatedRole(null);
-              setImpersonatedUserId(null);
-              setImpersonatedUserName(null);
-              setCurrentLogId(null);
-              sessionStorage.removeItem('vitaluxe_impersonation');
-              navigate("/auth");
+                
+                await supabase.auth.signOut();
+                setUserRole(null);
+                setImpersonatedRole(null);
+                setImpersonatedUserId(null);
+                setImpersonatedUserName(null);
+                setCurrentLogId(null);
+                sessionStorage.removeItem('vitaluxe_impersonation');
+                navigate("/auth");
+              })();
             }, 3000);
           }
         }
