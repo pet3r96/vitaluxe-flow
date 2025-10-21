@@ -581,17 +581,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Check 2FA status after successful login
-      await check2FAStatus(user.id);
-
-      // Check password status after successful login
-      await checkPasswordStatus();
-
-      // Generate CSRF token after successful authentication
-      const csrfToken = await generateCSRFToken();
-      if (!csrfToken) {
-        logger.warn('Failed to generate CSRF token - some operations may be restricted');
-      }
-
+      // Emergency navigation timeout - ensure user gets redirected even if post-login operations hang
+      const navigationTimeout = setTimeout(() => {
+        logger.warn('Emergency navigation timeout triggered - forcing redirect');
+        navigate("/dashboard");
+      }, 2000);
+      
+      // Perform post-login setup in background (don't block navigation)
+      Promise.all([
+        check2FAStatus(user.id).catch(err => logger.error('2FA check failed', err)),
+        checkPasswordStatus().catch(err => logger.error('Password check failed', err)),
+        generateCSRFToken().catch(err => logger.error('CSRF generation failed', err))
+      ]).catch(err => logger.error('Post-login setup failed', err));
+      
+      // Clear emergency timeout and navigate immediately
+      clearTimeout(navigationTimeout);
       navigate("/dashboard");
       return { error: null };
     } catch (error: any) {

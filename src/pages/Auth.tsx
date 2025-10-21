@@ -58,6 +58,22 @@ const Auth = () => {
 
   // Emergency reset removed - use admin role-based checks instead
 
+  // Force loading to clear after 10 seconds as a failsafe
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        console.warn('Login timeout - forcing loading clear');
+        setLoading(false);
+        toast({
+          title: "Login Timeout",
+          description: "The login process took too long. Please try again.",
+          variant: "destructive",
+        });
+      }, 10000);
+      return () => clearTimeout(timeout);
+    }
+  }, [loading, toast]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
