@@ -97,6 +97,12 @@ export const FactoryResetManager = () => {
   const [deleteOrdersConfirmText, setDeleteOrdersConfirmText] = useState("");
   const [deleteOrdersResult, setDeleteOrdersResult] = useState<any>(null);
   
+  // Clear Storage state
+  const [isClearingStorage, setIsClearingStorage] = useState(false);
+  const [showClearStorageDialog, setShowClearStorageDialog] = useState(false);
+  const [clearStorageConfirmText, setClearStorageConfirmText] = useState("");
+  const [clearStorageResult, setClearStorageResult] = useState<any>(null);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -216,6 +222,50 @@ export const FactoryResetManager = () => {
       });
     } finally {
       setIsDeletingOrders(false);
+    }
+  };
+
+  const handleClearStorage = async () => {
+    if (clearStorageConfirmText !== "CLEAR ALL STORAGE") {
+      toast({
+        title: "Error",
+        description: "Please type CLEAR ALL STORAGE to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsClearingStorage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("clear-storage-files", {
+        body: { confirm: "CLEAR ALL STORAGE" },
+      });
+
+      const hasValidData = data && typeof data.total_files_deleted === 'number';
+      
+      if (!hasValidData && error) {
+        throw error;
+      }
+
+      const resultData = data || { total_files_deleted: 0, execution_time_seconds: 0, cleared_buckets: {} };
+      
+      setClearStorageResult(resultData);
+      setShowClearStorageDialog(false);
+      setClearStorageConfirmText("");
+      
+      toast({
+        title: "Success",
+        description: `Cleared ${resultData.total_files_deleted} files from storage in ${resultData.execution_time_seconds}s`,
+      });
+    } catch (error: any) {
+      console.error("Clear storage error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to clear storage files",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearingStorage(false);
     }
   };
 
@@ -467,6 +517,124 @@ export const FactoryResetManager = () => {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {isDeletingOrders ? "Deleting..." : "Delete Orders"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Clear Storage Section */}
+        <Card className="border-destructive/50 mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Clear All Storage Files
+            </CardTitle>
+            <CardDescription>
+              Remove all files from storage buckets (receipts, prescriptions, contracts, terms-signed, quarantine)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This will permanently delete all uploaded files from storage buckets. 
+                Product images will be preserved. This action cannot be undone.
+              </AlertDescription>
+            </Alert>
+
+            <Button
+              variant="destructive"
+              onClick={() => setShowClearStorageDialog(true)}
+              disabled={isClearingStorage}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {isClearingStorage ? "Clearing..." : "Clear All Storage Files"}
+            </Button>
+
+            {clearStorageResult && (
+              <div className="space-y-4 mt-4">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Cleared {clearStorageResult.total_files_deleted} files in {clearStorageResult.execution_time_seconds}s
+                  </AlertDescription>
+                </Alert>
+
+                {clearStorageResult.cleared_buckets && Object.keys(clearStorageResult.cleared_buckets).length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">Bucket Results</h3>
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Bucket</TableHead>
+                            <TableHead className="text-right">Files Deleted</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(clearStorageResult.cleared_buckets).map(([bucket, result]: [string, any]) => (
+                            <TableRow key={bucket}>
+                              <TableCell className="font-mono text-sm">{bucket}</TableCell>
+                              <TableCell className="text-right">{result.files_deleted}</TableCell>
+                              <TableCell>
+                                {result.errors && result.errors.length > 0 ? (
+                                  <span className="text-destructive text-xs">{result.errors[0]}</span>
+                                ) : (
+                                  <span className="text-green-600 text-xs">✓ Success</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Clear Storage Confirmation Dialog */}
+        <AlertDialog open={showClearStorageDialog} onOpenChange={setShowClearStorageDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Confirm Storage Cleanup
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <p>This action will permanently delete all files from these storage buckets:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Receipts</li>
+                  <li>Prescriptions</li>
+                  <li>Contracts</li>
+                  <li>Terms Signed</li>
+                  <li>Quarantine</li>
+                </ul>
+                <p className="text-xs text-muted-foreground">Note: Product images will NOT be deleted</p>
+                <p className="font-semibold mt-4">Type "CLEAR ALL STORAGE" to confirm:</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <Input
+              value={clearStorageConfirmText}
+              onChange={(e) => setClearStorageConfirmText(e.target.value)}
+              placeholder="CLEAR ALL STORAGE"
+              className="font-mono"
+            />
+
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setClearStorageConfirmText("")}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleClearStorage}
+                disabled={isClearingStorage || clearStorageConfirmText !== "CLEAR ALL STORAGE"}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isClearingStorage ? "Clearing..." : "Clear Storage"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

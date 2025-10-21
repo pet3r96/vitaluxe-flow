@@ -116,3 +116,12 @@ verify_jwt = true
 
 [functions.get-s3-signed-url]
 verify_jwt = true
+
+[functions.clear-storage-files]
+verify_jwt = true
+
+[functions.delete-all-orders]
+verify_jwt = true
+
+[functions.factory-reset]
+verify_jwt = true
