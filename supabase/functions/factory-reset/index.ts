@@ -119,7 +119,7 @@ serve(async (req) => {
 
     // DRY RUN MODE
     if (mode === 'dryRun') {
-      console.log('Factory reset dry run initiated by', ADMIN_EMAIL);
+      console.log('Factory reset dry run initiated by', user.email);
 
       const current_counts: Record<string, number> = {
         // Transaction/Order Data
@@ -228,7 +228,7 @@ serve(async (req) => {
       const response: DryRunResponse = {
         mode: 'dryRun',
         admin_verified: true,
-        admin_email: ADMIN_EMAIL,
+        admin_email: user.email ?? 'unknown',
         admin_user_id: adminUserId,
         current_counts,
         preserved_tables,
@@ -243,7 +243,7 @@ serve(async (req) => {
     }
 
     // EXECUTE MODE
-    console.log('Factory reset EXECUTE initiated by', ADMIN_EMAIL);
+    console.log('Factory reset EXECUTE initiated by', user.email);
     const startTime = Date.now();
     const deleted_counts: Record<string, number> = {};
 
@@ -389,7 +389,7 @@ serve(async (req) => {
     try {
       await supabaseAdmin.from('audit_logs').insert({
         user_id: adminUserId,
-        user_email: ADMIN_EMAIL,
+        user_email: user.email,
         user_role: 'admin',
         action_type: 'factory_reset',
         entity_type: 'system',
@@ -427,7 +427,7 @@ serve(async (req) => {
       execution_time_seconds: Number(((endTime - startTime) / 1000).toFixed(1)),
       admin_preserved: {
         user_id: adminUserId,
-        email: ADMIN_EMAIL,
+        email: user.email ?? 'unknown',
         role: 'admin',
       },
     };
