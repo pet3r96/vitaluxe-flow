@@ -144,10 +144,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (event === 'SIGNED_IN' && session?.user) {
           // Don't show loading for SIGNED_IN from tab refresh/navigation
           // Only the login form should trigger loading
-          Promise.all([
+          void Promise.all([
             fetchUserRole(session.user.id).catch(err => logger.error('Role fetch failed', err)),
             generateCSRFToken().catch(err => logger.error('CSRF generation failed', err))
-          ]);
+          ]).catch(err => logger.error('Post-auth background tasks failed', err));
           logger.info('SIGNED_IN: non-blocking background operations triggered');
           
         } else if (event === 'SIGNED_OUT') {
@@ -164,7 +164,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
         } else if (event === 'USER_UPDATED' && session?.user) {
           // Silently update role without showing loading (non-blocking)
-          fetchUserRole(session.user.id).catch(err => 
+          void fetchUserRole(session.user.id).catch(err => 
             logger.error('Silent role update failed', err)
           );
           logger.info('USER_UPDATED: non-blocking role update triggered');
@@ -224,7 +224,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    checkImpersonationPermission();
+    void checkImpersonationPermission();
   }, [user?.id, userRole]);
 
   // Check if current user is a provider account and compute practice ID
@@ -280,7 +280,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    checkProviderStatusAndPractice();
+    void checkProviderStatusAndPractice();
   }, [effectiveUserId, effectiveRole]);
 
   // Real-time monitoring for account status changes
@@ -334,7 +334,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, navigate]);
 
@@ -442,7 +442,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (user && effectiveUserId && effectiveRole && !loading) {
       logger.info('Re-checking password status due to impersonation change');
-      checkPasswordStatus();
+      void checkPasswordStatus();
     }
   }, [effectiveUserId, effectiveRole]);
 
@@ -453,7 +453,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const handleActivity = () => {
       setLastActivityTime(Date.now());
       setShowIdleWarning(false);
-      updateActivity(); // Update database (throttled)
+      void updateActivity(); // Update database (throttled)
     };
 
     // Register activity listeners
@@ -486,7 +486,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Force logout at 30 minutes idle
       if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
-        forceLogout('idle_timeout');
+        void forceLogout('idle_timeout');
       }
     };
 
@@ -505,7 +505,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Tab became visible - check if session expired while hidden
         const idleMinutes = (Date.now() - lastActivityTime) / 60000;
         if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
-          forceLogout('idle_timeout');
+          void forceLogout('idle_timeout');
         }
       }
     };
@@ -546,13 +546,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleStayLoggedIn = () => {
     setLastActivityTime(Date.now());
     setShowIdleWarning(false);
-    updateActivity();
+    void updateActivity();
     toast.success('Session extended - you can continue working');
   };
 
   const handleLogoutNow = () => {
     setShowIdleWarning(false);
-    forceLogout('idle_timeout');
+    void forceLogout('idle_timeout');
   };
 
   const signIn = async (email: string, password: string) => {
