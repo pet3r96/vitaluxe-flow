@@ -3849,13 +3849,24 @@ export type Database = {
         Returns: number
       }
       create_user_with_role: {
-        Args: {
-          p_email: string
-          p_name: string
-          p_role: Database["public"]["Enums"]["app_role"]
-          p_role_data?: Json
-          p_user_id: string
-        }
+        Args:
+          | {
+              p_created_by?: string
+              p_email: string
+              p_name: string
+              p_role: Database["public"]["Enums"]["app_role"]
+              p_role_data?: Json
+              p_status?: string
+              p_temp_password?: boolean
+              p_user_id: string
+            }
+          | {
+              p_email: string
+              p_name: string
+              p_role: Database["public"]["Enums"]["app_role"]
+              p_role_data?: Json
+              p_user_id: string
+            }
         Returns: Json
       }
       decrypt_2fa_phone: {

@@ -87,6 +87,15 @@ verify_jwt = true
 [functions.send-welcome-email]
 verify_jwt = true
 
+[functions.send-verification-email]
+verify_jwt = true
+
+[functions.send-temp-password-email]
+verify_jwt = true
+
+[functions.verify-email]
+verify_jwt = false
+
 [functions.reset-password]
 verify_jwt = false
 

@@ -34,6 +34,9 @@ interface SignupRequest {
   role: 'admin' | 'doctor' | 'practice' | 'pharmacy' | 'topline' | 'downline' | 'provider';
   parentId?: string;
   csrfToken?: string; // Optional - fallback if header is stripped
+  isSelfSignup?: boolean; // Flag for self-signup flow
+  isAdminCreated?: boolean; // Flag for admin-created user flow
+  createdBy?: string; // Admin user ID who created this user
   roleData: {
     // Doctor/Practice fields
     licenseNumber?: string;
@@ -319,11 +322,17 @@ serve(async (req) => {
       );
     }
 
+    // Determine user status and email confirmation based on flow
+    const isSelfSignup = signupData.isSelfSignup === true;
+    const isAdminCreated = signupData.isAdminCreated === true || isAdminCaller;
+    const userStatus = isSelfSignup ? 'pending_verification' : 'active';
+    const requiresTempPassword = isAdminCreated && !isSelfSignup;
+
     // Create user using admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: signupData.email,
       password: initialPassword,
-      email_confirm: true, // Auto-confirm email
+      email_confirm: isAdminCreated, // Auto-confirm for admin-created, require verification for self-signup
       user_metadata: {
         name: signupData.name
       }
@@ -365,7 +374,7 @@ serve(async (req) => {
       p_role_data: roleDataForRpc 
     }));
 
-    // Use atomic function to create user with role
+    // Use atomic function to create user with role (with new Phase 2 parameters)
     const { data: creationResult, error: creationError } = await supabaseAdmin.rpc(
       'create_user_with_role',
       {
@@ -373,7 +382,10 @@ serve(async (req) => {
         p_email: signupData.email,
         p_name: signupData.name,
         p_role: signupData.role,
-        p_role_data: roleDataForRpc
+        p_role_data: roleDataForRpc,
+        p_status: userStatus,
+        p_created_by: signupData.createdBy || callerUserId,
+        p_temp_password: requiresTempPassword
       }
     );
 
@@ -688,10 +700,29 @@ serve(async (req) => {
     }
 
 
-    // Send welcome email with credentials only for admin-created accounts
-    // Admin-created accounts require password change on first login
-    if (isAdminCaller && signupData.role !== 'admin') {
-      console.log(`Admin-created account: sending welcome email with password to ${signupData.email}`);
+    // Handle email sending based on flow type
+    if (isSelfSignup) {
+      // Self-signup: Send verification email
+      console.log(`Self-signup: sending verification email to ${signupData.email}`);
+      
+      try {
+        const { error: emailError } = await supabaseAdmin.functions.invoke('send-verification-email', {
+          body: {
+            userId: userId,
+            email: signupData.email,
+            name: signupData.name
+          }
+        });
+
+        if (emailError) {
+          console.error('Error sending verification email:', emailError);
+        }
+      } catch (emailErr) {
+        console.error('Failed to invoke send-verification-email function:', emailErr);
+      }
+    } else if (isAdminCreated && signupData.role !== 'admin') {
+      // Admin-created: Send temp password email and set password status
+      console.log(`Admin-created account: sending temp password email to ${signupData.email}`);
       
       // Insert password status record for forced password change
       const { error: statusError } = await supabaseAdmin
@@ -707,29 +738,31 @@ serve(async (req) => {
         console.error('Error creating password status:', statusError);
       }
 
-      // Send welcome email with the initial password
+      // Send temp password email
       try {
-        const { error: emailError } = await supabaseAdmin.functions.invoke('send-welcome-email', {
+        const { error: emailError } = await supabaseAdmin.functions.invoke('send-temp-password-email', {
           body: {
             email: signupData.email,
             name: signupData.name,
-            temporaryPassword: initialPassword,
-            role: signupData.role
+            tempPassword: initialPassword,
+            createdBy: signupData.createdBy || callerUserId
           }
         });
 
         if (emailError) {
-          console.error('Error sending welcome email:', emailError);
+          console.error('Error sending temp password email:', emailError);
         }
       } catch (emailErr) {
-        console.error('Failed to invoke send-welcome-email function:', emailErr);
+        console.error('Failed to invoke send-temp-password-email function:', emailErr);
       }
     }
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: (isAdminCaller && signupData.role !== 'admin')
+        message: isSelfSignup
+          ? 'Account created successfully! Please check your email to verify your address.'
+          : isAdminCreated
           ? 'Account created successfully! A welcome email with login credentials has been sent.'
           : 'Account created successfully! You can now sign in.',
         userId: userId
