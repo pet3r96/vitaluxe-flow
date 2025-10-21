@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
  * Generates a new CSRF token and stores it both in sessionStorage and database
  * Call this when initializing a user session
  */
-export const generateCSRFToken = async (): Promise<string | null> => {
+const generateCSRFTokenInternal = async (): Promise<string | null> => {
   try {
     const token = crypto.randomUUID();
     sessionStorage.setItem('csrf_token', token);
@@ -51,6 +51,16 @@ export const generateCSRFToken = async (): Promise<string | null> => {
     });
     return null;
   }
+};
+
+/**
+ * Generates a CSRF token with a timeout to prevent hanging in iframe contexts
+ */
+export const generateCSRFToken = async (): Promise<string | null> => {
+  return Promise.race([
+    generateCSRFTokenInternal(),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
+  ]);
 };
 
 /**

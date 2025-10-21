@@ -5,6 +5,46 @@ This document outlines the comprehensive security measures implemented in the Vi
 
 ---
 
+## 🕒 Session Management & Idle Timeout
+
+**Automatic Logout Policy:**
+- **Idle Timeout:** 30 minutes of complete inactivity
+- **Warning:** Users receive a 2-minute warning before automatic logout
+- **Activity Tracking:** Monitors mouse movements, clicks, keyboard input, scrolling, and touch events
+- **Server-Side Enforcement:** Stale sessions are cleaned up every 15 minutes via scheduled job
+
+**How It Works:**
+1. **Client-Side Detection:**
+   - Tracks user interactions in real-time
+   - Resets the 30-minute countdown on any activity
+   - Shows warning dialog at 28 minutes of idle time
+   - Users can click "Stay Logged In" to extend session
+
+2. **Server-Side Cleanup:**
+   - Scheduled edge function runs every 15 minutes
+   - Deletes sessions with `last_activity > 30 minutes ago`
+   - Logs forced logouts to audit trail
+   - Ensures timeout even if client doesn't cooperate
+
+3. **Database Tracking:**
+   - `active_sessions.last_activity` updated on user interactions (throttled to 30s)
+   - Indexed for efficient cleanup queries
+   - Session state validated on API calls
+
+**HIPAA Compliance:**
+- ✅ Prevents unauthorized PHI access from unattended workstations
+- ✅ Automatic logout enforced even if browser remains open
+- ✅ All forced logouts logged to audit trail
+- ✅ Works across multiple tabs and windows
+
+**Configuration:**
+- Timeout duration: `SESSION_CONFIG.IDLE_TIMEOUT_MINUTES` (default: 30)
+- Warning threshold: `SESSION_CONFIG.WARNING_BEFORE_LOGOUT_MINUTES` (default: 2)
+- Activity update throttle: 30 seconds
+- Cleanup schedule: Every 15 minutes
+
+---
+
 ## 🔐 Critical Security Features
 
 ### 1. Data Encryption at Rest

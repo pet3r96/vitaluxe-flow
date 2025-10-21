@@ -334,7 +334,7 @@ export const AccountDetailsDialog = ({
                     )}
                   </div>
                 </div>
-                {twoFAData?.is_enrolled && (
+                {twoFAData && (
                   <Button
                     variant="destructive"
                     size="sm"
