@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .pre-filled {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .credentials {
+            font-family: monospace;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Admin Login Test</h1>
+        
+        <div class="pre-filled">
+            <strong>Test Credentials:</strong><br>
+            Email: <span class="credentials">info@vitaluxeservices.com</span><br>
+            Password: <span class="credentials">AdminTemp1234!</span>
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" value="info@vitaluxeservices.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" value="AdminTemp1234!" required>
+            </div>
+            
+            <button type="submit" id="loginBtn">Test Login</button>
+        </form>
+        
+        <div id="result" class="result"></div>
+        
+        <div id="userInfo" style="display: none; margin-top: 20px;">
+            <h3>User Information:</h3>
+            <div id="userDetails"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Supabase (you'll need to update these with your actual credentials)
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        
+        // Create Supabase client
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const form = document.getElementById('loginForm');
+        const resultDiv = document.getElementById('result');
+        const loginBtn = document.getElementById('loginBtn');
+        const userInfoDiv = document.getElementById('userInfo');
+        const userDetailsDiv = document.getElementById('userDetails');
+        
+        function showResult(message, type = 'info') {
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+        }
+        
+        function showUserInfo(user) {
+            userDetailsDiv.innerHTML = `
+                <p><strong>ID:</strong> ${user.id}</p>
+                <p><strong>Email:</strong> ${user.email}</p>
+                <p><strong>Email Confirmed:</strong> ${user.email_confirmed_at ? 'Yes' : 'No'}</p>
+                <p><strong>Created:</strong> ${new Date(user.created_at).toLocaleString()}</p>
+                <p><strong>Last Sign In:</strong> ${user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Never'}</p>
+            `;
+            userInfoDiv.style.display = 'block';
+        }
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Testing...';
+            showResult('Attempting login...', 'info');
+            
+            try {
+                // Test login
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    showResult(`❌ Login failed: ${error.message}`, 'error');
+                    return;
+                }
+                
+                if (!data.user) {
+                    showResult('❌ No user returned from login', 'error');
+                    return;
+                }
+                
+                showResult('✅ Login successful!', 'success');
+                showUserInfo(data.user);
+                
+                // Test role check
+                try {
+                    const { data: roleData, error: roleError } = await supabaseClient
+                        .from('user_roles')
+                        .select('role')
+                        .eq('user_id', data.user.id)
+                        .eq('role', 'admin')
+                        .single();
+                    
+                    if (roleError) {
+                        showResult(`✅ Login successful, but role check failed: ${roleError.message}`, 'error');
+                        return;
+                    }
+                    
+                    if (roleData) {
+                        showResult('✅ Login successful! ✅ Admin role confirmed!', 'success');
+                    } else {
+                        showResult('✅ Login successful, but admin role not found', 'error');
+                    }
+                } catch (roleErr) {
+                    showResult(`✅ Login successful, but role check error: ${roleErr.message}`, 'error');
+                }
+                
+                // Test profile check
+                try {
+                    const { data: profileData, error: profileError } = await supabaseClient
+                        .from('profiles')
+                        .select('active, name')
+                        .eq('id', data.user.id)
+                        .single();
+                    
+                    if (profileError) {
+                        showResult(`✅ Login successful! ✅ Admin role confirmed! But profile check failed: ${profileError.message}`, 'error');
+                        return;
+                    }
+                    
+                    if (profileData && profileData.active) {
+                        showResult(`✅ Login successful! ✅ Admin role confirmed! ✅ Profile active (${profileData.name})!`, 'success');
+                    } else {
+                        showResult('✅ Login successful! ✅ Admin role confirmed! But profile not active', 'error');
+                    }
+                } catch (profileErr) {
+                    showResult(`✅ Login successful! ✅ Admin role confirmed! But profile check error: ${profileErr.message}`, 'error');
+                }
+                
+            } catch (err) {
+                showResult(`❌ Unexpected error: ${err.message}`, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Test Login';
+            }
+        });
+        
+        // Show initial message
+        showResult('Ready to test admin login. Make sure you have applied the migration fixes.', 'info');
+    </script>
+    
+    <!-- Include Supabase JS -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</body>
+</html>
