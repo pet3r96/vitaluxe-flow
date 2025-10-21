@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fixing admin email from admin@vitaluxeservice.com to admin@vitaluxeservices.com');
+    console.log('Fixing admin email from admin@vitaluxeservice.com to info@vitaluxeservices.com');
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -27,7 +27,7 @@ serve(async (req) => {
 
     const ADMIN_USER_ID = '28807c7e-5296-4860-b3a1-93c883dff39d';
     const OLD_EMAIL = 'admin@vitaluxeservice.com';
-    const NEW_EMAIL = 'admin@vitaluxeservices.com';
+    const NEW_EMAIL = 'info@vitaluxeservices.com';
 
     // Update email in auth.users using admin API
     const { data: userData, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -70,7 +70,7 @@ serve(async (req) => {
         entity_type: 'user',
         entity_id: ADMIN_USER_ID,
         details: {
-          message: 'Admin email corrected from admin@vitaluxeservice.com to admin@vitaluxeservices.com',
+          message: 'Admin email corrected from admin@vitaluxeservice.com to info@vitaluxeservices.com',
           old_email: OLD_EMAIL,
           new_email: NEW_EMAIL,
           timestamp: new Date().toISOString()
@@ -85,7 +85,7 @@ serve(async (req) => {
         message: 'Admin email successfully updated',
         old_email: OLD_EMAIL,
         new_email: NEW_EMAIL,
-        note: 'You can now log in with admin@vitaluxeservices.com. This function can be safely deleted.'
+        note: 'You can now log in with info@vitaluxeservices.com. This function can be safely deleted.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
