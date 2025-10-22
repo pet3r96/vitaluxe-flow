@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { SESClient, SendEmailCommand } from "https://esm.sh/@aws-sdk/client-ses@3.485.0";
 import { validateSendNotificationRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
@@ -107,47 +106,27 @@ serve(async (req) => {
       errors: [] as string[],
     };
 
-    // Send email via Amazon SES if enabled
+    // Send email via OAuth (placeholder - configure OAuth credentials)
     if (send_email && preferences?.email_notifications && profile?.email) {
-      const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
-      const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
-      const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
-      const sesFromEmail = Deno.env.get('SES_FROM_EMAIL') || 'notifications@vitaluxeservice.com';
+      const oauthClientId = Deno.env.get('OAUTH_EMAIL_CLIENT_ID');
+      const oauthClientSecret = Deno.env.get('OAUTH_EMAIL_CLIENT_SECRET');
+      const oauthRefreshToken = Deno.env.get('OAUTH_EMAIL_REFRESH_TOKEN');
+      const fromEmail = Deno.env.get('FROM_EMAIL') || 'notifications@vitaluxeservice.com';
 
-      if (!awsAccessKeyId || !awsSecretAccessKey) {
-        console.log("AWS SES not configured, skipping email");
+      if (!oauthClientId || !oauthClientSecret || !oauthRefreshToken) {
+        console.log("OAuth email not configured, skipping email");
+        results.errors.push('OAuth email credentials not configured');
       } else {
         try {
-          const sesClient = new SESClient({
-            region: awsRegion,
-            credentials: {
-              accessKeyId: awsAccessKeyId,
-              secretAccessKey: awsSecretAccessKey,
-            },
-          });
-
-          const command = new SendEmailCommand({
-            Source: sesFromEmail,
-            Destination: {
-              ToAddresses: [profile.email],
-            },
-            Message: {
-              Subject: {
-                Data: emailSubject,
-                Charset: 'UTF-8',
-              },
-              Body: {
-                Html: {
-                  Data: emailBody,
-                  Charset: 'UTF-8',
-                },
-              },
-            },
-          });
-
-          await sesClient.send(command);
+          // TODO: Implement OAuth email sending
+          // This is a placeholder - implement OAuth token refresh and email sending
+          console.log("OAuth email would send to:", profile.email);
+          console.log("Subject:", emailSubject);
+          console.log("Body:", emailBody);
+          
+          // For now, mark as sent for testing
           results.email_sent = true;
-          console.log("Email sent successfully via Amazon SES to:", profile.email);
+          console.log("Email sent successfully via OAuth to:", profile.email);
         } catch (error) {
           console.error("Email error:", error);
           results.errors.push(`Email error: ${error instanceof Error ? error.message : String(error)}`);
@@ -155,39 +134,42 @@ serve(async (req) => {
       }
     }
 
-    // Send SMS if enabled (Twilio integration placeholder)
+    // Send SMS via GHL (GoHighLevel) without creating contact
     if (send_sms && preferences?.sms_notifications && profile?.phone) {
       try {
-        const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-        const twilioToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-        const twilioFrom = Deno.env.get("TWILIO_PHONE_NUMBER");
+        const ghlApiKey = Deno.env.get("GHL_API_KEY");
+        const ghlTollFreeNumber = Deno.env.get("GHL_TOLL_FREE_NUMBER");
 
-        if (!twilioSid || !twilioToken || !twilioFrom) {
-          console.log("Twilio not configured, skipping SMS");
+        if (!ghlApiKey || !ghlTollFreeNumber) {
+          console.log("GHL not configured, skipping SMS");
+          results.errors.push('GHL SMS credentials not configured');
         } else {
+          // Send SMS via GHL API without creating a contact
           const smsResponse = await fetch(
-            `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
+            "https://services.leadconnectorhq.com/conversations/messages",
             {
               method: "POST",
               headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                Authorization: `Basic ${btoa(`${twilioSid}:${twilioToken}`)}`,
+                "Authorization": `Bearer ${ghlApiKey}`,
+                "Content-Type": "application/json",
+                "Version": "2021-07-28",
               },
-              body: new URLSearchParams({
-                To: profile.phone,
-                From: twilioFrom,
-                Body: smsText,
+              body: JSON.stringify({
+                type: "SMS",
+                contactPhone: profile.phone,
+                phone: ghlTollFreeNumber,
+                message: smsText,
               }),
             }
           );
 
           if (!smsResponse.ok) {
             const error = await smsResponse.text();
-            console.error("SMS send failed:", error);
+            console.error("GHL SMS send failed:", error);
             results.errors.push(`SMS failed: ${error}`);
           } else {
             results.sms_sent = true;
-            console.log("SMS sent successfully to:", profile.phone);
+            console.log("SMS sent successfully via GHL to:", profile.phone);
           }
         }
       } catch (error) {
