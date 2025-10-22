@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -36,7 +36,16 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { code, attemptId, phoneNumber } = await req.json();
+    // Parse and log request body for debugging
+    const requestBody = await req.json();
+    console.log('[GHL] Verify | Raw request body:', JSON.stringify(requestBody));
+
+    const { code, attemptId, phoneNumber } = requestBody;
+    console.log('[GHL] Verify | Parsed values:', { 
+      code: code ? '***' : null, 
+      attemptId, 
+      phoneNumber: phoneNumber ? phoneNumber.substring(0, 5) + '***' : null 
+    });
 
     if (!code || code.length !== 6) {
       throw new Error('Valid 6-digit code is required');

@@ -144,6 +144,26 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
         throw new Error(data.error);
       }
 
+      // Verify that 2FA settings were actually saved in database
+      console.log('[GHLSmsSetupDialog] Verifying database record...');
+      const { data: settings, error: settingsError } = await supabase
+        .from('user_2fa_settings')
+        .select('phone_number, is_enrolled, ghl_enabled')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      console.log('[GHLSmsSetupDialog] Database check:', { 
+        found: !!settings, 
+        enrolled: settings?.is_enrolled,
+        ghlEnabled: settings?.ghl_enabled,
+        hasPhone: !!settings?.phone_number,
+        error: settingsError?.message 
+      });
+
+      if (!settings?.is_enrolled || !settings?.ghl_enabled) {
+        throw new Error('2FA setup failed to save. Please try again or contact support.');
+      }
+
       toast.success('Phone verified! Reloading...');
       console.log('[GHLSmsSetupDialog] Success - reloading page');
       setTimeout(() => window.location.reload(), 1000);

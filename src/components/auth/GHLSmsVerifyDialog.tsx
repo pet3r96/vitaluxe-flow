@@ -109,7 +109,10 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       }
 
       const { data, error } = await supabase.functions.invoke('verify-ghl-sms', {
-        body: { code, attemptId, phoneNumber } // Send attemptId, code, and phoneNumber
+        body: { code, attemptId, phoneNumber }, // Send attemptId, code, and phoneNumber
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;

@@ -3611,7 +3611,7 @@ export type Database = {
           is_enrolled: boolean
           last_ghl_verification: string | null
           last_verified_at: string | null
-          phone_number: string
+          phone_number: string | null
           phone_number_encrypted: string | null
           phone_verified: boolean
           phone_verified_at: string | null
@@ -3629,7 +3629,7 @@ export type Database = {
           is_enrolled?: boolean
           last_ghl_verification?: string | null
           last_verified_at?: string | null
-          phone_number: string
+          phone_number?: string | null
           phone_number_encrypted?: string | null
           phone_verified?: boolean
           phone_verified_at?: string | null
@@ -3647,7 +3647,7 @@ export type Database = {
           is_enrolled?: boolean
           last_ghl_verification?: string | null
           last_verified_at?: string | null
-          phone_number?: string
+          phone_number?: string | null
           phone_number_encrypted?: string | null
           phone_verified?: boolean
           phone_verified_at?: string | null
