@@ -29,7 +29,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Redirect if no user
   useEffect(() => {
     if (!initializing && !user) {
-      navigate("/auth");
+      navigate("/");
     }
   }, [user, initializing, navigate]);
 
@@ -62,14 +62,14 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Prevent admins from accessing the terms page (unless impersonating)
   useEffect(() => {
     if (!initializing && user && effectiveRole === 'admin' && !isImpersonating && location.pathname === '/accept-terms') {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [initializing, user, effectiveRole, isImpersonating, location.pathname, navigate]);
 
-  // If auth loaded but role never populated, redirect to auth page
+  // If auth loaded but role never populated, redirect to login page
   useEffect(() => {
     if (!initializing && user && !effectiveRole) {
-      navigate('/auth');
+      navigate('/');
     }
   }, [initializing, user, effectiveRole, navigate]);
 

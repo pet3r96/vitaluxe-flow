@@ -77,14 +77,14 @@ const App = () => (
             <GlobalImpersonationBanner>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/" element={<Auth />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
                   <Route path="/emergency-admin-recovery" element={<EmergencyAdminRecovery />} />
                   <Route
-                    path="/*"
+                    path="/dashboard/*"
                     element={
                       <ProtectedRoute>
                         <SidebarProvider>
@@ -102,26 +102,25 @@ const App = () => (
                                 <Suspense fallback={<PageLoader />}>
                                   <Routes>
                                     <Route path="/" element={<DashboardRouter />} />
-                                    <Route path="/dashboard" element={<DashboardRouter />} />
-                                    <Route path="/accounts" element={<Accounts />} />
-                                    <Route path="/practices" element={<Practices />} />
-                                    <Route path="/patients" element={<Patients />} />
-                                    <Route path="/providers" element={<Providers />} />
-                                    <Route path="/products" element={<Products />} />
-                                    <Route path="/orders" element={<Orders />} />
-                                    <Route path="/messages" element={<Messages />} />
-                                    <Route path="/pharmacies" element={<Pharmacies />} />
-                                    <Route path="/reports" element={<Reports />} />
-                                    <Route path="/cart" element={<Cart />} />
-                                    <Route path="/order-confirmation" element={<OrderConfirmation />} />
-                                    <Route path="/downlines" element={<MyDownlines />} />
-                                    <Route path="/med-spas" element={<MedSpas />} />
-                                    <Route path="/profile" element={<Profile />} />
-                                    <Route path="/admin-settings" element={<AdminSettings />} />
-                                    <Route path="/security" element={<Security />} />
-                                    <Route path="/admin/terms" element={<AdminTermsManagement />} />
-                                    <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
-                                    <Route path="/rep-reports" element={<RepProfitReports />} />
+                                    <Route path="accounts" element={<Accounts />} />
+                                    <Route path="practices" element={<Practices />} />
+                                    <Route path="patients" element={<Patients />} />
+                                    <Route path="providers" element={<Providers />} />
+                                    <Route path="products" element={<Products />} />
+                                    <Route path="orders" element={<Orders />} />
+                                    <Route path="messages" element={<Messages />} />
+                                    <Route path="pharmacies" element={<Pharmacies />} />
+                                    <Route path="reports" element={<Reports />} />
+                                    <Route path="cart" element={<Cart />} />
+                                    <Route path="order-confirmation" element={<OrderConfirmation />} />
+                                    <Route path="downlines" element={<MyDownlines />} />
+                                    <Route path="med-spas" element={<MedSpas />} />
+                                    <Route path="profile" element={<Profile />} />
+                                    <Route path="admin-settings" element={<AdminSettings />} />
+                                    <Route path="security" element={<Security />} />
+                                    <Route path="admin/terms" element={<AdminTermsManagement />} />
+                                    <Route path="admin/discount-codes" element={<AdminDiscountCodes />} />
+                                    <Route path="rep-reports" element={<RepProfitReports />} />
                                     <Route path="*" element={<NotFound />} />
                                   </Routes>
                                 </Suspense>

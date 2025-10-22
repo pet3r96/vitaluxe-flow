@@ -102,7 +102,7 @@ export const PaymentRetryDialog = ({
         });
         queryClient.invalidateQueries({ queryKey: ['orders'] });
         onOpenChange(false);
-        navigate('/orders');
+        navigate('/dashboard/orders');
       } else {
         const stillFailed = results.filter(r => !r.success);
         toast({
@@ -132,7 +132,7 @@ export const PaymentRetryDialog = ({
       description: "Failed orders have been cancelled."
     });
     onOpenChange(false);
-    navigate('/orders');
+    navigate('/dashboard/orders');
   };
 
   return (

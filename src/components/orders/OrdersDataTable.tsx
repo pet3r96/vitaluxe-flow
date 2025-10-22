@@ -491,7 +491,7 @@ export const OrdersDataTable = () => {
                         <Button
                           variant="link"
                           className="h-auto p-0 text-primary font-normal"
-                          onClick={() => window.location.href = `/patients?patient=${patientId}`}
+                          onClick={() => window.location.href = `/dashboard/patients?patient=${patientId}`}
                         >
                           {patientName}
                         </Button>

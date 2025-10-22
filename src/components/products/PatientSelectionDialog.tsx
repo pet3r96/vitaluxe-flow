@@ -503,7 +503,7 @@ export const PatientSelectionDialog = ({
             </Button>
             <Button onClick={() => {
               onOpenChange(false);
-              navigate("/patients");
+              navigate("/dashboard/patients");
             }}>
               Go to Patients
             </Button>
