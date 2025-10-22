@@ -127,7 +127,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
       console.log('[GHLSmsSetupDialog] Calling verify-ghl-sms with attemptId:', attemptId);
 
       const { data, error } = await supabase.functions.invoke('verify-ghl-sms', {
-        body: { code, attemptId }, // Send attemptId with code
+        body: { code, attemptId, phoneNumber: phone }, // Send attemptId, code, and phoneNumber
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }

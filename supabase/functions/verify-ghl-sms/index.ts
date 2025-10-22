@@ -36,7 +36,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { code, attemptId } = await req.json();
+    const { code, attemptId, phoneNumber } = await req.json();
 
     if (!code || code.length !== 6) {
       throw new Error('Valid 6-digit code is required');
@@ -44,6 +44,10 @@ serve(async (req) => {
 
     if (!attemptId) {
       throw new Error('Attempt ID is required');
+    }
+
+    if (!phoneNumber) {
+      throw new Error('Phone number is required');
     }
 
     console.log('[GHL] Verify | Attempt:', attemptId);
@@ -158,6 +162,7 @@ serve(async (req) => {
       const { error: updateError } = await supabase
         .from('user_2fa_settings')
         .update({
+          phone_number: phoneNumber,
           ghl_enabled: true,
           ghl_phone_verified: true,
           last_ghl_verification: now,
@@ -177,6 +182,7 @@ serve(async (req) => {
         .from('user_2fa_settings')
         .insert({
           user_id: user.id,
+          phone_number: phoneNumber,
           ghl_enabled: true,
           ghl_phone_verified: true,
           last_ghl_verification: now,
