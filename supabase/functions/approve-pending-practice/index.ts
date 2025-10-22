@@ -300,7 +300,7 @@ serve(async (req) => {
       // Send welcome email only for new users
       if (isNewUser) {
         try {
-          await supabaseAdmin.functions.invoke('send-welcome-email', {
+          await supabaseAdmin.functions.invoke('send-temp-password-email', {
             body: {
               email: practiceData.email,
               name: practiceData.practice_name,

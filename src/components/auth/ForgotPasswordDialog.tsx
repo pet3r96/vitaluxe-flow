@@ -40,7 +40,7 @@ export default function ForgotPasswordDialog({ open, onOpenChange }: ForgotPassw
       if (error) throw error;
 
       if (data?.success) {
-        toast.success("Password reset email sent! Check your inbox for your new temporary password.");
+        toast.success(data.message || "If an account exists with this email, a password reset link has been sent. Please check your inbox.");
         setEmail("");
         onOpenChange(false);
       } else {
@@ -65,7 +65,7 @@ export default function ForgotPasswordDialog({ open, onOpenChange }: ForgotPassw
           </div>
           <DialogTitle className="text-center">Reset Your Password</DialogTitle>
           <DialogDescription className="text-center">
-            Enter your email address and we'll send you a new temporary password
+            Enter your email address and we'll send you a password reset link
           </DialogDescription>
         </DialogHeader>
         

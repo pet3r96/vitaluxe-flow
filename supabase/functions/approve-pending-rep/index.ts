@@ -333,7 +333,7 @@ serve(async (req) => {
       // Send welcome email only for newly created users
       if (!userAlreadyExisted && temporaryPassword) {
         try {
-          await supabaseAdmin.functions.invoke('send-welcome-email', {
+          await supabaseAdmin.functions.invoke('send-temp-password-email', {
             body: {
               email: pendingRep.email,
               name: pendingRep.full_name,
