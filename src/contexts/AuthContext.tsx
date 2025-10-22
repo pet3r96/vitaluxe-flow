@@ -466,8 +466,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         roleResult,
         providerResult,
         impersonationResult,
-        passwordResult,
-        twoFAResult
+        passwordResult
       ] = await Promise.allSettled([
         // 1. Fetch role
         supabase
@@ -490,13 +489,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         supabase
           .from('user_password_status')
           .select('must_change_password, terms_accepted')
-          .eq('user_id', userId)
-          .maybeSingle(),
-        
-        // 5. Check 2FA status
-        supabase
-          .from('user_2fa_settings')
-          .select('is_enrolled, phone_verified, phone_number')
           .eq('user_id', userId)
           .maybeSingle()
       ]);
@@ -549,23 +541,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTermsAccepted(true);
       }
 
-      // Process 2FA status
-      if (twoFAResult.status === 'fulfilled') {
-        const twoFAData = twoFAResult.value.data;
-        if (!twoFAData) {
-          setRequires2FASetup(true);
-          setRequires2FAVerify(false);
-          setUser2FAPhone(null);
-        } else if (twoFAData.is_enrolled && twoFAData.phone_verified) {
-          setRequires2FAVerify(true);
-          setRequires2FASetup(false);
-          setUser2FAPhone(twoFAData.phone_number);
-        } else {
-          setRequires2FASetup(true);
-          setRequires2FAVerify(false);
-          setUser2FAPhone(null);
-        }
-      }
+      // Process 2FA status using dedicated check function
+      await check2FAStatus(userId);
 
       // Cache auth data in sessionStorage
       sessionStorage.setItem('vitaluxe_auth_cache', JSON.stringify({
@@ -749,6 +726,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error };
       }
 
+      // Fetch user data including 2FA status
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await fetchUserRole(session.user.id);
+      }
+
       // Auth state change will handle the rest
       const csrfToken = await generateCSRFToken();
       if (!csrfToken) {
@@ -756,7 +739,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setLoading(false);
-      navigate("/dashboard");
+      
+      // Don't navigate if 2FA is required - let the dialogs handle it
+      // The dialogs will reload the page after successful verification
+      
       return { error: null };
     } catch (error: any) {
       setLoading(false);
