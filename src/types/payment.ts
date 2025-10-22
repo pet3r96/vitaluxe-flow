@@ -17,10 +17,6 @@ export interface PaymentMethod {
   account_mask?: string;
   routing_number_last_four?: string;
   
-  // Plaid fields (legacy)
-  plaid_access_token_encrypted?: string;
-  plaid_account_id?: string;
-  
   // Billing address
   billing_street?: string;
   billing_city?: string;
