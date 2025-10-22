@@ -127,8 +127,8 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       // Mark 2FA as verified for this session
       mark2FAVerified();
       
-      toast.success('Verified! Reloading...');
-      setTimeout(() => window.location.reload(), 1000);
+      toast.success('Verification successful!');
+      // No reload needed - state change will automatically hide the dialog
     } catch (err: any) {
       console.error('Error verifying code:', err);
       setError(err.message || 'Invalid verification code');
