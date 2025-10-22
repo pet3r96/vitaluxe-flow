@@ -15,7 +15,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const ghlWebhookUrl = Deno.env.get('GHL_WEBHOOK_URL')!;
-    const ghlWebhookSecret = Deno.env.get('GHL_WEBHOOK_SECRET')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get authenticated user
@@ -84,33 +83,13 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    // Generate HMAC signature for GHL webhook
-    const payload = JSON.stringify({ phone: phoneNumber, code });
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(ghlWebhookSecret);
-    const messageData = encoder.encode(payload);
-    
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    
-    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-    const signatureHex = Array.from(new Uint8Array(signature))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    // Send SMS via GHL webhook
+    // Send SMS via GHL webhook (no signature required)
     const ghlResponse = await fetch(ghlWebhookUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-highlevel-signature': signatureHex
+        'Content-Type': 'application/json'
       },
-      body: payload
+      body: JSON.stringify({ phone: phoneNumber, code })
     });
 
     if (!ghlResponse.ok) {
