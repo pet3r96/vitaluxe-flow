@@ -357,30 +357,31 @@ export const AccountsDataTable = () => {
                           setSelectedAccount(account);
                           setDetailsOpen(true);
                         }}
+                        title="View Details"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {getDisplayRole(account) === "No role" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(account)}
-                          disabled={cleanupMutation.isPending}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => toggleAccountStatus(account.id, account.active)}
+                        title={account.active ? "Disable Account" : "Enable Account"}
                       >
                         {account.active ? (
-                          <PowerOff className="h-4 w-4" />
+                          <PowerOff className="h-4 w-4 text-orange-500" />
                         ) : (
-                          <Power className="h-4 w-4" />
+                          <Power className="h-4 w-4 text-green-500" />
                         )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteClick(account)}
+                        disabled={cleanupMutation.isPending}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="Delete Account"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
