@@ -90,6 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Function to check GHL 2FA status
   const check2FAStatus = async (userId: string) => {
+    console.log('[AuthContext] check2FAStatus - START for userId:', userId);
     try {
       const { data, error } = await supabase
         .from('user_2fa_settings')
@@ -101,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!data || !data.ghl_enabled) {
         // Not enrolled in GHL 2FA - force setup
+        console.log('[AuthContext] check2FAStatus - No 2FA record or not enabled, requires setup');
         setRequires2FASetup(true);
         setRequires2FAVerify(false);
         setUser2FAPhone(null);
@@ -116,11 +118,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (hoursSinceVerification > 24) {
           // Verification expired - need to re-verify
+          console.log('[AuthContext] check2FAStatus - Verification expired, requires verify');
           setRequires2FAVerify(true);
           setRequires2FASetup(false);
           setUser2FAPhone(data.phone_number);
         } else {
           // Still valid - allow access
+          console.log('[AuthContext] check2FAStatus - Verification valid, no 2FA needed');
           setRequires2FASetup(false);
           setRequires2FAVerify(false);
           setUser2FAPhone(data.phone_number);
@@ -129,8 +133,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Mark 2FA check as complete
       setTwoFAStatusChecked(true);
+      console.log('[AuthContext] check2FAStatus - END, twoFAStatusChecked=true');
     } catch (error) {
       logger.error('Error checking GHL 2FA status', error);
+      console.log('[AuthContext] check2FAStatus - ERROR, forcing setup');
       // On error, force setup to be safe
       setRequires2FASetup(true);
       setRequires2FAVerify(false);
@@ -164,7 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         logger.info('Auth state changed', { event, hasSession: !!session });
         
         // Only update session state for meaningful auth events, NOT for token refresh
@@ -179,49 +185,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setInitializing(false);
           clearTimeout(bootstrapTimeout);
           
-          // Create or update active_sessions record
-          const { error: sessionError } = await supabase
-            .from('active_sessions')
-            .upsert({
-              user_id: session.user.id,
-              session_id: session.access_token.substring(0, 20),
-              ip_address: null,
-              user_agent: navigator.userAgent,
-              last_activity: new Date().toISOString(),
-            }, { 
-              onConflict: 'user_id',
-              ignoreDuplicates: false 
-            });
-
-          if (sessionError) {
-            logger.error('Failed to create active session', sessionError);
-          }
-
           // Initialize lastActivityTime from current time
           setLastActivityTime(Date.now());
 
-          // Fetch role and CSRF token asynchronously (don't block)
-          Promise.all([
-            fetchUserRole(session.user.id),
-            generateCSRFToken()
-          ]).then(() => {
-            logger.info('SIGNED_IN: session created, user data loaded');
-          }).catch((error) => {
-            logger.error('Error loading user data after sign in', error);
-          });
+          console.log('[AuthContext] SIGNED_IN - deferring backend calls');
+          
+          // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
+          setTimeout(() => {
+            console.log('[AuthContext] Executing deferred backend calls');
+            
+            // Create or update active_sessions record
+            void supabase
+              .from('active_sessions')
+              .upsert({
+                user_id: session.user.id,
+                session_id: session.access_token.substring(0, 20),
+                ip_address: null,
+                user_agent: navigator.userAgent,
+                last_activity: new Date().toISOString(),
+              }, { 
+                onConflict: 'user_id',
+                ignoreDuplicates: false 
+              })
+              .then(({ error: sessionError }) => {
+                if (sessionError) {
+                  logger.error('Failed to create active session', sessionError);
+                }
+              });
+
+            // Fetch role and CSRF token asynchronously (don't block)
+            Promise.all([
+              fetchUserRole(session.user.id),
+              generateCSRFToken()
+            ]).then(() => {
+              logger.info('SIGNED_IN: session created, user data loaded');
+            }).catch((error) => {
+              logger.error('Error loading user data after sign in', error);
+            });
+          }, 0);
           
         } else if (event === 'USER_UPDATED' && session?.user) {
           // User data updated - refresh role data silently (no loading state)
-          await fetchUserRole(session.user.id);
+          setTimeout(() => {
+            void fetchUserRole(session.user.id);
+          }, 0);
           logger.info('USER_UPDATED: user data refreshed silently');
           
         } else if (event === 'SIGNED_OUT') {
           // Delete active session from database
           if (user?.id) {
-            await supabase
-              .from('active_sessions')
-              .delete()
-              .eq('user_id', user.id);
+            setTimeout(() => {
+              void supabase
+                .from('active_sessions')
+                .delete()
+                .eq('user_id', user.id);
+            }, 0);
           }
           
           // Clear all state on sign out
@@ -425,6 +443,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, navigate]);
 
   const fetchUserRole = async (userId: string) => {
+    console.log('[AuthContext] fetchUserRole - START for userId:', userId);
     try {
       logger.info('Fetching user role (optimized)', logger.sanitize({ userId }));
       
@@ -559,8 +578,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         timestamp: Date.now()
       }));
       
+      console.log('[AuthContext] fetchUserRole - END, role set to:', role);
       logger.info('All user data loaded (parallel + cached)');
     } catch (error) {
+      console.log('[AuthContext] fetchUserRole - ERROR, role set to null');
       logger.error("Error fetching user role", error);
       setUserRole(null);
       sessionStorage.removeItem('vitaluxe_auth_cache');

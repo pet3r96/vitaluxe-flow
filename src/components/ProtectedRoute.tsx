@@ -66,13 +66,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [initializing, user, effectiveRole, isImpersonating, location.pathname, navigate]);
 
-  // If auth loaded but role never populated, redirect to auth page
-  useEffect(() => {
-    if (!initializing && user && !effectiveRole) {
-      navigate('/auth');
-    }
-  }, [initializing, user, effectiveRole, navigate]);
-
   // ===== NOW SAFE TO HAVE CONDITIONAL RETURNS =====
 
   if (initializing) {
@@ -90,8 +83,23 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return null;
   }
 
+  // Show GHL 2FA dialogs if needed (mandatory for ALL users including admins)
+  // CHECK THIS BEFORE ROLE RESOLUTION to prevent getting stuck
+  if (!isImpersonating) {
+    if (requires2FASetup) {
+      console.log('[ProtectedRoute] Rendering GHLSmsSetupDialog');
+      return <GHLSmsSetupDialog open={true} userId={user.id} />;
+    }
+
+    if (requires2FAVerify && user2FAPhone) {
+      console.log('[ProtectedRoute] Rendering GHLSmsVerifyDialog');
+      return <GHLSmsVerifyDialog open={true} phoneNumber={user2FAPhone} userId={user.id} />;
+    }
+  }
+
   // While role is being determined, show a lightweight loader
   if (user && !effectiveRole) {
+    console.log('[ProtectedRoute] Waiting for role resolution');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -100,17 +108,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         </div>
       </div>
     );
-  }
-
-  // Show GHL 2FA dialogs if needed (mandatory for ALL users including admins)
-  if (!isImpersonating) {
-    if (requires2FASetup) {
-      return <GHLSmsSetupDialog open={true} userId={user.id} />;
-    }
-
-    if (requires2FAVerify && user2FAPhone) {
-      return <GHLSmsVerifyDialog open={true} phoneNumber={user2FAPhone} userId={user.id} />;
-    }
   }
 
   return <>{children}</>;
