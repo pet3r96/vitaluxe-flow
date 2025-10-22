@@ -87,6 +87,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
 
   const resendCode = async () => {
     setCode('');
+    setCountdown(60);
     await sendCode();
   };
 
