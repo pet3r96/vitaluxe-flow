@@ -42,6 +42,7 @@ export default function AdminTermsManagement() {
   const [attestationContent, setAttestationContent] = useState("");
   const [attestationCheckboxText, setAttestationCheckboxText] = useState("");
   const [savingAttestation, setSavingAttestation] = useState(false);
+  const [loadingAttestation, setLoadingAttestation] = useState(true);
 
   useEffect(() => {
     loadTerms();
@@ -188,6 +189,8 @@ export default function AdminTermsManagement() {
   };
 
   const loadAttestation = async () => {
+    setLoadingAttestation(true);
+    
     const { data, error } = await supabase
       .from('checkout_attestation')
       .select('*')
@@ -199,6 +202,7 @@ export default function AdminTermsManagement() {
         logger.error('Error loading attestation', error);
       });
       toast.error("Failed to load checkout attestation");
+      setLoadingAttestation(false);
       return;
     }
 
@@ -209,6 +213,8 @@ export default function AdminTermsManagement() {
       setAttestationContent(data.content);
       setAttestationCheckboxText(data.checkbox_text);
     }
+    
+    setLoadingAttestation(false);
   };
 
   const handleSaveAttestation = async () => {
@@ -454,97 +460,109 @@ export default function AdminTermsManagement() {
                     )}
                   </CardDescription>
                 </div>
-                <Button onClick={handleSaveAttestation} disabled={savingAttestation}>
+                <Button onClick={handleSaveAttestation} disabled={savingAttestation || loadingAttestation}>
                   <Save className="mr-2 h-4 w-4" />
                   {savingAttestation ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="attestation-title">Title</Label>
-                <Input
-                  id="attestation-title"
-                  value={attestationTitle}
-                  onChange={(e) => setAttestationTitle(e.target.value)}
-                  placeholder="e.g., Medical Attestation Required"
-                />
-              </div>
+              {loadingAttestation ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 w-48 bg-muted rounded mx-auto"></div>
+                    <div className="h-4 w-32 bg-muted rounded mx-auto"></div>
+                  </div>
+                  <p className="text-muted-foreground mt-4">Loading attestation data...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="attestation-title">Title</Label>
+                    <Input
+                      id="attestation-title"
+                      value={attestationTitle}
+                      onChange={(e) => setAttestationTitle(e.target.value)}
+                      placeholder="e.g., Medical Attestation Required"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="attestation-subtitle">Subtitle</Label>
-                <Input
-                  id="attestation-subtitle"
-                  value={attestationSubtitle}
-                  onChange={(e) => setAttestationSubtitle(e.target.value)}
-                  placeholder="e.g., Please read and confirm the following statement"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="attestation-subtitle">Subtitle</Label>
+                    <Input
+                      id="attestation-subtitle"
+                      value={attestationSubtitle}
+                      onChange={(e) => setAttestationSubtitle(e.target.value)}
+                      placeholder="e.g., Please read and confirm the following statement"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="attestation-content">Attestation Points</Label>
-                <Textarea
-                  id="attestation-content"
-                  value={attestationContent}
-                  onChange={(e) => setAttestationContent(e.target.value)}
-                  placeholder="Enter attestation points (one per line, use - for bullets)"
-                  className="min-h-[200px] font-mono"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Enter each attestation point on a new line. Start lines with "-" for bullet points.
-                </p>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="attestation-content">Attestation Points</Label>
+                    <Textarea
+                      id="attestation-content"
+                      value={attestationContent}
+                      onChange={(e) => setAttestationContent(e.target.value)}
+                      placeholder="Enter attestation points (one per line, use - for bullets)"
+                      className="min-h-[200px] font-mono"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Enter each attestation point on a new line. Start lines with "-" for bullet points.
+                    </p>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="attestation-checkbox">Checkbox Text</Label>
-                <Input
-                  id="attestation-checkbox"
-                  value={attestationCheckboxText}
-                  onChange={(e) => setAttestationCheckboxText(e.target.value)}
-                  placeholder="e.g., I agree to all of the above."
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="attestation-checkbox">Checkbox Text</Label>
+                    <Input
+                      id="attestation-checkbox"
+                      value={attestationCheckboxText}
+                      onChange={(e) => setAttestationCheckboxText(e.target.value)}
+                      placeholder="e.g., I agree to all of the above."
+                    />
+                  </div>
 
-              <div className="mt-6 p-4 border rounded-lg bg-accent/10">
-                <h4 className="font-semibold mb-4 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Preview
-                </h4>
-                <Card className="border-primary/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-primary">
-                      <AlertCircle className="h-5 w-5" />
-                      {attestationTitle}
-                    </CardTitle>
-                    <CardDescription>
-                      {attestationSubtitle}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Alert>
+                  <div className="mt-6 p-4 border rounded-lg bg-accent/10">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-sm leading-relaxed">
-                        By checking the box below, you attest that:
-                        <ul className="list-disc ml-6 mt-2 space-y-1">
-                          {attestationContent.split('\n').map((line, idx) => {
-                            const cleanedLine = line.trim().replace(/^-\s*/, '');
-                            return cleanedLine ? <li key={idx}>{cleanedLine}</li> : null;
-                          })}
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
+                      Preview
+                    </h4>
+                    <Card className="border-primary/20">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-primary">
+                          <AlertCircle className="h-5 w-5" />
+                          {attestationTitle}
+                        </CardTitle>
+                        <CardDescription>
+                          {attestationSubtitle}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <Alert>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription className="text-sm leading-relaxed">
+                            By checking the box below, you attest that:
+                            <ul className="list-disc ml-6 mt-2 space-y-1">
+                              {attestationContent.split('\n').map((line, idx) => {
+                                const cleanedLine = line.trim().replace(/^-\s*/, '');
+                                return cleanedLine ? <li key={idx}>{cleanedLine}</li> : null;
+                              })}
+                            </ul>
+                          </AlertDescription>
+                        </Alert>
 
-                    <div className="flex items-start space-x-3 p-4 rounded-lg bg-accent/50 border border-border">
-                      <Checkbox disabled className="mt-1" />
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium leading-relaxed">
-                          {attestationCheckboxText}
-                        </Label>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                        <div className="flex items-start space-x-3 p-4 rounded-lg bg-accent/50 border border-border">
+                          <Checkbox disabled className="mt-1" />
+                          <div className="flex-1">
+                            <Label className="text-sm font-medium leading-relaxed">
+                              {attestationCheckboxText}
+                            </Label>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
