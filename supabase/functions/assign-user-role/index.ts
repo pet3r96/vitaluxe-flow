@@ -356,12 +356,19 @@ serve(async (req) => {
 
     const userId = authData.user.id;
 
-    // Build roleData for RPC - NEVER include parentId here
-    // Downlines will be linked via separate upsert after user creation
+    // Build roleData for RPC
     const roleDataForRpc: any = { ...signupData.roleData };
-    delete roleDataForRpc.parentId; // Ensure parentId is never sent to RPC
     
+    // Map linkedToplineId to parentId for database function compatibility
+    if (signupData.role === 'downline' && roleDataForRpc.linkedToplineId) {
+      roleDataForRpc.parentId = roleDataForRpc.linkedToplineId;
+      console.log('Downline creation: mapped linkedToplineId to parentId for RPC');
+    }
+    
+    // For toplines, ensure no parentId/linkedToplineId is sent
     if (signupData.role === 'topline') {
+      delete roleDataForRpc.parentId;
+      delete roleDataForRpc.linkedToplineId;
       console.log('Topline creation: ensuring no parentId is sent to RPC');
     }
 
@@ -390,7 +397,13 @@ serve(async (req) => {
     );
 
     if (creationError || !creationResult?.success) {
-      console.error('User creation error:', creationError || creationResult?.error);
+      console.error('❌ User creation RPC failed:', {
+        error: creationError,
+        result: creationResult,
+        role: signupData.role,
+        roleDataSent: roleDataForRpc,
+        userId: userId
+      });
       
       // Check if it's a duplicate key constraint violation (profile already exists)
       const isDuplicateKey = creationError?.code === '23505' || 
