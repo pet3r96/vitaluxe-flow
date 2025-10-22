@@ -80,7 +80,7 @@ const App = () => (
                   <Route path="/" element={<Auth />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
-                  <Route path="/change-password" element={<ChangePassword />} />
+                  <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
                   <Route path="/emergency-admin-recovery" element={<EmergencyAdminRecovery />} />
                   <Route

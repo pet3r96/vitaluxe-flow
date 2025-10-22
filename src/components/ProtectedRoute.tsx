@@ -66,12 +66,13 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [initializing, user, effectiveRole, isImpersonating, location.pathname, navigate]);
 
-  // If auth loaded but role never populated, redirect to login page
+  // If auth loaded but role never populated, show error instead of redirecting
   useEffect(() => {
     if (!initializing && user && !effectiveRole) {
-      navigate('/');
+      console.error('User authenticated but no role assigned');
+      // Don't redirect - let user contact support
     }
-  }, [initializing, user, effectiveRole, navigate]);
+  }, [initializing, user, effectiveRole]);
 
   // ===== NOW SAFE TO HAVE CONDITIONAL RETURNS =====
 
@@ -94,9 +95,18 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   if (user && !effectiveRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
           <p className="mt-3 text-muted-foreground text-sm">Preparing your session...</p>
+          <p className="text-xs text-muted-foreground">
+            If this takes more than a few seconds,{" "}
+            <button 
+              onClick={() => window.location.reload()} 
+              className="text-primary hover:underline"
+            >
+              try refreshing the page
+            </button>
+          </p>
         </div>
       </div>
     );

@@ -39,10 +39,10 @@ const Auth = () => {
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
-    if (user) {
+    if (user && !loading) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   // Doctor-specific fields
   const [providerFullName, setProviderFullName] = useState("");
