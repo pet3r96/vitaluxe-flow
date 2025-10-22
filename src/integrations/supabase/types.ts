@@ -4023,6 +4023,45 @@ export type Database = {
           },
         ]
       }
+      user_2fa_settings_decrypted: {
+        Row: {
+          created_at: string | null
+          ghl_enabled: boolean | null
+          ghl_phone_verified: boolean | null
+          id: string | null
+          is_enrolled: boolean | null
+          last_ghl_verification: string | null
+          phone_number: string | null
+          phone_verified: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          ghl_enabled?: boolean | null
+          ghl_phone_verified?: boolean | null
+          id?: string | null
+          is_enrolled?: boolean | null
+          last_ghl_verification?: string | null
+          phone_number?: never
+          phone_verified?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          ghl_enabled?: boolean | null
+          ghl_phone_verified?: boolean | null
+          id?: string | null
+          is_enrolled?: boolean | null
+          last_ghl_verification?: string | null
+          phone_number?: never
+          phone_verified?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       archive_old_audit_logs: { Args: never; Returns: number }

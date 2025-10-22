@@ -94,15 +94,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const check2FAStatus = async (userId: string) => {
     console.log('[AuthContext] check2FAStatus - START for userId:', userId);
     try {
+      // Query the decrypted view to get actual phone number instead of [ENCRYPTED]
       const { data, error } = await supabase
-        .from('user_2fa_settings')
-        .select('ghl_enabled, ghl_phone_verified, phone_number, last_ghl_verification')
+        .from('user_2fa_settings_decrypted')
+        .select('ghl_enabled, ghl_phone_verified, phone_number, is_enrolled, last_ghl_verification')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error) throw error;
 
-      if (!data || !data.ghl_enabled) {
+      if (!data || !data.ghl_enabled || !data.is_enrolled) {
         // Not enrolled in GHL 2FA - force setup
         console.log('[AuthContext] check2FAStatus - No 2FA record or not enabled, requires setup');
         setRequires2FASetup(true);
