@@ -107,11 +107,52 @@ serve(async (req) => {
       errors: [] as string[],
     };
 
-    // Removed AWS SES logic - previously sent email via Amazon SES
-    // TODO: Replace with Supabase/Resend/SendGrid integration if needed
+    // Send Email via Postmark (replaced AWS SES on 2025-10-22)
     if (send_email && preferences?.email_notifications && profile?.email) {
-      console.log("Email sending not configured - skipping email to:", profile.email);
-      results.errors.push("Email service not configured");
+      try {
+        const POSTMARK_API_KEY = Deno.env.get("POSTMARK_API_KEY");
+        const POSTMARK_FROM_EMAIL = Deno.env.get("POSTMARK_FROM_EMAIL") || "info@vitaluxeservices.com";
+
+        if (!POSTMARK_API_KEY) {
+          console.error("POSTMARK_API_KEY not configured");
+          results.errors.push("Email service not configured");
+        } else {
+          const postmarkResponse = await fetch("https://api.postmarkapp.com/email/withTemplate", {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json",
+              "X-Postmark-Server-Token": POSTMARK_API_KEY,
+            },
+            body: JSON.stringify({
+              From: POSTMARK_FROM_EMAIL,
+              To: profile.email,
+              TemplateAlias: "notification-email",
+              TemplateModel: {
+                title: emailSubject,
+                message: notification.message,
+                html_body: emailBody,
+                action_url: notification.action_url || "",
+                action_text: "View Details",
+                ...notification.metadata
+              },
+            }),
+          });
+
+          if (!postmarkResponse.ok) {
+            const errorText = await postmarkResponse.text();
+            console.error("Postmark API error:", errorText);
+            results.errors.push(`Email failed: ${errorText}`);
+          } else {
+            const result = await postmarkResponse.json();
+            results.email_sent = true;
+            console.log("Notification email sent successfully to:", profile.email, "MessageID:", result.MessageID);
+          }
+        }
+      } catch (error) {
+        console.error("Email error:", error);
+        results.errors.push(`Email error: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
 
     // Send SMS if enabled (Twilio integration placeholder)

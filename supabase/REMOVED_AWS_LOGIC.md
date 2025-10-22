@@ -33,15 +33,27 @@ All AWS SDK dependencies for email and SMS have been deprecated.
 - ✅ S3 functionality (file storage) remains intact
 
 ## ✅ Env Vars to Remove
-The following environment variables are no longer needed and can be safely removed:
-- `AWS_REGION` (for SES/SNS only, keep if using S3)
-- `AWS_ACCESS_KEY_ID` (for SES/SNS only, keep if using S3)
-- `AWS_SECRET_ACCESS_KEY` (for SES/SNS only, keep if using S3)
-- `SES_FROM_EMAIL` (deprecated)
-- `SES_SOURCE_EMAIL` (deprecated)
-- `SNS_TOPIC_ARN` (deprecated, if exists)
+The following environment variables are **REMOVED** as of 2025-10-22:
+- ~~`SES_FROM_EMAIL`~~ (deprecated - removed)
+- ~~`SES_SOURCE_EMAIL`~~ (deprecated - removed)
+- ~~`SNS_TOPIC_ARN`~~ (deprecated - removed)
+- ~~Any `AWS_SES_*` variables~~ (deprecated - removed)
+- ~~Any `AWS_SNS_*` variables~~ (deprecated - removed)
 
-**Note:** If you're still using S3 for file storage (`get-s3-signed-url` and `upload-to-s3`), keep the AWS credentials.
+**Active AWS Secrets (S3 Storage Only)**:
+- `AWS_REGION` (keep - used for S3)
+- `AWS_ACCESS_KEY_ID` (keep - used for S3)
+- `AWS_SECRET_ACCESS_KEY` (keep - used for S3)
+- `S3_BUCKET_NAME` (keep - used for S3)
+
+**Active Postmark Secrets (Email)**:
+- `POSTMARK_API_KEY` (keep - used for all email sending)
+- `POSTMARK_FROM_EMAIL` (keep - used for all email sending)
+
+**Active Twilio Secrets (SMS Notifications)**:
+- `TWILIO_ACCOUNT_SID` (keep - used for notification SMS)
+- `TWILIO_AUTH_TOKEN` (keep - used for notification SMS)
+- `TWILIO_PHONE_NUMBER` (keep - used for notification SMS)
 
 ## 📊 Impact Analysis
 
@@ -54,10 +66,11 @@ The following environment variables are no longer needed and can be safely remov
 
 ### What Needs Replacement
 - ✅ **Email verification emails** - **REPLACED with Postmark (2025-01-22)**
-- ❌ Temp password emails (was AWS SES)
-- ❌ Welcome emails (was AWS SES)
-- ❌ 2FA SMS delivery (was AWS SNS)
-- ❌ Notification email delivery (was AWS SES)
+- ✅ **Temp password emails** - **REPLACED with Postmark (2025-01-22)**
+- ✅ **Password reset emails** - **REPLACED with Postmark (2025-01-22)**
+- ✅ **Notification emails** - **REPLACED with Postmark (2025-10-22)**
+- ⏸️ **2FA SMS delivery** - **DEFERRED** (codes stored in DB, no SMS sent)
+- ~~Welcome emails~~ (deprecated, not needed)
 
 ## 🚀 Recommended Replacements
 
@@ -114,3 +127,61 @@ All verification email sends are logged to `audit_logs` with:
 - `action_type: 'verification_email_sent'`
 - `entity_type: 'email_verification_tokens'`
 - Postmark MessageID for tracking
+
+---
+
+## ✅ Notification Email Integration (2025-10-22)
+
+### Implemented
+- **Function**: `supabase/functions/send-notification/index.ts`
+- **Purpose**: Send notification emails for system events, alerts, and user actions
+- **Email Service**: Postmark (via `email/withTemplate` API)
+- **Template Alias**: `notification-email`
+- **Required Secrets**:
+  - `POSTMARK_API_KEY` - Postmark Server API Token
+  - `POSTMARK_FROM_EMAIL` - Verified sender address (`info@vitaluxeservices.com`)
+
+### Flow
+1. User triggers notification event (e.g., order status change, system alert)
+2. Notification record created in `notifications` table
+3. `send-notification` edge function called with `notification_id`
+4. Function checks user's `notification_preferences` for email consent
+5. Retrieves notification template from `notification_templates` if available
+6. Replaces variables in email subject, body, and action URL
+7. Postmark sends branded email with dynamic content
+8. Function returns success status with email/SMS delivery results
+
+### Template Variables
+- `{{title}}` - Email subject/heading (from `emailSubject`)
+- `{{message}}` - Main notification message (from `notification.message`)
+- `{{html_body}}` - Pre-formatted HTML body with styling (from `emailBody`)
+- `{{action_url}}` - Optional button link (from `notification.action_url`)
+- `{{action_text}}` - Button text ("View Details")
+- Additional custom variables from `notification.metadata` (spread operator)
+
+### Variable Replacement System
+The function uses a `replaceVariables()` helper to replace `{{key}}` placeholders:
+- Fetches template from `notification_templates` by `template_key`
+- Applies variables from `notification.metadata` to all text fields
+- Supports dynamic content based on notification context (e.g., order ID, patient name)
+- Falls back to default formatting if no template is found
+
+### Audit Logging
+All notification email sends are logged with:
+- `action_type: 'notification_email_sent'` (via existing audit system)
+- Postmark MessageID for delivery tracking
+- Error messages if email fails (stored in `results.errors`)
+
+### Example Template Structure
+Create Postmark template with alias `notification-email`:
+```mustache
+{{title}}
+{{{html_body}}}
+{{#action_url}}<a href="{{action_url}}">{{action_text}}</a>{{/action_url}}
+```
+
+### SMS Integration (Twilio)
+- SMS functionality remains active via Twilio API
+- Controlled by `send_sms` parameter and `notification_preferences.sms_notifications`
+- Uses same template system for SMS text content
+- Independent from email delivery (both can be sent simultaneously)

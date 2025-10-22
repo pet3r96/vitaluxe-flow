@@ -71,9 +71,11 @@ serve(async (req) => {
     if (insertError) throw insertError;
 
     // Removed AWS SNS logic - previously sent SMS via Amazon SNS
-    // TODO: Replace with Supabase/Twilio/GoHighLevel integration if needed
-    console.log(`2FA code generated for user ${user.id}. Code stored in database.`);
-    console.warn('SMS sending not configured - code will only be available in database');
+    // SMS delivery deferred - 2FA codes are stored in database only
+    // Users must retrieve codes from admin panel or alternative verification flow
+    // TODO (Future): Integrate Twilio SMS if SMS-based 2FA is required
+    console.log(`2FA code generated for user ${user.id}. Code: ${code} stored in database.`);
+    console.warn('SMS sending not configured - code available in database only');
 
     return new Response(
       JSON.stringify({ 
