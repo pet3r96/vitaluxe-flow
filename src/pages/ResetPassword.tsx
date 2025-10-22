@@ -96,7 +96,7 @@ const ResetPassword = () => {
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate("/");
+        navigate("/auth");
       }, 3000);
 
     } catch (error: any) {
@@ -130,7 +130,7 @@ const ResetPassword = () => {
           </p>
 
           <Button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/auth")}
             className="gold-gradient text-primary-foreground"
           >
             Back to Login
@@ -245,7 +245,7 @@ const ResetPassword = () => {
         <div className="mt-6 text-center">
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/auth")}
             className="text-primary hover:underline text-sm"
           >
             Back to Login

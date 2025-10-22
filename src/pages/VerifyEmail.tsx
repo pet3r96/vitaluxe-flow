@@ -68,7 +68,7 @@ export default function VerifyEmail() {
                 You can now log in to your account using your email and password.
               </p>
               <Button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/auth')}
                 className="w-full"
                 size="lg"
               >
@@ -85,7 +85,7 @@ export default function VerifyEmail() {
                 </a>
               </p>
               <Button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/auth')}
                 variant="outline"
                 className="w-full"
               >

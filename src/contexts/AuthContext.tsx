@@ -404,7 +404,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setImpersonatedUserName(null);
                 setCurrentLogId(null);
                 sessionStorage.removeItem('vitaluxe_impersonation');
-                navigate("/");
+                navigate("/auth");
               })();
             }, 3000);
           }
@@ -922,7 +922,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentLogId(null);
     sessionStorage.removeItem('vitaluxe_impersonation');
     setLoading(false);
-    navigate("/");
+    navigate("/auth");
   };
 
   return (

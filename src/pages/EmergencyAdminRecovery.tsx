@@ -147,7 +147,7 @@ export default function EmergencyAdminRecovery() {
                       <Button
                         variant="outline"
                         className="w-full mt-4"
-                        onClick={() => window.location.href = "/"}
+                        onClick={() => window.location.href = "/auth"}
                       >
                         Go to Login
                       </Button>

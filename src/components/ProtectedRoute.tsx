@@ -29,7 +29,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Redirect if no user
   useEffect(() => {
     if (!initializing && !user) {
-      navigate("/");
+      navigate("/auth");
     }
   }, [user, initializing, navigate]);
 
@@ -62,17 +62,16 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Prevent admins from accessing the terms page (unless impersonating)
   useEffect(() => {
     if (!initializing && user && effectiveRole === 'admin' && !isImpersonating && location.pathname === '/accept-terms') {
-      navigate('/dashboard');
+      navigate('/');
     }
   }, [initializing, user, effectiveRole, isImpersonating, location.pathname, navigate]);
 
-  // If auth loaded but role never populated, show error instead of redirecting
+  // If auth loaded but role never populated, redirect to auth page
   useEffect(() => {
     if (!initializing && user && !effectiveRole) {
-      console.error('User authenticated but no role assigned');
-      // Don't redirect - let user contact support
+      navigate('/auth');
     }
-  }, [initializing, user, effectiveRole]);
+  }, [initializing, user, effectiveRole, navigate]);
 
   // ===== NOW SAFE TO HAVE CONDITIONAL RETURNS =====
 
@@ -95,18 +94,9 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   if (user && !effectiveRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
+        <div className="text-center">
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
           <p className="mt-3 text-muted-foreground text-sm">Preparing your session...</p>
-          <p className="text-xs text-muted-foreground">
-            If this takes more than a few seconds,{" "}
-            <button 
-              onClick={() => window.location.reload()} 
-              className="text-primary hover:underline"
-            >
-              try refreshing the page
-            </button>
-          </p>
         </div>
       </div>
     );

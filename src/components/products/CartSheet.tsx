@@ -116,7 +116,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
 
   const handleCheckout = () => {
     onOpenChange(false);
-    navigate("/dashboard/cart");
+    navigate("/cart");
   };
 
   const total = cartData?.items?.reduce(

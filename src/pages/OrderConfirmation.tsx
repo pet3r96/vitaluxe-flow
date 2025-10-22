@@ -615,7 +615,7 @@ export default function OrderConfirmation() {
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
         });
         queryClient.invalidateQueries({ queryKey: ["cart"] });
-        navigate("/dashboard/orders");
+        navigate("/orders");
       } else {
         // Some payments failed - show retry dialog
         setPaymentErrors(failedPayments);
@@ -800,7 +800,7 @@ export default function OrderConfirmation() {
   const isEmpty = cartLines.length === 0;
 
   if (isEmpty) {
-    navigate("/dashboard/cart");
+    navigate("/cart");
     return null;
   }
 
@@ -1169,7 +1169,7 @@ export default function OrderConfirmation() {
           variant="outline"
           size="lg"
           className="flex-1"
-          onClick={() => navigate("/dashboard/cart")}
+          onClick={() => navigate("/cart")}
           disabled={checkoutMutation.isPending}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />

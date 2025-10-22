@@ -379,7 +379,7 @@ export default function Cart() {
               <Button 
                 className="w-full min-h-[48px] text-base" 
                 size="lg"
-                onClick={() => navigate("/dashboard/order-confirmation", { 
+                onClick={() => navigate("/order-confirmation", { 
                   state: { 
                     discountCode, 
                     discountPercentage,
