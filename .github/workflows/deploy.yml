@@ -1,10 +1,9 @@
 name: Deploy Vitaluxe to AWS Lightsail
 
 on:
-  workflow_dispatch:  # Manual trigger only
-  # push:
-  #   branches:
-  #     - main  # Disabled: uncomment to auto-deploy on push to main
+  push:
+    branches:
+      - main
 
 permissions:
   id-token: write

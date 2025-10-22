@@ -14,12 +14,8 @@ import { validatePasswordStrength } from "@/lib/passwordStrength";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Mail, CheckCircle2, AlertCircle } from "lucide-react";
-import { GHLSmsSetupDialog } from "@/components/auth/GHLSmsSetupDialog";
-import { GHLSmsVerifyDialog } from "@/components/auth/GHLSmsVerifyDialog";
-import { useNavigate } from "react-router-dom";
 
 const Auth = () => {
-  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +32,7 @@ const Auth = () => {
     message: string;
     success: boolean;
   } | null>(null);
-  const { signIn, signUp, user, requires2FASetup, requires2FAVerify, user2FAPhone, twoFAStatusChecked } = useAuth();
+  const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
   // Doctor-specific fields
@@ -66,14 +62,6 @@ const Auth = () => {
   // Emergency reset removed - use admin role-based checks instead
 
   // Removed aggressive loading timeout - loading state is now properly managed by auth flow
-
-  // Redirect to dashboard after successful login and 2FA completion
-  // Only redirect when 2FA check is complete AND no 2FA is required
-  useEffect(() => {
-    if (user && twoFAStatusChecked && !requires2FASetup && !requires2FAVerify) {
-      navigate("/dashboard");
-    }
-  }, [user, twoFAStatusChecked, requires2FASetup, requires2FAVerify, navigate]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -652,21 +640,6 @@ const Auth = () => {
         open={showForgotPassword}
         onOpenChange={setShowForgotPassword}
       />
-
-      {user && requires2FASetup && (
-        <GHLSmsSetupDialog 
-          open={true}
-          userId={user.id}
-        />
-      )}
-
-      {user && requires2FAVerify && user2FAPhone && (
-        <GHLSmsVerifyDialog 
-          open={true}
-          phoneNumber={user2FAPhone}
-          userId={user.id}
-        />
-      )}
     </div>
   );
 };

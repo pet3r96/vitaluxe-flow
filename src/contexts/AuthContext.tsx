@@ -31,7 +31,6 @@ interface AuthContextType {
   requires2FASetup: boolean;
   requires2FAVerify: boolean;
   user2FAPhone: string | null;
-  twoFAStatusChecked: boolean;
   checkPasswordStatus: () => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
@@ -70,7 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [requires2FASetup, setRequires2FASetup] = useState(false);
   const [requires2FAVerify, setRequires2FAVerify] = useState(false);
   const [user2FAPhone, setUser2FAPhone] = useState<string | null>(null);
-  const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
   
   // Idle timeout state
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
@@ -126,15 +124,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser2FAPhone(data.phone_number);
         }
       }
-      
-      // Mark 2FA check as complete
-      setTwoFAStatusChecked(true);
     } catch (error) {
       logger.error('Error checking GHL 2FA status', error);
       // On error, force setup to be safe
       setRequires2FASetup(true);
       setRequires2FAVerify(false);
-      setTwoFAStatusChecked(true);
     }
   };
 
@@ -230,7 +224,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setImpersonatedUserId(null);
           setImpersonatedUserName(null);
           setCurrentLogId(null);
-          setTwoFAStatusChecked(false);
           sessionStorage.removeItem('vitaluxe_impersonation');
           clearCSRFToken();
           logger.info('SIGNED_OUT: state cleared, session deleted');
@@ -473,7 +466,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         roleResult,
         providerResult,
         impersonationResult,
-        passwordResult
+        passwordResult,
+        twoFAResult
       ] = await Promise.allSettled([
         // 1. Fetch role
         supabase
@@ -496,6 +490,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         supabase
           .from('user_password_status')
           .select('must_change_password, terms_accepted')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        
+        // 5. Check 2FA status
+        supabase
+          .from('user_2fa_settings')
+          .select('is_enrolled, phone_verified, phone_number')
           .eq('user_id', userId)
           .maybeSingle()
       ]);
@@ -548,8 +549,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTermsAccepted(true);
       }
 
-      // Process 2FA status using dedicated check function
-      await check2FAStatus(userId);
+      // Process 2FA status
+      if (twoFAResult.status === 'fulfilled') {
+        const twoFAData = twoFAResult.value.data;
+        if (!twoFAData) {
+          setRequires2FASetup(true);
+          setRequires2FAVerify(false);
+          setUser2FAPhone(null);
+        } else if (twoFAData.is_enrolled && twoFAData.phone_verified) {
+          setRequires2FAVerify(true);
+          setRequires2FASetup(false);
+          setUser2FAPhone(twoFAData.phone_number);
+        } else {
+          setRequires2FASetup(true);
+          setRequires2FAVerify(false);
+          setUser2FAPhone(null);
+        }
+      }
 
       // Cache auth data in sessionStorage
       sessionStorage.setItem('vitaluxe_auth_cache', JSON.stringify({
@@ -724,7 +740,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      setTwoFAStatusChecked(false); // Reset 2FA check status
       
       // Delegate to authService
       const { error } = await authService.loginUser(email, password);
@@ -734,12 +749,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error };
       }
 
-      // Fetch user data including 2FA status
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchUserRole(session.user.id);
-      }
-
       // Auth state change will handle the rest
       const csrfToken = await generateCSRFToken();
       if (!csrfToken) {
@@ -747,14 +756,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setLoading(false);
-      
-      // Don't navigate if 2FA is required - let the dialogs handle it
-      // The dialogs will reload the page after successful verification
-      
+      navigate("/dashboard");
       return { error: null };
     } catch (error: any) {
       setLoading(false);
-      setTwoFAStatusChecked(false);
       return { error };
     }
   };
@@ -915,10 +920,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setImpersonatedUserId(null);
     setImpersonatedUserName(null);
     setCurrentLogId(null);
-    setTwoFAStatusChecked(false);
     sessionStorage.removeItem('vitaluxe_impersonation');
     setLoading(false);
-    navigate("/");
+    navigate("/auth");
   };
 
   return (
@@ -943,7 +947,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       requires2FASetup,
       requires2FAVerify,
       user2FAPhone,
-      twoFAStatusChecked,
       checkPasswordStatus,
       setImpersonation,
       clearImpersonation,
