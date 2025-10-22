@@ -86,36 +86,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const effectiveUserId = impersonatedUserId || user?.id || null;
   const canImpersonate = userRole === 'admin' && canImpersonateDb;
 
-  // Function to check 2FA status
+  // Function to check GHL 2FA status
   const check2FAStatus = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('user_2fa_settings')
-        .select('is_enrolled, phone_verified, phone_number')
+        .select('ghl_enabled, ghl_phone_verified, phone_number, last_ghl_verification')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error) throw error;
 
-      if (!data) {
-        // No 2FA settings - need setup
+      if (!data || !data.ghl_enabled) {
+        // Not enrolled in GHL 2FA - force setup
         setRequires2FASetup(true);
         setRequires2FAVerify(false);
         setUser2FAPhone(null);
-      } else if (data.is_enrolled && data.phone_verified) {
-        // Has 2FA enrolled - need verification on login
-        setRequires2FAVerify(true);
-        setRequires2FASetup(false);
-        setUser2FAPhone(data.phone_number);
       } else {
-        // Incomplete enrollment - need setup
-        setRequires2FASetup(true);
-        setRequires2FAVerify(false);
-        setUser2FAPhone(null);
+        // Enrolled - check if verification is still valid (24 hours)
+        const lastVerification = data.last_ghl_verification 
+          ? new Date(data.last_ghl_verification) 
+          : null;
+        const now = new Date();
+        const hoursSinceVerification = lastVerification
+          ? (now.getTime() - lastVerification.getTime()) / (1000 * 60 * 60)
+          : 999;
+
+        if (hoursSinceVerification > 24) {
+          // Verification expired - need to re-verify
+          setRequires2FAVerify(true);
+          setRequires2FASetup(false);
+          setUser2FAPhone(data.phone_number);
+        } else {
+          // Still valid - allow access
+          setRequires2FASetup(false);
+          setRequires2FAVerify(false);
+          setUser2FAPhone(data.phone_number);
+        }
       }
     } catch (error) {
-      logger.error('Error checking 2FA status', error);
-      setRequires2FASetup(false);
+      logger.error('Error checking GHL 2FA status', error);
+      // On error, force setup to be safe
+      setRequires2FASetup(true);
       setRequires2FAVerify(false);
     }
   };

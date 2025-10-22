@@ -1,8 +1,8 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { TwoFactorSetupDialog } from "@/components/auth/TwoFactorSetupDialog";
-import { TwoFactorVerifyDialog } from "@/components/auth/TwoFactorVerifyDialog";
+import { GHLSmsSetupDialog } from "@/components/auth/GHLSmsSetupDialog";
+import { GHLSmsVerifyDialog } from "@/components/auth/GHLSmsVerifyDialog";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -85,14 +85,14 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return null;
   }
 
-  // Show 2FA dialogs if needed (admins never need 2FA, even when impersonating)
-  if (effectiveRole !== 'admin' && !isImpersonating) {
+  // Show GHL 2FA dialogs if needed (mandatory for ALL users including admins)
+  if (!isImpersonating) {
     if (requires2FASetup) {
-      return <TwoFactorSetupDialog open={true} userId={user.id} />;
+      return <GHLSmsSetupDialog open={true} userId={user.id} />;
     }
 
     if (requires2FAVerify && user2FAPhone) {
-      return <TwoFactorVerifyDialog open={true} phoneNumber={user2FAPhone} />;
+      return <GHLSmsVerifyDialog open={true} phoneNumber={user2FAPhone} userId={user.id} />;
     }
   }
 

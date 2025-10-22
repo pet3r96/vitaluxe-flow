@@ -3213,6 +3213,42 @@ export type Database = {
           },
         ]
       }
+      sms_codes: {
+        Row: {
+          attempt_count: number | null
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          phone: string
+          user_id: string
+          verified: boolean | null
+          verified_at: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          code: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          phone: string
+          user_id: string
+          verified?: boolean | null
+          verified_at?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone?: string
+          user_id?: string
+          verified?: boolean | null
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       statuses: {
         Row: {
           active: boolean | null
@@ -3418,6 +3454,45 @@ export type Database = {
           },
         ]
       }
+      two_fa_audit_log: {
+        Row: {
+          attempt_count: number | null
+          code_verified: boolean | null
+          created_at: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          phone: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          attempt_count?: number | null
+          code_verified?: boolean | null
+          created_at?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          phone: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          attempt_count?: number | null
+          code_verified?: boolean | null
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          phone?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       two_fa_reset_logs: {
         Row: {
           created_at: string
@@ -3494,8 +3569,11 @@ export type Database = {
         Row: {
           created_at: string
           enrolled_at: string | null
+          ghl_enabled: boolean | null
+          ghl_phone_verified: boolean | null
           id: string
           is_enrolled: boolean
+          last_ghl_verification: string | null
           last_verified_at: string | null
           phone_number: string
           phone_number_encrypted: string | null
@@ -3509,8 +3587,11 @@ export type Database = {
         Insert: {
           created_at?: string
           enrolled_at?: string | null
+          ghl_enabled?: boolean | null
+          ghl_phone_verified?: boolean | null
           id?: string
           is_enrolled?: boolean
+          last_ghl_verification?: string | null
           last_verified_at?: string | null
           phone_number: string
           phone_number_encrypted?: string | null
@@ -3524,8 +3605,11 @@ export type Database = {
         Update: {
           created_at?: string
           enrolled_at?: string | null
+          ghl_enabled?: boolean | null
+          ghl_phone_verified?: boolean | null
           id?: string
           is_enrolled?: boolean
+          last_ghl_verification?: string | null
           last_verified_at?: string | null
           phone_number?: string
           phone_number_encrypted?: string | null
@@ -3928,6 +4012,7 @@ export type Database = {
       cleanup_expired_cart_lines: { Args: never; Returns: number }
       cleanup_expired_csrf_tokens: { Args: never; Returns: number }
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
+      cleanup_expired_sms_codes: { Args: never; Returns: undefined }
       create_user_with_role:
         | {
             Args: {
