@@ -361,12 +361,12 @@ const Auth = () => {
         </p>
 
         {isLogin && !showVerificationMessage && (
-          <Alert className="mb-6 bg-primary/10 border-primary/20 py-2">
-            <Info className="h-3 w-3 text-primary" />
-            <AlertDescription className="text-xs">
+          <div className="mb-6 flex items-start gap-2 rounded-lg bg-accent/50 border border-border/50 p-3 backdrop-blur-sm">
+            <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
               For your security, you'll be automatically logged out after 30 minutes of inactivity.
-            </AlertDescription>
-          </Alert>
+            </p>
+          </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
