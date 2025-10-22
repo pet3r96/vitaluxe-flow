@@ -133,6 +133,21 @@ export default function OrderConfirmation() {
     enabled: !!effectiveUserId,
   });
 
+  // Fetch checkout attestation
+  const { data: checkoutAttestation } = useQuery({
+    queryKey: ["checkout-attestation"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("checkout_attestation")
+        .select("*")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       if (!cart?.id || !cart.lines || cart.lines.length === 0) {
@@ -1102,49 +1117,51 @@ export default function OrderConfirmation() {
         </CardContent>
       </Card>
 
-      {/* Medical Attestation */}
-      <Card className="border-primary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <AlertCircle className="h-5 w-5" />
-            Medical Attestation Required
-          </CardTitle>
-          <CardDescription>
-            Please read and confirm the following statement
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-sm leading-relaxed">
-              By checking the box below, you attest that:
-              <ul className="list-disc ml-6 mt-2 space-y-1">
-                <li>All order(s) are medically necessary</li>
-                <li>You have advised the patient(s) of any side effects</li>
-                <li>You have seen the patient in person</li>
-                <li>You have reviewed their medical record to avoid adverse medical effects</li>
-              </ul>
-            </AlertDescription>
-          </Alert>
+      {/* Medical Attestation - Dynamic */}
+      {checkoutAttestation && (
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <AlertCircle className="h-5 w-5" />
+              {checkoutAttestation.title}
+            </CardTitle>
+            <CardDescription>
+              {checkoutAttestation.subtitle}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-sm leading-relaxed">
+                By checking the box below, you attest that:
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  {checkoutAttestation.content.split('\n').map((line: string, idx: number) => {
+                    const cleanedLine = line.trim().replace(/^-\s*/, '');
+                    return cleanedLine ? <li key={idx}>{cleanedLine}</li> : null;
+                  })}
+                </ul>
+              </AlertDescription>
+            </Alert>
 
-          <div className="flex items-start space-x-3 p-4 rounded-lg bg-accent/50 border border-border">
-            <Checkbox
-              id="medical-attestation"
-              checked={agreed}
-              onCheckedChange={(checked) => setAgreed(checked as boolean)}
-              className="mt-1"
-            />
-            <div className="flex-1">
-              <Label
-                htmlFor="medical-attestation"
-                className="text-sm font-medium leading-relaxed cursor-pointer"
-              >
-                I agree to all of the above.
-              </Label>
+            <div className="flex items-start space-x-3 p-4 rounded-lg bg-accent/50 border border-border">
+              <Checkbox
+                id="medical-attestation"
+                checked={agreed}
+                onCheckedChange={(checked) => setAgreed(checked as boolean)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <Label
+                  htmlFor="medical-attestation"
+                  className="text-sm font-medium leading-relaxed cursor-pointer"
+                >
+                  {checkoutAttestation.checkbox_text}
+                </Label>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Action Buttons */}
       <div className="flex gap-4">

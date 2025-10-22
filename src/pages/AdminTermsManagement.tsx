@@ -8,8 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Download, Save } from "lucide-react";
+import { Download, Save, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
@@ -32,6 +34,14 @@ export default function AdminTermsManagement() {
   const [saving, setSaving] = useState(false);
   const [acceptances, setAcceptances] = useState<any[]>([]);
   const [loadingAcceptances, setLoadingAcceptances] = useState(false);
+  
+  // Checkout Attestation state
+  const [attestation, setAttestation] = useState<any>(null);
+  const [attestationTitle, setAttestationTitle] = useState("");
+  const [attestationSubtitle, setAttestationSubtitle] = useState("");
+  const [attestationContent, setAttestationContent] = useState("");
+  const [attestationCheckboxText, setAttestationCheckboxText] = useState("");
+  const [savingAttestation, setSavingAttestation] = useState(false);
 
   useEffect(() => {
     loadTerms();
@@ -39,6 +49,7 @@ export default function AdminTermsManagement() {
 
   useEffect(() => {
     loadAcceptances();
+    loadAttestation();
   }, []);
 
   const loadTerms = async () => {
@@ -176,6 +187,66 @@ export default function AdminTermsManagement() {
     }
   };
 
+  const loadAttestation = async () => {
+    const { data, error } = await supabase
+      .from('checkout_attestation')
+      .select('*')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) {
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error loading attestation', error);
+      });
+      toast.error("Failed to load checkout attestation");
+      return;
+    }
+
+    if (data) {
+      setAttestation(data);
+      setAttestationTitle(data.title);
+      setAttestationSubtitle(data.subtitle || "");
+      setAttestationContent(data.content);
+      setAttestationCheckboxText(data.checkbox_text);
+    }
+  };
+
+  const handleSaveAttestation = async () => {
+    if (!attestationTitle.trim() || !attestationContent.trim()) {
+      toast.error("Title and content are required");
+      return;
+    }
+
+    setSavingAttestation(true);
+
+    try {
+      const { error } = await supabase
+        .from('checkout_attestation')
+        .update({
+          title: attestationTitle,
+          subtitle: attestationSubtitle,
+          content: attestationContent,
+          checkbox_text: attestationCheckboxText,
+          version: (attestation?.version || 0) + 1,
+          updated_at: new Date().toISOString(),
+          updated_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('id', attestation.id);
+
+      if (error) throw error;
+
+      toast.success("Checkout attestation updated successfully");
+      await loadAttestation();
+    } catch (error: any) {
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error saving attestation', error);
+      });
+      toast.error(error.message || "Failed to save attestation");
+    } finally {
+      setSavingAttestation(false);
+    }
+  };
+
   const downloadPDF = async (pdfUrl: string, userName: string) => {
     try {
       // Get signed URL from Supabase
@@ -222,9 +293,10 @@ export default function AdminTermsManagement() {
       </div>
 
       <Tabs defaultValue="editor" className="space-y-4">
-        <TabsList className="grid-cols-1 sm:grid-cols-2">
+        <TabsList className="grid-cols-1 sm:grid-cols-3">
           <TabsTrigger value="editor">Terms Editor</TabsTrigger>
           <TabsTrigger value="acceptances">User Acceptances</TabsTrigger>
+          <TabsTrigger value="checkout">Checkout Attestation</TabsTrigger>
         </TabsList>
 
         <TabsContent value="editor" className="space-y-4">
@@ -366,6 +438,114 @@ export default function AdminTermsManagement() {
                 />
               </div>
             )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="checkout" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Edit Checkout Attestation</CardTitle>
+                  <CardDescription>
+                    This text appears on the order confirmation page.
+                    {attestation && (
+                      <> Version: {attestation.version} | Last Updated: {format(new Date(attestation.updated_at), 'PPp')}</>
+                    )}
+                  </CardDescription>
+                </div>
+                <Button onClick={handleSaveAttestation} disabled={savingAttestation}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {savingAttestation ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="attestation-title">Title</Label>
+                <Input
+                  id="attestation-title"
+                  value={attestationTitle}
+                  onChange={(e) => setAttestationTitle(e.target.value)}
+                  placeholder="e.g., Medical Attestation Required"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="attestation-subtitle">Subtitle</Label>
+                <Input
+                  id="attestation-subtitle"
+                  value={attestationSubtitle}
+                  onChange={(e) => setAttestationSubtitle(e.target.value)}
+                  placeholder="e.g., Please read and confirm the following statement"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="attestation-content">Attestation Points</Label>
+                <Textarea
+                  id="attestation-content"
+                  value={attestationContent}
+                  onChange={(e) => setAttestationContent(e.target.value)}
+                  placeholder="Enter attestation points (one per line, use - for bullets)"
+                  className="min-h-[200px] font-mono"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Enter each attestation point on a new line. Start lines with "-" for bullet points.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="attestation-checkbox">Checkbox Text</Label>
+                <Input
+                  id="attestation-checkbox"
+                  value={attestationCheckboxText}
+                  onChange={(e) => setAttestationCheckboxText(e.target.value)}
+                  placeholder="e.g., I agree to all of the above."
+                />
+              </div>
+
+              <div className="mt-6 p-4 border rounded-lg bg-accent/10">
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Preview
+                </h4>
+                <Card className="border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                      <AlertCircle className="h-5 w-5" />
+                      {attestationTitle}
+                    </CardTitle>
+                    <CardDescription>
+                      {attestationSubtitle}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-sm leading-relaxed">
+                        By checking the box below, you attest that:
+                        <ul className="list-disc ml-6 mt-2 space-y-1">
+                          {attestationContent.split('\n').map((line, idx) => {
+                            const cleanedLine = line.trim().replace(/^-\s*/, '');
+                            return cleanedLine ? <li key={idx}>{cleanedLine}</li> : null;
+                          })}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="flex items-start space-x-3 p-4 rounded-lg bg-accent/50 border border-border">
+                      <Checkbox disabled className="mt-1" />
+                      <div className="flex-1">
+                        <Label className="text-sm font-medium leading-relaxed">
+                          {attestationCheckboxText}
+                        </Label>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

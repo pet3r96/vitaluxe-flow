@@ -601,6 +601,45 @@ export type Database = {
           },
         ]
       }
+      checkout_attestation: {
+        Row: {
+          checkbox_text: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          subtitle: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          checkbox_text: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          checkbox_text?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
       commissions: {
         Row: {
           amount: number
