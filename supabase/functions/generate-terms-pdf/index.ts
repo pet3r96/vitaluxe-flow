@@ -502,11 +502,22 @@ serve(async (req) => {
       throw new Error('Failed to record acceptance');
     }
 
-    // Update user_password_status (for target user)
-    await supabase
+    // Update user_password_status (for target user) - using UPSERT to handle missing rows
+    const { error: statusError } = await supabase
       .from('user_password_status')
-      .update({ terms_accepted: true })
-      .eq('user_id', targetUserId);
+      .upsert({
+        user_id: targetUserId,
+        terms_accepted: true,
+        must_change_password: false  // Default to false for new rows
+      }, {
+        onConflict: 'user_id',
+        ignoreDuplicates: false  // Update if exists
+      });
+
+    if (statusError) {
+      console.error('Error updating user_password_status:', statusError);
+      // Don't throw - acceptance was recorded, this is just status sync
+    }
 
     // Get signed URL for download
     if (uploadMethod === 's3') {
