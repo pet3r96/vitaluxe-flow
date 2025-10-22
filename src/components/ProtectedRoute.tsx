@@ -80,9 +80,23 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // If auth loaded but role never populated, redirect to auth page
-  if (!initializing && user && !effectiveRole) {
-    navigate('/auth');
-    return null;
+  // Handle navigation in an effect to avoid setState during render warnings
+  useEffect(() => {
+    if (!initializing && user && !effectiveRole) {
+      navigate('/auth');
+    }
+  }, [initializing, user, effectiveRole, navigate]);
+
+  // While role is being determined, show a lightweight loader
+  if (user && initializing === false && effectiveRole === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+          <p className="mt-3 text-muted-foreground text-sm">Preparing your session...</p>
+        </div>
+      </div>
+    );
   }
 
   // Show GHL 2FA dialogs if needed (mandatory for ALL users including admins)
