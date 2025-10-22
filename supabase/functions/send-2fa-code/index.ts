@@ -70,12 +70,10 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    // Removed AWS SNS logic - previously sent SMS via Amazon SNS
-    // SMS delivery deferred - 2FA codes are stored in database only
-    // Users must retrieve codes from admin panel or alternative verification flow
-    // TODO (Future): Integrate Twilio SMS if SMS-based 2FA is required
-    console.log(`2FA code generated for user ${user.id}. Code: ${code} stored in database.`);
-    console.warn('SMS sending not configured - code available in database only');
+    // DEPRECATED: This function is replaced by send-ghl-sms
+    // Redirect users to use send-ghl-sms edge function for GHL-based 2FA
+    console.log(`DEPRECATED: 2FA code generated for user ${user.id}. Please use send-ghl-sms instead.`);
+    console.warn('This endpoint is deprecated. Use send-ghl-sms for GHL-based 2FA.');
 
     return new Response(
       JSON.stringify({ 

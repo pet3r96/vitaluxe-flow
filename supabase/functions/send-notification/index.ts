@@ -155,39 +155,32 @@ serve(async (req) => {
       }
     }
 
-    // Send SMS if enabled (Twilio integration placeholder)
+    // Send SMS via GHL webhook
     if (send_sms && preferences?.sms_notifications && profile?.phone) {
       try {
-        const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-        const twilioToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-        const twilioFrom = Deno.env.get("TWILIO_PHONE_NUMBER");
+        const ghlWebhookUrl = Deno.env.get("GHL_WEBHOOK_URL");
 
-        if (!twilioSid || !twilioToken || !twilioFrom) {
-          console.log("Twilio not configured, skipping SMS");
+        if (!ghlWebhookUrl) {
+          console.log("GHL webhook not configured, skipping SMS");
         } else {
-          const smsResponse = await fetch(
-            `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                Authorization: `Basic ${btoa(`${twilioSid}:${twilioToken}`)}`,
-              },
-              body: new URLSearchParams({
-                To: profile.phone,
-                From: twilioFrom,
-                Body: smsText,
-              }),
-            }
-          );
+          const ghlResponse = await fetch(ghlWebhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              phone: profile.phone,
+              code: smsText // Send full notification text
+            })
+          });
 
-          if (!smsResponse.ok) {
-            const error = await smsResponse.text();
-            console.error("SMS send failed:", error);
+          if (!ghlResponse.ok) {
+            const error = await ghlResponse.text();
+            console.error("GHL SMS send failed:", error);
             results.errors.push(`SMS failed: ${error}`);
           } else {
             results.sms_sent = true;
-            console.log("SMS sent successfully to:", profile.phone);
+            console.log("SMS sent successfully via GHL to:", profile.phone);
           }
         }
       } catch (error) {

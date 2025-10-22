@@ -84,6 +84,11 @@ serve(async (req) => {
     if (insertError) throw insertError;
 
     // Send SMS via GHL webhook (no signature required)
+    console.log('[GHL SMS] Sending code to phone:', phoneNumber.slice(-4), 'for user:', user.id);
+    console.log('[GHL SMS] Webhook URL:', ghlWebhookUrl);
+    console.log('[GHL SMS] Payload:', JSON.stringify({ phone: phoneNumber, code: '[REDACTED]' }));
+    
+    const ghlStartTime = Date.now();
     const ghlResponse = await fetch(ghlWebhookUrl, {
       method: 'POST',
       headers: {
@@ -91,11 +96,34 @@ serve(async (req) => {
       },
       body: JSON.stringify({ phone: phoneNumber, code })
     });
+    const ghlEndTime = Date.now();
+
+    console.log('[GHL SMS] Response status:', ghlResponse.status);
+    console.log('[GHL SMS] Response time:', (ghlEndTime - ghlStartTime), 'ms');
 
     if (!ghlResponse.ok) {
-      console.error('GHL webhook failed:', await ghlResponse.text());
-      throw new Error('Failed to send SMS. Please try again.');
+      const errorText = await ghlResponse.text();
+      console.error('[GHL SMS] Webhook failed:', errorText);
+      
+      // Log failure to audit
+      await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        event_type: 'ghl_webhook_failed',
+        phone: phoneNumber,
+        code_verified: false,
+        metadata: { 
+          error: errorText,
+          status: ghlResponse.status,
+          response_time_ms: ghlEndTime - ghlStartTime
+        }
+      });
+      
+      throw new Error(`GHL webhook failed: ${errorText}`);
     }
+    
+    const responseBody = await ghlResponse.text();
+    console.log('[GHL SMS] Success response:', responseBody);
+    console.log('[GHL SMS] Code sent successfully');
 
     // Log successful code send
     await supabase.from('two_fa_audit_log').insert({
