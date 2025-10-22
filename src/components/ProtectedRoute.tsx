@@ -23,6 +23,10 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ===== ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS =====
+  // This is critical to avoid "Rendered more hooks than during the previous render" error
+
+  // Redirect if no user
   useEffect(() => {
     if (!initializing && !user) {
       navigate("/auth");
@@ -37,7 +41,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         effectiveRole !== 'admin' &&
         location.pathname !== '/change-password'
       ) {
-        
         navigate("/change-password");
       }
     }
@@ -51,7 +54,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         effectiveRole !== 'admin' &&
         location.pathname !== '/accept-terms'
       ) {
-        
         navigate("/accept-terms");
       }
     }
@@ -63,6 +65,15 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       navigate('/');
     }
   }, [initializing, user, effectiveRole, isImpersonating, location.pathname, navigate]);
+
+  // If auth loaded but role never populated, redirect to auth page
+  useEffect(() => {
+    if (!initializing && user && !effectiveRole) {
+      navigate('/auth');
+    }
+  }, [initializing, user, effectiveRole, navigate]);
+
+  // ===== NOW SAFE TO HAVE CONDITIONAL RETURNS =====
 
   if (initializing) {
     return (
@@ -79,16 +90,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return null;
   }
 
-  // If auth loaded but role never populated, redirect to auth page
-  // Handle navigation in an effect to avoid setState during render warnings
-  useEffect(() => {
-    if (!initializing && user && !effectiveRole) {
-      navigate('/auth');
-    }
-  }, [initializing, user, effectiveRole, navigate]);
-
   // While role is being determined, show a lightweight loader
-  if (user && initializing === false && effectiveRole === null) {
+  if (user && !effectiveRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
