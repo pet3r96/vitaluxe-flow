@@ -7,6 +7,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface GHLSmsVerifyDialogProps {
   open: boolean;
@@ -15,8 +16,9 @@ interface GHLSmsVerifyDialogProps {
 }
 
 export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDialogProps) => {
+  const { mark2FAVerified } = useAuth();
   const [code, setCode] = useState('');
-  const [attemptId, setAttemptId] = useState<string | null>(null); // NEW: Store attemptId
+  const [attemptId, setAttemptId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [error, setError] = useState('');
@@ -122,6 +124,9 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
         throw new Error(data.error);
       }
 
+      // Mark 2FA as verified for this session
+      mark2FAVerified();
+      
       toast.success('Verified! Reloading...');
       setTimeout(() => window.location.reload(), 1000);
     } catch (err: any) {

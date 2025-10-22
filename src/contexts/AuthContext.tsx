@@ -32,6 +32,7 @@ interface AuthContextType {
   requires2FAVerify: boolean;
   user2FAPhone: string | null;
   twoFAStatusChecked: boolean;
+  mark2FAVerified: () => void;
   checkPasswordStatus: () => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
@@ -71,6 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [requires2FAVerify, setRequires2FAVerify] = useState(false);
   const [user2FAPhone, setUser2FAPhone] = useState<string | null>(null);
   const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
+  const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
   
   // Idle timeout state
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
@@ -107,24 +109,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRequires2FAVerify(false);
         setUser2FAPhone(null);
       } else {
-        // Enrolled - check if verification is still valid (24 hours)
-        const lastVerification = data.last_ghl_verification 
-          ? new Date(data.last_ghl_verification) 
-          : null;
-        const now = new Date();
-        const hoursSinceVerification = lastVerification
-          ? (now.getTime() - lastVerification.getTime()) / (1000 * 60 * 60)
-          : 999;
-
-        if (hoursSinceVerification > 24) {
-          // Verification expired - need to re-verify
-          console.log('[AuthContext] check2FAStatus - Verification expired, requires verify');
+        // Enrolled - require verification if not verified this session
+        if (!is2FAVerifiedThisSession) {
+          console.log('[AuthContext] check2FAStatus - Enrolled, requires verification');
           setRequires2FAVerify(true);
           setRequires2FASetup(false);
           setUser2FAPhone(data.phone_number);
         } else {
-          // Still valid - allow access
-          console.log('[AuthContext] check2FAStatus - Verification valid, no 2FA needed');
+          console.log('[AuthContext] check2FAStatus - Already verified this session');
           setRequires2FASetup(false);
           setRequires2FAVerify(false);
           setUser2FAPhone(data.phone_number);
@@ -249,6 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setImpersonatedUserName(null);
           setCurrentLogId(null);
           setTwoFAStatusChecked(false);
+          setIs2FAVerifiedThisSession(false);
           sessionStorage.removeItem('vitaluxe_impersonation');
           clearCSRFToken();
           logger.info('SIGNED_OUT: state cleared, session deleted');
@@ -428,6 +421,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setImpersonatedUserId(null);
                 setImpersonatedUserName(null);
                 setCurrentLogId(null);
+                setIs2FAVerifiedThisSession(false);
                 sessionStorage.removeItem('vitaluxe_impersonation');
                 navigate("/auth");
               })();
@@ -745,7 +739,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      setTwoFAStatusChecked(false); // Reset 2FA check status
+      setTwoFAStatusChecked(false);
+      setIs2FAVerifiedThisSession(false); // Reset 2FA verification on new login
       
       // Delegate to authService
       const { error } = await authService.loginUser(email, password);
@@ -898,6 +893,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     setLoading(true);
     
+    // Clear 2FA verification for next login
+    if (user?.id) {
+      await supabase
+        .from('user_2fa_settings')
+        .update({ last_ghl_verification: null })
+        .eq('user_id', user.id);
+    }
+    
     // Delete active session from database
     if (user?.id) {
       const { error: deleteError } = await supabase
@@ -937,9 +940,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setImpersonatedUserName(null);
     setCurrentLogId(null);
     setTwoFAStatusChecked(false);
+    setIs2FAVerifiedThisSession(false);
     sessionStorage.removeItem('vitaluxe_impersonation');
     setLoading(false);
     navigate("/");
+  };
+
+  // Mark 2FA as verified for current session
+  const mark2FAVerified = () => {
+    setIs2FAVerifiedThisSession(true);
+    setRequires2FAVerify(false);
   };
 
   return (
@@ -965,6 +975,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       requires2FAVerify,
       user2FAPhone,
       twoFAStatusChecked,
+      mark2FAVerified,
       checkPasswordStatus,
       setImpersonation,
       clearImpersonation,
