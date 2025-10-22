@@ -25,6 +25,8 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    console.log(`[verify-ghl-sms] User authenticated: ${user.id}`);
+
     const { code } = await req.json();
 
     if (!code || code.length !== 6) {
@@ -43,6 +45,12 @@ serve(async (req) => {
       .maybeSingle();
 
     if (codeError) throw codeError;
+
+    console.log(`[verify-ghl-sms] Code lookup result:`, { 
+      found: !!codeData, 
+      expired: codeData ? new Date(codeData.expires_at) < new Date() : null,
+      attemptCount: codeData?.attempt_count
+    });
 
     if (!codeData) {
       await supabase.from('two_fa_audit_log').insert({
@@ -131,6 +139,8 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existingSettings) {
+      console.log(`[verify-ghl-sms] Updating existing user_2fa_settings for user ${user.id}`);
+      
       // Update existing settings
       const { error: updateError } = await supabase
         .from('user_2fa_settings')
@@ -138,12 +148,20 @@ serve(async (req) => {
           ghl_enabled: true,
           ghl_phone_verified: true,
           last_ghl_verification: now,
-          phone_number: codeData.phone
+          phone_number: codeData.phone,
+          phone_verified: true,
+          is_enrolled: true
         })
         .eq('user_id', user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[verify-ghl-sms] Update failed:', updateError);
+        throw updateError;
+      }
+      console.log(`[verify-ghl-sms] Successfully updated user_2fa_settings`);
     } else {
+      console.log(`[verify-ghl-sms] Inserting new user_2fa_settings for user ${user.id}`);
+      
       // Insert new settings
       const { error: insertError } = await supabase
         .from('user_2fa_settings')
@@ -152,10 +170,16 @@ serve(async (req) => {
           phone_number: codeData.phone,
           ghl_enabled: true,
           ghl_phone_verified: true,
-          last_ghl_verification: now
+          last_ghl_verification: now,
+          phone_verified: true,
+          is_enrolled: true
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('[verify-ghl-sms] Insert failed:', insertError);
+        throw insertError;
+      }
+      console.log(`[verify-ghl-sms] Successfully inserted user_2fa_settings`);
     }
 
     // Log successful verification

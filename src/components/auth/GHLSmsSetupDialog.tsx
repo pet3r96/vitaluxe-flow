@@ -109,21 +109,35 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
-        throw new Error('No active session');
+      if (!session?.access_token) {
+        throw new Error('No active session. Please log in again.');
       }
 
+      console.log('[GHLSmsSetupDialog] Calling verify-ghl-sms with code:', code.substring(0, 3) + '***');
+
       const { data, error } = await supabase.functions.invoke('verify-ghl-sms', {
-        body: { code }
+        body: { code },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      console.log('[GHLSmsSetupDialog] Response:', { success: !error, hasData: !!data });
+
+      if (error) {
+        console.error('[GHLSmsSetupDialog] Invoke error:', error);
+        throw error;
+      }
+      if (data?.error) {
+        console.error('[GHLSmsSetupDialog] Function error:', data.error);
+        throw new Error(data.error);
+      }
 
       toast.success('Phone verified! Reloading...');
+      console.log('[GHLSmsSetupDialog] Success - reloading page');
       setTimeout(() => window.location.reload(), 1000);
     } catch (err: any) {
-      console.error('Error verifying code:', err);
+      console.error('[GHLSmsSetupDialog] Verification failed:', err);
       setError(err.message || 'Invalid verification code');
       if (err.message?.includes('attempts remaining')) {
         toast.error(err.message);
