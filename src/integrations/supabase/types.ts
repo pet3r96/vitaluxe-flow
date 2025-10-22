@@ -3839,18 +3839,12 @@ export type Database = {
       }
     }
     Functions: {
-      archive_old_audit_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      archive_old_audit_logs: { Args: never; Returns: number }
       can_cancel_order: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
       }
-      can_create_admin: {
-        Args: { _inviter_id: string }
-        Returns: boolean
-      }
+      can_create_admin: { Args: { _inviter_id: string }; Returns: boolean }
       can_downline_view_practice: {
         Args: { _downline_user_id: string; _practice_id: string }
         Returns: boolean
@@ -3859,29 +3853,17 @@ export type Database = {
         Args: { _practice_id: string; _topline_user_id: string }
         Returns: boolean
       }
-      can_user_impersonate: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      can_view_credentials: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      can_user_impersonate: { Args: { _user_id: string }; Returns: boolean }
+      can_view_credentials: { Args: { _user_id: string }; Returns: boolean }
       check_refill_eligibility: {
         Args: { p_order_line_id: string }
         Returns: Json
       }
-      cleanup_expired_cart_lines: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      cleanup_expired_csrf_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      create_user_with_role: {
-        Args:
-          | {
+      cleanup_expired_cart_lines: { Args: never; Returns: number }
+      cleanup_expired_csrf_tokens: { Args: never; Returns: number }
+      create_user_with_role:
+        | {
+            Args: {
               p_created_by?: string
               p_email: string
               p_name: string
@@ -3891,15 +3873,18 @@ export type Database = {
               p_temp_password?: boolean
               p_user_id: string
             }
-          | {
+            Returns: Json
+          }
+        | {
+            Args: {
               p_email: string
               p_name: string
               p_role: Database["public"]["Enums"]["app_role"]
               p_role_data?: Json
               p_user_id: string
             }
-        Returns: Json
-      }
+            Returns: Json
+          }
       decrypt_2fa_phone: {
         Args: { p_encrypted_phone: string }
         Returns: string
@@ -3924,22 +3909,10 @@ export type Database = {
         Args: { p_encrypted_data: string; p_field_type: string }
         Returns: string
       }
-      encrypt_plaid_token: {
-        Args: { p_token: string }
-        Returns: string
-      }
-      get_auth_user_id_by_email: {
-        Args: { p_email: string }
-        Returns: string
-      }
-      get_client_ip: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_rep_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      encrypt_plaid_token: { Args: { p_token: string }; Returns: string }
+      get_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
+      get_client_ip: { Args: never; Returns: string }
+      get_current_user_rep_id: { Args: never; Returns: string }
       get_decrypted_order_line_contact: {
         Args: { p_order_line_id: string }
         Returns: {
@@ -3991,7 +3964,7 @@ export type Database = {
         }[]
       }
       get_encryption_coverage: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           coverage_percentage: number
           data_type: string
@@ -3999,12 +3972,9 @@ export type Database = {
           total_records: number
         }[]
       }
-      get_my_topline_rep_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_my_topline_rep_id: { Args: never; Returns: string }
       get_security_events_summary: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           action_type: string
           event_count: number
@@ -4016,14 +3986,8 @@ export type Database = {
         Args: { _practice_linked_topline_user_id: string }
         Returns: string
       }
-      get_unread_notification_count: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      get_user_rep_id: {
-        Args: { _user_id: string }
-        Returns: string
-      }
+      get_unread_notification_count: { Args: never; Returns: number }
+      get_user_rep_id: { Args: { _user_id: string }; Returns: string }
       get_visible_products_for_effective_user: {
         Args: { p_effective_user_id: string }
         Returns: {
@@ -4031,7 +3995,7 @@ export type Database = {
         }[]
       }
       get_visible_products_for_user: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           id: string
         }[]
@@ -4043,14 +4007,8 @@ export type Database = {
         }
         Returns: boolean
       }
-      increment_discount_usage: {
-        Args: { p_code: string }
-        Returns: undefined
-      }
-      is_admin_ip_banned: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      increment_discount_usage: { Args: { p_code: string }; Returns: undefined }
+      is_admin_ip_banned: { Args: never; Returns: boolean }
       is_cart_owner: {
         Args: { _cart_id: string; _user_id: string }
         Returns: boolean
@@ -4063,10 +4021,7 @@ export type Database = {
         Args: { _thread_id: string; _user_id: string }
         Returns: boolean
       }
-      is_topline_of_rep: {
-        Args: { _rep_id: string }
-        Returns: boolean
-      }
+      is_topline_of_rep: { Args: { _rep_id: string }; Returns: boolean }
       log_audit_event: {
         Args: {
           p_action_type: string
@@ -4087,10 +4042,7 @@ export type Database = {
         }
         Returns: string
       }
-      mark_all_notifications_read: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      mark_all_notifications_read: { Args: never; Returns: number }
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: undefined
@@ -4102,10 +4054,7 @@ export type Database = {
           recomputed_count: number
         }[]
       }
-      refresh_security_events_summary: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      refresh_security_events_summary: { Args: never; Returns: undefined }
       validate_discount_code: {
         Args: { p_code: string }
         Returns: {

@@ -157,10 +157,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Handle different auth events
         if (event === 'SIGNED_IN' && session?.user) {
+          // Create or update active_sessions record
+          const { error: sessionError } = await supabase
+            .from('active_sessions')
+            .upsert({
+              user_id: session.user.id,
+              session_id: session.access_token.substring(0, 20),
+              ip_address: null,
+              user_agent: navigator.userAgent,
+              last_activity: new Date().toISOString(),
+            }, { 
+              onConflict: 'user_id',
+              ignoreDuplicates: false 
+            });
+
+          if (sessionError) {
+            logger.error('Failed to create active session', sessionError);
+          }
+
+          // Initialize lastActivityTime from current time
+          setLastActivityTime(Date.now());
+
           // User just signed in - fetch role silently
           await fetchUserRole(session.user.id);
           await generateCSRFToken();
-          logger.info('SIGNED_IN: user data loaded');
+          logger.info('SIGNED_IN: session created, user data loaded');
           
         } else if (event === 'USER_UPDATED' && session?.user) {
           // User data updated - refresh role data silently (no loading state)
@@ -168,6 +189,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logger.info('USER_UPDATED: user data refreshed silently');
           
         } else if (event === 'SIGNED_OUT') {
+          // Delete active session from database
+          if (user?.id) {
+            await supabase
+              .from('active_sessions')
+              .delete()
+              .eq('user_id', user.id);
+          }
+          
           // Clear all state on sign out
           setUserRole(null);
           setImpersonatedRole(null);
@@ -176,7 +205,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCurrentLogId(null);
           sessionStorage.removeItem('vitaluxe_impersonation');
           clearCSRFToken();
-          logger.info('SIGNED_OUT: state cleared');
+          logger.info('SIGNED_OUT: state cleared, session deleted');
           
         } else if (event === 'TOKEN_REFRESHED') {
           // Do nothing - no need to refetch data or show loading
@@ -195,10 +224,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
-      if (session?.user && !hasBootstrapped.current) {
-        hasBootstrapped.current = true;
-        await fetchUserRole(session.user.id);
-        await generateCSRFToken();
+      if (session?.user) {
+        // Fetch last_activity from database to restore timer
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('active_sessions')
+          .select('last_activity')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        if (sessionData?.last_activity) {
+          const lastActivityTimestamp = new Date(sessionData.last_activity).getTime();
+          setLastActivityTime(lastActivityTimestamp);
+          
+          // Check if already expired
+          const idleMinutes = (Date.now() - lastActivityTimestamp) / 60000;
+          if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
+            logger.warn('Session expired on page load', { idleMinutes });
+            await forceLogout('idle_timeout');
+            setInitializing(false);
+            clearTimeout(bootstrapTimeout);
+            return;
+          }
+          
+          logger.info('Session timer restored', { 
+            lastActivity: sessionData.last_activity,
+            idleMinutes: idleMinutes.toFixed(1) 
+          });
+        } else {
+          // No session in database - create one (edge case)
+          logger.warn('No active_session found, creating one');
+          await supabase.from('active_sessions').upsert({
+            user_id: session.user.id,
+            session_id: session.access_token.substring(0, 20),
+            user_agent: navigator.userAgent,
+            last_activity: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+          setLastActivityTime(Date.now());
+        }
+        
+        if (!hasBootstrapped.current) {
+          hasBootstrapped.current = true;
+          await fetchUserRole(session.user.id);
+          await generateCSRFToken();
+        }
       }
       
       setInitializing(false);
@@ -792,6 +860,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     setLoading(true);
+    
+    // Delete active session from database
+    if (user?.id) {
+      const { error: deleteError } = await supabase
+        .from('active_sessions')
+        .delete()
+        .eq('user_id', user.id);
+      
+      if (deleteError) {
+        logger.error('Failed to delete active session', deleteError);
+      } else {
+        logger.info('Active session deleted on logout');
+      }
+    }
     
     // End impersonation log if active
     if (currentLogId) {

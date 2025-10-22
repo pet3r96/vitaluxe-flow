@@ -24,10 +24,12 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Starting stale session cleanup...');
+    const startTime = new Date().toISOString();
+    console.log(`[${startTime}] Starting stale session cleanup...`);
 
     // Delete sessions inactive for >30 minutes
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    console.log(`Checking for sessions last active before: ${thirtyMinutesAgo}`);
     
     const { data: staleSessions, error: fetchError } = await supabase
       .from('active_sessions')
@@ -69,14 +71,18 @@ Deno.serve(async (req) => {
         throw deleteError;
       }
 
-      console.log(`Successfully cleaned up ${staleCount} stale sessions`);
+      console.log(`✅ Successfully cleaned up ${staleCount} stale sessions and created audit log entries`);
     }
+
+    const endTime = new Date().toISOString();
+    console.log(`[${endTime}] Cleanup complete. Next run in 15 minutes.`);
 
     return new Response(
       JSON.stringify({
         success: true,
         cleaned: staleCount,
-        timestamp: new Date().toISOString(),
+        timestamp: endTime,
+        next_run: 'in 15 minutes (cron: */15 * * * *)',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
