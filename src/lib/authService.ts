@@ -163,10 +163,14 @@ export const authService = {
    */
   loginUser: async (email: string, password: string): Promise<{ error: any }> => {
     try {
+      // Normalize credentials to avoid common input issues (e.g., copy/paste spaces)
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanPassword = password.trim();
+
       // Attempt sign in
       const { data: { user }, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: cleanEmail,
+        password: cleanPassword,
       });
 
       if (error) {
