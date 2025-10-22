@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SNSClient, PublishCommand } from "https://esm.sh/@aws-sdk/client-sns@3.485.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,12 +70,13 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    // Send SMS via GHL (GoHighLevel) without creating contact
-    const ghlApiKey = Deno.env.get('GHL_API_KEY');
-    const ghlTollFreeNumber = Deno.env.get('GHL_TOLL_FREE_NUMBER');
+    // Send SMS via Amazon SNS
+    const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
+    const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
+    const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
 
-    if (!ghlApiKey || !ghlTollFreeNumber) {
-      console.error('GHL SMS credentials not configured');
+    if (!awsAccessKeyId || !awsSecretAccessKey) {
+      console.error('AWS SNS credentials not configured');
       return new Response(
         JSON.stringify({ 
           error: 'SMS service not configured. Please contact support.',
@@ -85,36 +87,39 @@ serve(async (req) => {
     }
 
     try {
-      // Send SMS via GHL API without creating a contact
-      const smsResponse = await fetch(
-        "https://services.leadconnectorhq.com/conversations/messages",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${ghlApiKey}`,
-            "Content-Type": "application/json",
-            "Version": "2021-07-28",
-          },
-          body: JSON.stringify({
-            type: "SMS",
-            contactPhone: phoneNumber,
-            phone: ghlTollFreeNumber,
-            message: `Your VitaLuxe verification code is: ${code}. This code expires in 10 minutes.`,
-          }),
-        }
-      );
+      const snsClient = new SNSClient({
+        region: awsRegion,
+        credentials: {
+          accessKeyId: awsAccessKeyId,
+          secretAccessKey: awsSecretAccessKey,
+        },
+      });
 
-      if (!smsResponse.ok) {
-        const errorText = await smsResponse.text();
-        console.error('GHL SMS send failed:', errorText);
-        throw new Error(`Failed to send SMS via GHL: ${errorText}`);
+      const command = new PublishCommand({
+        PhoneNumber: phoneNumber,
+        Message: `Your VitaLuxe verification code is: ${code}. This code expires in 10 minutes.`,
+        MessageAttributes: {
+          'AWS.SNS.SMS.SenderID': {
+            DataType: 'String',
+            StringValue: 'VitaLuxe'
+          },
+          'AWS.SNS.SMS.SMSType': {
+            DataType: 'String',
+            StringValue: 'Transactional'
+          }
+        }
+      });
+
+      const snsResponse = await snsClient.send(command);
+      
+      if (!snsResponse.MessageId) {
+        throw new Error('Failed to send SMS via SNS');
       }
 
-      const responseData = await smsResponse.json();
-      console.log(`2FA code sent to ${phoneNumber} for user ${user.id} via GHL (ID: ${responseData.messageId || 'unknown'})`);
-    } catch (ghlError: any) {
-      console.error('GHL SMS error:', ghlError);
-      throw new Error(`Failed to send SMS: ${ghlError.message}`);
+      console.log(`2FA code sent to ${phoneNumber} for user ${user.id} via SNS (MessageId: ${snsResponse.MessageId})`);
+    } catch (snsError: any) {
+      console.error('AWS SNS error:', snsError);
+      throw new Error(`Failed to send SMS: ${snsError.message}`);
     }
 
     return new Response(

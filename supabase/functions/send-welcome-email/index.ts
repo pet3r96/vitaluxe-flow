@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { SESClient, SendEmailCommand } from "https://esm.sh/@aws-sdk/client-ses@3.485.0";
 import { validateSendWelcomeEmailRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
@@ -49,18 +50,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending ${isPasswordReset ? 'password reset' : 'welcome'} email to ${email} (${role})`);
 
-    // Check for OAuth email credentials
-    const oauthClientId = Deno.env.get('OAUTH_EMAIL_CLIENT_ID');
-    const oauthClientSecret = Deno.env.get('OAUTH_EMAIL_CLIENT_SECRET');
-    const oauthRefreshToken = Deno.env.get('OAUTH_EMAIL_REFRESH_TOKEN');
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'onboarding@vitaluxeservice.com';
+    // Check for AWS SES credentials
+    const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
+    const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
+    const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
+    const sesFromEmail = Deno.env.get('SES_FROM_EMAIL') || 'onboarding@vitaluxeservice.com';
     
-    if (!oauthClientId || !oauthClientSecret || !oauthRefreshToken) {
-      console.log("OAuth email not configured - email not sent (development mode)");
+    if (!awsAccessKeyId || !awsSecretAccessKey) {
+      console.log("AWS SES not configured - email not sent (development mode)");
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Email skipped - OAuth email not configured" 
+          message: "Email skipped - AWS SES not configured" 
         }),
         {
           status: 200,
@@ -73,19 +74,133 @@ const handler = async (req: Request): Promise<Response> => {
       ? "Your Password Has Been Reset - Vitaluxe Services CRM"
       : "Welcome to Vitaluxe Services CRM";
 
-    // TODO: Implement OAuth email sending
-    // For now, log the email details
-    console.log('OAuth email would send to:', email);
-    console.log('Subject:', emailSubject);
-    console.log('Temp password:', temporaryPassword);
+    const emailHeading = isPasswordReset
+      ? "Password Reset Successful"
+      : `Welcome, ${name}!`;
 
-    // Placeholder success response
-    console.log("Welcome email would be sent successfully via OAuth");
+    const emailIntro = isPasswordReset
+      ? `Your password has been successfully reset. Below are your new login credentials. Please note that you <strong>must change this temporary password</strong> upon your next login for security and HIPAA compliance.`
+      : `Thank you for joining <strong>Vitaluxe Services CRM</strong>. Your account has been created with the role: <strong>${role}</strong>.`;
 
-    return new Response(JSON.stringify({ success: true, message: 'Email sent (OAuth pending implementation)' }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { color: white; font-size: 28px; font-weight: bold; margin: 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .credential-box { background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .credential-label { font-weight: bold; color: #667eea; font-size: 14px; text-transform: uppercase; margin-bottom: 5px; }
+            .credential-value { font-size: 18px; font-family: 'Courier New', monospace; color: #333; background: #f3f4f6; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+            .warning-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .requirements { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .requirements ul { margin: 10px 0; padding-left: 20px; }
+            .requirements li { margin: 5px 0; }
+            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 class="logo">Vitaluxe Services</h1>
+              <p style="color: white; margin: 10px 0 0 0;">Professional CRM Platform</p>
+            </div>
+            
+            <div class="content">
+              <h2 style="color: #667eea; margin-top: 0;">${emailHeading}</h2>
+              
+              <p>${emailIntro}</p>
+                
+                <div class="credential-box">
+                  <div class="credential-label">Username / Email</div>
+                  <div class="credential-value">${email}</div>
+                  
+                  <div class="credential-label">Temporary Password</div>
+                  <div class="credential-value">${temporaryPassword}</div>
+                </div>
+                
+                <div class="warning-box">
+                  <strong>⚠️ IMPORTANT SECURITY NOTICE</strong>
+                  <p style="margin: 10px 0 0 0;">You <strong>must change your password</strong> upon first login. This is required for HIPAA compliance and account security.</p>
+                </div>
+                
+                <div class="requirements">
+                  <h3 style="color: #667eea; margin-top: 0;">Password Requirements</h3>
+                  <p>Your new password must meet these HIPAA-compliant requirements:</p>
+                  <ul>
+                    <li>✓ Minimum 12 characters</li>
+                    <li>✓ At least 1 uppercase letter (A-Z)</li>
+                    <li>✓ At least 1 lowercase letter (a-z)</li>
+                    <li>✓ At least 1 number (0-9)</li>
+                    <li>✓ At least 1 special character (!@#$%^&*)</li>
+                    <li>✓ Cannot contain your email address</li>
+                    <li>✓ Must be different from temporary password</li>
+                  </ul>
+                </div>
+                
+                <p style="margin-top: 30px;">If you have any questions or need assistance, please contact our support team.</p>
+                
+                <p style="margin-top: 20px;">Best regards,<br><strong>The Vitaluxe Services Team</strong></p>
+            </div>
+            
+            <div class="footer">
+              <p>This email contains sensitive information. Please do not share your credentials with anyone.</p>
+              <p>&copy; ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Initialize SES client and send email
+    try {
+      const sesClient = new SESClient({
+        region: awsRegion,
+        credentials: {
+          accessKeyId: awsAccessKeyId,
+          secretAccessKey: awsSecretAccessKey,
+        },
+      });
+
+      const command = new SendEmailCommand({
+        Source: sesFromEmail,
+        Destination: {
+          ToAddresses: [email],
+        },
+        Message: {
+          Subject: {
+            Data: emailSubject,
+            Charset: 'UTF-8',
+          },
+          Body: {
+            Html: {
+              Data: htmlBody,
+              Charset: 'UTF-8',
+            },
+          },
+        },
+      });
+
+      const sesResponse = await sesClient.send(command);
+      console.log("Welcome email sent successfully via Amazon SES:", sesResponse.MessageId);
+
+      return new Response(JSON.stringify({ success: true, messageId: sesResponse.MessageId }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (sesError: any) {
+      console.error("Error sending email via Amazon SES:", sesError);
+      return new Response(
+        JSON.stringify({ success: false, error: sesError.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
   } catch (error: any) {
     console.error("Error sending welcome email:", error);
     return new Response(
