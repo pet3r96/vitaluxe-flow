@@ -169,6 +169,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Handle different auth events
         if (event === 'SIGNED_IN' && session?.user) {
+          // Clear initializing immediately on successful sign in
+          setInitializing(false);
+          clearTimeout(bootstrapTimeout);
+          
           // Create or update active_sessions record
           const { error: sessionError } = await supabase
             .from('active_sessions')
@@ -190,10 +194,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Initialize lastActivityTime from current time
           setLastActivityTime(Date.now());
 
-          // User just signed in - fetch role silently
-          await fetchUserRole(session.user.id);
-          await generateCSRFToken();
-          logger.info('SIGNED_IN: session created, user data loaded');
+          // Fetch role and CSRF token asynchronously (don't block)
+          Promise.all([
+            fetchUserRole(session.user.id),
+            generateCSRFToken()
+          ]).then(() => {
+            logger.info('SIGNED_IN: session created, user data loaded');
+          }).catch((error) => {
+            logger.error('Error loading user data after sign in', error);
+          });
           
         } else if (event === 'USER_UPDATED' && session?.user) {
           // User data updated - refresh role data silently (no loading state)
