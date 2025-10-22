@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { DownlinesDataTable } from "@/components/downlines/DownlinesDataTable";
+import { RepPendingRepsTable } from "@/components/downlines/RepPendingRepsTable";
 import { AddRepRequestDialog } from "@/components/admin/AddRepRequestDialog";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { UserPlus } from "lucide-react";
 
 export default function MyDownlines() {
@@ -23,6 +25,11 @@ export default function MyDownlines() {
       </div>
       
       <DownlinesDataTable />
+      
+      <Separator className="my-8" />
+      
+      <RepPendingRepsTable />
+      
       <AddRepRequestDialog
         open={requestDialogOpen}
         onOpenChange={setRequestDialogOpen}

@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Eye, UserPlus } from "lucide-react";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
-import { AddPracticeDialog } from "./AddPracticeDialog";
+import { AddPracticeRequestDialog } from "./AddPracticeRequestDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
@@ -364,10 +364,10 @@ export const RepPracticesDataTable = () => {
       )}
 
       <div className="flex justify-end mb-4">
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add New Practice
-            </Button>
+        <Button onClick={() => setAddDialogOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Request New Practice
+        </Button>
           </div>
 
       {selectedPractice && (
@@ -379,11 +379,10 @@ export const RepPracticesDataTable = () => {
         />
       )}
 
-      <AddPracticeDialog
+      <AddPracticeRequestDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={() => refetch()}
-        preAssignedRepId={effectiveUserId}
       />
     </div>
   );

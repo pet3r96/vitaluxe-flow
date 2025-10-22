@@ -1,6 +1,8 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { RepPracticesDataTable } from "@/components/practices/RepPracticesDataTable";
+import { RepPendingPracticesTable } from "@/components/practices/RepPendingPracticesTable";
+import { Separator } from "@/components/ui/separator";
 
 const Practices = () => {
   const { effectiveRole } = useAuth();
@@ -20,7 +22,15 @@ const Practices = () => {
         </p>
       </div>
 
-      {isRep ? <RepPracticesDataTable /> : <PracticesDataTable />}
+      {isRep ? (
+        <>
+          <RepPracticesDataTable />
+          <Separator className="my-8" />
+          <RepPendingPracticesTable />
+        </>
+      ) : (
+        <PracticesDataTable />
+      )}
     </div>
   );
 };
