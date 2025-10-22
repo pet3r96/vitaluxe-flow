@@ -30,9 +30,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
   }, [countdown]);
 
   const formatCountdown = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${seconds}s`;
   };
 
   const formatPhoneNumber = (value: string) => {
@@ -81,7 +79,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
 
       toast.success('Verification code sent!');
       setStep('verify');
-      setCountdown(300);
+      setCountdown(30);
     } catch (err: any) {
       console.error('Error sending SMS:', err);
       setError(err.message || 'Failed to send verification code');
@@ -93,7 +91,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
 
   const resendCode = async () => {
     setCode('');
-    setCountdown(300);
+    setCountdown(30);
     await sendCode();
   };
 
