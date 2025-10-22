@@ -18,6 +18,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
   const [step, setStep] = useState<'phone' | 'verify'>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [attemptId, setAttemptId] = useState<string | null>(null); // NEW: Store attemptId
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -76,6 +77,13 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
 
       if (error) throw error;
       if (data.error) throw new Error(data.error);
+      
+      // Store attemptId for verification
+      if (data.attemptId) {
+        setAttemptId(data.attemptId);
+      } else {
+        throw new Error('No attempt ID received from server');
+      }
 
       toast.success('Verification code sent!');
       setStep('verify');
@@ -101,6 +109,11 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
       return;
     }
 
+    if (!attemptId) {
+      setError('Verification session expired. Please request a new code.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -111,10 +124,10 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
         throw new Error('No active session. Please log in again.');
       }
 
-      console.log('[GHLSmsSetupDialog] Calling verify-ghl-sms with code:', code.substring(0, 3) + '***');
+      console.log('[GHLSmsSetupDialog] Calling verify-ghl-sms with attemptId:', attemptId);
 
       const { data, error } = await supabase.functions.invoke('verify-ghl-sms', {
-        body: { code },
+        body: { code, attemptId }, // Send attemptId with code
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }

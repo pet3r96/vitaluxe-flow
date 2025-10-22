@@ -6,17 +6,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to hash codes securely using Web Crypto API
+async function hashCode(code: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(code);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get authenticated user
+    // Get authenticated user (minimal check, no storage)
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
@@ -25,58 +36,56 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    console.log(`[verify-ghl-sms] User authenticated: ${user.id}`);
-
-    const { code } = await req.json();
+    const { code, attemptId } = await req.json();
 
     if (!code || code.length !== 6) {
       throw new Error('Valid 6-digit code is required');
     }
 
-    // Find the most recent non-expired, non-verified code for this user
-    const { data: codeData, error: codeError } = await supabase
-      .from('sms_codes')
+    if (!attemptId) {
+      throw new Error('Attempt ID is required');
+    }
+
+    console.log('[GHL] Verify | Attempt:', attemptId);
+
+    // Find the attempt by attemptId (NO PII lookup needed)
+    const { data: attemptData, error: attemptError } = await supabase
+      .from('sms_verification_attempts')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('attempt_id', attemptId)
       .eq('verified', false)
       .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
       .maybeSingle();
 
-    if (codeError) throw codeError;
+    if (attemptError) throw attemptError;
 
-    console.log(`[verify-ghl-sms] Code lookup result:`, { 
-      found: !!codeData, 
-      expired: codeData ? new Date(codeData.expires_at) < new Date() : null,
-      attemptCount: codeData?.attempt_count
-    });
+    console.log('[GHL] Verify | Attempt:', attemptId, '| Found:', !!attemptData, '| AttemptCount:', attemptData?.attempt_count);
 
-    if (!codeData) {
+    if (!attemptData) {
       await supabase.from('two_fa_audit_log').insert({
-        user_id: user.id,
+        attempt_id: attemptId,
         event_type: 'code_failed',
-        phone: 'unknown',
         code_verified: false,
-        metadata: { reason: 'no_valid_code' }
+        response_time_ms: Date.now() - startTime,
+        metadata: { reason: 'no_valid_attempt' }
       });
 
       return new Response(
         JSON.stringify({ 
-          error: 'No valid verification code found. Please request a new code.' 
+          error: 'No valid verification attempt found. Please request a new code.' 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Check attempt count
-    if (codeData.attempt_count >= 5) {
+    if (attemptData.attempt_count >= 5) {
       await supabase.from('two_fa_audit_log').insert({
-        user_id: user.id,
+        attempt_id: attemptId,
         event_type: 'code_failed',
-        phone: codeData.phone,
         code_verified: false,
-        attempt_count: codeData.attempt_count,
+        attempt_count: attemptData.attempt_count,
+        response_time_ms: Date.now() - startTime,
         metadata: { reason: 'max_attempts_exceeded' }
       });
 
@@ -91,24 +100,28 @@ serve(async (req) => {
 
     // Increment attempt count
     const { error: updateAttemptError } = await supabase
-      .from('sms_codes')
-      .update({ attempt_count: codeData.attempt_count + 1 })
-      .eq('id', codeData.id);
+      .from('sms_verification_attempts')
+      .update({ attempt_count: attemptData.attempt_count + 1 })
+      .eq('attempt_id', attemptId);
 
     if (updateAttemptError) throw updateAttemptError;
 
-    // Verify code
-    if (codeData.code !== code) {
-      const attemptsRemaining = 5 - (codeData.attempt_count + 1);
+    // Verify code by comparing hash
+    const submittedCodeHash = await hashCode(code);
+    
+    if (attemptData.code_hash !== submittedCodeHash) {
+      const attemptsRemaining = 5 - (attemptData.attempt_count + 1);
       
       await supabase.from('two_fa_audit_log').insert({
-        user_id: user.id,
+        attempt_id: attemptId,
         event_type: 'code_failed',
-        phone: codeData.phone,
         code_verified: false,
-        attempt_count: codeData.attempt_count + 1,
+        attempt_count: attemptData.attempt_count + 1,
+        response_time_ms: Date.now() - startTime,
         metadata: { attempts_remaining: attemptsRemaining }
       });
+
+      console.log('[GHL] Verify | Attempt:', attemptId, '| Failed | Remaining:', attemptsRemaining);
 
       return new Response(
         JSON.stringify({ 
@@ -119,19 +132,20 @@ serve(async (req) => {
       );
     }
 
-    // Mark code as verified
+    // Mark attempt as verified
     const now = new Date().toISOString();
     const { error: verifyError } = await supabase
-      .from('sms_codes')
+      .from('sms_verification_attempts')
       .update({ 
         verified: true, 
         verified_at: now
       })
-      .eq('id', codeData.id);
+      .eq('attempt_id', attemptId);
 
     if (verifyError) throw verifyError;
 
-    // Update or create user_2fa_settings
+    // Update or create user_2fa_settings (minimal linking with user_id)
+    // Note: This is the only place we link attempt to user for 2FA enrollment
     const { data: existingSettings } = await supabase
       .from('user_2fa_settings')
       .select('id')
@@ -139,35 +153,30 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existingSettings) {
-      console.log(`[verify-ghl-sms] Updating existing user_2fa_settings for user ${user.id}`);
+      console.log('[GHL] Verify | Attempt:', attemptId, '| Updating 2FA settings for user');
       
-      // Update existing settings
       const { error: updateError } = await supabase
         .from('user_2fa_settings')
         .update({
           ghl_enabled: true,
           ghl_phone_verified: true,
           last_ghl_verification: now,
-          phone_number: codeData.phone,
           phone_verified: true,
           is_enrolled: true
         })
         .eq('user_id', user.id);
 
       if (updateError) {
-        console.error('[verify-ghl-sms] Update failed:', updateError);
+        console.error('[GHL] Verify | Attempt:', attemptId, '| Update failed:', updateError);
         throw updateError;
       }
-      console.log(`[verify-ghl-sms] Successfully updated user_2fa_settings`);
     } else {
-      console.log(`[verify-ghl-sms] Inserting new user_2fa_settings for user ${user.id}`);
+      console.log('[GHL] Verify | Attempt:', attemptId, '| Creating 2FA settings for user');
       
-      // Insert new settings
       const { error: insertError } = await supabase
         .from('user_2fa_settings')
         .insert({
           user_id: user.id,
-          phone_number: codeData.phone,
           ghl_enabled: true,
           ghl_phone_verified: true,
           last_ghl_verification: now,
@@ -176,22 +185,22 @@ serve(async (req) => {
         });
 
       if (insertError) {
-        console.error('[verify-ghl-sms] Insert failed:', insertError);
+        console.error('[GHL] Verify | Attempt:', attemptId, '| Insert failed:', insertError);
         throw insertError;
       }
-      console.log(`[verify-ghl-sms] Successfully inserted user_2fa_settings`);
     }
 
-    // Log successful verification
+    // Log successful verification (NO PII)
+    const totalTime = Date.now() - startTime;
     await supabase.from('two_fa_audit_log').insert({
-      user_id: user.id,
+      attempt_id: attemptId,
       event_type: 'code_verified',
-      phone: codeData.phone,
       code_verified: true,
-      attempt_count: codeData.attempt_count + 1
+      attempt_count: attemptData.attempt_count + 1,
+      response_time_ms: totalTime
     });
 
-    console.log(`SMS code verified for user ${user.id}`);
+    console.log('[GHL] Verify | Attempt:', attemptId, '| Success | Total:', totalTime, 'ms');
 
     return new Response(
       JSON.stringify({ 
@@ -203,7 +212,8 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error in verify-ghl-sms:', error);
+    const totalTime = Date.now() - startTime;
+    console.error('[GHL] Verify | Error:', error, '| Time:', totalTime, 'ms');
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -3249,6 +3249,36 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_verification_attempts: {
+        Row: {
+          attempt_count: number
+          attempt_id: string
+          code_hash: string
+          created_at: string
+          expires_at: string
+          verified: boolean
+          verified_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          attempt_id?: string
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          attempt_id?: string
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       statuses: {
         Row: {
           active: boolean | null
@@ -3457,6 +3487,7 @@ export type Database = {
       two_fa_audit_log: {
         Row: {
           attempt_count: number | null
+          attempt_id: string | null
           code_verified: boolean | null
           created_at: string | null
           event_type: string
@@ -3464,11 +3495,13 @@ export type Database = {
           ip_address: string | null
           metadata: Json | null
           phone: string
+          response_time_ms: number | null
           user_agent: string | null
           user_id: string
         }
         Insert: {
           attempt_count?: number | null
+          attempt_id?: string | null
           code_verified?: boolean | null
           created_at?: string | null
           event_type: string
@@ -3476,11 +3509,13 @@ export type Database = {
           ip_address?: string | null
           metadata?: Json | null
           phone: string
+          response_time_ms?: number | null
           user_agent?: string | null
           user_id: string
         }
         Update: {
           attempt_count?: number | null
+          attempt_id?: string | null
           code_verified?: boolean | null
           created_at?: string | null
           event_type?: string
@@ -3488,6 +3523,7 @@ export type Database = {
           ip_address?: string | null
           metadata?: Json | null
           phone?: string
+          response_time_ms?: number | null
           user_agent?: string | null
           user_id?: string
         }
@@ -4012,6 +4048,7 @@ export type Database = {
       cleanup_expired_cart_lines: { Args: never; Returns: number }
       cleanup_expired_csrf_tokens: { Args: never; Returns: number }
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
+      cleanup_expired_sms_attempts: { Args: never; Returns: undefined }
       cleanup_expired_sms_codes: { Args: never; Returns: undefined }
       create_user_with_role:
         | {

@@ -16,6 +16,7 @@ interface GHLSmsVerifyDialogProps {
 
 export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDialogProps) => {
   const [code, setCode] = useState('');
+  const [attemptId, setAttemptId] = useState<string | null>(null); // NEW: Store attemptId
   const [loading, setLoading] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [error, setError] = useState('');
@@ -61,6 +62,13 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
+      // Store attemptId for verification
+      if (data.attemptId) {
+        setAttemptId(data.attemptId);
+      } else {
+        throw new Error('No attempt ID received from server');
+      }
+
       toast.success('Verification code sent!');
       setCodeSent(true);
       setCountdown(60);
@@ -85,6 +93,11 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       return;
     }
 
+    if (!attemptId) {
+      setError('Verification session expired. Please resend code.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -96,7 +109,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       }
 
       const { data, error } = await supabase.functions.invoke('verify-ghl-sms', {
-        body: { code }
+        body: { code, attemptId } // Send attemptId with code
       });
 
       if (error) throw error;
