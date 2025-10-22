@@ -360,15 +360,6 @@ const Auth = () => {
           {isLogin ? "Sign in to your account" : "Create your account"}
         </p>
 
-        {isLogin && !showVerificationMessage && (
-          <Alert className="mb-4 bg-primary/10 border-primary/20">
-            <Info className="h-4 w-4 text-primary" />
-            <AlertDescription className="text-sm">
-              For your security, you'll be automatically logged out after 30 minutes of inactivity.
-            </AlertDescription>
-          </Alert>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
@@ -635,6 +626,15 @@ const Auth = () => {
           >
             {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
           </Button>
+
+          {isLogin && !showVerificationMessage && (
+            <Alert className="bg-primary/10 border-primary/20">
+              <Info className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-sm">
+                For your security, you'll be automatically logged out after 30 minutes of inactivity.
+              </AlertDescription>
+            </Alert>
+          )}
         </form>
 
         <div className="mt-6 text-center">
