@@ -274,10 +274,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (sessionData?.last_activity) {
           const lastActivityTimestamp = new Date(sessionData.last_activity).getTime();
-          setLastActivityTime(lastActivityTimestamp);
-          
-          // Check if already expired
           const idleMinutes = (Date.now() - lastActivityTimestamp) / 60000;
+          
+          // If already expired, force logout immediately
           if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
             logger.warn('Session expired on page load', { idleMinutes });
             await forceLogout('idle_timeout');
@@ -286,20 +285,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return;
           }
           
-          logger.info('Session timer restored', { 
-            lastActivity: sessionData.last_activity,
-            idleMinutes: idleMinutes.toFixed(1) 
-          });
+          // Only restore if activity is recent (< 5 minutes old)
+          // This handles mid-session page refreshes
+          if (idleMinutes < 5) {
+            setLastActivityTime(lastActivityTimestamp);
+            logger.info('Session timer restored from recent activity', { 
+              idleMinutes: idleMinutes.toFixed(1) 
+            });
+          } else {
+            // Stale timestamp - treat as fresh session
+            const now = Date.now();
+            setLastActivityTime(now);
+            await supabase.from('active_sessions').update({
+              last_activity: new Date(now).toISOString()
+            }).eq('user_id', session.user.id);
+            logger.info('Session timer reset (stale database timestamp)', { 
+              staleIdleMinutes: idleMinutes.toFixed(1) 
+            });
+          }
         } else {
-          // No session in database - create one (edge case)
-          logger.warn('No active_session found, creating one');
+          // No active session in database - create fresh one
+          const now = Date.now();
+          setLastActivityTime(now);
           await supabase.from('active_sessions').upsert({
             user_id: session.user.id,
             session_id: session.access_token.substring(0, 20),
             user_agent: navigator.userAgent,
-            last_activity: new Date().toISOString(),
+            last_activity: new Date(now).toISOString(),
           }, { onConflict: 'user_id' });
-          setLastActivityTime(Date.now());
+          logger.info('Created fresh session on page load');
         }
         
         if (!hasBootstrapped.current) {
@@ -754,6 +768,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Fetch user data including 2FA status
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        // Set fresh activity time for new login
+        const now = Date.now();
+        setLastActivityTime(now);
+        
+        // Update database with current timestamp
+        await supabase.from('active_sessions').upsert({
+          user_id: session.user.id,
+          session_id: session.access_token.substring(0, 20),
+          user_agent: navigator.userAgent,
+          last_activity: new Date(now).toISOString(),
+        }, { onConflict: 'user_id' });
+        
         await fetchUserRole(session.user.id);
       }
 
