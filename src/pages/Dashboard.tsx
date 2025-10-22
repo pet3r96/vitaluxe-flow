@@ -12,7 +12,7 @@ const Dashboard = () => {
 
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds - dashboard stats refresh frequently
     queryFn: async () => {
       let count = 0;
       
@@ -81,7 +81,7 @@ const Dashboard = () => {
 
   const { data: productsCount, isLoading: productsLoading } = useQuery({
     queryKey: ["dashboard-products-count", effectiveRole, effectiveUserId],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     queryFn: async () => {
       if (effectiveRole === "pharmacy") {
         const { data: pharmacyData } = await supabase
@@ -131,7 +131,7 @@ const Dashboard = () => {
 
   const { data: pendingOrdersCount, isLoading: pendingOrdersLoading } = useQuery({
     queryKey: ["dashboard-pending-orders-count", effectiveRole, effectiveUserId],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     queryFn: async () => {
       if (effectiveRole !== "pharmacy") {
         return 0;
@@ -169,7 +169,7 @@ const Dashboard = () => {
 
   const { data: usersCount, isLoading: usersLoading } = useQuery({
     queryKey: ["dashboard-users-count"],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     queryFn: async () => {
       const { count } = await supabase
         .from("profiles")
@@ -182,7 +182,7 @@ const Dashboard = () => {
 
   const { data: pendingRevenue, isLoading: pendingRevenueLoading } = useQuery({
     queryKey: ["dashboard-pending-revenue", effectiveRole, effectiveUserId],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     queryFn: async () => {
       let data: any = null;
       
@@ -262,7 +262,7 @@ const Dashboard = () => {
 
   const { data: collectedRevenue, isLoading: collectedRevenueLoading } = useQuery({
     queryKey: ["dashboard-collected-revenue", effectiveRole, effectiveUserId],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     queryFn: async () => {
       let data: any = null;
       

@@ -52,7 +52,7 @@ export const AccountsDataTable = () => {
   const { data: accounts, isLoading, refetch } = useQuery({
     queryKey: ["accounts", roleFilter],
     enabled: !!effectiveRole,
-    staleTime: 0,
+    staleTime: 300000, // 5 minutes - user accounts change infrequently
     queryFn: async () => {
       // First, get all profiles with their roles
       const { data: profilesData, error: profilesError } = await supabase

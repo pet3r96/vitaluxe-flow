@@ -12,7 +12,7 @@ export function RepsManagement() {
 
   const { data: reps, isLoading } = useQuery({
     queryKey: ["all-reps"],
-    staleTime: 0,
+    staleTime: 300000, // 5 minutes
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")

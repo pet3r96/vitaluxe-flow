@@ -54,7 +54,8 @@ export default function Cart() {
       return { id: cartData.id, lines: lines || [] };
     },
     enabled: !!effectiveUserId,
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds - cart updates frequently
+    refetchOnMount: true,
   });
 
   const removeMutation = useMutation({

@@ -24,6 +24,7 @@ export const useCartCount = (userId: string | null) => {
       return count || 0;
     },
     enabled: !!userId,
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds - cart count updates frequently
+    refetchOnMount: true, // Always check cart on mount
   });
 };

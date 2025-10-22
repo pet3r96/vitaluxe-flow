@@ -120,10 +120,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Bootstrap timeout failsafe - prevent stuck loading screen
+  // Bootstrap timeout failsafe - reduced from 15s to 8s
   useEffect(() => {
     const bootstrapTimeout = window.setTimeout(async () => {
-      logger.warn('Auth bootstrap timeout (15s): attempting retry');
+      logger.warn('Auth bootstrap timeout (8s): attempting retry');
       
       // Try ONE more time to fetch role
       const { data: { session } } = await supabase.auth.getSession();
@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logger.error('Auth bootstrap failed after retry');
       setInitializing(false);
       setUserRole(null);
-    }, 15000);
+    }, 8000);
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -215,32 +215,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Check impersonation permission from database
-  useEffect(() => {
-    const checkImpersonationPermission = async () => {
-      if (!user?.id || userRole !== 'admin') {
-        setCanImpersonateDb(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase.rpc('can_user_impersonate', {
-          _user_id: user.id
-        });
-
-        if (!error && data === true) {
-          setCanImpersonateDb(true);
-        } else {
-          setCanImpersonateDb(false);
-        }
-      } catch (error) {
-        logger.error('Error checking impersonation permission', error, logger.sanitize({ userId: user.id }));
-        setCanImpersonateDb(false);
-      }
-    };
-
-    void checkImpersonationPermission();
-  }, [user?.id, userRole]);
+  // Impersonation permission now checked in parallel during fetchUserRole - removed redundant useEffect
 
   // Check if current user is a provider account and compute practice ID
   useEffect(() => {
@@ -355,64 +330,167 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      logger.info('Fetching user role', logger.sanitize({ userId }));
+      logger.info('Fetching user role (optimized)', logger.sanitize({ userId }));
       
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (error) throw error;
-      const role = data?.role ?? null;
-      logger.info('User role fetched', { role });
-      setUserRole(role);
-
-      // If provider role, fetch practice_id from providers table
-      if (role === 'provider' as any) {
-        const { data: providerData } = await supabase
-          .from('providers' as any)
-          .select('practice_id')
-          .eq('user_id', userId)
-          .single();
-        
-        if (providerData) {
-          setPracticeParentId((providerData as any).practice_id);
+      // Check sessionStorage cache first (expires after 5 minutes)
+      const cached = sessionStorage.getItem('vitaluxe_auth_cache');
+      if (cached) {
+        try {
+          const { role, timestamp, practiceId, canImpersonate: cachedCanImpersonate } = JSON.parse(cached);
+          const age = Date.now() - timestamp;
+          if (age < 300000 && role) { // 5 minute cache
+            logger.info('Using cached auth data', { role, age: Math.floor(age / 1000) + 's' });
+            setUserRole(role);
+            if (practiceId) setPracticeParentId(practiceId);
+            if (typeof cachedCanImpersonate === 'boolean') setCanImpersonateDb(cachedCanImpersonate);
+            
+            // Still check password/2FA in background, but don't block
+            setTimeout(() => {
+              void checkPasswordStatus();
+              void check2FAStatus(userId);
+            }, 0);
+            
+            // Restore impersonation if admin
+            if (role === 'admin') {
+              const stored = sessionStorage.getItem('vitaluxe_impersonation');
+              if (stored) {
+                try {
+                  const { role: impRole, userId: impUserId, userName, logId } = JSON.parse(stored);
+                  setImpersonatedRole(impRole);
+                  setImpersonatedUserId(impUserId || null);
+                  setImpersonatedUserName(userName || null);
+                  setCurrentLogId(logId || null);
+                } catch (e) {
+                  sessionStorage.removeItem('vitaluxe_impersonation');
+                }
+              }
+            }
+            return;
+          }
+        } catch (e) {
+          sessionStorage.removeItem('vitaluxe_auth_cache');
         }
       }
 
-      // Restore impersonation from sessionStorage if authorized admin
-      if (role === 'admin') {
-        // Check database permission before restoring impersonation
-        const { data: canImpersonate } = await supabase.rpc('can_user_impersonate', {
-          _user_id: userId
-        });
+      // Parallelize all auth checks for maximum speed
+      const [
+        roleResult,
+        providerResult,
+        impersonationResult,
+        passwordResult,
+        twoFAResult
+      ] = await Promise.allSettled([
+        // 1. Fetch role
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+          .maybeSingle(),
         
-        if (canImpersonate === true) {
-          const stored = sessionStorage.getItem('vitaluxe_impersonation');
-          if (stored) {
-            try {
-              const { role: impRole, userId, userName, logId } = JSON.parse(stored);
-              setImpersonatedRole(impRole);
-              setImpersonatedUserId(userId || null);
-              setImpersonatedUserName(userName || null);
-              setCurrentLogId(logId || null);
-            } catch (e) {
-              sessionStorage.removeItem('vitaluxe_impersonation');
-            }
+        // 2. Fetch provider data (will be filtered after we know role)
+        supabase
+          .from('providers')
+          .select('practice_id')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        
+        // 3. Check impersonation permission
+        supabase.rpc('can_user_impersonate', { _user_id: userId }),
+        
+        // 4. Check password status
+        supabase
+          .from('user_password_status')
+          .select('must_change_password, terms_accepted')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        
+        // 5. Check 2FA status
+        supabase
+          .from('user_2fa_settings')
+          .select('is_enrolled, phone_verified, phone_number')
+          .eq('user_id', userId)
+          .maybeSingle()
+      ]);
+
+      // Process role
+      const role = roleResult.status === 'fulfilled' && roleResult.value.data?.role 
+        ? roleResult.value.data.role 
+        : null;
+      
+      if (!role) throw new Error('No role found');
+      
+      logger.info('User role fetched (parallel)', { role });
+      setUserRole(role);
+
+      // Process provider data (only if provider role)
+      if (role === 'provider' && providerResult.status === 'fulfilled') {
+        const practiceId = providerResult.value.data?.practice_id;
+        if (practiceId) {
+          setPracticeParentId(practiceId);
+        }
+      }
+
+      // Process impersonation permission
+      const canImpersonate = impersonationResult.status === 'fulfilled' && impersonationResult.value.data === true;
+      setCanImpersonateDb(canImpersonate);
+
+      // Restore impersonation from sessionStorage if authorized admin
+      if (role === 'admin' && canImpersonate) {
+        const stored = sessionStorage.getItem('vitaluxe_impersonation');
+        if (stored) {
+          try {
+            const { role: impRole, userId: impUserId, userName, logId } = JSON.parse(stored);
+            setImpersonatedRole(impRole);
+            setImpersonatedUserId(impUserId || null);
+            setImpersonatedUserName(userName || null);
+            setCurrentLogId(logId || null);
+          } catch (e) {
+            sessionStorage.removeItem('vitaluxe_impersonation');
           }
         }
       }
 
-      // Now that role is loaded, check password status and 2FA
-      logger.info('Checking password status and 2FA', { role });
-      await checkPasswordStatus();
-      await check2FAStatus(userId);
+      // Process password status
+      if (passwordResult.status === 'fulfilled' && passwordResult.value.data) {
+        setMustChangePassword(passwordResult.value.data.must_change_password || false);
+        setTermsAccepted(passwordResult.value.data.terms_accepted || false);
+      } else if (role === 'admin') {
+        // Admins exempt
+        setMustChangePassword(false);
+        setTermsAccepted(true);
+      }
+
+      // Process 2FA status
+      if (twoFAResult.status === 'fulfilled') {
+        const twoFAData = twoFAResult.value.data;
+        if (!twoFAData) {
+          setRequires2FASetup(true);
+          setRequires2FAVerify(false);
+          setUser2FAPhone(null);
+        } else if (twoFAData.is_enrolled && twoFAData.phone_verified) {
+          setRequires2FAVerify(true);
+          setRequires2FASetup(false);
+          setUser2FAPhone(twoFAData.phone_number);
+        } else {
+          setRequires2FASetup(true);
+          setRequires2FAVerify(false);
+          setUser2FAPhone(null);
+        }
+      }
+
+      // Cache auth data in sessionStorage
+      sessionStorage.setItem('vitaluxe_auth_cache', JSON.stringify({
+        role,
+        practiceId: role === 'provider' && providerResult.status === 'fulfilled' ? providerResult.value.data?.practice_id : null,
+        canImpersonate,
+        timestamp: Date.now()
+      }));
       
-      logger.info('All user data loaded');
+      logger.info('All user data loaded (parallel + cached)');
     } catch (error) {
       logger.error("Error fetching user role", error);
       setUserRole(null);
+      sessionStorage.removeItem('vitaluxe_auth_cache');
     }
   };
 
@@ -453,13 +531,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Re-check password status when impersonation changes (but not on initial load)
+  // Re-check password status when impersonation changes - optimized to only check real user ID changes
   useEffect(() => {
-    if (user && effectiveUserId && effectiveRole && !initializing) {
-      logger.info('Re-checking password status due to impersonation change');
+    if (user && effectiveUserId && effectiveRole && !initializing && effectiveUserId !== user.id) {
+      logger.info('Re-checking password status for impersonated user');
       void checkPasswordStatus();
     }
-  }, [effectiveUserId, effectiveRole]);
+  }, [effectiveUserId]);
 
   // Idle timeout: Track user activity
   useEffect(() => {
@@ -729,6 +807,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // Clear CSRF token before signing out
     clearCSRFToken();
+    
+    // Clear auth cache
+    sessionStorage.removeItem('vitaluxe_auth_cache');
     
     await supabase.auth.signOut();
     setUserRole(null);

@@ -46,10 +46,11 @@ import { DashboardRouter } from "./components/DashboardRouter";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      staleTime: 10 * 60 * 1000, // 10 minutes - increased for better caching
+      gcTime: 15 * 60 * 1000, // 15 minutes (formerly cacheTime)
       refetchOnWindowFocus: false,
       retry: 1,
+      refetchOnMount: false, // Don't refetch on component mount if data is fresh
     },
   },
 });

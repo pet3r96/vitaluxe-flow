@@ -34,7 +34,7 @@ export const PracticesDataTable = () => {
 
   const { data: practices, isLoading, refetch } = useQuery({
     queryKey: ["practices"],
-    staleTime: 0,
+    staleTime: 600000, // 10 minutes - practices rarely change
     queryFn: async () => {
       // First get all doctor role users
       const { data: allDoctors, error: doctorsError } = await supabase

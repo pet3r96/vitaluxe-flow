@@ -67,7 +67,7 @@ export const ProductCard = memo(({
       return data?.[0];
     },
     enabled: !!effectiveUserId && (isToplineRep || isDownlineRep || isProvider),
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds - pricing updates occasionally
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });

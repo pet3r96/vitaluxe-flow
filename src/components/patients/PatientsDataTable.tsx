@@ -29,7 +29,7 @@ export const PatientsDataTable = () => {
 
   const { data: patients, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["patients", effectiveRole, effectivePracticeId],
-    staleTime: 0,
+    staleTime: 300000, // 5 minutes - patient data changes infrequently
     queryFn: async () => {
       logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
       let patientsQuery = supabase

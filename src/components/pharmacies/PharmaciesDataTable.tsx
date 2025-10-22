@@ -30,7 +30,7 @@ export const PharmaciesDataTable = () => {
 
   const { data: pharmacies, isLoading, refetch } = useQuery({
     queryKey: ["pharmacies"],
-    staleTime: 0,
+    staleTime: 600000, // 10 minutes - pharmacies rarely change
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pharmacies")

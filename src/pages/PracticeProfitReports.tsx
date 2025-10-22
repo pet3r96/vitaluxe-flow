@@ -24,7 +24,7 @@ const PracticeProfitReports = () => {
   // Get orders for the practice
   const { data: orders, isLoading } = useQuery({
     queryKey: ["practice-orders", effectiveUserId],
-    staleTime: 0,
+    staleTime: 60000, // 1 minute
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")

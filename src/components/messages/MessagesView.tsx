@@ -59,7 +59,7 @@ export const MessagesView = () => {
   // Fetch user's orders (for providers/practices to link to tickets)
   const { data: userOrders } = useQuery({
     queryKey: ["user-orders-for-tickets", effectiveUserId],
-    staleTime: 0,
+    staleTime: 10000, // 10 seconds - messages need frequent updates
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")

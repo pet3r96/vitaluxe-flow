@@ -24,7 +24,7 @@ export const AuditLogsViewer = () => {
 
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["audit-logs", searchTerm, actionFilter, dateFilter],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     queryFn: async () => {
       let query = supabase
         .from("audit_logs")

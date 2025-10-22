@@ -60,7 +60,7 @@ export const PendingPracticesApproval = () => {
 
   const { data: pendingPractices, isLoading } = useQuery<PendingPracticeWithProfiles[]>({
     queryKey: ["pending-practices", statusFilter],
-    staleTime: 0,
+    staleTime: 60000, // 1 minute
     queryFn: async () => {
       let query = supabase
         .from("pending_practices")

@@ -57,7 +57,7 @@ export const ProductsGrid = () => {
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products", effectiveUserId, effectiveRole],
-    staleTime: 0,
+    staleTime: 600000, // 10 minutes - products are relatively static
     queryFn: async () => {
       let query = supabase
         .from("products")
