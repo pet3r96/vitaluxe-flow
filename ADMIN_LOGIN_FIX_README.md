@@ -5,6 +5,7 @@ This document explains how to fix the login issues for the admin account and ver
 ## Problem Summary
 
 The admin account `info@vitaluxeservices.com` was experiencing login failures due to:
+
 1. Potential duplicate UUIDs in the database from multiple migrations
 2. Inconsistent account status across `auth.users`, `profiles`, and `user_roles` tables
 3. Possible password status flags blocking login
@@ -21,6 +22,7 @@ The admin account `info@vitaluxeservices.com` was experiencing login failures du
 ### Migration Details
 
 The fix migration will:
+
 - ✅ Clean up any duplicate users with vitaluxe emails
 - ✅ Ensure the target UUID `28807c7e-5296-4860-b3a1-93c883dff39d` exists in all tables
 - ✅ Set password to `AdminTemp1234!`
@@ -121,9 +123,7 @@ After applying the fix, you should see:
 
 ## Security Notes
 
-- The temporary password `AdminTemp1234!` should be changed after successful login
 - The admin account has full system access - use responsibly
-- Consider setting up 2FA for additional security
 - Monitor audit logs for any suspicious activity
 
 ## Rollback (if needed)
@@ -146,6 +146,7 @@ If you continue to experience issues:
 ---
 
 **Login Credentials After Fix:**
+
 - Email: `info@vitaluxeservices.com`
 - Password: `AdminTemp1234!`
 - UUID: `28807c7e-5296-4860-b3a1-93c883dff39d`
