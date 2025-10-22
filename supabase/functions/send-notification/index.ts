@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { SESClient, SendEmailCommand } from "https://esm.sh/@aws-sdk/client-ses@3.485.0";
+// Removed AWS SES logic - previously used @aws-sdk/client-ses@3.485.0
 import { validateSendNotificationRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
@@ -107,52 +107,11 @@ serve(async (req) => {
       errors: [] as string[],
     };
 
-    // Send email via Amazon SES if enabled
+    // Removed AWS SES logic - previously sent email via Amazon SES
+    // TODO: Replace with Supabase/Resend/SendGrid integration if needed
     if (send_email && preferences?.email_notifications && profile?.email) {
-      const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
-      const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
-      const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
-      const sesFromEmail = Deno.env.get('SES_FROM_EMAIL') || 'notifications@vitaluxeservice.com';
-
-      if (!awsAccessKeyId || !awsSecretAccessKey) {
-        console.log("AWS SES not configured, skipping email");
-      } else {
-        try {
-          const sesClient = new SESClient({
-            region: awsRegion,
-            credentials: {
-              accessKeyId: awsAccessKeyId,
-              secretAccessKey: awsSecretAccessKey,
-            },
-          });
-
-          const command = new SendEmailCommand({
-            Source: sesFromEmail,
-            Destination: {
-              ToAddresses: [profile.email],
-            },
-            Message: {
-              Subject: {
-                Data: emailSubject,
-                Charset: 'UTF-8',
-              },
-              Body: {
-                Html: {
-                  Data: emailBody,
-                  Charset: 'UTF-8',
-                },
-              },
-            },
-          });
-
-          await sesClient.send(command);
-          results.email_sent = true;
-          console.log("Email sent successfully via Amazon SES to:", profile.email);
-        } catch (error) {
-          console.error("Email error:", error);
-          results.errors.push(`Email error: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
+      console.log("Email sending not configured - skipping email to:", profile.email);
+      results.errors.push("Email service not configured");
     }
 
     // Send SMS if enabled (Twilio integration placeholder)

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SNSClient, PublishCommand } from "https://esm.sh/@aws-sdk/client-sns@3.485.0";
+// Removed AWS SNS logic - previously used @aws-sdk/client-sns@3.485.0
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,57 +70,10 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    // Send SMS via Amazon SNS
-    const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
-    const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
-    const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
-
-    if (!awsAccessKeyId || !awsSecretAccessKey) {
-      console.error('AWS SNS credentials not configured');
-      return new Response(
-        JSON.stringify({ 
-          error: 'SMS service not configured. Please contact support.',
-          code // In development, return code for testing
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    try {
-      const snsClient = new SNSClient({
-        region: awsRegion,
-        credentials: {
-          accessKeyId: awsAccessKeyId,
-          secretAccessKey: awsSecretAccessKey,
-        },
-      });
-
-      const command = new PublishCommand({
-        PhoneNumber: phoneNumber,
-        Message: `Your VitaLuxe verification code is: ${code}. This code expires in 10 minutes.`,
-        MessageAttributes: {
-          'AWS.SNS.SMS.SenderID': {
-            DataType: 'String',
-            StringValue: 'VitaLuxe'
-          },
-          'AWS.SNS.SMS.SMSType': {
-            DataType: 'String',
-            StringValue: 'Transactional'
-          }
-        }
-      });
-
-      const snsResponse = await snsClient.send(command);
-      
-      if (!snsResponse.MessageId) {
-        throw new Error('Failed to send SMS via SNS');
-      }
-
-      console.log(`2FA code sent to ${phoneNumber} for user ${user.id} via SNS (MessageId: ${snsResponse.MessageId})`);
-    } catch (snsError: any) {
-      console.error('AWS SNS error:', snsError);
-      throw new Error(`Failed to send SMS: ${snsError.message}`);
-    }
+    // Removed AWS SNS logic - previously sent SMS via Amazon SNS
+    // TODO: Replace with Supabase/Twilio/GoHighLevel integration if needed
+    console.log(`2FA code generated for user ${user.id}. Code stored in database.`);
+    console.warn('SMS sending not configured - code will only be available in database');
 
     return new Response(
       JSON.stringify({ 
