@@ -122,6 +122,33 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_role_audit: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          assigned_to: string
+          email: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          assigned_to: string
+          email: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          assigned_to?: string
+          email?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       alert_rules: {
         Row: {
           created_at: string
@@ -3818,6 +3845,10 @@ export type Database = {
       }
       can_cancel_order: {
         Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_create_admin: {
+        Args: { _inviter_id: string }
         Returns: boolean
       }
       can_downline_view_practice: {
