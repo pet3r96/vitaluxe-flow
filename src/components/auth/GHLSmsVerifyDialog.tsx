@@ -51,6 +51,17 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
     setError('');
 
     try {
+      // Validate phone number is present
+      if (!phoneNumber || phoneNumber.trim().length === 0) {
+        throw new Error('Phone number is required');
+      }
+
+      // Sanitize phone number to E.164 format
+      const sanitizedPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
+      if (!sanitizedPhone.startsWith('+')) {
+        throw new Error('Phone number must include country code (e.g., +1)');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -58,7 +69,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       }
 
       const { data, error } = await supabase.functions.invoke('send-ghl-sms', {
-        body: { phoneNumber, purpose: 'verification' }
+        body: { phoneNumber: sanitizedPhone, purpose: 'verification' }
       });
 
       if (error) throw error;

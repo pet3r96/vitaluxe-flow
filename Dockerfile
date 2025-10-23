@@ -5,10 +5,12 @@ WORKDIR /app
 # Accept build arguments for Supabase credentials (optional)
 ARG VITE_SUPABASE_URL="https://qbtsfajshnrwwlfzkeog.supabase.co"
 ARG VITE_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidHNmYWpzaG5yd3dsZnprZW9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5OTQxMTEsImV4cCI6MjA3NTU3MDExMX0.dqoXG339wvLXWT-uphEjdslgxZD12DBwyrfaFi4NOro"
+ARG VITE_BUILD_ID="dev"
 
 # Set environment variables for build process (with defaults)
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
+ENV VITE_BUILD_ID=$VITE_BUILD_ID
 
 # Install dependencies first (better caching)
 COPY package*.json ./

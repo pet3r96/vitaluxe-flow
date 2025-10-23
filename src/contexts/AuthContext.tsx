@@ -285,24 +285,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return;
           }
           
-          // Only restore if activity is recent (< 5 minutes old)
-          // This handles mid-session page refreshes
-          if (idleMinutes < 5) {
-            setLastActivityTime(lastActivityTimestamp);
-            logger.info('Session timer restored from recent activity', { 
-              idleMinutes: idleMinutes.toFixed(1) 
-            });
-          } else {
-            // Stale timestamp - treat as fresh session
-            const now = Date.now();
-            setLastActivityTime(now);
-            await supabase.from('active_sessions').update({
-              last_activity: new Date(now).toISOString()
-            }).eq('user_id', session.user.id);
-            logger.info('Session timer reset (stale database timestamp)', { 
-              staleIdleMinutes: idleMinutes.toFixed(1) 
-            });
-          }
+          // Restore session timer from database
+          setLastActivityTime(lastActivityTimestamp);
+          logger.info('Session timer restored from database', { 
+            idleMinutes: idleMinutes.toFixed(1) 
+          });
         } else {
           // No active session in database - create fresh one
           const now = Date.now();
