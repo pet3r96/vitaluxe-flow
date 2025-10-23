@@ -722,42 +722,6 @@ serve(async (req) => {
       }
     }
 
-    // If provider role, create provider record
-    if (signupData.role === 'provider') {
-      // First update the profile with provider-specific data
-      const { error: profileUpdateError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          full_name: signupData.fullName,
-          npi: signupData.roleData.npi,
-          dea: signupData.roleData.dea,
-          license_number: signupData.roleData.licenseNumber,
-          phone: signupData.roleData.phone
-        })
-        .eq('id', userId);
-
-      if (profileUpdateError) {
-        console.error('Provider profile update error:', profileUpdateError);
-      }
-
-      // Then create the provider record (linking provider to practice)
-      const { error: providerError } = await supabaseAdmin
-        .from('providers')
-        .insert({
-          user_id: userId,
-          practice_id: signupData.roleData.practiceId,
-          active: true
-        });
-
-      if (providerError) {
-        console.error('Provider creation error:', providerError);
-        await supabaseAdmin.auth.admin.deleteUser(userId);
-        return new Response(
-          JSON.stringify({ error: 'Failed to create provider record' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
 
     // For pharmacy role, update priority_map if provided
     if (signupData.role === 'pharmacy' && signupData.roleData.priorityMap) {
