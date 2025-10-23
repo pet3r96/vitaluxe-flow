@@ -26,15 +26,15 @@ export const AddressVerificationPanel = () => {
       const [patients, pharmacies, providers] = await Promise.all([
         supabase
           .from("patients")
-          .select("id, name, address_formatted, address_verification_status, updated_at")
+          .select("id, name, address_formatted, address_verification_status, address_verification_source, updated_at")
           .in("address_verification_status", ["invalid", "unverified"]),
         supabase
           .from("pharmacies")
-          .select("id, name, address_formatted, address_verification_status, updated_at")
+          .select("id, name, address_formatted, address_verification_status, address_verification_source, updated_at")
           .in("address_verification_status", ["invalid", "unverified"]),
         supabase
           .from("profiles")
-          .select("id, name, address_formatted, address_verification_status, updated_at")
+          .select("id, name, address_formatted, address_verification_status, address_verification_source, updated_at")
           .in("address_verification_status", ["invalid", "unverified"])
           .not("address_formatted", "is", null),
       ]);
@@ -72,16 +72,42 @@ export const AddressVerificationPanel = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, source?: string) => {
+    const isEasyPost = source === 'easypost';
+    const badgeVariant = isEasyPost ? "default" : "outline";
+    
     switch (status) {
       case "verified":
-        return <Badge variant="default"><CheckCircle2 className="h-3 w-3 mr-1" />Verified</Badge>;
+        return (
+          <Badge variant={badgeVariant} className={isEasyPost ? "bg-green-100 text-green-800" : ""}>
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            {isEasyPost ? "EasyPost Verified" : "Verified"}
+          </Badge>
+        );
       case "invalid":
-        return <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Invalid</Badge>;
+        return (
+          <Badge variant="destructive">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            {isEasyPost ? "EasyPost Invalid" : "Invalid"}
+          </Badge>
+        );
       case "manual":
         return <Badge variant="secondary">Manual</Badge>;
       default:
         return <Badge variant="outline">Unverified</Badge>;
+    }
+  };
+
+  const getSourceBadge = (source?: string) => {
+    if (!source) return null;
+    
+    switch (source) {
+      case "easypost":
+        return <Badge variant="outline" className="text-xs">EasyPost</Badge>;
+      case "zip_validation":
+        return <Badge variant="outline" className="text-xs">ZIP Only</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">{source}</Badge>;
     }
   };
 
@@ -195,13 +221,14 @@ export const AddressVerificationPanel = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead>Last Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
@@ -216,7 +243,8 @@ export const AddressVerificationPanel = () => {
                         <TableCell className="font-mono text-sm">
                           {patient.address_formatted || "-"}
                         </TableCell>
-                        <TableCell>{getStatusBadge(patient.address_verification_status)}</TableCell>
+                        <TableCell>{getStatusBadge(patient.address_verification_status, patient.address_verification_source)}</TableCell>
+                        <TableCell>{getSourceBadge(patient.address_verification_source)}</TableCell>
                         <TableCell>{new Date(patient.updated_at).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))}
@@ -229,7 +257,8 @@ export const AddressVerificationPanel = () => {
                         <TableCell className="font-mono text-sm">
                           {pharmacy.address_formatted || "-"}
                         </TableCell>
-                        <TableCell>{getStatusBadge(pharmacy.address_verification_status)}</TableCell>
+                        <TableCell>{getStatusBadge(pharmacy.address_verification_status, pharmacy.address_verification_source)}</TableCell>
+                        <TableCell>{getSourceBadge(pharmacy.address_verification_source)}</TableCell>
                         <TableCell>{new Date(pharmacy.updated_at).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))}
@@ -242,13 +271,14 @@ export const AddressVerificationPanel = () => {
                         <TableCell className="font-mono text-sm">
                           {provider.address_formatted || "-"}
                         </TableCell>
-                        <TableCell>{getStatusBadge(provider.address_verification_status)}</TableCell>
+                        <TableCell>{getStatusBadge(provider.address_verification_status, provider.address_verification_source)}</TableCell>
+                        <TableCell>{getSourceBadge(provider.address_verification_source)}</TableCell>
                         <TableCell>{new Date(provider.updated_at).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))}
                     {invalidAddresses?.total === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
                           <CheckCircle2 className="h-6 w-6 mx-auto mb-2 text-primary" />
                           All addresses verified!
                         </TableCell>

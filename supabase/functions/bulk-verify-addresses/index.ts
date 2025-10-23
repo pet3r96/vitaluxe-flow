@@ -1,11 +1,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { validateBulkVerifyAddressesRequest } from '../_shared/requestValidators.ts';
+import { createEasyPostClient, formatAddressForEasyPost } from '../_shared/easypostClient.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+async function validateAddressWithEasyPost(street: string, city: string, state: string, zip: string) {
+  try {
+    const easyPostClient = createEasyPostClient();
+    
+    const easyPostAddress = formatAddressForEasyPost(street, city, state, zip);
+    const result = await easyPostClient.verifyAddress(easyPostAddress);
+    
+    return {
+      is_valid: result.is_valid,
+      suggested_city: result.suggested_city,
+      suggested_state: result.suggested_state,
+      confidence: result.confidence,
+      verification_source: result.verification_source
+    };
+  } catch (error) {
+    console.error('EasyPost validation failed:', error);
+    return { is_valid: false };
+  }
+}
 
 async function validateAddress(zip: string) {
   const cleanZip = zip.replace(/\D/g, '').slice(0, 5);
@@ -73,14 +94,33 @@ serve(async (req) => {
     if (!entity_type || entity_type === 'providers' || entity_type === 'all') {
       const { data: providers } = await supabaseClient
         .from('profiles')
-        .select('id, address_zip, shipping_address_zip, address_verification_status, shipping_address_verification_status')
+        .select('id, address_street, address_city, address_state, address_zip, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, address_verification_status, shipping_address_verification_status')
         .or('address_verification_status.neq.verified,shipping_address_verification_status.neq.verified');
 
       results.providers.total = providers?.length || 0;
 
       for (const provider of providers || []) {
+        // Verify regular address
         if (provider.address_zip && provider.address_verification_status !== 'verified') {
-          const validation = await validateAddress(provider.address_zip);
+          let validation;
+          try {
+            // Try EasyPost first if we have full address
+            if (provider.address_street && provider.address_city && provider.address_state) {
+              validation = await validateAddressWithEasyPost(
+                provider.address_street,
+                provider.address_city,
+                provider.address_state,
+                provider.address_zip
+              );
+            } else {
+              // Fallback to ZIP-only validation
+              validation = await validateAddress(provider.address_zip);
+            }
+          } catch (error) {
+            console.warn('Address validation failed, using fallback:', error);
+            validation = await validateAddress(provider.address_zip);
+          }
+
           await supabaseClient
             .from('profiles')
             .update({
@@ -88,6 +128,7 @@ serve(async (req) => {
               address_verified_at: new Date().toISOString(),
               address_city: validation.suggested_city,
               address_state: validation.suggested_state,
+              address_verification_source: validation.verification_source || 'zip_validation'
             })
             .eq('id', provider.id);
 
@@ -95,8 +136,27 @@ serve(async (req) => {
           else results.providers.invalid++;
         }
 
+        // Verify shipping address
         if (provider.shipping_address_zip && provider.shipping_address_verification_status !== 'verified') {
-          const validation = await validateAddress(provider.shipping_address_zip);
+          let validation;
+          try {
+            // Try EasyPost first if we have full address
+            if (provider.shipping_address_street && provider.shipping_address_city && provider.shipping_address_state) {
+              validation = await validateAddressWithEasyPost(
+                provider.shipping_address_street,
+                provider.shipping_address_city,
+                provider.shipping_address_state,
+                provider.shipping_address_zip
+              );
+            } else {
+              // Fallback to ZIP-only validation
+              validation = await validateAddress(provider.shipping_address_zip);
+            }
+          } catch (error) {
+            console.warn('Shipping address validation failed, using fallback:', error);
+            validation = await validateAddress(provider.shipping_address_zip);
+          }
+
           await supabaseClient
             .from('profiles')
             .update({
@@ -104,6 +164,7 @@ serve(async (req) => {
               shipping_address_verified_at: new Date().toISOString(),
               shipping_address_city: validation.suggested_city,
               shipping_address_state: validation.suggested_state,
+              shipping_address_verification_source: validation.verification_source || 'zip_validation'
             })
             .eq('id', provider.id);
 
@@ -117,14 +178,32 @@ serve(async (req) => {
     if (!entity_type || entity_type === 'pharmacies' || entity_type === 'all') {
       const { data: pharmacies } = await supabaseClient
         .from('pharmacies')
-        .select('id, address_zip, address_verification_status')
+        .select('id, address_street, address_city, address_state, address_zip, address_verification_status')
         .neq('address_verification_status', 'verified');
 
       results.pharmacies.total = pharmacies?.length || 0;
 
       for (const pharmacy of pharmacies || []) {
         if (pharmacy.address_zip) {
-          const validation = await validateAddress(pharmacy.address_zip);
+          let validation;
+          try {
+            // Try EasyPost first if we have full address
+            if (pharmacy.address_street && pharmacy.address_city && pharmacy.address_state) {
+              validation = await validateAddressWithEasyPost(
+                pharmacy.address_street,
+                pharmacy.address_city,
+                pharmacy.address_state,
+                pharmacy.address_zip
+              );
+            } else {
+              // Fallback to ZIP-only validation
+              validation = await validateAddress(pharmacy.address_zip);
+            }
+          } catch (error) {
+            console.warn('Pharmacy address validation failed, using fallback:', error);
+            validation = await validateAddress(pharmacy.address_zip);
+          }
+
           await supabaseClient
             .from('pharmacies')
             .update({
@@ -132,6 +211,7 @@ serve(async (req) => {
               address_verified_at: new Date().toISOString(),
               address_city: validation.suggested_city,
               address_state: validation.suggested_state,
+              address_verification_source: validation.verification_source || 'zip_validation'
             })
             .eq('id', pharmacy.id);
 
@@ -145,14 +225,32 @@ serve(async (req) => {
     if (!entity_type || entity_type === 'patients' || entity_type === 'all') {
       const { data: patients } = await supabaseClient
         .from('patients')
-        .select('id, address_zip, address_verification_status')
+        .select('id, address_street, address_city, address_state, address_zip, address_verification_status')
         .neq('address_verification_status', 'verified');
 
       results.patients.total = patients?.length || 0;
 
       for (const patient of patients || []) {
         if (patient.address_zip) {
-          const validation = await validateAddress(patient.address_zip);
+          let validation;
+          try {
+            // Try EasyPost first if we have full address
+            if (patient.address_street && patient.address_city && patient.address_state) {
+              validation = await validateAddressWithEasyPost(
+                patient.address_street,
+                patient.address_city,
+                patient.address_state,
+                patient.address_zip
+              );
+            } else {
+              // Fallback to ZIP-only validation
+              validation = await validateAddress(patient.address_zip);
+            }
+          } catch (error) {
+            console.warn('Patient address validation failed, using fallback:', error);
+            validation = await validateAddress(patient.address_zip);
+          }
+
           await supabaseClient
             .from('patients')
             .update({
@@ -160,6 +258,7 @@ serve(async (req) => {
               address_verified_at: new Date().toISOString(),
               address_city: validation.suggested_city,
               address_state: validation.suggested_state,
+              address_verification_source: validation.verification_source || 'zip_validation'
             })
             .eq('id', patient.id);
 

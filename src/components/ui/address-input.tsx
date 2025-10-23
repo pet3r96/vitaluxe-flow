@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,13 +74,20 @@ export const AddressInput = ({
           formatted: data.formatted_address,
           status: data.status,
           verified_at: new Date().toISOString(),
-          source: data.verification_source
+          source: data.verification_source,
+          confidence: data.confidence
         });
         
-        toast.success("✅ Address verified and formatted");
+        const isEasyPost = data.verification_source === 'easypost';
+        const confidenceText = data.confidence ? ` (${Math.round(data.confidence * 100)}% confidence)` : '';
+        toast.success(`✅ Address verified and formatted${isEasyPost ? ' via EasyPost' : ''}${confidenceText}`);
         setShowSuggestion(false);
       } else if (!data.is_valid) {
         setShowSuggestion(true);
+        const isEasyPost = data.verification_source === 'easypost';
+        if (isEasyPost) {
+          toast.error("❌ Address not deliverable according to EasyPost");
+        }
       }
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
@@ -177,7 +185,19 @@ export const AddressInput = ({
           <Alert className="border-green-600/20 bg-green-50 dark:bg-green-950/20">
             <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
             <AlertDescription className="text-green-800 dark:text-green-300">
-              Address verified: {validation.formatted_address}
+              <div className="flex items-center justify-between">
+                <span>Address verified: {validation.formatted_address}</span>
+                <div className="flex items-center space-x-2 text-xs">
+                  {validation.verification_source === 'easypost' && (
+                    <Badge variant="outline" className="text-xs">EasyPost</Badge>
+                  )}
+                  {validation.confidence && (
+                    <span className="text-green-600 dark:text-green-400">
+                      {Math.round(validation.confidence * 100)}% confidence
+                    </span>
+                  )}
+                </div>
+              </div>
             </AlertDescription>
           </Alert>
         )}

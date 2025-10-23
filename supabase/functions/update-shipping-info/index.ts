@@ -205,6 +205,81 @@ serve(async (req: Request) => {
       // Don't fail the request if audit logging fails
     }
 
+    // Auto-create EasyPost shipment if status is 'shipped' and tracking number is provided
+    if (normalizedStatus === 'shipped' && trackingNumber && !currentLine.easypost_shipment_id) {
+      try {
+        console.log('Auto-creating EasyPost shipment for order line:', orderLineId);
+        
+        // Get order line details for shipment creation
+        const { data: orderLineDetails, error: orderLineError } = await supabase
+          .from('order_lines')
+          .select(`
+            id,
+            patient_name,
+            patient_address,
+            assigned_pharmacy_id,
+            pharmacies!inner(
+              name,
+              address_street,
+              address_city,
+              address_state,
+              address_zip
+            )
+          `)
+          .eq('id', orderLineId)
+          .single();
+
+        if (orderLineError) {
+          console.error('Error getting order line details for shipment:', orderLineError);
+        } else if (orderLineDetails.pharmacies) {
+          // Parse patient address (assuming it's in a standard format)
+          const patientAddressParts = orderLineDetails.patient_address?.split(',') || [];
+          const patientStreet = patientAddressParts[0]?.trim() || '';
+          const patientCityStateZip = patientAddressParts[1]?.trim() || '';
+          const patientCity = patientCityStateZip.split(' ')[0] || '';
+          const patientState = patientCityStateZip.split(' ')[1] || '';
+          const patientZip = patientCityStateZip.split(' ')[2] || '';
+
+          // Create shipment via EasyPost API
+          const shipmentResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/create-easypost-shipment`, {
+            method: 'POST',
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/json',
+              'x-csrf-token': csrfToken || ''
+            },
+            body: JSON.stringify({
+              order_line_id: orderLineId,
+              from_address: {
+                street: orderLineDetails.pharmacies.address_street || '',
+                city: orderLineDetails.pharmacies.address_city || '',
+                state: orderLineDetails.pharmacies.address_state || '',
+                zip: orderLineDetails.pharmacies.address_zip || '',
+                name: orderLineDetails.pharmacies.name
+              },
+              to_address: {
+                street: patientStreet,
+                city: patientCity,
+                state: patientState,
+                zip: patientZip,
+                name: orderLineDetails.patient_name
+              }
+            })
+          });
+
+          if (shipmentResponse.ok) {
+            const shipmentData = await shipmentResponse.json();
+            console.log('Auto-created EasyPost shipment:', shipmentData.shipment?.id);
+          } else {
+            console.error('Failed to auto-create EasyPost shipment:', await shipmentResponse.text());
+          }
+        }
+      } catch (error) {
+        console.error('Error auto-creating EasyPost shipment:', error);
+        // Don't fail the main request if shipment creation fails
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, message: 'Shipping info updated successfully' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -108,14 +108,8 @@ verify_jwt = true
 [functions.check-key-rotation]
 verify_jwt = false
 
-[functions.check-key-rotation.schedule]
-cron = "0 9 * * 1"
-
 [functions.cleanup-cart-lines]
 verify_jwt = false
-
-[functions.cleanup-cart-lines.schedule]
-cron = "0 2 * * *"
 
 [functions.log-credential-access]
 verify_jwt = true
@@ -144,5 +138,8 @@ verify_jwt = true
 [functions.cleanup-stale-sessions]
 verify_jwt = false
 
-[functions.cleanup-stale-sessions.schedule]
-cron = "*/15 * * * *"
+[functions.create-easypost-shipment]
+verify_jwt = true
+
+[functions.get-easypost-tracking]
+verify_jwt = true

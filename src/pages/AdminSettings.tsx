@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddressVerificationPanel } from "@/components/admin/AddressVerificationPanel";
+import { EasyPostShipmentManager } from "@/components/admin/EasyPostShipmentManager";
 import { OrphanedUserFixer } from "@/components/admin/OrphanedUserFixer";
 import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
@@ -11,7 +12,7 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle } from "lucide-react";
+import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
@@ -51,6 +52,10 @@ const AdminSettings = () => {
           <TabsTrigger value="addresses" className="gap-2">
             <MapPin className="h-4 w-4" />
             Address Verification
+          </TabsTrigger>
+          <TabsTrigger value="shipments" className="gap-2">
+            <Truck className="h-4 w-4" />
+            EasyPost Shipments
           </TabsTrigger>
           <TabsTrigger value="product-types" className="gap-2">
             <Package className="h-4 w-4" />
@@ -154,11 +159,25 @@ const AdminSettings = () => {
             <CardHeader>
               <CardTitle>Global Address Verification</CardTitle>
               <CardDescription>
-                Validate and standardize addresses across all entities using Zippopotam.us API
+                Validate and standardize addresses across all entities using EasyPost and ZIP validation
               </CardDescription>
             </CardHeader>
             <CardContent>
               <AddressVerificationPanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="shipments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>EasyPost Shipment Management</CardTitle>
+              <CardDescription>
+                Create and manage shipments using EasyPost API for tracking and delivery
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EasyPostShipmentManager />
             </CardContent>
           </Card>
         </TabsContent>

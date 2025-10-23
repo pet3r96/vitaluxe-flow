@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { validateValidateAddressRequest } from "../_shared/requestValidators.ts";
 import { RateLimiter, RATE_LIMITS, getClientIP } from "../_shared/rateLimiter.ts";
+import { createEasyPostClient, formatAddressForEasyPost } from "../_shared/easypostClient.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +25,39 @@ interface ValidationResponse {
   status: 'verified' | 'invalid' | 'manual';
   error?: string;
   raw_response?: any;
+  confidence?: number;
+}
+
+async function validateAddressWithEasyPost(address: AddressInput): Promise<ValidationResponse> {
+  try {
+    const easyPostClient = createEasyPostClient();
+    
+    const easyPostAddress = formatAddressForEasyPost(
+      address.street || '',
+      address.city || '',
+      address.state || '',
+      address.zip
+    );
+
+    const result = await easyPostClient.verifyAddress(easyPostAddress);
+    
+    return {
+      is_valid: result.is_valid,
+      status: result.status,
+      formatted_address: result.formatted_address,
+      suggested_city: result.suggested_city,
+      suggested_state: result.suggested_state,
+      verification_source: result.verification_source,
+      confidence: result.confidence
+    };
+  } catch (error) {
+    console.error('EasyPost address validation error:', error);
+    return {
+      is_valid: false,
+      status: 'invalid',
+      error: (error as Error).message || 'Failed to validate address with EasyPost'
+    };
+  }
 }
 
 async function validateZipCode(zip: string): Promise<ValidationResponse> {
@@ -143,20 +177,57 @@ serve(async (req) => {
       );
     }
 
-    const zipValidation = await validateZipCode(zip);
+    // Try EasyPost first for full address verification
+    let validation: ValidationResponse;
+    try {
+      validation = await validateAddressWithEasyPost({ street, city, state, zip, manual_override });
+    } catch (error) {
+      console.warn('EasyPost validation failed, falling back to ZIP validation:', error);
+      // Fallback to ZIP-only validation if EasyPost fails
+      const zipValidation = await validateZipCode(zip);
+      
+      if (!zipValidation.is_valid) {
+        return new Response(
+          JSON.stringify(zipValidation),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
 
-    if (!zipValidation.is_valid) {
-      return new Response(
-        JSON.stringify(zipValidation),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
+      // Use ZIP validation logic as fallback
+      let status: 'verified' | 'invalid' = 'verified';
+      let error: string | undefined;
+
+      if (city && city.toLowerCase() !== zipValidation.suggested_city?.toLowerCase()) {
+        status = 'invalid';
+        error = `City mismatch: ZIP ${zip} is in ${zipValidation.suggested_city}, not ${city}`;
+      }
+
+      if (state && state.toUpperCase() !== zipValidation.suggested_state?.toUpperCase()) {
+        status = 'invalid';
+        error = `State mismatch: ZIP ${zip} is in ${zipValidation.suggested_state}, not ${state}`;
+      }
+
+      const finalCity = city || zipValidation.suggested_city || '';
+      const finalState = state || zipValidation.suggested_state || '';
+      
+      const formatted = formatAddress(street || '', finalCity, finalState, zip);
+
+      validation = {
+        is_valid: status === 'verified',
+        status,
+        formatted_address: formatted,
+        suggested_city: zipValidation.suggested_city,
+        suggested_state: zipValidation.suggested_state,
+        verification_source: zipValidation.verification_source,
+        error
+      };
     }
 
     if (manual_override) {
       const formatted = formatAddress(
         street || '',
-        city || zipValidation.suggested_city || '',
-        state || zipValidation.suggested_state || '',
+        city || validation.suggested_city || '',
+        state || validation.suggested_state || '',
         zip
       );
 
@@ -165,42 +236,16 @@ serve(async (req) => {
           is_valid: true,
           status: 'manual',
           formatted_address: formatted,
-          suggested_city: zipValidation.suggested_city,
-          suggested_state: zipValidation.suggested_state,
+          suggested_city: validation.suggested_city,
+          suggested_state: validation.suggested_state,
           verification_source: 'manual_override'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
-    let status: 'verified' | 'invalid' = 'verified';
-    let error: string | undefined;
-
-    if (city && city.toLowerCase() !== zipValidation.suggested_city?.toLowerCase()) {
-      status = 'invalid';
-      error = `City mismatch: ZIP ${zip} is in ${zipValidation.suggested_city}, not ${city}`;
-    }
-
-    if (state && state.toUpperCase() !== zipValidation.suggested_state?.toUpperCase()) {
-      status = 'invalid';
-      error = `State mismatch: ZIP ${zip} is in ${zipValidation.suggested_state}, not ${state}`;
-    }
-
-    const finalCity = city || zipValidation.suggested_city || '';
-    const finalState = state || zipValidation.suggested_state || '';
-    
-    const formatted = formatAddress(street || '', finalCity, finalState, zip);
-
     return new Response(
-      JSON.stringify({
-        is_valid: status === 'verified',
-        status,
-        formatted_address: formatted,
-        suggested_city: zipValidation.suggested_city,
-        suggested_state: zipValidation.suggested_state,
-        verification_source: zipValidation.verification_source,
-        error
-      }),
+      JSON.stringify(validation),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {
