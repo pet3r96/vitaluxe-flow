@@ -41,9 +41,14 @@ async function validateAddressWithEasyPost(address: AddressInput): Promise<Valid
 
     const result = await easyPostClient.verifyAddress(easyPostAddress);
     
+    // Map EasyPost status to our status type
+    let mappedStatus: 'verified' | 'invalid' | 'manual' = 'invalid';
+    if (result.status === 'verified') mappedStatus = 'verified';
+    else if (result.status === 'suggested') mappedStatus = 'verified'; // Treat suggested as verified
+    
     return {
       is_valid: result.is_valid,
-      status: result.status,
+      status: mappedStatus,
       formatted_address: result.formatted_address,
       suggested_city: result.suggested_city,
       suggested_state: result.suggested_state,
@@ -152,13 +157,13 @@ serve(async (req) => {
       );
     }
 
-    const validation = validateValidateAddressRequest(requestData);
-    if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+    const requestValidation = validateValidateAddressRequest(requestData);
+    if (!requestValidation.valid) {
+      console.warn('Validation failed:', requestValidation.errors);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
-          details: validation.errors 
+          details: requestValidation.errors 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -178,11 +183,11 @@ serve(async (req) => {
     }
 
     // Try EasyPost first for full address verification
-    let validation: ValidationResponse;
+    let addressValidation: ValidationResponse;
     try {
-      validation = await validateAddressWithEasyPost({ street, city, state, zip, manual_override });
-    } catch (error) {
-      console.warn('EasyPost validation failed, falling back to ZIP validation:', error);
+      addressValidation = await validateAddressWithEasyPost({ street, city, state, zip, manual_override });
+    } catch (validationError) {
+      console.warn('EasyPost validation failed, falling back to ZIP validation:', validationError);
       // Fallback to ZIP-only validation if EasyPost fails
       const zipValidation = await validateZipCode(zip);
       
@@ -195,16 +200,16 @@ serve(async (req) => {
 
       // Use ZIP validation logic as fallback
       let status: 'verified' | 'invalid' = 'verified';
-      let error: string | undefined;
+      let errorMsg: string | undefined;
 
       if (city && city.toLowerCase() !== zipValidation.suggested_city?.toLowerCase()) {
         status = 'invalid';
-        error = `City mismatch: ZIP ${zip} is in ${zipValidation.suggested_city}, not ${city}`;
+        errorMsg = `City mismatch: ZIP ${zip} is in ${zipValidation.suggested_city}, not ${city}`;
       }
 
       if (state && state.toUpperCase() !== zipValidation.suggested_state?.toUpperCase()) {
         status = 'invalid';
-        error = `State mismatch: ZIP ${zip} is in ${zipValidation.suggested_state}, not ${state}`;
+        errorMsg = `State mismatch: ZIP ${zip} is in ${zipValidation.suggested_state}, not ${state}`;
       }
 
       const finalCity = city || zipValidation.suggested_city || '';
@@ -212,22 +217,22 @@ serve(async (req) => {
       
       const formatted = formatAddress(street || '', finalCity, finalState, zip);
 
-      validation = {
+      addressValidation = {
         is_valid: status === 'verified',
         status,
         formatted_address: formatted,
         suggested_city: zipValidation.suggested_city,
         suggested_state: zipValidation.suggested_state,
         verification_source: zipValidation.verification_source,
-        error
+        error: errorMsg
       };
     }
 
     if (manual_override) {
       const formatted = formatAddress(
         street || '',
-        city || validation.suggested_city || '',
-        state || validation.suggested_state || '',
+        city || addressValidation.suggested_city || '',
+        state || addressValidation.suggested_state || '',
         zip
       );
 
@@ -236,8 +241,8 @@ serve(async (req) => {
           is_valid: true,
           status: 'manual',
           formatted_address: formatted,
-          suggested_city: validation.suggested_city,
-          suggested_state: validation.suggested_state,
+          suggested_city: addressValidation.suggested_city,
+          suggested_state: addressValidation.suggested_state,
           verification_source: 'manual_override'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -245,7 +250,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify(validation),
+      JSON.stringify(addressValidation),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {

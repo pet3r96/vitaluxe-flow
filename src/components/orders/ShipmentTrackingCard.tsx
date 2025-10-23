@@ -69,13 +69,13 @@ export const ShipmentTrackingCard = ({
     queryKey: ["tracking-events", orderLineId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("easypost_tracking_events")
+        .from("easypost_tracking_events" as any)
         .select("*")
         .eq("order_line_id", orderLineId)
         .order("event_time", { ascending: false });
 
       if (error) throw error;
-      return data as TrackingEvent[];
+      return data as unknown as TrackingEvent[];
     },
     enabled: !!orderLineId,
   });

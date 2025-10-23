@@ -125,7 +125,7 @@ export const EasyPostShipmentManager = () => {
     queryKey: ["easypost-shipments"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("easypost_shipments")
+        .from("easypost_shipments" as any)
         .select(`
           *,
           order_lines!inner(
@@ -138,7 +138,7 @@ export const EasyPostShipmentManager = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as Shipment[];
+      return data as unknown as Shipment[];
     },
   });
 

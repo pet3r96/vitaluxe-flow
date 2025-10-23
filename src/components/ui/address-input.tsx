@@ -17,7 +17,7 @@ interface AddressValue {
 
 interface AddressInputProps {
   value: AddressValue;
-  onChange: (address: AddressValue & { formatted?: string; status?: string; verified_at?: string; source?: string }) => void;
+  onChange: (address: AddressValue & { formatted?: string; status?: string; verified_at?: string; source?: string; confidence?: number }) => void;
   label?: string;
   required?: boolean;
   autoValidate?: boolean;
