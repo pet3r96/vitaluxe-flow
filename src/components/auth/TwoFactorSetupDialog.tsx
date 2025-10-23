@@ -17,7 +17,7 @@ interface TwoFactorSetupDialogProps {
 export const TwoFactorSetupDialog = ({ open, userId }: TwoFactorSetupDialogProps) => {
   const { toast } = useToast();
   const { isImpersonating, clearImpersonation } = useAuth();
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("+1");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"phone" | "verify">("phone");
   const [loading, setLoading] = useState(false);
@@ -25,20 +25,34 @@ export const TwoFactorSetupDialog = ({ open, userId }: TwoFactorSetupDialogProps
 
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    
+    // Always start with +1 for US numbers
+    if (digits.length === 0 || digits.length === 1) return '+1';
+    
+    // Format: +1-XXX-XXX-XXXX
+    if (digits.length <= 4) return `+1-${digits.slice(1)}`;
+    if (digits.length <= 7) return `+1-${digits.slice(1, 4)}-${digits.slice(4)}`;
+    return `+1-${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7, 11)}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
+    const value = e.target.value;
+    
+    // Prevent removing the +1 prefix
+    if (value.length < 2 || !value.startsWith('+1')) {
+      setPhoneNumber('+1');
+      return;
+    }
+    
+    const formatted = formatPhoneNumber(value);
     setPhoneNumber(formatted);
   };
 
   const handleSendCode = async () => {
     const cleanPhone = phoneNumber.replace(/\D/g, '');
     
-    if (cleanPhone.length !== 10) {
+    // Must be exactly 11 digits (1 + 10 digit US number)
+    if (cleanPhone.length !== 11 || !cleanPhone.startsWith('1')) {
       toast({
         title: "Invalid phone number",
         description: "Please enter a valid 10-digit US phone number",
@@ -54,7 +68,7 @@ export const TwoFactorSetupDialog = ({ open, userId }: TwoFactorSetupDialogProps
 
       const { error } = await supabase.functions.invoke('send-2fa-code', {
         body: { 
-          phoneNumber: `+1${cleanPhone}`,
+          phoneNumber: `+${cleanPhone}`,
           codeType: '2fa_setup'
         }
       });
@@ -108,7 +122,7 @@ export const TwoFactorSetupDialog = ({ open, userId }: TwoFactorSetupDialogProps
       const { data, error } = await supabase.functions.invoke('verify-2fa-code', {
         body: { 
           code,
-          phoneNumber: `+1${cleanPhone}`
+          phoneNumber: `+${cleanPhone}`
         }
       });
 
@@ -153,19 +167,19 @@ export const TwoFactorSetupDialog = ({ open, userId }: TwoFactorSetupDialogProps
               <Input
                 id="phone"
                 type="tel"
-                placeholder="555-123-4567"
+                placeholder="+1-555-123-4567"
                 value={phoneNumber}
                 onChange={handlePhoneChange}
-                maxLength={12}
+                maxLength={16}
               />
               <p className="text-xs text-muted-foreground">
-                We'll send a verification code to this number
+                US phone numbers only. Enter 10 digits after +1.
               </p>
             </div>
 
             <Button 
               onClick={handleSendCode} 
-              disabled={loading || phoneNumber.replace(/\D/g, '').length !== 10}
+              disabled={loading || phoneNumber.replace(/\D/g, '').length !== 11}
               className="w-full"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

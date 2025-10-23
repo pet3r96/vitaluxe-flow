@@ -16,7 +16,7 @@ interface GHLSmsSetupDialogProps {
 
 export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
   const [step, setStep] = useState<'phone' | 'verify'>('phone');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+1');
   const [code, setCode] = useState('');
   const [attemptId, setAttemptId] = useState<string | null>(null); // NEW: Store attemptId
   const [loading, setLoading] = useState(false);
@@ -35,23 +35,37 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
   };
 
   const formatPhoneNumber = (value: string) => {
+    // Always start with +1 for US numbers
     const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length === 0) return '';
-    if (cleaned.length <= 3) return `+${cleaned}`;
-    if (cleaned.length <= 6) return `+${cleaned.slice(0, 1)}-${cleaned.slice(1, 4)}-${cleaned.slice(4)}`;
-    if (cleaned.length <= 10) return `+${cleaned.slice(0, 1)}-${cleaned.slice(1, 4)}-${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
-    return `+${cleaned.slice(0, 1)}-${cleaned.slice(1, 4)}-${cleaned.slice(4, 7)}-${cleaned.slice(7, 11)}`;
+    
+    // If user tries to clear, keep +1
+    if (cleaned.length === 0 || cleaned.length === 1) return '+1';
+    
+    // Format: +1-XXX-XXX-XXXX
+    if (cleaned.length <= 4) return `+1-${cleaned.slice(1)}`;
+    if (cleaned.length <= 7) return `+1-${cleaned.slice(1, 4)}-${cleaned.slice(4)}`;
+    return `+1-${cleaned.slice(1, 4)}-${cleaned.slice(4, 7)}-${cleaned.slice(7, 11)}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
+    const value = e.target.value;
+    
+    // Prevent removing the +1 prefix
+    if (value.length < 2 || !value.startsWith('+1')) {
+      setPhone('+1');
+      setError('');
+      return;
+    }
+    
+    const formatted = formatPhoneNumber(value);
     setPhone(formatted);
     setError('');
   };
 
   const isValidPhone = () => {
     const cleaned = phone.replace(/\D/g, '');
-    return cleaned.length >= 10;
+    // Must be exactly 11 digits (1 + 10 digit US number)
+    return cleaned.length === 11 && cleaned.startsWith('1');
   };
 
   const sendCode = async () => {
@@ -211,7 +225,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
                 maxLength={16}
               />
               <p className="text-xs text-muted-foreground">
-                Enter your phone number in the format: +1-555-123-4567
+                US phone numbers only. Enter 10 digits after +1.
               </p>
             </div>
 
