@@ -41,18 +41,25 @@ const RepDashboard = () => {
         
         if (downlinesError) throw downlinesError;
         
+        const downlineUserIds = downlines?.map(d => d.user_id) || [];
         // Get user_ids of all downlines + topline's own user_id
-        const networkUserIds = [effectiveUserId, ...(downlines?.map(d => d.user_id) || [])];
+        const networkUserIds = [effectiveUserId, ...downlineUserIds];
         
-        // Count practices linked to anyone in the network
-        const { count, error } = await supabase
+        // Fetch practices linked to anyone in the network, but exclude downline profiles and the topline's own profile
+        const { data: profilesInNetwork, error } = await supabase
           .from("profiles")
-          .select("*", { count: 'exact', head: true })
+          .select("id")
           .in("linked_topline_id", networkUserIds)
           .eq("active", true);
         
         if (error) throw error;
-        return count || 0;
+        
+        // Filter out downline profiles and the topline's own profile
+        const filteredPracticeIds = (profilesInNetwork || [])
+          .filter(p => !downlineUserIds.includes(p.id) && p.id !== effectiveUserId)
+          .map(p => p.id);
+        
+        return filteredPracticeIds.length;
       }
       
       // Downlines don't show practice count
@@ -205,7 +212,7 @@ const RepDashboard = () => {
       title: "My Practices",
       value: practiceCount || 0,
       icon: Users,
-      description: "Including downline practices",
+      description: "Active practices in your network",
     },
     {
       title: "My Downlines",
