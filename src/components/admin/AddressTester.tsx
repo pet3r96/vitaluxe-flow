@@ -144,7 +144,11 @@ export const AddressTester = () => {
         <Alert className="border-amber-200 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="space-y-3">
-            <p className="font-semibold text-amber-900">⚠️ Address Issue Detected</p>
+            <p className="font-semibold text-amber-900">
+              {testResult.is_valid 
+                ? "⚠️ Address Issue Detected" 
+                : "❌ Address Not Deliverable (But We Found Corrections)"}
+            </p>
             
             <div className="text-sm text-amber-800 space-y-2">
               <div>
@@ -155,11 +159,28 @@ export const AddressTester = () => {
               </div>
               
               <div>
-                <p className="font-medium">EasyPost found the correct address:</p>
-                <p className="pl-2 font-mono text-xs text-green-700 font-semibold">
-                  ✓ {testResult.formatted_address}
+                <p className="font-medium">
+                  {testResult.is_valid 
+                    ? "EasyPost found the correct address:" 
+                    : "EasyPost corrected the format to:"}
+                </p>
+                <p className={`pl-2 font-mono text-xs font-semibold ${
+                  testResult.is_valid ? 'text-green-700' : 'text-amber-700'
+                }`}>
+                  {testResult.is_valid ? '✓' : '⚠️'} {testResult.formatted_address}
                 </p>
               </div>
+              
+              {!testResult.is_valid && (
+                <div className="bg-red-100 p-2 rounded border border-red-200">
+                  <p className="text-xs font-semibold text-red-900">
+                    ⚠️ Important: Even the corrected address is not deliverable according to EasyPost
+                  </p>
+                  <p className="text-xs text-red-800 mt-1">
+                    This address may not exist, or it may be too new to be in the USPS database.
+                  </p>
+                </div>
+              )}
               
               <div className="text-xs bg-amber-100 p-2 rounded">
                 <p className="font-medium mb-1">Corrections made:</p>
@@ -178,8 +199,11 @@ export const AddressTester = () => {
                 onClick={acceptSuggestion}
                 disabled={testing}
                 className="flex-1"
+                variant={testResult.is_valid ? 'default' : 'outline'}
               >
-                Apply Correct Address
+                {testResult.is_valid 
+                  ? "Apply Correct Address" 
+                  : "Use Corrected Address Anyway"}
               </Button>
               <Button 
                 type="button"
@@ -189,12 +213,14 @@ export const AddressTester = () => {
                 disabled={testing}
                 className="flex-1"
               >
-                Use My Address (Override)
+                Keep My Original Address
               </Button>
             </div>
             
             <p className="text-xs text-amber-600 italic">
-              💡 The corrected address is deliverable according to EasyPost
+              {testResult.is_valid 
+                ? "💡 The corrected address is deliverable according to EasyPost" 
+                : "⚠️ Use with caution: This address may not be deliverable"}
             </p>
           </AlertDescription>
         </Alert>
@@ -258,20 +284,31 @@ export const AddressTester = () => {
     }
 
     // Priority 5: Invalid address (no suggestions)
-    if (!testResult.is_valid && !testResult.suggested_street && !showSuggestion) {
+    if (!testResult.is_valid && !testResult.suggested_street && !showSuggestion && !testResult.error_details) {
       return (
         <Alert className="border-red-200 bg-red-50">
           <XCircle className="h-4 w-4 text-red-600" />
           <AlertDescription className="space-y-2">
             <div className="font-semibold text-red-900">❌ Address Could Not Be Verified</div>
             <div className="text-sm text-red-800">
-              {testResult.error || "This address is not deliverable."}
+              {testResult.error || "This address is not deliverable and no corrections could be found."}
             </div>
             <div className="text-xs text-red-700 mt-2">
               <div className="font-medium">Common issues:</div>
-              <div>• Street name may be incorrect</div>
-              <div>• City/ZIP mismatch</div>
-              <div>• Address does not exist</div>
+              <div>• Street name may be completely incorrect</div>
+              <div>• City/ZIP combination doesn't exist</div>
+              <div>• Address may be in a restricted area</div>
+            </div>
+            <div className="pt-2">
+              <Button 
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={manualOverride}
+                disabled={testing}
+              >
+                Use This Address Anyway (Not Recommended)
+              </Button>
             </div>
           </AlertDescription>
         </Alert>
