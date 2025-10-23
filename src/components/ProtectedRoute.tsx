@@ -13,7 +13,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     user, 
     initializing, 
     mustChangePassword, 
-    termsAccepted, 
+    termsAccepted,
+    passwordStatusChecked,
     effectiveRole, 
     isImpersonating,
     requires2FASetup,
@@ -50,16 +51,17 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // Redirect non-admin users who haven't accepted terms (after password change)
   useEffect(() => {
-    if (!initializing && user && !mustChangePassword && effectiveRole) {
+    if (!initializing && user && !mustChangePassword && effectiveRole && passwordStatusChecked) {
       if (
         !termsAccepted &&
         effectiveRole !== 'admin' &&
         location.pathname !== '/accept-terms'
       ) {
+        console.log('[ProtectedRoute] Redirecting to /accept-terms (terms not accepted)');
         navigate("/accept-terms");
       }
     }
-  }, [user, initializing, mustChangePassword, termsAccepted, effectiveRole, location.pathname, navigate]);
+  }, [user, initializing, mustChangePassword, termsAccepted, effectiveRole, passwordStatusChecked, location.pathname, navigate]);
 
   // Prevent admins from accessing the terms page (unless impersonating)
   useEffect(() => {
@@ -83,6 +85,19 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!user) {
     return null;
+  }
+
+  // Wait for password status to load before checking terms
+  if (user && effectiveRole && !passwordStatusChecked) {
+    console.log('[ProtectedRoute] Waiting for password status check');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+          <p className="mt-3 text-muted-foreground text-sm">Checking account status...</p>
+        </div>
+      </div>
+    );
   }
 
   // Show GHL 2FA dialogs if needed (mandatory for ALL users including admins)

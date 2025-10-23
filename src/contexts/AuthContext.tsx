@@ -32,6 +32,7 @@ interface AuthContextType {
   requires2FAVerify: boolean;
   user2FAPhone: string | null;
   twoFAStatusChecked: boolean;
+  passwordStatusChecked: boolean;
   mark2FAVerified: () => void;
   checkPasswordStatus: () => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
@@ -67,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [passwordStatusChecked, setPasswordStatusChecked] = useState(false);
   const [canImpersonateDb, setCanImpersonateDb] = useState(false);
   const [requires2FASetup, setRequires2FASetup] = useState(false);
   const [requires2FAVerify, setRequires2FAVerify] = useState(false);
@@ -282,6 +284,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setImpersonatedUserName(null);
           setCurrentLogId(null);
           setTwoFAStatusChecked(false);
+          setPasswordStatusChecked(false);
           setIs2FAVerifiedThisSession(false);
           sessionStorage.removeItem('vitaluxe_impersonation');
           
@@ -609,6 +612,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setMustChangePassword(false);
         setTermsAccepted(true);
       }
+      setPasswordStatusChecked(true);
 
       // Process 2FA status using dedicated check function
       await check2FAStatus(userId);
@@ -640,6 +644,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (effectiveRole === 'admin' && !isImpersonating) {
       setMustChangePassword(false);
       setTermsAccepted(true);
+      setPasswordStatusChecked(true);
       return { mustChangePassword: false, termsAccepted: true };
     }
 
@@ -652,6 +657,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         logger.error('Error checking password status', error);
+        setPasswordStatusChecked(true);
         return { mustChangePassword: false, termsAccepted: false };
       }
 
@@ -660,10 +666,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setMustChangePassword(mustChange);
       setTermsAccepted(termsAccept);
+      setPasswordStatusChecked(true);
       
       return { mustChangePassword: mustChange, termsAccepted: termsAccept };
     } catch (error) {
       logger.error('Error in checkPasswordStatus', error);
+      setPasswordStatusChecked(true);
       return { mustChangePassword: false, termsAccepted: false };
     }
   };
@@ -1048,6 +1056,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isProviderAccount,
       mustChangePassword,
       termsAccepted,
+      passwordStatusChecked,
       requires2FASetup,
       requires2FAVerify,
       user2FAPhone,
