@@ -111,13 +111,28 @@ Deno.serve(async (req) => {
         }
 
         if (targetRepId) {
-          // Upsert the link
+          // Determine assigned_topline_id for the link
+          let toplineIdForLink = null;
+          
+          // Get the rep's details to check if it's a downline
+          const { data: targetRepDetails } = await supabaseAdmin
+            .from('reps')
+            .select('role, assigned_topline_id')
+            .eq('id', targetRepId)
+            .single();
+          
+          if (targetRepDetails?.role === 'downline' && targetRepDetails.assigned_topline_id) {
+            toplineIdForLink = targetRepDetails.assigned_topline_id;
+          }
+          
+          // Upsert the link with assigned_topline_id
           const { error: linkError } = await supabaseAdmin
             .from('rep_practice_links')
             .upsert(
               {
                 rep_id: targetRepId,
                 practice_id: practice.id,
+                assigned_topline_id: toplineIdForLink,
                 created_at: new Date().toISOString(),
               },
               { onConflict: 'rep_id,practice_id' }

@@ -272,10 +272,10 @@ serve(async (req) => {
       if (practiceData.assigned_rep_user_id) {
         console.log('Creating rep_practice_link for assigned_rep_user_id:', practiceData.assigned_rep_user_id);
         
-        // Get the rep record ID (not user_id) from the reps table
+        // Get the rep record ID, role, and assigned_topline_id from the reps table
         const { data: repRecord, error: repLookupError } = await supabaseAdmin
           .from('reps')
-          .select('id')
+          .select('id, role, assigned_topline_id')
           .eq('user_id', practiceData.assigned_rep_user_id)
           .maybeSingle();
         
@@ -289,12 +289,19 @@ serve(async (req) => {
           throw new Error(`Rep record not found for user_id: ${practiceData.assigned_rep_user_id}`);
         }
         
-        // Upsert rep_practice_links (idempotent)
+        // Determine the topline ID for the link
+        let toplineIdForLink = null;
+        if (repRecord.role === 'downline' && repRecord.assigned_topline_id) {
+          toplineIdForLink = repRecord.assigned_topline_id;
+        }
+        
+        // Upsert rep_practice_links with assigned_topline_id (idempotent)
         const { error: linkError } = await supabaseAdmin
           .from('rep_practice_links')
           .upsert({
             rep_id: repRecord.id,
             practice_id: userId,
+            assigned_topline_id: toplineIdForLink,
             created_at: new Date().toISOString()
           }, {
             onConflict: 'rep_id,practice_id',

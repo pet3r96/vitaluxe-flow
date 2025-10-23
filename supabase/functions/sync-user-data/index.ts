@@ -303,12 +303,26 @@ serve(async (req) => {
           }
 
           if (repRecord) {
-            // Upsert rep_practice_link (works for both toplines and downlines)
+            // Determine assigned_topline_id for the link
+            let toplineIdForLink = null;
+            if (repRecord.role === 'downline') {
+              // Fetch the downline's assigned_topline_id
+              const { data: downlineDetails } = await supabaseAdmin
+                .from('reps')
+                .select('assigned_topline_id')
+                .eq('id', repRecord.id)
+                .single();
+              
+              toplineIdForLink = downlineDetails?.assigned_topline_id || null;
+            }
+            
+            // Upsert rep_practice_link with assigned_topline_id (works for both toplines and downlines)
             const { error: linkError } = await supabaseAdmin
               .from('rep_practice_links')
               .upsert({
                 rep_id: repRecord.id,
-                practice_id: practice.id
+                practice_id: practice.id,
+                assigned_topline_id: toplineIdForLink
               }, { onConflict: 'rep_id,practice_id' });
 
             if (!linkError) {
