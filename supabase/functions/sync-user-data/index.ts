@@ -263,6 +263,7 @@ serve(async (req) => {
     }
 
     // Step 3: Backfill missing rep_practice_links for approved practices
+    // Now handles BOTH toplines AND downlines as owners
     let repLinksAdded = 0;
     let doctorRolesAdded = 0;
 
@@ -275,26 +276,49 @@ serve(async (req) => {
     if (practicesWithTopline) {
       for (const practice of practicesWithTopline) {
         try {
-          // Get the rep_id for this topline user
-          const { data: toplineRep } = await supabaseAdmin
+          // Look up the rep in 'reps' table - could be topline OR downline
+          // Priority: downline first, then topline (downlines are more specific)
+          let repRecord = null;
+          
+          const { data: downlineRep } = await supabaseAdmin
             .from('reps')
-            .select('id')
+            .select('id, role')
             .eq('user_id', practice.linked_topline_id)
-            .eq('role', 'topline')
-            .single();
+            .eq('role', 'downline')
+            .maybeSingle();
 
-          if (toplineRep) {
-            // Upsert rep_practice_link
+          if (downlineRep) {
+            repRecord = downlineRep;
+          } else {
+            const { data: toplineRep } = await supabaseAdmin
+              .from('reps')
+              .select('id, role')
+              .eq('user_id', practice.linked_topline_id)
+              .eq('role', 'topline')
+              .maybeSingle();
+            
+            if (toplineRep) {
+              repRecord = toplineRep;
+            }
+          }
+
+          if (repRecord) {
+            // Upsert rep_practice_link (works for both toplines and downlines)
             const { error: linkError } = await supabaseAdmin
               .from('rep_practice_links')
               .upsert({
-                rep_id: toplineRep.id,
+                rep_id: repRecord.id,
                 practice_id: practice.id
               }, { onConflict: 'rep_id,practice_id' });
 
             if (!linkError) {
               repLinksAdded++;
+              console.log(`Linked practice ${practice.name} to ${repRecord.role} rep ${repRecord.id}`);
+            } else {
+              errors.push(`Failed to link practice ${practice.name}: ${linkError.message}`);
             }
+          } else {
+            console.log(`No rep found for practice ${practice.name} with linked_topline_id ${practice.linked_topline_id}`);
           }
 
           // Ensure user_roles has 'doctor' (normalize from legacy 'practice' role)
@@ -303,7 +327,7 @@ serve(async (req) => {
             .select('role')
             .eq('user_id', practice.id)
             .eq('role', 'doctor')
-            .single();
+            .maybeSingle();
 
           if (!existingRole) {
             const { error: roleError } = await supabaseAdmin

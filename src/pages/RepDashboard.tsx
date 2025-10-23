@@ -74,7 +74,7 @@ const RepDashboard = () => {
     enabled: !!repData?.id && !!effectiveUserId && effectiveRole === 'topline',
   });
 
-  // Get order count
+  // Get order count (using rep_practice_links for consistency)
   const { data: orderCount } = useQuery({
     queryKey: ["rep-order-count", repData?.id, effectiveUserId, effectiveRole],
     staleTime: 0,
@@ -85,32 +85,29 @@ const RepDashboard = () => {
         // Get all downlines assigned to this topline
         const { data: downlines, error: downlinesError } = await supabase
           .from("reps")
-          .select("user_id")
+          .select("id")
           .eq("assigned_topline_id", repData.id)
-          .eq("role", "downline");
+          .eq("role", "downline")
+          .eq("active", true);
         
         if (downlinesError) throw downlinesError;
         
-        const downlineUserIds = downlines?.map(d => d.user_id) || [];
-        const networkUserIds = [effectiveUserId, ...downlineUserIds];
+        const downlineRepIds = downlines?.map(d => d.id) || [];
+        const networkRepIds = [repData.id, ...downlineRepIds];
         
-        // Get all practices in the network
-        const { data: practices, error: practicesError } = await supabase
-          .from("profiles")
-          .select("id")
-          .in("linked_topline_id", networkUserIds)
-          .eq("active", true);
+        // Get all practices via rep_practice_links
+        const { data: practiceLinks, error: linksError } = await supabase
+          .from("rep_practice_links")
+          .select("practice_id")
+          .in("rep_id", networkRepIds);
         
-        if (practicesError) throw practicesError;
+        if (linksError) throw linksError;
         
-        // Filter OUT downline profiles themselves (they don't place orders, their sub-practices do)
-        const practiceIds = practices
-          ?.filter(p => !downlineUserIds.includes(p.id))
-          .map(p => p.id) || [];
+        const practiceIds = Array.from(new Set(practiceLinks?.map(l => l.practice_id) || []));
         
         if (practiceIds.length === 0) return 0;
         
-        // Count orders from actual practices
+        // Count orders from these practices
         const { count, error } = await supabase
           .from("orders")
           .select("*", { count: 'exact', head: true })
@@ -120,19 +117,15 @@ const RepDashboard = () => {
         if (error) throw error;
         return count || 0;
       } else {
-        // Downlines: get practices linked to this downline
-        const { data: practices, error: practicesError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("linked_topline_id", effectiveUserId)
-          .eq("active", true);
+        // Downlines: get practices via rep_practice_links
+        const { data: practiceLinks, error: linksError } = await supabase
+          .from("rep_practice_links")
+          .select("practice_id")
+          .eq("rep_id", repData.id);
         
-        if (practicesError) throw practicesError;
+        if (linksError) throw linksError;
         
-        // Filter out the downline's own profile if it's in there
-        const practiceIds = practices
-          ?.filter(p => p.id !== effectiveUserId)
-          .map(p => p.id) || [];
+        const practiceIds = practiceLinks?.map(l => l.practice_id) || [];
         
         if (practiceIds.length === 0) return 0;
         

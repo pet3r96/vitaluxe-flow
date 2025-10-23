@@ -85,50 +85,65 @@ export function DownlinesDataTable() {
         active: rep.active && rep.profiles.active,
       }));
 
-      // Get practice counts for each downline
-      const downlineIds = downlinesData.map((d) => d.id);
-      const { data: practices, error: practicesError } = await supabase
-        .from("profiles")
-        .select("id, linked_topline_id")
-        .in("linked_topline_id", downlineIds)
-        .eq("active", true);
+      // Get downline rep IDs (from reps table)
+      const downlineRepIds = downlineReps.map(rep => rep.id);
 
-      if (practicesError) throw practicesError;
+      // Get practice counts for each downline using rep_practice_links
+      const { data: practiceLinks, error: linksError } = await supabase
+        .from("rep_practice_links")
+        .select("rep_id, practice_id")
+        .in("rep_id", downlineRepIds);
 
-      // Create practice counts map
+      if (linksError) throw linksError;
+
+      // Build maps: rep_id -> [practice_ids] and rep_id -> practiceCount
+      const repToPracticesMap: Record<string, string[]> = {};
       const practiceCountsMap: Record<string, number> = {};
-      practices?.forEach((practice) => {
-        const downlineId = practice.linked_topline_id;
-        if (downlineId && downlineIds.includes(downlineId)) {
-          practiceCountsMap[downlineId] = (practiceCountsMap[downlineId] || 0) + 1;
+      
+      practiceLinks?.forEach(link => {
+        if (!repToPracticesMap[link.rep_id]) {
+          repToPracticesMap[link.rep_id] = [];
         }
+        repToPracticesMap[link.rep_id].push(link.practice_id);
+        practiceCountsMap[link.rep_id] = (practiceCountsMap[link.rep_id] || 0) + 1;
       });
 
+      // Get all unique practice IDs to fetch orders
+      const allPracticeIds = Array.from(new Set(practiceLinks?.map(l => l.practice_id) || []));
+
       // Get order counts for each downline's practices
-      const practiceIds = practices?.map(p => p.id) || [];
       const { data: orders, error: ordersError } = await supabase
         .from("orders")
         .select("doctor_id, id")
-        .in("doctor_id", practiceIds);
+        .in("doctor_id", allPracticeIds)
+        .neq("status", "cancelled");
 
       if (ordersError) throw ordersError;
 
-      // Create order counts map per downline
+      // Map orders back to downline rep_ids
       const orderCountsMap: Record<string, number> = {};
       orders?.forEach((order) => {
-        const practice = practices?.find(p => p.id === order.doctor_id);
-        if (practice && practice.linked_topline_id) {
-          const downlineId = practice.linked_topline_id;
-          orderCountsMap[downlineId] = (orderCountsMap[downlineId] || 0) + 1;
+        // Find which downline rep owns this practice
+        for (const [repId, practiceIds] of Object.entries(repToPracticesMap)) {
+          if (practiceIds.includes(order.doctor_id)) {
+            orderCountsMap[repId] = (orderCountsMap[repId] || 0) + 1;
+          }
         }
       });
 
       // Enrich downlines with practice counts and order counts
-      const enrichedDownlines: EnrichedDownline[] = downlinesData.map((downline) => ({
-        ...downline,
-        practiceCount: practiceCountsMap[downline.id] || 0,
-        orderCount: orderCountsMap[downline.id] || 0,
-      }));
+      // Match by finding the rep_id for each downline
+      const enrichedDownlines: EnrichedDownline[] = downlinesData.map((downline) => {
+        // Find the rep record for this downline user_id
+        const repRecord = downlineReps.find(r => r.user_id === downline.id);
+        const repId = repRecord?.id;
+        
+        return {
+          ...downline,
+          practiceCount: repId ? (practiceCountsMap[repId] || 0) : 0,
+          orderCount: repId ? (orderCountsMap[repId] || 0) : 0,
+        };
+      });
 
       return enrichedDownlines;
     },

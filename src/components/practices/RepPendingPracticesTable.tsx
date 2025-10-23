@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -44,6 +44,7 @@ type PendingPractice = {
 
 export function RepPendingPracticesTable() {
   const { effectiveUserId } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedPractice, setSelectedPractice] = useState<PendingPractice | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -57,7 +58,10 @@ export function RepPendingPracticesTable() {
         .eq("created_by_user_id", effectiveUserId)
         .order("created_at", { ascending: false });
 
-      if (selectedStatus !== "all") {
+      // Filter out approved items - they belong in "My Practices"
+      if (selectedStatus === "all") {
+        query = query.in("status", ["pending", "rejected"]);
+      } else {
         query = query.eq("status", selectedStatus);
       }
 
@@ -67,6 +71,46 @@ export function RepPendingPracticesTable() {
     },
     enabled: !!effectiveUserId,
   });
+
+  // Realtime subscription for auto-refresh when practices are approved
+  useEffect(() => {
+    if (!effectiveUserId) return;
+
+    console.debug('[RepPendingPracticesTable] Setting up realtime subscription');
+    
+    const channel = supabase
+      .channel('pending-practices-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pending_practices',
+          filter: `created_by_user_id=eq.${effectiveUserId}`
+        },
+        (payload) => {
+          console.debug('[RepPendingPracticesTable] Received update:', payload);
+          
+          // If a practice was approved, refresh all related queries
+          if (payload.new && (payload.new as any).status === 'approved') {
+            console.debug('[RepPendingPracticesTable] Practice approved, invalidating queries');
+            queryClient.invalidateQueries({ queryKey: ['rep-pending-practices', effectiveUserId] });
+            queryClient.invalidateQueries({ queryKey: ['rep-practices', effectiveUserId] });
+            queryClient.invalidateQueries({ queryKey: ['rep-practice-stats', effectiveUserId] });
+            queryClient.invalidateQueries({ queryKey: ['rep-practice-count'] });
+          } else {
+            // For other updates (rejected, etc.), just refresh pending table
+            queryClient.invalidateQueries({ queryKey: ['rep-pending-practices', effectiveUserId] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.debug('[RepPendingPracticesTable] Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveUserId, queryClient]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -109,7 +153,6 @@ export function RepPendingPracticesTable() {
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
           <TabsTrigger value="rejected">Rejected</TabsTrigger>
         </TabsList>
 

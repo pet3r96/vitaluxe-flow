@@ -36,7 +36,7 @@ export const RepPracticesDataTable = () => {
       // Get the current user's rep record (reps.id, not user_id)
       const { data: repRecord, error: repError } = await supabase
         .from("reps")
-        .select("id")
+        .select("id, role")
         .eq("user_id", effectiveUserId)
         .maybeSingle();
       
@@ -51,11 +51,34 @@ export const RepPracticesDataTable = () => {
         return [];
       }
       
-      // Query practices via rep_practice_links
+      // Build list of rep_ids to include (for toplines: include downlines too)
+      let networkRepIds = [repRecord.id];
+      
+      if (effectiveRole === 'topline') {
+        // Get all downlines assigned to this topline
+        const { data: downlines, error: downlinesError } = await supabase
+          .from("reps")
+          .select("id")
+          .eq("assigned_topline_id", repRecord.id)
+          .eq("role", "downline")
+          .eq("active", true);
+        
+        if (downlinesError) {
+          import('@/lib/logger').then(({ logger }) => {
+            logger.error("Error fetching downlines", downlinesError);
+          });
+          throw downlinesError;
+        }
+        
+        const downlineRepIds = downlines?.map(d => d.id) || [];
+        networkRepIds = [repRecord.id, ...downlineRepIds];
+      }
+      
+      // Query practices via rep_practice_links for entire network
       const { data: practiceLinks, error: linksError } = await supabase
         .from("rep_practice_links")
         .select("practice_id")
-        .eq("rep_id", repRecord.id);
+        .in("rep_id", networkRepIds);
       
       if (linksError) {
         import('@/lib/logger').then(({ logger }) => {
@@ -68,7 +91,8 @@ export const RepPracticesDataTable = () => {
         return [];
       }
 
-      const practiceIds = practiceLinks.map(link => link.practice_id);
+      // De-duplicate practice IDs
+      const practiceIds = Array.from(new Set(practiceLinks.map(link => link.practice_id)));
 
       // Fetch full practice details (no role filter needed - rep_practice_links validates these are practices)
       const { data: profilesData, error: profilesError } = await supabase

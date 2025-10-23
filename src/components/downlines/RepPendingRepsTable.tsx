@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -38,6 +38,7 @@ type PendingRep = {
 
 export function RepPendingRepsTable() {
   const { effectiveUserId } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedRep, setSelectedRep] = useState<PendingRep | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -51,7 +52,10 @@ export function RepPendingRepsTable() {
         .eq("created_by_user_id", effectiveUserId)
         .order("created_at", { ascending: false });
 
-      if (selectedStatus !== "all") {
+      // Filter out approved items - they belong in "My Downlines"
+      if (selectedStatus === "all") {
+        query = query.in("status", ["pending", "rejected"]);
+      } else {
         query = query.eq("status", selectedStatus);
       }
 
@@ -61,6 +65,45 @@ export function RepPendingRepsTable() {
     },
     enabled: !!effectiveUserId,
   });
+
+  // Realtime subscription for auto-refresh when reps are approved
+  useEffect(() => {
+    if (!effectiveUserId) return;
+
+    console.debug('[RepPendingRepsTable] Setting up realtime subscription');
+    
+    const channel = supabase
+      .channel('pending-reps-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pending_reps',
+          filter: `created_by_user_id=eq.${effectiveUserId}`
+        },
+        (payload) => {
+          console.debug('[RepPendingRepsTable] Received update:', payload);
+          
+          // If a rep was approved, refresh all related queries
+          if (payload.new && (payload.new as any).status === 'approved') {
+            console.debug('[RepPendingRepsTable] Rep approved, invalidating queries');
+            queryClient.invalidateQueries({ queryKey: ['rep-pending-reps', effectiveUserId] });
+            queryClient.invalidateQueries({ queryKey: ['downlines-table', effectiveUserId] });
+            queryClient.invalidateQueries({ queryKey: ['downline-count'] });
+          } else {
+            // For other updates (rejected, etc.), just refresh pending table
+            queryClient.invalidateQueries({ queryKey: ['rep-pending-reps', effectiveUserId] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.debug('[RepPendingRepsTable] Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveUserId, queryClient]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -103,7 +146,6 @@ export function RepPendingRepsTable() {
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
           <TabsTrigger value="rejected">Rejected</TabsTrigger>
         </TabsList>
 
