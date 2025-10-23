@@ -321,9 +321,6 @@ export const ProductsGrid = () => {
             custom_dosage: customDosage,
             order_notes: orderNotes,
             prescription_method: prescriptionMethod,
-            refills_allowed: false,
-            refills_total: 0,
-            refills_remaining: 0,
           });
 
         if (error) throw error;
@@ -353,9 +350,6 @@ export const ProductsGrid = () => {
             custom_dosage: customDosage,
             order_notes: orderNotes,
             prescription_method: prescriptionMethod,
-            refills_allowed: false,
-            refills_total: 0,
-            refills_remaining: 0,
           });
 
         if (error) throw error;

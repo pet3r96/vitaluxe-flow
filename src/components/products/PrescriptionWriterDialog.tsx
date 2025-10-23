@@ -235,9 +235,7 @@ export function PrescriptionWriterDialog({
           notes: notes,
           quantity: quantity,
           signature: signature,
-          dispensing_option: dispensingOption,
-          refills_allowed: false,
-          refills_total: 0
+          dispensing_option: dispensingOption
         }
       });
 

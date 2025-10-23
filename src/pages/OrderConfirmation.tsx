@@ -862,16 +862,6 @@ export default function OrderConfirmation() {
                     </div>
                   )}
                   
-                  {/* Display refill information */}
-                  {line.prescription_url && line.patient_name !== "Practice Order" && (
-                    <div className="mt-2 p-3 bg-purple-50 dark:bg-purple-950/30 rounded-md text-sm border border-purple-200 dark:border-purple-800">
-                      <p className="font-semibold text-xs text-purple-700 dark:text-purple-300 uppercase mb-1">Refills:</p>
-                      <p className="text-purple-600 dark:text-purple-400">
-                        {line.refills_allowed ? `${line.refills_total} refill(s) authorized` : 'No refills authorized'}
-                      </p>
-                    </div>
-                  )}
-                  
                   {/* Display order notes if present */}
                   {line.order_notes && (
                     <div className="mt-2 p-3 bg-accent/50 rounded-md text-sm border">
