@@ -46,15 +46,26 @@ const RepDashboard = () => {
         const networkRepIds = [repData.id, ...downlineRepIds];
         
         // Count practices using rep_practice_links (source of truth)
-        const { data: practiceLinks, error } = await supabase
+        const { data: practiceLinks, error: linksError } = await supabase
           .from("rep_practice_links")
-          .select("practice_id, profiles!inner(active)")
-          .in("rep_id", networkRepIds)
-          .eq("profiles.active", true);
+          .select("practice_id")
+          .in("rep_id", networkRepIds);
         
-        if (error) throw error;
+        if (linksError) throw linksError;
         
-        return practiceLinks?.length || 0;
+        if (!practiceLinks?.length) return 0;
+        
+        // Count active profiles
+        const practiceIds = practiceLinks.map(l => l.practice_id);
+        const { count, error: countError } = await supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .in("id", practiceIds)
+          .eq("active", true);
+        
+        if (countError) throw countError;
+        
+        return count || 0;
       }
       
       // Downlines don't show practice count

@@ -121,6 +121,18 @@ export const DataSyncButton = ({ onSyncComplete }: DataSyncButtonProps) => {
                   <span className="text-muted-foreground">Toplines fixed:</span>
                   <span className="font-semibold">{syncResults.repairedToplines}</span>
                 </div>
+                {syncResults.repLinksAdded > 0 && (
+                  <div className="flex justify-between p-3 bg-success/10 rounded-md border border-success/20">
+                    <span className="text-muted-foreground font-semibold">Practice links added:</span>
+                    <span className="font-bold text-success">{syncResults.repLinksAdded}</span>
+                  </div>
+                )}
+                {syncResults.doctorRolesAdded > 0 && (
+                  <div className="flex justify-between p-3 bg-success/10 rounded-md border border-success/20">
+                    <span className="text-muted-foreground font-semibold">Doctor roles added:</span>
+                    <span className="font-bold text-success">{syncResults.doctorRolesAdded}</span>
+                  </div>
+                )}
               </div>
 
               <div className="p-4 bg-primary/10 rounded-md border-l-4 border-primary">

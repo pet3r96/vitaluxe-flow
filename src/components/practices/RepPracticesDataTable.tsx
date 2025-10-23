@@ -70,15 +70,11 @@ export const RepPracticesDataTable = () => {
 
       const practiceIds = practiceLinks.map(link => link.practice_id);
 
-      // Fetch full practice details
+      // Fetch full practice details (no role filter needed - rep_practice_links validates these are practices)
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select(`
-          *,
-          user_roles!inner(role)
-        `)
+        .select("*")
         .in("id", practiceIds)
-        .eq("user_roles.role", "doctor")
         .eq("active", true)
         .order("created_at", { ascending: false });
 

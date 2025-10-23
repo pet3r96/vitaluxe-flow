@@ -262,7 +262,68 @@ serve(async (req) => {
       }
     }
 
-    // Step 3: Fix missing parent_id relationships
+    // Step 3: Backfill missing rep_practice_links for approved practices
+    let repLinksAdded = 0;
+    let doctorRolesAdded = 0;
+
+    const { data: practicesWithTopline } = await supabaseAdmin
+      .from('profiles')
+      .select('id, name, linked_topline_id')
+      .not('linked_topline_id', 'is', null)
+      .eq('active', true);
+
+    if (practicesWithTopline) {
+      for (const practice of practicesWithTopline) {
+        try {
+          // Get the rep_id for this topline user
+          const { data: toplineRep } = await supabaseAdmin
+            .from('reps')
+            .select('id')
+            .eq('user_id', practice.linked_topline_id)
+            .eq('role', 'topline')
+            .single();
+
+          if (toplineRep) {
+            // Upsert rep_practice_link
+            const { error: linkError } = await supabaseAdmin
+              .from('rep_practice_links')
+              .upsert({
+                rep_id: toplineRep.id,
+                practice_id: practice.id
+              }, { onConflict: 'rep_id,practice_id' });
+
+            if (!linkError) {
+              repLinksAdded++;
+            }
+          }
+
+          // Ensure user_roles has 'doctor' (normalize from legacy 'practice' role)
+          const { data: existingRole } = await supabaseAdmin
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', practice.id)
+            .eq('role', 'doctor')
+            .single();
+
+          if (!existingRole) {
+            const { error: roleError } = await supabaseAdmin
+              .from('user_roles')
+              .upsert({
+                user_id: practice.id,
+                role: 'doctor'
+              }, { onConflict: 'user_id,role' });
+
+            if (!roleError) {
+              doctorRolesAdded++;
+            }
+          }
+        } catch (error: any) {
+          errors.push(`Error backfilling links for practice ${practice.name}: ${error.message}`);
+        }
+      }
+    }
+
+    // Step 4: Fix missing parent_id relationships
     const { data: pharmaciesWithoutParent } = await supabaseAdmin
       .from('pharmacies')
       .select('id, user_id, name')
@@ -281,7 +342,7 @@ serve(async (req) => {
       }
     }
 
-    const totalRepaired = addedProfiles + addedRoles + repairedPharmacies;
+    const totalRepaired = addedProfiles + addedRoles + repairedPharmacies + repLinksAdded + doctorRolesAdded;
 
     // Log the sync event
     const summary = {
@@ -292,6 +353,8 @@ serve(async (req) => {
       repairedToplines,
       repairedDownlines,
       orphanedPharmaciesConverted,
+      repLinksAdded,
+      doctorRolesAdded,
       totalRepaired,
       errors: errors.length > 0 ? errors : null
     };
