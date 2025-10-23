@@ -753,17 +753,23 @@ serve(async (req) => {
 
       // Send temp password email
       try {
+        const authHeader = req.headers.get('Authorization');
         const { error: emailError } = await supabaseAdmin.functions.invoke('send-temp-password-email', {
           body: {
             email: signupData.email,
             name: signupData.name,
             temporaryPassword: initialPassword,
             role: signupData.role
-          }
+          },
+          headers: authHeader ? {
+            Authorization: authHeader
+          } : {}
         });
 
         if (emailError) {
           console.error('Error sending temp password email:', emailError);
+        } else {
+          console.log('Temporary password email sent successfully to:', signupData.email);
         }
       } catch (emailErr) {
         console.error('Failed to invoke send-temp-password-email function:', emailErr);
