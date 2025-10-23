@@ -478,6 +478,7 @@ export type Database = {
       }
       cart_lines: {
         Row: {
+          assigned_pharmacy_id: string | null
           cart_id: string
           created_at: string | null
           custom_dosage: string | null
@@ -509,6 +510,7 @@ export type Database = {
           shipping_speed: Database["public"]["Enums"]["shipping_speed"] | null
         }
         Insert: {
+          assigned_pharmacy_id?: string | null
           cart_id: string
           created_at?: string | null
           custom_dosage?: string | null
@@ -540,6 +542,7 @@ export type Database = {
           shipping_speed?: Database["public"]["Enums"]["shipping_speed"] | null
         }
         Update: {
+          assigned_pharmacy_id?: string | null
           cart_id?: string
           created_at?: string | null
           custom_dosage?: string | null
@@ -571,6 +574,13 @@ export type Database = {
           shipping_speed?: Database["public"]["Enums"]["shipping_speed"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "cart_lines_assigned_pharmacy_id_fkey"
+            columns: ["assigned_pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cart_lines_cart_id_fkey"
             columns: ["cart_id"]

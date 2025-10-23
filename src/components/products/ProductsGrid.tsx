@@ -21,7 +21,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useCartCount } from "@/hooks/useCartCount";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
-import { extractStateFromAddress } from "@/lib/addressUtils";
+import { extractStateWithFallback, isValidStateCode } from "@/lib/addressUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -236,6 +236,32 @@ export const ProductsGrid = () => {
 
   const paginatedProducts = filteredProducts?.slice(startIndex, endIndex);
 
+  // Helper to get user's topline rep ID for pharmacy scoping
+  const getUserToplineRepId = async (userId: string): Promise<string | null> => {
+    try {
+      // Get practice's linked_topline_id
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("linked_topline_id")
+        .eq("id", userId)
+        .single();
+      
+      if (!profile?.linked_topline_id) return null;
+      
+      // Convert user_id to rep_id
+      const { data: rep } = await supabase
+        .from("reps")
+        .select("id")
+        .eq("user_id", profile.linked_topline_id)
+        .single();
+      
+      return rep?.id || null;
+    } catch (error) {
+      console.error("Error getting topline rep ID:", error);
+      return null;
+    }
+  };
+
   const handleAddToCart = async (
     patientId: string | null, 
     quantity: number, 
@@ -310,8 +336,58 @@ export const ProductsGrid = () => {
           .eq("id", providerId)
           .single();
 
+        // Build robust address
         const providerAddress = providerProfile?.shipping_address_formatted || 
-          `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
+          (providerProfile?.shipping_address_street && 
+           providerProfile?.shipping_address_city && 
+           providerProfile?.shipping_address_state && 
+           providerProfile?.shipping_address_zip
+            ? `${providerProfile.shipping_address_street}, ${providerProfile.shipping_address_city}, ${providerProfile.shipping_address_state} ${providerProfile.shipping_address_zip}`
+            : null);
+
+        // Extract and validate destination state
+        const destinationState = extractStateWithFallback(
+          providerAddress,
+          providerProfile?.shipping_address_state
+        );
+
+        if (!isValidStateCode(destinationState)) {
+          toast.error(
+            "Invalid shipping address. Please go to Profile → Shipping Address and ensure it's formatted as: Street, City, ST 12345"
+          );
+          return;
+        }
+
+        // Get user's topline rep ID for scoping
+        const userToplineRepId = await getUserToplineRepId(providerId);
+
+        // Route to pharmacy - BLOCK if no pharmacy available
+        const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+          'route-order-to-pharmacy',
+          {
+            body: {
+              product_id: productForCart.id,
+              destination_state: destinationState,
+              user_topline_rep_id: userToplineRepId
+            }
+          }
+        );
+
+        if (routingError) {
+          console.error("Routing error:", routingError);
+          toast.error("Unable to verify pharmacy availability. Please try again.");
+          return;
+        }
+
+        if (!routingResult?.pharmacy_id) {
+          toast.error(
+            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please contact support.'}`
+          );
+          return;
+        }
+
+        // Success - pharmacy found, proceed with insertion
+        console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
 
         const { error } = await supabase
           .from("cart_lines" as any)
@@ -326,7 +402,8 @@ export const ProductsGrid = () => {
             patient_address: null,
             quantity: quantity,
             price_snapshot: correctPrice,
-            destination_state: extractStateFromAddress(providerAddress),
+            destination_state: destinationState,
+            assigned_pharmacy_id: routingResult.pharmacy_id,
             prescription_url: prescriptionUrl,
             custom_sig: customSig,
             custom_dosage: customDosage,
@@ -336,11 +413,61 @@ export const ProductsGrid = () => {
 
         if (error) throw error;
       } else {
+        // Fetch patient with ALL address fields
         const { data: patient } = await supabase
           .from("patients")
-          .select("name, email, phone, address")
+          .select("name, email, phone, address, address_formatted, address_street, address_city, address_state, address_zip")
           .eq("id", patientId!)
           .single();
+
+        // Build robust patient address
+        const patientAddress = patient?.address_formatted ||
+          (patient?.address_street && patient?.address_city && patient?.address_state && patient?.address_zip
+            ? `${patient.address_street}, ${patient.address_city}, ${patient.address_state} ${patient.address_zip}`
+            : patient?.address || null);
+
+        // Extract and validate state
+        const destinationState = patient?.address_state || 
+          extractStateWithFallback(patient?.address_formatted || '', patient?.address_state) ||
+          extractStateWithFallback(patientAddress || '', patient?.address_state);
+
+        if (!isValidStateCode(destinationState)) {
+          toast.error(
+            "Patient address is incomplete or invalid. Please update the patient's address with: Street, City, ST 12345"
+          );
+          return;
+        }
+
+        // Get user's topline rep ID for scoping
+        const userToplineRepId = await getUserToplineRepId(providerId);
+
+        // Route to pharmacy - BLOCK if no pharmacy available
+        const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+          'route-order-to-pharmacy',
+          {
+            body: {
+              product_id: productForCart.id,
+              destination_state: destinationState,
+              user_topline_rep_id: userToplineRepId
+            }
+          }
+        );
+
+        if (routingError) {
+          console.error("Routing error:", routingError);
+          toast.error("Unable to verify pharmacy availability. Please try again.");
+          return;
+        }
+
+        if (!routingResult?.pharmacy_id) {
+          toast.error(
+            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please contact support.'}`
+          );
+          return;
+        }
+
+        // Success - pharmacy found, proceed with insertion
+        console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
 
         const { error } = await supabase
           .from("cart_lines" as any)
@@ -352,10 +479,11 @@ export const ProductsGrid = () => {
             patient_name: patient?.name || "Unknown",
             patient_email: patient?.email,
             patient_phone: patient?.phone,
-            patient_address: patient?.address,
+            patient_address: patientAddress,
             quantity: quantity,
             price_snapshot: correctPrice,
-            destination_state: extractStateFromAddress(patient?.address),
+            destination_state: destinationState,
+            assigned_pharmacy_id: routingResult.pharmacy_id,
             prescription_url: prescriptionUrl,
             custom_sig: customSig,
             custom_dosage: customDosage,

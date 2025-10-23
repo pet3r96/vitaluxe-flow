@@ -20,7 +20,6 @@ import { AddCreditCardDialog } from "@/components/profile/AddCreditCardDialog";
 import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
 import { logger } from "@/lib/logger";
-import { extractStateFromAddress } from "@/lib/addressUtils";
 
 export default function OrderConfirmation() {
   const { effectiveUserId, user } = useAuth();
@@ -258,93 +257,39 @@ export default function OrderConfirmation() {
         return group && group.cart_line_ids[0] === lineId ? group.shipping_cost : 0;
       };
 
-      // PHASE 1: VALIDATE ALL ROUTING FIRST (before creating ANY orders)
+      // PHASE 1: Validate all cart lines have required data
+      console.log("Phase 1: Validating cart lines...");
+
+      // Validate practice lines
+      for (const line of practiceLines) {
+        if (!line.assigned_pharmacy_id || !line.destination_state) {
+          throw new Error(
+            `Invalid cart data for "${line.product?.name}". Please remove and re-add this item to your cart.`
+          );
+        }
+      }
+
+      // Validate patient lines
+      for (const line of patientLines) {
+        if (!line.assigned_pharmacy_id || !line.destination_state) {
+          throw new Error(
+            `Invalid cart data for "${line.product?.name}". Please remove and re-add this item to your cart.`
+          );
+        }
+      }
+
+      console.log("✅ All cart lines validated");
+      
       const practicePharmacyAssignments = new Map<string, string>();
       const patientPharmacyAssignments = new Map<string, string>();
       
-      // Process each practice line - validate routing
-      if (practiceLines.length > 0) {
-        const practiceAddress = providerProfile?.shipping_address_formatted || 
-          `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
-        
-        for (const line of practiceLines) {
-          let destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
-          
-          // Fallback to direct state field if extraction failed
-          if (!destinationState && providerProfile?.shipping_address_state) {
-            destinationState = providerProfile.shipping_address_state;
-          }
-          
-          // Validate state before routing
-          if (!destinationState || !/^[A-Z]{2}$/.test(destinationState)) {
-            const addressUsed = line.patient_address || practiceAddress;
-            throw new Error(
-              `Unable to determine shipping state from address: "${addressUsed}". Please go to Profile → Shipping Address and ensure it's formatted as: Street, City, ST 12345`
-            );
-          }
-          
-          try {
-            const { data: routingResult, error: routingError } = await supabase.functions.invoke(
-              'route-order-to-pharmacy',
-              {
-                body: {
-                  product_id: line.product_id,
-                  destination_state: destinationState
-                }
-              }
-            );
-            
-            if (!routingError && routingResult?.pharmacy_id) {
-              practicePharmacyAssignments.set(line.id, routingResult.pharmacy_id);
-            } else {
-              const productName = line.product?.name || 'Unknown product';
-              throw new Error(
-                `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
-              );
-            }
-          } catch (error) {
-            logger.error('Pharmacy routing failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'route_practice_order' }));
-            throw error;
-          }
-        }
+      // Extract pre-validated pharmacy assignments from cart
+      for (const line of practiceLines) {
+        practicePharmacyAssignments.set(line.id, line.assigned_pharmacy_id);
       }
       
-      // Validate routing for ALL patient lines BEFORE creating orders
-      if (patientLines.length > 0) {
-        for (const line of patientLines) {
-          const destinationState = extractStateFromAddress(line.patient_address);
-          
-          // Validate state before routing
-          if (!destinationState || !/^[A-Z]{2}$/.test(destinationState)) {
-            throw new Error(
-              `Unable to determine shipping state from patient address: "${line.patient_address || 'No address provided'}". Please ensure the patient address is formatted as: Street, City, ST 12345`
-            );
-          }
-          
-          try {
-            const { data: routingResult, error: routingError } = await supabase.functions.invoke(
-              'route-order-to-pharmacy',
-              {
-                body: {
-                  product_id: line.product_id,
-                  destination_state: destinationState
-                }
-              }
-            );
-            
-            if (!routingError && routingResult?.pharmacy_id) {
-              patientPharmacyAssignments.set(line.id, routingResult.pharmacy_id);
-            } else {
-              const productName = line.product?.name || 'Unknown product';
-              throw new Error(
-                `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
-              );
-            }
-          } catch (error) {
-            logger.error('Pharmacy routing failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'route_patient_order' }));
-            throw error;
-          }
-        }
+      for (const line of patientLines) {
+        patientPharmacyAssignments.set(line.id, line.assigned_pharmacy_id);
       }
       
       // PHASE 2: ALL ROUTING VALIDATED - NOW CREATE ORDERS
@@ -409,9 +354,9 @@ export default function OrderConfirmation() {
 
           if (practiceOrderError) throw practiceOrderError;
 
-          // Get assigned pharmacy from our map
-          const assignedPharmacyId = practicePharmacyAssignments.get(line.id);
-          const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
+          // Use pre-validated data from cart
+          const assignedPharmacyId = line.assigned_pharmacy_id;
+          const destinationState = line.destination_state;
           
           // Create ONE order_line for this order
           const discountedPrice = line.price_snapshot * (1 - discountPercentage / 100);
@@ -512,9 +457,9 @@ export default function OrderConfirmation() {
 
           if (patientOrderError) throw patientOrderError;
 
-          // Get assigned pharmacy from our map
-          const assignedPharmacyId = patientPharmacyAssignments.get(line.id);
-          const destinationState = extractStateFromAddress(line.patient_address);
+          // Use pre-validated data from cart
+          const assignedPharmacyId = line.assigned_pharmacy_id;
+          const destinationState = line.destination_state;
           
           // Create ONE order_line for this order
           const discountedPrice = line.price_snapshot * (1 - discountPercentage / 100);
