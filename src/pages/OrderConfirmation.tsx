@@ -258,13 +258,14 @@ export default function OrderConfirmation() {
         return group && group.cart_line_ids[0] === lineId ? group.shipping_cost : 0;
       };
 
-      // Process each practice line separately - create one order per line
+      // PHASE 1: VALIDATE ALL ROUTING FIRST (before creating ANY orders)
+      const practicePharmacyAssignments = new Map<string, string>();
+      const patientPharmacyAssignments = new Map<string, string>();
+      
+      // Process each practice line - validate routing
       if (practiceLines.length > 0) {
         const practiceAddress = providerProfile?.shipping_address_formatted || 
           `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
-
-        // First, route all lines to pharmacies
-        const pharmacyAssignments = new Map<string, string>();
         
         for (const line of practiceLines) {
           const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
@@ -281,7 +282,7 @@ export default function OrderConfirmation() {
             );
             
             if (!routingError && routingResult?.pharmacy_id) {
-              pharmacyAssignments.set(line.id, routingResult.pharmacy_id);
+              practicePharmacyAssignments.set(line.id, routingResult.pharmacy_id);
             } else {
               const productName = line.product?.name || 'Unknown product';
               throw new Error(
@@ -293,9 +294,47 @@ export default function OrderConfirmation() {
             throw error;
           }
         }
+      }
+      
+      // Validate routing for ALL patient lines BEFORE creating orders
+      if (patientLines.length > 0) {
+        for (const line of patientLines) {
+          const destinationState = extractStateFromAddress(line.patient_address);
+          
+          try {
+            const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+              'route-order-to-pharmacy',
+              {
+                body: {
+                  product_id: line.product_id,
+                  destination_state: destinationState
+                }
+              }
+            );
+            
+            if (!routingError && routingResult?.pharmacy_id) {
+              patientPharmacyAssignments.set(line.id, routingResult.pharmacy_id);
+            } else {
+              const productName = line.product?.name || 'Unknown product';
+              throw new Error(
+                `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
+              );
+            }
+          } catch (error) {
+            logger.error('Pharmacy routing failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'route_patient_order' }));
+            throw error;
+          }
+        }
+      }
+      
+      // PHASE 2: ALL ROUTING VALIDATED - NOW CREATE ORDERS
+      if (practiceLines.length > 0) {
+        const practiceAddress = providerProfile?.shipping_address_formatted || 
+          `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
+
         
         // Create shipping groups and calculate costs
-        const practiceShippingGroups = createShippingGroups(practiceLines, pharmacyAssignments);
+        const practiceShippingGroups = createShippingGroups(practiceLines, practicePharmacyAssignments);
         
         for (const group of practiceShippingGroups) {
           try {
@@ -351,7 +390,7 @@ export default function OrderConfirmation() {
           if (practiceOrderError) throw practiceOrderError;
 
           // Get assigned pharmacy from our map
-          const assignedPharmacyId = pharmacyAssignments.get(line.id);
+          const assignedPharmacyId = practicePharmacyAssignments.get(line.id);
           const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
           
           // Create ONE order_line for this order
@@ -397,39 +436,8 @@ export default function OrderConfirmation() {
 
       // Process each patient line separately - create one order per line
       if (patientLines.length > 0) {
-        // First, route all lines to pharmacies
-        const pharmacyAssignments = new Map<string, string>();
-        
-        for (const line of patientLines) {
-          const destinationState = extractStateFromAddress(line.patient_address);
-          
-          try {
-            const { data: routingResult, error: routingError } = await supabase.functions.invoke(
-              'route-order-to-pharmacy',
-              {
-                body: {
-                  product_id: line.product_id,
-                  destination_state: destinationState
-                }
-              }
-            );
-            
-            if (!routingError && routingResult?.pharmacy_id) {
-              pharmacyAssignments.set(line.id, routingResult.pharmacy_id);
-            } else {
-              const productName = line.product?.name || 'Unknown product';
-              throw new Error(
-                `Unable to fulfill order: No pharmacy available for "${productName}" in ${destinationState}. Please contact your representative or create a support ticket.`
-              );
-            }
-          } catch (error) {
-            logger.error('Pharmacy routing failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'route_patient_order' }));
-            throw error;
-          }
-        }
-        
-        // Create shipping groups and calculate costs
-        const patientShippingGroups = createShippingGroups(patientLines, pharmacyAssignments);
+        // Create shipping groups and calculate costs (routing already validated in PHASE 1)
+        const patientShippingGroups = createShippingGroups(patientLines, patientPharmacyAssignments);
         
         for (const group of patientShippingGroups) {
           try {
@@ -485,7 +493,7 @@ export default function OrderConfirmation() {
           if (patientOrderError) throw patientOrderError;
 
           // Get assigned pharmacy from our map
-          const assignedPharmacyId = pharmacyAssignments.get(line.id);
+          const assignedPharmacyId = patientPharmacyAssignments.get(line.id);
           const destinationState = extractStateFromAddress(line.patient_address);
           
           // Create ONE order_line for this order

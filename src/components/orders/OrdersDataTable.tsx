@@ -36,8 +36,9 @@ export const OrdersDataTable = () => {
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
-    staleTime: 10000, // 10 seconds - orders are time-sensitive
-    refetchInterval: 30000, // Auto-refetch every 30 seconds for real-time updates
+    staleTime: 0, // Always consider stale - realtime handles updates
+    refetchInterval: false, // Disable polling - use realtime instead
+    refetchOnWindowFocus: true, // Refetch when tab gains focus
     queryFn: async () => {
       logger.info('OrdersDataTable query', logger.sanitize({ 
         effectiveRole, 
