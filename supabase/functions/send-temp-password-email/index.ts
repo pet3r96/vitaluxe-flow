@@ -129,8 +129,8 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Email service not configured");
     }
 
-    // Send email via Postmark
-    const postmarkResponse = await fetch("https://api.postmarkapp.com/email/withTemplate", {
+    // Send email via Postmark - using plain HTML instead of template
+    const postmarkResponse = await fetch("https://api.postmarkapp.com/email", {
       method: "POST",
       headers: {
         "Accept": "application/json",
@@ -140,14 +140,44 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         From: "noreply@vitaluxeservices.com",
         To: email,
-        TemplateAlias: "temp-password-email",
-        TemplateModel: {
-          name: name,
-          email: email,
-          temporary_password: temporaryPassword,
-          role: role,
-          login_link: "https://vitaluxeservices.com/auth"
-        },
+        Subject: "Welcome to Vitaluxe - Your Temporary Password",
+        HtmlBody: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
+              .content { background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
+              .password-box { background-color: #fff; border: 2px solid #4F46E5; padding: 15px; margin: 20px 0; text-align: center; font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+              .button { display: inline-block; background-color: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+              .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Welcome to Vitaluxe</h1>
+              </div>
+              <div class="content">
+                <h2>Hello ${name},</h2>
+                <p>Your account has been created as a <strong>${role}</strong>.</p>
+                <p>Here is your temporary password:</p>
+                <div class="password-box">${temporaryPassword}</div>
+                <p><strong>Important:</strong> For security reasons, please change this password after your first login.</p>
+                <a href="https://vitaluxeservices.com/auth" class="button">Login Now</a>
+                <p>If you have any questions, please contact your administrator.</p>
+              </div>
+              <div class="footer">
+                <p>&copy; ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.</p>
+                <p>Email: ${email}</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `,
+        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nTemporary Password: ${temporaryPassword}\n\nPlease login at: https://vitaluxeservices.com/auth\n\nFor security reasons, please change this password after your first login.\n\nIf you have any questions, please contact your administrator.`
       }),
     });
 
