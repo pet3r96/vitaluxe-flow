@@ -284,6 +284,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTwoFAStatusChecked(false);
           setIs2FAVerifiedThisSession(false);
           sessionStorage.removeItem('vitaluxe_impersonation');
+          
+          // Clear 2FA verification cache on logout
+          if (user?.id) {
+            sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
+            sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
+          }
+          
           clearCSRFToken();
           logger.info('SIGNED_OUT: state cleared, session deleted');
           
@@ -988,6 +995,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // Clear auth cache
     sessionStorage.removeItem('vitaluxe_auth_cache');
+    
+    // Clear 2FA verification cache on logout
+    if (user?.id) {
+      sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
+      sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
+    }
     
     await supabase.auth.signOut();
     setUserRole(null);
