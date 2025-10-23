@@ -322,6 +322,31 @@ serve(async (req) => {
       );
     }
 
+    // Check for orphaned provider records before creating auth user
+    if (signupData.role === 'provider' && signupData.roleData?.practiceId) {
+      console.log('🔍 Checking for orphaned provider records for practice:', signupData.roleData.practiceId);
+      
+      const { data: orphanedProviders, error: orphanCheckError } = await supabaseAdmin
+        .from('providers')
+        .select('id, user_id')
+        .eq('practice_id', signupData.roleData.practiceId);
+      
+      if (!orphanCheckError && orphanedProviders && orphanedProviders.length > 0) {
+        console.log(`Found ${orphanedProviders.length} existing provider record(s) for this practice`);
+        
+        // Check if any are orphaned (user_id exists but auth user doesn't)
+        for (const provider of orphanedProviders) {
+          if (provider.user_id) {
+            const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(provider.user_id);
+            if (!authUser.user) {
+              console.log(`🧹 Cleaning up orphaned provider record: ${provider.id} with invalid user_id: ${provider.user_id}`);
+              await supabaseAdmin.from('providers').delete().eq('id', provider.id);
+            }
+          }
+        }
+      }
+    }
+
     // Determine user status and email confirmation based on flow
     const isSelfSignup = signupData.isSelfSignup === true;
     const isAdminCreated = signupData.isAdminCreated === true || isAdminCaller;
@@ -420,26 +445,45 @@ serve(async (req) => {
         result: creationResult,
         role: signupData.role,
         roleDataSent: roleDataForRpc,
-        userId: userId
+        userId: userId,
+        errorCode: creationError?.code,
+        errorDetails: creationError?.details,
+        errorMessage: creationError?.message
       });
       
-      // Check if it's a duplicate key constraint violation (profile already exists)
+      // Check if it's a duplicate key constraint violation
       const isDuplicateKey = creationError?.code === '23505' || 
-                            creationError?.message?.includes('duplicate key') ||
-                            creationError?.message?.includes('profiles_pkey');
+                            creationError?.message?.includes('duplicate key');
+      
+      // Specific check for provider-related constraint violations
+      const isProviderDuplicate = isDuplicateKey && (
+        creationError?.message?.includes('providers_user_id_key') ||
+        creationError?.details?.includes('providers_user_id_key')
+      );
       
       // Clean up: delete the auth user if profile/role creation fails
       console.log('Cleaning up auth user due to profile creation failure...');
       await supabaseAdmin.auth.admin.deleteUser(userId);
       console.log('Auth user cleanup complete');
       
-      const errorMessage = isDuplicateKey 
-        ? 'A profile with this information already exists. Please contact support if you believe this is an error.'
-        : (creationResult?.error || 'Failed to create user profile and role');
+      // Provide specific error messages
+      let errorMessage: string;
+      let statusCode: number;
+      
+      if (isProviderDuplicate) {
+        errorMessage = 'A provider account already exists for this practice. Please contact support if you need to add another provider.';
+        statusCode = 409;
+      } else if (isDuplicateKey) {
+        errorMessage = 'A profile with this information already exists. Please contact support if you believe this is an error.';
+        statusCode = 409;
+      } else {
+        errorMessage = creationResult?.error || creationError?.message || 'Failed to create user profile and role';
+        statusCode = 500;
+      }
       
       return new Response(
         JSON.stringify({ error: errorMessage }),
-        { status: isDuplicateKey ? 409 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
