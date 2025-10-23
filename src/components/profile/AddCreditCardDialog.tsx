@@ -133,7 +133,15 @@ export const AddCreditCardDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent 
+        className="max-w-md"
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.pac-container')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Add Credit Card</DialogTitle>
           <DialogDescription>
