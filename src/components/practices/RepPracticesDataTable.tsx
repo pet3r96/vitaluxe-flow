@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +28,7 @@ export const RepPracticesDataTable = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
+  const autoHealAttempted = useRef(false);
   const queryClient = useQueryClient();
 
   // Realtime subscription for pending_practices approval
@@ -249,6 +250,73 @@ export const RepPracticesDataTable = () => {
     },
     enabled: !!practices && practices.length > 0,
   });
+
+  // Fetch expected doctor practices count for auto-heal detection
+  const { data: expectedCount } = useQuery({
+    queryKey: ["expected-doctor-practices", effectiveUserId, effectiveRole],
+    queryFn: async () => {
+      if (!effectiveUserId) return 0;
+
+      // Get the current user's rep record
+      const { data: repRecord, error: repError } = await supabase
+        .from("reps")
+        .select("id, role, user_id")
+        .eq("user_id", effectiveUserId)
+        .maybeSingle();
+
+      if (repError || !repRecord) return 0;
+
+      // Build list of user_ids to check
+      let linkedToplineUserIds = [repRecord.user_id];
+
+      if (effectiveRole === 'topline') {
+        // Get all downlines' user_ids
+        const { data: downlines, error: downlinesError } = await supabase
+          .from("reps")
+          .select("user_id")
+          .eq("assigned_topline_id", repRecord.id)
+          .eq("role", "downline")
+          .eq("active", true);
+
+        if (!downlinesError && downlines) {
+          linkedToplineUserIds.push(...downlines.map(d => d.user_id));
+        }
+      }
+
+      // Count doctor practices linked to these user_ids
+      const { count } = await supabase
+        .from('profiles')
+        .select('id, user_roles!inner(role)', { count: 'exact', head: true })
+        .in('linked_topline_id', linkedToplineUserIds)
+        .eq('active', true)
+        .eq('user_roles.role', 'doctor');
+
+      return count || 0;
+    },
+    enabled: !!effectiveUserId && (effectiveRole === "topline" || effectiveRole === "downline"),
+  });
+
+  // Auto-heal: detect and fix missing rep_practice_links
+  useEffect(() => {
+    const currentLinks = practices?.length || 0;
+    const expected = expectedCount || 0;
+
+    if (expected > currentLinks && !autoHealAttempted.current && !isRepairing) {
+      autoHealAttempted.current = true;
+      console.log(`Auto-healing: Expected ${expected} practices but found ${currentLinks} links. Running backfill...`);
+
+      supabase.functions.invoke('backfill-rep-links')
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Auto-heal backfill failed:', error);
+          } else {
+            console.log('Auto-heal backfill succeeded:', data);
+            queryClient.invalidateQueries({ queryKey: ['rep-practices'] });
+            queryClient.invalidateQueries({ queryKey: ['rep-practice-stats'] });
+          }
+        });
+    }
+  }, [practices?.length, expectedCount, isRepairing, queryClient]);
 
   const handleRepairLinks = async () => {
     setIsRepairing(true);

@@ -76,12 +76,17 @@ Deno.serve(async (req) => {
 
     console.log(`Processing ${repIds.length} rep(s) and ${userIds.length} user ID(s)`);
 
-    // Find all active practices linked to these user_ids
+    // Find all active doctor practices linked to these user_ids (exclude rep profiles)
     const { data: practices, error: practicesError } = await supabaseAdmin
       .from('profiles')
-      .select('id, linked_topline_id')
+      .select(`
+        id,
+        linked_topline_id,
+        user_roles!inner(role)
+      `)
       .in('linked_topline_id', userIds)
-      .eq('active', true);
+      .eq('active', true)
+      .eq('user_roles.role', 'doctor');
 
     if (practicesError) {
       throw practicesError;
