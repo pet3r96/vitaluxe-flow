@@ -70,6 +70,17 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [initializing, user, effectiveRole, isImpersonating, location.pathname, navigate]);
 
+  // Timeout failsafe for password status check (prevents infinite loading)
+  useEffect(() => {
+    if (user && effectiveRole && !passwordStatusChecked) {
+      const timeout = setTimeout(() => {
+        console.warn('[ProtectedRoute] Password status check timeout after 10s - auth system should handle this');
+      }, 10000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [user, effectiveRole, passwordStatusChecked]);
+
   // ===== NOW SAFE TO HAVE CONDITIONAL RETURNS =====
 
   if (initializing) {
@@ -87,18 +98,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return null;
   }
 
-  // Wait for password status to load before checking terms
-  // Add 10-second timeout failsafe to prevent infinite loading
-  useEffect(() => {
-    if (user && effectiveRole && !passwordStatusChecked) {
-      const timeout = setTimeout(() => {
-        console.warn('[ProtectedRoute] Password status check timeout after 10s - auth system should handle this');
-      }, 10000);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [user, effectiveRole, passwordStatusChecked]);
-
   if (user && effectiveRole && !passwordStatusChecked) {
     console.log('[ProtectedRoute] Waiting for password status check');
     return (
@@ -106,6 +105,19 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         <div className="text-center">
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
           <p className="mt-3 text-muted-foreground text-sm">Checking account status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Wait for 2FA status check to complete before rendering
+  if (user && effectiveRole && !twoFAStatusChecked && !isImpersonating) {
+    console.log('[ProtectedRoute] Waiting for 2FA status check');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+          <p className="mt-3 text-muted-foreground text-sm">Verifying security settings...</p>
         </div>
       </div>
     );

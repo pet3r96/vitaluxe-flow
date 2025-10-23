@@ -505,11 +505,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (practiceId) setPracticeParentId(practiceId);
             if (typeof cachedCanImpersonate === 'boolean') setCanImpersonateDb(cachedCanImpersonate);
             
-            // Still check password/2FA in background, but don't block
-            setTimeout(() => {
-              void checkPasswordStatus();
-              void check2FAStatus(userId);
-            }, 0);
+            // Check password and 2FA status immediately (non-blocking but synchronous)
+            void checkPasswordStatus();
+            void check2FAStatus(userId);
             
             // Restore impersonation if admin
             if (role === 'admin') {

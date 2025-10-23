@@ -17,24 +17,39 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 // Helper function to retry dynamic imports on failure
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
   lazy(async () => {
-    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
-      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
-    );
+    const retryKey = 'vitaluxe-chunk-retry';
+    const hasRetried = window.sessionStorage.getItem(retryKey) === 'true';
 
     try {
       const component = await componentImport();
-      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      // Clear retry flag on successful load
+      window.sessionStorage.removeItem(retryKey);
       return component;
-    } catch (error) {
-      if (!pageHasAlreadyBeenForceRefreshed) {
-        // Assuming that the user's bundle is not up to date, force reload once
-        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
-        console.warn('Chunk load failed, forcing reload...', error);
-        window.location.reload();
-        // Return a never-resolving promise to prevent React from rendering during reload
-        return new Promise(() => {});
+    } catch (error: any) {
+      // Detect chunk load errors more reliably
+      const isChunkError = 
+        error?.name === 'ChunkLoadError' ||
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('dynamically imported module') ||
+        error?.message?.includes('Loading chunk');
+      
+      console.error('Component load error:', {
+        name: error?.name,
+        message: error?.message,
+        isChunkError,
+        hasRetried
+      });
+      
+      // Only retry once for chunk errors
+      if (isChunkError && !hasRetried) {
+        console.warn('Chunk load failed, reloading page...');
+        window.sessionStorage.setItem(retryKey, 'true');
+        // Small delay to ensure error is logged
+        setTimeout(() => window.location.reload(), 100);
+        return new Promise(() => {}); // Prevent further execution
       }
-      // If reload didn't fix it, throw the error to ErrorBoundary
+      
+      // Either not a chunk error, or already retried
       throw error;
     }
   });
@@ -67,7 +82,7 @@ const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const AdminDiscountCodes = lazy(() => import("./pages/AdminDiscountCodes"));
 const EmergencyAdminRecovery = lazy(() => import("./pages/EmergencyAdminRecovery"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
-const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter").then(m => ({ default: m.DashboardRouter })));
+const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"));
 
 // Loading fallback component
 const PageLoader = () => (
