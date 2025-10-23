@@ -269,23 +269,6 @@ serve(async (req) => {
         throw new Error(`Failed to upsert role: ${roleError.message}`);
       }
 
-      // Upsert default provider (idempotent)
-      const { error: providerError } = await supabaseAdmin
-        .from('providers')
-        .upsert({
-          user_id: userId,
-          practice_id: userId,
-          active: true,
-          updated_at: new Date().toISOString()
-        }, { 
-          onConflict: 'user_id',
-          ignoreDuplicates: false 
-        });
-
-      if (providerError) {
-        console.error('Failed to upsert provider:', providerError);
-      }
-
       // Upsert password status record (idempotent)
       await supabaseAdmin.from('user_password_status').upsert({
         user_id: userId,

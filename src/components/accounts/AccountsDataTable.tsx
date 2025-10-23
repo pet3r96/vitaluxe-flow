@@ -136,7 +136,11 @@ export const AccountsDataTable = () => {
         
         return {
           ...profile,
-          isProvider: providerUserIds.has(profile.id),
+          // Only mark as provider if they have a provider record where user_id !== practice_id
+          // This excludes self-referential provider records (which represent practices)
+          isProvider: providersData?.some(
+            p => p.user_id === profile.id && p.user_id !== p.practice_id
+          ) || false,
           linked_topline_display: resolvedTopline,
         };
       });
