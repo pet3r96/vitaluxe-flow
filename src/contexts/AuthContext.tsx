@@ -104,9 +104,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const verifiedAt = new Date(storedVerification).getTime();
         const hoursSinceVerification = (Date.now() - verifiedAt) / (1000 * 60 * 60);
         
-        // If verified within 12 hours, skip verification
-        if (hoursSinceVerification < 12) {
-          console.log('[AuthContext] check2FAStatus - Recently verified (sessionStorage), skipping');
+        // If verified within 1 hour, skip verification
+        if (hoursSinceVerification < 1) {
+          console.log('[AuthContext] check2FAStatus - Recently verified within last hour (sessionStorage), skipping');
           setIs2FAVerifiedThisSession(true);
           setRequires2FASetup(false);
           setRequires2FAVerify(false);
@@ -136,9 +136,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const lastVerified = new Date(data.last_ghl_verification).getTime();
           const hoursSinceVerification = (Date.now() - lastVerified) / (1000 * 60 * 60);
           
-          // If verified on server within 12 hours, treat as verified
-          if (hoursSinceVerification < 12) {
-            console.log('[AuthContext] check2FAStatus - Recently verified on server, skipping');
+          // If verified on server within 1 hour, treat as verified
+          if (hoursSinceVerification < 1) {
+            console.log('[AuthContext] check2FAStatus - Recently verified on server within last hour, skipping');
             setIs2FAVerifiedThisSession(true);
             setRequires2FASetup(false);
             setRequires2FAVerify(false);
