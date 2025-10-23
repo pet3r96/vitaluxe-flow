@@ -88,17 +88,14 @@ export class EasyPostClient {
 
       console.log('📦 EasyPost: Raw API response:', JSON.stringify(response, null, 2));
 
+      // EasyPost returns address data directly at root level, not nested under .address
+      const verified = response;
+
       // Validate response structure
-      if (!response) {
-        throw new Error('EasyPost returned empty response');
+      if (!verified) {
+        console.error('❌ EasyPost returned empty response');
+        throw new Error('EasyPost API returned empty response. Check API key permissions.');
       }
-
-      if (!response.address) {
-        console.error('❌ EasyPost response missing address object:', response);
-        throw new Error('EasyPost API response missing address object. Check API key permissions.');
-      }
-
-      const verified = response.address;
 
       // Check if verifications object exists
       if (!verified.verifications) {
