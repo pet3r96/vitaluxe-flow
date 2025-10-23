@@ -79,6 +79,13 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required NPI field first
+    if (!formData.npi || !formData.npi.trim()) {
+      setValidationErrors({ ...validationErrors, npi: "NPI is required" });
+      toast.error("Provider NPI is required");
+      return;
+    }
+    
     // Validate fields
     const phoneResult = validatePhone(formData.phone);
     const npiResult = validateNPI(formData.npi);
