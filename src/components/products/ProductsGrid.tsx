@@ -21,6 +21,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useCartCount } from "@/hooks/useCartCount";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
+import { extractStateFromAddress } from "@/lib/addressUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -302,6 +303,16 @@ export const ProductsGrid = () => {
       }
 
       if (shipToPractice) {
+        // Get provider's shipping address for practice orders
+        const { data: providerProfile } = await supabase
+          .from("profiles")
+          .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
+          .eq("id", providerId)
+          .single();
+
+        const providerAddress = providerProfile?.shipping_address_formatted || 
+          `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
+
         const { error } = await supabase
           .from("cart_lines" as any)
           .insert({
@@ -315,7 +326,7 @@ export const ProductsGrid = () => {
             patient_address: null,
             quantity: quantity,
             price_snapshot: correctPrice,
-            destination_state: "XX",
+            destination_state: extractStateFromAddress(providerAddress),
             prescription_url: prescriptionUrl,
             custom_sig: customSig,
             custom_dosage: customDosage,
@@ -344,7 +355,7 @@ export const ProductsGrid = () => {
             patient_address: patient?.address,
             quantity: quantity,
             price_snapshot: correctPrice,
-            destination_state: "IL",
+            destination_state: extractStateFromAddress(patient?.address),
             prescription_url: prescriptionUrl,
             custom_sig: customSig,
             custom_dosage: customDosage,

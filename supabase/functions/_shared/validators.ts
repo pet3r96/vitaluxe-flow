@@ -221,6 +221,50 @@ export function validateArray(
   return { valid: true };
 }
 
+/**
+ * Validate US state abbreviation
+ * @param state - Two-letter state code
+ * @param fieldName - Name of the field being validated
+ * @param required - Whether the field is required
+ * @returns ValidationResult
+ */
+export function validateState(
+  state: any,
+  fieldName: string = 'state',
+  required: boolean = true
+): ValidationResult {
+  if (!state || state === '') {
+    return required 
+      ? { valid: false, error: `${fieldName} is required` }
+      : { valid: true };
+  }
+  
+  if (typeof state !== 'string') {
+    return { valid: false, error: `${fieldName} must be a string` };
+  }
+  
+  // Must be exactly 2 uppercase letters
+  if (!/^[A-Z]{2}$/.test(state)) {
+    return { valid: false, error: `${fieldName} must be a valid 2-letter US state code` };
+  }
+  
+  // Validate against list of actual US states
+  const validStates = [
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+    'DC' // Include DC
+  ];
+  
+  if (!validStates.includes(state)) {
+    return { valid: false, error: `${fieldName} must be a valid US state` };
+  }
+  
+  return { valid: true };
+}
+
 // Composite validator - runs multiple validations and returns all errors
 export function validateInput(validations: ValidationResult[]): { valid: boolean; errors: string[] } {
   const errors = validations

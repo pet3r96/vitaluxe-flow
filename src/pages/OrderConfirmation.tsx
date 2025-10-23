@@ -20,14 +20,7 @@ import { AddCreditCardDialog } from "@/components/profile/AddCreditCardDialog";
 import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
 import { logger } from "@/lib/logger";
-
-// Helper function to extract state from address string
-const extractStateFromAddress = (address: string): string => {
-  if (!address) return '';
-  // Extract state from address string (e.g., "123 Main St, City, CA 12345" -> "CA")
-  const stateMatch = address.match(/,\s*([A-Z]{2})\s+\d{5}/);
-  return stateMatch ? stateMatch[1] : '';
-};
+import { extractStateFromAddress } from "@/lib/addressUtils";
 
 export default function OrderConfirmation() {
   const { effectiveUserId, user } = useAuth();

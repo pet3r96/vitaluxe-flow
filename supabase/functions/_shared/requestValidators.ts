@@ -15,7 +15,8 @@ import {
   validateInput,
   validatePhone,
   validateNPI,
-  validateDEA
+  validateDEA,
+  validateState
 } from './validators.ts';
 
 export function validateCancelOrderRequest(data: any) {
@@ -197,7 +198,7 @@ export function validateBulkVerifyAddressesRequest(data: any) {
 export function validateRouteOrderRequest(data: any) {
   const validations = [
     validateUUID(data.product_id, 'product_id'),
-    validateString(data.destination_state, 'destination_state', { required: true, maxLength: 2 })
+    validateState(data.destination_state, 'destination_state', true)
   ];
   
   return validateInput(validations);

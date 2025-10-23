@@ -54,8 +54,9 @@ export default function Cart() {
       return { id: cartData.id, lines: lines || [] };
     },
     enabled: !!effectiveUserId,
-    staleTime: 30000, // 30 seconds - cart updates frequently
+    staleTime: 0, // Always consider data stale for immediate refetch
     refetchOnMount: true,
+    refetchOnWindowFocus: true, // Refetch when tab gains focus
   });
 
   const removeMutation = useMutation({
