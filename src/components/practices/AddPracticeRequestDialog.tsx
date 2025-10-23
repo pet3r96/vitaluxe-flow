@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { AddressInput } from "@/components/ui/address-input";
 
 interface AddPracticeRequestDialogProps {
   open: boolean;
@@ -33,6 +34,10 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
     address_city: "",
     address_state: "",
     address_zip: "",
+    address_formatted: "",
+    address_verification_status: "unverified",
+    address_verified_at: undefined as string | undefined,
+    address_verification_source: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,6 +82,10 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
           address_city: formData.address_city,
           address_state: formData.address_state,
           address_zip: formData.address_zip,
+          address_formatted: formData.address_formatted || null,
+          address_verification_status: formData.address_verification_status || 'unverified',
+          address_verified_at: formData.address_verified_at || null,
+          address_verification_source: formData.address_verification_source || null,
           prescriber_full_name: "",
           prescriber_name: "",
           prescriber_npi: "",
@@ -101,6 +110,10 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
         address_city: "",
         address_state: "",
         address_zip: "",
+        address_formatted: "",
+        address_verification_status: "unverified",
+        address_verified_at: undefined,
+        address_verification_source: "",
       });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
@@ -228,44 +241,27 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
 
           <div className="space-y-4">
             <h3 className="font-semibold">Practice Address</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 col-span-2">
-                <Label htmlFor="address_street">Street Address *</Label>
-                <Input
-                  id="address_street"
-                  value={formData.address_street}
-                  onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address_city">City *</Label>
-                <Input
-                  id="address_city"
-                  value={formData.address_city}
-                  onChange={(e) => setFormData({ ...formData, address_city: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address_state">State *</Label>
-                <Input
-                  id="address_state"
-                  value={formData.address_state}
-                  onChange={(e) => setFormData({ ...formData, address_state: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address_zip">ZIP Code *</Label>
-                <Input
-                  id="address_zip"
-                  value={formData.address_zip}
-                  onChange={(e) => setFormData({ ...formData, address_zip: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
+            <AddressInput
+              value={{
+                street: formData.address_street,
+                city: formData.address_city,
+                state: formData.address_state,
+                zip: formData.address_zip,
+              }}
+              onChange={(addr) => setFormData({
+                ...formData,
+                address_street: addr.street || "",
+                address_city: addr.city || "",
+                address_state: addr.state || "",
+                address_zip: addr.zip || "",
+                address_formatted: addr.formatted || "",
+                address_verification_status: addr.status || 'unverified',
+                address_verified_at: addr.verified_at,
+                address_verification_source: addr.source || "",
+              })}
+              required
+              autoValidate={true}
+            />
           </div>
 
           <DialogFooter>

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { BillingAddress } from "@/types/payment";
+import { AddressInput } from "@/components/ui/address-input";
 
 interface AddBankAccountDialogProps {
   open: boolean;
@@ -163,48 +164,18 @@ export const AddBankAccountDialog = ({
             </Select>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="billingStreet">Billing Address</Label>
-            <Input
-              id="billingStreet"
-              placeholder="123 Main St"
-              value={billingAddress.street}
-              onChange={(e) => setBillingAddress({...billingAddress, street: e.target.value})}
-              required
-            />
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="billingCity">City</Label>
-              <Input
-                id="billingCity"
-                value={billingAddress.city}
-                onChange={(e) => setBillingAddress({...billingAddress, city: e.target.value})}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="billingState">State</Label>
-              <Input
-                id="billingState"
-                maxLength={2}
-                value={billingAddress.state}
-                onChange={(e) => setBillingAddress({...billingAddress, state: e.target.value})}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="billingZip">ZIP</Label>
-              <Input
-                id="billingZip"
-                maxLength={10}
-                value={billingAddress.zip}
-                onChange={(e) => setBillingAddress({...billingAddress, zip: e.target.value})}
-                required
-              />
-            </div>
-          </div>
+          <AddressInput
+            value={billingAddress}
+            onChange={(addr) => setBillingAddress({
+              street: addr.street || "",
+              city: addr.city || "",
+              state: addr.state || "",
+              zip: addr.zip || "",
+            })}
+            label="Billing Address"
+            required
+            autoValidate={true}
+          />
           
           <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
             <ShieldCheck className="h-4 w-4 mt-0.5 text-green-600" />

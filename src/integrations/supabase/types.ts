@@ -1914,8 +1914,12 @@ export type Database = {
       pending_practices: {
         Row: {
           address_city: string
+          address_formatted: string | null
           address_state: string
           address_street: string
+          address_verification_source: string | null
+          address_verification_status: string | null
+          address_verified_at: string | null
           address_zip: string
           admin_notes: string | null
           assigned_rep_user_id: string
@@ -1946,8 +1950,12 @@ export type Database = {
         }
         Insert: {
           address_city: string
+          address_formatted?: string | null
           address_state: string
           address_street: string
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
           address_zip: string
           admin_notes?: string | null
           assigned_rep_user_id: string
@@ -1978,8 +1986,12 @@ export type Database = {
         }
         Update: {
           address_city?: string
+          address_formatted?: string | null
           address_state?: string
           address_street?: string
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
           address_zip?: string
           admin_notes?: string | null
           assigned_rep_user_id?: string

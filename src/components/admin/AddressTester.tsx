@@ -19,6 +19,7 @@ interface ValidationResponse {
   verification_source?: string;
   status: 'verified' | 'invalid' | 'manual';
   error?: string;
+  error_details?: string[];
   confidence?: number;
 }
 
@@ -39,6 +40,7 @@ export const AddressTester = () => {
   });
   const [testResult, setTestResult] = useState<ValidationResponse | null>(null);
   const [testing, setTesting] = useState(false);
+  const [showSuggestion, setShowSuggestion] = useState(false);
 
   const handleTest = async () => {
     if (!testAddress.zip || testAddress.zip.length < 5) {
@@ -48,6 +50,7 @@ export const AddressTester = () => {
 
     setTesting(true);
     setTestResult(null);
+    setShowSuggestion(false);
     
     try {
       const { data, error } = await supabase.functions.invoke('validate-address', {
@@ -60,6 +63,16 @@ export const AddressTester = () => {
       });
 
       if (error) throw error;
+      
+      // Check if EasyPost provided corrections
+      if (data.error_details && data.error_details.length > 0 && data.formatted_address) {
+        setShowSuggestion(true);
+      } else if (data.is_valid && data.status === 'verified') {
+        setShowSuggestion(false);
+      } else {
+        setShowSuggestion(false);
+      }
+      
       setTestResult(data);
     } catch (error: any) {
       toast.error(`Verification failed: ${error.message}`);
@@ -68,6 +81,55 @@ export const AddressTester = () => {
         status: 'invalid',
         error: error.message
       });
+      setShowSuggestion(false);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const acceptSuggestion = () => {
+    if (!testResult?.formatted_address) return;
+    
+    // Update input fields with corrected values
+    setTestAddress({
+      street: testResult.suggested_street || testAddress.street,
+      city: testResult.suggested_city || testAddress.city,
+      state: testResult.suggested_state || testAddress.state,
+      zip: testResult.suggested_zip || testAddress.zip,
+    });
+    
+    // Mark as verified
+    setTestResult({
+      ...testResult,
+      status: 'verified',
+      is_valid: true
+    });
+    
+    setShowSuggestion(false);
+    toast.success("✅ Address corrected and verified");
+  };
+
+  const manualOverride = async () => {
+    setTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-address', {
+        body: {
+          ...testAddress,
+          manual_override: true
+        }
+      });
+      
+      if (error) throw error;
+      
+      setTestResult({
+        ...data,
+        status: 'manual',
+        is_valid: true
+      });
+      setShowSuggestion(false);
+      toast.success("✅ Using original address (manual override)");
+    } catch (error: any) {
+      toast.error("Manual override failed");
     } finally {
       setTesting(false);
     }
@@ -76,7 +138,71 @@ export const AddressTester = () => {
   const getResultAlert = () => {
     if (!testResult) return null;
 
-    if (testResult.status === 'verified' && testResult.verification_source === 'easypost') {
+    // Priority 1: Show interactive prompt when corrections are available
+    if (showSuggestion && testResult.error_details && testResult.error_details.length > 0) {
+      return (
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="space-y-3">
+            <p className="font-semibold text-amber-900">⚠️ Address Issue Detected</p>
+            
+            <div className="text-sm text-amber-800 space-y-2">
+              <div>
+                <p className="font-medium">You entered:</p>
+                <p className="pl-2 font-mono text-xs text-amber-700">
+                  {testAddress.street}, {testAddress.city}, {testAddress.state} {testAddress.zip}
+                </p>
+              </div>
+              
+              <div>
+                <p className="font-medium">EasyPost found the correct address:</p>
+                <p className="pl-2 font-mono text-xs text-green-700 font-semibold">
+                  ✓ {testResult.formatted_address}
+                </p>
+              </div>
+              
+              <div className="text-xs bg-amber-100 p-2 rounded">
+                <p className="font-medium mb-1">Corrections made:</p>
+                <ul className="list-disc list-inside pl-2 space-y-0.5">
+                  {testResult.error_details.map((detail, idx) => (
+                    <li key={idx}>{detail}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button 
+                type="button"
+                size="sm"
+                onClick={acceptSuggestion}
+                disabled={testing}
+                className="flex-1"
+              >
+                Apply Correct Address
+              </Button>
+              <Button 
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={manualOverride}
+                disabled={testing}
+                className="flex-1"
+              >
+                Use My Address (Override)
+              </Button>
+            </div>
+            
+            <p className="text-xs text-amber-600 italic">
+              💡 The corrected address is deliverable according to EasyPost
+            </p>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    // Priority 2: EasyPost verified success
+    if (testResult.status === 'verified' && !showSuggestion && testResult.verification_source === 'easypost') {
       return (
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -85,7 +211,7 @@ export const AddressTester = () => {
             <div className="text-sm text-green-800">
               <div className="font-mono">{testResult.formatted_address}</div>
               {testResult.confidence && (
-                <div className="mt-1">🎯 Confidence: {testResult.confidence}%</div>
+                <div className="mt-1">🎯 Confidence: {Math.round(testResult.confidence * 100)}%</div>
               )}
             </div>
           </AlertDescription>
@@ -93,7 +219,28 @@ export const AddressTester = () => {
       );
     }
 
-    if (testResult.status === 'verified' && testResult.verification_source?.includes('zip')) {
+    // Priority 3: Manual override success
+    if (testResult.status === 'manual' && !showSuggestion) {
+      return (
+        <Alert className="border-blue-200 bg-blue-50">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="space-y-2">
+            <div className="font-semibold text-blue-900">✓ Using Original Address (Manual Override)</div>
+            <div className="text-sm text-blue-800">
+              <div className="font-mono">
+                {testAddress.street}, {testAddress.city}, {testAddress.state} {testAddress.zip}
+              </div>
+              <div className="mt-2 text-xs italic text-blue-700">
+                ⚠️ This address was manually overridden and may not be deliverable
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    // Priority 4: ZIP-only validation
+    if (testResult.status === 'verified' && testResult.verification_source?.includes('zip') && !showSuggestion) {
       return (
         <Alert className="border-blue-200 bg-blue-50">
           <Info className="h-4 w-4 text-blue-600" />
@@ -110,42 +257,8 @@ export const AddressTester = () => {
       );
     }
 
-    if (testResult.status === 'verified' && testResult.suggested_street) {
-      return (
-        <Alert className="border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="space-y-2">
-            <div className="font-semibold text-amber-900">⚠️ Address Corrected</div>
-            <div className="text-sm text-amber-800">
-              <div className="mb-2">
-                <span className="font-medium">You entered:</span>
-                <div className="font-mono text-xs mt-1">
-                  {testAddress.street}, {testAddress.city}, {testAddress.state} {testAddress.zip}
-                </div>
-              </div>
-              <div>
-                <span className="font-medium">Corrected to:</span>
-                <div className="font-mono text-xs mt-1">{testResult.formatted_address}</div>
-              </div>
-              <div className="mt-2 text-xs">
-                <div className="font-medium">Changes:</div>
-                {testResult.suggested_street !== testAddress.street && (
-                  <div>• Street: {testAddress.street} → {testResult.suggested_street}</div>
-                )}
-                {testResult.suggested_city !== testAddress.city && (
-                  <div>• City: {testAddress.city} → {testResult.suggested_city}</div>
-                )}
-                {testResult.suggested_state !== testAddress.state && (
-                  <div>• State: {testAddress.state} → {testResult.suggested_state}</div>
-                )}
-              </div>
-            </div>
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    if (!testResult.is_valid) {
+    // Priority 5: Invalid address (no suggestions)
+    if (!testResult.is_valid && !testResult.suggested_street && !showSuggestion) {
       return (
         <Alert className="border-red-200 bg-red-50">
           <XCircle className="h-4 w-4 text-red-600" />
