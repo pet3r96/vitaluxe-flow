@@ -48,6 +48,34 @@ export const GoogleAddressAutocomplete = ({
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Ensure Google autocomplete dropdown stays visible and clickable
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .pac-container {
+        z-index: 9999 !important;
+        pointer-events: auto !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+      }
+      .pac-item {
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        padding: 8px !important;
+      }
+      .pac-item:hover {
+        background-color: #f0f0f0 !important;
+      }
+      .pac-item-query {
+        font-size: 14px !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   useEffect(() => {
     if (value.formatted) {
       setInputValue(value.formatted);
@@ -55,6 +83,25 @@ export const GoogleAddressAutocomplete = ({
       setInputValue(`${value.street}${value.city ? ', ' + value.city : ''}${value.state ? ', ' + value.state : ''}${value.zip ? ' ' + value.zip : ''}`);
     }
   }, [value]);
+
+  // Prevent input from clearing during selection
+  useEffect(() => {
+    if (!autocomplete || !inputRef.current) return;
+    
+    const input = inputRef.current;
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.pac-container')) {
+        e.stopPropagation();
+      }
+    };
+    
+    document.addEventListener('mousedown', handleMouseDown, true);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown, true);
+    };
+  }, [autocomplete]);
 
   const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
     setAutocomplete(autocompleteInstance);
@@ -95,8 +142,22 @@ export const GoogleAddressAutocomplete = ({
       }
       
       const formattedAddress = place.formatted_address || `${street}, ${city}, ${state} ${zip}`;
+      
+      // IMMEDIATELY set the input value (don't wait for validation)
       setInputValue(formattedAddress);
       
+      // IMMEDIATELY update parent with basic address data
+      onChange({
+        street,
+        city,
+        state,
+        zip,
+        formatted: formattedAddress,
+        status: 'unverified',
+        source: 'google_places',
+      });
+      
+      // Then validate in background
       await validateAddress({ street, city, state, zip }, formattedAddress);
     }
   };
@@ -168,6 +229,7 @@ export const GoogleAddressAutocomplete = ({
       <Label>{label} {required && '*'}</Label>
       
       <Autocomplete
+        key="google-autocomplete-stable"
         onLoad={onLoad}
         onPlaceChanged={onPlaceChanged}
         options={{
@@ -181,6 +243,16 @@ export const GoogleAddressAutocomplete = ({
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
+          onFocus={(e) => {
+            e.target.setAttribute('autocomplete', 'new-password');
+          }}
+          onBlur={(e) => {
+            const relatedTarget = e.relatedTarget as HTMLElement;
+            if (relatedTarget?.closest('.pac-container')) {
+              e.preventDefault();
+              inputRef.current?.focus();
+            }
+          }}
           disabled={disabled}
           autoComplete="off"
           data-form-type="other"
