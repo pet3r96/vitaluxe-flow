@@ -42,7 +42,6 @@ const lazyWithRetry = (componentImport: () => Promise<any>) =>
 // Lazy load all page components for better code splitting
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const Accounts = lazy(() => import("./pages/Accounts"));
 const Practices = lazy(() => import("./pages/Practices"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -60,7 +59,6 @@ const Profile = lazy(() => import("./pages/Profile"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 const Security = lazy(() => import("./pages/Security"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const RepDashboard = lazy(() => import("./pages/RepDashboard"));
 const MyDownlines = lazy(() => import("./pages/MyDownlines"));
 const RepProfitReports = lazy(() => import("./pages/RepProfitReports"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
