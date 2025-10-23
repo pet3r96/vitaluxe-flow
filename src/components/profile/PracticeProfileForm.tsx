@@ -26,7 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, KeyRound } from "lucide-react";
+import { Loader2, Save, KeyRound, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
@@ -380,20 +381,29 @@ export const PracticeProfileForm = () => {
               name="shipping_address"
               render={({ field }) => (
                 <FormItem>
+                  <div className="flex items-center gap-2">
+                    <FormLabel>Practice Shipping Address</FormLabel>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>This address will be used when you order for your practice/med spa</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <FormControl>
                     <GoogleAddressAutocomplete
-                      label="Practice Shipping Address"
                       value={field.value || {}}
                       onChange={field.onChange}
                     />
                   </FormControl>
-            <FormDescription>
-              This address will be used when you order for your practice/med spa
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">

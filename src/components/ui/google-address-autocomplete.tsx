@@ -260,29 +260,6 @@ export const GoogleAddressAutocomplete = ({
         />
       </Autocomplete>
       
-      {value.street && (
-        <div className="grid grid-cols-3 gap-2">
-          <Input 
-            value={value.city || ''} 
-            placeholder="City" 
-            readOnly 
-            className="bg-muted/50"
-          />
-          <Input 
-            value={value.state || ''} 
-            placeholder="State" 
-            readOnly 
-            className="bg-muted/50"
-          />
-          <Input 
-            value={value.zip || ''} 
-            placeholder="ZIP" 
-            readOnly 
-            className="bg-muted/50"
-          />
-        </div>
-      )}
-      
       {validating && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
