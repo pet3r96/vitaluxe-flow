@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getCSRFToken } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -75,8 +76,17 @@ export const EasyPostShipmentManager = () => {
         trackingCode = selectedOrder.tracking_number;
       }
 
+      // Get CSRF token
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to obtain CSRF token. Please refresh the page.");
+      }
+
       const { data, error } = await supabase.functions.invoke('get-easypost-tracking', {
-        body: { tracking_code: trackingCode }
+        body: { tracking_code: trackingCode },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       });
 
       if (error) throw error;
