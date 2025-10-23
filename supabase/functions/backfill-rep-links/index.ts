@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    let repIds: string[] = [];
-    let userIds: string[] = [];
+    const repIds: string[] = [];
+    const userIds: string[] = [];
 
     if (repData.role === 'topline') {
       // For topline: include self + all active downlines

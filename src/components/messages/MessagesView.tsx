@@ -246,7 +246,7 @@ export const MessagesView = () => {
       return;
     }
 
-    let participantIds = new Set([effectiveUserId]);
+    const participantIds = new Set([effectiveUserId]);
 
     if (recipientType === "admin") {
       // Add all admins

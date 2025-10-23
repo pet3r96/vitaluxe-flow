@@ -267,7 +267,7 @@ export const RepPracticesDataTable = () => {
       if (repError || !repRecord) return 0;
 
       // Build list of user_ids to check
-      let linkedToplineUserIds = [repRecord.user_id];
+      const linkedToplineUserIds = [repRecord.user_id];
 
       if (effectiveRole === 'topline') {
         // Get all downlines' user_ids

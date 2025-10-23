@@ -62,9 +62,9 @@ serve(async (req) => {
     let addedProfiles = 0;
     let addedRoles = 0;
     let repairedPharmacies = 0;
-    let repairedProviders = 0;
-    let repairedToplines = 0;
-    let repairedDownlines = 0;
+    const repairedProviders = 0;
+    const repairedToplines = 0;
+    const repairedDownlines = 0;
     let orphanedPharmaciesConverted = 0;
     const errors: string[] = [];
 

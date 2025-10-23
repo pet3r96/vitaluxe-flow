@@ -95,7 +95,7 @@ serve(async (req: Request) => {
     }
 
     let trackingCode = requestData.tracking_code;
-    let orderLineId = requestData.order_line_id;
+    const orderLineId = requestData.order_line_id;
 
     // If order_line_id provided, get tracking code from database
     if (orderLineId && !trackingCode) {
