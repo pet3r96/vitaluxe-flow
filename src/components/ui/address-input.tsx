@@ -37,8 +37,18 @@ export const AddressInput = ({
   const handleZipChange = async (zip: string) => {
     onChange({ ...value, zip });
 
-    if (autoValidate && zip.length === 5) {
+    // Only auto-validate when we have both ZIP and street
+    if (autoValidate && zip.length === 5 && value.street && value.street.trim().length >= 3) {
       await validateAddress(zip);
+    }
+  };
+
+  const handleStreetChange = async (street: string) => {
+    onChange({ ...value, street });
+    
+    // If ZIP already entered and street now complete, trigger validation
+    if (autoValidate && value.zip && value.zip.length === 5 && street.trim().length >= 3) {
+      await validateAddress(value.zip);
     }
   };
 
@@ -100,14 +110,22 @@ export const AddressInput = ({
   };
 
   const acceptSuggestion = () => {
-    if (validation?.suggested_city && validation?.suggested_state) {
+    if (validation?.formatted_address) {
       onChange({
         ...value,
-        city: validation.suggested_city,
-        state: validation.suggested_state,
+        street: validation.suggested_street || value.street,
+        city: validation.suggested_city || value.city,
+        state: validation.suggested_state || value.state,
+        zip: validation.suggested_zip || value.zip,
+        formatted: validation.formatted_address,
+        status: 'verified',
+        verified_at: new Date().toISOString(),
+        source: validation.verification_source,
+        confidence: validation.confidence
       });
       setShowSuggestion(false);
-      validateAddress();
+      setValidation({ ...validation, status: 'verified' });
+      toast.success("✅ Address corrected and verified");
     }
   };
 
@@ -146,7 +164,7 @@ export const AddressInput = ({
         <Input
           placeholder="Street Address"
           value={value.street || ""}
-          onChange={(e) => onChange({ ...value, street: e.target.value })}
+          onChange={(e) => handleStreetChange(e.target.value)}
           required={required}
         />
 
@@ -186,15 +204,24 @@ export const AddressInput = ({
             <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
             <AlertDescription className="text-green-800 dark:text-green-300">
               <div className="flex items-center justify-between">
-                <span>Address verified: {validation.formatted_address}</span>
+                <span>
+                  {validation.verification_source === 'easypost' 
+                    ? `✅ Full address verified: ${validation.formatted_address}`
+                    : validation.verification_source === 'zip_only_incomplete_data'
+                    ? `ZIP code valid: ${value.zip}. Enter street address for full verification.`
+                    : `Address formatted: ${validation.formatted_address}`
+                  }
+                </span>
                 <div className="flex items-center space-x-2 text-xs">
                   {validation.verification_source === 'easypost' && (
-                    <Badge variant="outline" className="text-xs">EasyPost</Badge>
-                  )}
-                  {validation.confidence && (
-                    <span className="text-green-600 dark:text-green-400">
-                      {Math.round(validation.confidence * 100)}% confidence
-                    </span>
+                    <>
+                      <Badge variant="outline" className="text-xs border-green-600 text-green-700 dark:text-green-400">EasyPost Verified</Badge>
+                      {validation.confidence && (
+                        <span className="text-green-600 dark:text-green-400">
+                          {Math.round(validation.confidence * 100)}% confidence
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -202,31 +229,87 @@ export const AddressInput = ({
           </Alert>
         )}
 
-        {showSuggestion && validation?.suggested_city && (
+        {showSuggestion && validation?.formatted_address && (
           <Alert className="border-amber-600/20 bg-amber-50 dark:bg-amber-950/20">
             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
             <AlertDescription className="text-amber-800 dark:text-amber-300">
-              <p className="mb-2">
-                Did you mean: {value.street}, {validation.suggested_city}, {validation.suggested_state} {value.zip}?
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  type="button"
-                  size="sm" 
-                  onClick={acceptSuggestion}
-                  className="h-7"
-                >
-                  Accept Suggestion
-                </Button>
-                <Button 
-                  type="button"
-                  size="sm" 
-                  variant="outline"
-                  onClick={proceedManually}
-                  className="h-7"
-                >
-                  Proceed Manually
-                </Button>
+              <div className="space-y-2">
+                <p className="font-semibold">⚠️ Address Issue Detected</p>
+                <div className="text-sm space-y-1">
+                  <p>You entered:</p>
+                  <p className="pl-2 text-amber-700 dark:text-amber-400">
+                    {value.street}, {value.city}, {value.state} {value.zip}
+                  </p>
+                  <p className="pt-2">Suggested correction:</p>
+                  <p className="pl-2 font-medium text-amber-900 dark:text-amber-200">
+                    ✓ {validation.formatted_address}
+                  </p>
+                  {validation.error_details && validation.error_details.length > 0 && (
+                    <div className="pt-2 text-xs">
+                      <p className="font-medium">Issues found:</p>
+                      <ul className="list-disc list-inside pl-2">
+                        {validation.error_details.map((detail: string, idx: number) => (
+                          <li key={idx}>{detail}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    type="button"
+                    size="sm" 
+                    onClick={acceptSuggestion}
+                    className="h-7"
+                  >
+                    Use Suggested Address
+                  </Button>
+                  <Button 
+                    type="button"
+                    size="sm" 
+                    variant="outline"
+                    onClick={proceedManually}
+                    className="h-7"
+                  >
+                    Keep My Address Anyway
+                  </Button>
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {validation?.status === 'invalid' && !validation?.formatted_address && !showSuggestion && (
+          <Alert className="border-red-600/20 bg-red-50 dark:bg-red-950/20">
+            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-500" />
+            <AlertDescription className="text-red-800 dark:text-red-300">
+              <div className="space-y-2">
+                <p className="font-semibold">❌ Address Cannot Be Verified</p>
+                <p className="text-sm">
+                  This address could not be verified as deliverable:
+                </p>
+                <p className="pl-2 text-sm text-red-700 dark:text-red-400">
+                  {value.street}, {value.city}, {value.state} {value.zip}
+                </p>
+                <div className="text-sm">
+                  <p className="font-medium">Common issues:</p>
+                  <ul className="list-disc list-inside pl-2 text-xs">
+                    <li>Street name may be incorrect</li>
+                    <li>City/ZIP code mismatch</li>
+                    <li>Address does not exist</li>
+                  </ul>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    type="button"
+                    size="sm" 
+                    variant="outline"
+                    onClick={proceedManually}
+                    className="h-7"
+                  >
+                    Use Anyway (Not Recommended)
+                  </Button>
+                </div>
               </div>
             </AlertDescription>
           </Alert>

@@ -70,10 +70,13 @@ export class EasyPostClient {
     is_valid: boolean;
     status: 'verified' | 'invalid' | 'suggested';
     formatted_address: string;
+    suggested_street?: string;
     suggested_city?: string;
     suggested_state?: string;
+    suggested_zip?: string;
     confidence: number;
     verification_source: string;
+    error_details?: string[];
   }> {
     try {
       const response = await this.makeRequest('/addresses', 'POST', {
@@ -89,14 +92,39 @@ export class EasyPostClient {
       // Format address
       const formatted = `${verified.street1}${verified.street2 ? ', ' + verified.street2 : ''}, ${verified.city}, ${verified.state} ${verified.zip}`;
 
+      // Collect error details if address was corrected
+      const errorDetails: string[] = [];
+      if (address.street1 !== verified.street1) {
+        errorDetails.push(`Street corrected: ${address.street1} → ${verified.street1}`);
+      }
+      if (address.city?.toLowerCase() !== verified.city?.toLowerCase()) {
+        errorDetails.push(`City corrected: ${address.city} → ${verified.city}`);
+      }
+      if (address.state !== verified.state) {
+        errorDetails.push(`State corrected: ${address.state} → ${verified.state}`);
+      }
+      if (address.zip !== verified.zip) {
+        errorDetails.push(`ZIP corrected: ${address.zip} → ${verified.zip}`);
+      }
+
+      // Add delivery verification errors if any
+      if (deliveryVerification?.errors && deliveryVerification.errors.length > 0) {
+        deliveryVerification.errors.forEach((err: any) => {
+          if (err.message) errorDetails.push(err.message);
+        });
+      }
+
       return {
         is_valid: isDeliverable,
         status: isDeliverable ? 'verified' : 'invalid',
         formatted_address: formatted,
+        suggested_street: verified.street1,
         suggested_city: verified.city,
         suggested_state: verified.state,
+        suggested_zip: verified.zip,
         confidence,
-        verification_source: 'easypost'
+        verification_source: 'easypost',
+        error_details: errorDetails.length > 0 ? errorDetails : undefined
       };
     } catch (error) {
       console.error('Address verification failed:', error);

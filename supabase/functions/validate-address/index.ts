@@ -19,11 +19,14 @@ interface AddressInput {
 interface ValidationResponse {
   is_valid: boolean;
   formatted_address?: string;
+  suggested_street?: string;
   suggested_city?: string;
   suggested_state?: string;
+  suggested_zip?: string;
   verification_source?: string;
   status: 'verified' | 'invalid' | 'manual';
   error?: string;
+  error_details?: string[];
   raw_response?: any;
   confidence?: number;
 }
@@ -182,12 +185,45 @@ serve(async (req) => {
       );
     }
 
+    // Validate we have minimum required data for full address verification
+    const hasMinimumData = street && street.trim().length >= 3;
+
+    if (!hasMinimumData) {
+      console.log('Insufficient data for EasyPost (missing street), using ZIP-only validation');
+      
+      // Skip EasyPost and go straight to ZIP-only validation
+      const zipValidation = await validateZipCode(zip);
+      
+      if (!zipValidation.is_valid) {
+        return new Response(
+          JSON.stringify(zipValidation),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      
+      // Return ZIP validation result with note about incomplete data
+      return new Response(
+        JSON.stringify({
+          ...zipValidation,
+          verification_source: 'zip_only_incomplete_data'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // Try EasyPost first for full address verification
     let addressValidation: ValidationResponse;
     try {
       addressValidation = await validateAddressWithEasyPost({ street, city, state, zip, manual_override });
     } catch (validationError) {
-      console.warn('EasyPost validation failed, falling back to ZIP validation:', validationError);
+      const errorMessage = (validationError as Error).message || '';
+      
+      // Don't log as error if it's just incomplete data or unable to verify
+      if (errorMessage.includes('Unable to verify address')) {
+        console.warn('EasyPost could not verify address, falling back to ZIP validation');
+      } else {
+        console.error('EasyPost validation failed, falling back to ZIP validation:', validationError);
+      }
       // Fallback to ZIP-only validation if EasyPost fails
       const zipValidation = await validateZipCode(zip);
       
