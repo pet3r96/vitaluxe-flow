@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
 import {
   Command,
   CommandEmpty,
@@ -52,7 +53,7 @@ interface PracticeDetailsDialogProps {
 const practiceEditSchema = z.object({
   name: z.string().min(1, "Practice name is required").max(100),
   phone: phoneSchema,
-  address: z.string().optional(),
+  address: z.custom<AddressValue>().optional(),
   npi: npiSchema,
   license_number: z.string().optional(),
   dea: deaSchema,
@@ -76,7 +77,7 @@ export const PracticeDetailsDialog = ({
     defaultValues: {
       name: "",
       phone: "",
-      address: "",
+      address: {},
       npi: "",
       license_number: "",
       dea: "",
@@ -185,10 +186,22 @@ export const PracticeDetailsDialog = ({
   // Initialize form data when provider changes
   useEffect(() => {
     if (provider) {
+      // Construct formatted address from structured fields if main address is missing
+      const formattedAddress = provider.address || provider.address_formatted || 
+        (provider.address_street ? 
+          `${provider.address_street}, ${provider.address_city}, ${provider.address_state} ${provider.address_zip}` 
+          : "");
+
       form.reset({
         name: provider.name || "",
         phone: sanitizeEncrypted(provider.phone) || "",
-        address: provider.address || "",
+        address: {
+          street: provider.address_street || "",
+          city: provider.address_city || "",
+          state: provider.address_state || "",
+          zip: provider.address_zip || "",
+          formatted: formattedAddress,
+        },
         npi: sanitizeEncrypted(provider.npi) || "",
         license_number: sanitizeEncrypted(provider.license_number) || "",
         dea: sanitizeEncrypted(provider.dea) || "",
@@ -204,7 +217,12 @@ export const PracticeDetailsDialog = ({
         .update({
           name: values.name,
           phone: values.phone || null,
-          address: values.address || null,
+          address: values.address?.formatted || null,
+          address_street: values.address?.street || null,
+          address_city: values.address?.city || null,
+          address_state: values.address?.state || null,
+          address_zip: values.address?.zip || null,
+          address_formatted: values.address?.formatted || null,
           npi: values.npi || null,
           license_number: values.license_number || null,
           dea: values.dea || null,
@@ -540,12 +558,21 @@ export const PracticeDetailsDialog = ({
                         {isEditing ? (
                           <>
                             <FormControl>
-                              <Input {...field} />
+                              <GoogleAddressAutocomplete 
+                                value={field.value || {}}
+                                onChange={field.onChange}
+                                placeholder="Start typing address..."
+                              />
                             </FormControl>
                             <FormMessage />
                           </>
                         ) : (
-                          <p className="font-medium">{provider.address || "-"}</p>
+                          <p className="font-medium">
+                            {provider.address || provider.address_formatted || 
+                              (provider.address_street ? 
+                                `${provider.address_street}, ${provider.address_city}, ${provider.address_state} ${provider.address_zip}` 
+                                : "-")}
+                          </p>
                         )}
                       </FormItem>
                     )}
