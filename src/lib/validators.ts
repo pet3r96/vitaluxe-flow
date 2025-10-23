@@ -41,6 +41,17 @@ export const deaSchema = z
   .or(z.literal(""));
 
 /**
+ * Email Validation
+ * Optional but must be valid email format if provided
+ */
+export const emailSchema = z
+  .string()
+  .trim()
+  .email("Invalid email format")
+  .optional()
+  .or(z.literal(""));
+
+/**
  * Helper functions for programmatic validation
  */
 export function validatePhone(phone: string | null | undefined): { valid: boolean; error?: string } {
@@ -65,6 +76,15 @@ export function validateDEA(dea: string | null | undefined): { valid: boolean; e
   if (!dea || dea === "") return { valid: true };
   
   const result = deaSchema.safeParse(dea);
+  return result.success 
+    ? { valid: true } 
+    : { valid: false, error: result.error.errors[0]?.message };
+}
+
+export function validateEmail(email: string | null | undefined): { valid: boolean; error?: string } {
+  if (!email || email === "") return { valid: true };
+  
+  const result = emailSchema.safeParse(email);
   return result.success 
     ? { valid: true } 
     : { valid: false, error: result.error.errors[0]?.message };

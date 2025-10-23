@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { AddressInput } from "@/components/ui/address-input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { validatePhone } from "@/lib/validators";
+import { Textarea } from "@/components/ui/textarea";
+import { validatePhone, validateEmail } from "@/lib/validators";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 
 interface PatientDialogProps {
@@ -34,6 +35,7 @@ export const PatientDialog = ({
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({
     phone: "",
+    email: "",
   });
   const [formData, setFormData] = useState({
     name: "",
@@ -119,7 +121,7 @@ export const PatientDialog = ({
       address_verification_status: "unverified",
       address_verification_source: "",
     });
-    setValidationErrors({ phone: "" });
+    setValidationErrors({ phone: "", email: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,16 +132,41 @@ export const PatientDialog = ({
       return;
     }
 
+    if (!formData.birth_date) {
+      toast.error("Date of birth is required");
+      return;
+    }
+
+    if (!formData.address_street || !formData.address_city || !formData.address_state || !formData.address_zip) {
+      toast.error("Complete address is required (street, city, state, zip)");
+      return;
+    }
+
+    if (!formData.allergies.trim()) {
+      toast.error("Allergies field is required (enter 'None' if no known allergies)");
+      return;
+    }
+
     if (!user) {
       toast.error("You must be logged in to manage patients");
       return;
     }
 
-    // Validate phone number
+    // Validate phone if provided
     if (formData.phone) {
       const phoneResult = validatePhone(formData.phone);
       if (!phoneResult.valid) {
-        setValidationErrors({ phone: phoneResult.error || "" });
+        setValidationErrors({ ...validationErrors, phone: phoneResult.error || "", email: validationErrors.email });
+        toast.error("Please fix validation errors before submitting");
+        return;
+      }
+    }
+
+    // Validate email if provided
+    if (formData.email) {
+      const emailResult = validateEmail(formData.email);
+      if (!emailResult.valid) {
+        setValidationErrors({ ...validationErrors, email: emailResult.error || "", phone: validationErrors.phone });
         toast.error("Please fix validation errors before submitting");
         return;
       }
@@ -236,20 +263,31 @@ export const PatientDialog = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email (Optional)</Label>
                 <Input
                   id="email"
-                  type="email"
+                  type="text"
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="patient@email.com"
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    setValidationErrors({ ...validationErrors, email: "" });
+                  }}
+                  onBlur={() => {
+                    if (formData.email) {
+                      const result = validateEmail(formData.email);
+                      setValidationErrors({ ...validationErrors, email: result.error || "" });
+                    }
+                  }}
+                  placeholder="patient@email.com (optional)"
+                  className={validationErrors.email ? "border-destructive" : ""}
                 />
+                {validationErrors.email && (
+                  <p className="text-sm text-destructive">{validationErrors.email}</p>
+                )}
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Phone (Optional)</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -276,7 +314,7 @@ export const PatientDialog = ({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="birth_date">Date of Birth</Label>
+              <Label htmlFor="birth_date">Date of Birth *</Label>
               <Input
                 id="birth_date"
                 type="date"
@@ -285,11 +323,12 @@ export const PatientDialog = ({
                   setFormData({ ...formData, birth_date: e.target.value })
                 }
                 max={new Date().toISOString().split('T')[0]}
+                required
               />
             </div>
 
             <AddressInput
-              label="Patient Address"
+              label="Patient Address *"
               value={{
                 street: formData.address_street,
                 city: formData.address_city,
@@ -311,26 +350,29 @@ export const PatientDialog = ({
             />
 
             <div className="grid gap-2">
-              <Label htmlFor="allergies">Allergies</Label>
-              <Input
+              <Label htmlFor="allergies">Allergies *</Label>
+              <Textarea
                 id="allergies"
                 value={formData.allergies}
                 onChange={(e) =>
                   setFormData({ ...formData, allergies: e.target.value })
                 }
-                placeholder="Penicillin, Latex, etc."
+                placeholder="Enter allergies or 'None' if no known allergies"
+                rows={3}
+                required
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Input
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
                 id="notes"
                 value={formData.notes}
                 onChange={(e) =>
                   setFormData({ ...formData, notes: e.target.value })
                 }
                 placeholder="Additional patient information"
+                rows={3}
               />
             </div>
           </div>
