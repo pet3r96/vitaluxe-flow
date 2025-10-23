@@ -115,12 +115,25 @@ export const ProductsGrid = () => {
 
   // Fetch visibility settings for topline rep to show hidden status
   const { data: visibilitySettings } = useQuery({
-    queryKey: ["rep-product-visibility", effectiveUserId],
+    queryKey: ["rep-product-visibility", effectiveUserId, isToplineRep],
     queryFn: async () => {
       if (!isToplineRep || !effectiveUserId) return {};
       
-      const { data: repId } = await supabase.rpc('get_user_rep_id');
-      if (!repId) return {};
+      const { data: repId, error: repError } = await supabase.rpc('get_user_rep_id', { 
+        _user_id: effectiveUserId 
+      });
+
+      if (repError) {
+        console.error('[ProductsGrid] Error fetching rep ID:', repError);
+        return {};
+      }
+
+      if (!repId) {
+        console.warn('[ProductsGrid] No rep ID found for user:', effectiveUserId);
+        return {};
+      }
+
+      console.log('[ProductsGrid] Fetching visibility for rep ID:', repId);
       
       const { data, error } = await supabase
         .from('rep_product_visibility')
@@ -128,9 +141,12 @@ export const ProductsGrid = () => {
         .eq('topline_rep_id', repId);
       
       if (error) {
-        console.error('Error fetching visibility settings:', error);
+        console.error('[ProductsGrid] Error fetching visibility settings:', error);
+        console.error('[ProductsGrid] Rep ID was:', repId);
         return {};
       }
+
+      console.log('[ProductsGrid] Visibility settings loaded:', data?.length, 'entries');
       
       // Convert to map: productId -> visible boolean
       const visibilityMap: Record<string, boolean> = {};
@@ -141,7 +157,7 @@ export const ProductsGrid = () => {
       return visibilityMap;
     },
     enabled: isToplineRep,
-    staleTime: 30000, // 30 seconds
+    staleTime: 10000, // 10 seconds - syncs faster with Visibility Settings tab changes
   });
 
   const toggleProductStatus = async (productId: string, currentStatus: boolean) => {
