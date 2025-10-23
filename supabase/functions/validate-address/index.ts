@@ -33,6 +33,17 @@ interface ValidationResponse {
 
 async function validateAddressWithEasyPost(address: AddressInput): Promise<ValidationResponse> {
   try {
+    console.log('🚀 Starting EasyPost validation for:', { 
+      street: address.street, 
+      city: address.city, 
+      state: address.state, 
+      zip: address.zip 
+    });
+    
+    // Check if API key is configured
+    const apiKey = Deno.env.get('EASYPOST_API_KEY');
+    console.log('🔑 EASYPOST_API_KEY configured:', !!apiKey, apiKey ? `(starts with ${apiKey.substring(0, 4)}...)` : '(not set)');
+    
     const easyPostClient = createEasyPostClient();
     
     const easyPostAddress = formatAddressForEasyPost(
@@ -44,26 +55,54 @@ async function validateAddressWithEasyPost(address: AddressInput): Promise<Valid
 
     const result = await easyPostClient.verifyAddress(easyPostAddress);
     
+    console.log('✅ EasyPost validation complete:', {
+      is_valid: result.is_valid,
+      status: result.status,
+      has_error_details: !!result.error_details
+    });
+    
     // Map EasyPost status to our status type
     let mappedStatus: 'verified' | 'invalid' | 'manual' = 'invalid';
     if (result.status === 'verified') mappedStatus = 'verified';
-    else if (result.status === 'suggested') mappedStatus = 'verified'; // Treat suggested as verified
+    else if (result.status === 'suggested') mappedStatus = 'verified';
     
     return {
       is_valid: result.is_valid,
       status: mappedStatus,
       formatted_address: result.formatted_address,
+      suggested_street: result.suggested_street,
       suggested_city: result.suggested_city,
       suggested_state: result.suggested_state,
+      suggested_zip: result.suggested_zip,
       verification_source: result.verification_source,
-      confidence: result.confidence
+      confidence: result.confidence,
+      error_details: result.error_details,
+      error: result.error_details && result.error_details.length > 0 
+        ? result.error_details.join('; ') 
+        : undefined
     };
   } catch (error) {
-    console.error('EasyPost address validation error:', error);
+    const errorMsg = (error as Error).message || 'Unknown error';
+    console.error('❌ EasyPost address validation error:', errorMsg);
+    
+    // Provide helpful error messages based on error type
+    let userFriendlyError = errorMsg;
+    
+    if (errorMsg.includes('EASYPOST_API_KEY')) {
+      userFriendlyError = '⚠️ EasyPost API key not configured. Please contact administrator.';
+    } else if (errorMsg.includes('verifications')) {
+      userFriendlyError = '⚠️ EasyPost API key may be invalid or lack permissions. Please verify configuration.';
+    } else if (errorMsg.includes('API Error: 401')) {
+      userFriendlyError = '⚠️ EasyPost authentication failed. API key is invalid.';
+    } else if (errorMsg.includes('API Error: 403')) {
+      userFriendlyError = '⚠️ EasyPost API key lacks permission for address verification.';
+    }
+    
     return {
       is_valid: false,
       status: 'invalid',
-      error: (error as Error).message || 'Failed to validate address with EasyPost'
+      error: userFriendlyError,
+      verification_source: 'easypost_error'
     };
   }
 }

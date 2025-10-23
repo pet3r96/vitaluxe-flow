@@ -79,15 +79,60 @@ export class EasyPostClient {
     error_details?: string[];
   }> {
     try {
+      console.log('🔍 EasyPost: Verifying address:', JSON.stringify(address, null, 2));
+      
       const response = await this.makeRequest('/addresses', 'POST', {
         address: address,
         verify: ["delivery"]
       });
 
+      console.log('📦 EasyPost: Raw API response:', JSON.stringify(response, null, 2));
+
+      // Validate response structure
+      if (!response) {
+        throw new Error('EasyPost returned empty response');
+      }
+
+      if (!response.address) {
+        console.error('❌ EasyPost response missing address object:', response);
+        throw new Error('EasyPost API response missing address object. Check API key permissions.');
+      }
+
       const verified = response.address;
-      const deliveryVerification = verified.verifications?.delivery;
-      const confidence = deliveryVerification?.confidence || 0;
-      const isDeliverable = deliveryVerification?.success || false;
+
+      // Check if verifications object exists
+      if (!verified.verifications) {
+        console.error('❌ EasyPost response missing verifications:', {
+          has_address: !!verified,
+          address_id: verified.id,
+          street1: verified.street1,
+          city: verified.city,
+          state: verified.state,
+          zip: verified.zip
+        });
+        
+        throw new Error(
+          'EasyPost API key may be invalid or lacks verification permissions. ' +
+          'Verifications object missing from response. ' +
+          'Please verify your EASYPOST_API_KEY is correct and has address verification enabled.'
+        );
+      }
+
+      const deliveryVerification = verified.verifications.delivery;
+      
+      if (!deliveryVerification) {
+        console.error('❌ EasyPost response missing delivery verification:', verified.verifications);
+        throw new Error('EasyPost response missing delivery verification data');
+      }
+
+      console.log('✅ EasyPost: Verification successful', {
+        success: deliveryVerification.success,
+        confidence: deliveryVerification.confidence,
+        errors: deliveryVerification.errors
+      });
+
+      const confidence = deliveryVerification.confidence || 0;
+      const isDeliverable = deliveryVerification.success || false;
 
       // Format address
       const formatted = `${verified.street1}${verified.street2 ? ', ' + verified.street2 : ''}, ${verified.city}, ${verified.state} ${verified.zip}`;
@@ -108,7 +153,7 @@ export class EasyPostClient {
       }
 
       // Add delivery verification errors if any
-      if (deliveryVerification?.errors && deliveryVerification.errors.length > 0) {
+      if (deliveryVerification.errors && deliveryVerification.errors.length > 0) {
         deliveryVerification.errors.forEach((err: any) => {
           if (err.message) errorDetails.push(err.message);
         });
@@ -127,14 +172,16 @@ export class EasyPostClient {
         error_details: errorDetails.length > 0 ? errorDetails : undefined
       };
     } catch (error) {
-      console.error('Address verification failed:', error);
-      // Return invalid status on error
+      console.error('❌ Address verification failed:', error);
+      
+      // Return invalid status on error with helpful message
       return {
         is_valid: false,
         status: 'invalid',
         formatted_address: `${address.street1}, ${address.city}, ${address.state} ${address.zip}`,
         confidence: 0,
-        verification_source: 'easypost_error'
+        verification_source: 'easypost_error',
+        error_details: [(error as Error).message]
       };
     }
   }
