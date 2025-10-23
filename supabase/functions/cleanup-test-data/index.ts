@@ -94,11 +94,11 @@ serve(async (req) => {
       try {
         console.log(`Processing user: ${targetEmail}`);
 
-        // Find user by email
+        // Find user by email (case-insensitive)
         const { data: profile, error: profileError } = await supabaseAdmin
           .from('profiles')
           .select('id, name, email')
-          .eq('email', targetEmail)
+          .ilike('email', targetEmail)
           .single();
 
         if (profileError || !profile) {
