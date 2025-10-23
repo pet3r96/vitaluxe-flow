@@ -86,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("Email service not configured");
       }
 
-      const resetLink = `https://vitaluxeservices.com/reset-password?token=${token}`;
+      const resetLink = `https://app.vitaluxeservices.com/reset-password?token=${token}`;
 
       const postmarkResponse = await fetch("https://api.postmarkapp.com/email", {
         method: "POST",
