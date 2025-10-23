@@ -506,7 +506,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (typeof cachedCanImpersonate === 'boolean') setCanImpersonateDb(cachedCanImpersonate);
             
             // Check password and 2FA status immediately (non-blocking but synchronous)
-            void checkPasswordStatus();
+            void checkPasswordStatus(role); // Pass the role we just loaded from cache
             void check2FAStatus(userId);
             
             // Restore impersonation if admin
@@ -602,13 +602,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Process password status
-      if (passwordResult.status === 'fulfilled' && passwordResult.value.data) {
-        setMustChangePassword(passwordResult.value.data.must_change_password || false);
-        setTermsAccepted(passwordResult.value.data.terms_accepted || false);
-      } else if (role === 'admin') {
-        // Admins exempt
+      if (role === 'admin') {
+        // Admins ALWAYS exempt, regardless of database value
         setMustChangePassword(false);
         setTermsAccepted(true);
+      } else if (passwordResult.status === 'fulfilled' && passwordResult.value.data) {
+        setMustChangePassword(passwordResult.value.data.must_change_password || false);
+        setTermsAccepted(passwordResult.value.data.terms_accepted || false);
       } else {
         // FALLBACK: If password check failed, use safe defaults
         logger.warn('Password status check failed, using safe defaults');
@@ -639,13 +639,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const checkPasswordStatus = async (): Promise<{ mustChangePassword: boolean; termsAccepted: boolean }> => {
+  const checkPasswordStatus = async (roleOverride?: string): Promise<{ mustChangePassword: boolean; termsAccepted: boolean }> => {
     if (!user) {
       return { mustChangePassword: false, termsAccepted: true };
     }
 
+    // Use provided role or fall back to effectiveRole
+    const roleToCheck = roleOverride || effectiveRole;
+
     // Only real admins (not impersonating) are exempt from both password change and terms acceptance
-    if (effectiveRole === 'admin' && !isImpersonating) {
+    if (roleToCheck === 'admin' && !isImpersonating) {
       setMustChangePassword(false);
       setTermsAccepted(true);
       setPasswordStatusChecked(true);
