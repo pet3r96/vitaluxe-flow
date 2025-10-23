@@ -68,7 +68,7 @@ serve(async (req) => {
 
     console.log("📤 Sending verification email via Postmark to:", email);
 
-    const postmarkRes = await fetch("https://api.postmarkapp.com/email/withTemplate", {
+    const postmarkRes = await fetch("https://api.postmarkapp.com/email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -77,12 +77,45 @@ serve(async (req) => {
       body: JSON.stringify({
         From: postmarkFromEmail,
         To: email,
-        TemplateAlias: "verify-account",
-        TemplateModel: {
-          product_name: "Vitaluxe",
-          name: name || "there",
-          action_link: verificationUrl,
-        },
+        Subject: "Verify Your Vitaluxe Account",
+        HtmlBody: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #E2C977; background-color: #0B0B0B; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 0 auto; }
+              .header { background: linear-gradient(135deg, #8E6E1E 0%, #C8A64B 50%, #E2C977 100%); padding: 30px 20px; text-align: center; }
+              .header h1 { margin: 0; color: #0B0B0B; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+              .content { background-color: #1A1A1A; padding: 40px 30px; border: 1px solid #292929; }
+              .content h2 { color: #E2C977; margin-top: 0; }
+              .content p { color: #E2C977; }
+              .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; transition: background-color 0.3s; }
+              .button:hover { background-color: #E2C977; }
+              .footer { text-align: center; padding: 25px 20px; color: #8E6E1E; font-size: 12px; background-color: #0B0B0B; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>VITALUXE</h1>
+              </div>
+              <div class="content">
+                <h2>Welcome to Vitaluxe</h2>
+                <p>Hello ${name || "there"},</p>
+                <p>Thank you for joining Vitaluxe. Please verify your email address to complete your registration:</p>
+                <a href="${verificationUrl}" class="button">Verify Email Address</a>
+                <p>This verification link will expire in 24 hours.</p>
+                <p>If you didn't create this account, you can safely ignore this email.</p>
+              </div>
+              <div class="footer">
+                <p>&copy; ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `,
+        TextBody: `Welcome to Vitaluxe\n\nHello ${name || "there"},\n\nThank you for joining Vitaluxe. Please verify your email address:\n\n${verificationUrl}\n\nThis link will expire in 24 hours.\n\nVitaluxe Services`
       }),
     });
 

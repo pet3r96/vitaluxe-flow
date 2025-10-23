@@ -146,22 +146,27 @@ const handler = async (req: Request): Promise<Response> => {
           <html>
           <head>
             <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
-              .content { background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
-              .password-box { background-color: #fff; border: 2px solid #4F46E5; padding: 15px; margin: 20px 0; text-align: center; font-size: 18px; font-weight: bold; letter-spacing: 2px; }
-              .button { display: inline-block; background-color: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-              .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #E2C977; background-color: #0B0B0B; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 0 auto; }
+              .header { background: linear-gradient(135deg, #8E6E1E 0%, #C8A64B 50%, #E2C977 100%); padding: 30px 20px; text-align: center; }
+              .header h1 { margin: 0; color: #0B0B0B; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+              .content { background-color: #1A1A1A; padding: 40px 30px; border: 1px solid #292929; }
+              .content h2 { color: #E2C977; margin-top: 0; }
+              .content p { color: #E2C977; }
+              .password-box { background-color: #0B0B0B; border: 2px solid #C8A64B; padding: 20px; margin: 25px 0; text-align: center; font-size: 20px; font-weight: bold; letter-spacing: 3px; color: #E2C977; border-radius: 8px; }
+              .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; transition: background-color 0.3s; }
+              .button:hover { background-color: #E2C977; }
+              .footer { text-align: center; padding: 25px 20px; color: #8E6E1E; font-size: 12px; background-color: #0B0B0B; }
+              strong { color: #C8A64B; }
             </style>
           </head>
           <body>
             <div class="container">
               <div class="header">
-                <h1>Welcome to Vitaluxe</h1>
+                <h1>VITALUXE</h1>
               </div>
               <div class="content">
-                <h2>Hello ${name},</h2>
+                <h2>Welcome, ${name}</h2>
                 <p>Your account has been created as a <strong>${role}</strong>.</p>
                 <p>Here is your temporary password:</p>
                 <div class="password-box">${temporaryPassword}</div>
@@ -171,7 +176,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               <div class="footer">
                 <p>&copy; ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.</p>
-                <p>Email: ${email}</p>
+                <p>${email}</p>
               </div>
             </div>
           </body>
