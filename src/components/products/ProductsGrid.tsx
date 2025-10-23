@@ -51,7 +51,8 @@ export const ProductsGrid = () => {
   const isToplineRep = effectiveRole === "topline";
   const isDownlineRep = effectiveRole === "downline";
   const isRep = isToplineRep || isDownlineRep;
-  const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
+  // Topline reps see all products but with visibility indicators
+  const viewingAsAdmin = (effectiveRole === "admin" && !isImpersonating) || isToplineRep;
 
   const { data: cartCount } = useCartCount(effectiveUserId);
 
@@ -110,6 +111,37 @@ export const ProductsGrid = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch visibility settings for topline rep to show hidden status
+  const { data: visibilitySettings } = useQuery({
+    queryKey: ["rep-product-visibility", effectiveUserId],
+    queryFn: async () => {
+      if (!isToplineRep || !effectiveUserId) return {};
+      
+      const { data: repId } = await supabase.rpc('get_user_rep_id');
+      if (!repId) return {};
+      
+      const { data, error } = await supabase
+        .from('rep_product_visibility')
+        .select('product_id, visible')
+        .eq('topline_rep_id', repId);
+      
+      if (error) {
+        console.error('Error fetching visibility settings:', error);
+        return {};
+      }
+      
+      // Convert to map: productId -> visible boolean
+      const visibilityMap: Record<string, boolean> = {};
+      data?.forEach(item => {
+        visibilityMap[item.product_id] = item.visible;
+      });
+      
+      return visibilityMap;
+    },
+    enabled: isToplineRep,
+    staleTime: 30000, // 30 seconds
   });
 
   const toggleProductStatus = async (productId: string, currentStatus: boolean) => {
@@ -417,6 +449,7 @@ export const ProductsGrid = () => {
                 isToplineRep={isToplineRep}
                 isDownlineRep={isDownlineRep}
                 role={effectiveRole}
+                isHiddenFromDownline={isToplineRep && visibilitySettings?.[product.id] === false}
                 onEdit={(product) => {
                   setSelectedProduct(product);
                   setIsEditing(true);

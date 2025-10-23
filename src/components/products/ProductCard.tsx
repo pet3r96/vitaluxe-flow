@@ -21,6 +21,7 @@ interface ProductCardProps {
   isToplineRep: boolean;
   isDownlineRep: boolean;
   role: string | null;
+  isHiddenFromDownline?: boolean;
   onEdit: (product: any) => void;
   onDelete: (product: any) => void;
   onAddToCart: (product: any) => void;
@@ -34,6 +35,7 @@ export const ProductCard = memo(({
   isToplineRep,
   isDownlineRep,
   role,
+  isHiddenFromDownline,
   onEdit,
   onDelete,
   onAddToCart,
@@ -179,6 +181,11 @@ export const ProductCard = memo(({
             <Badge variant={product.active ? "secondary" : "outline"} className="text-xs">
               {product.active ? "Active" : "Inactive"}
             </Badge>
+            {isToplineRep && isHiddenFromDownline && (
+              <Badge variant="destructive" className="text-xs">
+                Hidden from Downline
+              </Badge>
+            )}
             {effectivePrice?.has_override && (isToplineRep || isDownlineRep || isProvider) && (
               <Badge variant="secondary" className="text-xs bg-amber-500 hover:bg-amber-600 text-white">
                 Custom Price
