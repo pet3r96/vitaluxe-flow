@@ -183,7 +183,7 @@ export const ProductCard = memo(({
             </Badge>
             {isToplineRep && isHiddenFromDownline && (
               <Badge variant="destructive" className="text-xs">
-                Hidden from Downline
+                Deactivated
               </Badge>
             )}
             {effectivePrice?.has_override && (isToplineRep || isDownlineRep || isProvider) && (
