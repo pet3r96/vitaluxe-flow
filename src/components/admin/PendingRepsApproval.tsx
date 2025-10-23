@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Check, X, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCurrentCSRFToken } from "@/lib/csrf";
 
 export const PendingRepsApproval = () => {
   const queryClient = useQueryClient();
@@ -84,8 +85,16 @@ export const PendingRepsApproval = () => {
 
   const approveMutation = useMutation({
     mutationFn: async ({ requestId, adminNotes }: { requestId: string; adminNotes: string }) => {
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Session expired. Please refresh the page and try again.");
+      }
+
       const { data, error } = await supabase.functions.invoke("approve-pending-rep", {
         body: { requestId, action: "approve", adminNotes },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       });
       if (error) throw error;
       return data;
@@ -124,8 +133,16 @@ export const PendingRepsApproval = () => {
 
   const rejectMutation = useMutation({
     mutationFn: async ({ requestId, rejectionReason, adminNotes }: { requestId: string; rejectionReason: string; adminNotes: string }) => {
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Session expired. Please refresh the page and try again.");
+      }
+
       const { data, error } = await supabase.functions.invoke("approve-pending-rep", {
         body: { requestId, action: "reject", rejectionReason, adminNotes },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       });
       if (error) throw error;
       return data;
