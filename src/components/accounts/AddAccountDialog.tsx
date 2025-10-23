@@ -260,7 +260,28 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
-      toast.error(error.message || "Failed to create account");
+      console.error('Error creating account:', error);
+      
+      // Extract the actual error message from the response
+      let errorMessage = 'Failed to create account. Please try again.';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      // Check for specific error patterns and provide user-friendly messages
+      if (errorMessage.toLowerCase().includes('email') && 
+          (errorMessage.toLowerCase().includes('already') || 
+           errorMessage.toLowerCase().includes('exists') ||
+           errorMessage.toLowerCase().includes('registered'))) {
+        errorMessage = 'A user with this email already exists. Please use a different email address.';
+      } else if (errorMessage.includes('non-2xx')) {
+        errorMessage = 'Unable to create account. Please check your information and try again.';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
