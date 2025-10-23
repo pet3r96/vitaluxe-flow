@@ -269,6 +269,51 @@ serve(async (req) => {
         throw new Error(`Failed to upsert role: ${roleError.message}`);
       }
 
+      // Create rep_practice_links record to link the practice to the rep
+      if (practiceData.assigned_rep_user_id) {
+        console.log('Creating rep_practice_link for assigned_rep_user_id:', practiceData.assigned_rep_user_id);
+        
+        // Get the rep record ID (not user_id) from the reps table
+        const { data: repRecord, error: repLookupError } = await supabaseAdmin
+          .from('reps')
+          .select('id')
+          .eq('user_id', practiceData.assigned_rep_user_id)
+          .maybeSingle();
+        
+        if (repLookupError) {
+          console.error('Failed to lookup rep record:', repLookupError);
+          throw new Error(`Failed to lookup rep record: ${repLookupError.message}`);
+        }
+        
+        if (!repRecord) {
+          console.error('Rep record not found for user_id:', practiceData.assigned_rep_user_id);
+          throw new Error(`Rep record not found for user_id: ${practiceData.assigned_rep_user_id}`);
+        }
+        
+        // Upsert rep_practice_links (idempotent)
+        const { error: linkError } = await supabaseAdmin
+          .from('rep_practice_links')
+          .upsert({
+            rep_id: repRecord.id,
+            practice_id: userId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'rep_id,practice_id',
+            ignoreDuplicates: false
+          });
+        
+        if (linkError) {
+          console.error('Failed to create rep_practice_link:', linkError);
+          throw new Error(`Failed to create rep_practice_link: ${linkError.message}`);
+        }
+        
+        console.log('Successfully created rep_practice_link:', {
+          rep_id: repRecord.id,
+          practice_id: userId
+        });
+      }
+
       // Upsert password status record (idempotent)
       await supabaseAdmin.from('user_password_status').upsert({
         user_id: userId,
