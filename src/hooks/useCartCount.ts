@@ -18,7 +18,8 @@ export const useCartCount = (userId: string | null) => {
       const { count, error } = await supabase
         .from("cart_lines")
         .select("*", { count: "exact", head: true })
-        .eq("cart_id", cart.id);
+        .eq("cart_id", cart.id)
+        .gte("expires_at", new Date().toISOString());
 
       if (error) throw error;
       return count || 0;

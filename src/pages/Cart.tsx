@@ -43,7 +43,7 @@ export default function Cart() {
           provider:providers(
             id,
             user_id,
-            profiles!inner(name, npi, dea)
+            profiles(name, npi, dea)
           )
         `)
         .eq("cart_id", cartData.id)
