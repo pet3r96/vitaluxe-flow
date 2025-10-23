@@ -9,8 +9,9 @@ const corsHeaders = {
 interface TempPasswordEmailRequest {
   email: string;
   name: string;
-  temporaryPassword: string;
+  temporaryPassword?: string; // Optional - will be generated if userId provided
   role: string;
+  userId?: string; // Optional - for resending welcome emails
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -64,14 +65,51 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email, name, temporaryPassword, role }: TempPasswordEmailRequest = await req.json();
+    const { email, name, temporaryPassword: providedPassword, role, userId }: TempPasswordEmailRequest = await req.json();
 
     // Validate required fields
-    if (!email || !name || !temporaryPassword || !role) {
+    if (!email || !name || !role) {
       return new Response(
         JSON.stringify({ 
-          error: "Missing required fields: email, name, temporaryPassword, role" 
+          error: "Missing required fields: email, name, role" 
         }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate password server-side if userId is provided (resend scenario)
+    let temporaryPassword = providedPassword;
+    if (userId) {
+      // Generate secure password
+      const generateSecurePassword = (length: number = 16) => {
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+        let password = "";
+        const array = new Uint8Array(length);
+        crypto.getRandomValues(array);
+        for (let i = 0; i < length; i++) {
+          password += charset[array[i] % charset.length];
+        }
+        return password;
+      };
+
+      temporaryPassword = generateSecurePassword(16);
+
+      // Update password using service role key
+      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { password: temporaryPassword }
+      );
+
+      if (passwordError) {
+        console.error("Failed to update password:", passwordError);
+        throw new Error(`Failed to update password: ${passwordError.message}`);
+      }
+    }
+
+    // Ensure we have a password to send
+    if (!temporaryPassword) {
+      return new Response(
+        JSON.stringify({ error: "No password provided or generated" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -162,37 +162,15 @@ export const AccountDetailsDialog = ({
     return '***-***-****';
   };
 
-  const generateSecurePassword = (length: number = 16) => {
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "";
-    const array = new Uint8Array(length);
-    crypto.getRandomValues(array);
-    for (let i = 0; i < length; i++) {
-      password += charset[array[i] % charset.length];
-    }
-    return password;
-  };
-
   const handleResendWelcomeEmail = async () => {
     setIsResendingEmail(true);
     try {
-      // Generate a new temporary password
-      const tempPassword = generateSecurePassword(16);
-      
-      // Update the user's password in Supabase Auth
-      const { error: passwordError } = await supabase.auth.admin.updateUserById(
-        account.id,
-        { password: tempPassword }
-      );
-      
-      if (passwordError) throw passwordError;
-
-      // Send the email via edge function
+      // Call edge function - it handles password generation and update
       const { error: emailError } = await supabase.functions.invoke('send-temp-password-email', {
         body: {
+          userId: account.id,
           email: account.email,
           name: account.name,
-          temporaryPassword: tempPassword,
           role: getDisplayRole(account)
         }
       });
