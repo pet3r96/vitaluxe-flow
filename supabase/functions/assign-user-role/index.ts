@@ -379,7 +379,8 @@ serve(async (req) => {
       }
       
       roleDataForRpc.parentId = parentRep.id; // Use rep_id, not user_id
-      console.log(`Downline creation: mapped user_id ${roleDataForRpc.linkedToplineId} to rep_id ${parentRep.id}`);
+      delete roleDataForRpc.linkedToplineId; // Remove user_id to prevent RPC from using wrong field
+      console.log(`Downline creation: mapped user_id to rep_id ${parentRep.id}, linkedToplineId removed`);
     }
     
     // For toplines, ensure no parentId/linkedToplineId is sent
