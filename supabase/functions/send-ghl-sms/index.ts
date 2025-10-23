@@ -40,13 +40,19 @@ serve(async (req) => {
     const { phoneNumber, purpose = 'verification' } = await req.json();
 
     if (!phoneNumber) {
-      throw new Error('Phone number is required');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Phone number is required' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Validate phone number format (basic E.164 check)
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
     if (!phoneRegex.test(phoneNumber.replace(/[-\s]/g, ''))) {
-      throw new Error('Invalid phone number format. Use E.164 format (e.g., +15551234567)');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid phone number format. Use E.164 format (e.g., +15551234567)' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Rate limiting: Check for recent attempts (max 3 in last 15 minutes)

@@ -48,15 +48,24 @@ serve(async (req) => {
     });
 
     if (!code || code.length !== 6) {
-      throw new Error('Valid 6-digit code is required');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Valid 6-digit code is required' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (!attemptId) {
-      throw new Error('Attempt ID is required');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Verification session expired. Please request a new code.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (!phoneNumber) {
-      throw new Error('Phone number is required');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Phone number is required' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('[GHL] Verify | Attempt:', attemptId);
@@ -85,9 +94,10 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'No valid verification attempt found. Please request a new code.' 
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -104,10 +114,11 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'Maximum verification attempts exceeded. Please request a new code.',
           attemptsRemaining: 0
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -138,10 +149,11 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: `Invalid verification code. ${attemptsRemaining} ${attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.`,
           attemptsRemaining
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

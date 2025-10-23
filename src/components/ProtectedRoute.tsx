@@ -18,7 +18,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     isImpersonating,
     requires2FASetup,
     requires2FAVerify,
-    user2FAPhone
+    user2FAPhone,
+    twoFAStatusChecked
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,6 +30,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Redirect if no user
   useEffect(() => {
     if (!initializing && !user) {
+      console.log('[ProtectedRoute] ⚠️ Redirecting to /auth (source: route-guard, user: null)');
       navigate("/auth");
     }
   }, [user, initializing, navigate]);
@@ -84,8 +86,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // Show GHL 2FA dialogs if needed (mandatory for ALL users including admins)
-  // CHECK THIS BEFORE ROLE RESOLUTION to prevent getting stuck
-  if (!isImpersonating) {
+  // Only show after 2FA status has been checked to prevent premature auto-sends
+  if (!isImpersonating && twoFAStatusChecked) {
     if (requires2FASetup) {
       console.log('[ProtectedRoute] Rendering GHLSmsSetupDialog');
       return <GHLSmsSetupDialog open={true} userId={user.id} />;

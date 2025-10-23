@@ -94,6 +94,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const check2FAStatus = async (userId: string) => {
     console.log('[AuthContext] check2FAStatus - START for userId:', userId);
     try {
+      // Check sessionStorage first for recent verification
+      const storageKey = `vitaluxe_2fa_verified_${userId}`;
+      const storedVerification = sessionStorage.getItem(storageKey);
+      
+      if (storedVerification) {
+        const verifiedAt = new Date(storedVerification).getTime();
+        const hoursSinceVerification = (Date.now() - verifiedAt) / (1000 * 60 * 60);
+        
+        // If verified within 12 hours, skip verification
+        if (hoursSinceVerification < 12) {
+          console.log('[AuthContext] check2FAStatus - Recently verified (sessionStorage), skipping');
+          setIs2FAVerifiedThisSession(true);
+          setRequires2FASetup(false);
+          setRequires2FAVerify(false);
+          setTwoFAStatusChecked(true);
+          return;
+        }
+      }
+      
       // Query the decrypted view to get actual phone number instead of [ENCRYPTED]
       const { data, error } = await supabase
         .from('user_2fa_settings_decrypted')
@@ -110,7 +129,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRequires2FAVerify(false);
         setUser2FAPhone(null);
       } else {
-        // Enrolled - require verification if not verified this session
+        // Check server's last_ghl_verification timestamp
+        if (data.last_ghl_verification) {
+          const lastVerified = new Date(data.last_ghl_verification).getTime();
+          const hoursSinceVerification = (Date.now() - lastVerified) / (1000 * 60 * 60);
+          
+          // If verified on server within 12 hours, treat as verified
+          if (hoursSinceVerification < 12) {
+            console.log('[AuthContext] check2FAStatus - Recently verified on server, skipping');
+            setIs2FAVerifiedThisSession(true);
+            setRequires2FASetup(false);
+            setRequires2FAVerify(false);
+            setUser2FAPhone(data.phone_number);
+            // Update sessionStorage to match
+            sessionStorage.setItem(storageKey, data.last_ghl_verification);
+            setTwoFAStatusChecked(true);
+            return;
+          }
+        }
+        
+        // Enrolled but needs verification
         if (!is2FAVerifiedThisSession) {
           console.log('[AuthContext] check2FAStatus - Enrolled, requires verification');
           setRequires2FAVerify(true);
@@ -225,6 +263,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logger.info('USER_UPDATED: user data refreshed silently');
           
         } else if (event === 'SIGNED_OUT') {
+          console.log('[AuthContext] ⚠️ SIGNED_OUT event received (source: auth-event)');
+          
           // Delete active session from database
           if (user?.id) {
             setTimeout(() => {
@@ -701,6 +741,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, lastActivityTime]);
 
   const forceLogout = async (reason: 'idle_timeout' | 'session_expired') => {
+    const idleMinutes = (Date.now() - lastActivityTime) / 60000;
+    console.log(`[AuthContext] ⚠️ forceLogout called (reason: ${reason}, idleMinutes: ${idleMinutes.toFixed(1)})`);
     logger.info('Force logout triggered', { reason });
 
     // Log security event
@@ -962,8 +1004,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Mark 2FA as verified for current session
   const mark2FAVerified = () => {
+    console.log('[AuthContext] ✅ mark2FAVerified called');
     setIs2FAVerifiedThisSession(true);
     setRequires2FAVerify(false);
+    
+    // Persist verification to sessionStorage with timestamp
+    if (user?.id) {
+      const storageKey = `vitaluxe_2fa_verified_${user.id}`;
+      sessionStorage.setItem(storageKey, new Date().toISOString());
+      console.log('[AuthContext] 2FA verification persisted to sessionStorage');
+    }
   };
 
   return (
