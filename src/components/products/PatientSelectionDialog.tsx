@@ -124,22 +124,24 @@ export const PatientSelectionDialog = ({
     enabled: open && !!effectivePracticeId
   });
 
-  // Auto-select if only one provider
+  // Auto-select provider based on role and available providers
   useEffect(() => {
-    if (open && providers && providers.length === 1 && !selectedProviderId) {
-      setSelectedProviderId(providers[0].id);
-    }
-  }, [providers, selectedProviderId, open]);
-
-  // If user is a provider, find their provider record and use that ID
-  useEffect(() => {
-    if (effectiveRole === "provider" && effectiveUserId && providers) {
+    if (!open || !providers || providers.length === 0) return;
+    
+    // For providers: find their own provider record
+    if (effectiveRole === "provider" && effectiveUserId) {
       const matchingProvider = providers.find((p: any) => p.user_id === effectiveUserId);
-      if (matchingProvider) {
+      if (matchingProvider && matchingProvider.id !== selectedProviderId) {
         setSelectedProviderId(matchingProvider.id);
       }
     }
-  }, [effectiveRole, effectiveUserId, providers]);
+    // For doctors: auto-select if only one provider, otherwise leave null for manual selection
+    else if (effectiveRole === "doctor") {
+      if (providers.length === 1 && !selectedProviderId) {
+        setSelectedProviderId(providers[0].id);
+      }
+    }
+  }, [open, providers, effectiveRole, effectiveUserId, selectedProviderId]);
 
   // Fetch provider details for prescription writer
   const { data: selectedProviderData } = useQuery({
@@ -188,6 +190,7 @@ export const PatientSelectionDialog = ({
 
   useEffect(() => {
     if (!open) {
+      // Reset all dialog state when closing
       setCurrentStep('details');
       setShipTo('patient');
       setSelectedPatientId("");
@@ -200,12 +203,10 @@ export const PatientSelectionDialog = ({
       setOrderNotes("");
       setProviderSignature("");
       setShowPrescriptionWriter(false);
+      // Only reset provider selection when dialog closes
       if (effectiveRole === "doctor") {
         setSelectedProviderId(null);
       }
-    } else if (open && effectiveRole === "doctor") {
-      // Reset provider selection when dialog opens for doctors
-      setSelectedProviderId(null);
     }
   }, [open, effectiveRole]);
 
@@ -290,100 +291,6 @@ export const PatientSelectionDialog = ({
       return;
     }
 
-    // Determine destination state
-    let destinationState = '';
-    if (shipTo === 'patient') {
-      const selectedPatient = patients?.find(p => p.id === selectedPatientId);
-      
-      // Try structured fields first
-      if (selectedPatient?.address_state) {
-        destinationState = selectedPatient.address_state;
-      } else if (selectedPatient?.address_formatted) {
-        const stateMatch = selectedPatient.address_formatted.match(/,\s*([A-Z]{2})\s+\d{5}/);
-        destinationState = stateMatch ? stateMatch[1] : '';
-      }
-      
-      // Fallback: Try old address field if structured fields are empty
-      if (!destinationState && selectedPatient?.address) {
-        const stateMatch = selectedPatient.address.match(/,\s*([A-Z]{2})\s+\d{5}/);
-        destinationState = stateMatch ? stateMatch[1] : '';
-      }
-    } else {
-      // Practice order - check shipping address first, then regular address
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("shipping_address_state, shipping_address_formatted, address_state, address_formatted")
-        .eq("id", effectiveUserId)
-        .maybeSingle();
-      
-      // Priority 1: shipping_address_state
-      if (profileData?.shipping_address_state) {
-        destinationState = profileData.shipping_address_state;
-      } 
-      // Priority 2: shipping_address_formatted
-      else if (profileData?.shipping_address_formatted) {
-        const stateMatch = profileData.shipping_address_formatted.match(/,\s*([A-Z]{2})\s+\d{5}/);
-        destinationState = stateMatch ? stateMatch[1] : '';
-      }
-      // Priority 3: address_state (regular address)
-      else if (profileData?.address_state) {
-        destinationState = profileData.address_state;
-      }
-      // Priority 4: address_formatted (regular address)
-      else if (profileData?.address_formatted) {
-        const stateMatch = profileData.address_formatted.match(/,\s*([A-Z]{2})\s+\d{5}/);
-        destinationState = stateMatch ? stateMatch[1] : '';
-      }
-    }
-
-    // Validate destination state exists
-    if (!destinationState) {
-      const locationMsg = shipTo === 'practice' 
-        ? "practice address in your Profile" 
-        : "patient address";
-      toast.error(
-        `Unable to determine destination state. Please update the ${locationMsg} with complete address information including state.`,
-        { duration: 6000 }
-      );
-      return;
-    }
-
-    // Check pharmacy availability
-    try {
-      const { data: routingResult, error: routingError } = await supabase.functions.invoke(
-        'route-order-to-pharmacy',
-        {
-          body: {
-            product_id: product.id,
-            destination_state: destinationState
-          }
-        }
-      );
-      
-      if (routingError) {
-        import('@/lib/logger').then(({ logger }) => {
-          logger.error('Pharmacy routing check failed', routingError);
-        });
-        toast.error("Unable to verify pharmacy availability. Please try again.");
-        return;
-      }
-      
-      // If no pharmacy found, block cart addition
-      if (!routingResult?.pharmacy_id) {
-        toast.error(
-          `Please contact your representative or create a support ticket. It appears that there is no pharmacy available for this product in ${destinationState}.`,
-          { duration: 8000 }
-        );
-        return;
-      }
-    } catch (error) {
-      import('@/lib/logger').then(({ logger }) => {
-        logger.error('Pharmacy availability check failed', error);
-      });
-      toast.error("Unable to verify pharmacy availability. Please try again.");
-      return;
-    }
-
     const isPracticeOrder = shipTo === 'practice';
     
     let prescriptionUrl = null;
@@ -430,11 +337,19 @@ export const PatientSelectionDialog = ({
       }
     }
     
+    // Get the selected provider's user_id (not the provider record ID)
+    const selectedProvider = providers?.find((p: any) => p.id === selectedProviderId);
+    if (!selectedProvider?.user_id) {
+      toast.error("Unable to find provider information. Please try again.");
+      return;
+    }
+    
+    // Add to cart - ProductsGrid expects user_id for routing
     onAddToCart(
       isPracticeOrder ? null : selectedPatientId, 
       quantity,
       isPracticeOrder,
-      selectedProviderId,
+      selectedProvider.user_id,
       prescriptionUrl,
       customSig || null,
       customDosage || null,
