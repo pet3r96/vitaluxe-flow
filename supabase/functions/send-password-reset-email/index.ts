@@ -42,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('password_reset_tokens')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', oneHourAgo)
-      .eq('user_id', (await supabaseAdmin.from('profiles').select('id').eq('email', email).single()).data?.id ?? '');
+      .eq('user_id', (await supabaseAdmin.from('profiles').select('id').ilike('email', email).single()).data?.id ?? '');
 
     if (count && count >= 5) {
       return new Response(
@@ -55,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id, name, email')
-      .eq('email', email)
+      .ilike('email', email)
       .maybeSingle();
 
     // Don't reveal if email exists (security best practice)
