@@ -17,6 +17,7 @@ import { Info, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 import { GHLSmsSetupDialog } from "@/components/auth/GHLSmsSetupDialog";
 import { GHLSmsVerifyDialog } from "@/components/auth/GHLSmsVerifyDialog";
 import { useNavigate } from "react-router-dom";
+import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -48,11 +49,11 @@ const Auth = () => {
   const [dea, setDea] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState<AddressValue>({});
 
   // Pharmacy-specific fields
   const [contactEmail, setContactEmail] = useState("");
-  const [pharmacyAddress, setPharmacyAddress] = useState("");
+  const [pharmacyAddress, setPharmacyAddress] = useState<AddressValue>({});
   const [statesServiced, setStatesServiced] = useState<string[]>([]);
 
   const US_STATES = [
@@ -181,11 +182,27 @@ const Auth = () => {
               dea,
               company,
               phone,
-              address,
+              address: address.formatted || `${address.street}, ${address.city}, ${address.state} ${address.zip}`,
+              address_street: address.street,
+              address_city: address.city,
+              address_state: address.state,
+              address_zip: address.zip,
+              address_formatted: address.formatted,
+              address_verification_status: address.status,
+              address_verification_source: address.source,
+              address_verified_at: address.verified_at,
             }
           : {
               contactEmail,
-              address: pharmacyAddress,
+              address: pharmacyAddress.formatted || `${pharmacyAddress.street}, ${pharmacyAddress.city}, ${pharmacyAddress.state} ${pharmacyAddress.zip}`,
+              address_street: pharmacyAddress.street,
+              address_city: pharmacyAddress.city,
+              address_state: pharmacyAddress.state,
+              address_zip: pharmacyAddress.zip,
+              address_formatted: pharmacyAddress.formatted,
+              address_verification_status: pharmacyAddress.status,
+              address_verification_source: pharmacyAddress.source,
+              address_verified_at: pharmacyAddress.verified_at,
               statesServiced,
             };
 
@@ -434,17 +451,13 @@ const Auth = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Practice Address"
-                      className="bg-input border-border text-foreground"
-                    />
-                  </div>
+                  <GoogleAddressAutocomplete
+                    label="Practice Address"
+                    value={address}
+                    onChange={setAddress}
+                    placeholder="Start typing your practice address..."
+                    required
+                  />
 
                   {/* Provider Information Section */}
                   <div className="pt-4 pb-2">
@@ -543,17 +556,13 @@ const Auth = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="pharmacyAddress">Address</Label>
-                    <Input
-                      id="pharmacyAddress"
-                      type="text"
-                      value={pharmacyAddress}
-                      onChange={(e) => setPharmacyAddress(e.target.value)}
-                      placeholder="Pharmacy Address"
-                      className="bg-input border-border text-foreground"
-                    />
-                  </div>
+                  <GoogleAddressAutocomplete
+                    label="Pharmacy Address"
+                    value={pharmacyAddress}
+                    onChange={setPharmacyAddress}
+                    placeholder="Start typing your pharmacy address..."
+                    required
+                  />
 
                   <div className="space-y-3">
                     <Label>States Serviced *</Label>

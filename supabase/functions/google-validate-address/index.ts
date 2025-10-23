@@ -21,6 +21,8 @@ interface ValidationResponse {
   state?: string;
   zip?: string;
   verification_source: string;
+  deliverable?: boolean;
+  confidence?: number;
   error?: string;
   suggestions?: {
     street?: string;
@@ -29,6 +31,11 @@ interface ValidationResponse {
     zip?: string;
     formatted_address?: string;
   };
+  status?: 'verified' | 'unverified' | 'manual';
+  suggested_street?: string;
+  suggested_city?: string;
+  suggested_state?: string;
+  suggested_zip?: string;
 }
 
 serve(async (req) => {
@@ -156,6 +163,12 @@ serve(async (req) => {
           state: validatedState,
           zip: validatedZip,
           verification_source: 'google_places',
+          status: 'verified',
+          deliverable: true,
+          suggested_street: validatedStreet,
+          suggested_city: validatedCity,
+          suggested_state: validatedState,
+          suggested_zip: validatedZip,
         } as ValidationResponse),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { BillingAddress } from "@/types/payment";
-import { AddressInput } from "@/components/ui/address-input";
+import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
 interface AddBankAccountDialogProps {
   open: boolean;
@@ -164,7 +164,7 @@ export const AddBankAccountDialog = ({
             </Select>
           </div>
           
-          <AddressInput
+          <GoogleAddressAutocomplete
             value={billingAddress}
             onChange={(addr) => setBillingAddress({
               street: addr.street || "",
@@ -174,7 +174,6 @@ export const AddBankAccountDialog = ({
             })}
             label="Billing Address"
             required
-            autoValidate={true}
           />
           
           <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">

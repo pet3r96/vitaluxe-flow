@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, KeyRound } from "lucide-react";
-import { AddressInput } from "@/components/ui/address-input";
+import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
 
@@ -284,7 +284,7 @@ export const PracticeProfileForm = () => {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <AddressInput
+                    <GoogleAddressAutocomplete
                       label="Practice Address"
                       value={field.value || {}}
                       onChange={field.onChange}
@@ -381,7 +381,7 @@ export const PracticeProfileForm = () => {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <AddressInput
+                    <GoogleAddressAutocomplete
                       label="Practice Shipping Address"
                       value={field.value || {}}
                       onChange={field.onChange}
@@ -429,7 +429,7 @@ export const PracticeProfileForm = () => {
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <AddressInput
+                <GoogleAddressAutocomplete
                   label="Billing Address"
                   value={field.value || {}}
                   onChange={field.onChange}

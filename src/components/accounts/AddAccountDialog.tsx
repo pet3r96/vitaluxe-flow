@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AddressInput } from "@/components/ui/address-input";
+import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -454,7 +454,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
                 </div>
               </div>
 
-              <AddressInput
+              <GoogleAddressAutocomplete
                 label="Practice Address *"
                 value={{
                   street: formData.address_street,
@@ -559,7 +559,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
                 </p>
               </div>
 
-              <AddressInput
+              <GoogleAddressAutocomplete
                 label="Pharmacy Address *"
                 value={{
                   street: formData.address_street,

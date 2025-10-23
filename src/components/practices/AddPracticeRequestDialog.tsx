@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
-import { AddressInput } from "@/components/ui/address-input";
+import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
 interface AddPracticeRequestDialogProps {
   open: boolean;
@@ -241,7 +241,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
 
           <div className="space-y-4">
             <h3 className="font-semibold">Practice Address</h3>
-            <AddressInput
+            <GoogleAddressAutocomplete
               value={{
                 street: formData.address_street,
                 city: formData.address_city,
@@ -260,7 +260,6 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 address_verification_source: addr.source || "",
               })}
               required
-              autoValidate={true}
             />
           </div>
 

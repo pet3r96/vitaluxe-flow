@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tokenizeCard, detectCardType } from "@/lib/authorizenet-acceptjs";
 import { BillingAddress } from "@/types/payment";
-import { AddressInput } from "@/components/ui/address-input";
+import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
 interface AddCreditCardDialogProps {
   open: boolean;
@@ -35,12 +35,7 @@ export const AddCreditCardDialog = ({
   const [expiryYear, setExpiryYear] = useState("");
   const [cvv, setCvv] = useState("");
   const [cardholderName, setCardholderName] = useState("");
-  const [billingAddress, setBillingAddress] = useState<BillingAddress & {
-    formatted?: string;
-    status?: string;
-    verified_at?: string;
-    source?: string;
-  }>({
+  const [billingAddress, setBillingAddress] = useState<AddressValue>({
     street: defaultBillingAddress?.street || "",
     city: defaultBillingAddress?.city || "",
     state: defaultBillingAddress?.state || "",
@@ -74,7 +69,12 @@ export const AddCreditCardDialog = ({
           card_last_five: cardLastFive,
           card_expiry: cardExpiry,
           cardholder_name: cardholderName,
-          billing_address: billingAddress,
+          billing_address: {
+            street: billingAddress.street || "",
+            city: billingAddress.city || "",
+            state: billingAddress.state || "",
+            zip: billingAddress.zip || "",
+          },
           is_default: false,
           practice_id: practiceId,
         },
@@ -211,12 +211,11 @@ export const AddCreditCardDialog = ({
             />
           </div>
           
-          <AddressInput
+          <GoogleAddressAutocomplete
             value={billingAddress}
             onChange={handleAddressChange}
             label="Billing Address"
             required={true}
-            autoValidate={true}
           />
           
           <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">

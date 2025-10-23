@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AddressInput } from "@/components/ui/address-input";
+import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 import {
   Command,
   CommandEmpty,
@@ -353,7 +353,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
             </div>
           </div>
 
-          <AddressInput
+          <GoogleAddressAutocomplete
             label="Practice Address"
             value={{
               street: formData.address_street,
