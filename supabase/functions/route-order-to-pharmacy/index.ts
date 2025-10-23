@@ -22,7 +22,30 @@ async function routeOrderToPharmacy(
   destination_state: string,
   user_topline_rep_id?: string | null
 ): Promise<RoutingResult> {
-  console.log(`Routing order for product ${product_id} to state ${destination_state}, topline: ${user_topline_rep_id || 'N/A'}`);
+  // Validate destination_state
+  if (!destination_state || typeof destination_state !== 'string') {
+    return {
+      pharmacy_id: null,
+      reason: 'Invalid destination state: state is required'
+    };
+  }
+
+  const trimmedState = destination_state.trim();
+  if (trimmedState.length === 0) {
+    return {
+      pharmacy_id: null,
+      reason: 'Invalid destination state: state cannot be empty'
+    };
+  }
+
+  if (!/^[A-Z]{2}$/.test(trimmedState)) {
+    return {
+      pharmacy_id: null,
+      reason: `Invalid destination state: "${trimmedState}" must be a 2-letter US state code`
+    };
+  }
+
+  console.log(`Routing order for product ${product_id} to state ${trimmedState}, topline: ${user_topline_rep_id || 'N/A'}`);
 
   // 1. Get all pharmacies assigned to this product
   const { data: assignments, error } = await supabase
@@ -58,7 +81,7 @@ async function routeOrderToPharmacy(
   let eligiblePharmacies = assignments
     .map((a: any) => a.pharmacy)
     .filter((p: any) => 
-      p && p.active && p.states_serviced?.includes(destination_state)
+      p && p.active && p.states_serviced?.includes(trimmedState)
     );
 
   // 3. Apply topline scoping filter if user has a topline
@@ -90,12 +113,12 @@ async function routeOrderToPharmacy(
     console.log(`After topline scoping: ${eligiblePharmacies.length} pharmacies available`);
   }
 
-  console.log(`Found ${eligiblePharmacies.length} eligible pharmacies for state ${destination_state}`);
+  console.log(`Found ${eligiblePharmacies.length} eligible pharmacies for state ${trimmedState}`);
 
   if (eligiblePharmacies.length === 0) {
     return { 
       pharmacy_id: null, 
-      reason: `No active pharmacies serve state: ${destination_state}` 
+      reason: `No active pharmacies serve state: ${trimmedState}` 
     };
   }
 
@@ -111,7 +134,7 @@ async function routeOrderToPharmacy(
   // 4. Apply priority routing
   const pharmaciesWithPriority = eligiblePharmacies.map((pharmacy: any) => ({
     ...pharmacy,
-    priority: pharmacy.priority_map?.[destination_state] || 999 // Default to lowest
+    priority: pharmacy.priority_map?.[trimmedState] || 999 // Default to lowest
   }));
 
   // Sort by priority (lowest number = highest priority)
@@ -123,7 +146,7 @@ async function routeOrderToPharmacy(
 
   return { 
     pharmacy_id: selectedPharmacy.id, 
-    reason: `Priority routing: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority} for ${destination_state})` 
+    reason: `Priority routing: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority} for ${trimmedState})` 
   };
 }
 

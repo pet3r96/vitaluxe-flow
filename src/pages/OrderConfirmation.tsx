@@ -268,7 +268,20 @@ export default function OrderConfirmation() {
           `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
         
         for (const line of practiceLines) {
-          const destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
+          let destinationState = extractStateFromAddress(line.patient_address || practiceAddress);
+          
+          // Fallback to direct state field if extraction failed
+          if (!destinationState && providerProfile?.shipping_address_state) {
+            destinationState = providerProfile.shipping_address_state;
+          }
+          
+          // Validate state before routing
+          if (!destinationState || !/^[A-Z]{2}$/.test(destinationState)) {
+            const addressUsed = line.patient_address || practiceAddress;
+            throw new Error(
+              `Unable to determine shipping state from address: "${addressUsed}". Please go to Profile → Shipping Address and ensure it's formatted as: Street, City, ST 12345`
+            );
+          }
           
           try {
             const { data: routingResult, error: routingError } = await supabase.functions.invoke(
@@ -300,6 +313,13 @@ export default function OrderConfirmation() {
       if (patientLines.length > 0) {
         for (const line of patientLines) {
           const destinationState = extractStateFromAddress(line.patient_address);
+          
+          // Validate state before routing
+          if (!destinationState || !/^[A-Z]{2}$/.test(destinationState)) {
+            throw new Error(
+              `Unable to determine shipping state from patient address: "${line.patient_address || 'No address provided'}". Please ensure the patient address is formatted as: Street, City, ST 12345`
+            );
+          }
           
           try {
             const { data: routingResult, error: routingError } = await supabase.functions.invoke(
