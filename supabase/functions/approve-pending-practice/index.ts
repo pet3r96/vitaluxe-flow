@@ -161,42 +161,41 @@ serve(async (req) => {
       let userId: string;
       let isNewUser = false;
       
-      try {
-        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          email: practiceData.email,
-          password: temporaryPassword,
-          email_confirm: true,
-          user_metadata: {
-            name: practiceData.practice_name,
-            phone: practiceData.phone,
-            company: practiceData.company
-          }
-        });
-
-        if (createUserError) {
-          // Check if user already exists
-          if (createUserError.message?.includes('already registered') || 
-              createUserError.message?.includes('duplicate')) {
-            const { data: existingUser, error: fetchError } = await supabaseAdmin.auth.admin
-              .listUsers();
-            
-            const foundUser = existingUser?.users?.find((u: any) => u.email === practiceData.email);
-            if (!foundUser) {
-              throw new Error(`Failed to create or find user: ${createUserError.message}`);
-            }
-            userId = foundUser.id;
-          } else {
-            throw new Error(`Failed to create user: ${createUserError.message}`);
-          }
-        } else if (!newUser?.user) {
-          throw new Error('Failed to create user: No user data returned');
-        } else {
-          userId = newUser.user.id;
-          isNewUser = true;
+      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+        email: practiceData.email,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: {
+          name: practiceData.practice_name,
+          phone: practiceData.phone,
+          company: practiceData.company
         }
-      } catch (error: any) {
-        console.error('Error handling user creation:', error);
-        throw error;
+      });
+
+      if (createUserError) {
+        // Check if user already exists
+        if (createUserError.message?.includes('already registered') || 
+            createUserError.message?.includes('duplicate')) {
+          console.log('User already exists, fetching existing user...');
+          const { data: existingUser, error: fetchError } = await supabaseAdmin.auth.admin
+            .listUsers();
+          
+          const foundUser = existingUser?.users?.find((u: any) => u.email === practiceData.email);
+          if (!foundUser) {
+            throw new Error(`Failed to create or find user: ${createUserError.message}`);
+          }
+          userId = foundUser.id;
+          isNewUser = false; // CRITICAL: Don't send welcome email for existing users
+          console.log('Found existing user:', userId);
+        } else {
+          throw new Error(`Failed to create user: ${createUserError.message}`);
+        }
+      } else if (!newUser?.user) {
+        throw new Error('Failed to create user: No user data returned');
+      } else {
+        userId = newUser.user.id;
+        isNewUser = true;
+        console.log('Created new user:', userId);
       }
 
       // Upload contract file if provided
