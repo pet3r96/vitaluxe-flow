@@ -361,8 +361,25 @@ serve(async (req) => {
     
     // Map linkedToplineId to parentId for database function compatibility
     if (signupData.role === 'downline' && roleDataForRpc.linkedToplineId) {
-      roleDataForRpc.parentId = roleDataForRpc.linkedToplineId;
-      console.log('Downline creation: mapped linkedToplineId to parentId for RPC');
+      // linkedToplineId is a user_id, but we need the rep_id
+      const { data: parentRep, error: repLookupError } = await supabaseAdmin
+        .from('reps')
+        .select('id')
+        .eq('user_id', roleDataForRpc.linkedToplineId)
+        .eq('role', 'topline')
+        .single();
+      
+      if (repLookupError || !parentRep) {
+        console.error('Failed to find parent topline rep:', repLookupError);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: 'Invalid parent topline representative. Please select a valid topline rep.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      roleDataForRpc.parentId = parentRep.id; // Use rep_id, not user_id
+      console.log(`Downline creation: mapped user_id ${roleDataForRpc.linkedToplineId} to rep_id ${parentRep.id}`);
     }
     
     // For toplines, ensure no parentId/linkedToplineId is sent
