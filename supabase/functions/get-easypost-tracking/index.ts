@@ -168,12 +168,12 @@ serve(async (req: Request) => {
       }
     }
 
-    // Check if order should be marked as delivered
+    // Check if order should be marked as completed
     if (orderLineId && tracking.status === 'delivered') {
       const { error: updateError } = await supabase
         .from('order_lines')
         .update({
-          status: 'delivered',
+          status: 'completed',
           delivered_at: new Date().toISOString()
         })
         .eq('id', orderLineId);
@@ -190,7 +190,12 @@ serve(async (req: Request) => {
         tracking: {
           status: tracking.status,
           tracking_url: tracking.tracking_url,
-          events: tracking.events
+          events: tracking.events,
+          carrier: tracking.carrier,
+          est_delivery_date: tracking.est_delivery_date,
+          signed_by: tracking.signed_by,
+          weight: tracking.weight,
+          carrier_detail: tracking.carrier_detail
         },
         message: 'Tracking information retrieved successfully'
       }),

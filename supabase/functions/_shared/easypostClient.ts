@@ -191,6 +191,11 @@ export class EasyPostClient {
     status: string;
     events: EasyPostTrackingEvent[];
     tracking_url: string;
+    carrier?: string;
+    est_delivery_date?: string;
+    signed_by?: string;
+    weight?: number;
+    carrier_detail?: any;
   }> {
     try {
       // Create a tracker first (EasyPost requires this for new tracking codes)
@@ -211,7 +216,12 @@ export class EasyPostClient {
       return {
         status: tracker.status,
         events,
-        tracking_url: tracker.public_url || ''
+        tracking_url: tracker.public_url || '',
+        carrier: tracker.carrier,
+        est_delivery_date: tracker.est_delivery_date,
+        signed_by: tracker.signed_by,
+        weight: tracker.weight,
+        carrier_detail: tracker.carrier_detail
       };
     } catch (error) {
       console.error('Tracking retrieval failed:', error);
