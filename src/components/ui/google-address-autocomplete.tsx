@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLoadScript, Autocomplete } from '@react-google-maps/api';
 import { Input } from './input';
 import { Label } from './label';
@@ -46,6 +46,7 @@ export const GoogleAddressAutocomplete = ({
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (value.formatted) {
@@ -93,13 +94,14 @@ export const GoogleAddressAutocomplete = ({
         }
       }
       
-      setInputValue(place.formatted_address || '');
+      const formattedAddress = place.formatted_address || `${street}, ${city}, ${state} ${zip}`;
+      setInputValue(formattedAddress);
       
-      await validateAddress({ street, city, state, zip });
+      await validateAddress({ street, city, state, zip }, formattedAddress);
     }
   };
 
-  const validateAddress = async (address: AddressValue) => {
+  const validateAddress = async (address: AddressValue, displayAddress?: string) => {
     setValidating(true);
     try {
       const { data, error } = await supabase.functions.invoke('google-validate-address', {
@@ -110,25 +112,32 @@ export const GoogleAddressAutocomplete = ({
       
       setValidationResult(data);
       
-      onChange({
+      const validatedAddress: AddressValue = {
         street: data.suggested_street || address.street || '',
         city: data.suggested_city || address.city || '',
         state: data.suggested_state || address.state || '',
         zip: data.suggested_zip || address.zip || '',
-        formatted: data.formatted_address || '',
-        status: data.is_valid ? 'verified' : 'unverified',
+        formatted: data.formatted_address || displayAddress || '',
+        status: (data.is_valid ? 'verified' : 'unverified') as 'verified' | 'unverified',
         verified_at: new Date().toISOString(),
         source: 'google_places',
         deliverable: data.deliverable || data.is_valid,
-      });
+      };
+      
+      onChange(validatedAddress);
+      setInputValue(validatedAddress.formatted);
       
     } catch (error) {
       console.error('Validation error:', error);
       onChange({
         ...address,
+        formatted: displayAddress || '',
         status: 'manual',
         source: 'manual_entry',
       });
+      if (displayAddress) {
+        setInputValue(displayAddress);
+      }
     } finally {
       setValidating(false);
     }
@@ -167,11 +176,15 @@ export const GoogleAddressAutocomplete = ({
         }}
       >
         <Input
+          ref={inputRef}
           placeholder={placeholder}
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           disabled={disabled}
+          autoComplete="off"
+          data-form-type="other"
+          name="address-autocomplete"
         />
       </Autocomplete>
       

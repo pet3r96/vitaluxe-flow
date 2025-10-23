@@ -79,6 +79,24 @@ All colors MUST be HSL.
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold;
   }
+
+  /* Hide browser autofill suggestions for address fields */
+  input[data-form-type="other"]::-webkit-contacts-auto-fill-button,
+  input[data-form-type="other"]::-webkit-credentials-auto-fill-button {
+    visibility: hidden;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  /* Style Google Places Autocomplete dropdown */
+  .pac-container {
+    z-index: 9999 !important;
+    font-family: inherit;
+  }
+
+  .pac-item-query {
+    font-size: 14px;
+  }
 }
 
 @layer utilities {
