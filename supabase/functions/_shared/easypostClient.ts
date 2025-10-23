@@ -12,23 +12,6 @@ interface EasyPostAddress {
   company?: string;
 }
 
-interface EasyPostParcel {
-  length: number;
-  width: number;
-  height: number;
-  weight: number;
-}
-
-interface EasyPostShipment {
-  id: string;
-  tracking_code: string;
-  carrier: string;
-  service: string;
-  status: string;
-  label_url: string;
-  tracking_url: string;
-  rate: number;
-}
 
 interface EasyPostTrackingEvent {
   status: string;
@@ -49,8 +32,10 @@ export class EasyPostClient {
 
   private async makeRequest(endpoint: string, method: string = 'GET', data?: any) {
     const url = `${this.baseUrl}${endpoint}`;
+    // EasyPost uses Basic Auth with API key as username and empty password
+    const authString = btoa(`${this.apiKey}:`);
     const headers = {
-      'Authorization': `Bearer ${this.apiKey}`,
+      'Authorization': `Basic ${authString}`,
       'Content-Type': 'application/json',
     };
 
@@ -91,13 +76,15 @@ export class EasyPostClient {
     verification_source: string;
   }> {
     try {
-      const response = await this.makeRequest('/addresses/verify', 'POST', {
-        address: address
+      const response = await this.makeRequest('/addresses', 'POST', {
+        address: address,
+        verify: ["delivery"]
       });
 
       const verified = response.address;
-      const confidence = verified.verifications?.delivery?.confidence || 0;
-      const isDeliverable = verified.verifications?.delivery?.success || false;
+      const deliveryVerification = verified.verifications?.delivery;
+      const confidence = deliveryVerification?.confidence || 0;
+      const isDeliverable = deliveryVerification?.success || false;
 
       // Format address
       const formatted = `${verified.street1}${verified.street2 ? ', ' + verified.street2 : ''}, ${verified.city}, ${verified.state} ${verified.zip}`;
@@ -124,43 +111,6 @@ export class EasyPostClient {
     }
   }
 
-  /**
-   * Create a shipment using EasyPost API
-   */
-  async createShipment(
-    fromAddress: EasyPostAddress,
-    toAddress: EasyPostAddress,
-    parcel: EasyPostParcel,
-    carrierAccounts?: string[]
-  ): Promise<EasyPostShipment> {
-    try {
-      const shipmentData: any = {
-        from_address: fromAddress,
-        to_address: toAddress,
-        parcel: parcel
-      };
-
-      if (carrierAccounts && carrierAccounts.length > 0) {
-        shipmentData.carrier_accounts = carrierAccounts;
-      }
-
-      const response = await this.makeRequest('/shipments', 'POST', shipmentData);
-
-      return {
-        id: response.shipment.id,
-        tracking_code: response.shipment.tracking_code,
-        carrier: response.shipment.selected_rate?.carrier || 'unknown',
-        service: response.shipment.selected_rate?.service || 'unknown',
-        status: response.shipment.status,
-        label_url: response.shipment.postage_label?.label_url || '',
-        tracking_url: response.shipment.tracking_url || '',
-        rate: parseFloat(response.shipment.selected_rate?.rate || '0')
-      };
-    } catch (error) {
-      console.error('Shipment creation failed:', error);
-      throw error;
-    }
-  }
 
   /**
    * Get tracking information for a tracking code
@@ -171,21 +121,25 @@ export class EasyPostClient {
     tracking_url: string;
   }> {
     try {
-      const response = await this.makeRequest(`/trackers/${trackingCode}`);
+      // Create a tracker first (EasyPost requires this for new tracking codes)
+      const response = await this.makeRequest('/trackers', 'POST', {
+        tracking_code: trackingCode
+      });
 
-      const events = response.tracker.tracking_details?.map((event: any) => ({
+      const tracker = response;
+      const events = tracker.tracking_details?.map((event: any) => ({
         status: event.status,
         message: event.message,
         description: event.description,
-        carrier: response.tracker.carrier,
+        carrier: tracker.carrier,
         tracking_details: event,
         datetime: event.datetime
       })) || [];
 
       return {
-        status: response.tracker.status,
+        status: tracker.status,
         events,
-        tracking_url: response.tracker.public_url || ''
+        tracking_url: tracker.public_url || ''
       };
     } catch (error) {
       console.error('Tracking retrieval failed:', error);
@@ -218,28 +172,6 @@ export class EasyPostClient {
     }
   }
 
-  /**
-   * Get shipment details by ID
-   */
-  async getShipment(shipmentId: string): Promise<EasyPostShipment> {
-    try {
-      const response = await this.makeRequest(`/shipments/${shipmentId}`);
-
-      return {
-        id: response.shipment.id,
-        tracking_code: response.shipment.tracking_code,
-        carrier: response.shipment.selected_rate?.carrier || 'unknown',
-        service: response.shipment.selected_rate?.service || 'unknown',
-        status: response.shipment.status,
-        label_url: response.shipment.postage_label?.label_url || '',
-        tracking_url: response.shipment.tracking_url || '',
-        rate: parseFloat(response.shipment.selected_rate?.rate || '0')
-      };
-    } catch (error) {
-      console.error('Shipment retrieval failed:', error);
-      throw error;
-    }
-  }
 }
 
 /**
@@ -272,14 +204,3 @@ export function formatAddressForEasyPost(
   };
 }
 
-/**
- * Helper function to create default parcel for shipments
- */
-export function createDefaultParcel(): EasyPostParcel {
-  return {
-    length: 10, // inches
-    width: 8,
-    height: 4,
-    weight: 1 // ounces
-  };
-}
