@@ -34,7 +34,7 @@ interface AuthContextType {
   twoFAStatusChecked: boolean;
   passwordStatusChecked: boolean;
   mark2FAVerified: () => void;
-  checkPasswordStatus: () => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
+  checkPasswordStatus: (roleOverride?: string, userIdOverride?: string) => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -506,7 +506,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (typeof cachedCanImpersonate === 'boolean') setCanImpersonateDb(cachedCanImpersonate);
             
             // Check password and 2FA status immediately (non-blocking but synchronous)
-            void checkPasswordStatus(role); // Pass the role we just loaded from cache
+            void checkPasswordStatus(role, userId); // Pass role and userId we just loaded from cache
             void check2FAStatus(userId);
             
             // Restore impersonation if admin
@@ -639,19 +639,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const checkPasswordStatus = async (roleOverride?: string): Promise<{ mustChangePassword: boolean; termsAccepted: boolean }> => {
-    if (!user) {
-      return { mustChangePassword: false, termsAccepted: true };
-    }
-
-    // Use provided role or fall back to effectiveRole
+  const checkPasswordStatus = async (roleOverride?: string, userIdOverride?: string): Promise<{ mustChangePassword: boolean; termsAccepted: boolean }> => {
+    // Determine role and user ID safely (avoid early returns that keep spinner)
     const roleToCheck = roleOverride || effectiveRole;
+    const uid = userIdOverride || effectiveUserId || user?.id || null;
 
-    // Only real admins (not impersonating) are exempt from both password change and terms acceptance
+    logger.info('checkPasswordStatus start', { roleToCheck, hasUid: !!uid });
+
+    // Admins (not impersonating) are always exempt
     if (roleToCheck === 'admin' && !isImpersonating) {
       setMustChangePassword(false);
       setTermsAccepted(true);
       setPasswordStatusChecked(true);
+      logger.info('checkPasswordStatus admin bypass');
+      return { mustChangePassword: false, termsAccepted: true };
+    }
+
+    // If uid is not yet available due to initialization race, avoid blocking UI
+    if (!uid) {
+      setMustChangePassword(false);
+      setTermsAccepted(true);
+      setPasswordStatusChecked(true);
+      logger.warn('checkPasswordStatus no uid yet - using safe defaults');
       return { mustChangePassword: false, termsAccepted: true };
     }
 
@@ -659,7 +668,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase
         .from('user_password_status')
         .select('must_change_password, terms_accepted')
-        .eq('user_id', effectiveUserId)
+        .eq('user_id', uid)
         .maybeSingle();
 
       if (error) {
@@ -670,11 +679,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const mustChange = data?.must_change_password || false;
       const termsAccept = data?.terms_accepted || false;
-      
+
       setMustChangePassword(mustChange);
       setTermsAccepted(termsAccept);
       setPasswordStatusChecked(true);
-      
+
+      logger.info('checkPasswordStatus done', { mustChange, termsAccept });
       return { mustChangePassword: mustChange, termsAccepted: termsAccept };
     } catch (error) {
       logger.error('Error in checkPasswordStatus', error);
@@ -687,7 +697,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (user && effectiveUserId && effectiveRole && !initializing && effectiveUserId !== user.id) {
       logger.info('Re-checking password status for impersonated user');
-      void checkPasswordStatus();
+      void checkPasswordStatus(effectiveRole || undefined, effectiveUserId || undefined);
     }
   }, [effectiveUserId]);
 
