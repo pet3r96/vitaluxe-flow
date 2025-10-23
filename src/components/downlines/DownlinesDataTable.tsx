@@ -37,7 +37,8 @@ export function DownlinesDataTable() {
 
   const { data: downlines, isLoading } = useQuery({
     queryKey: ["downlines-table", effectiveUserId],
-    staleTime: 300000, // 5 minutes - downlines change infrequently
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!effectiveUserId) return [];
 

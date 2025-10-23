@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -14,11 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Eye, UserPlus } from "lucide-react";
+import { Search, Eye, UserPlus, RefreshCw } from "lucide-react";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
 import { AddPracticeRequestDialog } from "./AddPracticeRequestDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { toast } from "sonner";
 
 export const RepPracticesDataTable = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -26,10 +27,40 @@ export const RepPracticesDataTable = () => {
   const [selectedPractice, setSelectedPractice] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [isRepairing, setIsRepairing] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Realtime subscription for pending_practices approval
+  useEffect(() => {
+    const channel = supabase
+      .channel('pending-practices-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pending_practices',
+          filter: `status=eq.approved`
+        },
+        (payload) => {
+          console.log('[RepPracticesDataTable] Practice approved, refreshing:', payload);
+          queryClient.invalidateQueries({ queryKey: ['rep-practices', effectiveUserId] });
+          queryClient.invalidateQueries({ queryKey: ['rep-practice-stats', effectiveUserId] });
+          queryClient.invalidateQueries({ queryKey: ['rep-practice-count'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveUserId, queryClient]);
 
   // Fetch practices based on role using rep_practice_links
   const { data: practices, isLoading, refetch } = useQuery({
     queryKey: ["rep-practices", effectiveUserId, effectiveRole],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!effectiveUserId) return [];
 
@@ -186,6 +217,8 @@ export const RepPracticesDataTable = () => {
 
   const { data: stats } = useQuery({
     queryKey: ["rep-practice-stats", effectiveUserId, effectiveRole],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!practices || practices.length === 0) {
         return {
@@ -216,6 +249,29 @@ export const RepPracticesDataTable = () => {
     },
     enabled: !!practices && practices.length > 0,
   });
+
+  const handleRepairLinks = async () => {
+    setIsRepairing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-rep-links');
+      
+      if (error) throw error;
+
+      toast.success(data.message || `Added ${data.linksAdded} practice link(s)`);
+      
+      // Invalidate all related queries
+      queryClient.invalidateQueries({ queryKey: ['rep-practices', effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ['rep-practice-stats', effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ['rep-practice-count'] });
+      queryClient.invalidateQueries({ queryKey: ['downlines-table', effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ['downline-count'] });
+    } catch (error: any) {
+      console.error('Error repairing practice links:', error);
+      toast.error(error.message || 'Failed to repair practice links');
+    } finally {
+      setIsRepairing(false);
+    }
+  };
 
   const getRepDisplay = (linkedToplineId: string | null) => {
     if (!linkedToplineId || !allReps) {
@@ -280,7 +336,7 @@ export const RepPracticesDataTable = () => {
         </Card>
       </div>
 
-      {/* Search */}
+      {/* Search and Actions */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -290,6 +346,20 @@ export const RepPracticesDataTable = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
           />
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRepairLinks}
+            disabled={isRepairing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRepairing ? 'animate-spin' : ''}`} />
+            Repair Links
+          </Button>
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Request Practice
+          </Button>
         </div>
       </div>
 
@@ -382,13 +452,6 @@ export const RepPracticesDataTable = () => {
           endIndex={Math.min(endIndex, filteredPractices.length)}
         />
       )}
-
-      <div className="flex justify-end mb-4">
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Request New Practice
-        </Button>
-          </div>
 
       {selectedPractice && (
         <PracticeDetailsDialog
