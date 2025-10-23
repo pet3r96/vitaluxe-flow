@@ -35,7 +35,10 @@ async function validateAddress(zip: string) {
     const response = await fetch(`https://api.zippopotam.us/us/${cleanZip}`);
     
     if (!response.ok) {
-      return { is_valid: false };
+      return { 
+        is_valid: false,
+        verification_source: 'zip_validation'
+      };
     }
 
     const data = await response.json();
@@ -45,9 +48,13 @@ async function validateAddress(zip: string) {
       is_valid: true,
       suggested_city: place['place name'],
       suggested_state: place['state abbreviation'],
+      verification_source: 'zip_validation'
     };
   } catch (error) {
-    return { is_valid: false };
+    return { 
+      is_valid: false,
+      verification_source: 'zip_validation'
+    };
   }
 }
 

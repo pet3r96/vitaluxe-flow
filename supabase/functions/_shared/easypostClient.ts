@@ -8,6 +8,8 @@ interface EasyPostAddress {
   state: string;
   zip: string;
   country?: string;
+  name?: string;
+  company?: string;
 }
 
 interface EasyPostParcel {
