@@ -24,11 +24,20 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Detect dynamic import failures (chunk loading errors)
+    const isChunkLoadError = error.message?.includes('Failed to fetch dynamically imported module') ||
+                            error.message?.includes('error loading dynamically imported module') ||
+                            error.message?.includes('Importing a module script failed');
+    
     import('@/lib/logger').then(({ logger }) => {
+      if (isChunkLoadError) {
+        logger.warn('Chunk loading failed - likely stale cache after deployment', error);
+      }
       logger.error('ErrorBoundary caught an error', error, logger.sanitize({
         componentStack: errorInfo.componentStack,
         browser: navigator.userAgent,
-        url: window.location.href
+        url: window.location.href,
+        isChunkLoadError
       }));
     });
 
@@ -71,7 +80,16 @@ export class ErrorBoundary extends Component<Props, State> {
                 <CardTitle>Something went wrong</CardTitle>
               </div>
               <CardDescription>
-                An unexpected error occurred. Our team has been notified.
+                {this.state.error?.message?.includes('dynamically imported module') || 
+                 this.state.error?.message?.includes('Importing a module script failed') ? (
+                  <>
+                    Failed to load application module. This usually happens after an update.
+                    <br />
+                    <strong>Please clear your browser cache and reload the page.</strong>
+                  </>
+                ) : (
+                  'An unexpected error occurred. Our team has been notified.'
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

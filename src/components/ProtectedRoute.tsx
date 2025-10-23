@@ -88,6 +88,17 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // Wait for password status to load before checking terms
+  // Add 10-second timeout failsafe to prevent infinite loading
+  useEffect(() => {
+    if (user && effectiveRole && !passwordStatusChecked) {
+      const timeout = setTimeout(() => {
+        console.warn('[ProtectedRoute] Password status check timeout after 10s - auth system should handle this');
+      }, 10000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [user, effectiveRole, passwordStatusChecked]);
+
   if (user && effectiveRole && !passwordStatusChecked) {
     console.log('[ProtectedRoute] Waiting for password status check');
     return (

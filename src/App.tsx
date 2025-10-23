@@ -14,10 +14,35 @@ import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonation
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
+// Helper function to retry dynamic imports on failure
+const lazyWithRetry = (componentImport: () => Promise<any>) =>
+  lazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+    );
+
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasAlreadyBeenForceRefreshed) {
+        // Assuming that the user's bundle is not up to date, force reload once
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        console.warn('Chunk load failed, forcing reload...', error);
+        window.location.reload();
+        // Return a never-resolving promise to prevent React from rendering during reload
+        return new Promise(() => {});
+      }
+      // If reload didn't fix it, throw the error to ErrorBoundary
+      throw error;
+    }
+  });
+
 // Lazy load all page components for better code splitting
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const Accounts = lazy(() => import("./pages/Accounts"));
 const Practices = lazy(() => import("./pages/Practices"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -44,7 +69,7 @@ const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const AdminDiscountCodes = lazy(() => import("./pages/AdminDiscountCodes"));
 const EmergencyAdminRecovery = lazy(() => import("./pages/EmergencyAdminRecovery"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
-const DashboardRouter = lazy(() => import("./components/DashboardRouter").then(m => ({ default: m.DashboardRouter })));
+const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter").then(m => ({ default: m.DashboardRouter })));
 
 // Loading fallback component
 const PageLoader = () => (

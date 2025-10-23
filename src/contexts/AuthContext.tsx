@@ -611,7 +611,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Admins exempt
         setMustChangePassword(false);
         setTermsAccepted(true);
+      } else {
+        // FALLBACK: If password check failed, use safe defaults
+        logger.warn('Password status check failed, using safe defaults');
+        setMustChangePassword(false);
+        setTermsAccepted(false);
       }
+      // ALWAYS set this to true, even if checks fail
       setPasswordStatusChecked(true);
 
       // Process 2FA status using dedicated check function
