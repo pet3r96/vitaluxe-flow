@@ -55,7 +55,7 @@ const AdminSettings = () => {
           </TabsTrigger>
           <TabsTrigger value="shipments" className="gap-2">
             <Truck className="h-4 w-4" />
-            EasyPost Shipments
+            Tracking Tester
           </TabsTrigger>
           <TabsTrigger value="product-types" className="gap-2">
             <Package className="h-4 w-4" />
@@ -171,9 +171,9 @@ const AdminSettings = () => {
         <TabsContent value="shipments" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>EasyPost Shipment Management</CardTitle>
+              <CardTitle>EasyPost Tracking Tester</CardTitle>
               <CardDescription>
-                Create and manage shipments using EasyPost API for tracking and delivery
+                Test the EasyPost tracking API with existing orders or manual tracking codes
               </CardDescription>
             </CardHeader>
             <CardContent>
