@@ -86,8 +86,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // Show GHL 2FA dialogs if needed (mandatory for ALL users including admins)
-  // Only show after 2FA status has been checked to prevent premature auto-sends
-  if (!isImpersonating && twoFAStatusChecked) {
+  // Only show after 2FA status has been checked AND password has been changed
+  if (!isImpersonating && twoFAStatusChecked && !mustChangePassword) {
     if (requires2FASetup) {
       console.log('[ProtectedRoute] Rendering GHLSmsSetupDialog');
       return <GHLSmsSetupDialog open={true} userId={user.id} />;
