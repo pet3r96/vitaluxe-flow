@@ -62,7 +62,7 @@ export const AddressInput = ({
     setValidating(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('validate-address', {
+      const { data, error } = await supabase.functions.invoke('google-validate-address', {
         body: {
           street: value.street,
           city: value.city,
@@ -132,9 +132,12 @@ export const AddressInput = ({
   const proceedManually = async () => {
     setValidating(true);
     try {
-      const { data } = await supabase.functions.invoke('validate-address', {
+      const { data } = await supabase.functions.invoke('google-validate-address', {
         body: {
-          ...value,
+          street: value.street,
+          city: value.city,
+          state: value.state,
+          zip: value.zip,
           manual_override: true
         }
       });

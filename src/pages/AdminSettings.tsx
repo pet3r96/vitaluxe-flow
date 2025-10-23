@@ -1,5 +1,4 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AddressVerificationPanel } from "@/components/admin/AddressVerificationPanel";
 import { EasyPostShipmentManager } from "@/components/admin/EasyPostShipmentManager";
 import { OrphanedUserFixer } from "@/components/admin/OrphanedUserFixer";
 import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
@@ -12,7 +11,7 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
@@ -48,10 +47,6 @@ const AdminSettings = () => {
           <TabsTrigger value="pending-practices" className="gap-2">
             <Building2 className="h-4 w-4" />
             Pending Practices
-          </TabsTrigger>
-          <TabsTrigger value="addresses" className="gap-2">
-            <MapPin className="h-4 w-4" />
-            Address Verification
           </TabsTrigger>
           <TabsTrigger value="shipments" className="gap-2">
             <Truck className="h-4 w-4" />
@@ -150,20 +145,6 @@ const AdminSettings = () => {
             </CardHeader>
             <CardContent>
               <PendingPracticesApproval />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="addresses" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Global Address Verification</CardTitle>
-              <CardDescription>
-                Validate and standardize addresses across all entities using EasyPost and ZIP validation
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AddressVerificationPanel />
             </CardContent>
           </Card>
         </TabsContent>
