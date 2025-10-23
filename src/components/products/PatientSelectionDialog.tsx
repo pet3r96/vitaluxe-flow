@@ -126,10 +126,10 @@ export const PatientSelectionDialog = ({
 
   // Auto-select if only one provider
   useEffect(() => {
-    if (providers && providers.length === 1 && !selectedProviderId) {
+    if (open && providers && providers.length === 1 && !selectedProviderId) {
       setSelectedProviderId(providers[0].id);
     }
-  }, [providers, selectedProviderId]);
+  }, [providers, selectedProviderId, open]);
 
   // If user is a provider, find their provider record and use that ID
   useEffect(() => {
@@ -203,6 +203,9 @@ export const PatientSelectionDialog = ({
       if (effectiveRole === "doctor") {
         setSelectedProviderId(null);
       }
+    } else if (open && effectiveRole === "doctor") {
+      // Reset provider selection when dialog opens for doctors
+      setSelectedProviderId(null);
     }
   }, [open, effectiveRole]);
 
