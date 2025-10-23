@@ -757,8 +757,8 @@ serve(async (req) => {
           body: {
             email: signupData.email,
             name: signupData.name,
-            tempPassword: initialPassword,
-            createdBy: signupData.createdBy || callerUserId
+            temporaryPassword: initialPassword,
+            role: signupData.role
           }
         });
 
