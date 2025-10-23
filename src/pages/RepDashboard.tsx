@@ -35,31 +35,26 @@ const RepDashboard = () => {
         // Get all downlines assigned to this topline
         const { data: downlines, error: downlinesError } = await supabase
           .from("reps")
-          .select("user_id")
+          .select("id")
           .eq("assigned_topline_id", repData.id)
           .eq("role", "downline");
         
         if (downlinesError) throw downlinesError;
         
-        const downlineUserIds = downlines?.map(d => d.user_id) || [];
-        // Get user_ids of all downlines + topline's own user_id
-        const networkUserIds = [effectiveUserId, ...downlineUserIds];
+        const downlineRepIds = downlines?.map(d => d.id) || [];
+        // Get rep_ids for this topline and all downlines
+        const networkRepIds = [repData.id, ...downlineRepIds];
         
-        // Fetch practices linked to anyone in the network, but exclude downline profiles and the topline's own profile
-        const { data: profilesInNetwork, error } = await supabase
-          .from("profiles")
-          .select("id")
-          .in("linked_topline_id", networkUserIds)
-          .eq("active", true);
+        // Count practices using rep_practice_links (source of truth)
+        const { data: practiceLinks, error } = await supabase
+          .from("rep_practice_links")
+          .select("practice_id, profiles!inner(active)")
+          .in("rep_id", networkRepIds)
+          .eq("profiles.active", true);
         
         if (error) throw error;
         
-        // Filter out downline profiles and the topline's own profile
-        const filteredPracticeIds = (profilesInNetwork || [])
-          .filter(p => !downlineUserIds.includes(p.id) && p.id !== effectiveUserId)
-          .map(p => p.id);
-        
-        return filteredPracticeIds.length;
+        return practiceLinks?.length || 0;
       }
       
       // Downlines don't show practice count

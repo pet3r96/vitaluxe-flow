@@ -295,8 +295,7 @@ serve(async (req) => {
           .upsert({
             rep_id: repRecord.id,
             practice_id: userId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            created_at: new Date().toISOString()
           }, {
             onConflict: 'rep_id,practice_id',
             ignoreDuplicates: false
