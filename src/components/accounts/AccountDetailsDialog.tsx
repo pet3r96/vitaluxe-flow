@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, Edit2, X, ShieldOff } from "lucide-react";
+import { ExternalLink, Edit2, X, ShieldOff, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 interface AccountDetailsDialogProps {
@@ -51,6 +51,8 @@ export const AccountDetailsDialog = ({
   const [isSaving, setIsSaving] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isResetting2FA, setIsResetting2FA] = useState(false);
+  const [showResendEmailConfirm, setShowResendEmailConfirm] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   // Fetch 2FA status
   const { data: twoFAData, refetch: refetch2FA } = useQuery({
@@ -158,6 +160,61 @@ export const AccountDetailsDialog = ({
       return `***-***-${digits.slice(-4)}`;
     }
     return '***-***-****';
+  };
+
+  const generateSecurePassword = (length: number = 16) => {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "";
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    for (let i = 0; i < length; i++) {
+      password += charset[array[i] % charset.length];
+    }
+    return password;
+  };
+
+  const handleResendWelcomeEmail = async () => {
+    setIsResendingEmail(true);
+    try {
+      // Generate a new temporary password
+      const tempPassword = generateSecurePassword(16);
+      
+      // Update the user's password in Supabase Auth
+      const { error: passwordError } = await supabase.auth.admin.updateUserById(
+        account.id,
+        { password: tempPassword }
+      );
+      
+      if (passwordError) throw passwordError;
+
+      // Send the email via edge function
+      const { error: emailError } = await supabase.functions.invoke('send-temp-password-email', {
+        body: {
+          email: account.email,
+          name: account.name,
+          temporaryPassword: tempPassword,
+          role: getDisplayRole(account)
+        }
+      });
+
+      if (emailError) throw emailError;
+
+      // Log audit event
+      await supabase.rpc('log_audit_event', {
+        p_action_type: 'welcome_email_resent',
+        p_entity_type: 'profiles',
+        p_entity_id: account.id,
+        p_details: { resent_by: 'admin', email: account.email }
+      });
+
+      toast.success('Welcome email resent successfully');
+      setShowResendEmailConfirm(false);
+    } catch (error: any) {
+      console.error('Error resending welcome email:', error);
+      toast.error(error.message || 'Failed to resend welcome email');
+    } finally {
+      setIsResendingEmail(false);
+    }
   };
 
   const handleSave = async () => {
@@ -346,6 +403,28 @@ export const AccountDetailsDialog = ({
                 )}
               </div>
             </div>
+
+            {/* Welcome Email Section - only show if account was created with temp password */}
+            {account.temp_password && (
+              <div className="col-span-2 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">Welcome Email</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Account was created with a temporary password
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowResendEmailConfirm(true)}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Resend Welcome Email
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Parent/Topline Assignment Section for Reps */}
@@ -436,6 +515,27 @@ export const AccountDetailsDialog = ({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleReset2FA} disabled={isResetting2FA}>
               {isResetting2FA ? "Resetting..." : "Reset 2FA"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showResendEmailConfirm} onOpenChange={setShowResendEmailConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resend Welcome Email</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will generate a new temporary password and send a welcome email to <strong>{account?.email}</strong>.
+              The user's current password will be replaced with the new temporary password.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleResendWelcomeEmail} 
+              disabled={isResendingEmail}
+            >
+              {isResendingEmail ? "Sending..." : "Resend Email"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
