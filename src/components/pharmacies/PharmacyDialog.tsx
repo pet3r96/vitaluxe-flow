@@ -327,12 +327,17 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
               zip: formData.address_zip,
             }}
             onChange={(addressData) => {
+              const newState = addressData.state || "";
               setFormData({
                 ...formData,
                 address_street: addressData.street,
                 address_city: addressData.city,
-                address_state: addressData.state,
+                address_state: newState,
                 address_zip: addressData.zip,
+                // Auto-add home state to states_serviced if not already present
+                states_serviced: newState && !formData.states_serviced.includes(newState)
+                  ? [...formData.states_serviced, newState]
+                  : formData.states_serviced,
               });
             }}
           />

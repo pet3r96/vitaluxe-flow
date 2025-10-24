@@ -217,6 +217,7 @@ serve(async (req: Request) => {
             id,
             patient_name,
             patient_address,
+            destination_state,
             assigned_pharmacy_id,
             pharmacies!inner(
               name,
@@ -232,13 +233,14 @@ serve(async (req: Request) => {
         if (orderLineError) {
           console.error('Error getting order line details for shipment:', orderLineError);
         } else if (orderLineDetails.pharmacies) {
-          // Parse patient address (assuming it's in a standard format)
+          // Parse patient address for street/city/zip (state comes from destination_state field)
           const patientAddressParts = orderLineDetails.patient_address?.split(',') || [];
           const patientStreet = patientAddressParts[0]?.trim() || '';
           const patientCityStateZip = patientAddressParts[1]?.trim() || '';
           const patientCity = patientCityStateZip.split(' ')[0] || '';
-          const patientState = patientCityStateZip.split(' ')[1] || '';
           const patientZip = patientCityStateZip.split(' ')[2] || '';
+          // Use direct destination_state field instead of parsing
+          const patientState = orderLineDetails.destination_state || '';
 
           // Create shipment via EasyPost API
           const shipmentResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/create-easypost-shipment`, {
