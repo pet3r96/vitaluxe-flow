@@ -278,6 +278,23 @@ export const ProductsGrid = () => {
     }
   };
 
+  // Helper: Get practice_id for a provider user
+  const getPracticeIdFromProviderUserId = async (userId: string): Promise<string | null> => {
+    try {
+      const { data: provider } = await supabase
+        .from("providers")
+        .select("practice_id")
+        .eq("user_id", userId)
+        .eq("active", true)
+        .single();
+      
+      return provider?.practice_id || null;
+    } catch (error) {
+      console.error("Error getting practice ID from provider:", error);
+      return null;
+    }
+  };
+
   const handleAddToCart = async (
     patientId: string | null, 
     quantity: number, 
@@ -326,17 +343,40 @@ export const ProductsGrid = () => {
       // Use effective retail price (with overrides) or fallback to product defaults
       correctPrice = effectiveRetailPrice ?? productForCart.retail_price ?? productForCart.base_price;
 
-      // Get or create cart
+      // CRITICAL FIX: If user is a provider, use their practice_id as doctor_id
+      // This ensures orders link to the practice → reps get assigned → profits calculate
+      let resolvedDoctorId = effectiveUserId;
+
+      const { data: userRoleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", effectiveUserId)
+        .single();
+
+      if (userRoleData?.role === 'provider') {
+        const practiceId = await getPracticeIdFromProviderUserId(effectiveUserId);
+        if (!practiceId) {
+          toast.error("Unable to find practice association. Please contact support.");
+          return;
+        }
+        resolvedDoctorId = practiceId;
+        console.debug('[ProductsGrid] Provider detected - using practice_id as doctor_id', { 
+          provider_user_id: effectiveUserId, 
+          practice_id: practiceId 
+        });
+      }
+
+      // Get or create cart - use resolvedDoctorId for all cart operations
       let { data: cart } = await supabase
         .from("cart")
         .select("id")
-        .eq("doctor_id", effectiveUserId)
+        .eq("doctor_id", resolvedDoctorId)
         .single();
 
       if (!cart) {
         const { data: newCart, error: cartError } = await supabase
           .from("cart")
-          .insert({ doctor_id: effectiveUserId })
+          .insert({ doctor_id: resolvedDoctorId })
           .select("id")
           .single();
 
@@ -375,8 +415,8 @@ export const ProductsGrid = () => {
         
         console.debug('[ProductsGrid] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
 
-        // Get user's topline rep ID for scoping (use practice's effectiveUserId, not provider)
-        const userToplineRepId = await getUserToplineRepId(effectiveUserId);
+        // Get user's topline rep ID for scoping - use resolvedDoctorId (practice_id) to get topline rep
+        const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);
 
         // Route to pharmacy - BLOCK if no pharmacy available
         const { data: routingResult, error: routingError } = await supabase.functions.invoke(
@@ -460,8 +500,8 @@ export const ProductsGrid = () => {
           return;
         }
 
-        // Get user's topline rep ID for scoping
-        const userToplineRepId = await getUserToplineRepId(providerId);
+        // Get user's topline rep ID for scoping - use resolvedDoctorId (practice_id) to get topline rep
+        const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);
 
         // Route to pharmacy - BLOCK if no pharmacy available
         const { data: routingResult, error: routingError } = await supabase.functions.invoke(
