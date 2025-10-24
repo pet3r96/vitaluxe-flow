@@ -171,9 +171,12 @@ const RepDashboard = () => {
     queryFn: async () => {
       if (!repData?.id) return null;
       
-      let query = supabase
-        .from("order_profits")
-        .select("*");
+    let query = supabase
+      .from("order_profits")
+      .select(`
+        *,
+        orders:order_id (status)
+      `);
       
       if (effectiveRole === 'topline') {
         query = query.eq("topline_id", repData.id);
@@ -184,16 +187,18 @@ const RepDashboard = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      const totalProfit = data.reduce((sum, item) => {
-        const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
-        return sum + (parseFloat(profit?.toString() || '0'));
-      }, 0);
+      // Calculate total profit (excluding cancelled orders)
+      const totalProfit = data
+        .filter(item => item.orders?.status !== 'cancelled')
+        .reduce((sum, item) => {
+          const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
+          return sum + (parseFloat(profit?.toString() || '0'));
+        }, 0);
       
+      // Calculate pending profit (orders pending or processing, excluding cancelled)
       const pendingProfit = data
-        .filter(item => {
-          // Assuming we'd check order status here in real implementation
-          return true; // Placeholder
-        })
+        .filter(item => item.orders?.status !== 'cancelled')
+        .filter(item => ['pending', 'processing'].includes(item.orders?.status || ''))
         .reduce((sum, item) => {
           const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
           return sum + (parseFloat(profit?.toString() || '0'));

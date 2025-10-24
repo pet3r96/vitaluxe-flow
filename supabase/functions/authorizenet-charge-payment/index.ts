@@ -30,6 +30,12 @@ Deno.serve(async (req) => {
       }
     );
 
+    // Create admin client for operations requiring elevated permissions
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return new Response(
@@ -157,6 +163,16 @@ Deno.serve(async (req) => {
     } else {
       // Simulate payment failure
       console.log(`Payment failed for order ${order_id}`);
+      
+      // Mark payment method as declined
+      const { error: updateError } = await supabaseAdmin
+        .from('practice_payment_methods')
+        .update({ status: 'declined' })
+        .eq('id', payment_method_id);
+        
+      if (updateError) {
+        console.error('Failed to mark payment method as declined:', updateError);
+      }
       
       return new Response(
         JSON.stringify({

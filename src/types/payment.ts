@@ -2,6 +2,7 @@ export interface PaymentMethod {
   id: string;
   practice_id: string;
   payment_type: 'credit_card' | 'bank_account';
+  status?: 'active' | 'declined' | 'expired' | 'removed';
   authorizenet_profile_id?: string;
   authorizenet_payment_profile_id?: string;
   

@@ -108,7 +108,12 @@ export const PaymentMethodsSection = () => {
     },
   });
 
-  const creditCards = paymentMethods?.filter(pm => pm.payment_type === 'credit_card') || [];
+  // Filter for active credit cards only (exclude declined/removed)
+  const creditCards = paymentMethods?.filter(pm => 
+    pm.payment_type === 'credit_card' && 
+    pm.status !== 'declined' && 
+    pm.status !== 'removed'
+  ) || [];
 
   return (
     <>

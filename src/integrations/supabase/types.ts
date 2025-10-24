@@ -2346,6 +2346,7 @@ export type Database = {
           plaid_account_id: string | null
           practice_id: string
           routing_number_last_four: string | null
+          status: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2373,6 +2374,7 @@ export type Database = {
           plaid_account_id?: string | null
           practice_id: string
           routing_number_last_four?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2400,6 +2402,7 @@ export type Database = {
           plaid_account_id?: string | null
           practice_id?: string
           routing_number_last_four?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: [

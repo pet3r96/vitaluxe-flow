@@ -45,11 +45,13 @@ export const PaymentRetryDialog = ({
   const { data: paymentMethods } = useQuery({
     queryKey: ["payment-methods", effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("practice_payment_methods")
-        .select("*")
-        .eq("practice_id", effectiveUserId)
-        .order("is_default", { ascending: false });
+    const { data, error } = await supabase
+      .from("practice_payment_methods")
+      .select("*")
+      .eq("practice_id", effectiveUserId)
+      .neq("status", "declined")
+      .neq("status", "removed")
+      .order("is_default", { ascending: false });
 
       if (error) throw error;
       return data as PaymentMethod[];
