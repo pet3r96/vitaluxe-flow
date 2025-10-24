@@ -1,8 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { GHLSmsSetupDialog } from "@/components/auth/GHLSmsSetupDialog";
-import { GHLSmsVerifyDialog } from "@/components/auth/GHLSmsVerifyDialog";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -133,17 +131,19 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // Show GHL 2FA dialogs if needed (mandatory for ALL users including admins)
-  // Only show after 2FA status has been checked AND password has been changed
+  // Block access to protected content while 2FA is pending
+  // The global Global2FADialogs component handles showing the actual dialog
   if (!isImpersonating && twoFAStatusChecked && !mustChangePassword) {
-    if (requires2FASetup) {
-      console.log('[ProtectedRoute] Rendering GHLSmsSetupDialog');
-      return <GHLSmsSetupDialog open={true} userId={user.id} />;
-    }
-
-    if (requires2FAVerify && user2FAPhone) {
-      console.log('[ProtectedRoute] Rendering GHLSmsVerifyDialog');
-      return <GHLSmsVerifyDialog open={true} phoneNumber={user2FAPhone} userId={user.id} />;
+    if (requires2FASetup || requires2FAVerify) {
+      console.log('[ProtectedRoute] Blocking content - 2FA required (dialog shown globally)');
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center">
+            <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+            <p className="mt-3 text-muted-foreground text-sm">Security verification required...</p>
+          </div>
+        </div>
+      );
     }
   }
 

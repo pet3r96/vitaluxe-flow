@@ -13,6 +13,7 @@ import { GlobalImpersonationBanner } from "@/components/layout/GlobalImpersonati
 import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonationDropdown";
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 
 // Helper function to retry dynamic imports on failure
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
@@ -113,6 +114,7 @@ const App = () => (
           <BrowserRouter>
           <AuthProvider>
             <GlobalImpersonationBanner>
+              <Global2FADialogs />
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
