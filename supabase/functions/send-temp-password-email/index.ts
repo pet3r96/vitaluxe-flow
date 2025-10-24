@@ -148,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
             <style>
               body { font-family: Arial, sans-serif; line-height: 1.6; color: #E2C977; background-color: #0B0B0B; margin: 0; padding: 0; }
               .container { max-width: 600px; margin: 0 auto; }
-              .header { background: linear-gradient(135deg, #8E6E1E 0%, #C8A64B 50%, #E2C977 100%); padding: 30px 20px; text-align: center; }
+              .header { background-color: #292929; padding: 30px 20px; text-align: center; }
               .header h1 { margin: 0; color: #0B0B0B; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
               .content { background-color: #1A1A1A; padding: 40px 30px; border: 1px solid #292929; }
               .content h2 { color: #E2C977; margin-top: 0; }
