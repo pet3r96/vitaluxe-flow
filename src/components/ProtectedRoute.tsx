@@ -17,6 +17,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     passwordStatusChecked,
     effectiveRole, 
     isImpersonating,
+    effectiveUserId,
     requires2FASetup,
     requires2FAVerify,
     user2FAPhone,
@@ -57,11 +58,20 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         effectiveRole !== 'admin' &&
         location.pathname !== '/accept-terms'
       ) {
+        // Check session storage for "just accepted" flag
+        const sessionKey = `vitaluxe_terms_ok_${effectiveUserId || user?.id}`;
+        const sessionFlag = sessionStorage.getItem(sessionKey);
+        
+        if (sessionFlag) {
+          console.log('[ProtectedRoute] termsAccepted=false but session flag present, skipping redirect');
+          return;
+        }
+        
         console.log('[ProtectedRoute] Redirecting to /accept-terms (terms not accepted)');
         navigate("/accept-terms");
       }
     }
-  }, [user, initializing, mustChangePassword, termsAccepted, effectiveRole, passwordStatusChecked, location.pathname, navigate]);
+  }, [user, initializing, mustChangePassword, termsAccepted, effectiveRole, passwordStatusChecked, effectiveUserId, location.pathname, navigate]);
 
   // Prevent admins from accessing the terms page (unless impersonating)
   useEffect(() => {

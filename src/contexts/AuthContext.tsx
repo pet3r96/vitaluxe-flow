@@ -615,7 +615,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const roleToCheck = roleOverride || effectiveRole;
     const uid = userIdOverride || effectiveUserId || user?.id || null;
 
-    logger.info('checkPasswordStatus start', { roleToCheck, hasUid: !!uid });
+    logger.info('checkPasswordStatus start', { roleToCheck, hasUid: !!uid, isImpersonating });
 
     // Admins (not impersonating) are always exempt
     if (roleToCheck === 'admin' && !isImpersonating) {
@@ -635,7 +635,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { mustChangePassword: false, termsAccepted: true };
     }
 
+    // Check session storage for "just accepted" flag
+    const sessionKey = `vitaluxe_terms_ok_${uid}`;
+    const sessionFlag = sessionStorage.getItem(sessionKey);
+    if (sessionFlag) {
+      logger.info('checkPasswordStatus session flag found, treating terms as accepted for this session');
+      setTermsAccepted(true);
+      setMustChangePassword(false);
+      setPasswordStatusChecked(true);
+      // Continue to background recheck below
+    }
+
     try {
+      // If impersonating and not checking the admin's own status, use admin function
+      if (isImpersonating && uid !== user?.id && roleToCheck !== 'admin') {
+        logger.info('checkPasswordStatus impersonating -> using admin-get-password-status');
+        
+        const { data, error } = await supabase.functions.invoke('admin-get-password-status', {
+          body: { target_user_id: uid }
+        });
+
+        if (error) {
+          logger.error('admin-get-password-status error:', error);
+          // Safe fallback for admins: don't block them
+          logger.info('Falling back: setting termsAccepted=true for admin impersonation');
+          setTermsAccepted(true);
+          setMustChangePassword(false);
+          setPasswordStatusChecked(true);
+          return { mustChangePassword: false, termsAccepted: true };
+        }
+
+        logger.info('admin-get-password-status result:', data);
+        const mustChange = data.must_change_password || false;
+        const termsAccept = data.terms_accepted || false;
+        
+        setMustChangePassword(mustChange);
+        setTermsAccepted(termsAccept);
+        setPasswordStatusChecked(true);
+        
+        return { mustChangePassword: mustChange, termsAccepted: termsAccept };
+      }
+
+      // Not impersonating: direct read
+      logger.info('checkPasswordStatus direct read of user_password_status');
       const { data, error } = await supabase
         .from('user_password_status')
         .select('must_change_password, terms_accepted')

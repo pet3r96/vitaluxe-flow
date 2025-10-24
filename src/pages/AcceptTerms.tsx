@@ -131,10 +131,18 @@ export default function AcceptTerms() {
       if (error) throw error;
 
       if (data.success) {
+        // Set session flag to prevent re-prompts in this session
+        const sessionKey = `vitaluxe_terms_ok_${effectiveUserId || user?.id}`;
+        sessionStorage.setItem(sessionKey, new Date().toISOString());
+        console.log('[AcceptTerms] Session flag set for user', effectiveUserId || user?.id);
+
         toast.success(isImpersonating 
           ? `Terms accepted for ${impersonatedUserName || 'impersonated user'}!`
           : "Terms accepted successfully!");
-        await checkPasswordStatus();
+        
+        // Force a refresh of password status with explicit user context
+        await checkPasswordStatus(effectiveRole, effectiveUserId);
+        
         navigate("/");
       } else {
         throw new Error(data.error || "Failed to accept terms");
