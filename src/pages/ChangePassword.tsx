@@ -368,7 +368,10 @@ export default function ChangePassword() {
               className="w-full"
               disabled={loading || !validation.valid || formData.newPassword !== formData.confirmPassword}
             >
-              {loading ? "Changing Password..." : "Change Password & Continue"}
+              {loading 
+                ? (tokenMode ? "Setting Password..." : "Changing Password...") 
+                : (tokenMode ? "SET PASSWORD" : "Change Password & Continue")
+              }
             </Button>
           </form>
         </CardContent>

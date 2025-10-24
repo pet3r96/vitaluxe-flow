@@ -45,14 +45,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch token from database
-    const { data: resetToken, error: tokenError } = await supabaseAdmin
-      .from('password_reset_tokens')
+    // Fetch token from database - check both temp_password_tokens and password_reset_tokens
+    let resetToken: any = null;
+    let tokenSource: 'temp_password' | 'password_reset' = 'password_reset';
+    
+    // First check temp_password_tokens (for welcome emails)
+    const { data: tempToken, error: tempTokenError } = await supabaseAdmin
+      .from('temp_password_tokens')
       .select('*')
       .eq('token', token)
       .maybeSingle();
+    
+    if (tempToken && !tempTokenError) {
+      resetToken = tempToken;
+      tokenSource = 'temp_password';
+    } else {
+      // If not found in temp_password_tokens, check password_reset_tokens
+      const { data: passwordResetToken, error: passwordResetError } = await supabaseAdmin
+        .from('password_reset_tokens')
+        .select('*')
+        .eq('token', token)
+        .maybeSingle();
+      
+      if (passwordResetToken && !passwordResetError) {
+        resetToken = passwordResetToken;
+        tokenSource = 'password_reset';
+      }
+    }
 
-    if (tokenError || !resetToken) {
+    if (!resetToken) {
       return new Response(
         JSON.stringify({ error: "Invalid or expired reset token" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -86,9 +107,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw passwordError;
     }
 
-    // Mark token as used
+    // Mark token as used in the appropriate table
+    const tableName = tokenSource === 'temp_password' ? 'temp_password_tokens' : 'password_reset_tokens';
     await supabaseAdmin
-      .from('password_reset_tokens')
+      .from(tableName)
       .update({ used_at: new Date().toISOString() })
       .eq('token', token);
 
@@ -105,6 +127,14 @@ const handler = async (req: Request): Promise<Response> => {
       }, {
         onConflict: 'user_id'
       });
+
+    // Clear temp_password flag from profiles table
+    await supabaseAdmin
+      .from('profiles')
+      .update({
+        temp_password: false
+      })
+      .eq('id', resetToken.user_id);
 
     // Log audit event
     await supabaseAdmin.rpc('log_audit_event', {
