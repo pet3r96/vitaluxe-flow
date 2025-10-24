@@ -3,6 +3,7 @@
  */
 
 /**
+ * @deprecated Use direct address_state field instead of parsing formatted addresses.
  * Extract state abbreviation from formatted address string
  * Supports formats like:
  * - "123 Main St, City, FL 12345"
@@ -11,6 +12,7 @@
  * @returns Two-letter state code or empty string if not found
  */
 export const extractStateFromAddress = (address: string | null | undefined): string => {
+  console.warn('⚠️ extractStateFromAddress is deprecated. Use direct address_state field from database instead.');
   if (!address) return '';
   
   // Extract state from address (2 uppercase letters before ZIP)
@@ -19,6 +21,7 @@ export const extractStateFromAddress = (address: string | null | undefined): str
 };
 
 /**
+ * @deprecated Use direct address_state field instead of parsing formatted addresses.
  * Extract state with fallback to a direct state value
  * Useful for practice orders where we have both formatted address and separate state field
  * @param address - Formatted address string
@@ -29,6 +32,7 @@ export const extractStateWithFallback = (
   address: string | null | undefined,
   fallbackState?: string | null
 ): string => {
+  console.warn('⚠️ extractStateWithFallback is deprecated. Use direct address_state field from database instead.');
   const extracted = extractStateFromAddress(address);
   if (extracted) return extracted;
   

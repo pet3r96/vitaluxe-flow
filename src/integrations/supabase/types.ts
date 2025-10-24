@@ -3825,6 +3825,15 @@ export type Database = {
       }
     }
     Views: {
+      addresses_missing_state: {
+        Row: {
+          id: string | null
+          missing_field: string | null
+          record_name: string | null
+          table_name: string | null
+        }
+        Relationships: []
+      }
       cart_lines_masked: {
         Row: {
           cart_id: string | null
