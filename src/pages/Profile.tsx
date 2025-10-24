@@ -79,7 +79,10 @@ const Profile = () => {
         {isRep ? (
           <RepProfileForm />
         ) : isProvider ? (
-          <ProviderProfileForm />
+          <>
+            <ProviderProfileForm />
+            <PaymentMethodsSection />
+          </>
         ) : (
           <>
             <PracticeProfileForm />
