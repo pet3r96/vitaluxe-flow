@@ -178,7 +178,6 @@ const handler = async (req: Request): Promise<Response> => {
               .content { background-color: #1A1A1A; padding: 40px 30px; border: 1px solid #292929; }
               .content h2 { color: #E2C977; margin-top: 0; }
               .content p { color: #E2C977; }
-              .password-box { background-color: #0B0B0B; border: 2px solid #C8A64B; padding: 20px; margin: 25px 0; text-align: center; font-size: 20px; font-weight: bold; letter-spacing: 3px; color: #E2C977; border-radius: 8px; }
               .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; transition: background-color 0.3s; }
               .button:hover { background-color: #E2C977; }
               .footer { text-align: center; padding: 25px 20px; color: #8E6E1E; font-size: 12px; background-color: #0B0B0B; }
@@ -193,11 +192,8 @@ const handler = async (req: Request): Promise<Response> => {
               <div class="content">
                 <h2>Welcome, ${name}</h2>
                 <p>Your account has been created as a <strong>${role}</strong>.</p>
-                <p>Your temporary password is:</p>
-                <div class="password-box">${temporaryPassword}</div>
-                <p><strong>Recommended:</strong> Click the button below to set your own password immediately (no login required):</p>
+                <p><strong>Click the button below to set your password and complete your account setup:</strong></p>
                 <a href="https://app.vitaluxeservices.com/change-password?token=${token}" class="button">Set Your Password</a>
-                <p><strong>Alternative:</strong> You can also log in using the temporary password above and change it in your profile.</p>
                 <p style="color: #8E6E1E; font-size: 13px;"><em>This link expires in 24 hours.</em></p>
                 <p>If you have any questions, please contact your administrator.</p>
               </div>
@@ -209,7 +205,7 @@ const handler = async (req: Request): Promise<Response> => {
           </body>
           </html>
         `,
-        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nTemporary Password: ${temporaryPassword}\n\nRECOMMENDED: Set your password directly (no login required):\nhttps://app.vitaluxeservices.com/change-password?token=${token}\n\nALTERNATIVE: Log in with the temporary password above and change it in your profile:\nhttps://app.vitaluxeservices.com/change-password?email=${encodeURIComponent(email)}\n\nThis link expires in 24 hours.\n\nFor security reasons, you must change this password before using your account.\n\nIf you have any questions, please contact your administrator.`
+        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nSet your password directly (no login required):\nhttps://app.vitaluxeservices.com/change-password?token=${token}\n\nThis link expires in 24 hours.\n\nFor security reasons, you must set your password before using your account.\n\nIf you have any questions, please contact your administrator.`
       }),
     });
 
