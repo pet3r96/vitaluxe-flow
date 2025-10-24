@@ -2,10 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { ThemeProvider } from "next-themes";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -14,6 +14,7 @@ import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonation
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
+import { SessionTimer } from "./components/auth/SessionTimer";
 
 // Helper function to retry dynamic imports on failure
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
@@ -104,6 +105,23 @@ const queryClient = new QueryClient({
   },
 });
 
+// SessionTimerWrapper component to access auth context and location
+const SessionTimerWrapper = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Only show timer when user is authenticated and not on auth page
+  if (!user || location.pathname === '/auth') {
+    return null;
+  }
+  
+  return (
+    <div className="fixed top-4 right-4 z-50">
+      <SessionTimer userId={user.id} />
+    </div>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -113,6 +131,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
           <AuthProvider>
+            <SessionTimerWrapper />
             <GlobalImpersonationBanner>
               <Global2FADialogs />
               <Suspense fallback={<PageLoader />}>

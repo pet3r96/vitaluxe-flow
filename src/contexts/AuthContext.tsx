@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const HARD_SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
   const SESSION_EXP_KEY = 'vitaluxe_session_exp';
   const hardTimerRef = useRef<number | null>(null);
+  const checkIntervalRef = useRef<number | null>(null);
   
   const navigate = useNavigate();
   
@@ -169,6 +170,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserRole(null);
     }, 8000);
 
+    // Event handlers for tab visibility and focus
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        maybeSignOutIfExpired();
+      }
+    };
+
+    const handleFocus = () => {
+      maybeSignOutIfExpired();
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      // Check if session expiration was changed in another tab
+      if (e.key === SESSION_EXP_KEY) {
+        maybeSignOutIfExpired();
+      }
+    };
+
+    // Add event listeners for tab wake/focus
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorage);
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -186,16 +210,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setInitializing(false);
           clearTimeout(bootstrapTimeout);
           
+          // Clear any existing timers/intervals first
+          if (hardTimerRef.current) {
+            clearTimeout(hardTimerRef.current);
+            hardTimerRef.current = null;
+          }
+          if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+            checkIntervalRef.current = null;
+          }
+          
           // Set hard session expiration (60 minutes from now)
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
           localStorage.setItem(SESSION_EXP_KEY, String(expireAt));
           
-          // Schedule hard timeout
+          // Schedule primary hard timeout
           hardTimerRef.current = window.setTimeout(() => {
+            logger.info('Primary timer triggered logout');
             void doHardSignOut();
           }, HARD_SESSION_TIMEOUT_MS);
           
-          console.log('[AuthContext] SIGNED_IN - 60 minute timer started');
+          // Schedule failsafe interval check (every 30 seconds)
+          checkIntervalRef.current = window.setInterval(() => {
+            maybeSignOutIfExpired();
+          }, 30000);
+          
+          logger.info('Session timer started', { 
+            expiresAt: new Date(expireAt).toISOString(),
+            minutesRemaining: 60 
+          });
           
           // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
           setTimeout(() => {
@@ -222,10 +265,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (event === 'SIGNED_OUT') {
           console.log('[AuthContext] ⚠️ SIGNED_OUT event received (source: auth-event)');
           
-          // Clear hard timer
+          // Clear hard timer and interval
           if (hardTimerRef.current) {
             clearTimeout(hardTimerRef.current);
             hardTimerRef.current = null;
+          }
+          if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+            checkIntervalRef.current = null;
           }
           localStorage.removeItem(SESSION_EXP_KEY);
           
@@ -305,6 +352,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             hardTimerRef.current = window.setTimeout(() => {
               void doHardSignOut();
             }, timeRemaining);
+            
+            // Also set up failsafe interval
+            checkIntervalRef.current = window.setInterval(() => {
+              maybeSignOutIfExpired();
+            }, 30000);
           }
         } else {
           // No expiration found (shouldn't happen) - set fresh 60 minute timer
@@ -314,6 +366,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           hardTimerRef.current = window.setTimeout(() => {
             void doHardSignOut();
           }, HARD_SESSION_TIMEOUT_MS);
+          
+          // Set up failsafe interval
+          checkIntervalRef.current = window.setInterval(() => {
+            maybeSignOutIfExpired();
+          }, 30000);
         }
         
         if (!hasBootstrapped.current) {
@@ -338,6 +395,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (hardTimerRef.current) {
         clearTimeout(hardTimerRef.current);
       }
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+      }
+      // Remove event listeners
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
@@ -730,14 +794,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [effectiveUserId]);
 
+  // Failsafe check for session expiration - runs periodically to catch edge cases
+  const maybeSignOutIfExpired = () => {
+    const expStr = localStorage.getItem(SESSION_EXP_KEY);
+    if (!expStr) return;
+    
+    const remaining = parseInt(expStr) - Date.now();
+    if (remaining <= 0) {
+      logger.warn('Failsafe triggered: session expired');
+      void doHardSignOut();
+    }
+  };
+
   // Hard 60-minute session timeout function
   const doHardSignOut = async () => {
     logger.info('Hard session timeout - forcing logout after 60 minutes');
     
-    // Clear the timer
+    // Clear the timer and interval
     if (hardTimerRef.current) {
       clearTimeout(hardTimerRef.current);
       hardTimerRef.current = null;
+    }
+    if (checkIntervalRef.current) {
+      clearInterval(checkIntervalRef.current);
+      checkIntervalRef.current = null;
     }
     
     // Remove expiration timestamp
@@ -767,11 +847,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Sign out
     await supabase.auth.signOut();
     
-    // Navigate to auth page
+    // Navigate to auth page (no toast - per compliance requirements)
     navigate('/auth');
-    
-    // Show toast
-    toast.info('Session expired after 60 minutes. Please log in again.');
   };
 
   const signIn = async (email: string, password: string) => {
