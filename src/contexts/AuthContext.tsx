@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
   
   // Hard 60-minute session timeout (no idle tracking)
-  const HARD_SESSION_TIMEOUT_MS = 90 * 1000; // 90 seconds (TESTING)
+  const HARD_SESSION_TIMEOUT_MS = 35 * 60 * 1000; // 35 minutes
   const SESSION_EXP_KEY = 'vitaluxe_session_exp';
   const hardTimerRef = useRef<number | null>(null);
   const checkIntervalRef = useRef<number | null>(null);
