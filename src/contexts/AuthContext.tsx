@@ -739,18 +739,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log(`[AuthContext] ⚠️ forceLogout called (reason: ${reason}, idleMinutes: ${idleMinutes.toFixed(1)})`);
     logger.info('Force logout triggered', { reason });
 
-    // Clear 2FA verification for next login - ensure 2FA is required after idle timeout
-    if (user?.id) {
-      try {
-        await supabase
-          .from('user_2fa_settings')
-          .update({ last_ghl_verification: null })
-          .eq('user_id', user.id);
-      } catch (error) {
-        logger.error('Failed to clear 2FA verification on force logout', error);
-      }
-    }
-
     // Log security event
     try {
       await supabase.from('audit_logs').insert({
@@ -768,10 +756,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logger.error('Failed to log force logout', error);
     }
 
-    // Clear session and redirect
+    // Clear session and redirect - use a separate function that doesn't clear 2FA
     setShowIdleWarning(false);
-    await signOut();
+    await signOutForIdleTimeout();
     toast.error('Your session expired due to inactivity. Please log in again.');
+  };
+
+  // Separate sign out function for idle timeout that doesn't clear 2FA verification
+  const signOutForIdleTimeout = async () => {
+    setLoading(true);
+    
+    // Delete active session from database
+    if (user?.id) {
+      const { error: deleteError } = await supabase
+        .from('active_sessions')
+        .delete()
+        .eq('user_id', user.id);
+      
+      if (deleteError) {
+        logger.error('Failed to delete active session', deleteError);
+      } else {
+        logger.info('Active session deleted on idle timeout');
+      }
+    }
+    
+    // End impersonation log if active
+    if (currentLogId) {
+      try {
+        await supabase
+          .from('impersonation_logs')
+          .update({ end_time: new Date().toISOString() })
+          .eq('id', currentLogId);
+      } catch (error) {
+        logger.error('Error updating impersonation log on idle timeout', error);
+      }
+    }
+    
+    // Clear CSRF token before signing out
+    clearCSRFToken();
+    
+    // Clear auth cache
+    sessionStorage.removeItem('vitaluxe_auth_cache');
+    
+    // Clear 2FA verification cache on logout
+    if (user?.id) {
+      sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
+      sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
+    }
+    
+    await supabase.auth.signOut();
+    setUserRole(null);
+    setImpersonatedRole(null);
+    setImpersonatedUserId(null);
+    setImpersonatedUserName(null);
+    setCurrentLogId(null);
+    setTwoFAStatusChecked(false);
+    setIs2FAVerifiedThisSession(false);
+    sessionStorage.removeItem('vitaluxe_impersonation');
+    setLoading(false);
+    navigate("/");
   };
 
   const handleStayLoggedIn = () => {
@@ -956,11 +999,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     // Clear 2FA verification for next login - ensure 2FA is required on next sign in
+    // Only clear on manual sign out, not on idle timeout to avoid loops
     if (user?.id) {
-      await supabase
-        .from('user_2fa_settings')
-        .update({ last_ghl_verification: null })
-        .eq('user_id', user.id);
+      try {
+        await supabase
+          .from('user_2fa_settings')
+          .update({ last_ghl_verification: null })
+          .eq('user_id', user.id);
+      } catch (error) {
+        logger.error('Failed to clear 2FA verification on sign out', error);
+      }
     }
     
     // Delete active session from database
