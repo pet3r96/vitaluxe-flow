@@ -136,18 +136,33 @@ serve(async (req) => {
       // PUT ORDER ON HOLD
       const holdNote = `\n[On Hold by ${pharmacy.name} on ${new Date().toISOString()}]: ${reason}${notes ? ` - ${notes}` : ''}`;
 
-      // Update order lines to on_hold status
-      const { error: updateError } = await supabase
+      // Fetch current order lines to append notes
+      const { data: currentLines, error: fetchError } = await supabaseAdmin
         .from('order_lines')
-        .update({
-          status: 'on_hold',
-          order_notes: supabase.rpc('concat', { 
-            field: 'order_notes', 
-            value: holdNote 
-          })
-        })
+        .select('id, order_notes')
         .eq('order_id', order_id)
         .eq('assigned_pharmacy_id', pharmacy.id);
+
+      if (fetchError) {
+        console.error('Error fetching order lines:', fetchError);
+        throw fetchError;
+      }
+
+      // Update each line individually with concatenated notes
+      const updatePromises = (currentLines || []).map(line => {
+        const updatedNotes = (line.order_notes || '') + holdNote;
+        
+        return supabaseAdmin
+          .from('order_lines')
+          .update({
+            status: 'on_hold',
+            order_notes: updatedNotes
+          })
+          .eq('id', line.id);
+      });
+
+      const results = await Promise.all(updatePromises);
+      const updateError = results.find(r => r.error)?.error;
 
       if (updateError) {
         console.error('Error updating order lines to on_hold:', updateError);
@@ -237,18 +252,33 @@ serve(async (req) => {
       // DECLINE AND REFUND ORDER
       const declineNote = `\n[Declined by ${pharmacy.name} on ${new Date().toISOString()}]: ${reason}${notes ? ` - ${notes}` : ''}`;
 
-      // Update order lines to denied status
-      const { error: updateError } = await supabase
+      // Fetch current order lines to append notes
+      const { data: currentLines, error: fetchError } = await supabaseAdmin
         .from('order_lines')
-        .update({
-          status: 'denied',
-          order_notes: supabase.rpc('concat', { 
-            field: 'order_notes', 
-            value: declineNote 
-          })
-        })
+        .select('id, order_notes')
         .eq('order_id', order_id)
         .eq('assigned_pharmacy_id', pharmacy.id);
+
+      if (fetchError) {
+        console.error('Error fetching order lines:', fetchError);
+        throw fetchError;
+      }
+
+      // Update each line individually with concatenated notes
+      const updatePromises = (currentLines || []).map(line => {
+        const updatedNotes = (line.order_notes || '') + declineNote;
+        
+        return supabaseAdmin
+          .from('order_lines')
+          .update({
+            status: 'denied',
+            order_notes: updatedNotes
+          })
+          .eq('id', line.id);
+      });
+
+      const results = await Promise.all(updatePromises);
+      const updateError = results.find(r => r.error)?.error;
 
       if (updateError) {
         console.error('Error updating order lines to denied:', updateError);
