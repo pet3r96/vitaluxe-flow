@@ -171,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <p>Here is your temporary password:</p>
                 <div class="password-box">${temporaryPassword}</div>
                 <p><strong>Important:</strong> For security reasons, please change this password after your first login.</p>
-                <a href="https://app.vitaluxeservices.com/auth?email=${encodeURIComponent(email)}" class="button">Login Now</a>
+                <a href="https://app.vitaluxeservices.com/change-password?email=${encodeURIComponent(email)}" class="button">Change Password</a>
                 <p>If you have any questions, please contact your administrator.</p>
               </div>
               <div class="footer">
@@ -182,7 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
           </body>
           </html>
         `,
-        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nTemporary Password: ${temporaryPassword}\n\nPlease login at: https://app.vitaluxeservices.com/auth?email=${encodeURIComponent(email)}\n\nFor security reasons, please change this password after your first login.\n\nIf you have any questions, please contact your administrator.`
+        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nTemporary Password: ${temporaryPassword}\n\nPlease change your password at: https://app.vitaluxeservices.com/change-password?email=${encodeURIComponent(email)}\n\nFor security reasons, you must change this password before using your account.\n\nIf you have any questions, please contact your administrator.`
       }),
     });
 
