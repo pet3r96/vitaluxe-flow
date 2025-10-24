@@ -516,6 +516,9 @@ export default function OrderConfirmation() {
                 payment_method_id: selectedPaymentMethodId,
                 amount: order.total_amount,
               },
+              headers: {
+                'x-csrf-token': csrfToken!
+              }
             }
           );
 

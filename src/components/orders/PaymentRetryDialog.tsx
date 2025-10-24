@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PaymentMethod } from "@/types/payment";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";
 
 interface PaymentError {
   order_id: string;
@@ -58,6 +59,12 @@ export const PaymentRetryDialog = ({
 
   const retryPaymentMutation = useMutation({
     mutationFn: async (paymentMethodId: string) => {
+      // Validate CSRF token before retrying payments
+      const csrfToken = getCSRFToken();
+      if (!csrfToken || !(await validateCSRFToken(csrfToken))) {
+        throw new Error('Security token expired. Refresh the page and try again.');
+      }
+      
       const results = [];
       
       for (const orderId of failedOrderIds) {
@@ -80,6 +87,9 @@ export const PaymentRetryDialog = ({
               order_id: orderId,
               payment_method_id: paymentMethodId,
               amount: order.total_amount
+            },
+            headers: {
+              'x-csrf-token': csrfToken
             }
           }
         );
@@ -122,9 +132,10 @@ export const PaymentRetryDialog = ({
   });
 
   const handleCancelOrders = async () => {
+    const csrfToken = getCSRFToken();
     for (const orderId of failedOrderIds) {
       await supabase.functions.invoke('cancel-order', {
-        body: { orderId, reason: 'Payment failed and user chose to cancel' }
+        body: { orderId, reason: 'Payment failed and user chose to cancel', csrf_token: csrfToken }
       });
     }
     toast({
