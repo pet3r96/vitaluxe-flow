@@ -36,9 +36,8 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'query-vendor': ['@tanstack/react-query'],
+          // Vendor chunks - React and React Query must be in same chunk to prevent race condition
+          'react-vendor': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
           'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
           'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
           'supabase-vendor': ['@supabase/supabase-js'],
