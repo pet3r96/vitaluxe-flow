@@ -34,6 +34,34 @@ export default function ChangePassword() {
     newPassword: '',
     confirmPassword: ''
   });
+  
+  // State for user email fetched from token
+  const [userEmailFromToken, setUserEmailFromToken] = useState<string | null>(null);
+
+  // Fetch user email from token when in token mode
+  useEffect(() => {
+    if (tokenMode && tokenFromUrl) {
+      const fetchUserFromToken = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('validate-password-token', {
+            body: { token: tokenFromUrl }
+          });
+          
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          
+          if (data?.email) {
+            setUserEmailFromToken(data.email);
+          }
+        } catch (error) {
+          console.error('Error fetching user from token:', error);
+          // Don't show error to user yet, let them try to submit
+        }
+      };
+      
+      fetchUserFromToken();
+    }
+  }, [tokenMode, tokenFromUrl]);
 
   // Redirect to login if user is not authenticated (unless in token mode)
   useEffect(() => {
@@ -55,7 +83,7 @@ export default function ChangePassword() {
 
   const validation = validatePasswordStrength(
     formData.newPassword,
-    user?.email || '',
+    userEmailFromToken || user?.email || '',
     formData.currentPassword
   );
 
@@ -87,12 +115,41 @@ export default function ChangePassword() {
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        toast.success("Password set successfully! Redirecting to login...");
+        toast.success("Password set successfully! Logging you in...");
         
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          navigate("/auth");
-        }, 2000);
+        // Auto-login the user with their new password
+        if (data?.email) {
+          try {
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email: data.email,
+              password: formData.newPassword
+            });
+            
+            if (signInError) {
+              console.error('Auto-login failed:', signInError);
+              // Fallback to redirect to login page
+              setTimeout(() => {
+                navigate("/auth");
+              }, 2000);
+            } else {
+              // Successfully logged in, redirect to dashboard
+              setTimeout(() => {
+                navigate("/dashboard");
+              }, 1000);
+            }
+          } catch (loginError) {
+            console.error('Auto-login error:', loginError);
+            // Fallback to redirect to login page
+            setTimeout(() => {
+              navigate("/auth");
+            }, 2000);
+          }
+        } else {
+          // No email returned, redirect to login
+          setTimeout(() => {
+            navigate("/auth");
+          }, 2000);
+        }
         return;
       }
       

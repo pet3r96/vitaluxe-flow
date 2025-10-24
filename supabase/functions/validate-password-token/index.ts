@@ -6,9 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface ResetPasswordRequest {
+interface ValidateTokenRequest {
   token: string;
-  newPassword: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -28,19 +27,11 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    const { token, newPassword }: ResetPasswordRequest = await req.json();
+    const { token }: ValidateTokenRequest = await req.json();
 
-    if (!token || !newPassword) {
+    if (!token) {
       return new Response(
-        JSON.stringify({ error: "Token and new password are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Validate password strength (minimum requirements)
-    if (newPassword.length < 8) {
-      return new Response(
-        JSON.stringify({ error: "Password must be at least 8 characters long" }),
+        JSON.stringify({ error: "Token is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -96,80 +87,33 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Update user password
-    const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
-      resetToken.user_id,
-      { password: newPassword }
-    );
-
-    if (passwordError) {
-      console.error("Error updating password:", passwordError);
-      throw passwordError;
-    }
-
-    // Mark token as used in the appropriate table
-    const tableName = tokenSource === 'temp_password' ? 'temp_password_tokens' : 'password_reset_tokens';
-    await supabaseAdmin
-      .from(tableName)
-      .update({ used_at: new Date().toISOString() })
-      .eq('token', token);
-
-    // Update user_password_status - DO NOT set must_change_password
-    // (user chose their own password, no forced change needed)
-    await supabaseAdmin
-      .from('user_password_status')
-      .upsert({
-        user_id: resetToken.user_id,
-        must_change_password: false,
-        temporary_password_sent: false,
-        first_login_completed: true,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id'
-      });
-
-    // Clear temp_password flag from profiles table
-    await supabaseAdmin
-      .from('profiles')
-      .update({
-        temp_password: false
-      })
-      .eq('id', resetToken.user_id);
-
-    // Get user email for auto-login
+    // Get user email from auth.users table
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(resetToken.user_id);
     
     if (userError || !userData?.user) {
-      console.error("Error fetching user data:", userError);
-      // Still return success since password was updated
+      return new Response(
+        JSON.stringify({ error: "User not found" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-
-    // Log audit event
-    await supabaseAdmin.rpc('log_audit_event', {
-      p_action_type: 'password_reset_completed',
-      p_entity_type: 'user',
-      p_entity_id: resetToken.user_id,
-      p_details: { method: 'email_token' }
-    });
-
-    console.log("Password reset completed successfully for user:", resetToken.user_id);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Password reset successfully.",
-        email: userData?.user?.email || null,
-        userId: resetToken.user_id
+        valid: true,
+        email: userData.user.email,
+        userId: resetToken.user_id,
+        tokenSource: tokenSource
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error: any) {
-    console.error("Error in reset-password-with-token function:", error);
+    console.error("Error in validate-password-token function:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: "Failed to reset password. Please try again." 
+        error: "Failed to validate token. Please try again." 
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
