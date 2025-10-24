@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -46,9 +47,62 @@ export const OrderDetailsDialog = ({
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [decryptedPatientPHI, setDecryptedPatientPHI] = useState<Map<string, { allergies?: string | null, notes?: string | null }>>(new Map());
   const [decryptedContactInfo, setDecryptedContactInfo] = useState<Map<string, { patient_email?: string | null, patient_phone?: string | null, patient_address?: string | null }>>(new Map());
+  const [regeneratedPrescriptionUrls, setRegeneratedPrescriptionUrls] = useState<Map<string, string>>(new Map());
+  const [regeneratingUrls, setRegeneratingUrls] = useState(false);
 
   // Determine if user can view PHI (HIPAA compliance)
   const canViewPHI = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
+
+  // Query payment method details to display card info
+  const { data: paymentMethodDetails } = useQuery({
+    queryKey: ["payment-method", order.payment_method_id],
+    queryFn: async () => {
+      if (!order.payment_method_id) return null;
+      
+      const { data, error } = await supabase
+        .from("practice_payment_methods")
+        .select("card_type, card_last_five, card_expiry")
+        .eq("id", order.payment_method_id)
+        .single();
+      
+      if (error) {
+        logger.error('Failed to fetch payment method details', error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!order.payment_method_id && open
+  });
+
+  // Regenerate signed URL for uploaded prescriptions
+  const regenerateSignedUrl = async (existingUrl: string): Promise<string> => {
+    try {
+      // Extract file path from existing signed URL
+      // Format: https://[project].supabase.co/storage/v1/object/sign/prescriptions/[path]?token=...
+      const match = existingUrl.match(/\/prescriptions\/(.+?)(\?|$)/);
+      if (!match || !match[1]) {
+        logger.error('Could not parse prescription URL', new Error('Invalid URL format'), { url: existingUrl });
+        return existingUrl; // Return original if can't parse
+      }
+      
+      const filePath = decodeURIComponent(match[1]);
+      
+      // Generate new signed URL with 1-year expiry (31536000 seconds)
+      const { data, error } = await supabase.storage
+        .from('prescriptions')
+        .createSignedUrl(filePath, 31536000);
+      
+      if (error) {
+        logger.error('Failed to regenerate signed URL', error);
+        return existingUrl; // Fallback to original
+      }
+      
+      return data.signedUrl;
+    } catch (error) {
+      logger.error('Error regenerating prescription URL', error instanceof Error ? error : new Error(String(error)));
+      return existingUrl; // Fallback to original
+    }
+  };
 
   // Fetch and decrypt patient allergies and contact info when dialog opens
   useEffect(() => {
@@ -175,6 +229,20 @@ export const OrderDetailsDialog = ({
 
       setDecryptedPatientPHI(phiCache);
       setDecryptedContactInfo(contactCache);
+
+      // REGENERATE SIGNED URLs for uploaded prescriptions
+      setRegeneratingUrls(true);
+      const regeneratedUrls = new Map<string, string>();
+
+      for (const line of order.order_lines) {
+        if (line.prescription_url && line.prescription_method === 'uploaded') {
+          const newUrl = await regenerateSignedUrl(line.prescription_url);
+          regeneratedUrls.set(line.id, newUrl);
+        }
+      }
+
+      setRegeneratedPrescriptionUrls(regeneratedUrls);
+      setRegeneratingUrls(false);
     };
 
     fetchDecryptedData();
@@ -448,12 +516,33 @@ export const OrderDetailsDialog = ({
                   {order.payment_method_used === 'credit_card' ? 'Credit Card' : 'Bank Account'}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground font-mono">
-                Txn: {order.authorizenet_transaction_id.slice(0, 12)}...
-              </p>
-               {effectiveRole === 'admin' && 
-                order.authorizenet_transaction_id && 
-                (order.payment_status === 'paid' || order.payment_status === 'partially_refunded') && (
+              
+              {/* Display masked card details if available */}
+              {paymentMethodDetails ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium font-mono">
+                    {paymentMethodDetails.card_type} ••••{paymentMethodDetails.card_last_five}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Exp: {paymentMethodDetails.card_expiry}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground font-mono">
+                  Loading payment details...
+                </p>
+              )}
+              
+              {/* Show transaction ID only to admins */}
+              {effectiveRole === 'admin' && (
+                <p className="text-xs text-muted-foreground font-mono mt-2 pt-2 border-t">
+                  Txn: {order.authorizenet_transaction_id.slice(0, 12)}...
+                </p>
+              )}
+              
+              {effectiveRole === 'admin' && 
+               order.authorizenet_transaction_id && 
+               (order.payment_status === 'paid' || order.payment_status === 'partially_refunded') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -614,11 +703,15 @@ export const OrderDetailsDialog = ({
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => handleDownloadPrescription(line.prescription_url, line.patient_name)}
+                        onClick={() => {
+                          const urlToUse = regeneratedPrescriptionUrls.get(line.id) || line.prescription_url;
+                          handleDownloadPrescription(urlToUse, line.patient_name);
+                        }}
+                        disabled={regeneratingUrls}
                         className="w-full"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Download Prescription
+                        {regeneratingUrls ? 'Preparing Download...' : 'Download Prescription'}
                       </Button>
                     </div>
                   )}

@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck, CreditCard, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck, CreditCard, ShieldCheck, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -85,7 +85,7 @@ export default function OrderConfirmation() {
     (line: any) => line.patient_name === "Practice Order"
   );
 
-  const { data: providerProfile } = useQuery({
+  const { data: providerProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ["provider-shipping", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -97,7 +97,7 @@ export default function OrderConfirmation() {
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId && hasPracticeOrder,
+    enabled: !!effectiveUserId,
   });
 
   // Fetch payment methods (credit cards only)
@@ -142,6 +142,15 @@ export default function OrderConfirmation() {
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
+      // DEFENSIVE CHECK: Ensure profile is loaded if we have practice orders
+      const practiceLines = (cart?.lines as any[])?.filter(
+        (line) => line.patient_name === "Practice Order"
+      ) || [];
+      
+      if (practiceLines.length > 0 && isLoadingProfile) {
+        throw new Error("Loading practice information... Please wait and try again.");
+      }
+
       if (!cart?.id || !cart.lines || cart.lines.length === 0) {
         throw new Error("Cart is empty");
       }
@@ -166,20 +175,28 @@ export default function OrderConfirmation() {
         throw new Error("Security token expired. Please refresh the page and try again.");
       }
 
-      const practiceLines = (cart.lines as any[]).filter(
-        (line) => line.patient_name === "Practice Order"
-      );
       const patientLines = (cart.lines as any[]).filter(
         (line) => line.patient_name !== "Practice Order"
       );
 
-      const hasShippingAddress = providerProfile?.shipping_address_street && 
-                                 providerProfile?.shipping_address_city && 
-                                 providerProfile?.shipping_address_state && 
-                                 providerProfile?.shipping_address_zip;
-      
-      if (practiceLines.length > 0 && !hasShippingAddress) {
-        throw new Error("Please set your practice shipping address in your profile before placing practice orders");
+      // Validate practice shipping address if needed
+      if (practiceLines.length > 0) {
+        const hasShippingAddress = providerProfile?.shipping_address_street && 
+                                  providerProfile?.shipping_address_city && 
+                                  providerProfile?.shipping_address_state && 
+                                  providerProfile?.shipping_address_zip;
+        
+        if (!hasShippingAddress) {
+          const missingFields = [];
+          if (!providerProfile?.shipping_address_street) missingFields.push('street address');
+          if (!providerProfile?.shipping_address_city) missingFields.push('city');
+          if (!providerProfile?.shipping_address_state) missingFields.push('state');
+          if (!providerProfile?.shipping_address_zip) missingFields.push('ZIP code');
+          
+          throw new Error(
+            `Please set your practice shipping address in your profile before placing practice orders. Missing: ${missingFields.join(', ')}`
+          );
+        }
       }
 
       if (patientLines.length > 0) {
@@ -1155,6 +1172,57 @@ export default function OrderConfirmation() {
         </Card>
       )}
 
+      {/* Practice Shipping Address Display */}
+      {hasPracticeOrder && (
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-5 w-5" />
+              Practice Shipping Address
+            </CardTitle>
+            <CardDescription>
+              Orders will be shipped to this address
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingProfile ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Loading practice address...
+              </div>
+            ) : providerProfile?.shipping_address_street ? (
+              <div className="space-y-3">
+                <div className="text-sm">
+                  <p className="font-medium">{providerProfile.name}</p>
+                  <p className="text-muted-foreground">{providerProfile.shipping_address_street}</p>
+                  <p className="text-muted-foreground">
+                    {providerProfile.shipping_address_city}, {providerProfile.shipping_address_state} {providerProfile.shipping_address_zip}
+                  </p>
+                </div>
+                <Badge variant="default" className="bg-green-600">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Address Verified
+                </Badge>
+              </div>
+            ) : (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <span>Practice shipping address not set</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/profile")}
+                  >
+                    Go to Profile
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Action Buttons */}
       <div className="flex gap-4">
         <Button
@@ -1171,7 +1239,12 @@ export default function OrderConfirmation() {
           size="lg"
           className="flex-1"
           onClick={() => checkoutMutation.mutate()}
-          disabled={checkoutMutation.isPending || !agreed}
+          disabled={
+            checkoutMutation.isPending || 
+            !agreed || 
+            (hasPracticeOrder && isLoadingProfile) ||
+            (hasPracticeOrder && !providerProfile?.shipping_address_street)
+          }
         >
           {checkoutMutation.isPending ? (
             "Processing Order..."
