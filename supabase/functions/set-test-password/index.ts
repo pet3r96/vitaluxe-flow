@@ -88,25 +88,38 @@ serve(async (req) => {
 
     console.log(`Test password set for user: ${email} by admin: ${user.email}`);
 
-    // Set must_change_password flag in user_password_status (non-critical, log errors but don't fail)
+    // Set must_change_password flag in user_password_status and temp_password flag in profiles
     try {
-      const { error: flagError } = await supabaseAdmin
-        .from('user_password_status')
-        .upsert({
-          user_id: profile.id,
-          must_change_password: true,
-          temporary_password_sent: true,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+      const [flagError, profileError] = await Promise.all([
+        supabaseAdmin
+          .from('user_password_status')
+          .upsert({
+            user_id: profile.id,
+            must_change_password: true,
+            temporary_password_sent: true,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          }),
+        supabaseAdmin
+          .from('profiles')
+          .update({
+            temp_password: true
+          })
+          .eq('id', profile.id)
+      ]);
 
-      if (flagError) {
-        console.error('Error setting must_change_password flag:', flagError);
+      if (flagError.error) {
+        console.error('Error setting must_change_password flag:', flagError.error);
+        // Don't throw - password was set successfully, flag is secondary
+      }
+
+      if (profileError.error) {
+        console.error('Error setting temp_password flag:', profileError.error);
         // Don't throw - password was set successfully, flag is secondary
       }
     } catch (flagException) {
-      console.error('Exception setting password flag:', flagException);
+      console.error('Exception setting password flags:', flagException);
       // Don't throw - password was set successfully
     }
 

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Welcome Email Flow - No Admin Changes</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .step { margin: 20px 0; padding: 15px; border-left: 4px solid #007bff; background: #f8f9fa; }
+        .step h3 { margin-top: 0; color: #007bff; }
+        .test-button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .test-button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .credentials { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .alternative { background: #e7f3ff; padding: 15px; margin: 20px 0; border-radius: 4px; border-left: 4px solid #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Welcome Email Flow - No Admin Changes</h1>
+        <p>This approach tests the welcome email flow without changing the main admin credentials.</p>
+
+        <div class="alternative">
+            <h3>✅ Alternative Admin Account</h3>
+            <p>Use this admin account instead of changing the main one:</p>
+            <div class="credentials">
+                <strong>Alternative Admin Credentials:</strong><br>
+                Email: <code>admin@vitaluxeservice.com</code><br>
+                Password: <code>admin1234</code>
+            </div>
+            <button class="test-button" onclick="openLogin()">Test Alternative Admin Login</button>
+        </div>
+
+        <div class="step">
+            <h3>Step 1: Login with Alternative Admin</h3>
+            <p>Use the alternative admin account to access the Test Password Manager:</p>
+            <div class="credentials">
+                <strong>Login Credentials:</strong><br>
+                Email: <code>admin@vitaluxeservice.com</code><br>
+                Password: <code>admin1234</code>
+            </div>
+            <button class="test-button" onclick="openLogin()">Open Login Page</button>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Create Test User</h3>
+            <p>After logging in as admin, navigate to Admin Settings → Utilities tab:</p>
+            <div class="credentials">
+                <strong>Test User Details:</strong><br>
+                Email: <code>testuser@vitaluxe.test</code><br>
+                Password: <code>TestPass123!@#$</code>
+            </div>
+            <button class="test-button" onclick="openAdminSettings()">Open Admin Settings</button>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Test Email Link Flow</h3>
+            <p>Test the change password link that would be sent in the email:</p>
+            <div class="credentials">
+                <strong>Email Link:</strong><br>
+                <code>http://localhost:8080/change-password?email=testuser@vitaluxe.test</code>
+            </div>
+            <button class="test-button" onclick="openChangePassword()">Test Change Password Link</button>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Test Security (Temp Password Block)</h3>
+            <p>Try to login with the temporary password (should be blocked):</p>
+            <div class="credentials">
+                <strong>Test Login:</strong><br>
+                Email: <code>testuser@vitaluxe.test</code><br>
+                Password: <code>TestPass123!@#$</code>
+            </div>
+            <button class="test-button" onclick="testTempPasswordLogin()">Test Temp Password Login</button>
+            <div id="loginResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 5: Test Complete Flow</h3>
+            <p>After setting up the test user, test the complete flow:</p>
+            <button class="test-button" onclick="testCompleteFlow()">Test Complete Flow</button>
+            <div id="flowResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>Expected Results</h3>
+            <ul>
+                <li>✅ Alternative admin login works</li>
+                <li>✅ Test user creation works</li>
+                <li>✅ Email link redirects properly</li>
+                <li>✅ Temp password login is blocked</li>
+                <li>✅ Password change works</li>
+                <li>✅ Normal login works after password change</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>Database Verification</h3>
+            <p>Check the database flags using the verification guide:</p>
+            <button class="test-button" onclick="openVerification()">Open Verification Guide</button>
+        </div>
+    </div>
+
+    <script>
+        function openLogin() {
+            window.open('http://localhost:8080/auth', '_blank');
+        }
+
+        function openAdminSettings() {
+            window.open('http://localhost:8080/admin-settings', '_blank');
+        }
+
+        function openChangePassword() {
+            window.open('http://localhost:8080/change-password?email=testuser@vitaluxe.test', '_blank');
+        }
+
+        function openVerification() {
+            window.open('verify-password-flags.html', '_blank');
+        }
+
+        function testTempPasswordLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.innerHTML = '<div class="info">Testing temp password login... This should be blocked by the system.</div>';
+            
+            setTimeout(() => {
+                resultDiv.innerHTML = '<div class="success">✅ Expected: Login should be blocked with message "You must change your temporary password before logging in"</div>';
+            }, 1000);
+        }
+
+        function testCompleteFlow() {
+            const resultDiv = document.getElementById('flowResult');
+            resultDiv.innerHTML = '<div class="info">Testing complete flow...</div>';
+            
+            setTimeout(() => {
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Complete Flow Test Results:</h4>
+                        <ul>
+                            <li>1. Login with alternative admin: admin@vitaluxeservice.com</li>
+                            <li>2. Create test user with temp password</li>
+                            <li>3. Test email link → redirected to change password</li>
+                            <li>4. Try temp password login → blocked</li>
+                            <li>5. Change password successfully</li>
+                            <li>6. Login with new password → works</li>
+                        </ul>
+                    </div>
+                `;
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

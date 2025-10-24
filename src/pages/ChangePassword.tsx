@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,16 +16,32 @@ import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthInd
 export default function ChangePassword() {
   const { user, isImpersonating, impersonatedUserId, impersonatedUserName, clearImpersonation, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Get email from URL parameters
+  const emailFromUrl = searchParams.get('email');
   
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+
+  // Redirect to login if user is not authenticated
+  useEffect(() => {
+    if (!user && emailFromUrl) {
+      // User came from email link but is not logged in
+      // Redirect to login with email pre-filled
+      navigate(`/auth?email=${encodeURIComponent(emailFromUrl)}&message=Please log in with your temporary password to change it.`);
+    } else if (!user) {
+      // No user and no email parameter - redirect to login
+      navigate('/auth');
+    }
+  }, [user, emailFromUrl, navigate]);
 
   const validation = validatePasswordStrength(
     formData.newPassword,
@@ -100,10 +116,10 @@ export default function ChangePassword() {
           // Don't throw error - password change was successful, this is just cleanup
         }
 
-        toast.success("Password changed successfully!");
+        toast.success("Password changed successfully! You are now logged in.");
         
-        // After changing password, end session
-        await signOut();
+        // Navigate to dashboard after successful password change
+        navigate("/dashboard");
       }
     } catch (error: any) {
       logger.error("Password change failed", error, { 

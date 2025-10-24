@@ -22,6 +22,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState(searchParams.get("email") || "");
+  const [urlMessage, setUrlMessage] = useState(searchParams.get("message") || "");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"doctor" | "pharmacy">("doctor"); // "doctor" = Practice in the database
@@ -147,6 +148,14 @@ const Auth = () => {
           if ((error as any).code === 'email_not_verified') {
             setReminderEmail((error as any).email || email);
             setShowVerificationReminder(true);
+            setLoading(false);
+            return;
+          }
+          
+          // Check if this is a temporary password error
+          if ((error as any).code === 'temp_password_required') {
+            // Redirect to change password page with email parameter
+            navigate(`/change-password?email=${encodeURIComponent(email)}&message=You must change your temporary password before logging in.`);
             setLoading(false);
             return;
           }
@@ -369,6 +378,14 @@ const Auth = () => {
         <div className="flex flex-center justify-center mb-8">
           <img src={logo} alt="Vitaluxe Services" className="h-32 w-auto" />
         </div>
+        
+        {urlMessage && (
+          <Alert className="mb-6 border-blue-500 bg-blue-50">
+            <AlertDescription className="text-blue-800">
+              {urlMessage}
+            </AlertDescription>
+          </Alert>
+        )}
         
         <p className="text-center text-muted-foreground mb-4">
           {isLogin ? "Sign in to your account" : "Create your account"}

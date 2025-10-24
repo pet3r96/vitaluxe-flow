@@ -184,7 +184,7 @@ export const authService = {
       // Check account status
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('active, status')
+        .select('active, status, temp_password')
         .eq('id', user.id)
         .single();
 
@@ -212,6 +212,18 @@ export const authService = {
           code: 'email_not_verified',
           email: email,
           message: "Email not verified",
+        },
+      };
+    }
+
+    // Check if user has temporary password - prevent login
+    if (profile?.temp_password === true) {
+      await supabase.auth.signOut();
+      return {
+        error: {
+          code: 'temp_password_required',
+          email: email,
+          message: "You must change your temporary password before logging in. Please use the link in your welcome email to set a new password.",
         },
       };
     }
