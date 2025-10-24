@@ -14,8 +14,6 @@ import { validatePasswordStrength } from "@/lib/passwordStrength";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Mail, CheckCircle2, AlertCircle } from "lucide-react";
-import { GHLSmsSetupDialog } from "@/components/auth/GHLSmsSetupDialog";
-import { GHLSmsVerifyDialog } from "@/components/auth/GHLSmsVerifyDialog";
 import { useNavigate } from "react-router-dom";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
@@ -662,20 +660,6 @@ const Auth = () => {
         onOpenChange={setShowForgotPassword}
       />
 
-      {user && requires2FASetup && (
-        <GHLSmsSetupDialog 
-          open={true}
-          userId={user.id}
-        />
-      )}
-
-      {user && requires2FAVerify && user2FAPhone && (
-        <GHLSmsVerifyDialog 
-          open={true}
-          phoneNumber={user2FAPhone}
-          userId={user.id}
-        />
-      )}
     </div>
   );
 };

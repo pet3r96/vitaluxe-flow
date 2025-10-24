@@ -277,28 +277,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Rehydrate 2FA verification status from sessionStorage
+        // Rehydrate 2FA verification status from sessionStorage (persist across refresh for the life of the auth session)
         const verifiedKey = `vitaluxe_2fa_verified_${session.user.id}`;
         const verifiedAt = sessionStorage.getItem(verifiedKey);
         
         if (verifiedAt) {
-          // Optional: Validate against session expiration
-          const sessionExpiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-          const now = Date.now();
-          
-          if (sessionExpiresAt > now) {
-            // Session still valid, restore 2FA verification
-            setIs2FAVerifiedThisSession(true);
-            logger.info('[AuthContext] 2FA verification restored from sessionStorage', {
-              userId: session.user.id,
-              verifiedAt,
-              sessionExpiresAt: new Date(sessionExpiresAt).toISOString()
-            });
-          } else {
-            // Session expired, clear stale flag
-            sessionStorage.removeItem(verifiedKey);
-            logger.info('[AuthContext] Cleared stale 2FA verification flag');
-          }
+          setIs2FAVerifiedThisSession(true);
+          logger.info('[AuthContext] Restored 2FA verification from sessionStorage', { userId: session.user.id });
         }
         
         // Fetch last_activity from database to restore timer
