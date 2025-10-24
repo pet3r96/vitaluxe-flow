@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Download, XCircle, AlertCircle } from "lucide-react";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
+import { ShipmentTrackingCard } from "./ShipmentTrackingCard";
 import { CancelOrderDialog } from "./CancelOrderDialog";
 import { ReportNotesSection } from "./ReportNotesSection";
 import { RefundOrderDialog } from "./RefundOrderDialog";
@@ -734,6 +735,17 @@ export const OrderDetailsDialog = ({
                   <div className="pt-2">
                     <ShippingInfoForm orderLine={line} onSuccess={onSuccess} />
                     <ShippingAuditLog orderLineId={line.id} />
+                    
+                    {/* Shipment Tracking - Show for shipped orders with tracking info */}
+                    {line.status === 'shipped' && line.tracking_number && line.shipping_carrier && (
+                      <div className="mt-4">
+                        <ShipmentTrackingCard
+                          orderLineId={line.id}
+                          trackingNumber={line.tracking_number}
+                          carrier={line.shipping_carrier}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
