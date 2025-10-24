@@ -34,6 +34,21 @@ export const OrdersDataTable = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  // Fetch available order statuses from config
+  const { data: orderStatusConfigs } = useQuery({
+    queryKey: ["order_status_configs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_status_configs")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
     staleTime: 0, // Always consider stale - realtime handles updates
@@ -298,10 +313,9 @@ export const OrdersDataTable = () => {
         line.patient_name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     
-    const shippingStatuses = order.order_lines?.map((line: any) => line.status) || [];
+    // Filter by ORDER STATUS (not shipping status)
     const matchesStatus =
       statusFilter === "all" ||
-      (statusFilter === "denied" && shippingStatuses.includes("denied")) ||
       order.status === statusFilter;
     
     return matchesSearch && matchesStatus;
@@ -340,16 +354,13 @@ export const OrdersDataTable = () => {
   };
 
   const getStatusLabel = (status: string, count: number) => {
-    const labels: Record<string, string> = {
-      all: "All Statuses",
-      pending: "Pending",
-      processing: "Processing",
-      shipped: "Shipped",
-      denied: "Denied",
-      delivered: "Delivered",
-      cancelled: "Cancelled",
-    };
-    return `${labels[status] || status} (${count})`;
+    if (status === "all") {
+      return `All Order Statuses (${count})`;
+    }
+    
+    const config = orderStatusConfigs?.find(c => c.status_key === status);
+    const label = config?.display_name || status;
+    return `${label} (${count})`;
   };
 
   const getPaymentStatusColor = (status: string) => {
@@ -413,19 +424,18 @@ export const OrdersDataTable = () => {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[200px]">
             <SelectValue>
               {getStatusLabel(statusFilter, filteredOrders?.length || 0)}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="processing">Processing</SelectItem>
-            <SelectItem value="shipped">Shipped</SelectItem>
-            <SelectItem value="denied">Denied</SelectItem>
-            <SelectItem value="delivered">Delivered</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="all">All Order Statuses</SelectItem>
+            {orderStatusConfigs?.map((config) => (
+              <SelectItem key={config.id} value={config.status_key}>
+                {config.display_name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -445,7 +455,7 @@ export const OrdersDataTable = () => {
               <TableHead>Shipping Status</TableHead>
               <TableHead>Carrier</TableHead>
               {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
-              <TableHead>Status</TableHead>
+              <TableHead>Order Status</TableHead>
               <TableHead>Payment Status</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
