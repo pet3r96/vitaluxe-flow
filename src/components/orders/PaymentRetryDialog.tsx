@@ -149,20 +149,24 @@ export const PaymentRetryDialog = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          {paymentErrors.map((error, idx) => (
-            <Alert key={idx} variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Order #{error.order_number}</AlertTitle>
-              <AlertDescription>
-                {error.error}
-                {error.authorizenet_response?.messages?.message?.[0]?.text && (
-                  <div className="mt-2 text-xs">
-                    Response: {error.authorizenet_response.messages.message[0].text}
-                  </div>
-                )}
-              </AlertDescription>
-            </Alert>
-          ))}
+          {/* Single consolidated error message */}
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Payment Failed</AlertTitle>
+            <AlertDescription>
+              <p className="font-medium">
+                Payment was declined for {paymentErrors.length} order{paymentErrors.length > 1 ? 's' : ''}.
+              </p>
+              <p className="mt-2">
+                Please select a different payment method below to complete your order.
+              </p>
+              {paymentErrors.length > 1 && (
+                <p className="mt-2 text-xs">
+                  Order numbers: {paymentErrors.map(e => e.order_number).join(', ')}
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
           
           <div className="space-y-2">
             <Label>Choose a different payment method:</Label>

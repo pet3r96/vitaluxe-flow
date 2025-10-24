@@ -527,9 +527,11 @@ export default function OrderConfirmation() {
               .eq("id", order.id);
 
             failedPayments.push({
-              orderId: order.id,
+              order_id: order.id,
+              order_number: order.order_number,
+              success: false,
               error: paymentResult?.error || paymentError?.message || "Payment processing failed",
-              orderTotal: order.total_amount,
+              authorizenet_response: paymentResult?.authorizenet_response || null,
             });
             failedOrders.push(order.id);
           }
@@ -541,9 +543,11 @@ export default function OrderConfirmation() {
             .eq("id", order.id);
 
           failedPayments.push({
-            orderId: order.id,
-            error: error.message || "Payment processing exception",
-            orderTotal: order.total_amount,
+            order_id: order.id,
+            order_number: order.order_number,
+            success: false,
+            error: error.message || "Payment processing failed",
+            authorizenet_response: null,
           });
           failedOrders.push(order.id);
         }
