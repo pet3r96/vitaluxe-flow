@@ -130,7 +130,8 @@ export const OrdersDataTable = () => {
           ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
         });
         
-        return Array.from(ordersMap.values());
+        // Filter out orders with failed payments
+        return Array.from(ordersMap.values()).filter(order => order.payment_status !== 'payment_failed');
       }
 
       let query = supabase
@@ -242,7 +243,9 @@ export const OrdersDataTable = () => {
         query = query.in("doctor_id", practiceIds);
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data, error } = await query
+        .neq('payment_status', 'payment_failed')
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
