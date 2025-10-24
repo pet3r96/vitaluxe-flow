@@ -31,7 +31,103 @@ serve(async (req) => {
       );
     }
 
-    const validation = validateGeneratePrescriptionRequest(requestData);
+    let prescriptionData;
+
+    // Check if order_line_id is provided (new mode)
+    if (requestData.order_line_id) {
+      console.log('Fetching prescription data from order_line_id:', requestData.order_line_id);
+      
+      // Fetch order line
+      const { data: orderLine, error: lineError } = await supabase
+        .from('order_lines')
+        .select('*, orders!inner(created_at, ship_to)')
+        .eq('id', requestData.order_line_id)
+        .single();
+
+      if (lineError || !orderLine) {
+        console.error('Error fetching order line:', lineError);
+        return new Response(
+          JSON.stringify({ error: 'Order line not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch product name
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('name')
+        .eq('id', orderLine.product_id)
+        .single();
+
+      if (productError || !product) {
+        console.error('Error fetching product:', productError);
+        return new Response(
+          JSON.stringify({ error: 'Product not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch provider profile via providers table
+      const { data: provider, error: providerError } = await supabase
+        .from('providers')
+        .select('user_id')
+        .eq('id', orderLine.provider_id)
+        .single();
+
+      if (providerError || !provider) {
+        console.error('Error fetching provider:', providerError);
+        return new Response(
+          JSON.stringify({ error: 'Provider not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch provider profile for name and credentials
+      const { data: providerProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('name, company, address_street, address_city, address_state, address_zip')
+        .eq('id', provider.user_id)
+        .single();
+
+      if (profileError || !providerProfile) {
+        console.error('Error fetching provider profile:', profileError);
+        return new Response(
+          JSON.stringify({ error: 'Provider profile not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Build prescription data object
+      prescriptionData = {
+        provider_id: orderLine.provider_id,
+        patient_id: orderLine.patient_id,
+        product_name: product.name,
+        dosage: orderLine.custom_dosage || '',
+        sig: orderLine.custom_sig || '',
+        patient_name: orderLine.patient_name,
+        patient_address: orderLine.patient_address,
+        provider_name: providerProfile.name || 'Provider',
+        practice_name: providerProfile.company || null,
+        practice_address: providerProfile.address_street 
+          ? `${providerProfile.address_street}, ${providerProfile.address_city}, ${providerProfile.address_state} ${providerProfile.address_zip}`
+          : null,
+        date: new Date(orderLine.orders.created_at).toLocaleDateString('en-US'),
+        notes: '',
+        quantity: orderLine.quantity || 1,
+        signature: '',
+        dispensing_option: 'dispense_as_written',
+        refills_allowed: orderLine.refills_allowed ?? false,
+        refills_total: orderLine.refills_total ?? 0,
+        is_office_dispensing: orderLine.orders.ship_to === 'practice'
+      };
+
+      console.log('Built prescription data:', JSON.stringify(prescriptionData, null, 2));
+    } else {
+      // Use provided data (existing mode)
+      prescriptionData = requestData;
+    }
+
+    const validation = validateGeneratePrescriptionRequest(prescriptionData);
     if (!validation.valid) {
       console.error('Prescription validation failed:', validation.errors);
       return createErrorResponse(
@@ -69,7 +165,7 @@ serve(async (req) => {
       dispensing_option,
       refills_allowed = false,
       refills_total = 0
-    } = requestData;
+    } = prescriptionData;
 
     // Normalize helper: convert falsy or [ENCRYPTED] to fallback
     const norm = (value: any, fallback: string): string => {

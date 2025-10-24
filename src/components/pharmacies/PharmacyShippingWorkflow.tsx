@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Package, MapPin, Loader2, CheckCircle } from "lucide-react";
+import { FileText, Package, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PharmacyDeclineDialog } from "./PharmacyDeclineDialog";
 
@@ -68,20 +68,12 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
 
       if (error) throw error;
 
-      // Create blob and download
-      const blob = new Blob([Uint8Array.from(atob(data.pdf), c => c.charCodeAt(0))], { 
-        type: 'application/pdf' 
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `prescription-${patientName}-${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('Prescription downloaded', { id: 'prescription' });
+      if (data?.prescription_url) {
+        window.open(data.prescription_url, '_blank');
+        toast.success('Prescription ready', { id: 'prescription' });
+      } else {
+        throw new Error('No prescription URL returned');
+      }
     } catch (error: any) {
       console.error('Error downloading prescription:', error);
       toast.error(error.message || 'Failed to download prescription', { id: 'prescription' });
@@ -118,35 +110,6 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
     }
   };
 
-  // Download shipping label
-  const downloadShippingLabel = async () => {
-    try {
-      toast.loading('Generating shipping label...', { id: 'label' });
-      
-      const { data, error } = await supabase.functions.invoke('generate-shipping-label', {
-        body: { order_id: orderId }
-      });
-
-      if (error) throw error;
-
-      const blob = new Blob([Uint8Array.from(atob(data.pdf), c => c.charCodeAt(0))], { 
-        type: 'application/pdf' 
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `shipping-label-${orderId.slice(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('Shipping label downloaded', { id: 'label' });
-    } catch (error: any) {
-      console.error('Error downloading label:', error);
-      toast.error(error.message || 'Failed to download shipping label', { id: 'label' });
-    }
-  };
 
   // Mark as shipped
   const markShipped = async () => {
@@ -245,6 +208,15 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
               <p className="text-muted-foreground">Ship To</p>
               <p className="font-medium capitalize">{order.ship_to || 'Patient'}</p>
             </div>
+            <div>
+              <p className="text-muted-foreground">Shipping Method</p>
+              <p className="font-medium">
+                {order.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
+                {' • '}
+                {order.lines?.[0]?.shipping_speed === 'overnight' ? 'Overnight' :
+                 order.lines?.[0]?.shipping_speed === '2day' ? '2-Day' : 'Ground'}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -258,7 +230,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Button 
               variant="outline" 
               className="h-20 flex flex-col gap-2"
@@ -281,15 +253,6 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
             >
               <Package className="h-6 w-6" />
               <span>Order Summary</span>
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="h-20 flex flex-col gap-2"
-              onClick={downloadShippingLabel}
-            >
-              <MapPin className="h-6 w-6" />
-              <span>Shipping Label</span>
             </Button>
           </div>
         </CardContent>
