@@ -617,6 +617,12 @@ export const MessagesView = () => {
                       <SelectValue placeholder="Select issue type..." />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="order_on_hold">Order On Hold</SelectItem>
+                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                      <SelectItem value="cannot_fulfill">Cannot Fulfill</SelectItem>
+                      <SelectItem value="invalid_prescription">Invalid Prescription</SelectItem>
+                      <SelectItem value="incorrect_dosage">Incorrect Dosage</SelectItem>
+                      <SelectItem value="patient_request">Patient Request</SelectItem>
                       <SelectItem value="shipping_delay">Shipping Delay</SelectItem>
                       <SelectItem value="product_quality">Product Quality Issue</SelectItem>
                       <SelectItem value="wrong_order">Wrong Order Received</SelectItem>

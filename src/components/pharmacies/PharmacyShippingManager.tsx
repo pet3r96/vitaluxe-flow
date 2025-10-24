@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PharmacyShippingWorkflow } from "./PharmacyShippingWorkflow";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, CheckCircle, XCircle, List } from "lucide-react";
+import { Package, CheckCircle, XCircle, List, Clock } from "lucide-react";
 import { toast } from "sonner";
 
-type OrderStatus = 'pending' | 'processing' | 'shipped' | 'denied' | 'all';
+type OrderStatus = 'pending' | 'processing' | 'shipped' | 'denied' | 'on_hold' | 'all';
 
 export const PharmacyShippingManager = () => {
   const { user, effectiveUserId } = useAuth();
@@ -74,6 +74,8 @@ export const PharmacyShippingManager = () => {
         query = query.eq('status', 'shipped');
       } else if (activeTab === 'denied') {
         query = query.eq('status', 'denied');
+      } else if (activeTab === 'on_hold') {
+        query = query.eq('status', 'on_hold');
       }
 
       const { data, error } = await query;
@@ -100,23 +102,27 @@ export const PharmacyShippingManager = () => {
       filled: 'secondary',
       shipped: 'outline',
       denied: 'destructive',
+      on_hold: 'outline',
     };
 
+    const label = status === 'on_hold' ? 'On Hold' : status.charAt(0).toUpperCase() + status.slice(1);
+
     return (
-      <Badge variant={variants[status] || 'default'}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <Badge variant={variants[status] || 'default'} className={status === 'on_hold' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}>
+        {label}
       </Badge>
     );
   };
 
   const getCounts = () => {
-    if (!orders) return { pending: 0, shipped: 0, denied: 0, all: 0 };
+    if (!orders) return { pending: 0, shipped: 0, denied: 0, on_hold: 0, all: 0 };
     
     // We need to fetch all orders to get accurate counts
     return {
       pending: orders.filter(o => ['pending', 'filled'].includes(o.status)).length,
       shipped: orders.filter(o => o.status === 'shipped').length,
       denied: orders.filter(o => o.status === 'denied').length,
+      on_hold: orders.filter(o => o.status === 'on_hold').length,
       all: orders.length,
     };
   };
@@ -146,6 +152,10 @@ export const PharmacyShippingManager = () => {
             <Package className="h-4 w-4" />
             Pending {counts.pending > 0 && `(${counts.pending})`}
           </TabsTrigger>
+          <TabsTrigger value="on_hold" className="gap-2">
+            <Clock className="h-4 w-4" />
+            On Hold {counts.on_hold > 0 && `(${counts.on_hold})`}
+          </TabsTrigger>
           <TabsTrigger value="shipped" className="gap-2">
             <CheckCircle className="h-4 w-4" />
             Shipped {counts.shipped > 0 && `(${counts.shipped})`}
@@ -168,6 +178,7 @@ export const PharmacyShippingManager = () => {
             <Card className="p-8 text-center">
               <p className="text-muted-foreground">
                 {activeTab === 'pending' && 'No pending orders'}
+                {activeTab === 'on_hold' && 'No orders on hold'}
                 {activeTab === 'shipped' && 'No shipped orders'}
                 {activeTab === 'denied' && 'No declined orders - great job!'}
                 {activeTab === 'all' && 'No orders assigned to you yet'}

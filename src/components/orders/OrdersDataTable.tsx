@@ -347,6 +347,7 @@ export const OrdersDataTable = () => {
       denied: "bg-destructive text-destructive-foreground",
       canceled: "bg-destructive text-destructive-foreground",
       cancelled: "bg-destructive text-destructive-foreground",
+      on_hold: "bg-yellow-100 text-yellow-800 border border-yellow-300",
       change_requested: "bg-amber-500 text-white",
       mixed: "bg-gradient-to-r from-primary to-secondary text-white",
     };

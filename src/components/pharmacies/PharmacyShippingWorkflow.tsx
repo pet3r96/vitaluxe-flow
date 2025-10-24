@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FileText, Package, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { PharmacyDeclineDialog } from "./PharmacyDeclineDialog";
+import { PharmacyOrderActionDialog } from "./PharmacyOrderActionDialog";
 
 interface PharmacyShippingWorkflowProps {
   orderId: string;
@@ -318,9 +318,9 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
 
       <Separator />
 
-      {/* Decline Order */}
+      {/* Order Action Section */}
       {!isShipped && !isDeclined && (
-        <PharmacyDeclineDialog 
+        <PharmacyOrderActionDialog 
           orderId={orderId}
           orderNumber={orderId.slice(0, 8)}
           onSuccess={() => {
