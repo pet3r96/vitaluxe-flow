@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,13 +33,13 @@ export const PharmacyShippingManager = () => {
     enabled: !!effectiveUserId,
   });
 
-  // Fetch assigned orders
-  const { data: orders, isLoading, refetch } = useQuery({
-    queryKey: ['pharmacy-assigned-orders', pharmacyData?.id, activeTab],
+  // Fetch ALL assigned orders (no status filter)
+  const { data: allOrders, isLoading, refetch } = useQuery({
+    queryKey: ['pharmacy-assigned-orders', pharmacyData?.id],
     queryFn: async () => {
       if (!pharmacyData?.id) return [];
 
-      let query = supabase
+      const { data, error } = await supabase
         .from('order_lines')
         .select(`
           id,
@@ -66,19 +66,6 @@ export const PharmacyShippingManager = () => {
         `)
         .eq('assigned_pharmacy_id', pharmacyData.id)
         .order('created_at', { ascending: false });
-
-      // Filter by tab
-      if (activeTab === 'pending') {
-        query = query.in('status', ['pending', 'filled']);
-      } else if (activeTab === 'shipped') {
-        query = query.eq('status', 'shipped');
-      } else if (activeTab === 'denied') {
-        query = query.eq('status', 'denied');
-      } else if (activeTab === 'on_hold') {
-        query = query.eq('status', 'on_hold');
-      }
-
-      const { data, error } = await query;
       
       if (error) {
         toast.error('Failed to load orders');
@@ -95,19 +82,41 @@ export const PharmacyShippingManager = () => {
     enabled: !!pharmacyData?.id,
   });
 
+  // Filter orders based on active tab (client-side)
+  const filteredOrders = useMemo(() => {
+    if (!allOrders) return [];
+
+    if (activeTab === 'all') return allOrders;
+
+    if (activeTab === 'pending') {
+      return allOrders.filter(o => ['pending', 'filled'].includes(o.status));
+    }
+    if (activeTab === 'shipped') {
+      return allOrders.filter(o => o.status === 'shipped');
+    }
+    if (activeTab === 'denied') {
+      return allOrders.filter(o => o.status === 'denied');
+    }
+    if (activeTab === 'on_hold') {
+      return allOrders.filter(o => o.status === 'on_hold');
+    }
+
+    return allOrders;
+  }, [allOrders, activeTab]);
+
   // Clear selection when filtered orders change or active tab changes
   useEffect(() => {
     // Case 1: No orders for current filter
-    if (!orders || orders.length === 0) {
+    if (!filteredOrders || filteredOrders.length === 0) {
       setSelectedOrderId(null);
       return;
     }
     
     // Case 2: Selected order not in current filtered list
-    if (selectedOrderId && !orders.some(o => o.order_id === selectedOrderId)) {
+    if (selectedOrderId && !filteredOrders.some(o => o.order_id === selectedOrderId)) {
       setSelectedOrderId(null);
     }
-  }, [orders, activeTab, selectedOrderId]);
+  }, [filteredOrders, activeTab, selectedOrderId]);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -129,15 +138,14 @@ export const PharmacyShippingManager = () => {
   };
 
   const getCounts = () => {
-    if (!orders) return { pending: 0, shipped: 0, denied: 0, on_hold: 0, all: 0 };
+    if (!allOrders) return { pending: 0, shipped: 0, denied: 0, on_hold: 0, all: 0 };
     
-    // We need to fetch all orders to get accurate counts
     return {
-      pending: orders.filter(o => ['pending', 'filled'].includes(o.status)).length,
-      shipped: orders.filter(o => o.status === 'shipped').length,
-      denied: orders.filter(o => o.status === 'denied').length,
-      on_hold: orders.filter(o => o.status === 'on_hold').length,
-      all: orders.length,
+      pending: allOrders.filter(o => ['pending', 'filled'].includes(o.status)).length,
+      shipped: allOrders.filter(o => o.status === 'shipped').length,
+      denied: allOrders.filter(o => o.status === 'denied').length,
+      on_hold: allOrders.filter(o => o.status === 'on_hold').length,
+      all: allOrders.length,
     };
   };
 
@@ -188,7 +196,7 @@ export const PharmacyShippingManager = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Sidebar - Order List */}
         <div className="lg:col-span-1 space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
-          {!orders || orders.length === 0 ? (
+          {!filteredOrders || filteredOrders.length === 0 ? (
             <Card className="p-8 text-center">
               <p className="text-muted-foreground">
                 {activeTab === 'pending' && 'No pending orders'}
@@ -199,7 +207,7 @@ export const PharmacyShippingManager = () => {
               </p>
             </Card>
           ) : (
-            orders.map((orderLine) => (
+            filteredOrders.map((orderLine) => (
               <Card
                 key={orderLine.id}
                 className={`p-4 cursor-pointer transition-all hover:shadow-md ${
