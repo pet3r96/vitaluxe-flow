@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -308,6 +308,41 @@ export const OrdersDataTable = () => {
     };
   }, [effectiveUserId, effectiveRole, refetch]);
 
+  // Calculate counts for each status (including search filter)
+  const statusCounts = useMemo(() => {
+    if (!orders) return { all: 0 };
+    
+    const counts: Record<string, number> = {};
+    
+    // Count all orders that match search (regardless of status)
+    const searchFilteredOrders = orders.filter((order) => {
+      const searchLower = searchQuery.toLowerCase();
+      return !searchQuery || 
+        order.id.toLowerCase().includes(searchLower) || 
+        order.profiles?.name?.toLowerCase().includes(searchLower) || 
+        order.order_lines?.some((line: any) =>
+          line.patient_name?.toLowerCase().includes(searchLower) || 
+          line.products?.name?.toLowerCase().includes(searchLower) || 
+          line.products?.product_types?.name?.toLowerCase().includes(searchLower) || 
+          line.tracking_number?.toLowerCase().includes(searchLower)
+        ) ||
+        order.status.toLowerCase().includes(searchLower) || 
+        order.payment_status.toLowerCase().includes(searchLower);
+    });
+    
+    counts.all = searchFilteredOrders.length;
+    
+    // Count orders for each status config
+    orderStatusConfigs?.forEach(config => {
+      counts[config.status_key] = searchFilteredOrders.filter(order => 
+        order.status === config.status_key ||
+        order.order_lines?.some((line: any) => line.status === config.status_key)
+      ).length || 0;
+    });
+    
+    return counts;
+  }, [orders, orderStatusConfigs, searchQuery]);
+
   const filteredOrders = orders?.filter((order) => {
     const searchLower = searchQuery.toLowerCase();
     
@@ -443,10 +478,12 @@ export const OrdersDataTable = () => {
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Order Statuses</SelectItem>
+            <SelectItem value="all">
+              All Order Statuses ({statusCounts.all || 0})
+            </SelectItem>
             {orderStatusConfigs?.map((config) => (
               <SelectItem key={config.id} value={config.status_key}>
-                {config.display_name}
+                {config.display_name} ({statusCounts[config.status_key] || 0})
               </SelectItem>
             ))}
           </SelectContent>
