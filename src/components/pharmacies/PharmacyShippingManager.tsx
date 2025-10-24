@@ -56,6 +56,7 @@ export const PharmacyShippingManager = () => {
             created_at,
             total_amount,
             ship_to,
+            payment_status,
             profiles (
               id,
               name,
@@ -82,7 +83,12 @@ export const PharmacyShippingManager = () => {
         throw error;
       }
       
-      return data;
+      // Filter out order lines from orders with payment_failed status
+      const filteredData = data?.filter(orderLine => 
+        orderLine.orders?.payment_status !== 'payment_failed'
+      ) || [];
+      
+      return filteredData;
     },
     enabled: !!pharmacyData?.id,
   });
