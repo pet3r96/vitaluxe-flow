@@ -69,8 +69,21 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
       if (error) throw error;
 
       if (data?.prescription_url) {
-        window.open(data.prescription_url, '_blank');
-        toast.success('Prescription ready', { id: 'prescription' });
+        // Fetch the signed URL and trigger download
+        const response = await fetch(data.prescription_url);
+        if (!response.ok) throw new Error('Failed to fetch prescription');
+        
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.file_name || `prescription-${patientName.replace(/\s+/g, '_')}-${Date.now()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast.success('Prescription downloaded', { id: 'prescription' });
       } else {
         throw new Error('No prescription URL returned');
       }
