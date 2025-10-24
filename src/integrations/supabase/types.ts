@@ -4444,6 +4444,7 @@ export type Database = {
         | "denied"
         | "change_requested"
         | "delivered"
+        | "declined"
       payment_status: "pending" | "completed"
       shipping_carrier: "fedex" | "ups" | "usps"
       shipping_speed: "ground" | "2day" | "overnight"
@@ -4603,6 +4604,7 @@ export const Constants = {
         "denied",
         "change_requested",
         "delivered",
+        "declined",
       ],
       payment_status: ["pending", "completed"],
       shipping_carrier: ["fedex", "ups", "usps"],

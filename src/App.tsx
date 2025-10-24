@@ -84,6 +84,7 @@ const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const AdminDiscountCodes = lazy(() => import("./pages/AdminDiscountCodes"));
 const EmergencyAdminRecovery = lazy(() => import("./pages/EmergencyAdminRecovery"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"));
 
 // Loading fallback component
@@ -181,6 +182,7 @@ const App = () => (
                                     <Route path="/admin/terms" element={<AdminTermsManagement />} />
                                     <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
                                     <Route path="/rep-reports" element={<RepProfitReports />} />
+                                    <Route path="/shipping" element={<PharmacyShipping />} />
                                     <Route path="*" element={<NotFound />} />
                                   </Routes>
                                 </Suspense>

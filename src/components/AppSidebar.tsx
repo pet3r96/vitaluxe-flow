@@ -72,6 +72,7 @@ const menuItems = {
   ],
   pharmacy: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Shipping", url: "/shipping", icon: Package },
     { title: "Orders", url: "/orders", icon: ShoppingCart },
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
