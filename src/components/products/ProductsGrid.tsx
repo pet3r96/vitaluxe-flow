@@ -262,6 +262,22 @@ export const ProductsGrid = () => {
     }
   };
 
+  // Helper to convert user_id to provider.id
+  const getProviderIdFromUserId = async (userId: string): Promise<string | null> => {
+    try {
+      const { data: provider } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      
+      return provider?.id || null;
+    } catch (error) {
+      console.error("Error getting provider ID:", error);
+      return null;
+    }
+  };
+
   const handleAddToCart = async (
     patientId: string | null, 
     quantity: number, 
@@ -358,6 +374,13 @@ export const ProductsGrid = () => {
           return;
         }
 
+        // Convert user_id to provider.id for database insertion
+        const actualProviderId = await getProviderIdFromUserId(providerId);
+        if (!actualProviderId) {
+          toast.error("Unable to find provider record. Please contact support.");
+          return;
+        }
+
         // Get user's topline rep ID for scoping
         const userToplineRepId = await getUserToplineRepId(providerId);
 
@@ -395,7 +418,7 @@ export const ProductsGrid = () => {
             cart_id: cart.id,
             product_id: productForCart.id,
             patient_id: null,
-            provider_id: providerId,
+            provider_id: actualProviderId,
             patient_name: "Practice Order",
             patient_email: null,
             patient_phone: null,
@@ -438,6 +461,13 @@ export const ProductsGrid = () => {
           return;
         }
 
+        // Convert user_id to provider.id for database insertion
+        const actualProviderId = await getProviderIdFromUserId(providerId);
+        if (!actualProviderId) {
+          toast.error("Unable to find provider record. Please contact support.");
+          return;
+        }
+
         // Get user's topline rep ID for scoping
         const userToplineRepId = await getUserToplineRepId(providerId);
 
@@ -475,7 +505,7 @@ export const ProductsGrid = () => {
             cart_id: cart.id,
             product_id: productForCart.id,
             patient_id: patientId,
-            provider_id: providerId,
+            provider_id: actualProviderId,
             patient_name: patient?.name || "Unknown",
             patient_email: patient?.email,
             patient_phone: patient?.phone,
