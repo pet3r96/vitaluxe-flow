@@ -5,9 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { generateCSRFToken, clearCSRFToken } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
-import { SESSION_CONFIG } from "@/config/session";
-import { updateActivity } from "@/lib/sessionManager";
-import { IdleWarningDialog } from "@/components/auth/IdleWarningDialog";
+// Idle timeout system removed - now using simple 60-minute hard session timeout
 import { authService } from "@/lib/authService";
 
 interface AuthContextType {
@@ -76,10 +74,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
   const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
   
-  // Idle timeout state
-  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
-  const [showIdleWarning, setShowIdleWarning] = useState(false);
-  const [idleSecondsRemaining, setIdleSecondsRemaining] = useState(0);
+  // Hard 60-minute session timeout (no idle tracking)
+  const HARD_SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
+  const SESSION_EXP_KEY = 'vitaluxe_session_exp';
+  const hardTimerRef = useRef<number | null>(null);
   
   const navigate = useNavigate();
   
@@ -174,40 +172,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setInitializing(false);
           clearTimeout(bootstrapTimeout);
           
-          // Initialize lastActivityTime from current time
-          setLastActivityTime(Date.now());
-
-          console.log('[AuthContext] SIGNED_IN - deferring backend calls');
+          // Set hard session expiration (60 minutes from now)
+          const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
+          localStorage.setItem(SESSION_EXP_KEY, String(expireAt));
+          
+          // Schedule hard timeout
+          hardTimerRef.current = window.setTimeout(() => {
+            void doHardSignOut();
+          }, HARD_SESSION_TIMEOUT_MS);
+          
+          console.log('[AuthContext] SIGNED_IN - 60 minute timer started');
           
           // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
           setTimeout(() => {
             console.log('[AuthContext] Executing deferred backend calls');
             
-            // Create or update active_sessions record
-            void supabase
-              .from('active_sessions')
-              .upsert({
-                user_id: session.user.id,
-                session_id: session.access_token.substring(0, 20),
-                ip_address: null,
-                user_agent: navigator.userAgent,
-                last_activity: new Date().toISOString(),
-              }, { 
-                onConflict: 'user_id',
-                ignoreDuplicates: false 
-              })
-              .then(({ error: sessionError }) => {
-                if (sessionError) {
-                  logger.error('Failed to create active session', sessionError);
-                }
-              });
-
             // Fetch role and CSRF token asynchronously (don't block)
             Promise.all([
               fetchUserRole(session.user.id),
               generateCSRFToken()
             ]).then(() => {
-              logger.info('SIGNED_IN: session created, user data loaded');
+              logger.info('SIGNED_IN: user data loaded');
             }).catch((error) => {
               logger.error('Error loading user data after sign in', error);
             });
@@ -223,15 +208,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (event === 'SIGNED_OUT') {
           console.log('[AuthContext] ⚠️ SIGNED_OUT event received (source: auth-event)');
           
-          // Delete active session from database
-          if (user?.id) {
-            setTimeout(() => {
-              void supabase
-                .from('active_sessions')
-                .delete()
-                .eq('user_id', user.id);
-            }, 0);
+          // Clear hard timer
+          if (hardTimerRef.current) {
+            clearTimeout(hardTimerRef.current);
+            hardTimerRef.current = null;
           }
+          localStorage.removeItem(SESSION_EXP_KEY);
           
           // Clear all state on sign out
           setUserRole(null);
@@ -251,7 +233,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
           
           clearCSRFToken();
-          logger.info('SIGNED_OUT: state cleared, session deleted');
+          logger.info('SIGNED_OUT: state cleared');
           
         } else if (event === 'TOKEN_REFRESHED') {
           // Do nothing - no need to refetch data or show loading
@@ -271,51 +253,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Rehydrate 2FA verification status from sessionStorage (persist across refresh for the life of the auth session)
+        // Rehydrate 2FA verification status from sessionStorage
         const verifiedKey = `vitaluxe_2fa_verified_${session.user.id}`;
         const verifiedAt = sessionStorage.getItem(verifiedKey);
         
         if (verifiedAt) {
           setIs2FAVerifiedThisSession(true);
-          logger.info('[AuthContext] Restored 2FA verification from sessionStorage', { userId: session.user.id });
+          logger.info('[AuthContext] Restored 2FA verification from sessionStorage');
         }
         
-        // Fetch last_activity from database to restore timer
-        const { data: sessionData, error: sessionError } = await supabase
-          .from('active_sessions')
-          .select('last_activity')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
+        // Check if hard session has expired
+        const expireAt = localStorage.getItem(SESSION_EXP_KEY);
         
-        if (sessionData?.last_activity) {
-          const lastActivityTimestamp = new Date(sessionData.last_activity).getTime();
-          const idleMinutes = (Date.now() - lastActivityTimestamp) / 60000;
+        if (expireAt) {
+          const timeRemaining = parseInt(expireAt) - Date.now();
           
-          // If already expired, force logout immediately
-          if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
-            logger.warn('Session expired on page load', { idleMinutes });
-            await forceLogout('idle_timeout', { idleMinutes });
+          if (timeRemaining <= 0) {
+            // Session expired - force logout
+            logger.warn('Session expired on page load');
+            await doHardSignOut();
             setInitializing(false);
             clearTimeout(bootstrapTimeout);
             return;
+          } else {
+            // Session still valid - schedule remaining time
+            logger.info('Session restored - scheduling remaining timeout', {
+              minutesRemaining: (timeRemaining / 60000).toFixed(1)
+            });
+            hardTimerRef.current = window.setTimeout(() => {
+              void doHardSignOut();
+            }, timeRemaining);
           }
-          
-          // Restore session timer from database
-          setLastActivityTime(lastActivityTimestamp);
-          logger.info('Session timer restored from database', { 
-            idleMinutes: idleMinutes.toFixed(1) 
-          });
         } else {
-          // No active session in database - create fresh one
-          const now = Date.now();
-          setLastActivityTime(now);
-          await supabase.from('active_sessions').upsert({
-            user_id: session.user.id,
-            session_id: session.access_token.substring(0, 20),
-            user_agent: navigator.userAgent,
-            last_activity: new Date(now).toISOString(),
-          }, { onConflict: 'user_id' });
-          logger.info('Created fresh session on page load');
+          // No expiration found (shouldn't happen) - set fresh 60 minute timer
+          logger.warn('No session expiration found - creating fresh timer');
+          const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
+          localStorage.setItem(SESSION_EXP_KEY, String(expireAt));
+          hardTimerRef.current = window.setTimeout(() => {
+            void doHardSignOut();
+          }, HARD_SESSION_TIMEOUT_MS);
         }
         
         if (!hasBootstrapped.current) {
@@ -336,6 +312,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       subscription.unsubscribe();
+      clearTimeout(bootstrapTimeout);
+      if (hardTimerRef.current) {
+        clearTimeout(hardTimerRef.current);
+      }
     };
   }, []);
 
@@ -708,176 +688,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [effectiveUserId]);
 
-  // Idle timeout: Track user activity
-  useEffect(() => {
-    if (!user) return;
-
-    const handleActivity = () => {
-      setLastActivityTime(Date.now());
-      setShowIdleWarning(false);
-      void updateActivity(); // Update database (throttled)
-    };
-
-    // Register activity listeners
-    SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
-      window.addEventListener(event, handleActivity, { passive: true });
-    });
-
-    return () => {
-      SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
-        window.removeEventListener(event, handleActivity);
-      });
-    };
-  }, [user]);
-
-  // Idle timeout: Check for inactivity
-  useEffect(() => {
-    if (!user) return;
-
-    const checkIdleTimeout = () => {
-      const now = Date.now();
-      const idleMinutes = (now - lastActivityTime) / 60000;
-      const warningThreshold = SESSION_CONFIG.IDLE_TIMEOUT_MINUTES - SESSION_CONFIG.WARNING_BEFORE_LOGOUT_MINUTES;
-
-      // Show warning at 28 minutes idle
-      if (idleMinutes >= warningThreshold && idleMinutes < SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
-        const secondsRemaining = Math.floor((SESSION_CONFIG.IDLE_TIMEOUT_MINUTES - idleMinutes) * 60);
-        setIdleSecondsRemaining(secondsRemaining);
-        setShowIdleWarning(true);
-      }
-
-      // Force logout at 30 minutes idle
-      if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
-        void forceLogout('idle_timeout', { idleMinutes });
-      }
-    };
-
-    // Check every 60 seconds
-    const interval = setInterval(checkIdleTimeout, SESSION_CONFIG.SESSION_CHECK_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [user, lastActivityTime]);
-
-  // Idle timeout: Check on tab visibility change
-  useEffect(() => {
-    if (!user) return;
-
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        // Tab became visible - check if session expired while hidden
-        const idleMinutes = (Date.now() - lastActivityTime) / 60000;
-        if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
-          void forceLogout('idle_timeout', { idleMinutes });
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user, lastActivityTime]);
-
-  const forceLogout = async (reason: string = 'unknown', context?: Record<string, any>) => {
-    const idleMinutes = (Date.now() - lastActivityTime) / 60000;
-    console.log(`[AuthContext] ⚠️ forceLogout called (reason: ${reason}, idleMinutes: ${idleMinutes.toFixed(1)})`);
-    logger.info('[AuthContext] Force logout triggered', {
-      reason,
-      userId: user?.id,
-      currentPath: window.location.pathname,
-      idleMinutes,
-      ...context
-    });
-
-    // Log security event
-    try {
-      await supabase.from('audit_logs').insert({
-        user_id: user?.id,
-        user_email: user?.email,
-        user_role: effectiveRole,
-        action_type: 'force_logout',
-        entity_type: 'auth',
-        details: {
-          reason,
-          idle_time_minutes: (Date.now() - lastActivityTime) / 60000,
-        },
-      });
-    } catch (error) {
-      logger.error('Failed to log force logout', error);
-    }
-
-    // Clear session and redirect - use a separate function that doesn't clear 2FA
-    setShowIdleWarning(false);
-    await signOutForIdleTimeout();
-    toast.error('Your session expired due to inactivity. Please log in again.');
-  };
-
-  // Separate sign out function for idle timeout that doesn't clear 2FA verification
-  const signOutForIdleTimeout = async () => {
-    setLoading(true);
+  // Hard 60-minute session timeout function
+  const doHardSignOut = async () => {
+    logger.info('Hard session timeout - forcing logout after 60 minutes');
     
-    // Delete active session from database
+    // Clear the timer
+    if (hardTimerRef.current) {
+      clearTimeout(hardTimerRef.current);
+      hardTimerRef.current = null;
+    }
+    
+    // Remove expiration timestamp
+    localStorage.removeItem(SESSION_EXP_KEY);
+    
+    // Clear any 2FA verification cache
     if (user?.id) {
-      const { error: deleteError } = await supabase
-        .from('active_sessions')
-        .delete()
-        .eq('user_id', user.id);
-      
-      if (deleteError) {
-        logger.error('Failed to delete active session', deleteError);
-      } else {
-        logger.info('Active session deleted on idle timeout');
-      }
+      sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
+      sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
     }
     
-    // End impersonation log if active
-    if (currentLogId) {
+    // Close impersonation if active
+    if (isImpersonating && currentLogId) {
       try {
         await supabase
           .from('impersonation_logs')
           .update({ end_time: new Date().toISOString() })
           .eq('id', currentLogId);
       } catch (error) {
-        logger.error('Error updating impersonation log on idle timeout', error);
+        logger.error('Error ending impersonation on hard timeout', error);
       }
     }
     
-    // Clear CSRF token before signing out
-    clearCSRFToken();
-    
-    // Clear auth cache
-    sessionStorage.removeItem('vitaluxe_auth_cache');
-    
-    // Clear 2FA verification cache on logout
-    if (user?.id) {
-      sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
-      sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
-    }
-    
+    // Sign out
     await supabase.auth.signOut();
-    setUserRole(null);
-    setImpersonatedRole(null);
-    setImpersonatedUserId(null);
-    setImpersonatedUserName(null);
-    setCurrentLogId(null);
-    setTwoFAStatusChecked(false);
-    setIs2FAVerifiedThisSession(false);
-    sessionStorage.removeItem('vitaluxe_impersonation');
-    setLoading(false);
-    navigate("/");
-  };
-
-  const handleStayLoggedIn = () => {
-    setLastActivityTime(Date.now());
-    setShowIdleWarning(false);
-    void updateActivity();
-    toast.success('Session extended - you can continue working');
-  };
-
-  const handleLogoutNow = () => {
-    setShowIdleWarning(false);
-    void forceLogout('idle_timeout');
+    
+    // Navigate to auth page
+    navigate('/auth');
+    
+    // Show toast
+    toast.info('Session expired after 60 minutes. Please log in again.');
   };
 
   const signIn = async (email: string, password: string) => {
@@ -897,31 +746,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Fetch user data including 2FA status
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Set fresh activity time for new login
-        const now = Date.now();
-        setLastActivityTime(now);
-        
-        // Update database with current timestamp
-        await supabase.from('active_sessions').upsert({
-          user_id: session.user.id,
-          session_id: session.access_token.substring(0, 20),
-          user_agent: navigator.userAgent,
-          last_activity: new Date(now).toISOString(),
-        }, { onConflict: 'user_id' });
-        
         await fetchUserRole(session.user.id);
       }
 
-      // Auth state change will handle the rest
       const csrfToken = await generateCSRFToken();
       if (!csrfToken) {
         logger.warn('Failed to generate CSRF token');
       }
 
       setLoading(false);
-      
-      // Don't navigate if 2FA is required - let the dialogs handle it
-      // The dialogs will reload the page after successful verification
       
       return { error: null };
     } catch (error: any) {
@@ -1055,19 +888,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     setLoading(true);
     
-    // Delete active session from database
-    if (user?.id) {
-      const { error: deleteError } = await supabase
-        .from('active_sessions')
-        .delete()
-        .eq('user_id', user.id);
-      
-      if (deleteError) {
-        logger.error('Failed to delete active session', deleteError);
-      } else {
-        logger.info('Active session deleted on logout');
-      }
+    // Clear hard timer
+    if (hardTimerRef.current) {
+      clearTimeout(hardTimerRef.current);
+      hardTimerRef.current = null;
     }
+    localStorage.removeItem(SESSION_EXP_KEY);
     
     // End impersonation log if active
     if (currentLogId) {
@@ -1103,7 +929,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIs2FAVerifiedThisSession(false);
     sessionStorage.removeItem('vitaluxe_impersonation');
     setLoading(false);
-    navigate("/");
+    navigate("/auth");
   };
 
   // Mark 2FA as verified for current session
@@ -1146,12 +972,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signOut 
     }}>
       {children}
-      <IdleWarningDialog
-        open={showIdleWarning}
-        secondsRemaining={idleSecondsRemaining}
-        onStayLoggedIn={handleStayLoggedIn}
-        onLogoutNow={handleLogoutNow}
-      />
     </AuthContext.Provider>
   );
 };

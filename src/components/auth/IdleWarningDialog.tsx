@@ -1,3 +1,15 @@
+/**
+ * DEPRECATED - Idle Warning Dialog
+ * 
+ * This component is no longer used. The idle timeout feature has been removed
+ * in favor of a simple 60-minute hard session timeout with no warning dialog.
+ * 
+ * Users are now automatically logged out after exactly 60 minutes from sign-in,
+ * regardless of activity. No warning is shown.
+ * 
+ * This file is kept for reference only.
+ */
+
 import { useState, useEffect } from "react";
 import {
   AlertDialog,

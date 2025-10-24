@@ -6,11 +6,17 @@ const corsHeaders = {
 };
 
 /**
- * Cleanup Stale Sessions Edge Function
+ * Cleanup Stale Sessions Edge Function - DEPRECATED
  * 
- * Scheduled to run every 15 minutes via cron job.
- * Removes sessions that have been inactive for >30 minutes.
- * This enforces idle timeout even if client doesn't cooperate.
+ * This function is no longer actively used. The system now uses a simple
+ * 60-minute hard session timeout on the client side with no database tracking.
+ * 
+ * The active_sessions table is no longer written to by the new implementation.
+ * This function is kept as a no-op for backwards compatibility and can be
+ * removed in a future cleanup.
+ * 
+ * Previous behavior: Removed sessions inactive for >30 minutes
+ * New behavior: Returns success immediately without doing anything
  */
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -19,70 +25,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const startTime = new Date().toISOString();
-    console.log(`[${startTime}] Starting stale session cleanup...`);
-
-    // Delete sessions inactive for >30 minutes
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    console.log(`Checking for sessions last active before: ${thirtyMinutesAgo}`);
+    console.log('[cleanup-stale-sessions] DEPRECATED - No-op function');
     
-    const { data: staleSessions, error: fetchError } = await supabase
-      .from('active_sessions')
-      .select('id, user_id, last_activity')
-      .lt('last_activity', thirtyMinutesAgo);
-
-    if (fetchError) {
-      console.error('Error fetching stale sessions:', fetchError);
-      throw fetchError;
-    }
-
-    const staleCount = staleSessions?.length || 0;
-    console.log(`Found ${staleCount} stale sessions to clean up`);
-
-    if (staleCount > 0) {
-      // Log forced logouts to audit_logs
-      for (const session of staleSessions || []) {
-        await supabase.from('audit_logs').insert({
-          user_id: session.user_id,
-          action_type: 'force_logout',
-          entity_type: 'active_sessions',
-          entity_id: session.id,
-          details: {
-            reason: 'idle_timeout',
-            last_activity: session.last_activity,
-            cleanup_time: new Date().toISOString(),
-          },
-        });
-      }
-
-      // Delete stale sessions
-      const { error: deleteError } = await supabase
-        .from('active_sessions')
-        .delete()
-        .lt('last_activity', thirtyMinutesAgo);
-
-      if (deleteError) {
-        console.error('Error deleting stale sessions:', deleteError);
-        throw deleteError;
-      }
-
-      console.log(`✅ Successfully cleaned up ${staleCount} stale sessions and created audit log entries`);
-    }
-
     const endTime = new Date().toISOString();
-    console.log(`[${endTime}] Cleanup complete. Next run in 15 minutes.`);
-
+    
     return new Response(
       JSON.stringify({
         success: true,
-        cleaned: staleCount,
+        cleaned: 0,
         timestamp: endTime,
-        next_run: 'in 15 minutes (cron: */15 * * * *)',
+        message: 'DEPRECATED: Session cleanup now handled by client-side 60-minute hard timeout',
+        next_run: 'Function is deprecated',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

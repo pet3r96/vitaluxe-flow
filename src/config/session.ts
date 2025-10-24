@@ -1,24 +1,22 @@
 /**
- * Session Management Configuration
+ * Session Configuration - DEPRECATED
  * 
- * Centralized configuration for idle timeout and activity tracking.
- * These settings ensure HIPAA compliance by automatically logging out
- * inactive users to prevent unauthorized access to PHI.
+ * Idle timeout logic has been removed.
+ * System now uses a simple 60-minute hard session timeout.
+ * See AuthContext.tsx for implementation.
+ * 
+ * Hard timeout: 60 minutes from sign-in, regardless of activity.
+ * Users are logged out and redirected to /auth with 2FA required on next login.
  */
 
 export const SESSION_CONFIG = {
-  // Auto-logout after 30 minutes of complete inactivity
+  // DEPRECATED - No longer used for idle tracking
   IDLE_TIMEOUT_MINUTES: 30,
-  
-  // Show warning 2 minutes before logout
   WARNING_BEFORE_LOGOUT_MINUTES: 2,
-  
-  // How often to update last_activity in database (debounced)
-  ACTIVITY_UPDATE_INTERVAL_MS: 30000, // 30 seconds
-  
-  // How often to check if user has been idle too long
-  SESSION_CHECK_INTERVAL_MS: 60000, // 60 seconds
-  
-  // User interactions that count as "activity"
+  ACTIVITY_UPDATE_INTERVAL_MS: 30000,
+  SESSION_CHECK_INTERVAL_MS: 60000,
   ACTIVITY_EVENTS: ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'] as const,
+  
+  // NEW: Hard session timeout (implemented in AuthContext.tsx)
+  HARD_TIMEOUT_MINUTES: 60,
 } as const;

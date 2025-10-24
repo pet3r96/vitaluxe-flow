@@ -66,34 +66,17 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
   }, []);
 
   useEffect(() => {
-    if (open && !codeSent) {
-      // Check sessionStorage for recent attempt
+    if (open && userId) {
+      // Always send a fresh code when dialog opens
+      // Clear any stored attempt first
       const storageKey = `vitaluxe_2fa_attempt_${userId}`;
-      const storedAttempt = sessionStorage.getItem(storageKey);
+      sessionStorage.removeItem(storageKey);
       
-      if (storedAttempt) {
-        try {
-          const { attemptId: storedId, sentAt } = JSON.parse(storedAttempt);
-          const minutesSinceSent = (Date.now() - new Date(sentAt).getTime()) / (1000 * 60);
-          
-          // If code was sent within 5 minutes, restore and don't send again
-          if (minutesSinceSent < 5 && storedId) {
-            console.log('[GHLSmsVerifyDialog] Restoring recent attempt from sessionStorage');
-            setAttemptId(storedId);
-            setCodeSent(true);
-            const secondsRemaining = Math.floor((5 * 60) - (minutesSinceSent * 60));
-            setCountdown(Math.max(0, Math.min(60, secondsRemaining)));
-            return;
-          }
-        } catch (e) {
-          console.error('[GHLSmsVerifyDialog] Failed to parse stored attempt:', e);
-        }
-      }
-      
-      // No valid stored attempt, send new code
-      sendCode();
+      // Send code immediately
+      console.log('[GHLSmsVerifyDialog] Dialog opened - sending fresh code');
+      void sendCode();
     }
-  }, [open]);
+  }, [open, userId]);
 
   const maskPhone = (phoneNum: string) => {
     const cleaned = phoneNum.replace(/\D/g, '');
@@ -149,24 +132,17 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      // Store attemptId for verification
+      // Store attemptId for verification (in component state only, not sessionStorage)
       if (data.attemptId) {
         setAttemptId(data.attemptId);
-        
-        // Persist to sessionStorage
-        const storageKey = `vitaluxe_2fa_attempt_${userId}`;
-        sessionStorage.setItem(storageKey, JSON.stringify({
-          attemptId: data.attemptId,
-          sentAt: new Date().toISOString()
-        }));
-        console.log('[GHLSmsVerifyDialog] Attempt stored in sessionStorage');
+        console.log('[GHLSmsVerifyDialog] Attempt ID received from server');
       } else {
         throw new Error('No attempt ID received from server');
       }
 
       toast.success('Verification code sent!');
       setCodeSent(true);
-      setCountdown(60);
+      setCountdown(30); // 30 second resend cooldown
       setSessionTimeout(180); // Reset to 3 minutes
     } catch (err: any) {
       console.error('Error sending SMS:', err);
@@ -180,9 +156,6 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
   const resendCode = async () => {
     setCode('');
     setAttemptsRemaining(null);
-    // Clear stored attempt to force fresh send
-    const storageKey = `vitaluxe_2fa_attempt_${userId}`;
-    sessionStorage.removeItem(storageKey);
     await sendCode();
   };
 
