@@ -673,28 +673,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Not impersonating: direct read
-      logger.info('checkPasswordStatus direct read of user_password_status');
-      const { data, error } = await supabase
-        .from('user_password_status')
-        .select('must_change_password, terms_accepted')
-        .eq('user_id', uid)
-        .maybeSingle();
+      logger.info('checkPasswordStatus direct read of user_password_status and profiles');
+      
+      // Check both user_password_status and profiles.temp_password
+      const [passwordStatusResult, profileResult] = await Promise.all([
+        supabase
+          .from('user_password_status')
+          .select('must_change_password, terms_accepted')
+          .eq('user_id', uid)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('temp_password')
+          .eq('id', uid)
+          .maybeSingle()
+      ]);
 
-      if (error) {
-        logger.error('Error checking password status', error);
+      if (passwordStatusResult.error) {
+        logger.error('Error checking password status', passwordStatusResult.error);
         setPasswordStatusChecked(true);
         return { mustChangePassword: false, termsAccepted: false };
       }
 
-      const mustChange = data?.must_change_password || false;
-      const termsAccept = data?.terms_accepted || false;
+      if (profileResult.error) {
+        logger.error('Error checking profile temp_password', profileResult.error);
+        setPasswordStatusChecked(true);
+        return { mustChangePassword: false, termsAccepted: false };
+      }
 
-      setMustChangePassword(mustChange);
+      // Check if user has temp_password flag set
+      const hasTempPassword = profileResult.data?.temp_password || false;
+      const mustChange = passwordStatusResult.data?.must_change_password || false;
+      const termsAccept = passwordStatusResult.data?.terms_accepted || false;
+
+      // If user has temp_password flag, they must change password regardless of other flags
+      const finalMustChange = mustChange || hasTempPassword;
+
+      setMustChangePassword(finalMustChange);
       setTermsAccepted(termsAccept);
       setPasswordStatusChecked(true);
 
-      logger.info('checkPasswordStatus done', { mustChange, termsAccept });
-      return { mustChangePassword: mustChange, termsAccepted: termsAccept };
+      logger.info('checkPasswordStatus done', { finalMustChange, termsAccept, hasTempPassword });
+      return { mustChangePassword: finalMustChange, termsAccepted: termsAccept };
     } catch (error) {
       logger.error('Error in checkPasswordStatus', error);
       setPasswordStatusChecked(true);

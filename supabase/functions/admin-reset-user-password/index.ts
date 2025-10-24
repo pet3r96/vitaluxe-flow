@@ -84,6 +84,19 @@ serve(async (req) => {
       // Don't throw - password was set successfully
     }
 
+    // Clear temp_password flag from profiles table
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .update({
+        temp_password: false
+      })
+      .eq('id', targetUserId);
+
+    if (profileError) {
+      console.error('Error clearing temp_password flag:', profileError);
+      // Don't throw - password was set successfully
+    }
+
     // Get target user email for logging
     const { data: targetUserData } = await supabaseClient.auth.admin.getUserById(targetUserId);
 

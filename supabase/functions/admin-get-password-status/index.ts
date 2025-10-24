@@ -62,27 +62,50 @@ Deno.serve(async (req) => {
 
     console.log(`Admin ${user.id} requesting password status for user ${target_user_id}`);
 
-    // Use service role to read user_password_status (bypasses RLS)
+    // Use service role to read both user_password_status and profiles (bypasses RLS)
     const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: statusData, error: statusError } = await supabaseService
-      .from('user_password_status')
-      .select('must_change_password, terms_accepted')
-      .eq('user_id', target_user_id)
-      .maybeSingle();
+    
+    const [statusResult, profileResult] = await Promise.all([
+      supabaseService
+        .from('user_password_status')
+        .select('must_change_password, terms_accepted')
+        .eq('user_id', target_user_id)
+        .maybeSingle(),
+      supabaseService
+        .from('profiles')
+        .select('temp_password')
+        .eq('id', target_user_id)
+        .maybeSingle()
+    ]);
 
-    if (statusError) {
-      console.error('Error reading user_password_status:', statusError);
+    if (statusResult.error) {
+      console.error('Error reading user_password_status:', statusResult.error);
       return new Response(
         JSON.stringify({ error: 'Failed to read password status' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // If no row exists, return defaults
+    if (profileResult.error) {
+      console.error('Error reading profiles temp_password:', profileResult.error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to read profile status' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user has temp_password flag set
+    const hasTempPassword = profileResult.data?.temp_password || false;
+    const mustChange = statusResult.data?.must_change_password || false;
+    const termsAccept = statusResult.data?.terms_accepted || false;
+
+    // If user has temp_password flag, they must change password regardless of other flags
+    const finalMustChange = mustChange || hasTempPassword;
+
     const result = {
       success: true,
-      must_change_password: statusData?.must_change_password ?? false,
-      terms_accepted: statusData?.terms_accepted ?? false,
+      must_change_password: finalMustChange,
+      terms_accepted: termsAccept,
     };
 
     console.log(`Returning status for ${target_user_id}:`, result);

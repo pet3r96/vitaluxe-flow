@@ -87,6 +87,19 @@ export default function ChangePassword() {
 
         if (statusError) throw statusError;
 
+        // Clear temp_password flag from profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            temp_password: false
+          })
+          .eq('id', user?.id);
+
+        if (profileError) {
+          console.error('Failed to clear temp_password flag:', profileError);
+          // Don't throw error - password change was successful, this is just cleanup
+        }
+
         toast.success("Password changed successfully!");
         
         // After changing password, end session
