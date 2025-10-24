@@ -53,6 +53,10 @@ serve(async (req) => {
       patient_dob,
       patient_age,
       patient_address,
+      patient_address_street,
+      patient_address_city,
+      patient_address_state,
+      patient_address_zip,
       patient_sex,
       is_office_dispensing,
       provider_name,
@@ -221,6 +225,7 @@ serve(async (req) => {
     // Patient information section
     doc.setFontSize(11);
     const startY = 2.2;
+    const rowHeight = 0.35; // Increased spacing for better readability
 
     if (is_office_dispensing) {
       // Show "DISPENSING IN OFFICE ONLY" message
@@ -238,45 +243,70 @@ serve(async (req) => {
       doc.text('For practice use. Not for patient dispensing.', 4, startY + 0.6, { align: 'center' });
       
     } else {
-      // Original patient info grid layout
-      // Row 1
+      // Improved patient info grid layout with structured address
+      // Row 1: Name and DOB
       doc.setFont('helvetica', 'bold');
       doc.text('Name:', 0.75, startY);
       doc.setFont('helvetica', 'normal');
-      doc.text(patient_name, 1.5, startY);
+      doc.text(patient_name, 1.5, startY, { maxWidth: 2.8 });
       
       doc.setFont('helvetica', 'bold');
       doc.text('DOB:', 4.5, startY);
       doc.setFont('helvetica', 'normal');
       doc.text(patient_dob || 'N/A', 5.2, startY);
 
-      // Row 2
+      // Row 2: Address Line 1 (Street) and Age
       doc.setFont('helvetica', 'bold');
-      doc.text('Address:', 0.75, startY + 0.3);
+      doc.text('Address:', 0.75, startY + rowHeight);
       doc.setFont('helvetica', 'normal');
-      doc.text(patient_address || 'N/A', 1.5, startY + 0.3, { maxWidth: 2.5 });
+      
+      // Use structured address if available, otherwise fallback to formatted
+      if (patient_address_street) {
+        doc.text(patient_address_street, 1.5, startY + rowHeight, { maxWidth: 2.8 });
+      } else if (patient_address) {
+        // Fallback: use formatted address but remove USA suffix and show first line only
+        const cleanAddr = (patient_address).replace(/, USA$/i, '');
+        const firstLine = cleanAddr.split(',')[0];
+        doc.text(firstLine, 1.5, startY + rowHeight, { maxWidth: 2.8 });
+      } else {
+        doc.text('N/A', 1.5, startY + rowHeight);
+      }
       
       doc.setFont('helvetica', 'bold');
-      doc.text('Age:', 4.5, startY + 0.3);
+      doc.text('Age:', 4.5, startY + rowHeight);
       doc.setFont('helvetica', 'normal');
-      doc.text(patient_age?.toString() || 'N/A', 5.2, startY + 0.3);
+      doc.text(patient_age?.toString() || 'N/A', 5.2, startY + rowHeight);
 
-      // Row 3
-      doc.setFont('helvetica', 'bold');
-      doc.text('Allergies:', 0.75, startY + 0.6);
+      // Row 3: Address Line 2 (City, State ZIP) and Sex
       doc.setFont('helvetica', 'normal');
-      doc.text(patient_allergies || 'NKDA', 1.5, startY + 0.6);
+      if (patient_address_city && patient_address_state && patient_address_zip) {
+        const cityStateZip = `${patient_address_city}, ${patient_address_state} ${patient_address_zip}`;
+        doc.text(cityStateZip, 1.5, startY + (rowHeight * 2), { maxWidth: 2.8 });
+      } else if (patient_address) {
+        // Fallback: show remaining parts of formatted address
+        const cleanAddr = (patient_address).replace(/, USA$/i, '');
+        const parts = cleanAddr.split(',');
+        if (parts.length > 1) {
+          const secondLine = parts.slice(1).join(',').trim();
+          doc.text(secondLine, 1.5, startY + (rowHeight * 2), { maxWidth: 2.8 });
+        }
+      }
       
       doc.setFont('helvetica', 'bold');
-      doc.text('Sex:', 4.5, startY + 0.6);
+      doc.text('Sex:', 4.5, startY + (rowHeight * 2));
       doc.setFont('helvetica', 'normal');
-      doc.text(patient_sex || 'N/A', 5.2, startY + 0.6);
+      doc.text(patient_sex || 'N/A', 5.2, startY + (rowHeight * 2));
 
-      // Row 4
+      // Row 4: Allergies and Date
       doc.setFont('helvetica', 'bold');
-      doc.text('Date:', 0.75, startY + 0.9);
+      doc.text('Allergies:', 0.75, startY + (rowHeight * 3));
       doc.setFont('helvetica', 'normal');
-      doc.text(date, 1.5, startY + 0.9);
+      doc.text(patient_allergies || 'NKDA', 1.5, startY + (rowHeight * 3), { maxWidth: 2.8 });
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Date:', 4.5, startY + (rowHeight * 3));
+      doc.setFont('helvetica', 'normal');
+      doc.text(date, 5.2, startY + (rowHeight * 3));
     }
 
     // Reset text color

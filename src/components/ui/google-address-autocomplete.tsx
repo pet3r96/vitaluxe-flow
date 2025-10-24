@@ -141,7 +141,7 @@ export const GoogleAddressAutocomplete = ({
         }
       }
       
-      const formattedAddress = place.formatted_address || `${street}, ${city}, ${state} ${zip}`;
+      const formattedAddress = (place.formatted_address || `${street}, ${city}, ${state} ${zip}`).replace(/, USA$/i, '');
       
       // IMMEDIATELY set the input value (don't wait for validation)
       setInputValue(formattedAddress);
