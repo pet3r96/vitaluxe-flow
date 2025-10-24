@@ -33,6 +33,7 @@ const PracticeProfitReports = () => {
           created_at,
           status,
           total_amount,
+          payment_status,
           discount_code,
           discount_percentage,
           discount_amount,
@@ -46,6 +47,7 @@ const PracticeProfitReports = () => {
           )
         `)
         .eq("doctor_id", effectiveUserId)
+        .neq("payment_status", "payment_failed")
         .order("created_at", { ascending: false });
       
       if (error) throw error;
