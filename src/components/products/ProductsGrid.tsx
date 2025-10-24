@@ -352,7 +352,10 @@ export const ProductsGrid = () => {
           .eq("id", providerId)
           .single();
 
-        // Build robust address
+        // Use direct state field from Google Address (no parsing needed)
+        const destinationState = providerProfile?.shipping_address_state || '';
+
+        // Build formatted address for display
         const providerAddress = providerProfile?.shipping_address_formatted || 
           (providerProfile?.shipping_address_street && 
            providerProfile?.shipping_address_city && 
@@ -361,15 +364,9 @@ export const ProductsGrid = () => {
             ? `${providerProfile.shipping_address_street}, ${providerProfile.shipping_address_city}, ${providerProfile.shipping_address_state} ${providerProfile.shipping_address_zip}`
             : null);
 
-        // Extract and validate destination state
-        const destinationState = extractStateWithFallback(
-          providerAddress,
-          providerProfile?.shipping_address_state
-        );
-
         if (!isValidStateCode(destinationState)) {
           toast.error(
-            "Invalid shipping address. Please go to Profile → Shipping Address and ensure it's formatted as: Street, City, ST 12345"
+            "Invalid shipping address. Please update your shipping address in Profile with valid state information."
           );
           return;
         }
@@ -443,20 +440,18 @@ export const ProductsGrid = () => {
           .eq("id", patientId!)
           .single();
 
-        // Build robust patient address
+        // Use direct state field from Google Address (no parsing needed)
+        const destinationState = patient?.address_state || '';
+
+        // Build formatted address for display
         const patientAddress = patient?.address_formatted ||
           (patient?.address_street && patient?.address_city && patient?.address_state && patient?.address_zip
             ? `${patient.address_street}, ${patient.address_city}, ${patient.address_state} ${patient.address_zip}`
             : patient?.address || null);
 
-        // Extract and validate state
-        const destinationState = patient?.address_state || 
-          extractStateWithFallback(patient?.address_formatted || '', patient?.address_state) ||
-          extractStateWithFallback(patientAddress || '', patient?.address_state);
-
         if (!isValidStateCode(destinationState)) {
           toast.error(
-            "Patient address is incomplete or invalid. Please update the patient's address with: Street, City, ST 12345"
+            "Patient address is incomplete or invalid. Please update the patient's address with valid state information."
           );
           return;
         }
