@@ -345,28 +345,23 @@ export const ProductsGrid = () => {
       }
 
       if (shipToPractice) {
-        // Get provider's shipping address for practice orders
-        const { data: providerProfile } = await supabase
+        console.debug('[ProductsGrid] Practice order - fetching practice shipping address', { effectiveUserId });
+        
+        // Get practice's shipping address (not provider's) for practice orders
+        const { data: practiceProfile } = await supabase
           .from("profiles")
           .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
-          .eq("id", providerId)
+          .eq("id", effectiveUserId)
           .single();
 
         // Use direct state field from Google Address (no parsing needed)
-        const destinationState = providerProfile?.shipping_address_state || '';
-
-        // Build formatted address for display
-        const providerAddress = providerProfile?.shipping_address_formatted || 
-          (providerProfile?.shipping_address_street && 
-           providerProfile?.shipping_address_city && 
-           providerProfile?.shipping_address_state && 
-           providerProfile?.shipping_address_zip
-            ? `${providerProfile.shipping_address_street}, ${providerProfile.shipping_address_city}, ${providerProfile.shipping_address_state} ${providerProfile.shipping_address_zip}`
-            : null);
+        const destinationState = practiceProfile?.shipping_address_state || '';
+        
+        console.debug('[ProductsGrid] Practice shipping state resolved', { destinationState });
 
         if (!isValidStateCode(destinationState)) {
           toast.error(
-            "Invalid shipping address. Please update your shipping address in Profile with valid state information."
+            "Invalid practice shipping address. Please update your practice shipping address in Profile with a valid 2-letter state."
           );
           return;
         }
@@ -377,9 +372,11 @@ export const ProductsGrid = () => {
           toast.error("Unable to find provider record. Please contact support.");
           return;
         }
+        
+        console.debug('[ProductsGrid] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
 
-        // Get user's topline rep ID for scoping
-        const userToplineRepId = await getUserToplineRepId(providerId);
+        // Get user's topline rep ID for scoping (use practice's effectiveUserId, not provider)
+        const userToplineRepId = await getUserToplineRepId(effectiveUserId);
 
         // Route to pharmacy - BLOCK if no pharmacy available
         const { data: routingResult, error: routingError } = await supabase.functions.invoke(

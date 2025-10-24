@@ -20,7 +20,7 @@ import { PatientSelectionDialog } from "./PatientSelectionDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
-import { extractStateFromAddress } from "@/lib/addressUtils";
+import { isValidStateCode } from "@/lib/addressUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -146,6 +146,46 @@ export const ProductsDataTable = () => {
 
   const paginatedProducts = filteredProducts?.slice(startIndex, endIndex);
 
+  // Helper to convert user_id to provider.id
+  const getProviderIdFromUserId = async (userId: string): Promise<string | null> => {
+    try {
+      const { data: provider } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      
+      return provider?.id || null;
+    } catch (error) {
+      console.error("Error getting provider ID:", error);
+      return null;
+    }
+  };
+
+  // Helper to get user's topline rep ID for pharmacy scoping
+  const getUserToplineRepId = async (userId: string): Promise<string | null> => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("linked_topline_id")
+        .eq("id", userId)
+        .single();
+      
+      if (!profile?.linked_topline_id) return null;
+      
+      const { data: rep } = await supabase
+        .from("reps")
+        .select("id")
+        .eq("user_id", profile.linked_topline_id)
+        .single();
+      
+      return rep?.id || null;
+    } catch (error) {
+      console.error("Error getting topline rep ID:", error);
+      return null;
+    }
+  };
+
   const handleAddToCart = async (
     patientId: string | null, 
     quantity: number, 
@@ -204,15 +244,65 @@ export const ProductsDataTable = () => {
       }
 
       if (shipToPractice) {
-        // Get provider's shipping address for practice orders
-        const { data: providerProfile } = await supabase
+        console.debug('[ProductsDataTable] Practice order - fetching practice shipping address', { effectiveUserId });
+        
+        // Get practice's shipping address (not provider's) for practice orders
+        const { data: practiceProfile } = await supabase
           .from("profiles")
           .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
-          .eq("id", providerId)
+          .eq("id", effectiveUserId)
           .single();
 
-        const providerAddress = providerProfile?.shipping_address_formatted || 
-          `${providerProfile?.shipping_address_street}, ${providerProfile?.shipping_address_city}, ${providerProfile?.shipping_address_state} ${providerProfile?.shipping_address_zip}`;
+        // Use direct state field from Google Address (no parsing needed)
+        const destinationState = practiceProfile?.shipping_address_state || '';
+        
+        console.debug('[ProductsDataTable] Practice shipping state resolved', { destinationState });
+
+        if (!isValidStateCode(destinationState)) {
+          toast.error(
+            "Invalid practice shipping address. Please set it in your Profile with a valid 2-letter state."
+          );
+          return;
+        }
+
+        // Convert user_id to provider.id for database insertion
+        const actualProviderId = await getProviderIdFromUserId(providerId);
+        if (!actualProviderId) {
+          toast.error("Unable to find provider record. Please contact support.");
+          return;
+        }
+        
+        console.debug('[ProductsDataTable] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
+
+        // Get user's topline rep ID for scoping (use practice's effectiveUserId, not provider)
+        const userToplineRepId = await getUserToplineRepId(effectiveUserId);
+
+        // Route to pharmacy - BLOCK if no pharmacy available
+        const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+          'route-order-to-pharmacy',
+          {
+            body: {
+              product_id: productForCart.id,
+              destination_state: destinationState,
+              user_topline_rep_id: userToplineRepId
+            }
+          }
+        );
+
+        if (routingError) {
+          console.error("Routing error:", routingError);
+          toast.error("Unable to verify pharmacy availability. Please try again.");
+          return;
+        }
+
+        if (!routingResult?.pharmacy_id) {
+          toast.error(
+            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please contact support.'}`
+          );
+          return;
+        }
+
+        console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
 
         const { error } = await supabase
           .from("cart_lines" as any)
@@ -220,14 +310,15 @@ export const ProductsDataTable = () => {
             cart_id: cart.id,
             product_id: productForCart.id,
             patient_id: null,
-            provider_id: providerId,
+            provider_id: actualProviderId,
             patient_name: "Practice Order",
             patient_email: null,
             patient_phone: null,
             patient_address: null,
             quantity: quantity,
             price_snapshot: correctPrice,
-            destination_state: extractStateFromAddress(providerAddress),
+            destination_state: destinationState,
+            assigned_pharmacy_id: routingResult.pharmacy_id,
             prescription_url: prescriptionUrl,
             custom_sig: customSig,
             custom_dosage: customDosage,
@@ -237,12 +328,63 @@ export const ProductsDataTable = () => {
 
         if (error) throw error;
       } else {
-        // Patient order - get patient details
+        // Patient order - get patient with ALL address fields
         const { data: patient } = await supabase
           .from("patients")
-          .select("name, email, phone, address")
+          .select("name, email, phone, address, address_formatted, address_street, address_city, address_state, address_zip")
           .eq("id", patientId!)
           .single();
+
+        // Use direct state field from Google Address (no parsing needed)
+        const destinationState = patient?.address_state || '';
+
+        if (!isValidStateCode(destinationState)) {
+          toast.error(
+            "Patient address is incomplete or invalid. Please update the patient's address with valid state information."
+          );
+          return;
+        }
+
+        // Convert user_id to provider.id for database insertion
+        const actualProviderId = await getProviderIdFromUserId(providerId);
+        if (!actualProviderId) {
+          toast.error("Unable to find provider record. Please contact support.");
+          return;
+        }
+
+        // Get user's topline rep ID for scoping
+        const userToplineRepId = await getUserToplineRepId(effectiveUserId);
+
+        // Route to pharmacy - BLOCK if no pharmacy available
+        const { data: routingResult, error: routingError } = await supabase.functions.invoke(
+          'route-order-to-pharmacy',
+          {
+            body: {
+              product_id: productForCart.id,
+              destination_state: destinationState,
+              user_topline_rep_id: userToplineRepId
+            }
+          }
+        );
+
+        if (routingError) {
+          console.error("Routing error:", routingError);
+          toast.error("Unable to verify pharmacy availability. Please try again.");
+          return;
+        }
+
+        if (!routingResult?.pharmacy_id) {
+          toast.error(
+            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please contact support.'}`
+          );
+          return;
+        }
+
+        // Build formatted address for display
+        const patientAddress = patient?.address_formatted ||
+          (patient?.address_street && patient?.address_city && patient?.address_state && patient?.address_zip
+            ? `${patient.address_street}, ${patient.address_city}, ${patient.address_state} ${patient.address_zip}`
+            : patient?.address || null);
 
         const { error } = await supabase
           .from("cart_lines" as any)
@@ -250,14 +392,15 @@ export const ProductsDataTable = () => {
             cart_id: cart.id,
             product_id: productForCart.id,
             patient_id: patientId,
-            provider_id: providerId,
+            provider_id: actualProviderId,
             patient_name: patient?.name || "Unknown",
             patient_email: patient?.email,
             patient_phone: patient?.phone,
-            patient_address: patient?.address,
+            patient_address: patientAddress,
             quantity: quantity,
             price_snapshot: correctPrice,
-            destination_state: extractStateFromAddress(patient?.address),
+            destination_state: destinationState,
+            assigned_pharmacy_id: routingResult.pharmacy_id,
             prescription_url: prescriptionUrl,
             custom_sig: customSig,
             custom_dosage: customDosage,
