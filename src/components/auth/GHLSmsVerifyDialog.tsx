@@ -24,7 +24,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
-  const [sessionTimeout, setSessionTimeout] = useState(180); // 3 minutes in seconds
+  
 
   useEffect(() => {
     if (countdown > 0) {
@@ -33,44 +33,11 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
     }
   }, [countdown]);
 
-  // Session timeout countdown (3 minutes) - ONLY when dialog is open
-  useEffect(() => {
-    if (!open) {
-      // Dialog closed, clear any running timers
-      return;
-    }
 
-    if (sessionTimeout > 0) {
-      const timer = setTimeout(() => {
-        setSessionTimeout(prev => prev - 1);
-      }, 1000);
-      return () => {
-        clearTimeout(timer);
-        console.log('[GHLSmsVerifyDialog] Cleared session timeout timer');
-      };
-    }
-    
-    // Auto-logout when session expires
-    if (sessionTimeout === 0) {
-      handleSessionTimeout();
-    }
-  }, [open, sessionTimeout]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      // Clear any running timers when component unmounts
-      setSessionTimeout(180); // Reset for next time
-      console.log('[GHLSmsVerifyDialog] Component unmounted, timers cleared');
-    };
-  }, []);
 
   useEffect(() => {
     if (open && userId) {
       // Always send a fresh code when dialog opens
-      // Clear any stored attempt first
-      const storageKey = `vitaluxe_2fa_attempt_${userId}`;
-      sessionStorage.removeItem(storageKey);
       
       // Send code immediately
       console.log('[GHLSmsVerifyDialog] Dialog opened - sending fresh code');
@@ -86,16 +53,6 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
     return phoneNum;
   };
 
-  const handleSessionTimeout = async () => {
-    console.log('[GHLSmsVerifyDialog] Session timeout - redirecting to login', {
-      userId,
-      phoneNumber: maskPhone(phoneNumber)
-    });
-    
-    toast.error('Verification session expired. Please login again.');
-    await supabase.auth.signOut();
-    window.location.href = '/auth';
-  };
 
   const handleReturnToLogin = async () => {
     console.log('[GHLSmsVerifyDialog] User clicked Return to Login', { userId });
@@ -143,7 +100,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       toast.success('Verification code sent!');
       setCodeSent(true);
       setCountdown(30); // 30 second resend cooldown
-      setSessionTimeout(180); // Reset to 3 minutes
+      
     } catch (err: any) {
       console.error('Error sending SMS:', err);
       setError(err.message || 'Failed to send verification code');
@@ -217,9 +174,6 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
           <DialogDescription>
             Please verify your identity to continue.
             {codeSent && ` Code sent to ${maskPhone(phoneNumber)}`}
-            <div className={`mt-2 text-sm ${sessionTimeout < 30 ? 'text-destructive font-semibold animate-pulse' : 'text-muted-foreground'}`}>
-              Session expires in {Math.floor(sessionTimeout / 60)}:{String(sessionTimeout % 60).padStart(2, '0')}
-            </div>
           </DialogDescription>
         </DialogHeader>
 

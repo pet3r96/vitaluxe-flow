@@ -111,11 +111,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRequires2FAVerify(false);
         setUser2FAPhone(null);
       } else {
-        // Always require verification on login
-        console.log('[AuthContext] check2FAStatus - Enrolled, requires verification');
-        setRequires2FAVerify(true);
+        // Enrolled - require verification unless already verified for this hard session
+        const twoFaKey = `vitaluxe_2fa_verified_until_${userId}`;
+        const verifiedUntil = localStorage.getItem(twoFaKey);
+        const sessionExpireAt = localStorage.getItem(SESSION_EXP_KEY);
+        const now = Date.now();
+        const isVerified = verifiedUntil && sessionExpireAt
+          ? parseInt(verifiedUntil) > now && parseInt(sessionExpireAt) > now
+          : false;
+
         setRequires2FASetup(false);
         setUser2FAPhone(data.phone_number);
+        if (isVerified) {
+          setIs2FAVerifiedThisSession(true);
+          setRequires2FAVerify(false);
+          console.log('[AuthContext] check2FAStatus - Already verified for this session');
+        } else {
+          setRequires2FAVerify(true);
+          console.log('[AuthContext] check2FAStatus - Requires verification');
+        }
       }
       
       // Mark 2FA check as complete
@@ -228,6 +242,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           // Clear 2FA verification cache on logout
           if (user?.id) {
+            const twoFaKey = `vitaluxe_2fa_verified_until_${user.id}`;
+            localStorage.removeItem(twoFaKey);
+            // Clean up legacy sessionStorage keys if present
             sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
             sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
           }
@@ -253,13 +270,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Rehydrate 2FA verification status from sessionStorage
-        const verifiedKey = `vitaluxe_2fa_verified_${session.user.id}`;
-        const verifiedAt = sessionStorage.getItem(verifiedKey);
-        
-        if (verifiedAt) {
-          setIs2FAVerifiedThisSession(true);
-          logger.info('[AuthContext] Restored 2FA verification from sessionStorage');
+        // Rehydrate 2FA verification status from localStorage (persisted for duration of hard session)
+        const verifiedKey = `vitaluxe_2fa_verified_until_${session.user.id}`;
+        const verifiedUntil = localStorage.getItem(verifiedKey);
+        const sessionExpireAt = localStorage.getItem(SESSION_EXP_KEY);
+        if (verifiedUntil && sessionExpireAt) {
+          const now = Date.now();
+          const valid = parseInt(verifiedUntil) > now && parseInt(sessionExpireAt) > now;
+          if (valid) {
+            setIs2FAVerifiedThisSession(true);
+            setRequires2FAVerify(false);
+            logger.info('[AuthContext] Restored 2FA verification from localStorage');
+          }
         }
         
         // Check if hard session has expired
@@ -703,6 +725,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // Clear any 2FA verification cache
     if (user?.id) {
+      const twoFaKey = `vitaluxe_2fa_verified_until_${user.id}`;
+      localStorage.removeItem(twoFaKey);
+      // Legacy cleanup
       sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
       sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
     }
@@ -915,6 +940,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // Clear 2FA verification cache on logout
     if (user?.id) {
+      const twoFaKey = `vitaluxe_2fa_verified_until_${user.id}`;
+      localStorage.removeItem(twoFaKey);
+      // Legacy cleanup
       sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
       sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
     }
@@ -932,9 +960,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate("/auth");
   };
 
-  // Mark 2FA as verified for current session
   const mark2FAVerified = () => {
     console.log('[AuthContext] ✅ mark2FAVerified called');
+    const expStr = localStorage.getItem(SESSION_EXP_KEY);
+    const expireAt = expStr ? parseInt(expStr) : (Date.now() + HARD_SESSION_TIMEOUT_MS);
+    if (user?.id) {
+      localStorage.setItem(`vitaluxe_2fa_verified_until_${user.id}`, String(expireAt));
+    }
     setIs2FAVerifiedThisSession(true);
     setRequires2FAVerify(false);
   };
