@@ -6,7 +6,7 @@ import { Alert } from "@/components/ui/alert";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface GHLSmsVerifyDialogProps {
@@ -24,6 +24,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
+  const [sessionTimeout, setSessionTimeout] = useState(180); // 3 minutes in seconds
 
   useEffect(() => {
     if (countdown > 0) {
@@ -31,6 +32,21 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       return () => clearTimeout(timer);
     }
   }, [countdown]);
+
+  // Session timeout countdown (3 minutes)
+  useEffect(() => {
+    if (open && sessionTimeout > 0) {
+      const timer = setTimeout(() => {
+        setSessionTimeout(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    
+    // Auto-logout when session expires
+    if (open && sessionTimeout === 0) {
+      handleSessionTimeout();
+    }
+  }, [open, sessionTimeout]);
 
   useEffect(() => {
     if (open && !codeSent) {
@@ -68,6 +84,17 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       return `+${cleaned.slice(0, 1)}-XXX-XXX-${cleaned.slice(-4)}`;
     }
     return phoneNum;
+  };
+
+  const handleSessionTimeout = async () => {
+    toast.error('Verification session expired. Please login again.');
+    await supabase.auth.signOut();
+    window.location.href = '/auth';
+  };
+
+  const handleReturnToLogin = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/auth';
   };
 
   const sendCode = async () => {
@@ -117,6 +144,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       toast.success('Verification code sent!');
       setCodeSent(true);
       setCountdown(60);
+      setSessionTimeout(180); // Reset to 3 minutes
     } catch (err: any) {
       console.error('Error sending SMS:', err);
       setError(err.message || 'Failed to send verification code');
@@ -193,6 +221,9 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
           <DialogDescription>
             Please verify your identity to continue.
             {codeSent && ` Code sent to ${maskPhone(phoneNumber)}`}
+            <div className={`mt-2 text-sm ${sessionTimeout < 30 ? 'text-destructive font-semibold animate-pulse' : 'text-muted-foreground'}`}>
+              Session expires in {Math.floor(sessionTimeout / 60)}:{String(sessionTimeout % 60).padStart(2, '0')}
+            </div>
           </DialogDescription>
         </DialogHeader>
 
@@ -248,6 +279,19 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
           >
             {countdown > 0 ? `Resend in ${countdown}s` : 'Resend Code'}
           </Button>
+
+          <Button 
+            variant="ghost" 
+            onClick={handleReturnToLogin}
+            className="w-full mt-2 text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Cancel & Return to Login
+          </Button>
+
+          <p className="text-xs text-center text-muted-foreground mt-4">
+            Having trouble? Contact support for assistance.
+          </p>
         </div>
       </DialogContent>
     </Dialog>

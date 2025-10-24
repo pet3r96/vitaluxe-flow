@@ -53,6 +53,11 @@ export const PatientDialog = ({
     address_verification_source: "",
   });
 
+  const [decryptedPHI, setDecryptedPHI] = useState<{
+    allergies: string | null;
+    notes: string | null;
+  }>({ allergies: null, notes: null });
+
   useEffect(() => {
     if (patient) {
       setFormData({
@@ -60,8 +65,8 @@ export const PatientDialog = ({
         email: patient.email || "",
         phone: patient.phone || "",
         birth_date: patient.birth_date || "",
-        allergies: patient.allergies || "",
-        notes: patient.notes || "",
+        allergies: "", // Will be populated by decryption useEffect
+        notes: "", // Will be populated by decryption useEffect
         address_street: patient.address_street || "",
         address_city: patient.address_city || "",
         address_state: patient.address_state || "",
@@ -73,6 +78,60 @@ export const PatientDialog = ({
     } else {
       resetForm();
     }
+  }, [patient, open]);
+
+  // Decrypt patient PHI when editing existing patient
+  useEffect(() => {
+    const fetchDecryptedPHI = async () => {
+      if (!patient || !open || !patient.id) {
+        setDecryptedPHI({ allergies: null, notes: null });
+        return;
+      }
+
+      // Check if allergies or notes are encrypted
+      const hasEncryptedData = patient.allergies === '[ENCRYPTED]' || patient.notes === '[ENCRYPTED]';
+      
+      if (!hasEncryptedData) {
+        // No encryption, use plain text values
+        setDecryptedPHI({
+          allergies: patient.allergies,
+          notes: patient.notes
+        });
+        setFormData(prev => ({
+          ...prev,
+          allergies: patient.allergies || "",
+          notes: patient.notes || ""
+        }));
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('get_decrypted_patient_phi', {
+          p_patient_id: patient.id
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setDecryptedPHI({
+            allergies: data[0].allergies,
+            notes: data[0].notes
+          });
+
+          // Update formData with decrypted values
+          setFormData(prev => ({
+            ...prev,
+            allergies: data[0].allergies || "",
+            notes: data[0].notes || ""
+          }));
+        }
+      } catch (error) {
+        console.error('[PatientDialog] Failed to decrypt patient PHI:', error);
+        toast.error('Failed to load patient information');
+      }
+    };
+
+    fetchDecryptedPHI();
   }, [patient, open]);
 
   // HIPAA Compliance: Log PHI access when viewing patient with sensitive data
