@@ -21,6 +21,7 @@ const Dashboard = () => {
           .from("orders")
           .select("*", { count: "exact", head: true })
           .neq("status", "cancelled")
+          .neq("payment_status", "payment_failed")
           .eq("doctor_id", effectiveUserId);
         count = result.count || 0;
       } else if (effectiveRole === "provider" as any) {
@@ -71,7 +72,8 @@ const Dashboard = () => {
         const result: any = await (supabase as any)
           .from("orders")
           .select("*", { count: "exact", head: true })
-          .neq("status", "cancelled");
+          .neq("status", "cancelled")
+          .neq("payment_status", "payment_failed");
         count = result.count || 0;
       }
       
@@ -155,9 +157,10 @@ const Dashboard = () => {
         .from("order_lines")
         .select(`
           order_id,
-          orders!inner(status)
+          orders!inner(status, payment_status)
         `)
         .eq("assigned_pharmacy_id", pharmacyData.id)
+        .neq("orders.payment_status", "payment_failed")
         .eq("orders.status", "pending");
       
       // Get unique order IDs (one order can have multiple lines)
@@ -191,6 +194,7 @@ const Dashboard = () => {
           .from("orders")
           .select("total_amount")
           .neq("status", "cancelled")
+          .neq("payment_status", "payment_failed")
           .eq("doctor_id", effectiveUserId)
           .eq("status", "pending");
         data = result.data;
@@ -209,9 +213,10 @@ const Dashboard = () => {
             .select(`
               price,
               quantity,
-              orders!inner(status)
+              orders!inner(status, payment_status)
             `)
             .eq("provider_id", providerData.id)
+            .neq("orders.payment_status", "payment_failed")
             .eq("orders.status", "pending");
           
           // Calculate total from order lines (price * quantity)
@@ -235,9 +240,10 @@ const Dashboard = () => {
             .select(`
               price,
               quantity,
-              orders!inner(status)
+              orders!inner(status, payment_status)
             `)
             .eq("assigned_pharmacy_id", pharmacyData.id)
+            .neq("orders.payment_status", "payment_failed")
             .eq("orders.status", "pending");
           
           // Calculate total from order lines (price * quantity)
@@ -251,6 +257,7 @@ const Dashboard = () => {
           .from("orders")
           .select("total_amount")
           .neq("status", "cancelled")
+          .neq("payment_status", "payment_failed")
           .eq("status", "pending");
         data = result.data;
       }
@@ -271,6 +278,7 @@ const Dashboard = () => {
           .from("orders")
           .select("total_amount")
           .neq("status", "cancelled")
+          .neq("payment_status", "payment_failed")
           .eq("doctor_id", effectiveUserId)
           .eq("status", "completed");
         data = result.data;
@@ -289,9 +297,10 @@ const Dashboard = () => {
             .select(`
               price,
               quantity,
-              orders!inner(status)
+              orders!inner(status, payment_status)
             `)
             .eq("provider_id", providerData.id)
+            .neq("orders.payment_status", "payment_failed")
             .eq("orders.status", "completed");
           
           // Calculate total from order lines (price * quantity)
@@ -315,9 +324,10 @@ const Dashboard = () => {
             .select(`
               price,
               quantity,
-              orders!inner(status)
+              orders!inner(status, payment_status)
             `)
             .eq("assigned_pharmacy_id", pharmacyData.id)
+            .neq("orders.payment_status", "payment_failed")
             .eq("orders.status", "completed");
           
           // Calculate total from order lines (price * quantity)
@@ -331,6 +341,7 @@ const Dashboard = () => {
           .from("orders")
           .select("total_amount")
           .neq("status", "cancelled")
+          .neq("payment_status", "payment_failed")
           .eq("status", "completed");
         data = result.data;
       }

@@ -112,7 +112,8 @@ const RepDashboard = () => {
           .from("orders")
           .select("*", { count: 'exact', head: true })
           .in("doctor_id", practiceIds)
-          .neq("status", "cancelled");
+          .neq("status", "cancelled")
+          .neq("payment_status", "payment_failed");
         
         if (error) throw error;
         return count || 0;
@@ -134,7 +135,8 @@ const RepDashboard = () => {
           .from("orders")
           .select("*", { count: 'exact', head: true })
           .in("doctor_id", practiceIds)
-          .neq("status", "cancelled");
+          .neq("status", "cancelled")
+          .neq("payment_status", "payment_failed");
         
         if (error) throw error;
         return count || 0;
