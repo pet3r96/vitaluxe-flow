@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -94,6 +94,20 @@ export const PharmacyShippingManager = () => {
     },
     enabled: !!pharmacyData?.id,
   });
+
+  // Clear selection when filtered orders change or active tab changes
+  useEffect(() => {
+    // Case 1: No orders for current filter
+    if (!orders || orders.length === 0) {
+      setSelectedOrderId(null);
+      return;
+    }
+    
+    // Case 2: Selected order not in current filtered list
+    if (selectedOrderId && !orders.some(o => o.order_id === selectedOrderId)) {
+      setSelectedOrderId(null);
+    }
+  }, [orders, activeTab, selectedOrderId]);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {

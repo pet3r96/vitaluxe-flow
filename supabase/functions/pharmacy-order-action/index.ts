@@ -11,6 +11,7 @@ interface OrderActionRequest {
   action: 'hold' | 'decline';
   reason: string;
   notes?: string;
+  target_user_id?: string; // For admin impersonation
 }
 
 serve(async (req) => {
@@ -19,7 +20,7 @@ serve(async (req) => {
   }
 
   try {
-    const { order_id, action, reason, notes }: OrderActionRequest = await req.json();
+    const { order_id, action, reason, notes, target_user_id }: OrderActionRequest = await req.json();
 
     if (!order_id || !action || !reason) {
       throw new Error('order_id, action, and reason are required');
@@ -28,6 +29,11 @@ serve(async (req) => {
     if (!['hold', 'decline'].includes(action)) {
       throw new Error('action must be either "hold" or "decline"');
     }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -44,13 +50,34 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    console.log(`Pharmacy user ${user.id} ${action}ing order ${order_id}`);
+    // Determine which user ID to use for pharmacy lookup
+    let pharmacyUserId = user.id;
 
-    // Get pharmacy ID
-    const { data: pharmacy, error: pharmacyError } = await supabase
+    // If target_user_id provided, verify admin permission
+    if (target_user_id && target_user_id !== user.id) {
+      console.log(`Admin ${user.id} acting as pharmacy user ${target_user_id}`);
+      
+      // Verify acting user is admin
+      const { data: roleData } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (roleData?.role !== 'admin') {
+        throw new Error('Only admins can act on behalf of other users');
+      }
+      
+      pharmacyUserId = target_user_id;
+    }
+
+    console.log(`Pharmacy user ${pharmacyUserId} ${action}ing order ${order_id}`);
+
+    // Get pharmacy ID using resolved user ID
+    const { data: pharmacy, error: pharmacyError } = await supabaseAdmin
       .from('pharmacies')
       .select('id, name')
-      .eq('user_id', user.id)
+      .eq('user_id', pharmacyUserId)
       .single();
 
     if (pharmacyError) {

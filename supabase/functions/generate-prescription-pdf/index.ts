@@ -167,11 +167,6 @@ serve(async (req) => {
       refills_total = 0
     } = prescriptionData;
 
-    // Normalize helper: convert falsy or [ENCRYPTED] to fallback
-    const norm = (value: any, fallback: string): string => {
-      if (!value || value === '[ENCRYPTED]' || value === 'null') return fallback;
-      return String(value);
-    };
 
     // Fetch provider credentials directly from profiles (no longer encrypted)
     const { data: providerRecord, error: providerError } = await supabase
@@ -212,10 +207,10 @@ serve(async (req) => {
       license_type: typeof profileData.license_number
     });
 
-    // Use normalized values
-    const provider_npi = norm(profileData.npi, 'N/A');
-    const provider_dea = norm(profileData.dea, 'N/A');
-    const provider_license = norm(profileData.license_number, 'N/A');
+    // Use provider credentials directly
+    const provider_npi = profileData.npi || '';
+    const provider_dea = profileData.dea || '';
+    const provider_license = profileData.license_number || '';
 
     console.log('Normalized provider credentials:', {
       npi: provider_npi,
@@ -240,7 +235,7 @@ serve(async (req) => {
         .rpc('get_decrypted_patient_phi', { p_patient_id: patient_id });
       
       if (!patientError && patientData && patientData.length > 0) {
-        patient_allergies = norm(patientData[0].allergies, 'NKDA');
+        patient_allergies = patientData[0].allergies || 'NKDA';
       }
     }
 
