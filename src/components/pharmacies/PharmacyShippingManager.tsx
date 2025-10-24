@@ -10,27 +10,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Package, CheckCircle, XCircle, List } from "lucide-react";
 import { toast } from "sonner";
 
-type OrderStatus = 'pending' | 'processing' | 'shipped' | 'declined' | 'all';
+type OrderStatus = 'pending' | 'processing' | 'shipped' | 'denied' | 'all';
 
 export const PharmacyShippingManager = () => {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<OrderStatus>('pending');
 
   // Fetch pharmacy user_id
   const { data: pharmacyData } = useQuery({
-    queryKey: ['pharmacy-user', user?.id],
+    queryKey: ['pharmacy-user', effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pharmacies')
         .select('id, user_id, name')
-        .eq('user_id', user?.id)
+        .eq('user_id', effectiveUserId)
         .single();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveUserId,
   });
 
   // Fetch assigned orders
@@ -51,7 +51,7 @@ export const PharmacyShippingManager = () => {
           patient_name,
           created_at,
           order_notes,
-          orders!inner (
+          orders (
             id,
             created_at,
             total_amount,
@@ -71,8 +71,8 @@ export const PharmacyShippingManager = () => {
         query = query.in('status', ['pending', 'filled']);
       } else if (activeTab === 'shipped') {
         query = query.eq('status', 'shipped');
-      } else if (activeTab === 'declined') {
-        query = query.eq('status', 'declined');
+      } else if (activeTab === 'denied') {
+        query = query.eq('status', 'denied');
       }
 
       const { data, error } = await query;
@@ -93,7 +93,7 @@ export const PharmacyShippingManager = () => {
       processing: 'secondary',
       filled: 'secondary',
       shipped: 'outline',
-      declined: 'destructive',
+      denied: 'destructive',
     };
 
     return (
@@ -104,13 +104,13 @@ export const PharmacyShippingManager = () => {
   };
 
   const getCounts = () => {
-    if (!orders) return { pending: 0, shipped: 0, declined: 0, all: 0 };
+    if (!orders) return { pending: 0, shipped: 0, denied: 0, all: 0 };
     
     // We need to fetch all orders to get accurate counts
     return {
       pending: orders.filter(o => ['pending', 'filled'].includes(o.status)).length,
       shipped: orders.filter(o => o.status === 'shipped').length,
-      declined: orders.filter(o => o.status === 'declined').length,
+      denied: orders.filter(o => o.status === 'denied').length,
       all: orders.length,
     };
   };
@@ -144,9 +144,9 @@ export const PharmacyShippingManager = () => {
             <CheckCircle className="h-4 w-4" />
             Shipped {counts.shipped > 0 && `(${counts.shipped})`}
           </TabsTrigger>
-          <TabsTrigger value="declined" className="gap-2">
+          <TabsTrigger value="denied" className="gap-2">
             <XCircle className="h-4 w-4" />
-            Declined {counts.declined > 0 && `(${counts.declined})`}
+            Declined {counts.denied > 0 && `(${counts.denied})`}
           </TabsTrigger>
           <TabsTrigger value="all" className="gap-2">
             <List className="h-4 w-4" />
@@ -163,7 +163,7 @@ export const PharmacyShippingManager = () => {
               <p className="text-muted-foreground">
                 {activeTab === 'pending' && 'No pending orders'}
                 {activeTab === 'shipped' && 'No shipped orders'}
-                {activeTab === 'declined' && 'No declined orders - great job!'}
+                {activeTab === 'denied' && 'No declined orders - great job!'}
                 {activeTab === 'all' && 'No orders assigned to you yet'}
               </p>
             </Card>

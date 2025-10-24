@@ -208,7 +208,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
   }
 
   const isShipped = order.lines?.some(l => l.status === 'shipped');
-  const isDeclined = order.lines?.some(l => l.status === 'declined');
+  const isDeclined = order.lines?.some(l => l.status === 'denied');
 
   return (
     <div className="space-y-6">
