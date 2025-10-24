@@ -219,16 +219,33 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
 
     setIsMarkingShipped(true);
     try {
-      const { error } = await supabase.functions.invoke('update-shipping-info', {
-        body: {
-          order_id: orderId,
-          tracking_number: trackingNumber.trim(),
-          carrier,
-          status: 'shipped',
+      // Update ALL order lines in this order
+      if (!order?.lines || order.lines.length === 0) {
+        throw new Error('No order lines found');
+      }
+
+      // Normalize carrier to lowercase for edge function enum validation
+      const normalizedCarrier = carrier.toLowerCase();
+
+      // Update each order line
+      const updatePromises = order.lines.map(async (line) => {
+        const { error } = await supabase.functions.invoke('update-shipping-info', {
+          body: {
+            orderLineId: line.id,
+            trackingNumber: trackingNumber.trim(),
+            carrier: normalizedCarrier,
+            status: 'shipped',
+          }
+        });
+
+        if (error) {
+          console.error(`Error updating line ${line.id}:`, error);
+          throw error;
         }
       });
 
-      if (error) throw error;
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
 
       toast.success('Order marked as shipped');
       setTrackingNumber("");
