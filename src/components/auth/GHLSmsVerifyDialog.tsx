@@ -116,10 +116,12 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
     await sendCode();
   };
 
-  const verifyCode = async () => {
+  const verifyCode = async (codeValue?: string) => {
     if (loading) return; // Prevent double submission
     
-    if (code.length !== 6) {
+    const codeToVerify = codeValue || code;
+    
+    if (codeToVerify.length !== 6) {
       setError('Please enter the complete 6-digit code');
       return;
     }
@@ -140,7 +142,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       }
 
       const { data, error } = await supabase.functions.invoke('verify-ghl-sms', {
-        body: { code, attemptId, phoneNumber }, // Send attemptId, code, and phoneNumber
+        body: { code: codeToVerify, attemptId, phoneNumber }, // Send attemptId, code, and phoneNumber
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -190,7 +192,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
                 setError('');
                 // Auto-submit when all 6 digits are entered
                 if (value.length === 6) {
-                  verifyCode();
+                  verifyCode(value);
                 }
               }}
               disabled={loading}
@@ -219,7 +221,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
           )}
 
           <Button 
-            onClick={verifyCode} 
+            onClick={() => verifyCode()} 
             disabled={code.length !== 6 || loading}
             className="w-full"
           >

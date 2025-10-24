@@ -131,10 +131,12 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
     window.location.href = '/auth';
   };
 
-  const handleVerifyCode = async () => {
+  const handleVerifyCode = async (codeValue?: string) => {
     if (loading) return; // Prevent double submission
     
-    if (code.length !== 6) {
+    const codeToVerify = codeValue || code;
+    
+    if (codeToVerify.length !== 6) {
       toast({
         title: "Invalid code",
         description: "Please enter the 6-digit verification code",
@@ -150,7 +152,7 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
 
       const { data, error } = await supabase.functions.invoke('verify-2fa-code', {
         body: { 
-          code,
+          code: codeToVerify,
           phoneNumber
         }
       });
@@ -204,7 +206,7 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
                 setCode(value);
                 // Auto-submit when all 6 digits are entered
                 if (value.length === 6) {
-                  handleVerifyCode();
+                  handleVerifyCode(value);
                 }
               }}
             >
@@ -230,7 +232,7 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
               {countdown > 0 ? `Resend (${countdown}s)` : 'Resend Code'}
             </Button>
             <Button
-              onClick={handleVerifyCode}
+              onClick={() => handleVerifyCode()}
               disabled={loading || code.length !== 6}
               className="flex-1"
             >
