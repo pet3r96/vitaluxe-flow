@@ -76,14 +76,13 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Order ${order_id} placed by practice ${order.doctor_id}`);
-    console.log(`Verifying payment method ${payment_method_id} belongs to practice ${order.doctor_id}`);
+    console.log(`Verifying payment method ${payment_method_id}...`);
 
-    // Fetch payment method - verify it belongs to the practice that placed the order
+    // Fetch payment method (no practice_id filter initially)
     const { data: paymentMethod, error: pmError } = await supabase
       .from('practice_payment_methods')
       .select('*')
       .eq('id', payment_method_id)
-      .eq('practice_id', order.doctor_id)
       .single();
 
     if (pmError || !paymentMethod) {
@@ -92,6 +91,42 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           success: false, 
           error: 'Payment method not found. Please select a valid payment method or add a new one.' 
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify ownership: practice card OR provider card (if provider belongs to this practice)
+    let isAuthorized = false;
+
+    // Case 1: Payment method belongs to the practice that owns the order
+    if (paymentMethod.practice_id === order.doctor_id) {
+      console.log('✓ Payment authorized: practice card for practice order');
+      isAuthorized = true;
+    } else {
+      // Case 2: Payment method may belong to a provider linked to this practice
+      const { data: providerLink } = await supabaseAdmin
+        .from('providers')
+        .select('practice_id')
+        .eq('user_id', paymentMethod.practice_id)
+        .eq('active', true)
+        .single();
+
+      if (providerLink && providerLink.practice_id === order.doctor_id) {
+        console.log('✓ Payment authorized: provider card for linked practice order');
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      console.error('Payment authorization failed', {
+        payment_method_practice_id: paymentMethod.practice_id,
+        order_doctor_id: order.doctor_id
+      });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'You can only use payment methods associated with your practice. Please select a different payment method.' 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
