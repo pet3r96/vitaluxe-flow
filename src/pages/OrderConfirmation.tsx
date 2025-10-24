@@ -229,36 +229,9 @@ export default function OrderConfirmation() {
         );
       }
 
-      // ORDER CREATION: For providers, link orders to practice (not provider)
-      // This ensures rep commissions calculate correctly via practice's linked_topline_id
-      let doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
-      
-      // Check if current user is a provider
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", doctorIdForOrder)
-        .single();
-      
-      if (userRole?.role === 'provider') {
-        const { data: provider } = await supabase
-          .from("providers")
-          .select("practice_id")
-          .eq("user_id", doctorIdForOrder)
-          .eq("active", true)
-          .single();
-        
-        if (!provider?.practice_id) {
-          throw new Error("Provider not associated with a practice. Please contact support.");
-        }
-        
-        console.debug('[OrderConfirmation] Provider order - linking to practice', {
-          provider_user_id: doctorIdForOrder,
-          practice_id: provider.practice_id
-        });
-        
-        doctorIdForOrder = provider.practice_id;
-      }
+      // ORDER CREATION: Use the effective user ID directly for all orders
+      // Providers use their own user ID, practices use theirs
+      const doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
       const createdOrders = [];
       
       // Helper function to create shipping groups
