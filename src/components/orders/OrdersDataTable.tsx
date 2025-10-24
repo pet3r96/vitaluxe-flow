@@ -606,11 +606,13 @@ export const OrdersDataTable = () => {
                     </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <ReceiptDownloadButton
-                        orderId={order.id}
-                        orderDate={order.created_at}
-                        practiceName={order.profiles?.name || "Practice"}
-                      />
+                      {effectiveRole !== "pharmacy" && (
+                        <ReceiptDownloadButton
+                          orderId={order.id}
+                          orderDate={order.created_at}
+                          practiceName={order.profiles?.name || "Practice"}
+                        />
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

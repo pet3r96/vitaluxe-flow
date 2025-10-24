@@ -313,7 +313,7 @@ serve(async (req) => {
     doc.setTextColor(0, 0, 0);
 
     // Large Rx symbol
-    const rxY = 4.0;
+    const rxY = 3.4;
     doc.setFontSize(80);
     doc.setFont('times', 'bold');
     doc.setTextColor(139, 69, 19); // Brown color
