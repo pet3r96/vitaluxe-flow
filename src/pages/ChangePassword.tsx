@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 
 export default function ChangePassword() {
-  const { user, isImpersonating, clearImpersonation, signOut } = useAuth();
+  const { user, isImpersonating, impersonatedUserId, impersonatedUserName, clearImpersonation, signOut } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -49,36 +49,55 @@ export default function ChangePassword() {
     setLoading(true);
 
     try {
-      // Update password in Supabase Auth
-      const { error: passwordError } = await supabase.auth.updateUser({
-        password: formData.newPassword
-      });
+      // SPLIT LOGIC: Admin impersonating vs regular user
+      if (isImpersonating && impersonatedUserId) {
+        // ADMIN PATH: Use edge function to reset impersonated user's password
+        const { data, error } = await supabase.functions.invoke('admin-reset-user-password', {
+          body: {
+            targetUserId: impersonatedUserId,
+            newPassword: formData.newPassword
+          }
+        });
 
-      if (passwordError) throw passwordError;
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
-      // Update password status in database
-      const { error: statusError } = await supabase
-        .from('user_password_status')
-        .update({
-          must_change_password: false,
-          first_login_completed: true,
-          password_last_changed: new Date().toISOString()
-        })
-        .eq('user_id', user?.id);
-
-      if (statusError) throw statusError;
-
-      toast.success("Password changed successfully!");
-      
-      // After changing password, end session to avoid redirect loops
-      if (isImpersonating) {
+        toast.success("Password changed successfully for impersonated user!");
+        
+        // Exit impersonation after password change
         await clearImpersonation();
         navigate("/");
       } else {
+        // REGULAR USER PATH: Update own password
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: formData.newPassword
+        });
+
+        if (passwordError) throw passwordError;
+
+        // Update password status in database
+        const { error: statusError } = await supabase
+          .from('user_password_status')
+          .update({
+            must_change_password: false,
+            first_login_completed: true,
+            password_last_changed: new Date().toISOString()
+          })
+          .eq('user_id', user?.id);
+
+        if (statusError) throw statusError;
+
+        toast.success("Password changed successfully!");
+        
+        // After changing password, end session
         await signOut();
       }
     } catch (error: any) {
-      logger.error("Password change failed", error, { user_id: user?.id });
+      logger.error("Password change failed", error, { 
+        user_id: user?.id,
+        impersonating: isImpersonating,
+        target_user_id: impersonatedUserId 
+      });
       toast.error(error.message || "Failed to change password");
     } finally {
       setLoading(false);
@@ -92,42 +111,59 @@ export default function ChangePassword() {
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             <Lock className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle className="text-3xl">Change Your Password</CardTitle>
+          <CardTitle className="text-3xl">
+            {isImpersonating ? 'Reset Impersonated User Password' : 'Change Your Password'}
+          </CardTitle>
           <CardDescription className="text-base">
-            For your security and HIPAA compliance, you must change your temporary password before accessing the system.
+            {isImpersonating 
+              ? `You are changing the password for ${impersonatedUserName || 'the impersonated user'}. This will not affect your admin password.`
+              : 'For your security and HIPAA compliance, you must change your temporary password before accessing the system.'
+            }
           </CardDescription>
         </CardHeader>
         
         <CardContent>
-          <Alert className="mb-6 border-amber-500 bg-amber-50">
-            <AlertDescription className="text-amber-800">
-              <strong>Security Notice:</strong> Your temporary password was sent via email. Please create a strong, unique password that meets all requirements below.
-            </AlertDescription>
-          </Alert>
+          {!isImpersonating && (
+            <Alert className="mb-6 border-amber-500 bg-amber-50">
+              <AlertDescription className="text-amber-800">
+                <strong>Security Notice:</strong> Your temporary password was sent via email. Please create a strong, unique password that meets all requirements below.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {isImpersonating && (
+            <Alert className="mb-6 border-blue-500 bg-blue-50">
+              <AlertDescription className="text-blue-800">
+                <strong>Admin Notice:</strong> You are resetting the password for <strong>{impersonatedUserName}</strong>. Your admin password will remain unchanged.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Current Password */}
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current (Temporary) Password</Label>
-              <div className="relative">
-                <Input
-                  id="currentPassword"
-                  type={showCurrentPassword ? "text" : "password"}
-                  value={formData.currentPassword}
-                  onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-                  required
-                  className="pr-10"
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+            {/* Current Password - Hidden for admins impersonating */}
+            {!isImpersonating && (
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Current (Temporary) Password</Label>
+                <div className="relative">
+                  <Input
+                    id="currentPassword"
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={formData.currentPassword}
+                    onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                    required
+                    className="pr-10"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* New Password */}
             <div className="space-y-2">

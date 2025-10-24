@@ -102,6 +102,9 @@ verify_jwt = false
 [functions.reset-admin-password]
 verify_jwt = false
 
+[functions.admin-reset-user-password]
+verify_jwt = true
+
 [functions.log-error]
 verify_jwt = true
 
