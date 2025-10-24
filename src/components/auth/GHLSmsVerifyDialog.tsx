@@ -16,7 +16,7 @@ interface GHLSmsVerifyDialogProps {
 }
 
 export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDialogProps) => {
-  const { mark2FAVerified } = useAuth();
+  const { mark2FAVerified, actualRole } = useAuth();
   const [code, setCode] = useState('');
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -311,6 +311,20 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
             <LogOut className="mr-2 h-4 w-4" />
             Cancel & Return to Login
           </Button>
+
+          {actualRole === 'admin' && (
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                console.log('[GHLSmsVerifyDialog] Admin emergency bypass activated');
+                mark2FAVerified();
+                toast.success('2FA skipped (Admin Override)');
+              }}
+              className="w-full mt-2 border-orange-500 text-orange-600 hover:bg-orange-50"
+            >
+              ⚠️ Admin: Skip 2FA (Emergency)
+            </Button>
+          )}
 
           <p className="text-xs text-center text-muted-foreground mt-4">
             Having trouble? Contact support for assistance.
