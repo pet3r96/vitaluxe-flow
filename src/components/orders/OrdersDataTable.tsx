@@ -324,10 +324,11 @@ export const OrdersDataTable = () => {
       order.status.toLowerCase().includes(searchLower) || // Order status
       order.payment_status.toLowerCase().includes(searchLower); // Payment status
     
-    // Filter by ORDER STATUS (not shipping status)
+    // Filter by ORDER STATUS and shipping line statuses
     const matchesStatus =
       statusFilter === "all" ||
-      order.status === statusFilter;
+      order.status === statusFilter ||
+      order.order_lines?.some((line: any) => line.status === statusFilter);
     
     return matchesSearch && matchesStatus;
   });
