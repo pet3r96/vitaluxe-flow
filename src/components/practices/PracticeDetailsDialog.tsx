@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +28,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ExternalLink, Copy, Pencil, Check, ChevronsUpDown, X } from "lucide-react";
+import { ExternalLink, Copy, Pencil, Check, ChevronsUpDown, X, Info } from "lucide-react";
 import { toast } from "sonner";
 import { cn, sanitizeEncrypted } from "@/lib/utils";
 import { useForm } from "react-hook-form";
@@ -561,7 +562,7 @@ export const PracticeDetailsDialog = ({
                     control={form.control}
                     name="address"
                     render={({ field }) => (
-                      <FormItem>
+                       <FormItem>
                         <FormLabel className="text-sm text-muted-foreground">Address</FormLabel>
                         {isEditing ? (
                           <>
@@ -573,6 +574,12 @@ export const PracticeDetailsDialog = ({
                               />
                             </FormControl>
                             <FormMessage />
+                            <Alert className="mt-2">
+                              <Info className="h-4 w-4" />
+                              <AlertDescription>
+                                Updating this address will automatically update the shipping address for all providers in this practice.
+                              </AlertDescription>
+                            </Alert>
                           </>
                         ) : (
                           <p className="font-medium">

@@ -4404,6 +4404,10 @@ export type Database = {
         }[]
       }
       refresh_security_events_summary: { Args: never; Returns: undefined }
+      sync_practice_address_to_providers: {
+        Args: { p_practice_id: string }
+        Returns: undefined
+      }
       validate_discount_code: {
         Args: { p_code: string }
         Returns: {

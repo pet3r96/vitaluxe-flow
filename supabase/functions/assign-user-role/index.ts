@@ -487,6 +487,23 @@ serve(async (req) => {
       );
     }
 
+    // Sync practice address to provider if this is a provider creation
+    if (signupData.role === 'provider' && signupData.roleData?.practiceId) {
+      console.log('🔄 Syncing practice address to new provider...');
+      
+      const { error: syncError } = await supabaseAdmin.rpc(
+        'sync_practice_address_to_providers',
+        { p_practice_id: signupData.roleData.practiceId }
+      );
+      
+      if (syncError) {
+        console.error('⚠️ Failed to sync practice address:', syncError);
+        // Don't fail the whole operation, just log it
+      } else {
+        console.log('✅ Practice address synced to provider successfully');
+      }
+    }
+
     // Upload contract if provided
     let contractUrl = null;
     if (signupData.contractFile) {

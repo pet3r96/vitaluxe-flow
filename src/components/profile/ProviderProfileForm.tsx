@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, KeyRound } from "lucide-react";
+import { Loader2, Save, KeyRound, Building2, Info } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
 
@@ -47,9 +48,35 @@ export const ProviderProfileForm = () => {
         .select("*")
         .eq("id", effectiveUserId)
         .single();
-
+      
       if (error) throw error;
       return data;
+    },
+    enabled: !!effectiveUserId,
+  });
+
+  // Fetch practice information for this provider
+  const { data: practiceInfo } = useQuery({
+    queryKey: ["provider-practice-info", effectiveUserId],
+    queryFn: async () => {
+      // Get provider record
+      const { data: providerData, error: providerError } = await supabase
+        .from("providers")
+        .select("practice_id")
+        .eq("user_id", effectiveUserId)
+        .single();
+      
+      if (providerError || !providerData?.practice_id) return null;
+      
+      // Get practice profile
+      const { data: practiceData, error: practiceError } = await supabase
+        .from("profiles")
+        .select("name, address_street, address_city, address_state, address_zip")
+        .eq("id", providerData.practice_id)
+        .single();
+      
+      if (practiceError) throw practiceError;
+      return practiceData;
     },
     enabled: !!effectiveUserId,
   });
@@ -307,6 +334,36 @@ export const ProviderProfileForm = () => {
         </Form>
       </CardContent>
     </Card>
+
+    {/* Practice Shipping Address - Read Only */}
+    {practiceInfo && practiceInfo.address_street && (
+      <Card className="border-primary/20 bg-muted/30">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Practice Shipping Address
+          </CardTitle>
+          <CardDescription>
+            Orders will be shipped to this address when you select "Ship to My Practice"
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            <div className="font-medium">{practiceInfo.name}</div>
+            <div className="text-muted-foreground">
+              {practiceInfo.address_street}
+            </div>
+            <div className="text-muted-foreground">
+              {practiceInfo.address_city}, {practiceInfo.address_state} {practiceInfo.address_zip}
+            </div>
+            <Badge variant="outline" className="mt-2 flex items-center gap-1 w-fit">
+              <Info className="h-3 w-3" />
+              This address is managed by your practice administrator
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+    )}
 
     <Card>
       <CardHeader>
