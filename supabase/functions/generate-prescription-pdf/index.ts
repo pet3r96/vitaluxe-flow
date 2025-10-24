@@ -408,12 +408,12 @@ serve(async (req) => {
     // Reset text color
     doc.setTextColor(0, 0, 0);
 
-    // Large Rx symbol
-    const rxY = 3.4;
-    doc.setFontSize(80);
+    // Large Rx symbol (moved down to avoid overlap)
+    const rxY = 4.8;
+    doc.setFontSize(60);
     doc.setFont('times', 'bold');
     doc.setTextColor(139, 69, 19); // Brown color
-    doc.text('Rx', 1.2, rxY);
+    doc.text('Rx', 0.8, rxY);
 
     // Medication information (in bordered box)
     doc.setTextColor(0, 0, 0);
