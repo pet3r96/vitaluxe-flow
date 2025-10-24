@@ -2,30 +2,15 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Search, Eye, Download } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { OrderDetailsDialog } from "./OrderDetailsDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 import { logger } from "@/lib/logger";
+import { OrderStatusTabs } from "./OrderStatusTabs";
+import { OrdersToolbar } from "./OrdersToolbar";
+import { OrdersCardView } from "./OrdersCardView";
+import { downloadCSV } from "@/lib/csvExport";
+import { toast } from "sonner";
 
 export const OrdersDataTable = () => {
   const { effectiveRole, effectiveUserId, user } = useAuth();
@@ -307,10 +292,13 @@ export const OrdersDataTable = () => {
   }, [effectiveUserId, effectiveRole, refetch]);
 
   const filteredOrders = orders?.filter((order) => {
+    const searchLower = searchQuery.toLowerCase();
     const matchesSearch =
-      order.profiles?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.id.toLowerCase().includes(searchLower) ||
+      order.profiles?.name?.toLowerCase().includes(searchLower) ||
       order.order_lines?.some((line: any) =>
-        line.patient_name?.toLowerCase().includes(searchQuery.toLowerCase())
+        line.patient_name?.toLowerCase().includes(searchLower) ||
+        line.products?.name?.toLowerCase().includes(searchLower)
       );
     
     // Filter by ORDER STATUS (not shipping status)
@@ -409,231 +397,76 @@ export const OrdersDataTable = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       logger.error('Prescription download error', error);
+      toast.error('Failed to download prescription');
     }
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search orders..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue>
-              {getStatusLabel(statusFilter, filteredOrders?.length || 0)}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Order Statuses</SelectItem>
-            {orderStatusConfigs?.map((config) => (
-              <SelectItem key={config.id} value={config.status_key}>
-                {config.display_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+  const handleExport = () => {
+    if (!filteredOrders || filteredOrders.length === 0) {
+      toast.error('No orders to export');
+      return;
+    }
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[2000px]">
-          <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Doctor</TableHead>
-              <TableHead>Patient Name</TableHead>
-              <TableHead>Fulfillment Type</TableHead>
-              <TableHead>Products</TableHead>
-              <TableHead>Prescription</TableHead>
-              <TableHead>Shipping</TableHead>
-              <TableHead>Shipping Status</TableHead>
-              <TableHead>Carrier</TableHead>
-              {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
-              <TableHead>Order Status</TableHead>
-              <TableHead>Payment Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 13 : 14} className="text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : filteredOrders?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 13 : 14} className="text-center text-muted-foreground">
-                  No orders found
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedOrders?.map((order) => {
-                const firstOrderLine = order.order_lines?.[0];
-                const patientId = firstOrderLine?.patient_id;
-                const patientName = firstOrderLine?.patient_name || "N/A";
-                
-                // Aggregate shipping status from order lines
-                const shippingStatuses = order.order_lines?.map((line: any) => line.status) || [];
-                const uniqueStatuses = [...new Set(shippingStatuses)];
-                const shippingStatus: string = uniqueStatuses.length === 1 
-                  ? (uniqueStatuses[0] as string)
-                  : uniqueStatuses.length > 1 
-                    ? "mixed" 
-                    : "pending";
-                
-                return (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">
-                      #{order.id.slice(0, 8)}
-                    </TableCell>
-                    <TableCell>{order.profiles?.name || "N/A"}</TableCell>
-                    <TableCell>
-                      {order.ship_to === 'practice' || !patientId ? (
-                        <span className="text-muted-foreground">{patientName}</span>
-                      ) : (
-                        <Button
-                          variant="link"
-                          className="h-auto p-0 text-primary font-normal"
-                          onClick={() => window.location.href = `/patients?patient=${patientId}`}
-                        >
-                          {patientName}
-                        </Button>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={order.ship_to === 'practice' ? 'secondary' : 'outline'}>
-                        {order.ship_to === 'practice' ? '🏢 Practice' : '👤 Patient'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {order.order_lines?.map((line: any, idx: number) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs">
-                              {line.products?.product_types?.name || "Unknown"}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                              {line.products?.name || "N/A"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {effectiveRole === "pharmacy" ? (
-                        // For pharmacies, show Yes/No badge (no download)
-                        <div className="space-y-1">
-                          {order.order_lines?.map((line: any, idx: number) => (
-                            <Badge 
-                              key={idx} 
-                              variant={line.prescription_url ? "default" : "outline"} 
-                              className="text-xs"
-                            >
-                              {line.prescription_url ? 'Yes' : 'No'}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : order.order_lines?.some((line: any) => line.prescription_url) ? (
-                        // For non-pharmacy roles, show download button
-                        <div className="space-y-1">
-                          {order.order_lines?.map((line: any, idx: number) => 
-                            line.prescription_url ? (
-                              <Button
-                                key={idx}
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  handlePrescriptionDownload(
-                                    line.prescription_url,
-                                    line.products?.name || 'prescription'
-                                  );
-                                }}
-                                className="h-7 px-2 text-xs"
-                              >
-                                <Download className="h-3 w-3 mr-1" />
-                                Rx
-                              </Button>
-                            ) : null
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {order.order_lines?.[0]?.shipping_speed === '2day' ? '2-Day' : 
-                         order.order_lines?.[0]?.shipping_speed === 'overnight' ? 'Overnight' : 
-                         'Ground'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(shippingStatus)}>
-                        {shippingStatus === "mixed" ? "Mixed Status" : shippingStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {order.order_lines?.[0]?.shipping_carrier || "-"}
-                    </TableCell>
-                    {effectiveRole !== "pharmacy" && <TableCell>${order.total_amount}</TableCell>}
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(order.status)}>
-                          {order.status}
-                        </Badge>
-                        {order.status_manual_override && (
-                          <Badge variant="outline" className="text-xs">
-                            Manual
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getPaymentStatusColor(order.payment_status)}>
-                        {getPaymentStatusLabel(order.payment_status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {effectiveRole !== "pharmacy" && (
-                        <ReceiptDownloadButton
-                          orderId={order.id}
-                          orderDate={order.created_at}
-                          practiceName={order.profiles?.name || "Practice"}
-                        />
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setDetailsOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-        </div>
-      </div>
+    const csvRows = filteredOrders.map(order => {
+      const firstLine = order.order_lines?.[0];
+      return [
+        order.id.slice(0, 8),
+        new Date(order.created_at).toLocaleDateString(),
+        firstLine?.patient_name || 'N/A',
+        order.profiles?.name || 'N/A',
+        order.order_lines?.map((l: any) => l.products?.name).join('; ') || 'N/A',
+        order.total_amount,
+        order.status,
+        order.payment_status,
+        order.ship_to || 'N/A',
+      ];
+    });
+
+    const headers = [
+      'Order ID',
+      'Date',
+      'Patient',
+      'Doctor/Practice',
+      'Products',
+      'Total',
+      'Status',
+      'Payment',
+      'Fulfillment',
+    ];
+
+    downloadCSV(csvRows, headers, 'orders');
+    toast.success(`Exported ${filteredOrders.length} orders`);
+  };
+
+  return (
+    <div className="space-y-6">
+      <OrderStatusTabs
+        activeStatus={statusFilter}
+        onStatusChange={setStatusFilter}
+        orders={orders || []}
+        availableStatuses={orderStatusConfigs || []}
+      />
+
+      <OrdersToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onExport={handleExport}
+        totalOrders={filteredOrders?.length || 0}
+      />
+
+      <OrdersCardView
+        orders={paginatedOrders || []}
+        isLoading={isLoading}
+        effectiveRole={effectiveRole}
+        onViewDetails={(order) => {
+          setSelectedOrder(order);
+          setDetailsOpen(true);
+        }}
+        onDownloadPrescription={handlePrescriptionDownload}
+        getStatusColor={getStatusColor}
+        getPaymentStatusColor={getPaymentStatusColor}
+        getPaymentStatusLabel={getPaymentStatusLabel}
+      />
 
       {filteredOrders && filteredOrders.length > 0 && (
         <DataTablePagination
