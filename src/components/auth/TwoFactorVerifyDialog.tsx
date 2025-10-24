@@ -36,20 +36,36 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
     }
   }, [open]);
 
-  // Session timeout countdown (3 minutes)
+  // Session timeout countdown (3 minutes) - ONLY when dialog is open
   useEffect(() => {
-    if (open && sessionTimeout > 0) {
+    if (!open) {
+      // Dialog closed, clear any running timers
+      return;
+    }
+
+    if (sessionTimeout > 0) {
       const timer = setTimeout(() => {
         setSessionTimeout(prev => prev - 1);
       }, 1000);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        console.log('[TwoFactorVerifyDialog] Cleared session timeout timer');
+      };
     }
     
     // Auto-logout when session expires
-    if (open && sessionTimeout === 0) {
+    if (sessionTimeout === 0) {
       handleSessionTimeout();
     }
   }, [open, sessionTimeout]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setSessionTimeout(180);
+      console.log('[TwoFactorVerifyDialog] Component unmounted, timers cleared');
+    };
+  }, []);
 
   const handleSendCode = async () => {
     setLoading(true);
@@ -96,6 +112,10 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
   };
 
   const handleSessionTimeout = async () => {
+    console.log('[TwoFactorVerifyDialog] Session timeout - redirecting to login', {
+      phoneNumber: maskPhoneNumber(phoneNumber)
+    });
+    
     toast({
       title: "Session expired",
       description: "Please login again.",
@@ -106,6 +126,7 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
   };
 
   const handleReturnToLogin = async () => {
+    console.log('[TwoFactorVerifyDialog] User clicked Return to Login');
     await supabase.auth.signOut();
     window.location.href = '/auth';
   };

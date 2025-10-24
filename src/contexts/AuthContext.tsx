@@ -277,6 +277,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // Rehydrate 2FA verification status from sessionStorage
+        const verifiedKey = `vitaluxe_2fa_verified_${session.user.id}`;
+        const verifiedAt = sessionStorage.getItem(verifiedKey);
+        
+        if (verifiedAt) {
+          // Optional: Validate against session expiration
+          const sessionExpiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+          const now = Date.now();
+          
+          if (sessionExpiresAt > now) {
+            // Session still valid, restore 2FA verification
+            setIs2FAVerifiedThisSession(true);
+            logger.info('[AuthContext] 2FA verification restored from sessionStorage', {
+              userId: session.user.id,
+              verifiedAt,
+              sessionExpiresAt: new Date(sessionExpiresAt).toISOString()
+            });
+          } else {
+            // Session expired, clear stale flag
+            sessionStorage.removeItem(verifiedKey);
+            logger.info('[AuthContext] Cleared stale 2FA verification flag');
+          }
+        }
+        
         // Fetch last_activity from database to restore timer
         const { data: sessionData, error: sessionError } = await supabase
           .from('active_sessions')
@@ -291,7 +315,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // If already expired, force logout immediately
           if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
             logger.warn('Session expired on page load', { idleMinutes });
-            await forceLogout('idle_timeout');
+            await forceLogout('idle_timeout', { idleMinutes });
             setInitializing(false);
             clearTimeout(bootstrapTimeout);
             return;
@@ -703,7 +727,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Force logout at 30 minutes idle
       if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
-        void forceLogout('idle_timeout');
+        void forceLogout('idle_timeout', { idleMinutes });
       }
     };
 
@@ -722,7 +746,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Tab became visible - check if session expired while hidden
         const idleMinutes = (Date.now() - lastActivityTime) / 60000;
         if (idleMinutes >= SESSION_CONFIG.IDLE_TIMEOUT_MINUTES) {
-          void forceLogout('idle_timeout');
+          void forceLogout('idle_timeout', { idleMinutes });
         }
       }
     };
@@ -734,10 +758,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [user, lastActivityTime]);
 
-  const forceLogout = async (reason: 'idle_timeout' | 'session_expired') => {
+  const forceLogout = async (reason: string = 'unknown', context?: Record<string, any>) => {
     const idleMinutes = (Date.now() - lastActivityTime) / 60000;
     console.log(`[AuthContext] ⚠️ forceLogout called (reason: ${reason}, idleMinutes: ${idleMinutes.toFixed(1)})`);
-    logger.info('Force logout triggered', { reason });
+    logger.info('[AuthContext] Force logout triggered', {
+      reason,
+      userId: user?.id,
+      currentPath: window.location.pathname,
+      idleMinutes,
+      ...context
+    });
 
     // Log security event
     try {
@@ -995,7 +1025,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast.success("Returned to your Admin account");
   };
 
-  const signOut = async () => {
+  const signOut = async (reason: string = 'manual_logout') => {
+    logger.info('[AuthContext] Sign out initiated', {
+      reason,
+      userId: user?.id,
+      isImpersonating
+    });
+    
     setLoading(true);
     
     // Clear 2FA verification for next login - ensure 2FA is required on next sign in

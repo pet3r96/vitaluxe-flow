@@ -33,20 +33,37 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
     }
   }, [countdown]);
 
-  // Session timeout countdown (3 minutes)
+  // Session timeout countdown (3 minutes) - ONLY when dialog is open
   useEffect(() => {
-    if (open && sessionTimeout > 0) {
+    if (!open) {
+      // Dialog closed, clear any running timers
+      return;
+    }
+
+    if (sessionTimeout > 0) {
       const timer = setTimeout(() => {
         setSessionTimeout(prev => prev - 1);
       }, 1000);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        console.log('[GHLSmsVerifyDialog] Cleared session timeout timer');
+      };
     }
     
     // Auto-logout when session expires
-    if (open && sessionTimeout === 0) {
+    if (sessionTimeout === 0) {
       handleSessionTimeout();
     }
   }, [open, sessionTimeout]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Clear any running timers when component unmounts
+      setSessionTimeout(180); // Reset for next time
+      console.log('[GHLSmsVerifyDialog] Component unmounted, timers cleared');
+    };
+  }, []);
 
   useEffect(() => {
     if (open && !codeSent) {
@@ -87,12 +104,18 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
   };
 
   const handleSessionTimeout = async () => {
+    console.log('[GHLSmsVerifyDialog] Session timeout - redirecting to login', {
+      userId,
+      phoneNumber: maskPhone(phoneNumber)
+    });
+    
     toast.error('Verification session expired. Please login again.');
     await supabase.auth.signOut();
     window.location.href = '/auth';
   };
 
   const handleReturnToLogin = async () => {
+    console.log('[GHLSmsVerifyDialog] User clicked Return to Login', { userId });
     await supabase.auth.signOut();
     window.location.href = '/auth';
   };

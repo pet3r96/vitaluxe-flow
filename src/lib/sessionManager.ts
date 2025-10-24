@@ -4,8 +4,18 @@ import { logger } from "@/lib/logger";
 /**
  * Session Management Utilities
  * 
- * Provides functions for tracking user activity and validating session freshness.
- * These utilities support the idle timeout system to prevent unauthorized access.
+ * IMPORTANT: These utilities are for reference only.
+ * 
+ * DO NOT call isSessionExpired() or getIdleMinutes() directly from components.
+ * All session timeout enforcement is centralized in AuthContext.tsx.
+ * 
+ * The AuthContext:
+ * - Monitors idle time via active_sessions table
+ * - Enforces 30-minute timeout with 2-minute warning
+ * - Applies to ALL users including admins
+ * - Handles logout and redirect automatically
+ * 
+ * These functions exist for edge cases and testing only.
  */
 
 let lastUpdateTime = 0;
