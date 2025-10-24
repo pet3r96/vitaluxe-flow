@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileText, Package, Loader2, CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { ShipmentTrackingCard } from "@/components/orders/ShipmentTrackingCard";
 
 interface PharmacyShippingWorkflowProps {
   orderId: string;
@@ -60,6 +61,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
         .select(`
           *,
           products (
+            name,
             requires_prescription
           )
         `)
@@ -445,6 +447,43 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
           </div>
         </CardContent>
       </Card>
+
+      {/* Shipment Tracking Display for Shipped Orders */}
+      {isShipped && order.lines && order.lines.length > 0 && (
+        <div className="space-y-4">
+          {order.lines
+            .filter(line => line.status === 'shipped' && line.tracking_number)
+            .map(line => (
+              <div key={line.id} className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-sm font-medium">
+                    {line.patient_name} - {line.products?.name || 'Product'}
+                  </p>
+                  <Badge variant="outline" className="text-xs">
+                    {line.status}
+                  </Badge>
+                </div>
+                <ShipmentTrackingCard
+                  orderLineId={line.id}
+                  trackingNumber={line.tracking_number}
+                  carrier={line.shipping_carrier}
+                />
+              </div>
+            ))}
+          
+          {/* Show message if shipped but no tracking available */}
+          {order.lines.every(line => !line.tracking_number) && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">
+                  This order is marked as shipped but no tracking information is available.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Unified Workflow Card */}
       {!isShipped && !isDeclined && (
