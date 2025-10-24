@@ -41,8 +41,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Verify admin role
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const authToken = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(authToken);
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -103,6 +103,31 @@ const handler = async (req: Request): Promise<Response> => {
       if (passwordError) {
         console.error("Failed to update password:", passwordError);
         throw new Error(`Failed to update password: ${passwordError.message}`);
+      }
+    }
+
+    // Generate secure token for direct password change (token-based flow)
+    const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // 24-hour expiration
+
+    // Store token in database (for token-based password change)
+    let tokenStored = false;
+    if (userId) {
+      const { error: tokenError } = await supabaseAdmin
+        .from('temp_password_tokens')
+        .insert({
+          user_id: userId,
+          token: token,
+          expires_at: expiresAt.toISOString()
+        });
+
+      if (tokenError) {
+        console.error('Failed to create temp password token:', tokenError);
+        // Don't fail the entire request, just log it
+      } else {
+        tokenStored = true;
+        console.log('Temp password token created successfully');
       }
     }
 
@@ -168,10 +193,12 @@ const handler = async (req: Request): Promise<Response> => {
               <div class="content">
                 <h2>Welcome, ${name}</h2>
                 <p>Your account has been created as a <strong>${role}</strong>.</p>
-                <p>Here is your temporary password:</p>
+                <p>Your temporary password is:</p>
                 <div class="password-box">${temporaryPassword}</div>
-                <p><strong>Important:</strong> For security reasons, please change this password after your first login.</p>
-                <a href="https://app.vitaluxeservices.com/change-password?email=${encodeURIComponent(email)}" class="button">Change Password</a>
+                <p><strong>Recommended:</strong> Click the button below to set your own password immediately (no login required):</p>
+                <a href="https://app.vitaluxeservices.com/change-password?token=${token}" class="button">Set Your Password</a>
+                <p><strong>Alternative:</strong> You can also log in using the temporary password above and change it in your profile.</p>
+                <p style="color: #8E6E1E; font-size: 13px;"><em>This link expires in 24 hours.</em></p>
                 <p>If you have any questions, please contact your administrator.</p>
               </div>
               <div class="footer">
@@ -182,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
           </body>
           </html>
         `,
-        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nTemporary Password: ${temporaryPassword}\n\nPlease change your password at: https://app.vitaluxeservices.com/change-password?email=${encodeURIComponent(email)}\n\nFor security reasons, you must change this password before using your account.\n\nIf you have any questions, please contact your administrator.`
+        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nTemporary Password: ${temporaryPassword}\n\nRECOMMENDED: Set your password directly (no login required):\nhttps://app.vitaluxeservices.com/change-password?token=${token}\n\nALTERNATIVE: Log in with the temporary password above and change it in your profile:\nhttps://app.vitaluxeservices.com/change-password?email=${encodeURIComponent(email)}\n\nThis link expires in 24 hours.\n\nFor security reasons, you must change this password before using your account.\n\nIf you have any questions, please contact your administrator.`
       }),
     });
 

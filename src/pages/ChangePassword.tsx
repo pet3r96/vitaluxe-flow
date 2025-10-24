@@ -22,8 +22,12 @@ export default function ChangePassword() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // Get email from URL parameters
+  // Get parameters from URL
+  const tokenFromUrl = searchParams.get('token');
   const emailFromUrl = searchParams.get('email');
+  
+  // Determine if we're in token mode (unauthenticated password change)
+  const [tokenMode] = useState(!!tokenFromUrl);
   
   const [formData, setFormData] = useState({
     currentPassword: '',
@@ -31,8 +35,14 @@ export default function ChangePassword() {
     confirmPassword: ''
   });
 
-  // Redirect to login if user is not authenticated
+  // Redirect to login if user is not authenticated (unless in token mode)
   useEffect(() => {
+    // If token is provided, we're in token mode (no auth required)
+    if (tokenFromUrl) {
+      return; // Don't redirect, allow unauthenticated access
+    }
+    
+    // No token - require authentication
     if (!user && emailFromUrl) {
       // User came from email link but is not logged in
       // Redirect to login with email pre-filled
@@ -41,7 +51,7 @@ export default function ChangePassword() {
       // No user and no email parameter - redirect to login
       navigate('/auth');
     }
-  }, [user, emailFromUrl, navigate]);
+  }, [user, emailFromUrl, tokenFromUrl, navigate]);
 
   const validation = validatePasswordStrength(
     formData.newPassword,
@@ -65,7 +75,28 @@ export default function ChangePassword() {
     setLoading(true);
 
     try {
-      // SPLIT LOGIC: Admin impersonating vs regular user
+      // TOKEN MODE: Use edge function with token (unauthenticated)
+      if (tokenMode && tokenFromUrl) {
+        const { data, error } = await supabase.functions.invoke('reset-password-with-token', {
+          body: {
+            token: tokenFromUrl,
+            newPassword: formData.newPassword
+          }
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        toast.success("Password set successfully! Redirecting to login...");
+        
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          navigate("/auth");
+        }, 2000);
+        return;
+      }
+      
+      // ADMIN IMPERSONATION MODE
       if (isImpersonating && impersonatedUserId) {
         // ADMIN PATH: Use edge function to reset impersonated user's password
         const { data, error } = await supabase.functions.invoke('admin-reset-user-password', {
@@ -141,12 +172,19 @@ export default function ChangePassword() {
             <Lock className="w-8 h-8 text-primary" />
           </div>
           <CardTitle className="text-3xl">
-            {isImpersonating ? 'Reset Impersonated User Password' : 'Change Your Password'}
+            {tokenMode 
+              ? 'Set Your Password'
+              : isImpersonating 
+                ? 'Reset Impersonated User Password' 
+                : 'Change Your Password'
+            }
           </CardTitle>
           <CardDescription className="text-base">
-            {isImpersonating 
-              ? `You are changing the password for ${impersonatedUserName || 'the impersonated user'}. This will not affect your admin password.`
-              : 'For your security and HIPAA compliance, you must change your temporary password before accessing the system.'
+            {tokenMode
+              ? 'Set your new password below. This link will expire in 24 hours.'
+              : isImpersonating 
+                ? `You are changing the password for ${impersonatedUserName || 'the impersonated user'}. This will not affect your admin password.`
+                : 'For your security and HIPAA compliance, you must change your temporary password before accessing the system.'
             }
           </CardDescription>
         </CardHeader>
@@ -169,8 +207,8 @@ export default function ChangePassword() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Current Password - Hidden for admins impersonating */}
-            {!isImpersonating && (
+            {/* Current Password - Hidden for admins impersonating AND token mode */}
+            {!isImpersonating && !tokenMode && (
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">Current (Temporary) Password</Label>
                 <div className="relative">
