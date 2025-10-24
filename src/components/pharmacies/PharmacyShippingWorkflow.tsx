@@ -15,6 +15,7 @@ import { FileText, Package, Loader2, CheckCircle, Clock, XCircle, AlertCircle } 
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ShipmentTrackingCard } from "@/components/orders/ShipmentTrackingCard";
+import { getCurrentCSRFToken } from "@/lib/csrf";
 
 interface PharmacyShippingWorkflowProps {
   orderId: string;
@@ -221,6 +222,12 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
 
     setIsMarkingShipped(true);
     try {
+      // Get CSRF token
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to verify session. Please refresh and try again.");
+      }
+
       // Update ALL order lines in this order
       if (!order?.lines || order.lines.length === 0) {
         throw new Error('No order lines found');
@@ -237,6 +244,9 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
             trackingNumber: trackingNumber.trim(),
             carrier: normalizedCarrier,
             status: 'shipped',
+          },
+          headers: {
+            'x-csrf-token': csrfToken
           }
         });
 
