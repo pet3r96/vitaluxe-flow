@@ -343,10 +343,28 @@ export const ProductsGrid = () => {
       // Use effective retail price (with overrides) or fallback to product defaults
       correctPrice = effectiveRetailPrice ?? productForCart.retail_price ?? productForCart.base_price;
 
-      // CRITICAL FIX: If user is a provider, use their practice_id as doctor_id
-      // This ensures orders link to the practice → reps get assigned → profits calculate
-      let resolvedDoctorId = effectiveUserId;
+      // CART OPERATIONS: Always use effectiveUserId (provider's or practice's user_id)
+      // This ensures providers see their own cart items
+      let { data: cart } = await supabase
+        .from("cart")
+        .select("id")
+        .eq("doctor_id", effectiveUserId)
+        .single();
 
+      if (!cart) {
+        const { data: newCart, error: cartError } = await supabase
+          .from("cart")
+          .insert({ doctor_id: effectiveUserId })
+          .select("id")
+          .single();
+
+        if (cartError) throw cartError;
+        cart = newCart;
+      }
+
+      // ORDER CONTEXT: For providers, resolve practice_id for shipping/routing/profits
+      // (but cart stays linked to provider's user_id above)
+      let resolvedDoctorId = effectiveUserId;
       const { data: userRoleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -360,34 +378,16 @@ export const ProductsGrid = () => {
           return;
         }
         resolvedDoctorId = practiceId;
-        console.debug('[ProductsGrid] Provider detected - using practice_id as doctor_id', { 
+        console.debug('[ProductsGrid] Provider detected - using practice context for orders', { 
           provider_user_id: effectiveUserId, 
           practice_id: practiceId 
         });
       }
 
-      // Get or create cart - use resolvedDoctorId for all cart operations
-      let { data: cart } = await supabase
-        .from("cart")
-        .select("id")
-        .eq("doctor_id", resolvedDoctorId)
-        .single();
-
-      if (!cart) {
-        const { data: newCart, error: cartError } = await supabase
-          .from("cart")
-          .insert({ doctor_id: resolvedDoctorId })
-          .select("id")
-          .single();
-
-        if (cartError) throw cartError;
-        cart = newCart;
-      }
-
       if (shipToPractice) {
         console.debug('[ProductsGrid] Practice order - fetching practice shipping address', { effectiveUserId });
         
-        // Get practice's shipping address (not provider's) for practice orders
+        // Get practice's shipping address
         const { data: practiceProfile } = await supabase
           .from("profiles")
           .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
