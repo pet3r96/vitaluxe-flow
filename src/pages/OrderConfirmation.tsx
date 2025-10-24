@@ -88,35 +88,10 @@ export default function OrderConfirmation() {
   const { data: providerProfile } = useQuery({
     queryKey: ["provider-shipping", effectiveUserId],
     queryFn: async () => {
-      // Determine whose shipping address to fetch
-      let profileIdForShipping = effectiveUserId;
-      
-      // Check if user is a provider
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", effectiveUserId)
-        .single();
-      
-      if (userRole?.role === 'provider') {
-        // Get practice_id from provider
-        const { data: provider } = await supabase
-          .from("providers")
-          .select("practice_id")
-          .eq("user_id", effectiveUserId)
-          .eq("active", true)
-          .single();
-        
-        if (provider?.practice_id) {
-          profileIdForShipping = provider.practice_id;
-        }
-      }
-      
-      // Fetch shipping address from correct profile
       const { data, error } = await supabase
         .from("profiles")
         .select("shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_formatted, name")
-        .eq("id", profileIdForShipping)
+        .eq("id", effectiveUserId)
         .single();
 
       if (error) throw error;
