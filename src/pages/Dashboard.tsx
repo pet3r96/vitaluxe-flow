@@ -26,11 +26,7 @@ const Dashboard = () => {
         count = result.count || 0;
       } else if (effectiveRole === "provider" as any) {
         // Count distinct orders that have at least one order_line by this provider
-        const { data: orderLines } = await supabase
-          .from("order_lines")
-          .select("order_id");
-        
-        // Filter by provider from providers table
+        // and exclude failed payments
         const { data: providerData } = await supabase
           .from("providers")
           .select("id")
@@ -40,8 +36,13 @@ const Dashboard = () => {
         if (providerData) {
           const { data: providerOrderLines } = await supabase
             .from("order_lines")
-            .select("order_id")
-            .eq("provider_id", providerData.id);
+            .select(`
+              order_id,
+              orders!inner(payment_status, status)
+            `)
+            .eq("provider_id", providerData.id)
+            .neq("orders.payment_status", "payment_failed")
+            .neq("orders.status", "cancelled");
           
           // Get unique order IDs
           const uniqueOrderIds = [...new Set(providerOrderLines?.map(ol => ol.order_id) || [])];
@@ -57,10 +58,16 @@ const Dashboard = () => {
         
         if (pharmacyData) {
           // Count distinct orders that have at least one order_line assigned to this pharmacy
+          // and exclude failed payments
           const { data: orderLines } = await supabase
             .from("order_lines")
-            .select("order_id")
-            .eq("assigned_pharmacy_id", pharmacyData.id);
+            .select(`
+              order_id,
+              orders!inner(payment_status, status)
+            `)
+            .eq("assigned_pharmacy_id", pharmacyData.id)
+            .neq("orders.payment_status", "payment_failed")
+            .neq("orders.status", "cancelled");
           
           // Get unique order IDs (since one order can have multiple lines)
           const uniqueOrderIds = [...new Set(orderLines?.map(ol => ol.order_id) || [])];
