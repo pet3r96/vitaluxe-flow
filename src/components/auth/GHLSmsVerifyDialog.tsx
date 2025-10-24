@@ -117,6 +117,8 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
   };
 
   const verifyCode = async () => {
+    if (loading) return; // Prevent double submission
+    
     if (code.length !== 6) {
       setError('Please enter the complete 6-digit code');
       return;
@@ -186,6 +188,10 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
               onChange={(value) => {
                 setCode(value);
                 setError('');
+                // Auto-submit when all 6 digits are entered
+                if (value.length === 6) {
+                  verifyCode();
+                }
               }}
               disabled={loading}
             >

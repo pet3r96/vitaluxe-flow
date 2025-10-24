@@ -132,6 +132,8 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
   };
 
   const handleVerifyCode = async () => {
+    if (loading) return; // Prevent double submission
+    
     if (code.length !== 6) {
       toast({
         title: "Invalid code",
@@ -195,7 +197,17 @@ export const TwoFactorVerifyDialog = ({ open, phoneNumber }: TwoFactorVerifyDial
           <div className="space-y-2">
             <Label>Verification Code</Label>
             <div className="flex justify-center py-4">
-              <InputOTP maxLength={6} value={code} onChange={setCode}>
+            <InputOTP 
+              maxLength={6} 
+              value={code} 
+              onChange={(value) => {
+                setCode(value);
+                // Auto-submit when all 6 digits are entered
+                if (value.length === 6) {
+                  handleVerifyCode();
+                }
+              }}
+            >
                 <InputOTPGroup>
                   <InputOTPSlot index={0} />
                   <InputOTPSlot index={1} />
