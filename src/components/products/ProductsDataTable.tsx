@@ -162,6 +162,23 @@ export const ProductsDataTable = () => {
     }
   };
 
+  // Helper: Get practice_id for a provider user
+  const getPracticeIdFromProviderUserId = async (userId: string): Promise<string | null> => {
+    try {
+      const { data: provider } = await supabase
+        .from("providers")
+        .select("practice_id")
+        .eq("user_id", userId)
+        .eq("active", true)
+        .single();
+      
+      return provider?.practice_id || null;
+    } catch (error) {
+      console.error("Error getting practice ID from provider:", error);
+      return null;
+    }
+  };
+
   // Helper to get user's topline rep ID for pharmacy scoping
   const getUserToplineRepId = async (userId: string): Promise<string | null> => {
     try {
@@ -225,17 +242,40 @@ export const ProductsDataTable = () => {
         }
       }
 
-      // Get or create cart
+      // CRITICAL FIX: If user is a provider, use their practice_id as doctor_id
+      // This ensures orders link to the practice → reps get assigned → profits calculate
+      let resolvedDoctorId = effectiveUserId;
+
+      const { data: userRoleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", effectiveUserId)
+        .single();
+
+      if (userRoleData?.role === 'provider') {
+        const practiceId = await getPracticeIdFromProviderUserId(effectiveUserId);
+        if (!practiceId) {
+          toast.error("Unable to find practice association. Please contact support.");
+          return;
+        }
+        resolvedDoctorId = practiceId;
+        console.debug('[ProductsDataTable] Provider detected - using practice_id as doctor_id', { 
+          provider_user_id: effectiveUserId, 
+          practice_id: practiceId 
+        });
+      }
+
+      // Get or create cart - use resolvedDoctorId for all cart operations
       let { data: cart } = await supabase
         .from("cart")
         .select("id")
-        .eq("doctor_id", effectiveUserId)
+        .eq("doctor_id", resolvedDoctorId)
         .single();
 
       if (!cart) {
         const { data: newCart, error: cartError } = await supabase
           .from("cart")
-          .insert({ doctor_id: effectiveUserId })
+          .insert({ doctor_id: resolvedDoctorId })
           .select("id")
           .single();
 
@@ -250,7 +290,7 @@ export const ProductsDataTable = () => {
         const { data: practiceProfile } = await supabase
           .from("profiles")
           .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
-          .eq("id", effectiveUserId)
+          .eq("id", resolvedDoctorId)
           .single();
 
         // Use direct state field from Google Address (no parsing needed)

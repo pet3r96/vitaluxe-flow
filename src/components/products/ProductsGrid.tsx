@@ -391,7 +391,7 @@ export const ProductsGrid = () => {
         const { data: practiceProfile } = await supabase
           .from("profiles")
           .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
-          .eq("id", effectiveUserId)
+          .eq("id", resolvedDoctorId)
           .single();
 
         // Use direct state field from Google Address (no parsing needed)
