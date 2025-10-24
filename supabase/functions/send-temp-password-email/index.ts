@@ -163,7 +163,7 @@ const handler = async (req: Request): Promise<Response> => {
           <body>
             <div class="container">
               <div class="header">
-                <h1>VITALUXE</h1>
+                <img src="https://app.vitaluxeservices.com/vitaluxe-logo-dark-bg.png" alt="Vitaluxe" style="max-width: 200px; height: auto;" />
               </div>
               <div class="content">
                 <h2>Welcome, ${name}</h2>
@@ -171,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <p>Here is your temporary password:</p>
                 <div class="password-box">${temporaryPassword}</div>
                 <p><strong>Important:</strong> For security reasons, please change this password after your first login.</p>
-                <a href="https://app.vitaluxeservices.com/auth" class="button">Login Now</a>
+                <a href="https://app.vitaluxeservices.com/change-password" class="button">Login Now</a>
                 <p>If you have any questions, please contact your administrator.</p>
               </div>
               <div class="footer">
@@ -182,7 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
           </body>
           </html>
         `,
-        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nTemporary Password: ${temporaryPassword}\n\nPlease login at: https://app.vitaluxeservices.com/auth\n\nFor security reasons, please change this password after your first login.\n\nIf you have any questions, please contact your administrator.`
+        TextBody: `Welcome to Vitaluxe, ${name}!\n\nYour account has been created as a ${role}.\n\nTemporary Password: ${temporaryPassword}\n\nPlease login at: https://app.vitaluxeservices.com/change-password\n\nFor security reasons, please change this password after your first login.\n\nIf you have any questions, please contact your administrator.`
       }),
     });
 
