@@ -390,10 +390,10 @@ const Dashboard = () => {
       hidden: effectiveRole !== "admin",
     },
     {
-      title: "Pending Revenue",
+      title: effectiveRole === "doctor" ? "Total Paid" : "Pending Revenue",
       value: pendingRevenueLoading ? "..." : `$${pendingRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Practice pending revenue" : (effectiveRole as any) === "provider" ? "Your pending revenue" : "Pending orders revenue",
+      description: effectiveRole === "doctor" ? "Total amount paid by practice" : (effectiveRole as any) === "provider" ? "Your pending revenue" : "Pending orders revenue",
       isLoading: pendingRevenueLoading,
       hidden: effectiveRole === "pharmacy" || effectiveRole === "provider",
     },
@@ -403,7 +403,7 @@ const Dashboard = () => {
       icon: DollarSign,
       description: effectiveRole === "doctor" ? "Practice collected revenue" : (effectiveRole as any) === "provider" ? "Your collected revenue" : "Completed orders revenue",
       isLoading: collectedRevenueLoading,
-      hidden: effectiveRole === "pharmacy" || effectiveRole === "provider",
+      hidden: effectiveRole === "pharmacy" || effectiveRole === "provider" || effectiveRole === "doctor",
     },
   ].filter(stat => !stat.hidden);
 
