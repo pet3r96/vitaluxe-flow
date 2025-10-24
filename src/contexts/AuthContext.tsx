@@ -263,9 +263,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logger.info('USER_UPDATED: user data refreshed silently');
           
         } else if (event === 'SIGNED_OUT') {
-          console.log('[AuthContext] ⚠️ SIGNED_OUT event received (source: auth-event)');
+          console.log('[AuthContext] ⚠️ SIGNED_OUT event received');
           
-          // Clear hard timer and interval
+          // CRITICAL: Capture user ID before clearing
+          const userIdToClean = user?.id;
+          
+          // Clear timers
           if (hardTimerRef.current) {
             clearTimeout(hardTimerRef.current);
             hardTimerRef.current = null;
@@ -274,9 +277,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             clearInterval(checkIntervalRef.current);
             checkIntervalRef.current = null;
           }
+          
+          // Clear session storage
           localStorage.removeItem(SESSION_EXP_KEY);
           
-          // Clear all state on sign out
+          // Clear 2FA verification using captured ID
+          if (userIdToClean) {
+            localStorage.removeItem(`vitaluxe_2fa_verified_until_${userIdToClean}`);
+            sessionStorage.removeItem(`vitaluxe_2fa_verified_${userIdToClean}`);
+            sessionStorage.removeItem(`vitaluxe_2fa_attempt_${userIdToClean}`);
+          }
+          
+          // Clear auth cache
+          sessionStorage.removeItem('vitaluxe_auth_cache');
+          sessionStorage.removeItem('vitaluxe_impersonation');
+          
+          // Clear all state
           setUserRole(null);
           setImpersonatedRole(null);
           setImpersonatedUserId(null);
@@ -285,16 +301,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTwoFAStatusChecked(false);
           setPasswordStatusChecked(false);
           setIs2FAVerifiedThisSession(false);
-          sessionStorage.removeItem('vitaluxe_impersonation');
-          
-          // Clear 2FA verification cache on logout
-          if (user?.id) {
-            const twoFaKey = `vitaluxe_2fa_verified_until_${user.id}`;
-            localStorage.removeItem(twoFaKey);
-            // Clean up legacy sessionStorage keys if present
-            sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
-            sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
-          }
+          setRequires2FASetup(false);
+          setRequires2FAVerify(false);
           
           clearCSRFToken();
           logger.info('SIGNED_OUT: state cleared');
@@ -808,9 +816,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Hard 60-minute session timeout function
   const doHardSignOut = async () => {
-    logger.info('Hard session timeout - forcing logout after 60 minutes');
+    logger.info('Hard session timeout - forcing logout');
     
-    // Clear the timer and interval
+    // CRITICAL: Capture user ID BEFORE clearing anything
+    const userIdToClean = user?.id;
+    
+    // Clear timers
     if (hardTimerRef.current) {
       clearTimeout(hardTimerRef.current);
       hardTimerRef.current = null;
@@ -820,19 +831,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       checkIntervalRef.current = null;
     }
     
-    // Remove expiration timestamp
+    // AGGRESSIVE CLEANUP - do this BEFORE supabase.auth.signOut()
     localStorage.removeItem(SESSION_EXP_KEY);
     
-    // Clear any 2FA verification cache
-    if (user?.id) {
-      const twoFaKey = `vitaluxe_2fa_verified_until_${user.id}`;
-      localStorage.removeItem(twoFaKey);
-      // Legacy cleanup
-      sessionStorage.removeItem(`vitaluxe_2fa_verified_${user.id}`);
-      sessionStorage.removeItem(`vitaluxe_2fa_attempt_${user.id}`);
+    // Clear 2FA verification for current user
+    if (userIdToClean) {
+      localStorage.removeItem(`vitaluxe_2fa_verified_until_${userIdToClean}`);
+      sessionStorage.removeItem(`vitaluxe_2fa_verified_${userIdToClean}`);
+      sessionStorage.removeItem(`vitaluxe_2fa_attempt_${userIdToClean}`);
     }
     
-    // Close impersonation if active
+    // Clear auth cache
+    sessionStorage.removeItem('vitaluxe_auth_cache');
+    
+    // Clear impersonation
+    sessionStorage.removeItem('vitaluxe_impersonation');
+    
+    // Close impersonation log if active
     if (isImpersonating && currentLogId) {
       try {
         await supabase
@@ -844,18 +859,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     
-    // Sign out
+    // NOW sign out from Supabase
     await supabase.auth.signOut();
     
-    // Navigate to auth page (no toast - per compliance requirements)
+    // Force immediate state reset
+    setSession(null);
+    setUser(null);
+    setUserRole(null);
+    setImpersonatedRole(null);
+    setImpersonatedUserId(null);
+    setImpersonatedUserName(null);
+    setCurrentLogId(null);
+    setTwoFAStatusChecked(false);
+    setPasswordStatusChecked(false);
+    setIs2FAVerifiedThisSession(false);
+    setRequires2FASetup(false);
+    setRequires2FAVerify(false);
+    
+    // Navigate to auth
     navigate('/auth');
   };
 
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      
+      // AGGRESSIVE PRE-LOGIN CLEANUP - clear any old session remnants
+      localStorage.removeItem(SESSION_EXP_KEY);
+      sessionStorage.removeItem('vitaluxe_auth_cache');
+      
+      // Clear any old 2FA verification keys (pattern-based cleanup)
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('vitaluxe_2fa_verified_until_')) {
+          localStorage.removeItem(key);
+        }
+      }
+      
+      // Reset 2FA state
       setTwoFAStatusChecked(false);
-      setIs2FAVerifiedThisSession(false); // Reset 2FA verification on new login
+      setIs2FAVerifiedThisSession(false);
+      setRequires2FASetup(false);
+      setRequires2FAVerify(false);
       
       // Delegate to authService
       const { error } = await authService.loginUser(email, password);
