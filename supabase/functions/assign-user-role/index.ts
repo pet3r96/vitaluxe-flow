@@ -794,7 +794,7 @@ serve(async (req) => {
         console.error('Error creating password status:', statusError);
       }
 
-      // Send temp password email
+      // Send temp password email with userId for token generation
       try {
         const authHeader = req.headers.get('Authorization');
         const { error: emailError } = await supabaseAdmin.functions.invoke('send-temp-password-email', {
@@ -802,7 +802,8 @@ serve(async (req) => {
             email: signupData.email,
             name: signupData.name,
             temporaryPassword: initialPassword,
-            role: signupData.role
+            role: signupData.role,
+            userId: userId  // CRITICAL: Pass userId so token can be created
           },
           headers: authHeader ? {
             Authorization: authHeader
@@ -811,11 +812,13 @@ serve(async (req) => {
 
         if (emailError) {
           console.error('Error sending temp password email:', emailError);
+          console.error('Email error details:', JSON.stringify(emailError));
         } else {
-          console.log('Temporary password email sent successfully to:', signupData.email);
+          console.log('✅ Temporary password email sent successfully to:', signupData.email);
         }
       } catch (emailErr) {
         console.error('Failed to invoke send-temp-password-email function:', emailErr);
+        console.error('Email invocation error details:', emailErr);
       }
     }
 

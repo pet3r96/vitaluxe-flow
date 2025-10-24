@@ -338,11 +338,14 @@ serve(async (req) => {
               email: pendingRep.email,
               name: pendingRep.full_name,
               temporaryPassword: temporaryPassword,
-              role: pendingRep.role
+              role: pendingRep.role,
+              userId: newUserId  // CRITICAL: Pass userId so token can be created
             }
           });
+          console.log('✅ Welcome email sent successfully to:', pendingRep.email);
         } catch (emailErr) {
           console.error('Failed to send welcome email:', emailErr);
+          console.error('Email error details:', emailErr);
         }
       }
 

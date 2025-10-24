@@ -338,11 +338,14 @@ serve(async (req) => {
               email: practiceData.email,
               name: practiceData.practice_name,
               temporaryPassword: temporaryPassword,
-              role: 'doctor'
+              role: 'doctor',
+              userId: userId  // CRITICAL: Pass userId so token can be created
             }
           });
+          console.log('✅ Welcome email sent successfully to:', practiceData.email);
         } catch (emailErr) {
           console.error('Failed to send welcome email:', emailErr);
+          console.error('Email error details:', emailErr);
         }
       } else {
         console.log('Skipping welcome email for existing user');
