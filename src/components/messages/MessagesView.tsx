@@ -14,10 +14,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { logger } from "@/lib/logger";
+import { useMessageAlerts } from "@/hooks/useMessageAlerts";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
+  const { markThreadAsRead } = useMessageAlerts();
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [newThreadSubject, setNewThreadSubject] = useState("");
@@ -207,6 +209,14 @@ export const MessagesView = () => {
       refetchThreads();
     }
   };
+
+  // Mark thread as read when viewing it
+  useEffect(() => {
+    if (selectedThread && messages && messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      markThreadAsRead(selectedThread, latestMessage.id);
+    }
+  }, [selectedThread, messages, markThreadAsRead]);
 
   const createThread = async () => {
     if (!newThreadSubject.trim() || !newThreadMessage.trim()) {
