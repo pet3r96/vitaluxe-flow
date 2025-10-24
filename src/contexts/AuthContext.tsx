@@ -93,40 +93,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const canImpersonate = userRole === 'admin' && canImpersonateDb;
 
   // Function to check GHL 2FA status
-  const check2FAStatus = async (userId: string, roleOverride?: string) => {
-    console.log('[AuthContext] check2FAStatus - START for userId:', userId, 'role:', roleOverride || userRole);
-    
-    // ADMIN BYPASS: Admins skip 2FA entirely
-    if (roleOverride === 'admin' || userRole === 'admin') {
-      console.log('[AuthContext] check2FAStatus - ADMIN BYPASS, skipping 2FA');
-      setRequires2FASetup(false);
-      setRequires2FAVerify(false);
-      setTwoFAStatusChecked(true);
-      setUser2FAPhone(null);
-      return;
-    }
+  const check2FAStatus = async (userId: string) => {
+    console.log('[AuthContext] check2FAStatus - START for userId:', userId);
     
     try {
-      // Check sessionStorage for recent verification (within 24 hours)
-      const verifiedKey = `vitaluxe_2fa_verified_${userId}`;
-      const verifiedAt = sessionStorage.getItem(verifiedKey);
-      
-      if (verifiedAt) {
-        const hoursSinceVerification = (Date.now() - new Date(verifiedAt).getTime()) / (1000 * 60 * 60);
-        if (hoursSinceVerification < 24) {
-          console.log('[AuthContext] check2FAStatus - Recent verification found (< 24h), skipping');
-          setRequires2FASetup(false);
-          setRequires2FAVerify(false);
-          setTwoFAStatusChecked(true);
-          setIs2FAVerifiedThisSession(true);
-          return;
-        }
-      }
-      
       // Query the decrypted view to get actual phone number instead of [ENCRYPTED]
       const { data, error } = await supabase
         .from('user_2fa_settings_decrypted')
-        .select('ghl_enabled, ghl_phone_verified, phone_number, is_enrolled, last_ghl_verification')
+        .select('ghl_enabled, ghl_phone_verified, phone_number, is_enrolled')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -139,34 +113,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRequires2FAVerify(false);
         setUser2FAPhone(null);
       } else {
-        // Check database last_ghl_verification timestamp
-        if (data.last_ghl_verification) {
-          const hoursSinceDbVerification = (Date.now() - new Date(data.last_ghl_verification).getTime()) / (1000 * 60 * 60);
-          if (hoursSinceDbVerification < 24) {
-            console.log('[AuthContext] check2FAStatus - DB shows recent verification (< 24h), skipping');
-            setRequires2FASetup(false);
-            setRequires2FAVerify(false);
-            setUser2FAPhone(data.phone_number);
-            setIs2FAVerifiedThisSession(true);
-            // Update sessionStorage to match
-            sessionStorage.setItem(verifiedKey, data.last_ghl_verification);
-            setTwoFAStatusChecked(true);
-            return;
-          }
-        }
-        
-        // Verification needed
-        if (!is2FAVerifiedThisSession) {
-          console.log('[AuthContext] check2FAStatus - Enrolled, requires verification');
-          setRequires2FAVerify(true);
-          setRequires2FASetup(false);
-          setUser2FAPhone(data.phone_number);
-        } else {
-          console.log('[AuthContext] check2FAStatus - Already verified this session');
-          setRequires2FASetup(false);
-          setRequires2FAVerify(false);
-          setUser2FAPhone(data.phone_number);
-        }
+        // Always require verification on login
+        console.log('[AuthContext] check2FAStatus - Enrolled, requires verification');
+        setRequires2FAVerify(true);
+        setRequires2FASetup(false);
+        setUser2FAPhone(data.phone_number);
       }
       
       // Mark 2FA check as complete
@@ -521,7 +472,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             // Check password and 2FA status immediately (non-blocking but synchronous)
             void checkPasswordStatus(role, userId); // Pass role and userId we just loaded from cache
-            void check2FAStatus(userId, role);
+            void check2FAStatus(userId);
             
             // Restore impersonation if admin
             if (role === 'admin') {
@@ -633,7 +584,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPasswordStatusChecked(true);
 
       // Process 2FA status using dedicated check function
-      await check2FAStatus(userId, role);
+      await check2FAStatus(userId);
 
       // Cache auth data in sessionStorage
       sessionStorage.setItem('vitaluxe_auth_cache', JSON.stringify({
@@ -1104,19 +1055,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     setLoading(true);
     
-    // Clear 2FA verification for next login - ensure 2FA is required on next sign in
-    // Only clear on manual sign out, not on idle timeout to avoid loops
-    if (user?.id) {
-      try {
-        await supabase
-          .from('user_2fa_settings')
-          .update({ last_ghl_verification: null })
-          .eq('user_id', user.id);
-      } catch (error) {
-        logger.error('Failed to clear 2FA verification on sign out', error);
-      }
-    }
-    
     // Delete active session from database
     if (user?.id) {
       const { error: deleteError } = await supabase
@@ -1173,13 +1111,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('[AuthContext] ✅ mark2FAVerified called');
     setIs2FAVerifiedThisSession(true);
     setRequires2FAVerify(false);
-    
-    // Persist verification to sessionStorage with timestamp
-    if (user?.id) {
-      const storageKey = `vitaluxe_2fa_verified_${user.id}`;
-      sessionStorage.setItem(storageKey, new Date().toISOString());
-      console.log('[AuthContext] 2FA verification persisted to sessionStorage');
-    }
   };
 
   return (
