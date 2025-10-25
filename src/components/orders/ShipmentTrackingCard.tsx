@@ -61,7 +61,7 @@ export const ShipmentTrackingCard = ({
   const [editCarrier, setEditCarrier] = useState(carrier || "");
 
   // Fetch tracking information
-  const { data: tracking, isLoading, refetch } = useQuery({
+  const { data: trackingResponse, isLoading, refetch } = useQuery({
     queryKey: ["shipment-tracking", orderLineId, trackingNumber, carrier],
     queryFn: async () => {
       if (!trackingNumber) return null;
@@ -71,24 +71,56 @@ export const ShipmentTrackingCard = ({
         throw new Error("Unable to verify session");
       }
 
-      const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-        body: { tracking_code: trackingNumber, carrier: carrier },
-        headers: {
-          'x-csrf-token': csrfToken
-        }
-      });
+      // Route to appropriate tracking API based on carrier
+      if (carrier === "Amazon") {
+        const { data, error } = await supabase.functions.invoke("amazon-get-tracking", {
+          body: { orderLineId, trackingNumber },
+          headers: {
+            'x-csrf-token': csrfToken
+          }
+        });
 
-      if (error) throw error;
-      return data.tracking;
+        if (error) throw error;
+        
+        // Return normalized format with rate limit info
+        return {
+          tracking: data.data,
+          cached: data.cached,
+          calls_remaining_today: data.calls_remaining_today,
+          rate_limit_message: data.rate_limit_message,
+          next_refresh_available: data.next_refresh_available,
+          cached_at: data.cached_at
+        };
+      } else {
+        const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
+          body: { tracking_code: trackingNumber, carrier: carrier },
+          headers: {
+            'x-csrf-token': csrfToken
+          }
+        });
+
+        if (error) throw error;
+        return { tracking: data.tracking };
+      }
     },
     enabled: !!trackingNumber,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnMount: false, // Don't refetch when component remounts
-    retry: 1, // Only retry once on failure
-    retryDelay: 2000, // Wait 2 seconds before retry
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+    retryDelay: 2000,
   });
+
+  // Extract tracking data and metadata
+  const tracking = trackingResponse?.tracking;
+  const rateLimitInfo = carrier === "Amazon" ? {
+    cached: trackingResponse?.cached,
+    calls_remaining: trackingResponse?.calls_remaining_today,
+    message: trackingResponse?.rate_limit_message,
+    next_refresh: trackingResponse?.next_refresh_available,
+    cached_at: trackingResponse?.cached_at
+  } : null;
 
   // Fetch tracking events from database
   const { data: trackingEvents } = useQuery({
@@ -122,15 +154,28 @@ export const ShipmentTrackingCard = ({
         throw new Error("Unable to verify session");
       }
       
-      const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-        body: { tracking_code: trackingNumber, carrier: carrier },
-        headers: {
-          'x-csrf-token': csrfToken
-        }
-      });
+      // Route to appropriate tracking API based on carrier
+      if (carrier === "Amazon") {
+        const { data, error } = await supabase.functions.invoke("amazon-get-tracking", {
+          body: { orderLineId, trackingNumber },
+          headers: {
+            'x-csrf-token': csrfToken
+          }
+        });
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
+          body: { tracking_code: trackingNumber, carrier: carrier },
+          headers: {
+            'x-csrf-token': csrfToken
+          }
+        });
+
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       toast.success("Tracking information updated");
@@ -350,6 +395,7 @@ export const ShipmentTrackingCard = ({
                   <SelectItem value="UPS">UPS</SelectItem>
                   <SelectItem value="FedEx">FedEx</SelectItem>
                   <SelectItem value="DHL">DHL</SelectItem>
+                  <SelectItem value="Amazon">Amazon</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -415,6 +461,25 @@ export const ShipmentTrackingCard = ({
                     <p className="text-xs text-muted-foreground ml-6">
                       Events received: {tracking.events.length}
                     </p>
+                  )}
+                  {rateLimitInfo && (
+                    <div className="ml-6 space-y-1">
+                      {rateLimitInfo.cached && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          {rateLimitInfo.message}
+                        </p>
+                      )}
+                      {rateLimitInfo.calls_remaining !== undefined && (
+                        <p className="text-xs text-muted-foreground">
+                          API calls remaining today: {rateLimitInfo.calls_remaining}
+                        </p>
+                      )}
+                      {rateLimitInfo.cached_at && (
+                        <p className="text-xs text-muted-foreground">
+                          Cached at: {formatDateTime(rateLimitInfo.cached_at)}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
                 {getStatusBadge(tracking.status)}
