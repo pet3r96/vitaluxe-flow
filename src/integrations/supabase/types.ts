@@ -4497,7 +4497,7 @@ export type Database = {
         | "declined"
         | "on_hold"
       payment_status: "pending" | "completed"
-      shipping_carrier: "fedex" | "ups" | "usps"
+      shipping_carrier: "fedex" | "ups" | "usps" | "amazon"
       shipping_speed: "ground" | "2day" | "overnight"
       verification_code_type: "2fa_setup" | "2fa_login"
     }
@@ -4659,7 +4659,7 @@ export const Constants = {
         "on_hold",
       ],
       payment_status: ["pending", "completed"],
-      shipping_carrier: ["fedex", "ups", "usps"],
+      shipping_carrier: ["fedex", "ups", "usps", "amazon"],
       shipping_speed: ["ground", "2day", "overnight"],
       verification_code_type: ["2fa_setup", "2fa_login"],
     },
