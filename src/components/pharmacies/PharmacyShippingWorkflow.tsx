@@ -581,7 +581,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
                         <SelectItem value="FedEx">FedEx</SelectItem>
                         <SelectItem value="UPS">UPS</SelectItem>
                         <SelectItem value="USPS">USPS</SelectItem>
-                        <SelectItem value="Amazon">Amazon Logistics</SelectItem>
+                        <SelectItem value="DHL">DHL</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

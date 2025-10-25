@@ -172,6 +172,7 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
               <SelectItem value="fedex">FedEx</SelectItem>
               <SelectItem value="ups">UPS</SelectItem>
               <SelectItem value="usps">USPS</SelectItem>
+              <SelectItem value="dhl">DHL</SelectItem>
             </SelectContent>
           </Select>
         </div>

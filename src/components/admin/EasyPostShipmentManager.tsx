@@ -207,8 +207,6 @@ export const EasyPostShipmentManager = () => {
                     <SelectItem value="UPS">UPS</SelectItem>
                     <SelectItem value="FedEx">FedEx</SelectItem>
                     <SelectItem value="DHL">DHL</SelectItem>
-                    <SelectItem value="CanadaPost">Canada Post</SelectItem>
-                    <SelectItem value="AustraliaPost">Australia Post</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">

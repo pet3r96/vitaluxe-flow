@@ -313,8 +313,6 @@ export const ShipmentTrackingCard = ({
                   <SelectItem value="UPS">UPS</SelectItem>
                   <SelectItem value="FedEx">FedEx</SelectItem>
                   <SelectItem value="DHL">DHL</SelectItem>
-                  <SelectItem value="Amazon">Amazon Logistics</SelectItem>
-                  <SelectItem value="CanadaPost">Canada Post</SelectItem>
                 </SelectContent>
               </Select>
             </div>
