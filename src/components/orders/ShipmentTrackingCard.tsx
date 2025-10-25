@@ -64,7 +64,7 @@ export const ShipmentTrackingCard = ({
   const normalizedCarrier = (carrier ?? '').toLowerCase();
 
   // Fetch tracking information
-  const { data: trackingResponse, isLoading, refetch } = useQuery({
+  const { data: trackingResponse, isLoading, error: trackingError, refetch } = useQuery({
     queryKey: ["shipment-tracking", orderLineId, trackingNumber, carrier],
     queryFn: async () => {
       if (!trackingNumber) return null;
@@ -74,37 +74,16 @@ export const ShipmentTrackingCard = ({
         throw new Error("Unable to verify session");
       }
 
-      // Route to appropriate tracking API based on carrier
-      if (normalizedCarrier === "amazon") {
-        const { data, error } = await supabase.functions.invoke("amazon-get-tracking", {
-          body: { orderLineId, trackingNumber },
-          headers: {
-            'x-csrf-token': csrfToken
-          }
-        });
+      // All tracking now routes through EasyPost
+      const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
+        body: { tracking_code: trackingNumber, carrier: normalizedCarrier },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
+      });
 
-        if (error) throw error;
-        
-        // Return normalized format with rate limit info
-        return {
-          tracking: data.data,
-          cached: data.cached,
-          calls_remaining_today: data.calls_remaining_today,
-          rate_limit_message: data.rate_limit_message,
-          next_refresh_available: data.next_refresh_available,
-          cached_at: data.cached_at
-        };
-      } else {
-        const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-          body: { tracking_code: trackingNumber, carrier: normalizedCarrier },
-          headers: {
-            'x-csrf-token': csrfToken
-          }
-        });
-
-        if (error) throw error;
-        return { tracking: data.tracking };
-      }
+      if (error) throw error;
+      return { tracking: data.tracking };
     },
     enabled: !!trackingNumber,
     staleTime: 5 * 60 * 1000,
@@ -115,15 +94,8 @@ export const ShipmentTrackingCard = ({
     retryDelay: 2000,
   });
 
-  // Extract tracking data and metadata
+  // Extract tracking data
   const tracking = trackingResponse?.tracking;
-  const rateLimitInfo = normalizedCarrier === "amazon" ? {
-    cached: trackingResponse?.cached,
-    calls_remaining: trackingResponse?.calls_remaining_today,
-    message: trackingResponse?.rate_limit_message,
-    next_refresh: trackingResponse?.next_refresh_available,
-    cached_at: trackingResponse?.cached_at
-  } : null;
 
   // Fetch tracking events from database
   const { data: trackingEvents } = useQuery({
@@ -157,28 +129,16 @@ export const ShipmentTrackingCard = ({
         throw new Error("Unable to verify session");
       }
       
-      // Route to appropriate tracking API based on carrier
-      if (normalizedCarrier === "amazon") {
-        const { data, error } = await supabase.functions.invoke("amazon-get-tracking", {
-          body: { orderLineId, trackingNumber },
-          headers: {
-            'x-csrf-token': csrfToken
-          }
-        });
+      // All tracking now routes through EasyPost
+      const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
+        body: { tracking_code: trackingNumber, carrier: normalizedCarrier },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
+      });
 
-        if (error) throw error;
-        return data;
-      } else {
-        const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-          body: { tracking_code: trackingNumber, carrier: normalizedCarrier },
-          headers: {
-            'x-csrf-token': csrfToken
-          }
-        });
-
-        if (error) throw error;
-        return data;
-      }
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       toast.success("Tracking information updated");
@@ -397,7 +357,6 @@ export const ShipmentTrackingCard = ({
                   <SelectItem value="usps">USPS</SelectItem>
                   <SelectItem value="ups">UPS</SelectItem>
                   <SelectItem value="fedex">FedEx</SelectItem>
-                  <SelectItem value="amazon">Amazon</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -412,6 +371,14 @@ export const ShipmentTrackingCard = ({
               <Loader2 className="h-6 w-6 animate-spin mx-auto" />
               <p className="text-sm text-muted-foreground mt-2">Loading tracking information...</p>
             </div>
+          ) : trackingError ? (
+            <div className="text-center py-4">
+              <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm font-medium text-red-600">Unable to load tracking information</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {trackingError instanceof Error ? trackingError.message : 'An error occurred'}
+              </p>
+            </div>
           ) : tracking ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -420,29 +387,10 @@ export const ShipmentTrackingCard = ({
                     {getStatusIcon(tracking.status)}
                     <span className="font-medium">Current Status</span>
                   </div>
-                  {canEdit && tracking.events && (
+                   {canEdit && tracking.events && (
                     <p className="text-xs text-muted-foreground ml-6">
                       Events received: {tracking.events.length}
                     </p>
-                  )}
-                  {rateLimitInfo && (
-                    <div className="ml-6 space-y-1">
-                      {rateLimitInfo.cached && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                          {rateLimitInfo.message}
-                        </p>
-                      )}
-                      {rateLimitInfo.calls_remaining !== undefined && (
-                        <p className="text-xs text-muted-foreground">
-                          API calls remaining today: {rateLimitInfo.calls_remaining}
-                        </p>
-                      )}
-                      {rateLimitInfo.cached_at && (
-                        <p className="text-xs text-muted-foreground">
-                          Cached at: {formatDateTime(rateLimitInfo.cached_at)}
-                        </p>
-                      )}
-                    </div>
                   )}
                 </div>
                 {getStatusBadge(tracking.status)}

@@ -43,6 +43,12 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Get CSRF token
+      const csrfToken = await (await import('@/lib/csrf')).getCurrentCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to verify session. Please refresh and try again.");
+      }
+
       // Only send fields that have changed
       const payload: any = { orderLineId: orderLine.id };
       
@@ -60,9 +66,14 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
 
       const { data, error } = await supabase.functions.invoke('update-shipping-info', {
         body: payload,
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || "Failed to update shipping information");
+      }
 
       toast.success("Shipping information updated successfully");
       onSuccess();
@@ -84,27 +95,37 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
 
     setIsRefreshing(true);
     try {
-      // Route to appropriate tracking API based on carrier
-      const functionName = orderLine.shipping_carrier === 'amazon' 
-        ? 'amazon-get-tracking' 
-        : 'get-easypost-tracking';
-      
-      const body = orderLine.shipping_carrier === 'amazon'
-        ? { orderLineId: orderLine.id, trackingNumber: orderLine.tracking_number }
-        : { tracking_code: orderLine.tracking_number, carrier: orderLine.shipping_carrier };
+      // Get CSRF token
+      const csrfToken = await (await import('@/lib/csrf')).getCurrentCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to verify session. Please refresh and try again.");
+      }
 
-      const { data, error } = await supabase.functions.invoke(functionName, { body });
+      // All tracking now routes through EasyPost
+      const { data, error } = await supabase.functions.invoke('get-easypost-tracking', {
+        body: { 
+          tracking_code: orderLine.tracking_number, 
+          carrier: orderLine.shipping_carrier?.toLowerCase()
+        },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
+      });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || "Failed to refresh tracking");
+      }
 
-      setTrackingData(data.data);
-      setIsCached(data.cached || false);
-      setCallsRemaining(data.calls_remaining_today);
+      setTrackingData(data.tracking);
+      setIsCached(false);
+      setCallsRemaining(null);
 
-      if (data.cached) {
-        toast.info(data.rate_limit_message, { duration: 5000 });
+      if (data.tracking?.status === 'delivered' && data.tracking.estimated_delivery_date) {
+        toast.success(`Package delivered on ${new Date(data.tracking.estimated_delivery_date).toLocaleDateString()}`);
+      } else if (data.tracking?.status && data.tracking.estimated_delivery_date) {
+        toast.success(`Status: ${data.tracking.status} - Est. delivery: ${new Date(data.tracking.estimated_delivery_date).toLocaleDateString()}`);
       } else {
-        toast.success(`Tracking updated (${data.calls_remaining_today} refreshes left today)`);
+        toast.success('Tracking information updated');
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to refresh tracking");
@@ -176,7 +197,6 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
               <SelectItem value="fedex">FedEx</SelectItem>
               <SelectItem value="ups">UPS</SelectItem>
               <SelectItem value="usps">USPS</SelectItem>
-              <SelectItem value="amazon">Amazon</SelectItem>
             </SelectContent>
           </Select>
         </div>
