@@ -4351,6 +4351,12 @@ export type Database = {
       get_unread_message_count: { Args: { p_user_id: string }; Returns: number }
       get_unread_notification_count: { Args: never; Returns: number }
       get_user_rep_id: { Args: { _user_id: string }; Returns: string }
+      get_visible_pharmacies_for_effective_user: {
+        Args: { p_effective_user_id: string }
+        Returns: {
+          id: string
+        }[]
+      }
       get_visible_products_for_effective_user: {
         Args: { p_effective_user_id: string }
         Returns: {

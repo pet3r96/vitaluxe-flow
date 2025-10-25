@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Table,
   TableBody,
@@ -21,6 +22,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const PharmaciesDataTable = () => {
+  const { effectiveRole, effectiveUserId, isImpersonating } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPharmacy, setSelectedPharmacy] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -28,11 +30,14 @@ export const PharmaciesDataTable = () => {
   const [selectedPharmacyForRates, setSelectedPharmacyForRates] = useState<any>(null);
   const [fixingPharmacyId, setFixingPharmacyId] = useState<string | null>(null);
 
+  // Only real non-impersonating admins bypass visibility filtering
+  const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
+
   const { data: pharmacies, isLoading, refetch } = useQuery({
-    queryKey: ["pharmacies"],
+    queryKey: ["pharmacies", effectiveUserId, effectiveRole],
     staleTime: 600000, // 10 minutes - pharmacies rarely change
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("pharmacies")
         .select(`
           *,
@@ -45,6 +50,33 @@ export const PharmaciesDataTable = () => {
         `)
         .order("created_at", { ascending: false });
 
+      // For impersonated views or non-admin users, filter by visibility
+      if (isImpersonating || !viewingAsAdmin) {
+        try {
+          const { data: visiblePharmacies, error: visError } = await supabase.rpc(
+            'get_visible_pharmacies_for_effective_user' as any,
+            { p_effective_user_id: effectiveUserId }
+          ) as { data: Array<{ id: string }> | null; error: any };
+          
+          if (visError) {
+            console.error('[PharmaciesDataTable] Visibility RPC error:', visError);
+            toast.error('Could not determine pharmacy visibility');
+            return [];
+          } else if (visiblePharmacies && visiblePharmacies.length > 0) {
+            const visiblePharmacyIds = visiblePharmacies.map((p) => p.id);
+            query = query.in('id', visiblePharmacyIds);
+          } else {
+            // No visible pharmacies found
+            return [];
+          }
+        } catch (error) {
+          console.error('[PharmaciesDataTable] Error checking pharmacy visibility:', error);
+          toast.error('Could not determine pharmacy visibility');
+          return [];
+        }
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
