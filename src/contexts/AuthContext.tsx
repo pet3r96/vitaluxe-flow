@@ -1019,15 +1019,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Server-side session creation - no longer using sessionStorage
           try {
             const { data: { session: authSession } } = await supabase.auth.getSession();
-            const { error: sessionError } = await supabase.functions.invoke('start-impersonation', {
-              body: { role, userId: userId || null, userName: userName || null },
+            const { data, error: sessionError } = await supabase.functions.invoke('start-impersonation', {
+              body: { 
+                role, 
+                userId: userId || null, 
+                userName: userName || null,
+                targetEmail: targetEmail || null
+              },
               headers: {
                 Authorization: `Bearer ${authSession?.access_token}`
               }
             });
             if (sessionError) {
               logger.error('Error creating server-side impersonation session', sessionError);
-              toast.error("Failed to create impersonation session");
+              const errorMsg = sessionError.message || 'Failed to create impersonation session';
+              toast.error(errorMsg);
               return;
             }
           } catch (err) {
@@ -1080,7 +1086,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentLogId(null);
     // End server-side session
     try {
-      await supabase.functions.invoke('end-impersonation');
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const { error } = await supabase.functions.invoke('end-impersonation', {
+        headers: {
+          Authorization: `Bearer ${authSession?.access_token}`
+        }
+      });
+      if (error) {
+        logger.error('Error ending impersonation session', error);
+      }
     } catch (err) {
       logger.error('Error calling end-impersonation in clearImpersonation', err);
     }
