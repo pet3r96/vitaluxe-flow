@@ -833,6 +833,56 @@ export type Database = {
         }
         Relationships: []
       }
+      easypost_tracking_events: {
+        Row: {
+          carrier: string | null
+          created_at: string | null
+          description: string | null
+          easypost_tracker_id: string
+          event_time: string
+          id: string
+          message: string | null
+          order_line_id: string
+          status: string
+          tracking_details: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          carrier?: string | null
+          created_at?: string | null
+          description?: string | null
+          easypost_tracker_id: string
+          event_time: string
+          id?: string
+          message?: string | null
+          order_line_id: string
+          status: string
+          tracking_details?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          carrier?: string | null
+          created_at?: string | null
+          description?: string | null
+          easypost_tracker_id?: string
+          event_time?: string
+          id?: string
+          message?: string | null
+          order_line_id?: string
+          status?: string
+          tracking_details?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "easypost_tracking_events_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_verification_tokens: {
         Row: {
           created_at: string | null
