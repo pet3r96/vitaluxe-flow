@@ -44,8 +44,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Create authenticated DB client for RLS-compliant queries
+    const db = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      }
+    );
+
     // Check impersonation permissions
-    const { data: canImpersonate } = await supabase.rpc('can_user_impersonate', { 
+    const { data: canImpersonate } = await db.rpc('can_user_impersonate', { 
       _user_id: user.id 
     });
 
@@ -67,7 +76,7 @@ Deno.serve(async (req) => {
     });
 
     // Create impersonation log entry
-    const { data: logData, error: logError } = await supabase
+    const { data: logData, error: logError } = await db
       .from('impersonation_logs')
       .insert({
         impersonator_id: user.id,
@@ -83,6 +92,13 @@ Deno.serve(async (req) => {
 
     if (logError || !logData) {
       console.error('[start-impersonation] Failed to create log:', logError);
+      // Check for RLS violation
+      if (logError?.code === '42501') {
+        return new Response(
+          JSON.stringify({ error: 'Denied by row-level security policy' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: 'Failed to create impersonation log' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -90,7 +106,7 @@ Deno.serve(async (req) => {
     }
 
     // Create or update active session (UPSERT to handle single session per admin)
-    const { data: sessionData, error: sessionError } = await supabase
+    const { data: sessionData, error: sessionError } = await db
       .from('active_impersonation_sessions')
       .upsert({
         admin_user_id: user.id,
@@ -108,6 +124,13 @@ Deno.serve(async (req) => {
 
     if (sessionError) {
       console.error('[start-impersonation] Failed to create session:', sessionError);
+      // Check for RLS violation
+      if (sessionError?.code === '42501') {
+        return new Response(
+          JSON.stringify({ error: 'Denied by row-level security policy' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: 'Failed to create impersonation session' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

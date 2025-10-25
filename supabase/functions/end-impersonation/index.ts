@@ -37,10 +37,19 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Create authenticated DB client for RLS-compliant queries
+    const db = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      }
+    );
+
     console.log('[end-impersonation] Request from admin:', user.id);
 
     // Get active session
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await db
       .from('active_impersonation_sessions')
       .select('*')
       .eq('admin_user_id', user.id)
@@ -52,24 +61,38 @@ Deno.serve(async (req) => {
 
     if (session?.impersonation_log_id) {
       // Update the log with end time
-      const { error: logError } = await supabase
+      const { error: logError } = await db
         .from('impersonation_logs')
         .update({ end_time: new Date().toISOString() })
         .eq('id', session.impersonation_log_id);
 
       if (logError) {
         console.error('[end-impersonation] Failed to update log:', logError);
+        // Check for RLS violation
+        if (logError.code === '42501') {
+          return new Response(
+            JSON.stringify({ error: 'Denied by row-level security policy' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 
     // Delete the active session
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await db
       .from('active_impersonation_sessions')
       .delete()
       .eq('admin_user_id', user.id);
 
     if (deleteError) {
       console.error('[end-impersonation] Failed to delete session:', deleteError);
+      // Check for RLS violation
+      if (deleteError.code === '42501') {
+        return new Response(
+          JSON.stringify({ error: 'Denied by row-level security policy' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: 'Failed to end impersonation session' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

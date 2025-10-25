@@ -37,8 +37,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Create authenticated DB client for RLS-compliant queries
+    const db = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      }
+    );
+
     // Get active session for this admin
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await db
       .from('active_impersonation_sessions')
       .select('*')
       .eq('admin_user_id', user.id)
@@ -46,6 +55,13 @@ Deno.serve(async (req) => {
 
     if (sessionError) {
       console.error('[get-active-impersonation] Error fetching session:', sessionError);
+      // Check for RLS violation
+      if (sessionError.code === '42501') {
+        return new Response(
+          JSON.stringify({ error: 'Denied by row-level security policy' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: 'Failed to fetch impersonation session' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,7 +73,7 @@ Deno.serve(async (req) => {
       console.log('[get-active-impersonation] Session expired, cleaning up');
       
       // Clean up expired session
-      await supabase
+      await db
         .from('active_impersonation_sessions')
         .delete()
         .eq('id', session.id);
@@ -70,7 +86,7 @@ Deno.serve(async (req) => {
 
     // Update last activity if session exists and not expired
     if (session) {
-      await supabase
+      await db
         .from('active_impersonation_sessions')
         .update({ last_activity: new Date().toISOString() })
         .eq('id', session.id);
