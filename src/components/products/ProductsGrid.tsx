@@ -53,7 +53,8 @@ export const ProductsGrid = () => {
   const isDownlineRep = effectiveRole === "downline";
   const isRep = isToplineRep || isDownlineRep;
   // Topline reps see all products but with visibility indicators
-  const viewingAsAdmin = (effectiveRole === "admin" && !isImpersonating) || isToplineRep;
+  // Only real non-impersonating admins bypass visibility filtering
+  const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
 
   const { data: cartCount } = useCartCount(effectiveUserId);
 
@@ -78,8 +79,8 @@ export const ProductsGrid = () => {
         `)
         .order("created_at", { ascending: false });
 
-      // For non-admin viewing or when impersonating, filter by visibility
-      if (!viewingAsAdmin) {
+      // For toplines, impersonated views, or non-admin users, filter by visibility
+      if (isImpersonating || !viewingAsAdmin) {
         try {
           const { data: visibleProducts, error: visError } = await supabase.rpc(
             'get_visible_products_for_effective_user' as any,
