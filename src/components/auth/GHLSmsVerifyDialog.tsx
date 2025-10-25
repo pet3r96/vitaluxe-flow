@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ interface GHLSmsVerifyDialogProps {
 
 export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDialogProps) => {
   const { mark2FAVerified } = useAuth();
+  const sentRef = useRef(false);
   const [code, setCode] = useState('');
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,12 +37,15 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
 
 
   useEffect(() => {
-    if (open && userId) {
-      // Always send a fresh code when dialog opens
-      
-      // Send code immediately
+    if (open && userId && !sentRef.current) {
+      sentRef.current = true;
       console.log('[GHLSmsVerifyDialog] Dialog opened - sending fresh code');
       void sendCode();
+    }
+    
+    // Reset ref when dialog closes
+    if (!open) {
+      sentRef.current = false;
     }
   }, [open, userId]);
 

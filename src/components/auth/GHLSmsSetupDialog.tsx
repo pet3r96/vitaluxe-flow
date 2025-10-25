@@ -8,6 +8,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface GHLSmsSetupDialogProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface GHLSmsSetupDialogProps {
 }
 
 export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
+  const { mark2FAVerified } = useAuth();
   const [step, setStep] = useState<'phone' | 'verify'>('phone');
   const [phone, setPhone] = useState('+1');
   const [code, setCode] = useState('');
@@ -178,6 +180,9 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
         throw new Error('2FA setup failed to save. Please try again or contact support.');
       }
 
+      // Mark this session as verified to prevent another SMS
+      mark2FAVerified();
+      
       toast.success('Phone verified! Reloading...');
       console.log('[GHLSmsSetupDialog] Success - reloading page');
       setTimeout(() => window.location.reload(), 1000);
@@ -260,6 +265,10 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
                 onChange={(value) => {
                   setCode(value);
                   setError('');
+                  // Auto-submit when all 6 digits are entered
+                  if (value.length === 6) {
+                    verifyCode();
+                  }
                 }}
                 disabled={loading}
               >
