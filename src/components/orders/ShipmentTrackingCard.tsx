@@ -60,6 +60,9 @@ export const ShipmentTrackingCard = ({
   const [editTrackingNumber, setEditTrackingNumber] = useState(trackingNumber || "");
   const [editCarrier, setEditCarrier] = useState(carrier || "");
 
+  // Normalize carrier for consistent routing
+  const normalizedCarrier = (carrier ?? '').toLowerCase();
+
   // Fetch tracking information
   const { data: trackingResponse, isLoading, refetch } = useQuery({
     queryKey: ["shipment-tracking", orderLineId, trackingNumber, carrier],
@@ -72,7 +75,7 @@ export const ShipmentTrackingCard = ({
       }
 
       // Route to appropriate tracking API based on carrier
-      if (carrier === "Amazon") {
+      if (normalizedCarrier === "amazon") {
         const { data, error } = await supabase.functions.invoke("amazon-get-tracking", {
           body: { orderLineId, trackingNumber },
           headers: {
@@ -93,7 +96,7 @@ export const ShipmentTrackingCard = ({
         };
       } else {
         const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-          body: { tracking_code: trackingNumber, carrier: carrier },
+          body: { tracking_code: trackingNumber, carrier: normalizedCarrier },
           headers: {
             'x-csrf-token': csrfToken
           }
@@ -114,7 +117,7 @@ export const ShipmentTrackingCard = ({
 
   // Extract tracking data and metadata
   const tracking = trackingResponse?.tracking;
-  const rateLimitInfo = carrier === "Amazon" ? {
+  const rateLimitInfo = normalizedCarrier === "amazon" ? {
     cached: trackingResponse?.cached,
     calls_remaining: trackingResponse?.calls_remaining_today,
     message: trackingResponse?.rate_limit_message,
@@ -155,7 +158,7 @@ export const ShipmentTrackingCard = ({
       }
       
       // Route to appropriate tracking API based on carrier
-      if (carrier === "Amazon") {
+      if (normalizedCarrier === "amazon") {
         const { data, error } = await supabase.functions.invoke("amazon-get-tracking", {
           body: { orderLineId, trackingNumber },
           headers: {
@@ -167,7 +170,7 @@ export const ShipmentTrackingCard = ({
         return data;
       } else {
         const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-          body: { tracking_code: trackingNumber, carrier: carrier },
+          body: { tracking_code: trackingNumber, carrier: normalizedCarrier },
           headers: {
             'x-csrf-token': csrfToken
           }
@@ -308,7 +311,7 @@ export const ShipmentTrackingCard = ({
               </Badge>
               {carrier && (
                 <Badge variant="outline">
-                  {carrier}
+                  {carrier.toUpperCase()}
                 </Badge>
               )}
               
@@ -391,11 +394,10 @@ export const ShipmentTrackingCard = ({
                   <SelectValue placeholder="Select carrier" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USPS">USPS</SelectItem>
-                  <SelectItem value="UPS">UPS</SelectItem>
-                  <SelectItem value="FedEx">FedEx</SelectItem>
-                  <SelectItem value="DHL">DHL</SelectItem>
-                  <SelectItem value="Amazon">Amazon</SelectItem>
+                  <SelectItem value="usps">USPS</SelectItem>
+                  <SelectItem value="ups">UPS</SelectItem>
+                  <SelectItem value="fedex">FedEx</SelectItem>
+                  <SelectItem value="amazon">Amazon</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -454,7 +456,7 @@ export const ShipmentTrackingCard = ({
                     className="w-full"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Track on {carrier || 'Carrier'} Website
+                    Track on {carrier?.toUpperCase() || 'Carrier'} Website
                   </Button>
                 </div>
               )}

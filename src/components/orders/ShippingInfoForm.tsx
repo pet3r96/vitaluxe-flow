@@ -84,12 +84,16 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
 
     setIsRefreshing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('amazon-get-tracking', {
-        body: { 
-          orderLineId: orderLine.id,
-          trackingNumber: orderLine.tracking_number 
-        }
-      });
+      // Route to appropriate tracking API based on carrier
+      const functionName = orderLine.shipping_carrier === 'amazon' 
+        ? 'amazon-get-tracking' 
+        : 'get-easypost-tracking';
+      
+      const body = orderLine.shipping_carrier === 'amazon'
+        ? { orderLineId: orderLine.id, trackingNumber: orderLine.tracking_number }
+        : { tracking_code: orderLine.tracking_number, carrier: orderLine.shipping_carrier };
+
+      const { data, error } = await supabase.functions.invoke(functionName, { body });
 
       if (error) throw error;
 
@@ -172,7 +176,7 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
               <SelectItem value="fedex">FedEx</SelectItem>
               <SelectItem value="ups">UPS</SelectItem>
               <SelectItem value="usps">USPS</SelectItem>
-              <SelectItem value="dhl">DHL</SelectItem>
+              <SelectItem value="amazon">Amazon</SelectItem>
             </SelectContent>
           </Select>
         </div>
