@@ -97,7 +97,7 @@ export function validateUpdateShippingRequest(data: any) {
   const validations = [
     validateUUID(data.orderLineId, 'orderLineId'),
     validateString(data.trackingNumber, 'trackingNumber', { maxLength: 100 }),
-    validateEnum(data.carrier, 'carrier', ['fedex', 'ups', 'usps'], false),
+    validateEnum(data.carrier, 'carrier', ['fedex', 'ups', 'usps', 'amazon'], false),
     validateEnum(data.status, 'status', ['pending', 'filled', 'shipped', 'delivered', 'denied', 'change_requested'], false),
     validateString(data.changeDescription, 'changeDescription', { maxLength: 1000 })
   ];

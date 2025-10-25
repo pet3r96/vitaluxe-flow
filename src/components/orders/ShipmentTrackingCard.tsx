@@ -400,45 +400,6 @@ export const ShipmentTrackingCard = ({
               </Select>
             </div>
             
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Use EasyPost Test Codes</Label>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditTrackingNumber("EZ1000000001");
-                    setEditCarrier("USPS");
-                  }}
-                >
-                  Pre-Transit
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditTrackingNumber("EZ1000000002");
-                    setEditCarrier("USPS");
-                  }}
-                >
-                  In Transit
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditTrackingNumber("EZ1000000003");
-                    setEditCarrier("USPS");
-                  }}
-                >
-                  Delivered
-                </Button>
-              </div>
-            </div>
-            
             <p className="text-xs text-muted-foreground">
               Changes will update the tracking information and refresh tracking data.
             </p>

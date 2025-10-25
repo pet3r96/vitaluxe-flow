@@ -17,7 +17,10 @@ Deno.serve(async (req) => {
 
     const { orderLineId, trackingNumber } = await req.json();
 
+    console.log('Amazon tracking API called with:', { orderLineId, trackingNumber });
+
     if (!orderLineId || !trackingNumber) {
+      console.error('Missing required parameters:', { orderLineId, trackingNumber });
       throw new Error('orderLineId and trackingNumber are required');
     }
 
