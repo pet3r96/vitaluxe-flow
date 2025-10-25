@@ -53,6 +53,50 @@ export type Database = {
         }
         Relationships: []
       }
+      active_impersonation_sessions: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          impersonated_role: string
+          impersonated_user_id: string | null
+          impersonated_user_name: string | null
+          impersonation_log_id: string | null
+          last_activity: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          impersonated_role: string
+          impersonated_user_id?: string | null
+          impersonated_user_name?: string | null
+          impersonation_log_id?: string | null
+          last_activity?: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          impersonated_role?: string
+          impersonated_user_id?: string | null
+          impersonated_user_name?: string | null
+          impersonation_log_id?: string | null
+          last_activity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_impersonation_sessions_impersonation_log_id_fkey"
+            columns: ["impersonation_log_id"]
+            isOneToOne: false
+            referencedRelation: "impersonation_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       active_sessions: {
         Row: {
           created_at: string
@@ -4259,6 +4303,7 @@ export type Database = {
       }
       cleanup_expired_cart_lines: { Args: never; Returns: number }
       cleanup_expired_csrf_tokens: { Args: never; Returns: number }
+      cleanup_expired_impersonation_sessions: { Args: never; Returns: number }
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       cleanup_expired_sms_attempts: { Args: never; Returns: undefined }
       cleanup_expired_sms_codes: { Args: never; Returns: undefined }

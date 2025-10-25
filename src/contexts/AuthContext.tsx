@@ -292,7 +292,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           // Clear auth cache
           sessionStorage.removeItem('vitaluxe_auth_cache');
-          sessionStorage.removeItem('vitaluxe_impersonation');
+          // Server-side session will be cleaned up by timeout or explicit end call
           
           // Clear all state
           setUserRole(null);
@@ -492,20 +492,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
             setTimeout(() => {
               void (async () => {
-                // End impersonation log if active
-                const storedImpersonation = sessionStorage.getItem('vitaluxe_impersonation');
-                if (storedImpersonation) {
-                  try {
-                    const { logId } = JSON.parse(storedImpersonation);
-                    if (logId) {
-                      await supabase
-                        .from('impersonation_logs')
-                        .update({ end_time: new Date().toISOString() })
-                        .eq('id', logId);
-                    }
-                  } catch (e) {
-                    logger.error('Error ending impersonation log on deactivation', e);
+                // End impersonation session if active
+                try {
+                  const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation');
+                  if (sessionData?.session) {
+                    await supabase.functions.invoke('end-impersonation');
                   }
+                } catch (e) {
+                  logger.error('Error ending impersonation on deactivation', e);
                 }
                 
                 await supabase.auth.signOut();
@@ -515,7 +509,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setImpersonatedUserName(null);
                 setCurrentLogId(null);
                 setIs2FAVerifiedThisSession(false);
-                sessionStorage.removeItem('vitaluxe_impersonation');
+                // Server-side session cleanup handled above
                 navigate("/auth");
               })();
             }, 3000);
@@ -550,19 +544,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             void checkPasswordStatus(role, userId); // Pass role and userId we just loaded from cache
             void check2FAStatus(userId);
             
-            // Restore impersonation if admin
+            // Restore impersonation if admin - fetch from server
             if (role === 'admin') {
-              const stored = sessionStorage.getItem('vitaluxe_impersonation');
-              if (stored) {
-                try {
-                  const { role: impRole, userId: impUserId, userName, logId } = JSON.parse(stored);
-                  setImpersonatedRole(impRole);
-                  setImpersonatedUserId(impUserId || null);
-                  setImpersonatedUserName(userName || null);
-                  setCurrentLogId(logId || null);
-                } catch (e) {
-                  sessionStorage.removeItem('vitaluxe_impersonation');
+              try {
+                const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation');
+                if (sessionData?.session) {
+                  const session = sessionData.session;
+                  setImpersonatedRole(session.impersonated_role);
+                  setImpersonatedUserId(session.impersonated_user_id || null);
+                  setImpersonatedUserName(session.impersonated_user_name || null);
+                  setCurrentLogId(session.impersonation_log_id || null);
                 }
+              } catch (e) {
+                logger.error('Error fetching active impersonation session', e);
               }
             }
             return;
@@ -626,19 +620,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const canImpersonate = impersonationResult.status === 'fulfilled' && impersonationResult.value.data === true;
       setCanImpersonateDb(canImpersonate);
 
-      // Restore impersonation from sessionStorage if authorized admin
+      // Restore impersonation from server if authorized admin
       if (role === 'admin' && canImpersonate) {
-        const stored = sessionStorage.getItem('vitaluxe_impersonation');
-        if (stored) {
-          try {
-            const { role: impRole, userId: impUserId, userName, logId } = JSON.parse(stored);
-            setImpersonatedRole(impRole);
-            setImpersonatedUserId(impUserId || null);
-            setImpersonatedUserName(userName || null);
-            setCurrentLogId(logId || null);
-          } catch (e) {
-            sessionStorage.removeItem('vitaluxe_impersonation');
+        try {
+          const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation');
+          if (sessionData?.session) {
+            const session = sessionData.session;
+            setImpersonatedRole(session.impersonated_role);
+            setImpersonatedUserId(session.impersonated_user_id || null);
+            setImpersonatedUserName(session.impersonated_user_name || null);
+            setCurrentLogId(session.impersonation_log_id || null);
           }
+        } catch (e) {
+          logger.error('Error fetching active impersonation session', e);
         }
       }
 
@@ -849,10 +843,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Clear auth cache
     sessionStorage.removeItem('vitaluxe_auth_cache');
     
-    // Clear impersonation
-    sessionStorage.removeItem('vitaluxe_impersonation');
+    // Clear impersonation - end server-side session
+    try {
+      await supabase.functions.invoke('end-impersonation');
+    } catch (err) {
+      logger.error('Error ending impersonation on hard timeout', err);
+    }
     
-    // Close impersonation log if active
+    // Close impersonation log if active (backup)
     if (isImpersonating && currentLogId) {
       try {
         await supabase
@@ -1008,13 +1006,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (logData) {
           setCurrentLogId(logData.id);
-          sessionStorage.setItem('vitaluxe_impersonation', JSON.stringify({ 
-            role, 
-            userId: userId || null, 
-            userName: userName || null,
-            logId: logData.id,
-            timestamp: Date.now() 
-          }));
+          // Server-side session creation - no longer using sessionStorage
+          try {
+            const { error: sessionError } = await supabase.functions.invoke('start-impersonation', {
+              body: { role, userId: userId || null, userName: userName || null }
+            });
+            if (sessionError) {
+              logger.error('Error creating server-side impersonation session', sessionError);
+              toast.error("Failed to create impersonation session");
+              return;
+            }
+          } catch (err) {
+            logger.error('Error calling start-impersonation', err);
+            toast.error("Failed to start impersonation");
+            return;
+          }
         }
       } catch (error) {
         logger.error('Error logging impersonation', error);
@@ -1022,7 +1028,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
     } else {
-      sessionStorage.removeItem('vitaluxe_impersonation');
+      // End server-side session when clearing impersonation
+      try {
+        await supabase.functions.invoke('end-impersonation');
+      } catch (err) {
+        logger.error('Error calling end-impersonation', err);
+      }
     }
     
     setImpersonatedRole(role);
@@ -1053,7 +1064,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setImpersonatedUserId(null);
     setImpersonatedUserName(null);
     setCurrentLogId(null);
-    sessionStorage.removeItem('vitaluxe_impersonation');
+    // End server-side session
+    try {
+      await supabase.functions.invoke('end-impersonation');
+    } catch (err) {
+      logger.error('Error calling end-impersonation in clearImpersonation', err);
+    }
     toast.success("Returned to your Admin account");
   };
 
@@ -1110,7 +1126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentLogId(null);
     setTwoFAStatusChecked(false);
     setIs2FAVerifiedThisSession(false);
-    sessionStorage.removeItem('vitaluxe_impersonation');
+    // Server-side session already ended by clearCSRFToken or signOut flow
     setLoading(false);
     navigate("/auth");
   };
