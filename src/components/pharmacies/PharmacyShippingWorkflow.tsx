@@ -477,6 +477,11 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
                   orderLineId={line.id}
                   trackingNumber={line.tracking_number}
                   carrier={line.shipping_carrier}
+                  canEdit={true}
+                  onUpdate={() => {
+                    queryClient.invalidateQueries({ queryKey: ['pharmacy-assigned-orders'] });
+                    queryClient.invalidateQueries({ queryKey: ['order-shipping-details', orderId] });
+                  }}
                 />
               </div>
             ))}

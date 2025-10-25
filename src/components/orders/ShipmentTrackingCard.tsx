@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Loader2, 
   RefreshCw, 
@@ -15,6 +18,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCurrentCSRFToken } from "@/lib/csrf";
 import {
   Table,
   TableBody,
@@ -37,15 +41,24 @@ interface ShipmentTrackingCardProps {
   orderLineId: string;
   trackingNumber?: string;
   carrier?: string;
+  canEdit?: boolean;
+  onUpdate?: () => void;
 }
 
 export const ShipmentTrackingCard = ({ 
   orderLineId, 
   trackingNumber, 
-  carrier 
+  carrier,
+  canEdit = false,
+  onUpdate
 }: ShipmentTrackingCardProps) => {
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
+  
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTrackingNumber, setEditTrackingNumber] = useState(trackingNumber || "");
+  const [editCarrier, setEditCarrier] = useState(carrier || "");
 
   // Fetch tracking information
   const { data: tracking, isLoading, refetch } = useQuery({
@@ -54,14 +67,13 @@ export const ShipmentTrackingCard = ({
       if (!trackingNumber) return null;
 
       const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-        body: { tracking_code: trackingNumber }
+        body: { tracking_code: trackingNumber, carrier: carrier }
       });
 
       if (error) throw error;
       return data.tracking;
     },
     enabled: !!trackingNumber,
-    refetchInterval: 300000, // Refetch every 5 minutes
   });
 
   // Fetch tracking events from database
@@ -86,7 +98,7 @@ export const ShipmentTrackingCard = ({
       if (!trackingNumber) throw new Error("No tracking number available");
       
       const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-        body: { tracking_code: trackingNumber }
+        body: { tracking_code: trackingNumber, carrier: carrier }
       });
 
       if (error) throw error;
@@ -99,6 +111,49 @@ export const ShipmentTrackingCard = ({
     },
     onError: (error: any) => {
       toast.error(`Failed to refresh tracking: ${error.message}`);
+    }
+  });
+
+  // Save tracking changes mutation
+  const saveTrackingMutation = useMutation({
+    mutationFn: async () => {
+      if (!editTrackingNumber.trim()) {
+        throw new Error("Tracking number is required");
+      }
+      if (!editCarrier) {
+        throw new Error("Carrier is required");
+      }
+
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to verify session");
+      }
+
+      const { data, error } = await supabase.functions.invoke("update-shipping-info", {
+        body: {
+          orderLineId: orderLineId,
+          trackingNumber: editTrackingNumber.trim(),
+          carrier: editCarrier.toLowerCase(),
+        },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Tracking information updated");
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["shipment-tracking", orderLineId] });
+      queryClient.invalidateQueries({ queryKey: ["tracking-events", orderLineId] });
+      queryClient.invalidateQueries({ queryKey: ["order-shipping-details"] });
+      queryClient.invalidateQueries({ queryKey: ["pharmacy-assigned-orders"] });
+      if (onUpdate) onUpdate();
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update tracking: ${error.message}`);
     }
   });
 
@@ -163,124 +218,206 @@ export const ShipmentTrackingCard = ({
             <Package className="h-5 w-5 mr-2" />
             Shipment Tracking
           </CardTitle>
-          <div className="flex items-center space-x-2">
-            <Badge variant="outline" className="font-mono text-sm">
-              {trackingNumber}
-            </Badge>
-            {carrier && (
-              <Badge variant="outline">
-                {carrier}
+          
+          {!isEditing ? (
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="font-mono text-sm">
+                {trackingNumber}
               </Badge>
-            )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => refreshTrackingMutation.mutate()}
-              disabled={refreshTrackingMutation.isPending}
-            >
-              {refreshTrackingMutation.isPending ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3" />
+              {carrier && (
+                <Badge variant="outline">
+                  {carrier}
+                </Badge>
               )}
-            </Button>
-          </div>
+              
+              {canEdit && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditTrackingNumber(trackingNumber || "");
+                    setEditCarrier(carrier || "");
+                    setIsEditing(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => refreshTrackingMutation.mutate()}
+                disabled={refreshTrackingMutation.isPending}
+              >
+                {refreshTrackingMutation.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditTrackingNumber(trackingNumber || "");
+                  setEditCarrier(carrier || "");
+                }}
+                disabled={saveTrackingMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => saveTrackingMutation.mutate()}
+                disabled={saveTrackingMutation.isPending || !editTrackingNumber.trim() || !editCarrier}
+              >
+                {saveTrackingMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Saving
+                  </>
+                ) : (
+                  'Save'
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="text-center py-4">
-            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-            <p className="text-sm text-muted-foreground mt-2">Loading tracking information...</p>
-          </div>
-        ) : tracking ? (
+        {isEditing ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                {getStatusIcon(tracking.status)}
-                <span className="font-medium">Current Status</span>
-              </div>
-              {getStatusBadge(tracking.status)}
+            <div className="space-y-2">
+              <Label htmlFor="edit-tracking">Tracking Number</Label>
+              <Input
+                id="edit-tracking"
+                value={editTrackingNumber}
+                onChange={(e) => setEditTrackingNumber(e.target.value)}
+                placeholder="Enter tracking number"
+              />
             </div>
-
-            {tracking.tracking_url && (
-              <div className="flex justify-center">
-                <Button
-                  variant="outline"
-                  onClick={() => window.open(tracking.tracking_url, '_blank')}
-                  className="w-full"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Track on {carrier || 'Carrier'} Website
-                </Button>
-              </div>
-            )}
-
-            {expanded && (
-              <div className="space-y-4">
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">Tracking History</h4>
-                  {trackingEvents && trackingEvents.length > 0 ? (
-                    <div className="space-y-3">
-                      {trackingEvents.map((event, index) => (
-                        <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-shrink-0 mt-1">
-                            {getStatusIcon(event.status)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium">{event.status}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDateTime(event.datetime)}
-                              </p>
-                            </div>
-                            {event.message && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {event.message}
-                              </p>
-                            )}
-                            {event.description && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {event.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center text-muted-foreground py-4">
-                      <Clock className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No tracking events available</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setExpanded(!expanded)}
-              >
-                {expanded ? "Hide Details" : "Show Details"}
-              </Button>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-carrier">Carrier</Label>
+              <Select value={editCarrier} onValueChange={setEditCarrier}>
+                <SelectTrigger id="edit-carrier">
+                  <SelectValue placeholder="Select carrier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USPS">USPS</SelectItem>
+                  <SelectItem value="UPS">UPS</SelectItem>
+                  <SelectItem value="FedEx">FedEx</SelectItem>
+                  <SelectItem value="DHL">DHL</SelectItem>
+                  <SelectItem value="Amazon">Amazon Logistics</SelectItem>
+                  <SelectItem value="CanadaPost">Canada Post</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            
+            <p className="text-xs text-muted-foreground">
+              Changes will update the tracking information and refresh tracking data.
+            </p>
           </div>
         ) : (
-          <div className="text-center text-muted-foreground py-4">
-            <AlertCircle className="h-6 w-6 mx-auto mb-2 opacity-50" />
-            <p>Unable to load tracking information</p>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => refetch()}
-              className="mt-2"
-            >
-              Try Again
-            </Button>
-          </div>
+          isLoading ? (
+            <div className="text-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+              <p className="text-sm text-muted-foreground mt-2">Loading tracking information...</p>
+            </div>
+          ) : tracking ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  {getStatusIcon(tracking.status)}
+                  <span className="font-medium">Current Status</span>
+                </div>
+                {getStatusBadge(tracking.status)}
+              </div>
+
+              {tracking.tracking_url && (
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open(tracking.tracking_url, '_blank')}
+                    className="w-full"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Track on {carrier || 'Carrier'} Website
+                  </Button>
+                </div>
+              )}
+
+              {expanded && (
+                <div className="space-y-4">
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-3">Tracking History</h4>
+                    {trackingEvents && trackingEvents.length > 0 ? (
+                      <div className="space-y-3">
+                        {trackingEvents.map((event, index) => (
+                          <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <div className="flex-shrink-0 mt-1">
+                              {getStatusIcon(event.status)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium">{event.status}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatDateTime(event.datetime)}
+                                </p>
+                              </div>
+                              {event.message && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {event.message}
+                                </p>
+                              )}
+                              {event.description && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {event.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center text-muted-foreground py-4">
+                        <Clock className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No tracking events available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExpanded(!expanded)}
+                >
+                  {expanded ? "Hide Details" : "Show Details"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-4">
+              <AlertCircle className="h-6 w-6 mx-auto mb-2 opacity-50" />
+              <p>Unable to load tracking information</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => refetch()}
+                className="mt-2"
+              >
+                Try Again
+              </Button>
+            </div>
+          )
         )}
       </CardContent>
     </Card>
