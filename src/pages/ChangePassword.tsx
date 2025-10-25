@@ -37,31 +37,44 @@ export default function ChangePassword() {
   
   // State for user email fetched from token
   const [userEmailFromToken, setUserEmailFromToken] = useState<string | null>(null);
+  
+  // State to track if token has been verified (starts true if not in token mode)
+  const [tokenVerified, setTokenVerified] = useState(!tokenMode);
 
-  // Fetch user email from token when in token mode
+  // Verify token immediately when in token mode - redirect if invalid/used
   useEffect(() => {
     if (tokenMode && tokenFromUrl) {
-      const fetchUserFromToken = async () => {
+      setLoading(true);
+      const verifyToken = async () => {
         try {
           const { data, error } = await supabase.functions.invoke('validate-password-token', {
             body: { token: tokenFromUrl }
           });
           
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
+          if (error || !data?.valid) {
+            console.error('Token validation failed:', error || 'Invalid token');
+            toast.error("This password reset link is invalid, expired, or has already been used.");
+            navigate("/auth?message=link_expired_or_used");
+            return;
+          }
           
+          // Token is valid - set email and mark as verified
           if (data?.email) {
             setUserEmailFromToken(data.email);
           }
+          setTokenVerified(true);
         } catch (error) {
-          console.error('Error fetching user from token:', error);
-          // Don't show error to user yet, let them try to submit
+          console.error('Token validation error:', error);
+          toast.error("Failed to verify password reset link.");
+          navigate("/auth?message=link_expired_or_used");
+        } finally {
+          setLoading(false);
         }
       };
       
-      fetchUserFromToken();
+      verifyToken();
     }
-  }, [tokenMode, tokenFromUrl]);
+  }, [tokenMode, tokenFromUrl, navigate]);
 
   // Redirect to login if user is not authenticated (unless in token mode)
   useEffect(() => {
@@ -220,6 +233,21 @@ export default function ChangePassword() {
       setLoading(false);
     }
   };
+
+  // Show loading screen while verifying token
+  if (tokenMode && !tokenVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardContent className="pt-12 pb-8 flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="text-lg font-medium text-foreground">Verifying password reset link...</p>
+            <p className="text-sm text-muted-foreground">Please wait while we validate your request</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
