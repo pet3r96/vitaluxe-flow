@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Hard 60-minute session timeout (no idle tracking)
   const HARD_SESSION_TIMEOUT_MS = 35 * 60 * 1000; // 35 minutes
-  const SESSION_EXP_KEY = 'vitaluxe_session_exp';
+  const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
   const hardTimerRef = useRef<number | null>(null);
   const checkIntervalRef = useRef<number | null>(null);
   
@@ -115,7 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Enrolled - require verification unless already verified for this hard session
         const twoFaKey = `vitaluxe_2fa_verified_until_${userId}`;
         const verifiedUntil = localStorage.getItem(twoFaKey);
-        const sessionExpireAt = localStorage.getItem(SESSION_EXP_KEY);
+        const sessionExpireAt = localStorage.getItem(getSessionExpKey(userId));
         const now = Date.now();
         const isVerified = verifiedUntil && sessionExpireAt
           ? parseInt(verifiedUntil) > now && parseInt(sessionExpireAt) > now
@@ -182,8 +182,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const handleStorage = (e: StorageEvent) => {
-      // Check if session expiration was changed in another tab
-      if (e.key === SESSION_EXP_KEY) {
+      // Check if session expiration was changed in another tab (any user)
+      if (e.key?.startsWith('vitaluxe_session_exp_')) {
         maybeSignOutIfExpired();
       }
     };
@@ -222,7 +222,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           // Set hard session expiration (60 minutes from now)
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
-          localStorage.setItem(SESSION_EXP_KEY, String(expireAt));
+          localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
           
           // Schedule primary hard timeout
           hardTimerRef.current = window.setTimeout(() => {
@@ -278,8 +278,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             checkIntervalRef.current = null;
           }
           
-          // Clear session storage
-          localStorage.removeItem(SESSION_EXP_KEY);
+          // Clear session storage using captured ID
+          if (userIdToClean) {
+            localStorage.removeItem(getSessionExpKey(userIdToClean));
+          }
           
           // Clear 2FA verification using captured ID
           if (userIdToClean) {
@@ -328,7 +330,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Rehydrate 2FA verification status from localStorage (persisted for duration of hard session)
         const verifiedKey = `vitaluxe_2fa_verified_until_${session.user.id}`;
         const verifiedUntil = localStorage.getItem(verifiedKey);
-        const sessionExpireAt = localStorage.getItem(SESSION_EXP_KEY);
+        const sessionExpireAt = localStorage.getItem(getSessionExpKey(session.user.id));
         if (verifiedUntil && sessionExpireAt) {
           const now = Date.now();
           const valid = parseInt(verifiedUntil) > now && parseInt(sessionExpireAt) > now;
@@ -340,7 +342,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         // Check if hard session has expired
-        const expireAt = localStorage.getItem(SESSION_EXP_KEY);
+        const expireAt = localStorage.getItem(getSessionExpKey(session.user.id));
         
         if (expireAt) {
           const timeRemaining = parseInt(expireAt) - Date.now();
@@ -370,7 +372,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // No expiration found (shouldn't happen) - set fresh 60 minute timer
           logger.warn('No session expiration found - creating fresh timer');
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
-          localStorage.setItem(SESSION_EXP_KEY, String(expireAt));
+          localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
           hardTimerRef.current = window.setTimeout(() => {
             void doHardSignOut();
           }, HARD_SESSION_TIMEOUT_MS);
@@ -804,7 +806,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Failsafe check for session expiration - runs periodically to catch edge cases
   const maybeSignOutIfExpired = () => {
-    const expStr = localStorage.getItem(SESSION_EXP_KEY);
+    if (!user?.id) return;
+    const expStr = localStorage.getItem(getSessionExpKey(user.id));
     if (!expStr) return;
     
     const remaining = parseInt(expStr) - Date.now();
@@ -832,7 +835,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     // AGGRESSIVE CLEANUP - do this BEFORE supabase.auth.signOut()
-    localStorage.removeItem(SESSION_EXP_KEY);
+    if (userIdToClean) {
+      localStorage.removeItem(getSessionExpKey(userIdToClean));
+    }
     
     // Clear 2FA verification for current user
     if (userIdToClean) {
@@ -885,7 +890,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       
       // AGGRESSIVE PRE-LOGIN CLEANUP - clear any old session remnants
-      localStorage.removeItem(SESSION_EXP_KEY);
+      // Clear all user-specific session keys (pattern-based cleanup)
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('vitaluxe_session_exp_')) {
+          localStorage.removeItem(key);
+        }
+      }
       sessionStorage.removeItem('vitaluxe_auth_cache');
       
       // Clear any old 2FA verification keys (pattern-based cleanup)
@@ -1060,7 +1071,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       clearTimeout(hardTimerRef.current);
       hardTimerRef.current = null;
     }
-    localStorage.removeItem(SESSION_EXP_KEY);
+    if (user?.id) {
+      localStorage.removeItem(getSessionExpKey(user.id));
+    }
     
     // End impersonation log if active
     if (currentLogId) {
@@ -1104,7 +1117,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const mark2FAVerified = () => {
     console.log('[AuthContext] ✅ mark2FAVerified called');
-    const expStr = localStorage.getItem(SESSION_EXP_KEY);
+    if (!user?.id) return;
+    const expStr = localStorage.getItem(getSessionExpKey(user.id));
     const expireAt = expStr ? parseInt(expStr) : (Date.now() + HARD_SESSION_TIMEOUT_MS);
     if (user?.id) {
       localStorage.setItem(`vitaluxe_2fa_verified_until_${user.id}`, String(expireAt));
