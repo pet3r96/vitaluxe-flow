@@ -62,7 +62,7 @@ export const ShipmentTrackingCard = ({
 
   // Fetch tracking information
   const { data: tracking, isLoading, refetch } = useQuery({
-    queryKey: ["shipment-tracking", orderLineId],
+    queryKey: ["shipment-tracking", orderLineId, trackingNumber, carrier],
     queryFn: async () => {
       if (!trackingNumber) return null;
 
@@ -82,6 +82,12 @@ export const ShipmentTrackingCard = ({
       return data.tracking;
     },
     enabled: !!trackingNumber,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false, // Don't refetch when component remounts
+    retry: 1, // Only retry once on failure
+    retryDelay: 2000, // Wait 2 seconds before retry
   });
 
   // Fetch tracking events from database
@@ -264,9 +270,9 @@ export const ShipmentTrackingCard = ({
                 size="sm"
                 variant="outline"
                 onClick={() => refreshTrackingMutation.mutate()}
-                disabled={refreshTrackingMutation.isPending}
+                disabled={refreshTrackingMutation.isPending || isLoading}
               >
-                {refreshTrackingMutation.isPending ? (
+                {refreshTrackingMutation.isPending || isLoading ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
                   <RefreshCw className="h-3 w-3" />
@@ -425,8 +431,12 @@ export const ShipmentTrackingCard = ({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => refetch()}
+                onClick={() => {
+                  // Add small delay to avoid duplicate in-flight requests
+                  setTimeout(() => refetch(), 1000);
+                }}
                 className="mt-2"
+                disabled={isLoading}
               >
                 Try Again
               </Button>
