@@ -126,9 +126,11 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
     await sendCode();
   };
 
-  const verifyCode = async () => {
+  const verifyCode = async (codeValue?: string) => {
+    const codeToVerify = codeValue || code;
+    
     console.log('[GHLSmsSetupDialog] verifyCode CALLED', { 
-      codeLength: code.length,
+      codeLength: codeToVerify.length,
       hasAttemptId: !!attemptId,
       attemptId: attemptId,
       hasPhone: !!phone,
@@ -141,7 +143,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
       return;
     }
     
-    if (code.length !== 6) {
+    if (codeToVerify.length !== 6) {
       console.log('[GHLSmsSetupDialog] Blocked: code length not 6');
       setError('Please enter the complete 6-digit code');
       return;
@@ -166,7 +168,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
       console.log('[GHLSmsSetupDialog] Calling verify-ghl-sms with attemptId:', attemptId);
 
       const { data, error } = await supabase.functions.invoke('verify-ghl-sms', {
-        body: { code, attemptId, phoneNumber: phone }, // Send attemptId, code, and phoneNumber
+        body: { code: codeToVerify, attemptId, phoneNumber: phone }, // Send attemptId, code, and phoneNumber
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -302,7 +304,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
                   // Auto-submit when all 6 digits are entered
                   if (value.length === 6) {
                     console.log('[GHLSmsSetupDialog] Auto-submitting with attemptId:', attemptId);
-                    verifyCode();
+                    verifyCode(value);
                   }
                 }}
                 disabled={loading}
@@ -325,7 +327,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
             )}
 
             <Button 
-              onClick={verifyCode} 
+              onClick={() => verifyCode()} 
               disabled={code.length !== 6 || loading}
               className="w-full"
             >
