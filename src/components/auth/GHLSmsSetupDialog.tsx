@@ -7,7 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface GHLSmsSetupDialogProps {
@@ -71,6 +71,8 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
   };
 
   const sendCode = async () => {
+    console.log('[GHLSmsSetupDialog] sendCode START', { phone, userId });
+    
     if (!isValidPhone()) {
       setError('Please enter a valid phone number');
       return;
@@ -96,6 +98,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
       
       // Store attemptId for verification
       if (data.attemptId) {
+        console.log('[GHLSmsSetupDialog] SMS sent successfully', { attemptId: data.attemptId });
         setAttemptId(data.attemptId);
       } else {
         throw new Error('No attempt ID received from server');
@@ -120,6 +123,12 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
   };
 
   const verifyCode = async () => {
+    console.log('[GHLSmsSetupDialog] verifyCode START', { 
+      attemptId, 
+      codeLength: code.length,
+      userId 
+    });
+    
     if (code.length !== 6) {
       setError('Please enter the complete 6-digit code');
       return;
@@ -197,6 +206,12 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReturnToLogin = async () => {
+    console.log('[GHLSmsSetupDialog] User clicked Return to Login', { userId });
+    await supabase.auth.signOut();
+    window.location.href = '/auth';
   };
 
   const maskPhone = (phoneNum: string) => {
@@ -306,6 +321,19 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
             >
               {countdown > 0 ? `Resend in ${formatCountdown(countdown)}` : 'Resend Code'}
             </Button>
+
+            <Button 
+              variant="ghost" 
+              onClick={handleReturnToLogin}
+              className="w-full mt-2 text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Cancel & Return to Login
+            </Button>
+
+            <p className="text-xs text-center text-muted-foreground mt-4">
+              Having trouble? Contact support for assistance.
+            </p>
           </div>
         )}
       </DialogContent>

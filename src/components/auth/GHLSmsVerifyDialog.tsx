@@ -65,8 +65,10 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
   };
 
   const sendCode = async () => {
+    console.log('[GHLSmsVerifyDialog] sendCode START', { phoneNumber, userId });
     setLoading(true);
     setError('');
+    setAttemptsRemaining(null);
 
     try {
       // Validate phone number is present
@@ -95,8 +97,8 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
 
       // Store attemptId for verification (in component state only, not sessionStorage)
       if (data.attemptId) {
+        console.log('[GHLSmsVerifyDialog] SMS sent successfully', { attemptId: data.attemptId });
         setAttemptId(data.attemptId);
-        console.log('[GHLSmsVerifyDialog] Attempt ID received from server');
       } else {
         throw new Error('No attempt ID received from server');
       }
