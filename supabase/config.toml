@@ -3,9 +3,6 @@ project_id = "qbtsfajshnrwwlfzkeog"
 [functions.cleanup-test-data]
 verify_jwt = true
 
-[functions.emergency-admin-reset]
-verify_jwt = false
-
 [functions.amazon-get-tracking]
 verify_jwt = true
 

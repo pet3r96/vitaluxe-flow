@@ -82,7 +82,6 @@ const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const AcceptTerms = lazy(() => import("./pages/AcceptTerms"));
 const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const AdminDiscountCodes = lazy(() => import("./pages/AdminDiscountCodes"));
-const EmergencyAdminRecovery = lazy(() => import("./pages/EmergencyAdminRecovery"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"));
@@ -142,7 +141,6 @@ const App = () => (
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
-                  <Route path="/emergency-admin-recovery" element={<EmergencyAdminRecovery />} />
                   <Route
                     path="/*"
                     element={
