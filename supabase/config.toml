@@ -143,3 +143,12 @@ verify_jwt = true
 
 [functions.get-easypost-tracking]
 verify_jwt = true
+
+[functions.get-active-impersonation]
+verify_jwt = true
+
+[functions.start-impersonation]
+verify_jwt = true
+
+[functions.end-impersonation]
+verify_jwt = true

@@ -494,9 +494,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               void (async () => {
                 // End impersonation session if active
                 try {
-                  const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation');
-                  if (sessionData?.session) {
-                    await supabase.functions.invoke('end-impersonation');
+                  const { data: { session: authSession } } = await supabase.auth.getSession();
+                  const token = authSession?.access_token;
+                  if (token) {
+                    const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+                      headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (sessionData?.session) {
+                      await supabase.functions.invoke('end-impersonation', {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                    }
                   }
                 } catch (e) {
                   logger.error('Error ending impersonation on deactivation', e);
