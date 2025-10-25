@@ -197,6 +197,23 @@ export class EasyPostClient {
     weight?: number;
     carrier_detail?: any;
   }> {
+    // Normalize carrier to EasyPost format
+    const normalizeCarrier = (c?: string): string | undefined => {
+      if (!c) return undefined;
+      const normalized = c.toUpperCase();
+      // Map common variations to EasyPost carrier slugs
+      const carrierMap: Record<string, string> = {
+        'USPS': 'USPS',
+        'UPS': 'UPS',
+        'FEDEX': 'FedEx',
+        'DHL': 'DHLExpress',
+        'DHLEXPRESS': 'DHLExpress'
+      };
+      return carrierMap[normalized] || c;
+    };
+
+    const normalizedCarrier = normalizeCarrier(carrier);
+
     try {
       // Build tracker request with optional carrier
       const trackerRequest: any = {
@@ -204,8 +221,8 @@ export class EasyPostClient {
       };
       
       // Add carrier if provided (required for test tracking codes)
-      if (carrier) {
-        trackerRequest.carrier = carrier;
+      if (normalizedCarrier) {
+        trackerRequest.carrier = normalizedCarrier;
       }
       
       console.log('Creating EasyPost tracker:', trackerRequest);
@@ -246,6 +263,46 @@ export class EasyPostClient {
     } catch (error: any) {
       console.error('❌ Tracking retrieval failed:', error);
       
+      // Retry without carrier if mismatch error
+      if (normalizedCarrier && error?.message?.includes('tracking number does not belong to the carrier')) {
+        console.log('🔄 Carrier mismatch detected, retrying without carrier...');
+        
+        try {
+          const trackerRequest = { tracking_code: trackingCode };
+          const response = await this.makeRequest('/trackers', 'POST', trackerRequest);
+          const tracker = response?.tracker ?? response;
+          
+          const events = tracker.tracking_details?.map((event: any) => ({
+            status: event.status,
+            message: event.message,
+            description: event.description,
+            carrier: tracker.carrier,
+            tracking_details: event,
+            datetime: event.datetime
+          })) || [];
+
+          console.log('✅ Retry without carrier successful:', {
+            status: tracker.status,
+            carrier: tracker.carrier,
+            events_count: events.length
+          });
+
+          return {
+            status: tracker.status,
+            events,
+            tracking_url: tracker.public_url || '',
+            carrier: tracker.carrier,
+            est_delivery_date: tracker.est_delivery_date,
+            signed_by: tracker.signed_by,
+            weight: tracker.weight,
+            carrier_detail: tracker.carrier_detail
+          };
+        } catch (retryError) {
+          console.error('❌ Retry without carrier also failed:', retryError);
+          // Fall through to duplicate check
+        }
+      }
+      
       // Fallback for "duplicate request is currently in-flight" error
       if (error?.message?.includes('duplicate request is currently in-flight')) {
         console.log('⏳ Duplicate request detected, waiting and retrying with GET...');
@@ -254,7 +311,7 @@ export class EasyPostClient {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         try {
-          const queryParams = `tracking_code=${encodeURIComponent(trackingCode)}${carrier ? `&carrier=${encodeURIComponent(carrier)}` : ''}`;
+          const queryParams = `tracking_code=${encodeURIComponent(trackingCode)}${normalizedCarrier ? `&carrier=${encodeURIComponent(normalizedCarrier)}` : ''}`;
           const listResponse = await this.makeRequest(`/trackers?${queryParams}`, 'GET');
           
           // Get first tracker from list
@@ -271,6 +328,7 @@ export class EasyPostClient {
 
           console.log('✅ Fallback GET successful:', {
             status: tracker.status,
+            carrier: tracker.carrier,
             events_count: events.length
           });
 
