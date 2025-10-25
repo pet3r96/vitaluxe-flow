@@ -66,8 +66,16 @@ export const ShipmentTrackingCard = ({
     queryFn: async () => {
       if (!trackingNumber) return null;
 
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to verify session");
+      }
+
       const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-        body: { tracking_code: trackingNumber, carrier: carrier }
+        body: { tracking_code: trackingNumber, carrier: carrier },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       });
 
       if (error) throw error;
@@ -97,8 +105,16 @@ export const ShipmentTrackingCard = ({
     mutationFn: async () => {
       if (!trackingNumber) throw new Error("No tracking number available");
       
+      const csrfToken = await getCurrentCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to verify session");
+      }
+      
       const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-        body: { tracking_code: trackingNumber, carrier: carrier }
+        body: { tracking_code: trackingNumber, carrier: carrier },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       });
 
       if (error) throw error;
