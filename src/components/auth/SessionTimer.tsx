@@ -9,7 +9,7 @@ interface SessionTimerProps {
 
 export const SessionTimer = ({ userId }: SessionTimerProps) => {
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
-  const SESSION_EXP_KEY = 'vitaluxe_session_exp';
+  const SESSION_EXP_KEY = `vitaluxe_session_exp_${userId}`;
 
   useEffect(() => {
     const updateTimer = () => {
@@ -41,7 +41,7 @@ export const SessionTimer = ({ userId }: SessionTimerProps) => {
   const isCritical = minutes < 1;
 
   return (
-    <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-md border border-border/50">
+    <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md border border-border/50 shadow-lg">
       <Clock className="h-4 w-4 text-muted-foreground" />
       <span className={cn(
         "font-mono text-sm font-medium",
