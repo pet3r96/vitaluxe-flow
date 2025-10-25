@@ -210,10 +210,13 @@ export class EasyPostClient {
       
       console.log('Creating EasyPost tracker:', trackerRequest);
       
-      // Create a tracker first (EasyPost requires this for new tracking codes)
+      // Create a tracker (EasyPost requires this for new tracking codes)
       const response = await this.makeRequest('/trackers', 'POST', trackerRequest);
 
-      const tracker = response;
+      // Parse tracker from response - EasyPost returns { tracker: {...} }
+      const tracker = response?.tracker ?? response;
+      
+      // Map tracking events from tracking_details
       const events = tracker.tracking_details?.map((event: any) => ({
         status: event.status,
         message: event.message,
@@ -222,6 +225,13 @@ export class EasyPostClient {
         tracking_details: event,
         datetime: event.datetime
       })) || [];
+
+      console.log('✅ Parsed EasyPost tracking:', {
+        status: tracker.status,
+        carrier: tracker.carrier,
+        events_count: events.length,
+        has_url: !!tracker.public_url
+      });
 
       return {
         status: tracker.status,
@@ -233,8 +243,53 @@ export class EasyPostClient {
         weight: tracker.weight,
         carrier_detail: tracker.carrier_detail
       };
-    } catch (error) {
-      console.error('Tracking retrieval failed:', error);
+    } catch (error: any) {
+      console.error('❌ Tracking retrieval failed:', error);
+      
+      // Fallback for "duplicate request is currently in-flight" error
+      if (error?.message?.includes('duplicate request is currently in-flight')) {
+        console.log('⏳ Duplicate request detected, waiting and retrying with GET...');
+        
+        // Wait 1 second then try GET endpoint
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          const queryParams = `tracking_code=${encodeURIComponent(trackingCode)}${carrier ? `&carrier=${encodeURIComponent(carrier)}` : ''}`;
+          const listResponse = await this.makeRequest(`/trackers?${queryParams}`, 'GET');
+          
+          // Get first tracker from list
+          const tracker = (listResponse?.trackers && listResponse.trackers[0]) || listResponse?.tracker || listResponse;
+          
+          const events = tracker.tracking_details?.map((event: any) => ({
+            status: event.status,
+            message: event.message,
+            description: event.description,
+            carrier: tracker.carrier,
+            tracking_details: event,
+            datetime: event.datetime
+          })) || [];
+
+          console.log('✅ Fallback GET successful:', {
+            status: tracker.status,
+            events_count: events.length
+          });
+
+          return {
+            status: tracker.status,
+            events,
+            tracking_url: tracker.public_url || '',
+            carrier: tracker.carrier,
+            est_delivery_date: tracker.est_delivery_date,
+            signed_by: tracker.signed_by,
+            weight: tracker.weight,
+            carrier_detail: tracker.carrier_detail
+          };
+        } catch (fallbackError) {
+          console.error('❌ Fallback GET also failed:', fallbackError);
+          throw fallbackError;
+        }
+      }
+      
       throw error;
     }
   }

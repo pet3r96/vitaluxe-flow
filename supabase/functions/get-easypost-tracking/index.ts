@@ -185,6 +185,13 @@ serve(async (req: Request) => {
       }
     }
 
+    console.log('✅ Tracking retrieved:', {
+      status: tracking.status,
+      events_count: tracking.events.length,
+      carrier: tracking.carrier,
+      has_url: !!tracking.tracking_url
+    });
+
     return new Response(
       JSON.stringify({
         success: true,

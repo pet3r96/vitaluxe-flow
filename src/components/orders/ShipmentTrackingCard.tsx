@@ -101,7 +101,13 @@ export const ShipmentTrackingCard = ({
         .order("event_time", { ascending: false });
 
       if (error) throw error;
-      return data as unknown as TrackingEvent[];
+      if (!data) return [];
+      
+      // Map event_time to datetime for consistent property names
+      return data.map((e: any) => ({ 
+        ...e, 
+        datetime: e.event_time 
+      })) as TrackingEvent[];
     },
     enabled: !!orderLineId,
   });
@@ -180,6 +186,8 @@ export const ShipmentTrackingCard = ({
   });
 
   const getStatusIcon = (status: string) => {
+    if (!status) return <AlertCircle className="h-4 w-4 text-red-500" />;
+    
     switch (status.toLowerCase()) {
       case "delivered":
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
@@ -195,6 +203,10 @@ export const ShipmentTrackingCard = ({
   };
 
   const getStatusBadge = (status: string) => {
+    if (!status) {
+      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Unknown</Badge>;
+    }
+    
     switch (status.toLowerCase()) {
       case "delivered":
         return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle2 className="h-3 w-3 mr-1" />Delivered</Badge>;
