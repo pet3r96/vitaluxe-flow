@@ -16,6 +16,36 @@ interface RoutingResult {
   reason: string;
 }
 
+/**
+ * Helper function to safely extract priority from priority_map
+ * Validates structure and normalizes state code case
+ * @param pharmacy - Pharmacy object with priority_map
+ * @param state - Two-letter state code
+ * @returns Priority number (lower = higher priority, 999 = default/lowest)
+ */
+function getPriority(pharmacy: any, state: string): number {
+  // Validate priority_map exists and is an object
+  if (!pharmacy.priority_map || typeof pharmacy.priority_map !== 'object') {
+    return 999;
+  }
+  
+  // Try both uppercase and lowercase versions of state code
+  const priorityUpper = pharmacy.priority_map[state.toUpperCase()];
+  const priorityLower = pharmacy.priority_map[state.toLowerCase()];
+  const priority = priorityUpper ?? priorityLower;
+  
+  // Validate priority is a positive number
+  return typeof priority === 'number' && priority > 0 ? priority : 999;
+}
+
+/**
+ * Routes an order to the best available pharmacy based on:
+ * - Product assignment
+ * - State servicing
+ * - Topline rep scoping
+ * - Priority system (lower number = higher priority)
+ * - Random selection among same-priority pharmacies for load distribution
+ */
 async function routeOrderToPharmacy(
   supabase: any,
   product_id: string,
@@ -84,26 +114,22 @@ async function routeOrderToPharmacy(
       p && p.active && p.states_serviced?.includes(trimmedState)
     );
 
-  // 3. Apply topline scoping filter if user has a topline
+  // 3. Apply topline scoping filter if user has a topline (OPTIMIZED QUERY)
   if (user_topline_rep_id) {
     const pharmacyIds = eligiblePharmacies.map((p: any) => p.id);
     
-    // Get pharmacy scope assignments
+    // Single query to get all scope data
     const { data: scopeData } = await supabase
       .from("pharmacy_rep_assignments")
-      .select("pharmacy_id")
+      .select("pharmacy_id, topline_rep_id")
       .in("pharmacy_id", pharmacyIds);
     
     // Build sets for efficient lookups
     const scopedPharmacyIds = new Set(scopeData?.map((s: any) => s.pharmacy_id) || []);
-    
-    // Get user's assigned pharmacies
-    const { data: userAssignments } = await supabase
-      .from("pharmacy_rep_assignments")
-      .select("pharmacy_id")
-      .eq("topline_rep_id", user_topline_rep_id);
-    
-    const userPharmacyIds = new Set(userAssignments?.map((a: any) => a.pharmacy_id) || []);
+    const userPharmacyIds = new Set(
+      scopeData?.filter((s: any) => s.topline_rep_id === user_topline_rep_id)
+        .map((s: any) => s.pharmacy_id) || []
+    );
     
     // Filter: include pharmacy if it's global (not scoped) OR user has access
     eligiblePharmacies = eligiblePharmacies.filter((p: any) => 
@@ -116,33 +142,103 @@ async function routeOrderToPharmacy(
   console.log(`Found ${eligiblePharmacies.length} eligible pharmacies for state ${trimmedState}`);
 
   if (eligiblePharmacies.length === 0) {
+    await supabase.from("order_routing_log").insert({
+      product_id,
+      destination_state: trimmedState,
+      user_topline_rep_id,
+      eligible_pharmacies: [],
+      selected_pharmacy_id: null,
+      selected_pharmacy_name: null,
+      selection_reason: `No active pharmacies serve state: ${trimmedState}`,
+      priority_used: null
+    });
+    
     return { 
       pharmacy_id: null, 
       reason: `No active pharmacies serve state: ${trimmedState}` 
     };
   }
 
-  // 3. If only one pharmacy, return it
+  // 4. Single pharmacy match
   if (eligiblePharmacies.length === 1) {
-    console.log(`Single pharmacy match: ${eligiblePharmacies[0].name}`);
+    const selectedPharmacy = eligiblePharmacies[0];
+    const priority = getPriority(selectedPharmacy, trimmedState);
+    
+    console.log(`Single pharmacy match: ${selectedPharmacy.name}`);
+    
+    await supabase.from("order_routing_log").insert({
+      product_id,
+      destination_state: trimmedState,
+      user_topline_rep_id,
+      eligible_pharmacies: [{
+        id: selectedPharmacy.id,
+        name: selectedPharmacy.name,
+        priority
+      }],
+      selected_pharmacy_id: selectedPharmacy.id,
+      selected_pharmacy_name: selectedPharmacy.name,
+      selection_reason: `Single pharmacy match: ${selectedPharmacy.name}`,
+      priority_used: priority
+    });
+    
     return { 
-      pharmacy_id: eligiblePharmacies[0].id, 
-      reason: `Single pharmacy match: ${eligiblePharmacies[0].name}` 
+      pharmacy_id: selectedPharmacy.id, 
+      reason: `Single pharmacy match: ${selectedPharmacy.name}` 
     };
   }
 
-  // 4. Apply priority routing
+  // 5. Apply priority routing with validated priority extraction
   const pharmaciesWithPriority = eligiblePharmacies.map((pharmacy: any) => ({
     ...pharmacy,
-    priority: pharmacy.priority_map?.[trimmedState] || 999 // Default to lowest
+    priority: getPriority(pharmacy, trimmedState)
   }));
 
   // Sort by priority (lowest number = highest priority)
-  pharmaciesWithPriority.sort((a: any, b: any) => a.priority - b.priority);
+  // Tie-breaker: alphabetical by name for consistency
+  pharmaciesWithPriority.sort((a: any, b: any) => {
+    const priorityDiff = a.priority - b.priority;
+    if (priorityDiff !== 0) return priorityDiff;
+    return a.name.localeCompare(b.name);
+  });
 
-  const selectedPharmacy = pharmaciesWithPriority[0];
+  // Log all eligible pharmacies with their priorities
+  console.log(`Eligible pharmacies for ${trimmedState}:`, 
+    pharmaciesWithPriority.map((p: any) => ({ 
+      name: p.name, 
+      priority: p.priority,
+      id: p.id 
+    }))
+  );
+
+  // 6. Random selection within highest priority tier
+  const highestPriority = pharmaciesWithPriority[0].priority;
+  const topPriorityPharmacies = pharmaciesWithPriority.filter(
+    (p: any) => p.priority === highestPriority
+  );
+
+  // Random selection for load distribution
+  const selectedPharmacy = topPriorityPharmacies[
+    Math.floor(Math.random() * topPriorityPharmacies.length)
+  ];
 
   console.log(`Priority routing selected: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority})`);
+  console.log(`Selected from ${topPriorityPharmacies.length} pharmacies with same priority`);
+
+  // 7. Audit logging
+  await supabase.from("order_routing_log").insert({
+    product_id,
+    destination_state: trimmedState,
+    user_topline_rep_id,
+    eligible_pharmacies: pharmaciesWithPriority.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      priority: p.priority
+    })),
+    selected_pharmacy_id: selectedPharmacy.id,
+    selected_pharmacy_name: selectedPharmacy.name,
+    selection_reason: `Priority routing: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority} for ${trimmedState}, randomly selected from ${topPriorityPharmacies.length} pharmacy(ies) with same priority)`,
+    priority_used: selectedPharmacy.priority
+  });
 
   return { 
     pharmacy_id: selectedPharmacy.id, 

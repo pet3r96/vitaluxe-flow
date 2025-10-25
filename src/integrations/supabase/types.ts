@@ -1689,6 +1689,45 @@ export type Database = {
           },
         ]
       }
+      order_routing_log: {
+        Row: {
+          created_at: string | null
+          destination_state: string
+          eligible_pharmacies: Json | null
+          id: string
+          priority_used: number | null
+          product_id: string
+          selected_pharmacy_id: string | null
+          selected_pharmacy_name: string | null
+          selection_reason: string | null
+          user_topline_rep_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          destination_state: string
+          eligible_pharmacies?: Json | null
+          id?: string
+          priority_used?: number | null
+          product_id: string
+          selected_pharmacy_id?: string | null
+          selected_pharmacy_name?: string | null
+          selection_reason?: string | null
+          user_topline_rep_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          destination_state?: string
+          eligible_pharmacies?: Json | null
+          id?: string
+          priority_used?: number | null
+          product_id?: string
+          selected_pharmacy_id?: string | null
+          selected_pharmacy_name?: string | null
+          selection_reason?: string | null
+          user_topline_rep_id?: string | null
+        }
+        Relationships: []
+      }
       order_status_configs: {
         Row: {
           color_class: string
