@@ -548,11 +548,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (role === 'admin') {
               try {
                 const { data: { session: authSession } } = await supabase.auth.getSession();
-                const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
-                  headers: {
-                    Authorization: `Bearer ${authSession?.access_token}`
-                  }
-                });
+                const token = authSession?.access_token;
+                let sessionData: any;
+                if (token) {
+                  ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+                    headers: { Authorization: `Bearer ${token}` }
+                  }));
+                } else {
+                  ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation'));
+                }
                 if (sessionData?.session) {
                   const session = sessionData.session;
                   setImpersonatedRole(session.impersonated_role);
@@ -629,11 +633,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (role === 'admin' && canImpersonate) {
         try {
           const { data: { session: authSession } } = await supabase.auth.getSession();
-          const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
-            headers: {
-              Authorization: `Bearer ${authSession?.access_token}`
-            }
-          });
+          const token = authSession?.access_token;
+          let sessionData: any;
+          if (token) {
+            ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+              headers: { Authorization: `Bearer ${token}` }
+            }));
+          } else {
+            ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation'));
+          }
           if (sessionData?.session) {
             const session = sessionData.session;
             setImpersonatedRole(session.impersonated_role);
@@ -1019,17 +1027,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Server-side session creation - no longer using sessionStorage
           try {
             const { data: { session: authSession } } = await supabase.auth.getSession();
-            const { data, error: sessionError } = await supabase.functions.invoke('start-impersonation', {
+            const token = authSession?.access_token;
+            const options: any = {
               body: { 
                 role, 
                 userId: userId || null, 
                 userName: userName || null,
                 targetEmail: targetEmail || null
               },
-              headers: {
-                Authorization: `Bearer ${authSession?.access_token}`
-              }
-            });
+            };
+            if (token) options.headers = { Authorization: `Bearer ${token}` };
+            const { data, error: sessionError } = await supabase.functions.invoke('start-impersonation', options);
             if (sessionError) {
               logger.error('Error creating server-side impersonation session', sessionError);
               const errorMsg = sessionError.message || 'Failed to create impersonation session';
@@ -1087,11 +1095,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // End server-side session
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
-      const { error } = await supabase.functions.invoke('end-impersonation', {
-        headers: {
-          Authorization: `Bearer ${authSession?.access_token}`
-        }
-      });
+      const token = authSession?.access_token;
+      let error: any;
+      if (token) {
+        ({ error } = await supabase.functions.invoke('end-impersonation', {
+          headers: { Authorization: `Bearer ${token}` }
+        }));
+      } else {
+        ({ error } = await supabase.functions.invoke('end-impersonation'));
+      }
       if (error) {
         logger.error('Error ending impersonation session', error);
       }
