@@ -80,7 +80,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Check if token was already used
-    if (resetToken.used_at) {
+    // For temp_password tokens, check both 'used' boolean and 'used_at' timestamp
+    // For password_reset tokens, check only 'used_at'
+    const isTokenUsed = tokenSource === 'temp_password' 
+      ? (resetToken.used || resetToken.used_at)
+      : resetToken.used_at;
+    
+    if (isTokenUsed) {
       return new Response(
         JSON.stringify({ error: "Reset token has already been used" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

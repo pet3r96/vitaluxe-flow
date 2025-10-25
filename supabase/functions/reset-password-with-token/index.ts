@@ -108,11 +108,22 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Mark token as used in the appropriate table
-    const tableName = tokenSource === 'temp_password' ? 'temp_password_tokens' : 'password_reset_tokens';
-    await supabaseAdmin
-      .from(tableName)
-      .update({ used_at: new Date().toISOString() })
-      .eq('token', token);
+    if (tokenSource === 'temp_password') {
+      // For temp_password_tokens, update both 'used' boolean and 'used_at' timestamp
+      await supabaseAdmin
+        .from('temp_password_tokens')
+        .update({ 
+          used: true,
+          used_at: new Date().toISOString() 
+        })
+        .eq('token', token);
+    } else {
+      // For password_reset_tokens, update only 'used_at' timestamp
+      await supabaseAdmin
+        .from('password_reset_tokens')
+        .update({ used_at: new Date().toISOString() })
+        .eq('token', token);
+    }
 
     // Update user_password_status - DO NOT set must_change_password
     // (user chose their own password, no forced change needed)
