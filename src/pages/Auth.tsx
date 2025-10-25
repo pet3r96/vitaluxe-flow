@@ -395,7 +395,7 @@ const Auth = () => {
           <div className="mb-6 flex items-start gap-2 rounded-lg bg-accent/50 border border-border/50 p-3 backdrop-blur-sm">
             <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
             <p className="text-xs text-white leading-relaxed">
-              For Security & Compliance, you'll be automatically logged out after 60 minutes.
+              For Security & Compliance, you'll be automatically logged out after 30 minutes.
             </p>
           </div>
         )}
