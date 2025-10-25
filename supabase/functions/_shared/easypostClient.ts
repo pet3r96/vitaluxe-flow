@@ -187,7 +187,7 @@ export class EasyPostClient {
   /**
    * Get tracking information for a tracking code
    */
-  async getTracking(trackingCode: string): Promise<{
+  async getTracking(trackingCode: string, carrier?: string): Promise<{
     status: string;
     events: EasyPostTrackingEvent[];
     tracking_url: string;
@@ -198,10 +198,20 @@ export class EasyPostClient {
     carrier_detail?: any;
   }> {
     try {
-      // Create a tracker first (EasyPost requires this for new tracking codes)
-      const response = await this.makeRequest('/trackers', 'POST', {
+      // Build tracker request with optional carrier
+      const trackerRequest: any = {
         tracking_code: trackingCode
-      });
+      };
+      
+      // Add carrier if provided (required for test tracking codes)
+      if (carrier) {
+        trackerRequest.carrier = carrier;
+      }
+      
+      console.log('Creating EasyPost tracker:', trackerRequest);
+      
+      // Create a tracker first (EasyPost requires this for new tracking codes)
+      const response = await this.makeRequest('/trackers', 'POST', trackerRequest);
 
       const tracker = response;
       const events = tracker.tracking_details?.map((event: any) => ({

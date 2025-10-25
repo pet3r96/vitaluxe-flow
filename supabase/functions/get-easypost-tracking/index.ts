@@ -12,6 +12,7 @@ interface GetTrackingRequest {
   tracking_code?: string;
   order_line_id?: string;
   create_tracker?: boolean;
+  carrier?: string;
 }
 
 serve(async (req: Request) => {
@@ -129,10 +130,10 @@ serve(async (req: Request) => {
     // Create EasyPost client
     const easyPostClient = createEasyPostClient();
 
-    console.log('Getting tracking for:', trackingCode);
+    console.log('Getting tracking for:', trackingCode, requestData.carrier ? `with carrier: ${requestData.carrier}` : '(auto-detect carrier)');
 
-    // Get tracking information from EasyPost
-    const tracking = await easyPostClient.getTracking(trackingCode);
+    // Get tracking information from EasyPost with optional carrier
+    const tracking = await easyPostClient.getTracking(trackingCode, requestData.carrier);
 
     // Store tracking events in database
     if (orderLineId && tracking.events.length > 0) {

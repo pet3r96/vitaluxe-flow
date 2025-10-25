@@ -28,6 +28,7 @@ export const EasyPostShipmentManager = () => {
   const [testMode, setTestMode] = useState<'order' | 'manual'>('order');
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [manualTrackingCode, setManualTrackingCode] = useState("");
+  const [selectedCarrier, setSelectedCarrier] = useState<string>('USPS');
   const [trackingResult, setTrackingResult] = useState<any>(null);
   const [isTestingTracking, setIsTestingTracking] = useState(false);
 
@@ -83,7 +84,10 @@ export const EasyPostShipmentManager = () => {
       }
 
       const { data, error } = await supabase.functions.invoke('get-easypost-tracking', {
-        body: { tracking_code: trackingCode },
+        body: { 
+          tracking_code: trackingCode,
+          carrier: selectedCarrier
+        },
         headers: {
           'x-csrf-token': csrfToken
         }
@@ -178,17 +182,39 @@ export const EasyPostShipmentManager = () => {
 
           {/* Manual Entry Mode */}
           {testMode === 'manual' && (
-            <div className="space-y-2">
-              <Label htmlFor="tracking-code">Enter Tracking Code</Label>
-              <Input
-                id="tracking-code"
-                placeholder="e.g., 1Z999AA10123456784"
-                value={manualTrackingCode}
-                onChange={(e) => setManualTrackingCode(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter any tracking code from USPS, UPS, FedEx, or other carriers supported by EasyPost
-              </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="tracking-code">Enter Tracking Code</Label>
+                <Input
+                  id="tracking-code"
+                  placeholder="e.g., EZ1000000001 or 1Z999AA10123456784"
+                  value={manualTrackingCode}
+                  onChange={(e) => setManualTrackingCode(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter any tracking code from USPS, UPS, FedEx, or EasyPost test codes (EZ1000000001-EZ7000000007)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="carrier">Carrier</Label>
+                <Select value={selectedCarrier} onValueChange={setSelectedCarrier}>
+                  <SelectTrigger id="carrier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USPS">USPS</SelectItem>
+                    <SelectItem value="UPS">UPS</SelectItem>
+                    <SelectItem value="FedEx">FedEx</SelectItem>
+                    <SelectItem value="DHL">DHL</SelectItem>
+                    <SelectItem value="CanadaPost">Canada Post</SelectItem>
+                    <SelectItem value="AustraliaPost">Australia Post</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Required for EasyPost test codes (EZ1000000001-EZ7000000007). Real tracking numbers will auto-detect the carrier.
+                </p>
+              </div>
             </div>
           )}
 
