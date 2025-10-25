@@ -74,8 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
   const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
   
-  // Hard 60-minute session timeout (no idle tracking)
-  const HARD_SESSION_TIMEOUT_MS = 35 * 60 * 1000; // 35 minutes
+  // Hard 30-minute session timeout (no idle tracking)
+  const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
   const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
   const hardTimerRef = useRef<number | null>(null);
   const checkIntervalRef = useRef<number | null>(null);
@@ -220,7 +220,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             checkIntervalRef.current = null;
           }
           
-          // Set hard session expiration (60 minutes from now)
+          // Set hard session expiration (30 minutes from now)
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
           
@@ -237,7 +237,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           logger.info('Session timer started', { 
             expiresAt: new Date(expireAt).toISOString(),
-            minutesRemaining: 60 
+            minutesRemaining: 30 
           });
           
           // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
@@ -369,7 +369,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }, 30000);
           }
         } else {
-          // No expiration found (shouldn't happen) - set fresh 60 minute timer
+          // No expiration found (shouldn't happen) - set fresh 30 minute timer
           logger.warn('No session expiration found - creating fresh timer');
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
