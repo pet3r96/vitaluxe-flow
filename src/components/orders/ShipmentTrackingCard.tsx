@@ -179,6 +179,9 @@ export const ShipmentTrackingCard = ({
       queryClient.invalidateQueries({ queryKey: ["order-shipping-details"] });
       queryClient.invalidateQueries({ queryKey: ["pharmacy-assigned-orders"] });
       if (onUpdate) onUpdate();
+      
+      // Trigger automatic refresh after save
+      setTimeout(() => refetch(), 500);
     },
     onError: (error: any) => {
       toast.error(`Failed to update tracking: ${error.message}`);
@@ -351,6 +354,45 @@ export const ShipmentTrackingCard = ({
               </Select>
             </div>
             
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Use EasyPost Test Codes</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditTrackingNumber("EZ1000000001");
+                    setEditCarrier("USPS");
+                  }}
+                >
+                  Pre-Transit
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditTrackingNumber("EZ1000000002");
+                    setEditCarrier("USPS");
+                  }}
+                >
+                  In Transit
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditTrackingNumber("EZ1000000003");
+                    setEditCarrier("USPS");
+                  }}
+                >
+                  Delivered
+                </Button>
+              </div>
+            </div>
+            
             <p className="text-xs text-muted-foreground">
               Changes will update the tracking information and refresh tracking data.
             </p>
@@ -364,9 +406,16 @@ export const ShipmentTrackingCard = ({
           ) : tracking ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(tracking.status)}
-                  <span className="font-medium">Current Status</span>
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    {getStatusIcon(tracking.status)}
+                    <span className="font-medium">Current Status</span>
+                  </div>
+                  {canEdit && tracking.events && (
+                    <p className="text-xs text-muted-foreground ml-6">
+                      Events received: {tracking.events.length}
+                    </p>
+                  )}
                 </div>
                 {getStatusBadge(tracking.status)}
               </div>
