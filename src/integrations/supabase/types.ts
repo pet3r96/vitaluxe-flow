@@ -3723,45 +3723,6 @@ export type Database = {
         }
         Relationships: []
       }
-      two_fa_verification_codes: {
-        Row: {
-          attempts: number
-          code: string
-          code_type: Database["public"]["Enums"]["verification_code_type"]
-          created_at: string
-          expires_at: string
-          id: string
-          phone_number: string
-          user_id: string
-          verified: boolean
-          verified_at: string | null
-        }
-        Insert: {
-          attempts?: number
-          code: string
-          code_type?: Database["public"]["Enums"]["verification_code_type"]
-          created_at?: string
-          expires_at: string
-          id?: string
-          phone_number: string
-          user_id: string
-          verified?: boolean
-          verified_at?: string | null
-        }
-        Update: {
-          attempts?: number
-          code?: string
-          code_type?: Database["public"]["Enums"]["verification_code_type"]
-          created_at?: string
-          expires_at?: string
-          id?: string
-          phone_number?: string
-          user_id?: string
-          verified?: boolean
-          verified_at?: string | null
-        }
-        Relationships: []
-      }
       user_2fa_settings: {
         Row: {
           created_at: string
@@ -4499,7 +4460,6 @@ export type Database = {
       payment_status: "pending" | "completed"
       shipping_carrier: "fedex" | "ups" | "usps" | "amazon"
       shipping_speed: "ground" | "2day" | "overnight"
-      verification_code_type: "2fa_setup" | "2fa_login"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4661,7 +4621,6 @@ export const Constants = {
       payment_status: ["pending", "completed"],
       shipping_carrier: ["fedex", "ups", "usps", "amazon"],
       shipping_speed: ["ground", "2day", "overnight"],
-      verification_code_type: ["2fa_setup", "2fa_login"],
     },
   },
 } as const

@@ -191,7 +191,6 @@ serve(async (req) => {
         audit_logs_archive: await getCount('audit_logs_archive', 'non_admin'),
         active_sessions: await getCount('active_sessions', 'non_admin'),
         security_events: await getCount('security_events', 'non_admin'),
-        two_fa_verification_codes: await getCount('two_fa_verification_codes', 'non_admin'),
         two_fa_reset_logs: await getCount('two_fa_reset_logs'),
         user_2fa_settings: await getCount('user_2fa_settings', 'non_admin'),
         sync_logs: await getCount('sync_logs'),
@@ -353,7 +352,6 @@ serve(async (req) => {
     deleted_counts.audit_logs_archive = await deleteRecords('audit_logs_archive', 'non_admin');
     deleted_counts.active_sessions = await deleteRecords('active_sessions', 'non_admin');
     deleted_counts.security_events = await deleteRecords('security_events', 'non_admin');
-    deleted_counts.two_fa_verification_codes = await deleteRecords('two_fa_verification_codes', 'non_admin');
     deleted_counts.two_fa_reset_logs = await deleteRecords('two_fa_reset_logs', 'all');
     deleted_counts.user_2fa_settings = await deleteRecords('user_2fa_settings', 'non_admin');
     deleted_counts.sync_logs = await deleteRecords('sync_logs', 'all');
