@@ -98,8 +98,12 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
       
       // Store attemptId for verification
       if (data.attemptId) {
-        console.log('[GHLSmsSetupDialog] SMS sent successfully', { attemptId: data.attemptId });
+        console.log('[GHLSmsSetupDialog] SMS sent successfully - SETTING attemptId', { 
+          attemptId: data.attemptId 
+        });
         setAttemptId(data.attemptId);
+        // Verify it was set
+        console.log('[GHLSmsSetupDialog] State after setAttemptId - current value:', data.attemptId);
       } else {
         throw new Error('No attempt ID received from server');
       }
@@ -123,19 +127,29 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
   };
 
   const verifyCode = async () => {
-    console.log('[GHLSmsSetupDialog] verifyCode START', { 
-      attemptId, 
+    console.log('[GHLSmsSetupDialog] verifyCode CALLED', { 
       codeLength: code.length,
+      hasAttemptId: !!attemptId,
+      attemptId: attemptId,
+      hasPhone: !!phone,
+      loading,
       userId 
     });
     
+    if (loading) {
+      console.log('[GHLSmsSetupDialog] Blocked: already loading');
+      return;
+    }
+    
     if (code.length !== 6) {
+      console.log('[GHLSmsSetupDialog] Blocked: code length not 6');
       setError('Please enter the complete 6-digit code');
       return;
     }
 
     if (!attemptId) {
-      setError('Verification session expired. Please request a new code.');
+      console.log('[GHLSmsSetupDialog] BLOCKED: No attemptId!', { attemptIdState: attemptId });
+      setError('Session expired. Please resend the code.');
       return;
     }
 
@@ -278,10 +292,16 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
                 maxLength={6}
                 value={code}
                 onChange={(value) => {
+                  console.log('[GHLSmsSetupDialog] Code input changed', {
+                    length: value.length,
+                    willAutoSubmit: value.length === 6,
+                    currentAttemptId: attemptId
+                  });
                   setCode(value);
                   setError('');
                   // Auto-submit when all 6 digits are entered
                   if (value.length === 6) {
+                    console.log('[GHLSmsSetupDialog] Auto-submitting with attemptId:', attemptId);
                     verifyCode();
                   }
                 }}
