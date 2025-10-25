@@ -69,10 +69,12 @@ Deno.serve(async (req) => {
     const { data: logData, error: logError } = await supabase
       .from('impersonation_logs')
       .insert({
-        admin_user_id: user.id,
-        impersonated_role: role,
-        impersonated_user_id: userId || null,
-        target_email: targetEmail || null,
+        impersonator_id: user.id,
+        impersonator_email: user.email || '',
+        target_user_id: userId || null,
+        target_user_email: targetEmail || '',
+        target_user_name: userName || '',
+        target_role: role,
         start_time: new Date().toISOString(),
       })
       .select('id')

@@ -547,7 +547,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Restore impersonation if admin - fetch from server
             if (role === 'admin') {
               try {
-                const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation');
+                const { data: { session: authSession } } = await supabase.auth.getSession();
+                const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+                  headers: {
+                    Authorization: `Bearer ${authSession?.access_token}`
+                  }
+                });
                 if (sessionData?.session) {
                   const session = sessionData.session;
                   setImpersonatedRole(session.impersonated_role);
@@ -623,7 +628,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Restore impersonation from server if authorized admin
       if (role === 'admin' && canImpersonate) {
         try {
-          const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation');
+          const { data: { session: authSession } } = await supabase.auth.getSession();
+          const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+            headers: {
+              Authorization: `Bearer ${authSession?.access_token}`
+            }
+          });
           if (sessionData?.session) {
             const session = sessionData.session;
             setImpersonatedRole(session.impersonated_role);
@@ -1008,8 +1018,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCurrentLogId(logData.id);
           // Server-side session creation - no longer using sessionStorage
           try {
+            const { data: { session: authSession } } = await supabase.auth.getSession();
             const { error: sessionError } = await supabase.functions.invoke('start-impersonation', {
-              body: { role, userId: userId || null, userName: userName || null }
+              body: { role, userId: userId || null, userName: userName || null },
+              headers: {
+                Authorization: `Bearer ${authSession?.access_token}`
+              }
             });
             if (sessionError) {
               logger.error('Error creating server-side impersonation session', sessionError);
