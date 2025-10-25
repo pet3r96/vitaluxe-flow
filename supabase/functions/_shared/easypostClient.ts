@@ -233,6 +233,9 @@ export class EasyPostClient {
       // Parse tracker from response - EasyPost returns { tracker: {...} }
       const tracker = response?.tracker ?? response;
       
+      // Log raw tracker for debugging
+      console.log('📦 Raw tracker object:', JSON.stringify(tracker, null, 2));
+      
       // Map tracking events from tracking_details
       const events = tracker.tracking_details?.map((event: any) => ({
         status: event.status,
@@ -243,15 +246,18 @@ export class EasyPostClient {
         datetime: event.datetime
       })) || [];
 
+      // Fallback for empty/unknown status
+      const finalStatus = tracker.status || 'pre_transit';
+
       console.log('✅ Parsed EasyPost tracking:', {
-        status: tracker.status,
+        status: finalStatus,
         carrier: tracker.carrier,
         events_count: events.length,
         has_url: !!tracker.public_url
       });
 
       return {
-        status: tracker.status,
+        status: finalStatus,
         events,
         tracking_url: tracker.public_url || '',
         carrier: tracker.carrier,
@@ -281,14 +287,16 @@ export class EasyPostClient {
             datetime: event.datetime
           })) || [];
 
+          const finalStatus = tracker.status || 'pre_transit';
+
           console.log('✅ Retry without carrier successful:', {
-            status: tracker.status,
+            status: finalStatus,
             carrier: tracker.carrier,
             events_count: events.length
           });
 
           return {
-            status: tracker.status,
+            status: finalStatus,
             events,
             tracking_url: tracker.public_url || '',
             carrier: tracker.carrier,
@@ -326,14 +334,16 @@ export class EasyPostClient {
             datetime: event.datetime
           })) || [];
 
+          const finalStatus = tracker.status || 'pre_transit';
+
           console.log('✅ Fallback GET successful:', {
-            status: tracker.status,
+            status: finalStatus,
             carrier: tracker.carrier,
             events_count: events.length
           });
 
           return {
-            status: tracker.status,
+            status: finalStatus,
             events,
             tracking_url: tracker.public_url || '',
             carrier: tracker.carrier,

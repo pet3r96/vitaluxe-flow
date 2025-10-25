@@ -204,7 +204,7 @@ export const ShipmentTrackingCard = ({
 
   const getStatusBadge = (status: string) => {
     if (!status) {
-      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Unknown</Badge>;
+      return <Badge variant="outline" className="bg-amber-100 text-amber-800"><Package className="h-3 w-3 mr-1" />Awaiting Updates</Badge>;
     }
     
     switch (status.toLowerCase()) {
@@ -213,9 +213,9 @@ export const ShipmentTrackingCard = ({
       case "in_transit":
         return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Truck className="h-3 w-3 mr-1" />In Transit</Badge>;
       case "pre_transit":
-        return <Badge variant="outline" className="bg-gray-100 text-gray-800"><Package className="h-3 w-3 mr-1" />Pre Transit</Badge>;
+        return <Badge variant="outline" className="bg-amber-100 text-amber-800"><Package className="h-3 w-3 mr-1" />Awaiting Carrier Updates</Badge>;
       case "unknown":
-        return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Unknown</Badge>;
+        return <Badge variant="outline" className="bg-amber-100 text-amber-800"><Package className="h-3 w-3 mr-1" />Awaiting Carrier Updates</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
