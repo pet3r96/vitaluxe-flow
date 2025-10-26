@@ -270,8 +270,7 @@ const RepProductivityReport = () => {
         </CardContent>
       </Card>
 
-      {filteredData && filteredData.length > 0 && (
-        <>
+        {filteredData && filteredData.length > 0 && (
           <DataTablePagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -282,15 +281,7 @@ const RepProductivityReport = () => {
             startIndex={startIndex}
             endIndex={Math.min(endIndex, filteredData.length)}
           />
-          
-          <Alert>
-            <AlertDescription className="text-sm">
-              <strong>Revenue</strong> shows total markup from base price (includes Rx admin profit + Non-Rx rep markup). 
-              <strong>Commissions</strong> show what reps earn (Non-Rx only, $0 for Rx due to federal anti-kickback regulations).
-            </AlertDescription>
-          </Alert>
-        </>
-      )}
+        )}
     </div>
   );
 };
