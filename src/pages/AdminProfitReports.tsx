@@ -27,6 +27,7 @@ import {
 const AdminProfitReports = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");
 
   // Get profit details with order and product information
   const { data: profitDetails, isLoading } = useQuery({
@@ -55,6 +56,18 @@ const AdminProfitReports = () => {
       return data;
     },
   });
+
+  // Filter data based on Rx selection
+  const filteredProfitDetails = useMemo(() => {
+    if (!profitDetails) return [];
+    
+    if (rxFilter === "non-rx") {
+      return profitDetails.filter(item => !item.is_rx_required);
+    } else if (rxFilter === "rx-only") {
+      return profitDetails.filter(item => item.is_rx_required);
+    }
+    return profitDetails;
+  }, [profitDetails, rxFilter]);
 
   const totalAdminProfit = useMemo(() => 
     profitDetails
