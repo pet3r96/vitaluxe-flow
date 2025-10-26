@@ -41,23 +41,27 @@ export const PharmacyProductsGrid = () => {
     enabled: !!effectiveUserId,
   });
 
-  // Fetch products assigned to this pharmacy
+  // Fetch products assigned to this pharmacy through product_pharmacies junction
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["pharmacy-products", pharmacyData?.id],
     queryFn: async () => {
       if (!pharmacyData?.id) return [];
 
       const { data, error } = await supabase
-        .from("products")
+        .from("product_pharmacies")
         .select(`
-          *,
-          product_types(id, name)
+          product_id,
+          products (
+            *,
+            product_types(id, name)
+          )
         `)
-        .eq("pharmacy_id", pharmacyData.id)
-        .order("created_at", { ascending: false });
+        .eq("pharmacy_id", pharmacyData.id);
 
       if (error) throw error;
-      return data || [];
+      
+      // Flatten the structure to return just products
+      return data?.map(pp => pp.products).filter(Boolean) || [];
     },
     enabled: !!pharmacyData?.id,
   });

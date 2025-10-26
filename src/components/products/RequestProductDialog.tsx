@@ -35,7 +35,7 @@ export const RequestProductDialog = ({
   onOpenChange,
   onSuccess,
 }: RequestProductDialogProps) => {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
@@ -50,18 +50,18 @@ export const RequestProductDialog = ({
 
   // Fetch current pharmacy
   const { data: pharmacy } = useQuery({
-    queryKey: ["current-pharmacy", user?.id],
+    queryKey: ["current-pharmacy", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pharmacies")
         .select("id, name")
-        .eq("user_id", user?.id)
+        .eq("user_id", effectiveUserId)
         .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && open,
+    enabled: !!effectiveUserId && open,
   });
 
   // Fetch product types
@@ -82,7 +82,7 @@ export const RequestProductDialog = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user || !pharmacy) {
+    if (!effectiveUserId || !pharmacy) {
       toast({
         title: "Error",
         description: "User or pharmacy not found",
@@ -133,7 +133,7 @@ export const RequestProductDialog = ({
       }
 
       const requestData = {
-        created_by_user_id: user.id,
+        created_by_user_id: effectiveUserId,
         pharmacy_id: pharmacy.id,
         name: formData.name,
         dosage: formData.dosage || null,
