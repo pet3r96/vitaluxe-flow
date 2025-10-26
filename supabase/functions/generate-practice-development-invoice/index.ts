@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import jsPDF from 'https://esm.sh/jspdf@2.5.1';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? 'https://qbtsfajshnrwwlfzkeog.supabase.co';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -10,6 +11,23 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Diagnostic logging (no secret values)
+    console.log('env_present', { 
+      url: Boolean(supabaseUrl), 
+      key: Boolean(supabaseServiceKey) 
+    });
+
+    // Early validation
+    if (!supabaseServiceKey) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Backend configuration missing (service key).', 
+          code: 'MISSING_ENV' 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Get request body
@@ -61,9 +79,6 @@ Deno.serve(async (req) => {
     };
 
     // Generate PDF using jsPDF
-    const jsPDFModule = await import('https://esm.sh/jspdf@2.5.1');
-    const jsPDF = jsPDFModule.default;
-    
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = 20;
