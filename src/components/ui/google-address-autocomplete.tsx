@@ -84,22 +84,27 @@ export const GoogleAddressAutocomplete = ({
     }
   }, [value]);
 
-  // Prevent input from clearing during selection
+  // Prevent input from clearing during selection and dialog close
   useEffect(() => {
     if (!autocomplete || !inputRef.current) return;
     
     const input = inputRef.current;
-    const handleMouseDown = (e: MouseEvent) => {
+    const handleInteraction = (e: Event) => {
       const target = e.target as HTMLElement;
       if (target.closest('.pac-container')) {
         e.stopPropagation();
       }
     };
     
-    document.addEventListener('mousedown', handleMouseDown, true);
+    // Handle all interaction events that could close parent dialogs
+    document.addEventListener('mousedown', handleInteraction, true);
+    document.addEventListener('pointerdown', handleInteraction, true);
+    document.addEventListener('touchstart', handleInteraction, true);
     
     return () => {
-      document.removeEventListener('mousedown', handleMouseDown, true);
+      document.removeEventListener('mousedown', handleInteraction, true);
+      document.removeEventListener('pointerdown', handleInteraction, true);
+      document.removeEventListener('touchstart', handleInteraction, true);
     };
   }, [autocomplete]);
 
@@ -243,6 +248,11 @@ export const GoogleAddressAutocomplete = ({
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault(); // Prevent form submission
+            }
+          }}
           onFocus={(e) => {
             e.target.setAttribute('autocomplete', 'new-password');
           }}

@@ -75,7 +75,15 @@ export function DeliveryAddressEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent 
+        className="sm:max-w-[500px]"
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.pac-container')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {addressType === 'practice' 

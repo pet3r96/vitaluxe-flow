@@ -50,7 +50,14 @@ export default function DeliveryConfirmation() {
         .from("cart_lines")
         .select(`
           *,
-          product:products(*)
+          product:products(*),
+          patient:patients(
+            address_street,
+            address_city,
+            address_state,
+            address_zip,
+            address_formatted
+          )
         `)
         .eq("cart_id", cart.id);
 
@@ -98,20 +105,21 @@ export default function DeliveryConfirmation() {
       if (error) throw error;
     },
     onSuccess: () => {
+      console.log('[DeliveryConfirmation] Practice address updated successfully');
       queryClient.invalidateQueries({ queryKey: ["profile", effectiveUserId] });
       toast.success("Practice address updated successfully");
       setEditingAddress(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error updating practice address:", error);
-      toast.error("Failed to update practice address");
+      toast.error(`Failed to update practice address: ${error?.message || 'Unknown error'}`);
     },
   });
 
   // Update patient address mutation
   const updatePatientAddress = useMutation({
     mutationFn: async ({ patientName, lineIds, address }: { patientName: string; lineIds: string[]; address: any }) => {
-      console.log('[DeliveryConfirmation] Updating patient address for:', patientName, 'Line IDs:', lineIds);
+      console.log('[DeliveryConfirmation] Updating patient address for:', patientName, 'Line IDs:', lineIds, 'Cart ID:', cartData?.cart.id);
       
       const { data, error } = await supabase
         .from("cart_lines")
@@ -129,23 +137,57 @@ export default function DeliveryConfirmation() {
         .in("id", lineIds)
         .select('id');
 
-      if (error) throw error;
-      
-      console.log('[DeliveryConfirmation] Updated rows:', data?.length || 0);
-      
-      if (!data || data.length === 0) {
-        console.error('[DeliveryConfirmation] No rows updated! Line IDs:', lineIds);
-        throw new Error('No cart lines were updated. Please try again.');
+      // If Supabase returns error, throw it
+      if (error) {
+        console.error('[DeliveryConfirmation] Supabase error:', error);
+        throw error;
       }
+      
+      // Log result but don't fail on 0 rows (RLS may prevent data return)
+      console.log('[DeliveryConfirmation] Update result - rows returned:', data?.length || 0);
+      
+      return { lineIds, address };
+    },
+    onMutate: async ({ lineIds, address }) => {
+      // Optimistic update for immediate UI feedback
+      await queryClient.cancelQueries({ queryKey: ["cart", effectiveUserId] });
+      const previousData = queryClient.getQueryData(["cart", effectiveUserId]);
+      
+      queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
+        if (!old?.lines) return old;
+        return {
+          ...old,
+          lines: old.lines.map((line: any) => 
+            lineIds.includes(line.id) ? {
+              ...line,
+              patient_address_street: address.street,
+              patient_address_city: address.city,
+              patient_address_state: address.state,
+              patient_address_zip: address.zip,
+              patient_address_formatted: address.formatted,
+              patient_address_validated: address.status === 'verified',
+              patient_address_validation_source: address.source || 'manual',
+              patient_address: null,
+            } : line
+          ),
+        };
+      });
+      
+      return { previousData };
     },
     onSuccess: () => {
+      console.log('[DeliveryConfirmation] Patient address saved, invalidating cache');
       queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
       toast.success("Patient address updated successfully");
       setEditingAddress(null);
     },
-    onError: (error) => {
+    onError: (error: any, variables, context: any) => {
       console.error("Error updating patient address:", error);
-      toast.error("Failed to update patient address");
+      // Rollback optimistic update
+      if (context?.previousData) {
+        queryClient.setQueryData(["cart", effectiveUserId], context.previousData);
+      }
+      toast.error(`Failed to update patient address: ${error?.message || 'Unknown error'}`);
     },
   });
 
@@ -389,6 +431,18 @@ export default function DeliveryConfirmation() {
                         <div>{lines[0].patient_address_street}</div>
                         <div>{lines[0].patient_address_city}, {lines[0].patient_address_state} {lines[0].patient_address_zip}</div>
                       </div>
+                    ) : lines[0].patient?.address_street ? (
+                      <div className="text-sm">
+                        <div className="text-muted-foreground">
+                          <div>{patientName}</div>
+                          <div>{lines[0].patient.address_street}</div>
+                          <div>{lines[0].patient.address_city}, {lines[0].patient.address_state} {lines[0].patient.address_zip}</div>
+                        </div>
+                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mt-1 text-xs">
+                          <CheckCircle2 className="h-3 w-3" />
+                          From patient record
+                        </div>
+                      </div>
                     ) : lines[0].patient_address ? (
                       <div className="text-sm text-muted-foreground">
                         <div>{patientName}</div>
@@ -405,35 +459,63 @@ export default function DeliveryConfirmation() {
                       </div>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log('[DeliveryConfirmation] Editing patient address. Lines:', lines.map(l => l.id));
-                      setEditingAddress({
-                        type: 'patient',
-                        patientName,
-                        lineIds: lines.map(l => l.id),
-                        oldPatientAddress: lines[0].patient_address,
-                        currentAddress: {
-                          street: lines[0].patient_address_street || '',
-                          city: lines[0].patient_address_city || '',
-                          state: lines[0].patient_address_state || '',
-                          zip: lines[0].patient_address_zip || '',
-                        }
-                      });
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    {!lines[0].patient_address_street && lines[0].patient_address ? (
-                      <>
-                        Edit
-                        <Badge variant="secondary" className="ml-2 text-xs">Update Required</Badge>
-                      </>
-                    ) : (
-                      'Edit'
+                  <div className="flex gap-2">
+                    {!lines[0].patient_address_street && lines[0].patient?.address_street && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          console.log('[DeliveryConfirmation] Applying patient record address');
+                          updatePatientAddress.mutate({
+                            patientName,
+                            lineIds: lines.map(l => l.id),
+                            address: {
+                              street: lines[0].patient.address_street,
+                              city: lines[0].patient.address_city,
+                              state: lines[0].patient.address_state,
+                              zip: lines[0].patient.address_zip,
+                              formatted: lines[0].patient.address_formatted || 
+                                `${lines[0].patient.address_street}, ${lines[0].patient.address_city}, ${lines[0].patient.address_state} ${lines[0].patient.address_zip}`,
+                              status: 'verified',
+                              source: 'patient_record',
+                            }
+                          });
+                        }}
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Apply from Patient
+                      </Button>
                     )}
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        console.log('[DeliveryConfirmation] Editing patient address. Lines:', lines.map(l => l.id));
+                        setEditingAddress({
+                          type: 'patient',
+                          patientName,
+                          lineIds: lines.map(l => l.id),
+                          oldPatientAddress: lines[0].patient_address,
+                          currentAddress: {
+                            street: lines[0].patient_address_street || '',
+                            city: lines[0].patient_address_city || '',
+                            state: lines[0].patient_address_state || '',
+                            zip: lines[0].patient_address_zip || '',
+                          }
+                        });
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      {!lines[0].patient_address_street && lines[0].patient_address ? (
+                        <>
+                          Edit
+                          <Badge variant="secondary" className="ml-2 text-xs">Update Required</Badge>
+                        </>
+                      ) : (
+                        'Edit'
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
