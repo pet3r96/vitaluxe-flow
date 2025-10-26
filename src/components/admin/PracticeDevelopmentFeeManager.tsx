@@ -198,10 +198,23 @@ export default function PracticeDevelopmentFeeManager() {
         .createSignedUrl(invoice.pdf_url, 3600);
       
       if (error) throw error;
-      window.open(data.signedUrl, "_blank");
+      
+      // Download the PDF instead of opening in new tab
+      const response = await fetch(data.signedUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${invoice.invoice_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Invoice downloaded");
     } catch (error) {
-      console.error("Error viewing PDF:", error);
-      toast.error("Failed to load PDF");
+      console.error("Error downloading PDF:", error);
+      toast.error("Failed to download PDF");
     }
   };
 
@@ -426,42 +439,48 @@ export default function PracticeDevelopmentFeeManager() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      {/* Download button - shown when PDF exists */}
                       {invoice.pdf_url && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewPDF(invoice)}
+                          title="Download PDF"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Download className="w-4 h-4" />
                         </Button>
                       )}
+                      
+                      {/* Edit button - shown for all pending invoices */}
                       {invoice.payment_status === "pending" && (
-                        <>
-                          {!invoice.pdf_url && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedInvoice(invoice);
-                                setIsInvoiceDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedInvoice(invoice);
-                              setPaymentMethod("");
-                              setPaymentNotes("");
-                              setIsPaymentDialogOpen(true);
-                            }}
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                        </>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedInvoice(invoice);
+                            setIsInvoiceDialogOpen(true);
+                          }}
+                          title="Edit Invoice"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      
+                      {/* Mark as Paid button - shown for pending invoices only */}
+                      {invoice.payment_status === "pending" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedInvoice(invoice);
+                            setPaymentMethod("");
+                            setPaymentNotes("");
+                            setIsPaymentDialogOpen(true);
+                          }}
+                          title="Mark as Paid"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
                       )}
                     </div>
                   </TableCell>

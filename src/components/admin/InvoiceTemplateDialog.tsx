@@ -258,6 +258,7 @@ export function InvoiceTemplateDialog({
   };
 
   const handleGenerateInvoice = async () => {
+    if (isGenerating) return; // Prevent double-click
     if (!validateForm()) return;
 
     try {
