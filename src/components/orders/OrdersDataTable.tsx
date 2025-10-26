@@ -28,6 +28,16 @@ import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
+import { toast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface OrderQueryMetadata {
+  hasRepRecord: boolean;
+  practiceCount: number;
+  practiceNames: string[];
+  isEmpty: boolean;
+  emptyReason: 'no_rep' | 'no_practices' | 'no_orders' | null;
+}
 
 export const OrdersDataTable = () => {
   const { effectiveRole, effectiveUserId, user } = useAuth();
@@ -35,6 +45,13 @@ export const OrdersDataTable = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [queryMetadata, setQueryMetadata] = useState<OrderQueryMetadata>({
+    hasRepRecord: true,
+    practiceCount: 0,
+    practiceNames: [],
+    isEmpty: false,
+    emptyReason: null
+  });
 
   // Fetch available order statuses from config
   const { data: orderStatusConfigs } = useQuery({
@@ -51,17 +68,18 @@ export const OrdersDataTable = () => {
     },
   });
 
-  const { data: orders, isLoading, refetch } = useQuery({
+  const { data: orders, isLoading, refetch, error } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
     staleTime: 0, // Always consider stale - realtime handles updates
     refetchInterval: false, // Disable polling - use realtime instead
     refetchOnWindowFocus: true, // Refetch when tab gains focus
     queryFn: async () => {
-      logger.info('OrdersDataTable query', logger.sanitize({ 
-        effectiveRole, 
-        effectiveUserId,
-        authUid: user?.id 
-      }));
+      try {
+        logger.info('OrdersDataTable query', logger.sanitize({ 
+          effectiveRole, 
+          effectiveUserId,
+          authUid: user?.id 
+        }));
 
       // Special handling for pharmacy users - fetch from order_lines
       if (effectiveRole === "pharmacy") {
@@ -211,20 +229,44 @@ export const OrdersDataTable = () => {
           .maybeSingle();
         
         if (!downlineRep) {
-          return []; // No rep record found
+          setQueryMetadata({
+            hasRepRecord: false,
+            practiceCount: 0,
+            practiceNames: [],
+            isEmpty: true,
+            emptyReason: 'no_rep'
+          });
+          return [];
         }
         
         // Get practices linked to this downline via rep_practice_links
         const { data: practiceLinks } = await supabase
           .from("rep_practice_links")
-          .select("practice_id")
+          .select("practice_id, profiles:practice_id(name)")
           .eq("rep_id", downlineRep.id);
         
         const practiceIds = practiceLinks?.map(pl => pl.practice_id) || [];
+        const practiceNames = practiceLinks?.map(pl => (pl as any).profiles?.name).filter(Boolean) || [];
         
         if (practiceIds.length === 0) {
-          return []; // No practices assigned, no orders
+          setQueryMetadata({
+            hasRepRecord: true,
+            practiceCount: 0,
+            practiceNames: [],
+            isEmpty: true,
+            emptyReason: 'no_practices'
+          });
+          return [];
         }
+        
+        // Store metadata for display
+        setQueryMetadata({
+          hasRepRecord: true,
+          practiceCount: practiceIds.length,
+          practiceNames,
+          isEmpty: false,
+          emptyReason: null
+        });
         
         query = query.in("doctor_id", practiceIds);
       }
@@ -275,8 +317,30 @@ export const OrdersDataTable = () => {
         .neq('payment_status', 'payment_failed')
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        logger.error('Orders query error', error, { effectiveRole, effectiveUserId });
+        throw error;
+      }
+      
+      // Update metadata if we got results for downline
+      if (effectiveRole === "downline" && data?.length === 0 && queryMetadata.practiceCount > 0) {
+        setQueryMetadata(prev => ({
+          ...prev,
+          isEmpty: true,
+          emptyReason: 'no_orders'
+        }));
+      }
+      
       return data;
+      } catch (error) {
+        logger.error('Orders fetch failed', error);
+        toast({
+          title: "Error loading orders",
+          description: "Unable to load orders. Please refresh or contact support.",
+          variant: "destructive"
+        });
+        throw error;
+      }
     },
   });
 
@@ -472,6 +536,18 @@ export const OrdersDataTable = () => {
 
   return (
     <div className="space-y-4">
+      {/* Show practice scope info for downlines */}
+      {effectiveRole === "downline" && queryMetadata.practiceCount > 0 && (
+        <Alert>
+          <AlertDescription className="text-sm">
+            Showing orders from <strong>{queryMetadata.practiceCount}</strong> assigned practice{queryMetadata.practiceCount > 1 ? 's' : ''}
+            {queryMetadata.practiceNames.length > 0 && (
+              <>: {queryMetadata.practiceNames.join(', ')}</>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -526,10 +602,44 @@ export const OrdersDataTable = () => {
                   Loading...
                 </TableCell>
               </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
+                  <div className="py-8 space-y-2">
+                    <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
+                    <p className="text-sm font-medium">Unable to load orders</p>
+                    <p className="text-xs text-muted-foreground">Please refresh the page or contact support if the issue persists</p>
+                    <Button variant="outline" size="sm" onClick={() => refetch()}>
+                      Try Again
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center text-muted-foreground">
-                  No orders found
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
+                  <div className="py-8 space-y-2 text-muted-foreground">
+                    {effectiveRole === "downline" && queryMetadata.emptyReason === 'no_rep' ? (
+                      <>
+                        <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+                        <p className="text-sm font-medium text-foreground">Account Setup Incomplete</p>
+                        <p className="text-xs">No representative record found for this account. Please contact admin to complete setup.</p>
+                      </>
+                    ) : effectiveRole === "downline" && queryMetadata.emptyReason === 'no_practices' ? (
+                      <>
+                        <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+                        <p className="text-sm font-medium text-foreground">No Practices Assigned</p>
+                        <p className="text-xs">No practices are linked to your account yet. Contact your topline or admin to assign practices.</p>
+                      </>
+                    ) : effectiveRole === "downline" && queryMetadata.emptyReason === 'no_orders' ? (
+                      <>
+                        <p className="text-sm font-medium text-foreground">No Orders Found</p>
+                        <p className="text-xs">No orders found for your {queryMetadata.practiceCount} assigned practice{queryMetadata.practiceCount > 1 ? 's' : ''}. Try adjusting your search or filters.</p>
+                      </>
+                    ) : (
+                      <p className="text-sm">No orders found</p>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
