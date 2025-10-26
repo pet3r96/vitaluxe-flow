@@ -39,8 +39,6 @@ export const RepresentativesDataTable = () => {
             id,
             name,
             email,
-            phone,
-            company,
             active
           ),
           topline_rep:assigned_topline_id (
@@ -64,7 +62,6 @@ export const RepresentativesDataTable = () => {
     const matchesSearch = 
       profile?.name?.toLowerCase().includes(searchLower) ||
       profile?.email?.toLowerCase().includes(searchLower) ||
-      profile?.company?.toLowerCase().includes(searchLower) ||
       rep.role?.toLowerCase().includes(searchLower);
     
     return matchesSearch;
@@ -113,15 +110,6 @@ export const RepresentativesDataTable = () => {
     },
   });
 
-  const formatPhoneNumber = (phone: string | null) => {
-    if (!phone) return "-";
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-    }
-    return phone;
-  };
-
   return (
     <div className="space-y-4">
       {/* Summary Stats Cards */}
@@ -151,7 +139,7 @@ export const RepresentativesDataTable = () => {
         <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by name, email, or company..."
+            placeholder="Search by name, email, or role..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 w-full"
@@ -165,14 +153,12 @@ export const RepresentativesDataTable = () => {
 
       {/* Data Table */}
       <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1400px]">
+        <div className="min-w-[1000px]">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Company</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Assigned To</TableHead>
                 <TableHead>Status</TableHead>
@@ -182,13 +168,13 @@ export const RepresentativesDataTable = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
+                  <TableCell colSpan={6} className="text-center">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : !filteredReps || filteredReps.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No representatives found
                   </TableCell>
                 </TableRow>
@@ -197,8 +183,6 @@ export const RepresentativesDataTable = () => {
                   <TableRow key={rep.id}>
                     <TableCell className="font-medium">{rep.profiles?.name || "-"}</TableCell>
                     <TableCell>{rep.profiles?.email || "-"}</TableCell>
-                    <TableCell>{formatPhoneNumber(rep.profiles?.phone)}</TableCell>
-                    <TableCell>{rep.profiles?.company || "-"}</TableCell>
                     <TableCell>
                       <Badge variant={rep.role === "topline" ? "default" : "secondary"}>
                         {rep.role === "topline" ? "Topline" : "Downline"}

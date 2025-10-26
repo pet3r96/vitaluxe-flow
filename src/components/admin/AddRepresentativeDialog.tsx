@@ -28,7 +28,6 @@ import {
 import { toast } from "sonner";
 import { Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { validatePhone } from "@/lib/validators";
 import { getCurrentCSRFToken } from "@/lib/csrf";
 
 interface AddRepresentativeDialogProps {
@@ -40,15 +39,10 @@ interface AddRepresentativeDialogProps {
 export const AddRepresentativeDialog = ({ open, onOpenChange, onSuccess }: AddRepresentativeDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [toplineComboboxOpen, setToplineComboboxOpen] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({
-    phone: "",
-  });
   const [formData, setFormData] = useState({
     repType: "topline",
     name: "",
     email: "",
-    phone: "",
-    company: "",
     assignedToplineId: "",
   });
 
@@ -76,22 +70,13 @@ export const AddRepresentativeDialog = ({ open, onOpenChange, onSuccess }: AddRe
     enabled: open && formData.repType === "downline",
   });
 
-  const handlePhoneChange = (value: string) => {
-    setFormData({ ...formData, phone: value });
-    const phoneValidation = validatePhone(value);
-    setValidationErrors({ ...validationErrors, phone: phoneValidation.error || "" });
-  };
-
   const resetForm = () => {
     setFormData({
       repType: "topline",
       name: "",
       email: "",
-      phone: "",
-      company: "",
       assignedToplineId: "",
     });
-    setValidationErrors({ phone: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,11 +85,6 @@ export const AddRepresentativeDialog = ({ open, onOpenChange, onSuccess }: AddRe
     // Validate
     if (!formData.name || !formData.email) {
       toast.error("Please fill in all required fields");
-      return;
-    }
-
-    if (formData.phone && validationErrors.phone) {
-      toast.error("Please fix phone number errors");
       return;
     }
 
@@ -125,8 +105,6 @@ export const AddRepresentativeDialog = ({ open, onOpenChange, onSuccess }: AddRe
           name: formData.name,
           role: formData.repType,
           roleData: {
-            phone: formData.phone,
-            company: formData.company,
             ...(formData.repType === "downline" && { 
               linkedToplineId: formData.assignedToplineId 
             }),
@@ -210,31 +188,6 @@ export const AddRepresentativeDialog = ({ open, onOpenChange, onSuccess }: AddRe
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="john@example.com"
                 required
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handlePhoneChange(e.target.value)}
-                placeholder="(555) 123-4567"
-              />
-              {validationErrors.phone && (
-                <p className="text-sm text-destructive">{validationErrors.phone}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="company">Company</Label>
-              <Input
-                id="company"
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                placeholder="Company name"
               />
             </div>
           </div>

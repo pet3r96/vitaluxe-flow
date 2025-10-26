@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
-import { validatePhone } from "@/lib/validators";
 
 interface RepDetailsDialogProps {
   open: boolean;
@@ -32,33 +31,38 @@ export const RepDetailsDialog = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState({
     name: rep.profiles?.name || "",
-    phone: rep.profiles?.phone || "",
-    company: rep.profiles?.company || "",
   });
-  const [validationErrors, setValidationErrors] = useState({ phone: "" });
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
-  const handlePhoneChange = (value: string) => {
-    setEditedData({ ...editedData, phone: value });
-    const phoneValidation = validatePhone(value);
-    setValidationErrors({ phone: phoneValidation.error || "" });
-  };
+  // Fetch 2FA phone number
+  const { data: twoFAPhone } = useQuery({
+    queryKey: ["rep-2fa-phone", rep.user_id],
+    queryFn: async () => {
+      const { data: settings } = await supabase
+        .from("user_2fa_settings")
+        .select("phone_number_encrypted, is_enrolled, phone_verified")
+        .eq("user_id", rep.user_id)
+        .single();
+      
+      if (!settings || !settings.is_enrolled) return null;
+      
+      const { data: decrypted } = await supabase.rpc("decrypt_2fa_phone", {
+        p_encrypted_phone: settings.phone_number_encrypted
+      });
+      
+      return decrypted;
+    },
+    enabled: open && !!rep.user_id,
+  });
 
   const handleSave = async () => {
-    if (editedData.phone && validationErrors.phone) {
-      toast.error("Please fix validation errors");
-      return;
-    }
-
     setLoading(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({
           name: editedData.name,
-          phone: editedData.phone,
-          company: editedData.company,
         })
         .eq("id", rep.user_id);
       
@@ -78,10 +82,7 @@ export const RepDetailsDialog = ({
   const handleCancel = () => {
     setEditedData({
       name: rep.profiles?.name || "",
-      phone: rep.profiles?.phone || "",
-      company: rep.profiles?.company || "",
     });
-    setValidationErrors({ phone: "" });
     setIsEditing(false);
   };
 
@@ -146,32 +147,17 @@ export const RepDetailsDialog = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Phone</Label>
-                  {isEditing ? (
-                    <>
-                      <Input
-                        value={editedData.phone}
-                        onChange={(e) => handlePhoneChange(e.target.value)}
-                      />
-                      {validationErrors.phone && (
-                        <p className="text-sm text-destructive">{validationErrors.phone}</p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-sm">{formatPhoneNumber(rep.profiles?.phone)}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Company</Label>
-                  {isEditing ? (
-                    <Input
-                      value={editedData.company}
-                      onChange={(e) => setEditedData({ ...editedData, company: e.target.value })}
-                    />
-                  ) : (
-                    <p className="text-sm">{rep.profiles?.company || "-"}</p>
-                  )}
+                  <Label>Phone (2FA)</Label>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm">
+                      {twoFAPhone ? formatPhoneNumber(twoFAPhone) : "Not Set"}
+                    </p>
+                    {!twoFAPhone && (
+                      <Badge variant="secondary" className="text-xs">
+                        Set during login
+                      </Badge>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
