@@ -51,7 +51,8 @@ const ToplinePaymentManager = () => {
         `)
         .not("topline_id", "is", null)
         .eq("payment_status", "pending")
-        .in("orders.status", ["shipped", "delivered"])
+        .eq("orders.status", "delivered")
+        .eq("orders.payment_status", "paid")
         .gte("created_at", dateRange.start.toISOString())
         .lte("created_at", dateRange.end.toISOString())
         .order("created_at", { ascending: false });
