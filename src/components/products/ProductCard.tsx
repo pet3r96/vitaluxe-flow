@@ -84,11 +84,15 @@ export const ProductCard = memo(({
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground pr-2">Topline:</span>
-            <span>${product.topline_price || "-"}</span>
+            <span>
+              {product.requires_prescription ? "$-" : `$${product.topline_price || "-"}`}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground pr-2">Downline:</span>
-            <span>${product.downline_price || "-"}</span>
+            <span>
+              {product.requires_prescription ? "$-" : `$${product.downline_price || "-"}`}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground pr-2">Practice:</span>
