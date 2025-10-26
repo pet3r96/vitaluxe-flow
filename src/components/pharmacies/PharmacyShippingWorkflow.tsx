@@ -74,6 +74,10 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
     },
   });
 
+  // Check if order has Rx required products
+  const hasRxRequiredProducts = order?.lines?.some(line => line.products?.requires_prescription === true);
+  const hasNonRxProducts = order?.lines?.some(line => line.products?.requires_prescription === false);
+
   // Download prescription (matches provider/practice logic)
   const downloadPrescription = async (lineId: string, patientName: string, prescriptionUrl?: string, requiresPrescription?: boolean) => {
     try {
@@ -405,12 +409,27 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
             </div>
             <div>
               <p className="text-muted-foreground">Shipping Method</p>
-              <p className="font-medium">
-                {order.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
-                {' • '}
-                {order.lines?.[0]?.shipping_speed === 'overnight' ? 'Overnight' :
-                 order.lines?.[0]?.shipping_speed === '2day' ? '2-Day' : 'Ground'}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-medium">
+                  {order.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
+                  {' • '}
+                  {order.lines?.[0]?.shipping_speed === 'overnight' ? 'Overnight' :
+                   order.lines?.[0]?.shipping_speed === '2day' ? '2-Day' : 'Ground'}
+                </p>
+                {hasRxRequiredProducts && hasNonRxProducts ? (
+                  <Badge variant="secondary" className="text-xs">
+                    Mixed (Rx + Non-Rx)
+                  </Badge>
+                ) : hasRxRequiredProducts ? (
+                  <Badge variant="default" className="text-xs bg-blue-600">
+                    Rx Required
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs">
+                    No Rx Required
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
