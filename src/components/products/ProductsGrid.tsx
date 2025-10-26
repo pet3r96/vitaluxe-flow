@@ -228,6 +228,36 @@ export const ProductsGrid = () => {
     [products, searchQuery, productTypeFilter, prescriptionFilter]
   );
 
+  const productCounts = useMemo(() => {
+    if (!products) return {
+      all: 0,
+      byType: {} as Record<string, number>,
+      prescriptionRequired: 0,
+      noPrescription: 0
+    };
+
+    const counts = {
+      all: products.length,
+      byType: {} as Record<string, number>,
+      prescriptionRequired: 0,
+      noPrescription: 0
+    };
+
+    products.forEach(product => {
+      if (product.product_type_id) {
+        counts.byType[product.product_type_id] = (counts.byType[product.product_type_id] || 0) + 1;
+      }
+      
+      if (product.requires_prescription === true) {
+        counts.prescriptionRequired++;
+      } else {
+        counts.noPrescription++;
+      }
+    });
+
+    return counts;
+  }, [products]);
+
   const {
     currentPage,
     totalPages,
@@ -596,15 +626,15 @@ export const ProductsGrid = () => {
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="Vitamins">Vitamins</SelectItem>
-              <SelectItem value="R & D Products">R & D Products</SelectItem>
-              <SelectItem value="Peptides">Peptides</SelectItem>
-              <SelectItem value="GLP 1">GLP 1</SelectItem>
-              <SelectItem value="GLP 2">GLP 2</SelectItem>
-              <SelectItem value="GLP 3">GLP 3</SelectItem>
-              <SelectItem value="Supplies">Supplies</SelectItem>
-              <SelectItem value="Vitamin IV's">Vitamin IV's</SelectItem>
+              <SelectItem value="all">All Types ({productCounts.all})</SelectItem>
+              <SelectItem value="Vitamins">Vitamins ({productCounts.byType["Vitamins"] || 0})</SelectItem>
+              <SelectItem value="R & D Products">R & D Products ({productCounts.byType["R & D Products"] || 0})</SelectItem>
+              <SelectItem value="Peptides">Peptides ({productCounts.byType["Peptides"] || 0})</SelectItem>
+              <SelectItem value="GLP 1">GLP 1 ({productCounts.byType["GLP 1"] || 0})</SelectItem>
+              <SelectItem value="GLP 2">GLP 2 ({productCounts.byType["GLP 2"] || 0})</SelectItem>
+              <SelectItem value="GLP 3">GLP 3 ({productCounts.byType["GLP 3"] || 0})</SelectItem>
+              <SelectItem value="Supplies">Supplies ({productCounts.byType["Supplies"] || 0})</SelectItem>
+              <SelectItem value="Vitamin IV's">Vitamin IV's ({productCounts.byType["Vitamin IV's"] || 0})</SelectItem>
             </SelectContent>
           </Select>
           
@@ -616,9 +646,9 @@ export const ProductsGrid = () => {
               <SelectValue placeholder="Filter by prescription" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Products</SelectItem>
-              <SelectItem value="yes">Prescription Required</SelectItem>
-              <SelectItem value="no">No Prescription</SelectItem>
+              <SelectItem value="all">All Products ({productCounts.all})</SelectItem>
+              <SelectItem value="yes">Prescription Required ({productCounts.prescriptionRequired})</SelectItem>
+              <SelectItem value="no">No Prescription ({productCounts.noPrescription})</SelectItem>
             </SelectContent>
           </Select>
         </div>
