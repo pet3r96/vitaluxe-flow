@@ -1,15 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { Tag, RefreshCw } from "lucide-react";
+import { Tag, RefreshCw, AlertCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,27 +81,27 @@ const AdminProfitReports = () => {
 
   // Channel-specific profit calculations
   const directProfit = useMemo(() => 
-    profitDetails
+    filteredProfitDetails
       ?.filter(item => item.orders?.status !== 'cancelled')
       .filter(item => !item.topline_id && !item.downline_id)
       .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
-    [profitDetails]
+    [filteredProfitDetails]
   );
 
   const toplineOnlyProfit = useMemo(() => 
-    profitDetails
+    filteredProfitDetails
       ?.filter(item => item.orders?.status !== 'cancelled')
       .filter(item => item.topline_id && !item.downline_id)
       .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
-    [profitDetails]
+    [filteredProfitDetails]
   );
 
   const fullNetworkProfit = useMemo(() => 
-    profitDetails
+    filteredProfitDetails
       ?.filter(item => item.orders?.status !== 'cancelled')
       .filter(item => item.topline_id && item.downline_id)
       .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
-    [profitDetails]
+    [filteredProfitDetails]
   );
 
   const {
@@ -111,11 +113,11 @@ const AdminProfitReports = () => {
     hasNextPage,
     hasPrevPage
   } = usePagination({
-    totalItems: profitDetails?.length || 0,
+    totalItems: filteredProfitDetails?.length || 0,
     itemsPerPage: 25
   });
 
-  const paginatedProfitDetails = profitDetails?.slice(startIndex, endIndex);
+  const paginatedProfitDetails = filteredProfitDetails?.slice(startIndex, endIndex);
 
   // Recompute profits mutation
   const recomputeProfitsMutation = useMutation({
@@ -153,29 +155,41 @@ const AdminProfitReports = () => {
             Detailed breakdown of platform earnings
           </p>
         </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Recompute Profits
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Recompute Order Profits?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will recalculate profits for all pending and processing orders using the current price overrides.
-                This is useful after updating rep pricing to ensure accurate profit calculations.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => recomputeProfitsMutation.mutate()}>
-                Recompute
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <div className="flex items-center gap-3">
+          <Select value={rxFilter} onValueChange={(value: any) => setRxFilter(value)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Orders</SelectItem>
+              <SelectItem value="non-rx">Non-Rx Only</SelectItem>
+              <SelectItem value="rx-only">Rx-Required Only</SelectItem>
+            </SelectContent>
+          </Select>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Recompute Profits
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Recompute Order Profits?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will recalculate profits for all pending and processing orders using the current price overrides.
+                  This is useful after updating rep pricing to ensure accurate profit calculations.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => recomputeProfitsMutation.mutate()}>
+                  Recompute
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -259,9 +273,9 @@ const AdminProfitReports = () => {
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : profitDetails?.length === 0 ? (
+              ) : filteredProfitDetails?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No profit data yet
                   </TableCell>
                 </TableRow>
@@ -300,8 +314,17 @@ const AdminProfitReports = () => {
                         {profit.orders?.status || 'unknown'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${parseFloat(profit.admin_profit?.toString() || '0').toFixed(2)}
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="font-medium">
+                          ${parseFloat(profit.admin_profit?.toString() || '0').toFixed(2)}
+                        </span>
+                        {profit.is_rx_required && (
+                          <Badge variant="outline" className="text-xs">
+                            Rx Order - Zero Rep Commission
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -311,16 +334,26 @@ const AdminProfitReports = () => {
         </CardContent>
       </Card>
 
-      {profitDetails && profitDetails.length > 0 && (
+      {rxFilter === "all" && filteredProfitDetails && filteredProfitDetails.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            * Rx-required products show zero rep commissions due to federal anti-kickback regulations. 
+            Use the filter above to view non-Rx orders separately.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {filteredProfitDetails && filteredProfitDetails.length > 0 && (
         <DataTablePagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={goToPage}
           hasNextPage={hasNextPage}
           hasPrevPage={hasPrevPage}
-          totalItems={profitDetails.length}
+          totalItems={filteredProfitDetails.length}
           startIndex={startIndex}
-          endIndex={Math.min(endIndex, profitDetails.length)}
+          endIndex={Math.min(endIndex, filteredProfitDetails.length)}
         />
       )}
     </div>

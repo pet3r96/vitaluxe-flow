@@ -146,9 +146,13 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         dosage: product.dosage || "",
         sig: product.sig || "",
         base_price: product.base_price?.toString() || "",
-        topline_price: product.topline_price?.toString() || "",
-        downline_price: product.downline_price?.toString() || "",
-        retail_price: product.retail_price?.toString() || "",
+        // Clear legacy rep prices for Rx products
+        topline_price: (product.requires_prescription ? "" : product.topline_price?.toString()) || "",
+        downline_price: (product.requires_prescription ? "" : product.downline_price?.toString()) || "",
+        // Force practice price = base price for Rx products
+        retail_price: (product.requires_prescription 
+          ? product.base_price?.toString() 
+          : product.retail_price?.toString()) || "",
         assigned_pharmacies: [],
         requires_prescription: product.requires_prescription || false,
         product_type_id: product.product_type_id || "",
@@ -156,10 +160,28 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         assigned_topline_reps: [],
       });
       setImagePreview(product.image_url || "");
+      
+      // Show warning if legacy Rx product had rep prices
+      if (product.requires_prescription && (product.topline_price || product.downline_price)) {
+        toast.warning("Legacy pricing cleared: Rx products cannot have rep commissions");
+      }
     } else {
       resetForm();
     }
   }, [product]);
+
+  // Auto-sync prices when Rx toggle changes or base price updates
+  useEffect(() => {
+    if (formData.requires_prescription) {
+      // For Rx products: Practice Price = Base Price, no rep markup
+      setFormData(prev => ({
+        ...prev,
+        retail_price: prev.base_price,
+        topline_price: "",
+        downline_price: ""
+      }));
+    }
+  }, [formData.requires_prescription, formData.base_price]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -182,30 +204,48 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       return;
     }
 
-    // Validate pricing tiers to prevent negative profits
-    const basePrice = parseFloat(formData.base_price);
-    const toplinePrice = formData.topline_price ? parseFloat(formData.topline_price) : null;
-    const downlinePrice = formData.downline_price ? parseFloat(formData.downline_price) : null;
-    const retailPrice = formData.retail_price ? parseFloat(formData.retail_price) : null;
-
-    if (toplinePrice && toplinePrice <= basePrice) {
-      toast.error("Topline price must be greater than base price");
-      return;
+    // Rx-specific validation
+    if (formData.requires_prescription) {
+      const basePrice = parseFloat(formData.base_price);
+      const retailPrice = parseFloat(formData.retail_price);
+      
+      if (Math.abs(retailPrice - basePrice) > 0.01) {
+        toast.error("Practice Price must equal Base Price for Rx products");
+        return;
+      }
+      
+      if (formData.topline_price || formData.downline_price) {
+        toast.error("Rep prices must be empty for Rx products");
+        return;
+      }
     }
 
-    if (downlinePrice && toplinePrice && downlinePrice <= toplinePrice) {
-      toast.error("Downline price must be greater than topline price");
-      return;
-    }
+    // Non-Rx pricing validation
+    if (!formData.requires_prescription) {
+      const basePrice = parseFloat(formData.base_price);
+      const toplinePrice = formData.topline_price ? parseFloat(formData.topline_price) : null;
+      const downlinePrice = formData.downline_price ? parseFloat(formData.downline_price) : null;
+      const retailPrice = formData.retail_price ? parseFloat(formData.retail_price) : null;
 
-    if (retailPrice && downlinePrice && retailPrice < downlinePrice) {
-      toast.error("Practice price must be greater than or equal to downline price");
-      return;
-    }
+      if (toplinePrice && toplinePrice <= basePrice) {
+        toast.error("Topline price must be greater than base price");
+        return;
+      }
 
-    if (retailPrice && toplinePrice && !downlinePrice && retailPrice < toplinePrice) {
-      toast.error("Practice price must be greater than or equal to topline price");
-      return;
+      if (downlinePrice && toplinePrice && downlinePrice <= toplinePrice) {
+        toast.error("Downline price must be greater than topline price");
+        return;
+      }
+
+      if (retailPrice && downlinePrice && retailPrice < downlinePrice) {
+        toast.error("Practice price must be greater than or equal to downline price");
+        return;
+      }
+
+      if (retailPrice && toplinePrice && !downlinePrice && retailPrice < toplinePrice) {
+        toast.error("Practice price must be greater than or equal to topline price");
+        return;
+      }
     }
 
     setLoading(true);
@@ -237,9 +277,17 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         dosage: formData.dosage,
         sig: formData.sig,
         base_price: parseFloat(formData.base_price),
-        topline_price: formData.topline_price ? parseFloat(formData.topline_price) : null,
-        downline_price: formData.downline_price ? parseFloat(formData.downline_price) : null,
-        retail_price: formData.retail_price ? parseFloat(formData.retail_price) : null,
+        // Force null for Rx products
+        topline_price: formData.requires_prescription 
+          ? null 
+          : (formData.topline_price ? parseFloat(formData.topline_price) : null),
+        downline_price: formData.requires_prescription 
+          ? null 
+          : (formData.downline_price ? parseFloat(formData.downline_price) : null),
+        // Force Practice Price = Base Price for Rx
+        retail_price: formData.requires_prescription 
+          ? parseFloat(formData.base_price) 
+          : (formData.retail_price ? parseFloat(formData.retail_price) : null),
         image_url: imageUrl,
         active: true,
         requires_prescription: formData.requires_prescription,
@@ -486,6 +534,47 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             )}
           </div>
 
+          {/* Prescription Requirement Toggle - MOVED TO TOP */}
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="requires_prescription" className="text-base font-semibold">
+                  Prescription Required
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Require prescription upload when ordering this product
+                </p>
+              </div>
+              <Switch
+                id="requires_prescription"
+                checked={formData.requires_prescription}
+                onCheckedChange={(checked) => {
+                  // Warn when toggling OFF (prices were cleared)
+                  if (!checked && formData.requires_prescription && !formData.topline_price) {
+                    toast.info("Rx disabled: You'll need to enter Topline/Downline prices again");
+                  }
+                  
+                  // Warn when toggling ON (existing prices will be cleared)
+                  if (checked && !formData.requires_prescription && formData.topline_price) {
+                    toast.warning("Enabling Rx: Rep prices will be cleared per federal regulations");
+                  }
+                  
+                  setFormData({ ...formData, requires_prescription: checked });
+                }}
+              />
+            </div>
+            
+            {formData.requires_prescription && (
+              <Alert variant="destructive" className="border-orange-500 bg-orange-50 dark:bg-orange-950">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
+                  <strong>⚠️ Prescription-required products:</strong> No rep commissions allowed per federal anti-kickback regulations.
+                  Base Price will automatically equal Practice Price (no markup allowed).
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
           {/* Multi-Pharmacy Assignment */}
           <div className="space-y-2">
             <Label>Assigned Pharmacies *</Label>
@@ -561,73 +650,57 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="topline_price">Topline Rep Price</Label>
-              <Input
-                id="topline_price"
-                type="number"
-                step="0.01"
-                value={formData.topline_price}
-                onChange={(e) => setFormData({ ...formData, topline_price: e.target.value })}
-              />
-            </div>
+            {/* Conditional: Only show rep prices if NOT Rx-required */}
+            {!formData.requires_prescription && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="topline_price">Topline Rep Price</Label>
+                  <Input
+                    id="topline_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.topline_price}
+                    onChange={(e) => setFormData({ ...formData, topline_price: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="downline_price">Downline Rep Price</Label>
+                  <Input
+                    id="downline_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.downline_price}
+                    onChange={(e) => setFormData({ ...formData, downline_price: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
-              <Label htmlFor="downline_price">Downline Rep Price</Label>
-              <Input
-                id="downline_price"
-                type="number"
-                step="0.01"
-                value={formData.downline_price}
-                onChange={(e) => setFormData({ ...formData, downline_price: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="retail_price">Practice Price</Label>
+              <Label htmlFor="retail_price">
+                Practice Price
+                {formData.requires_prescription && (
+                  <Badge variant="outline" className="ml-2 text-xs">Auto-set = Base Price</Badge>
+                )}
+              </Label>
               <Input
                 id="retail_price"
                 type="number"
                 step="0.01"
                 value={formData.retail_price}
                 onChange={(e) => setFormData({ ...formData, retail_price: e.target.value })}
+                readOnly={formData.requires_prescription}
+                className={formData.requires_prescription ? "bg-muted cursor-not-allowed" : ""}
               />
               <p className="text-xs text-muted-foreground">
-                Price shown to practices at checkout
+                {formData.requires_prescription 
+                  ? "Automatically set to Base Price (no markup for Rx)" 
+                  : "Price shown to practices at checkout"}
               </p>
             </div>
           </div>
 
-          {/* Prescription Requirement Toggle */}
-          <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="requires_prescription" className="text-base font-semibold">
-                  Prescription Required
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Require prescription upload when ordering this product
-                </p>
-              </div>
-              <Switch
-                id="requires_prescription"
-                checked={formData.requires_prescription}
-                onCheckedChange={(checked) => 
-                  setFormData({ ...formData, requires_prescription: checked })
-                }
-              />
-            </div>
-            
-            {formData.requires_prescription && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  Providers must upload a valid prescription (PDF or PNG) when adding this product to cart.
-                  Orders cannot be completed without prescriptions for required products.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

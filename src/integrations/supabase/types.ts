@@ -1582,6 +1582,7 @@ export type Database = {
           downline_profit: number | null
           downline_profit_before_discount: number | null
           id: string
+          is_rx_required: boolean | null
           order_id: string
           order_line_id: string
           paid_at: string | null
@@ -1589,6 +1590,7 @@ export type Database = {
           payment_status: Database["public"]["Enums"]["payment_status"]
           practice_price: number
           quantity: number
+          rx_restriction_note: string | null
           topline_id: string | null
           topline_price: number | null
           topline_profit: number | null
@@ -1606,6 +1608,7 @@ export type Database = {
           downline_profit?: number | null
           downline_profit_before_discount?: number | null
           id?: string
+          is_rx_required?: boolean | null
           order_id: string
           order_line_id: string
           paid_at?: string | null
@@ -1613,6 +1616,7 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"]
           practice_price: number
           quantity?: number
+          rx_restriction_note?: string | null
           topline_id?: string | null
           topline_price?: number | null
           topline_profit?: number | null
@@ -1630,6 +1634,7 @@ export type Database = {
           downline_profit?: number | null
           downline_profit_before_discount?: number | null
           id?: string
+          is_rx_required?: boolean | null
           order_id?: string
           order_line_id?: string
           paid_at?: string | null
@@ -1637,12 +1642,20 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"]
           practice_price?: number
           quantity?: number
+          rx_restriction_note?: string | null
           topline_id?: string | null
           topline_price?: number | null
           topline_profit?: number | null
           topline_profit_before_discount?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "order_profits_downline_id_fkey"
+            columns: ["downline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
           {
             foreignKeyName: "order_profits_downline_id_fkey"
             columns: ["downline_id"]
@@ -1670,6 +1683,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rep_payments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_profits_topline_id_fkey"
+            columns: ["topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
           },
           {
             foreignKeyName: "order_profits_topline_id_fkey"
@@ -2413,6 +2433,13 @@ export type Database = {
             foreignKeyName: "pharmacy_rep_assignments_topline_rep_id_fkey"
             columns: ["topline_rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "pharmacy_rep_assignments_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -2712,6 +2739,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rep_assignments_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
           },
           {
             foreignKeyName: "product_rep_assignments_topline_rep_id_fkey"
@@ -3124,6 +3158,13 @@ export type Database = {
             foreignKeyName: "rep_payments_topline_rep_id_fkey"
             columns: ["topline_rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_payments_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3156,6 +3197,13 @@ export type Database = {
             foreignKeyName: "rep_practice_links_assigned_topline_id_fkey"
             columns: ["assigned_topline_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_practice_links_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3172,6 +3220,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_practice_links_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
           },
           {
             foreignKeyName: "rep_practice_links_rep_id_fkey"
@@ -3231,6 +3286,13 @@ export type Database = {
             foreignKeyName: "rep_product_price_overrides_rep_id_fkey"
             columns: ["rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_product_price_overrides_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3270,6 +3332,13 @@ export type Database = {
             foreignKeyName: "rep_product_visibility_topline_fk"
             columns: ["topline_rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_product_visibility_topline_fk"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3304,6 +3373,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
           {
             foreignKeyName: "reps_assigned_topline_id_fkey"
             columns: ["assigned_topline_id"]
@@ -4240,6 +4316,52 @@ export type Database = {
           },
         ]
       }
+      rep_productivity_summary: {
+        Row: {
+          assigned_topline_id: string | null
+          last_order_date: string | null
+          non_rx_orders: number | null
+          practice_count: number | null
+          rep_email: string | null
+          rep_id: string | null
+          rep_name: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          rx_orders: number | null
+          total_commissions: number | null
+          total_orders: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_2fa_settings_decrypted: {
         Row: {
           created_at: string | null
@@ -4507,6 +4629,7 @@ export type Database = {
           recomputed_count: number
         }[]
       }
+      refresh_rep_productivity_summary: { Args: never; Returns: undefined }
       refresh_security_events_summary: { Args: never; Returns: undefined }
       sync_practice_address_to_providers: {
         Args: { p_practice_id: string }

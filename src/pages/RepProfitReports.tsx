@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
@@ -12,6 +15,7 @@ import { Tag } from "lucide-react";
 
 const RepProfitReports = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
+  const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");
 
   // Get rep ID
   const { data: repData } = useQuery({
@@ -29,14 +33,13 @@ const RepProfitReports = () => {
     enabled: !!effectiveUserId,
   });
 
-  // Get profit details
+  // Get profit details with order information, including Rx flag
   const { data: profitDetails, isLoading } = useQuery({
     queryKey: ["rep-profit-details", repData?.id, effectiveRole],
-    staleTime: 60000, // 1 minute
+    enabled: !!repData?.id && !!effectiveRole,
+    staleTime: 60000,
     queryFn: async () => {
-      if (!repData?.id) return [];
-      
-      let query = supabase
+      const { data, error } = await supabase
         .from("order_profits")
         .select(`
           *,
@@ -47,60 +50,76 @@ const RepProfitReports = () => {
             doctor_id,
             profiles:doctor_id (name)
           )
-        `);
+        `)
+        .or(
+          effectiveRole === 'topline'
+            ? `topline_id.eq.${repData.id}`
+            : `downline_id.eq.${repData.id}`
+        )
+        .order("created_at", { ascending: false });
       
-      if (effectiveRole === 'topline') {
-        query = query.eq("topline_id", repData.id);
-      } else {
-        query = query.eq("downline_id", repData.id);
-      }
-      
-      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!repData?.id,
   });
 
-  const totalProfit = profitDetails
-    ?.filter(item => item.orders?.status !== 'cancelled')
-    .reduce((sum, item) => {
-      const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
-      return sum + (parseFloat(profit?.toString() || '0'));
-    }, 0) || 0;
+  // Filter profit details based on Rx status
+  const filteredProfitDetails = useMemo(() => {
+    if (!profitDetails) return [];
+    
+    if (rxFilter === "non-rx") {
+      return profitDetails.filter(item => !item.is_rx_required);
+    } else if (rxFilter === "rx-only") {
+      return profitDetails.filter(item => item.is_rx_required);
+    }
+    return profitDetails;
+  }, [profitDetails, rxFilter]);
 
-  const unpaidProfit = profitDetails
-    ?.filter(item => item.orders?.status !== 'cancelled')
-    ?.filter(item => item.payment_status === 'pending')
-    .reduce((sum, item) => {
-      const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
-      return sum + (parseFloat(profit?.toString() || '0'));
-    }, 0) || 0;
+  const totalProfit = useMemo(() => 
+    filteredProfitDetails
+      ?.filter(item => item.orders?.status !== 'cancelled')
+      .reduce((sum, item) => {
+        const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
+        return sum + (parseFloat(profit?.toString() || '0'));
+      }, 0) || 0,
+    [filteredProfitDetails, effectiveRole]
+  );
 
-  const paidProfit = profitDetails
-    ?.filter(item => item.orders?.status !== 'cancelled')
-    ?.filter(item => item.payment_status === 'completed')
-    .reduce((sum, item) => {
-      const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
-      return sum + (parseFloat(profit?.toString() || '0'));
-    }, 0) || 0;
+  const unpaidProfit = useMemo(() => 
+    filteredProfitDetails
+      ?.filter(item => item.payment_status !== 'completed' && item.orders?.status !== 'cancelled')
+      .reduce((sum, item) => {
+        const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
+        return sum + parseFloat(profit?.toString() || '0');
+      }, 0) || 0,
+    [filteredProfitDetails, effectiveRole]
+  );
 
-  // Topline-specific profit breakdowns
+  const paidProfit = useMemo(() => 
+    filteredProfitDetails
+      ?.filter(item => item.payment_status === 'completed' && item.orders?.status !== 'cancelled')
+      .reduce((sum, item) => {
+        const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
+        return sum + parseFloat(profit?.toString() || '0');
+      }, 0) || 0,
+    [filteredProfitDetails, effectiveRole]
+  );
+
   const directSalesProfit = useMemo(() => {
     if (effectiveRole !== 'topline') return 0;
-    return profitDetails
+    return filteredProfitDetails
       ?.filter(item => item.orders?.status !== 'cancelled')
       .filter(item => !item.downline_id)
       .reduce((sum, item) => sum + parseFloat(item.topline_profit?.toString() || '0'), 0) || 0;
-  }, [profitDetails, effectiveRole]);
+  }, [filteredProfitDetails, effectiveRole]);
 
   const networkSalesProfit = useMemo(() => {
     if (effectiveRole !== 'topline') return 0;
-    return profitDetails
+    return filteredProfitDetails
       ?.filter(item => item.orders?.status !== 'cancelled')
-      .filter(item => !!item.downline_id)
+      .filter(item => item.downline_id)
       .reduce((sum, item) => sum + parseFloat(item.topline_profit?.toString() || '0'), 0) || 0;
-  }, [profitDetails, effectiveRole]);
+  }, [filteredProfitDetails, effectiveRole]);
 
   const {
     currentPage,
@@ -111,79 +130,96 @@ const RepProfitReports = () => {
     hasNextPage,
     hasPrevPage
   } = usePagination({
-    totalItems: profitDetails?.length || 0,
+    totalItems: filteredProfitDetails?.length || 0,
     itemsPerPage: 25
   });
 
-  const paginatedProfitDetails = profitDetails?.slice(startIndex, endIndex);
+  const paginatedProfitDetails = filteredProfitDetails?.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Profit Reports</h1>
-        <p className="text-muted-foreground mt-2">
-          Detailed breakdown of your earnings
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Profit Reports</h1>
+          <p className="text-muted-foreground mt-2">Detailed breakdown of your earnings</p>
+        </div>
+        
+        <Select value={rxFilter} onValueChange={(value: any) => setRxFilter(value)}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Orders</SelectItem>
+            <SelectItem value="non-rx">Non-Rx Only</SelectItem>
+            <SelectItem value="rx-only">Rx-Required Only</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className={`grid gap-4 ${effectiveRole === 'topline' ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Total Billed Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalProfit.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">All-time earnings</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {rxFilter === "rx-only" 
+                ? "Rx orders (no commission)"
+                : rxFilter === "non-rx"
+                ? "Non-Rx commissions only"
+                : "All-time earnings"}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Unpaid Profits</CardTitle>
+            <CardTitle className="text-sm font-medium">Unpaid Commission</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">${unpaidProfit.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Awaiting payment</p>
+            <p className="text-xs text-muted-foreground mt-1">Pending payment</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Paid Profits</CardTitle>
+            <CardTitle className="text-sm font-medium">Paid Commission</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">${paidProfit.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Completed payments</p>
+            <p className="text-xs text-muted-foreground mt-1">Received</p>
           </CardContent>
         </Card>
-
-        {effectiveRole === 'topline' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Tag className="h-4 w-4" />
-                Sales Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Direct Sales:</span>
-                  <span className="font-semibold">${directSalesProfit.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Network Sales:</span>
-                  <span className="font-semibold">${networkSalesProfit.toFixed(2)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
+
+      {effectiveRole === 'topline' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Sales Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Direct Sales (No Downline)</p>
+                <p className="text-2xl font-bold">${directSalesProfit.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Network Sales (Via Downline)</p>
+                <p className="text-2xl font-bold">${networkSalesProfit.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Profit History</CardTitle>
+          <CardTitle>Commission History</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -191,77 +227,50 @@ const RepProfitReports = () => {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Practice</TableHead>
-                <TableHead>Order ID</TableHead>
-                {effectiveRole === 'topline' && <TableHead>Sale Type</TableHead>}
-                <TableHead>Status</TableHead>
-                {effectiveRole === 'topline' && <TableHead>Payment Status</TableHead>}
-                <TableHead className="text-right">Your Profit</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Payment Status</TableHead>
+                <TableHead>Order Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Loading...
-                  </TableCell>
+                  <TableCell colSpan={5} className="text-center">Loading...</TableCell>
                 </TableRow>
-              ) : profitDetails?.length === 0 ? (
+              ) : paginatedProfitDetails?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No profit data yet
+                    No commission data yet
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedProfitDetails?.map((profit: any) => {
-                  const myProfit = effectiveRole === 'topline' ? profit.topline_profit : profit.downline_profit;
+                  const profitAmount = effectiveRole === 'topline' ? profit.topline_profit : profit.downline_profit;
                   return (
                     <TableRow key={profit.id}>
+                      <TableCell>{format(new Date(profit.created_at), "MMM dd, yyyy")}</TableCell>
+                      <TableCell>{profit.orders?.profiles?.name}</TableCell>
                       <TableCell>
-                        {profit.created_at ? format(new Date(profit.created_at), "MMM d, yyyy") : "-"}
-                      </TableCell>
-                      <TableCell>{profit.orders?.profiles?.name || "-"}</TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {profit.order_id?.slice(0, 8)}...
-                      </TableCell>
-                      {effectiveRole === 'topline' && (
-                        <TableCell>
-                          {profit.downline_id ? (
-                            <Badge variant="outline" className="text-xs">
-                              Via Downline
-                            </Badge>
-                          ) : (
-                            <Badge variant="default" className="text-xs">
-                              Direct Sale
-                            </Badge>
+                        <div className="flex items-center gap-2">
+                          <span>${parseFloat(profitAmount?.toString() || '0').toFixed(2)}</span>
+                          {profit.is_rx_required && (
+                            <Badge variant="outline" className="text-xs">Rx - No Commission</Badge>
                           )}
-                        </TableCell>
-                      )}
+                        </div>
+                      </TableCell>
                       <TableCell>
-                        <Badge variant={
-                          profit.orders?.status === 'shipped' || profit.orders?.status === 'delivered' 
-                            ? 'default' 
-                            : 'secondary'
-                        }>
-                          {profit.orders?.status || 'unknown'}
+                        <Badge variant={profit.payment_status === 'completed' ? 'default' : 'secondary'}>
+                          {profit.payment_status === 'completed' ? 'Paid' : 'Pending'}
                         </Badge>
                       </TableCell>
-                      {effectiveRole === 'topline' && (
-                        <TableCell>
-                          <Badge 
-                            variant={profit.payment_status === 'completed' ? 'default' : 'secondary'}
-                            className={profit.payment_status === 'completed' ? 'bg-green-600' : 'bg-yellow-600'}
-                          >
-                            {profit.payment_status === 'completed' ? 'Paid' : 'Pending'}
-                          </Badge>
-                          {profit.paid_at && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {format(new Date(profit.paid_at), "MMM d, yyyy")}
-                            </div>
-                          )}
-                        </TableCell>
-                      )}
-                      <TableCell className="text-right font-medium">
-                        ${parseFloat(myProfit?.toString() || '0').toFixed(2)}
+                      <TableCell>
+                        <Badge variant={
+                          profit.orders?.status === 'delivered' ? 'default' :
+                          profit.orders?.status === 'shipped' ? 'secondary' :
+                          profit.orders?.status === 'cancelled' ? 'destructive' : 'outline'
+                        }>
+                          {profit.orders?.status}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   );
@@ -272,16 +281,26 @@ const RepProfitReports = () => {
         </CardContent>
       </Card>
 
-      {profitDetails && profitDetails.length > 0 && (
+      {rxFilter === "all" && filteredProfitDetails && filteredProfitDetails.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            * Rx-required products show $0 commission due to federal anti-kickback regulations. 
+            Use the filter above to view non-Rx orders separately.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {filteredProfitDetails && filteredProfitDetails.length > 0 && (
         <DataTablePagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={goToPage}
           hasNextPage={hasNextPage}
           hasPrevPage={hasPrevPage}
-          totalItems={profitDetails.length}
+          totalItems={filteredProfitDetails.length}
           startIndex={startIndex}
-          endIndex={Math.min(endIndex, profitDetails.length)}
+          endIndex={Math.min(endIndex, filteredProfitDetails.length)}
         />
       )}
     </div>
