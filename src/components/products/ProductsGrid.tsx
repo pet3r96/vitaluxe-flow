@@ -38,6 +38,7 @@ export const ProductsGrid = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
+  const [prescriptionFilter, setPrescriptionFilter] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -217,9 +218,14 @@ export const ProductsGrid = () => {
       const matchesType = productTypeFilter === "all" || 
         product.product_type_id === productTypeFilter;
       
-      return matchesSearch && matchesType;
+      const matchesPrescription = 
+        prescriptionFilter === "all" ||
+        (prescriptionFilter === "yes" && product.requires_prescription === true) ||
+        (prescriptionFilter === "no" && product.requires_prescription === false);
+      
+      return matchesSearch && matchesType && matchesPrescription;
     }), 
-    [products, searchQuery, productTypeFilter]
+    [products, searchQuery, productTypeFilter, prescriptionFilter]
   );
 
   const {
@@ -599,6 +605,20 @@ export const ProductsGrid = () => {
               <SelectItem value="GLP 3">GLP 3</SelectItem>
               <SelectItem value="Supplies">Supplies</SelectItem>
               <SelectItem value="Vitamin IV's">Vitamin IV's</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select
+            value={prescriptionFilter}
+            onValueChange={setPrescriptionFilter}
+          >
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Filter by prescription" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Products</SelectItem>
+              <SelectItem value="yes">Prescription Required</SelectItem>
+              <SelectItem value="no">No Prescription</SelectItem>
             </SelectContent>
           </Select>
         </div>
