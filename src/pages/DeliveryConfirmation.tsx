@@ -136,10 +136,13 @@ export default function DeliveryConfirmation() {
     },
   });
 
+  // Helper to identify practice orders (no patient or "Practice Order" label)
+  const isPracticeOrder = (line: any) => !line.patient_name || line.patient_name === "Practice Order";
+
   // Group cart lines by destination
-  const practiceOrders = cartData?.lines.filter(line => !line.patient_name) || [];
+  const practiceOrders = cartData?.lines.filter(isPracticeOrder) || [];
   const patientGroups = cartData?.lines
-    .filter(line => line.patient_name)
+    .filter(line => !isPracticeOrder(line))
     .reduce((groups, line) => {
       const key = line.patient_name || "Unknown Patient";
       if (!groups[key]) {
