@@ -329,9 +329,13 @@ const AdminProfitReports = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {profit.is_rx_required && (
+                      {profit.is_rx_required ? (
                         <Badge variant="outline" className="text-xs">
                           Rx Order - Zero Rep Commission
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">
+                          Non Rx Order- Commissions Applicable
                         </Badge>
                       )}
                     </TableCell>
