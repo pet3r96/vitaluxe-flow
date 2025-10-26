@@ -171,7 +171,7 @@ const AdminProfitReports = () => {
         <div className="flex items-center gap-3">
           <Select value={rxFilter} onValueChange={(value: any) => setRxFilter(value)}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue />
+              <SelectValue placeholder="Filter by order type" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Orders</SelectItem>
