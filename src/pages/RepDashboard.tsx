@@ -176,7 +176,8 @@ const RepDashboard = () => {
       .select(`
         *,
         orders:order_id (status)
-      `);
+      `)
+      .eq("is_rx_required", false); // Exclude Rx orders (reps don't earn commission on Rx)
       
       if (effectiveRole === 'topline') {
         query = query.eq("topline_id", repData.id);
