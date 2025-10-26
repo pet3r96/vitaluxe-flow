@@ -70,26 +70,26 @@ const AdminProfitReports = () => {
   }, [profitDetails, rxFilter]);
 
   const totalAdminProfit = useMemo(() => 
-    profitDetails
+    filteredProfitDetails
       ?.filter(item => item.orders?.status !== 'cancelled')
       .reduce((sum, item) => 
         sum + parseFloat(item.admin_profit?.toString() || '0'), 0
       ) || 0,
-    [profitDetails]
+    [filteredProfitDetails]
   );
 
   const pendingAdminProfit = useMemo(() => 
-    profitDetails
+    filteredProfitDetails
       ?.filter(item => ['pending', 'processing'].includes(item.orders?.status || '') && item.orders?.status !== 'cancelled')
       .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
-    [profitDetails]
+    [filteredProfitDetails]
   );
 
   const collectedAdminProfit = useMemo(() => 
-    profitDetails
+    filteredProfitDetails
       ?.filter(item => ['shipped', 'delivered'].includes(item.orders?.status || '') && item.orders?.status !== 'cancelled')
       .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
-    [profitDetails]
+    [filteredProfitDetails]
   );
 
   // Channel-specific profit calculations

@@ -1660,6 +1660,13 @@ export type Database = {
             foreignKeyName: "order_profits_downline_id_fkey"
             columns: ["downline_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "order_profits_downline_id_fkey"
+            columns: ["downline_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -1689,6 +1696,13 @@ export type Database = {
             columns: ["topline_id"]
             isOneToOne: false
             referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "order_profits_topline_id_fkey"
+            columns: ["topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
             referencedColumns: ["rep_id"]
           },
           {
@@ -2440,6 +2454,13 @@ export type Database = {
             foreignKeyName: "pharmacy_rep_assignments_topline_rep_id_fkey"
             columns: ["topline_rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "pharmacy_rep_assignments_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -2745,6 +2766,13 @@ export type Database = {
             columns: ["topline_rep_id"]
             isOneToOne: false
             referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "product_rep_assignments_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
             referencedColumns: ["rep_id"]
           },
           {
@@ -3165,6 +3193,13 @@ export type Database = {
             foreignKeyName: "rep_payments_topline_rep_id_fkey"
             columns: ["topline_rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_payments_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3204,6 +3239,13 @@ export type Database = {
             foreignKeyName: "rep_practice_links_assigned_topline_id_fkey"
             columns: ["assigned_topline_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_practice_links_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3226,6 +3268,13 @@ export type Database = {
             columns: ["rep_id"]
             isOneToOne: false
             referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_practice_links_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
             referencedColumns: ["rep_id"]
           },
           {
@@ -3293,6 +3342,13 @@ export type Database = {
             foreignKeyName: "rep_product_price_overrides_rep_id_fkey"
             columns: ["rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_product_price_overrides_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3339,6 +3395,13 @@ export type Database = {
             foreignKeyName: "rep_product_visibility_topline_fk"
             columns: ["topline_rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_product_visibility_topline_fk"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3378,6 +3441,13 @@ export type Database = {
             columns: ["assigned_topline_id"]
             isOneToOne: false
             referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
             referencedColumns: ["rep_id"]
           },
           {
@@ -4337,6 +4407,66 @@ export type Database = {
             columns: ["assigned_topline_id"]
             isOneToOne: false
             referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rep_productivity_view: {
+        Row: {
+          assigned_topline_id: string | null
+          last_order_date: string | null
+          non_rx_orders: number | null
+          practice_count: number | null
+          rep_email: string | null
+          rep_id: string | null
+          rep_name: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          rx_orders: number | null
+          total_commissions: number | null
+          total_orders: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
             referencedColumns: ["rep_id"]
           },
           {

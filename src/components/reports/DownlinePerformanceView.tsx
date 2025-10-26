@@ -40,7 +40,7 @@ const DownlinePerformanceView = () => {
       await supabase.rpc('refresh_rep_productivity_summary');
       
       const { data, error } = await supabase
-        .from("rep_productivity_summary")
+        .from("rep_productivity_view")
         .select("*")
         .eq("assigned_topline_id", currentRep.id)
         .order("total_commissions", { ascending: false });

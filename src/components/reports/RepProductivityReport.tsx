@@ -24,7 +24,7 @@ const RepProductivityReport = () => {
       await supabase.rpc('refresh_rep_productivity_summary');
       
       const { data, error } = await supabase
-        .from("rep_productivity_summary")
+        .from("rep_productivity_view")
         .select("*")
         .order("total_commissions", { ascending: false });
       
