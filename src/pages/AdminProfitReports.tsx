@@ -276,19 +276,20 @@ const AdminProfitReports = () => {
                 <TableHead>Order ID</TableHead>
                 <TableHead>Sales Chain</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead className="text-right">Admin Profit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">
+                  <TableCell colSpan={8} className="text-center">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredProfitDetails?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     No profit data yet
                   </TableCell>
                 </TableRow>
@@ -327,17 +328,17 @@ const AdminProfitReports = () => {
                         {profit.orders?.status || 'unknown'}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {profit.is_rx_required && (
+                        <Badge variant="outline" className="text-xs">
+                          Rx Order - Zero Rep Commission
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="font-medium">
-                          ${parseFloat(profit.admin_profit?.toString() || '0').toFixed(2)}
-                        </span>
-                        {profit.is_rx_required && (
-                          <Badge variant="outline" className="text-xs">
-                            Rx Order - Zero Rep Commission
-                          </Badge>
-                        )}
-                      </div>
+                      <span className="font-medium">
+                        ${parseFloat(profit.admin_profit?.toString() || '0').toFixed(2)}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))
