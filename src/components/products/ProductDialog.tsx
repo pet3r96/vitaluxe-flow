@@ -149,10 +149,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         // Clear legacy rep prices for Rx products
         topline_price: (product.requires_prescription ? "" : product.topline_price?.toString()) || "",
         downline_price: (product.requires_prescription ? "" : product.downline_price?.toString()) || "",
-        // Force practice price = base price for Rx products
-        retail_price: (product.requires_prescription 
-          ? product.base_price?.toString() 
-          : product.retail_price?.toString()) || "",
+        // Allow admin markup for Rx products
+        retail_price: product.retail_price?.toString() || "",
         assigned_pharmacies: [],
         requires_prescription: product.requires_prescription || false,
         product_type_id: product.product_type_id || "",
@@ -170,18 +168,17 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     }
   }, [product]);
 
-  // Auto-sync prices when Rx toggle changes or base price updates
+  // Auto-sync prices when Rx toggle changes
   useEffect(() => {
     if (formData.requires_prescription) {
-      // For Rx products: Practice Price = Base Price, no rep markup
+      // For Rx products: Clear rep prices only (admin can still markup to practices)
       setFormData(prev => ({
         ...prev,
-        retail_price: prev.base_price,
         topline_price: "",
         downline_price: ""
       }));
     }
-  }, [formData.requires_prescription, formData.base_price]);
+  }, [formData.requires_prescription]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -206,16 +203,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
 
     // Rx-specific validation
     if (formData.requires_prescription) {
-      const basePrice = parseFloat(formData.base_price);
-      const retailPrice = parseFloat(formData.retail_price);
-      
-      if (Math.abs(retailPrice - basePrice) > 0.01) {
-        toast.error("Practice Price must equal Base Price for Rx products");
-        return;
-      }
-      
       if (formData.topline_price || formData.downline_price) {
-        toast.error("Rep prices must be empty for Rx products");
+        toast.error("Rep prices must be empty for Rx products (federal anti-kickback compliance)");
         return;
       }
     }
@@ -284,10 +273,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         downline_price: formData.requires_prescription 
           ? null 
           : (formData.downline_price ? parseFloat(formData.downline_price) : null),
-        // Force Practice Price = Base Price for Rx
-        retail_price: formData.requires_prescription 
-          ? parseFloat(formData.base_price) 
-          : (formData.retail_price ? parseFloat(formData.retail_price) : null),
+        // Allow admin markup for Rx products
+        retail_price: formData.retail_price ? parseFloat(formData.retail_price) : null,
         image_url: imageUrl,
         active: true,
         requires_prescription: formData.requires_prescription,
@@ -565,11 +552,15 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </div>
             
             {formData.requires_prescription && (
-              <Alert variant="destructive" className="border-orange-500 bg-orange-50 dark:bg-orange-950">
+              <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950">
                 <AlertCircle className="h-4 w-4 text-orange-600" />
                 <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
-                  <strong>⚠️ Prescription-required products:</strong> No rep commissions allowed per federal anti-kickback regulations.
-                  Base Price will automatically equal Practice Price (no markup allowed).
+                  <strong>⚕️ Prescription-Required Product (Federal Compliance)</strong>
+                  <ul className="list-disc pl-4 mt-2 space-y-1 text-xs">
+                    <li><strong>Admin Markup Allowed:</strong> You can set any Practice Price above Base Price</li>
+                    <li><strong>No Rep Commissions:</strong> Topline/Downline prices are disabled per federal anti-kickback regulations</li>
+                    <li><strong>Profit Distribution:</strong> 100% of markup goes to admin (reps earn $0 on Rx sales)</li>
+                  </ul>
                 </AlertDescription>
               </Alert>
             )}
@@ -679,23 +670,26 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
 
             <div className="space-y-2">
               <Label htmlFor="retail_price">
-                Practice Price
+                Practice Price *
                 {formData.requires_prescription && (
-                  <Badge variant="outline" className="ml-2 text-xs">Auto-set = Base Price</Badge>
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    Admin Markup Allowed
+                  </Badge>
                 )}
               </Label>
               <Input
                 id="retail_price"
                 type="number"
                 step="0.01"
+                required
                 value={formData.retail_price}
                 onChange={(e) => setFormData({ ...formData, retail_price: e.target.value })}
-                readOnly={formData.requires_prescription}
-                className={formData.requires_prescription ? "bg-muted cursor-not-allowed" : ""}
+                disabled={loading}
+                placeholder="Price charged to practices"
               />
               <p className="text-xs text-muted-foreground">
                 {formData.requires_prescription 
-                  ? "Automatically set to Base Price (no markup for Rx)" 
+                  ? "Set your markup to practices (reps will earn $0 commission)" 
                   : "Price shown to practices at checkout"}
               </p>
             </div>
