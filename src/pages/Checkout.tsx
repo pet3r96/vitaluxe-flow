@@ -46,6 +46,45 @@ export default function Checkout() {
   // Get merchant fee
   const { calculateMerchantFee } = useMerchantFee();
   const merchantFeePercentage = location.state?.merchantFeePercentage || 3.75;
+
+  // Calculation functions - defined before useMemo to avoid initialization errors
+  const calculateSubtotal = () => {
+    return (cart?.lines || []).reduce<number>(
+      (sum, line: any) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
+      0
+    );
+  };
+
+  const calculateDiscountAmount = () => {
+    if (!discountPercentage) return 0;
+    return calculateSubtotal() * (discountPercentage / 100);
+  };
+
+  const calculateShipping = () => {
+    // Group cart lines by patient + shipping speed to calculate shipping costs
+    const shippingGroups = new Map<string, { speed: string; count: number }>();
+    
+    (cart?.lines || []).forEach((line: any) => {
+      const key = `${line.patient_id || 'practice'}_${line.shipping_speed}`;
+      if (!shippingGroups.has(key)) {
+        shippingGroups.set(key, { speed: line.shipping_speed, count: 1 });
+      }
+    });
+    
+    // Calculate shipping based on groups (one charge per patient/speed combination)
+    const shippingRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
+    let total = 0;
+    
+    shippingGroups.forEach(group => {
+      total += shippingRates[group.speed as keyof typeof shippingRates] || 9.99;
+    });
+    
+    return total;
+  };
+
+  const calculateFinalTotal = () => {
+    return calculateSubtotal() - calculateDiscountAmount() + calculateShipping() + merchantFeeAmount;
+  };
   const merchantFeeAmount = useMemo(() => {
     if (location.state?.merchantFeeAmount) {
       return location.state.merchantFeeAmount;
@@ -767,44 +806,6 @@ export default function Checkout() {
       // Auto-upload the file
       handlePrescriptionUpload(lineId, file);
     }
-  };
-
-  const calculateSubtotal = () => {
-    return (cart?.lines || []).reduce<number>(
-      (sum, line: any) => sum + ((line.price_snapshot || 0) * (line.quantity || 1)),
-      0
-    );
-  };
-
-  const calculateDiscountAmount = () => {
-    if (!discountPercentage) return 0;
-    return calculateSubtotal() * (discountPercentage / 100);
-  };
-
-  const calculateShipping = () => {
-    // Group cart lines by patient + shipping speed to calculate shipping costs
-    const shippingGroups = new Map<string, { speed: string; count: number }>();
-    
-    (cart?.lines || []).forEach((line: any) => {
-      const key = `${line.patient_id || 'practice'}_${line.shipping_speed}`;
-      if (!shippingGroups.has(key)) {
-        shippingGroups.set(key, { speed: line.shipping_speed, count: 1 });
-      }
-    });
-    
-    // Calculate shipping based on groups (one charge per patient/speed combination)
-    const shippingRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
-    let total = 0;
-    
-    shippingGroups.forEach(group => {
-      total += shippingRates[group.speed as keyof typeof shippingRates] || 9.99;
-    });
-    
-    return total;
-  };
-
-  const calculateFinalTotal = () => {
-    return calculateSubtotal() - calculateDiscountAmount() + calculateShipping() + merchantFeeAmount;
   };
 
   if (isLoading) {
