@@ -59,17 +59,22 @@ export default function DeliveryConfirmation() {
   });
 
   // Fetch practice profile for practice shipping address
-  const { data: profile } = useQuery({
+  const { data: profile, isError: profileError, error: profileErrorDetails } = useQuery({
     queryKey: ["profile", effectiveUserId],
     enabled: !!effectiveUserId,
     queryFn: async () => {
+      console.log("[DeliveryConfirmation] Fetching profile for:", effectiveUserId);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", effectiveUserId!)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[DeliveryConfirmation] Profile fetch error:", error);
+        throw error;
+      }
+      console.log("[DeliveryConfirmation] Profile data:", data);
       return data;
     },
   });
@@ -281,10 +286,24 @@ export default function DeliveryConfirmation() {
                         <div>{profile.shipping_address_street}</div>
                         <div>{profile.shipping_address_city}, {profile.shipping_address_state} {profile.shipping_address_zip}</div>
                       </div>
+                    ) : profile?.shipping_address_formatted ? (
+                      <div className="text-sm text-muted-foreground">
+                        <div>{profile.name}</div>
+                        <div>{profile.shipping_address_formatted}</div>
+                        <div className="flex items-center gap-2 text-amber-600 mt-1">
+                          <AlertCircle className="h-4 w-4" />
+                          Please update to structured format
+                        </div>
+                      </div>
+                    ) : profileError ? (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        Error loading address
+                      </div>
                     ) : (
                       <div className="flex items-center gap-2 text-sm text-destructive">
                         <AlertCircle className="h-4 w-4" />
-                        No address on file
+                        No address on file - click Edit to add
                       </div>
                     )}
                   </div>
@@ -376,6 +395,7 @@ export default function DeliveryConfirmation() {
                     onClick={() => setEditingAddress({
                       type: 'patient',
                       patientName,
+                      patientId: lines[0].patient_address ? lines[0].patient_address : undefined,
                       currentAddress: {
                         street: lines[0].patient_address_street || '',
                         city: lines[0].patient_address_city || '',
@@ -385,7 +405,14 @@ export default function DeliveryConfirmation() {
                     })}
                   >
                     <Edit className="h-4 w-4 mr-2" />
-                    Edit
+                    {!lines[0].patient_address_street && lines[0].patient_address ? (
+                      <>
+                        Edit
+                        <Badge variant="secondary" className="ml-2 text-xs">Update Required</Badge>
+                      </>
+                    ) : (
+                      'Edit'
+                    )}
                   </Button>
                 </div>
               </div>
@@ -428,6 +455,7 @@ export default function DeliveryConfirmation() {
           onOpenChange={(open) => !open && setEditingAddress(null)}
           addressType={editingAddress.type}
           currentAddress={editingAddress.currentAddress}
+          oldPatientAddress={editingAddress.patientId}
           onSave={(address) => {
             if (editingAddress.type === 'practice') {
               updatePracticeAddress.mutate(address);

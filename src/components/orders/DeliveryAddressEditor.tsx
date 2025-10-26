@@ -13,7 +13,28 @@ interface DeliveryAddressEditorProps {
     state: string;
     zip: string;
   };
+  oldPatientAddress?: string;
   onSave: (address: AddressValue) => void;
+}
+
+const parseOldAddress = (oldAddress: string) => {
+  // Parse "340 West Flagler Street, Miami, FL 33130-1578, USA"
+  const parts = oldAddress.split(',').map(p => p.trim());
+  if (parts.length >= 3) {
+    const street = parts[0];
+    const city = parts[1];
+    const stateZipMatch = parts[2].match(/([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/);
+    if (stateZipMatch) {
+      return {
+        street,
+        city,
+        state: stateZipMatch[1],
+        zip: stateZipMatch[2].split('-')[0],
+        formatted: oldAddress,
+      };
+    }
+  }
+  return null;
 }
 
 export function DeliveryAddressEditor({
@@ -21,17 +42,25 @@ export function DeliveryAddressEditor({
   onOpenChange,
   addressType,
   currentAddress,
+  oldPatientAddress,
   onSave,
 }: DeliveryAddressEditorProps) {
+  // Try to parse old address if structured fields are empty
+  const parsedOldAddress = oldPatientAddress && !currentAddress?.street 
+    ? parseOldAddress(oldPatientAddress) 
+    : null;
+
+  const initialAddress = parsedOldAddress || currentAddress;
+
   const [address, setAddress] = useState<AddressValue>({
-    street: currentAddress?.street || "",
-    city: currentAddress?.city || "",
-    state: currentAddress?.state || "",
-    zip: currentAddress?.zip || "",
-    formatted: currentAddress ? 
-      `${currentAddress.street}, ${currentAddress.city}, ${currentAddress.state} ${currentAddress.zip}` : 
+    street: initialAddress?.street || "",
+    city: initialAddress?.city || "",
+    state: initialAddress?.state || "",
+    zip: initialAddress?.zip || "",
+    formatted: initialAddress ? 
+      `${initialAddress.street}, ${initialAddress.city}, ${initialAddress.state} ${initialAddress.zip}` : 
       "",
-    status: currentAddress?.street ? "verified" : "unverified",
+    status: initialAddress?.street ? "verified" : "unverified",
     source: "google",
   });
 
@@ -49,10 +78,16 @@ export function DeliveryAddressEditor({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {addressType === 'practice' ? 'Edit Practice Address' : 'Edit Patient Delivery Address'}
+            {addressType === 'practice' 
+              ? (currentAddress?.street ? 'Edit Practice Address' : 'Add Practice Address')
+              : (oldPatientAddress && !currentAddress?.street 
+                  ? 'Update Patient Delivery Address' 
+                  : 'Edit Patient Delivery Address')}
           </DialogTitle>
           <DialogDescription>
-            Enter and verify the shipping address. Google address validation will help ensure accurate delivery.
+            {oldPatientAddress && !currentAddress?.street 
+              ? 'Update and verify the patient delivery address with structured format for accurate shipping.'
+              : 'Enter and verify the shipping address. Google address validation will help ensure accurate delivery.'}
           </DialogDescription>
         </DialogHeader>
 
