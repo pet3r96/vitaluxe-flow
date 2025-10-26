@@ -42,13 +42,14 @@ const RepProfitReports = () => {
     staleTime: 60000,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("rep_earnings_view")
-        .select("*")
-        .eq("rep_id", repData.id)
-        .order("created_at", { ascending: false });
+        .rpc('get_rep_earnings', { _rep_id: repData.id });
       
       if (error) throw error;
-      return data;
+      
+      // Sort by created_at descending (newest first)
+      return (data || []).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     },
   });
 

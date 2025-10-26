@@ -4847,6 +4847,29 @@ export type Database = {
         }[]
       }
       get_my_topline_rep_id: { Args: never; Returns: string }
+      get_rep_earnings: {
+        Args: { _rep_id: string }
+        Returns: {
+          amount: number
+          created_at: string
+          description: string
+          doctor_id: string
+          earning_type: string
+          id: string
+          invoice_number: string
+          is_rx_required: boolean
+          order_status: string
+          paid_at: string
+          payment_method: string
+          payment_notes: string
+          payment_status: string
+          pdf_url: string
+          practice_name: string
+          reference_number: string
+          related_id: string
+          rep_id: string
+        }[]
+      }
       get_security_events_summary: {
         Args: never
         Returns: {
