@@ -91,10 +91,10 @@ Deno.serve(async (req) => {
     yPos += 8;
     doc.setFontSize(10);
     doc.setTextColor(107, 114, 128); // Gray
-    doc.text('123 Example Blvd, Palm Beach, FL 33480', pageWidth / 2, yPos, { align: 'center' });
+    doc.text('16192 Coastal Highway, Lewes, Delaware 19958', pageWidth / 2, yPos, { align: 'center' });
     
     yPos += 5;
-    doc.text('accounts@vitaluxeservices.com | (800) 555-1234', pageWidth / 2, yPos, { align: 'center' });
+    doc.text('info@vitaluxeservices.com | 844-252-5233', pageWidth / 2, yPos, { align: 'center' });
     
     yPos += 10;
     doc.setDrawColor(229, 231, 235);
