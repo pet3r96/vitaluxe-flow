@@ -2519,6 +2519,9 @@ export type Database = {
           pdf_url: string | null
           topline_rep_id: string
           updated_at: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           amount: number
@@ -2537,6 +2540,9 @@ export type Database = {
           pdf_url?: string | null
           topline_rep_id: string
           updated_at?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           amount?: number
@@ -2555,6 +2561,9 @@ export type Database = {
           pdf_url?: string | null
           topline_rep_id?: string
           updated_at?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {

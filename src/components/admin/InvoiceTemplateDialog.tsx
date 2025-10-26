@@ -264,8 +264,29 @@ export function InvoiceTemplateDialog({
     try {
       setIsGenerating(true);
       
-      const invoiceNumber = existingInvoice?.invoice_number || await generateInvoiceNumber();
       const billingMonthDate = startOfMonth(new Date(billingMonth));
+      
+      // Check for existing non-voided invoice
+      if (!existingInvoice) {
+        const { data: duplicateCheck } = await supabase
+          .from("practice_development_fee_invoices")
+          .select("id, invoice_number, payment_status")
+          .eq("topline_rep_id", selectedRepId)
+          .eq("billing_month", format(billingMonthDate, "yyyy-MM-dd"))
+          .neq("payment_status", "voided")
+          .maybeSingle();
+
+        if (duplicateCheck) {
+          toast.error(
+            `An invoice already exists for this rep and billing month: ${duplicateCheck.invoice_number}. ` +
+            `${duplicateCheck.payment_status === "paid" ? "The invoice has been paid." : "Please edit or void the existing invoice first."}`
+          );
+          setIsGenerating(false);
+          return;
+        }
+      }
+      
+      const invoiceNumber = existingInvoice?.invoice_number || await generateInvoiceNumber();
       
       const dueDateStr = dueDate ? format(dueDate, "yyyy-MM-dd") : null;
       

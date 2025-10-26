@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Edit, Eye, CheckCircle, Download, DollarSign, FileText, Users } from "lucide-react";
+import { Plus, Edit, Eye, CheckCircle, Download, DollarSign, FileText, Users, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceTemplateDialog } from "./InvoiceTemplateDialog";
@@ -32,6 +32,8 @@ export default function PracticeDevelopmentFeeManager() {
   const [feeNotes, setFeeNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
+  const [isVoidDialogOpen, setIsVoidDialogOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState("");
 
   // Fetch topline reps
   const { data: toplineReps = [] } = useQuery({
@@ -186,6 +188,34 @@ export default function PracticeDevelopmentFeeManager() {
     }
   });
 
+  const voidInvoiceMutation = useMutation({
+    mutationFn: async ({ invoiceId, reason }: { invoiceId: string; reason: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from("practice_development_fee_invoices")
+        .update({
+          payment_status: "voided",
+          voided_at: new Date().toISOString(),
+          voided_by: user?.id,
+          void_reason: reason
+        })
+        .eq("id", invoiceId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["practice-development-invoices"] });
+      toast.success("Invoice voided successfully");
+      setIsVoidDialogOpen(false);
+      setVoidReason("");
+    },
+    onError: (error) => {
+      console.error("Error voiding invoice:", error);
+      toast.error("Failed to void invoice");
+    }
+  });
+
   const handleViewPDF = async (invoice: any) => {
     if (!invoice.pdf_url) {
       toast.error("PDF not generated yet");
@@ -221,15 +251,17 @@ export default function PracticeDevelopmentFeeManager() {
   const handleExportCSV = () => {
     const csvData = filteredInvoices.map(invoice => [
       invoice.invoice_number,
-            invoice.reps?.profiles?.name || "Unknown",
-            invoice.reps?.profiles?.email || "",
-            format(new Date(invoice.billing_month), "MMMM yyyy"),
-            format(new Date(invoice.invoice_date), "MMM dd, yyyy"),
-            format(new Date(invoice.due_date), "MMM dd, yyyy"),
-            `$${parseFloat(String(invoice.amount)).toFixed(2)}`,
+      invoice.reps?.profiles?.name || "Unknown",
+      invoice.reps?.profiles?.email || "",
+      format(new Date(invoice.billing_month), "MMMM yyyy"),
+      format(new Date(invoice.invoice_date), "MMM dd, yyyy"),
+      format(new Date(invoice.due_date), "MMM dd, yyyy"),
+      `$${parseFloat(String(invoice.amount)).toFixed(2)}`,
       invoice.payment_status,
       invoice.paid_at ? format(new Date(invoice.paid_at), "MMM dd, yyyy") : "—",
-      invoice.payment_method || "—"
+      invoice.payment_method || "—",
+      invoice.voided_at ? format(new Date(invoice.voided_at), "MMM dd, yyyy") : "—",
+      invoice.void_reason || "—"
     ]);
 
     const headers = [
@@ -242,7 +274,9 @@ export default function PracticeDevelopmentFeeManager() {
       "Amount",
       "Status",
       "Paid Date",
-      "Payment Method"
+      "Payment Method",
+      "Voided Date",
+      "Void Reason"
     ];
 
     downloadCSV(csvData, headers, "practice-development-fees");
@@ -401,6 +435,7 @@ export default function PracticeDevelopmentFeeManager() {
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="voided">Voided</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -430,8 +465,14 @@ export default function PracticeDevelopmentFeeManager() {
                     ${parseFloat(invoice.amount.toString()).toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={invoice.payment_status === "paid" ? "default" : "secondary"}>
-                      {invoice.payment_status === "paid" ? "Paid" : "Pending"}
+                    <Badge variant={
+                      invoice.payment_status === "paid" ? "default" : 
+                      invoice.payment_status === "voided" ? "destructive" :
+                      "secondary"
+                    }>
+                      {invoice.payment_status === "paid" ? "Paid" : 
+                       invoice.payment_status === "voided" ? "Voided" :
+                       "Pending"}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -463,6 +504,23 @@ export default function PracticeDevelopmentFeeManager() {
                           title="Edit Invoice"
                         >
                           <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      
+                      {/* Void button - shown for pending invoices only */}
+                      {invoice.payment_status === "pending" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedInvoice(invoice);
+                            setVoidReason("");
+                            setIsVoidDialogOpen(true);
+                          }}
+                          title="Void Invoice"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
                         </Button>
                       )}
                       
@@ -616,6 +674,70 @@ export default function PracticeDevelopmentFeeManager() {
               }}
             >
               Mark as Paid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Void Invoice Dialog */}
+      <Dialog open={isVoidDialogOpen} onOpenChange={setIsVoidDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Void Invoice</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4">
+              <p className="text-sm text-destructive font-medium">
+                ⚠️ This action cannot be undone
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Voiding this invoice will mark it as cancelled. It will be excluded from all financial calculations.
+              </p>
+            </div>
+            
+            {selectedInvoice && (
+              <div className="space-y-2 text-sm">
+                <p><strong>Invoice #:</strong> {selectedInvoice.invoice_number}</p>
+                <p><strong>Rep:</strong> {selectedInvoice.reps?.profiles?.name || "Unknown"}</p>
+                <p><strong>Amount:</strong> ${parseFloat(selectedInvoice.amount.toString()).toFixed(2)}</p>
+                <p><strong>Billing Month:</strong> {format(new Date(selectedInvoice.billing_month), "MMMM yyyy")}</p>
+              </div>
+            )}
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Reason for Voiding <span className="text-destructive">*</span></Label>
+              <Textarea
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                rows={3}
+                placeholder="e.g., Duplicate invoice, billing error, rep no longer active..."
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsVoidDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!voidReason.trim()) {
+                  toast.error("Please provide a reason for voiding");
+                  return;
+                }
+                voidInvoiceMutation.mutate({
+                  invoiceId: selectedInvoice.id,
+                  reason: voidReason
+                });
+              }}
+            >
+              Void Invoice
             </Button>
           </DialogFooter>
         </DialogContent>
