@@ -347,15 +347,6 @@ const AdminProfitReports = () => {
         </CardContent>
       </Card>
 
-      {rxFilter === "all" && filteredProfitDetails && filteredProfitDetails.length > 0 && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            * Rx-required products show zero rep commissions due to federal anti-kickback regulations. 
-            Use the filter above to view non-Rx orders separately.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {filteredProfitDetails && filteredProfitDetails.length > 0 && (
         <DataTablePagination
