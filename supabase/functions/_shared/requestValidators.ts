@@ -324,8 +324,8 @@ export function validateWebhookRequest(data: any) {
   return validateInput(validations);
 }
 
-export function validateApprovePendingProductRequest(data: any): ValidationResult {
-  const validations: ValidationResult[] = [
+export function validateApprovePendingProductRequest(data: any) {
+  const validations = [
     validateUUID(data.requestId, 'requestId'),
     validateEnum(data.action, 'action', ['approve', 'reject'], true),
     validateString(data.adminNotes, 'adminNotes', { required: false, maxLength: 1000 }),

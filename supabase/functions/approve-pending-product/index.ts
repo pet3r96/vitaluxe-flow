@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token');
-    const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
+    const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, csrfToken || undefined);
     if (!csrfValidation.valid) {
       throw new Error('Invalid CSRF token');
     }
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const validation = validateApprovePendingProductRequest(body);
     if (!validation.valid) {
       return new Response(
-        JSON.stringify({ error: validation.error }),
+        JSON.stringify({ error: validation.errors.join(', ') }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
