@@ -118,7 +118,32 @@ export default function Checkout() {
       return { id: cartData.id, lines: lines || [] };
     },
     enabled: !!effectiveUserId,
+    staleTime: 5000,
+    refetchOnWindowFocus: false,
   });
+
+  // Helper to fetch fresh cart snapshot at mutation time
+  const fetchCartSnapshot = async () => {
+    const { data: cartData, error: cartError } = await supabase
+      .from("cart")
+      .select("id")
+      .eq("doctor_id", effectiveUserId)
+      .maybeSingle();
+
+    if (cartError) throw cartError;
+    if (!cartData) return { id: undefined as unknown as string, lines: [] as any[] };
+
+    const { data: lines, error: linesError } = await supabase
+      .from("cart_lines")
+      .select(`
+        *,
+        product:products(name, dosage, sig, image_url, base_price, requires_prescription)
+      `)
+      .eq("cart_id", cartData.id);
+
+    if (linesError) throw linesError;
+    return { id: cartData.id, lines: lines || [] };
+  };
 
   const hasPracticeOrder = (cart?.lines || []).some(
     (line: any) => line.patient_name === "Practice Order"
@@ -181,16 +206,19 @@ export default function Checkout() {
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
-      // DEFENSIVE CHECK: Ensure profile is loaded if we have practice orders
-      const practiceLines = (cart?.lines as any[])?.filter(
-        (line) => line.patient_name === "Practice Order"
-      ) || [];
+      // Always ensure we have a usable cart snapshot at the moment of click
+      const latestCart = (cart?.lines && cart.lines.length > 0) ? cart : await fetchCartSnapshot();
+      
+      const linesAll = (latestCart?.lines as any[]) || [];
+
+      // If there are any practice lines, make sure profile is loaded before proceeding
+      const practiceLines = linesAll.filter((line) => line.patient_name === "Practice Order");
       
       if (practiceLines.length > 0 && isLoadingProfile) {
         throw new Error("Loading practice information... Please wait and try again.");
       }
 
-      if (!cart?.id || !cart.lines || cart.lines.length === 0) {
+      if (!latestCart?.id || linesAll.length === 0) {
         throw new Error("Cart is empty");
       }
 
@@ -214,7 +242,7 @@ export default function Checkout() {
         throw new Error("Security token expired. Please refresh the page and try again.");
       }
 
-      const patientLines = (cart.lines as any[]).filter(
+      const patientLines = linesAll.filter(
         (line) => line.patient_name !== "Practice Order"
       );
 
@@ -655,7 +683,7 @@ export default function Checkout() {
         const { error: deleteError } = await supabase
           .from("cart_lines")
           .delete()
-          .eq("cart_id", cart.id);
+          .eq("cart_id", latestCart.id);
 
         if (deleteError) throw deleteError;
       }
@@ -1211,7 +1239,9 @@ export default function Checkout() {
           onClick={() => checkoutMutation.mutate()}
           disabled={
             checkoutMutation.isPending || 
-            !agreed
+            !agreed ||
+            isLoading ||
+            !(cart?.lines && cart.lines.length > 0)
           }
         >
           {checkoutMutation.isPending ? (
