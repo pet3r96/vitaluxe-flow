@@ -118,8 +118,8 @@ export default function DeliveryConfirmation() {
 
   // Update patient address mutation
   const updatePatientAddress = useMutation({
-    mutationFn: async ({ patientName, lineIds, cartId, address }: { patientName: string; lineIds: string[]; cartId: string; address: any }) => {
-      console.log('[DeliveryConfirmation] Updating patient address for:', patientName, 'Line IDs:', lineIds, 'Cart ID:', cartId);
+    mutationFn: async ({ patientName, lineIds, address }: { patientName: string; lineIds: string[]; address: any }) => {
+      console.log('[DeliveryConfirmation] Updating patient address for:', patientName, 'Line IDs:', lineIds);
       console.log('[DeliveryConfirmation] Address data being saved:', {
         street: address.street,
         city: address.city,
@@ -141,7 +141,6 @@ export default function DeliveryConfirmation() {
           patient_address_validation_source: address.source || 'manual',
           patient_address: null, // Clear legacy field
         })
-        .eq("cart_id", cartId)
         .in("id", lineIds)
         .select('id');
 
@@ -154,13 +153,12 @@ export default function DeliveryConfirmation() {
       // Log detailed result
       console.log('[DeliveryConfirmation] Update complete:', {
         rowsUpdated: data?.length || 0,
-        cartId,
         lineIds,
         updatedRowIds: data?.map(d => d.id) || []
       });
       
       if (!data || data.length === 0) {
-        console.warn('[DeliveryConfirmation] Warning: Update returned 0 rows. Check RLS policies or cart_id.');
+        console.warn('[DeliveryConfirmation] Warning: Update returned 0 rows. Check RLS policies.');
       }
       
       return { lineIds, address };
@@ -482,15 +480,10 @@ export default function DeliveryConfirmation() {
                         variant="secondary"
                         size="sm"
                         onClick={() => {
-                          if (!cartData?.cart?.id) {
-                            toast.error("Cart data not loaded. Please refresh the page.");
-                            return;
-                          }
-                          console.log('[DeliveryConfirmation] Applying patient record address with cart ID:', cartData.cart.id);
+                          console.log('[DeliveryConfirmation] Applying patient record address');
                           updatePatientAddress.mutate({
                             patientName,
                             lineIds: lines.map(l => l.id),
-                            cartId: cartData.cart.id,
                             address: {
                               street: lines[0].patient.address_street,
                               city: lines[0].patient.address_city,
@@ -512,11 +505,7 @@ export default function DeliveryConfirmation() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        if (!cartData?.cart?.id) {
-                          toast.error("Cart data not loaded. Please refresh the page.");
-                          return;
-                        }
-                        console.log('[DeliveryConfirmation] Editing patient address. Lines:', lines.map(l => l.id), 'Cart ID:', cartData.cart.id);
+                        console.log('[DeliveryConfirmation] Editing patient address. Lines:', lines.map(l => l.id));
                         setEditingAddress({
                           type: 'patient',
                           patientName,
@@ -588,15 +577,10 @@ export default function DeliveryConfirmation() {
             if (editingAddress.type === 'practice') {
               updatePracticeAddress.mutate(address);
             } else if (editingAddress.patientName && editingAddress.lineIds) {
-              if (!cartData?.cart?.id) {
-                toast.error("Cart data not loaded. Cannot save address.");
-                return;
-              }
-              console.log('[DeliveryConfirmation] Saving patient address with cart ID:', cartData.cart.id);
+              console.log('[DeliveryConfirmation] Saving patient address');
               updatePatientAddress.mutate({
                 patientName: editingAddress.patientName,
                 lineIds: editingAddress.lineIds,
-                cartId: cartData.cart.id,
                 address
               });
             }
