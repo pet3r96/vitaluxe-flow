@@ -46,11 +46,12 @@ export function InvoiceTemplateDialog({
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [notes, setNotes] = useState(DEFAULT_NOTES);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [rateInputs, setRateInputs] = useState<Record<string, string>>({});
 
   // Initialize with default line items
   useEffect(() => {
     if (open && !existingInvoice) {
-      setLineItems([
+      const defaultItems = [
         {
           id: crypto.randomUUID(),
           description: "Practice Engagement & Support (Non-Clinical) — Number of active practices supported: 12",
@@ -79,8 +80,16 @@ export function InvoiceTemplateDialog({
           rate: 250.00,
           amount: 250.00
         }
-      ]);
+      ];
+      setLineItems(defaultItems);
       setNotes(DEFAULT_NOTES);
+      
+      // Initialize rate inputs
+      const rateMap: Record<string, string> = {};
+      defaultItems.forEach(item => {
+        rateMap[item.id] = item.rate.toFixed(2);
+      });
+      setRateInputs(rateMap);
     }
   }, [open, existingInvoice]);
 
@@ -90,8 +99,16 @@ export function InvoiceTemplateDialog({
       setSelectedRepId(existingInvoice.topline_rep_id);
       setBillingMonth(format(new Date(existingInvoice.billing_month), "yyyy-MM"));
       setInvoiceDate(format(new Date(existingInvoice.invoice_date), "yyyy-MM-dd"));
-      setLineItems(existingInvoice.invoice_template_data.line_items);
+      const items = existingInvoice.invoice_template_data.line_items;
+      setLineItems(items);
       setNotes(existingInvoice.invoice_template_data.notes);
+      
+      // Initialize rate inputs from existing data
+      const rateMap: Record<string, string> = {};
+      items.forEach((item: LineItem) => {
+        rateMap[item.id] = (item.rate ?? 0).toFixed(2);
+      });
+      setRateInputs(rateMap);
     }
   }, [existingInvoice]);
 
@@ -114,13 +131,15 @@ export function InvoiceTemplateDialog({
   };
 
   const addLineItem = () => {
+    const newId = crypto.randomUUID();
     setLineItems([...lineItems, {
-      id: crypto.randomUUID(),
+      id: newId,
       description: "",
       quantity: 1,
       rate: 0,
       amount: 0
     }]);
+    setRateInputs(prev => ({ ...prev, [newId]: "0.00" }));
   };
 
   const removeLineItem = (id: string) => {
@@ -129,6 +148,10 @@ export function InvoiceTemplateDialog({
       return;
     }
     setLineItems(items => items.filter(item => item.id !== id));
+    setRateInputs(prev => {
+      const { [id]: _, ...rest } = prev;
+      return rest;
+    });
   };
 
   const generateInvoiceNumber = async () => {
@@ -192,12 +215,14 @@ export function InvoiceTemplateDialog({
       const invoiceNumber = existingInvoice?.invoice_number || await generateInvoiceNumber();
       const billingMonthDate = startOfMonth(new Date(billingMonth));
       
+      const dueDateStr = dueDate ? format(dueDate, "yyyy-MM-dd") : null;
+      
       const invoiceData = {
         invoice_number: invoiceNumber,
         topline_rep_id: selectedRepId,
         billing_month: format(billingMonthDate, "yyyy-MM-dd"),
         invoice_date: invoiceDate,
-        due_date: format(dueDate, "yyyy-MM-dd"),
+        due_date: dueDateStr,
         amount: totalDue,
         invoice_template_data: {
           line_items: lineItems,
@@ -241,12 +266,14 @@ export function InvoiceTemplateDialog({
       const invoiceNumber = existingInvoice?.invoice_number || await generateInvoiceNumber();
       const billingMonthDate = startOfMonth(new Date(billingMonth));
       
+      const dueDateStr = dueDate ? format(dueDate, "yyyy-MM-dd") : null;
+      
       const invoiceData = {
         invoice_number: invoiceNumber,
         topline_rep_id: selectedRepId,
         billing_month: format(billingMonthDate, "yyyy-MM-dd"),
         invoice_date: invoiceDate,
-        due_date: format(dueDate, "yyyy-MM-dd"),
+        due_date: dueDateStr,
         amount: totalDue,
         invoice_template_data: {
           line_items: lineItems,
@@ -255,6 +282,7 @@ export function InvoiceTemplateDialog({
           total_due: totalDue
         } as any
       };
+
 
       let invoiceId = existingInvoice?.id;
       
@@ -395,14 +423,27 @@ export function InvoiceTemplateDialog({
                   <div className="space-y-2">
                     <Label>Rate</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">$</span>
                       <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.rate}
-                        onChange={(e) => updateLineItem(item.id, "rate", parseFloat(e.target.value) || 0)}
-                        className="pl-7"
+                        type="text"
+                        inputMode="decimal"
+                        value={rateInputs[item.id] ?? (item.rate ?? 0).toFixed(2)}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/,/g, "");
+                          if (raw === "" || /^[0-9]*\.?[0-9]{0,2}$/.test(raw)) {
+                            setRateInputs(prev => ({ ...prev, [item.id]: raw }));
+                            const num = parseFloat(raw);
+                            updateLineItem(item.id, "rate", isNaN(num) ? 0 : num);
+                          }
+                        }}
+                        onBlur={() => {
+                          const raw = (rateInputs[item.id] ?? "").replace(/,/g, "");
+                          const num = parseFloat(raw);
+                          const formatted = isNaN(num) ? "0.00" : num.toFixed(2);
+                          setRateInputs(prev => ({ ...prev, [item.id]: formatted }));
+                          updateLineItem(item.id, "rate", isNaN(num) ? 0 : num);
+                        }}
+                        className="pl-7 bg-background border-input hover:border-primary focus:border-primary cursor-text"
                         placeholder="0.00"
                       />
                     </div>
