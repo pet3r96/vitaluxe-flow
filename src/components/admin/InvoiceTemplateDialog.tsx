@@ -97,7 +97,7 @@ export function InvoiceTemplateDialog({
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
   const totalDue = subtotal;
-  const dueDate = addDays(new Date(invoiceDate), 15);
+  const dueDate = invoiceDate ? addDays(new Date(invoiceDate), 15) : null;
 
   const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
     setLineItems(items => items.map(item => {
@@ -394,13 +394,18 @@ export function InvoiceTemplateDialog({
 
                   <div className="space-y-2">
                     <Label>Rate</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.rate}
-                      onChange={(e) => updateLineItem(item.id, "rate", parseFloat(e.target.value) || 0)}
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.rate}
+                        onChange={(e) => updateLineItem(item.id, "rate", parseFloat(e.target.value) || 0)}
+                        className="pl-7"
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -441,7 +446,9 @@ export function InvoiceTemplateDialog({
             </div>
             <div className="flex justify-between text-muted-foreground">
               <span>Due Date:</span>
-              <span>{format(dueDate, "MMMM d, yyyy")} (Net 15)</span>
+              <span>
+                {dueDate && invoiceDate ? format(dueDate, "MMMM d, yyyy") : "—"} (Net 15)
+              </span>
             </div>
           </div>
 
