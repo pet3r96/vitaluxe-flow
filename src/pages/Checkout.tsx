@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck, CreditCard, ShieldCheck, Building2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, FileCheck, Package, Upload, FileText, X, Loader2, Truck, CreditCard, ShieldCheck, Building2, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -21,7 +21,7 @@ import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
 import { logger } from "@/lib/logger";
 
-export default function OrderConfirmation() {
+export default function Checkout() {
   const { effectiveUserId, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -825,12 +825,30 @@ export default function OrderConfirmation() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Progress Indicator */}
+      <div className="flex items-center justify-center gap-2 text-sm mb-6">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <CheckCircle2 className="h-4 w-4 text-success" />
+          <span>Cart</span>
+        </div>
+        <div className="w-16 h-px bg-border" />
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <CheckCircle2 className="h-4 w-4 text-success" />
+          <span>Delivery</span>
+        </div>
+        <div className="w-16 h-px bg-border" />
+        <div className="flex items-center gap-2 text-primary font-medium">
+          <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">3</div>
+          <span>Payment</span>
+        </div>
+      </div>
+
       <div className="flex items-center gap-3">
-        <FileCheck className="h-8 w-8 text-primary" />
+        <ShieldCheck className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Confirm Your Order</h1>
+          <h1 className="text-3xl font-bold text-foreground">Complete Checkout</h1>
           <p className="text-muted-foreground mt-1">
-            Please review your order details and confirm the medical attestation below
+            Review your order, select payment method, and complete your purchase
           </p>
         </div>
       </div>
@@ -1172,56 +1190,7 @@ export default function OrderConfirmation() {
         </Card>
       )}
 
-      {/* Practice Shipping Address Display */}
-      {hasPracticeOrder && (
-        <Card className="border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Building2 className="h-5 w-5" />
-              Practice Shipping Address
-            </CardTitle>
-            <CardDescription>
-              Orders will be shipped to this address
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingProfile ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                Loading practice address...
-              </div>
-            ) : providerProfile?.shipping_address_street ? (
-              <div className="space-y-3">
-                <div className="text-sm">
-                  <p className="font-medium">{providerProfile.name}</p>
-                  <p className="text-muted-foreground">{providerProfile.shipping_address_street}</p>
-                  <p className="text-muted-foreground">
-                    {providerProfile.shipping_address_city}, {providerProfile.shipping_address_state} {providerProfile.shipping_address_zip}
-                  </p>
-                </div>
-                <Badge variant="default" className="bg-green-600">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Address Verified
-                </Badge>
-              </div>
-            ) : (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="flex items-center justify-between">
-                  <span>Practice shipping address not set</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate("/profile")}
-                  >
-                    Go to Profile
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Practice Shipping Address Display - REMOVED, now handled in delivery confirmation */}
 
       {/* Action Buttons */}
       <div className="flex gap-4">
@@ -1229,11 +1198,11 @@ export default function OrderConfirmation() {
           variant="outline"
           size="lg"
           className="flex-1"
-          onClick={() => navigate("/cart")}
+          onClick={() => navigate("/delivery-confirmation")}
           disabled={checkoutMutation.isPending}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Cart
+          Back to Delivery
         </Button>
         <Button
           size="lg"
@@ -1241,9 +1210,7 @@ export default function OrderConfirmation() {
           onClick={() => checkoutMutation.mutate()}
           disabled={
             checkoutMutation.isPending || 
-            !agreed || 
-            (hasPracticeOrder && isLoadingProfile) ||
-            (hasPracticeOrder && !providerProfile?.shipping_address_street)
+            !agreed
           }
         >
           {checkoutMutation.isPending ? (

@@ -1,0 +1,445 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { Package, Truck, MapPin, Edit, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight } from "lucide-react";
+import { DeliveryAddressEditor } from "@/components/orders/DeliveryAddressEditor";
+
+export default function DeliveryConfirmation() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  const [editingAddress, setEditingAddress] = useState<{
+    type: 'practice' | 'patient';
+    patientId?: string;
+    patientName?: string;
+    currentAddress?: any;
+  } | null>(null);
+
+  const discountState = location.state as { 
+    discountCode?: string; 
+    discountPercentage?: number;
+    merchantFeePercentage?: number;
+    merchantFeeAmount?: number;
+  };
+
+  // Fetch cart data with patient groupings
+  const { data: cartData, isLoading: cartLoading } = useQuery({
+    queryKey: ["cart", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data: cart, error: cartError } = await supabase
+        .from("cart")
+        .select("id")
+        .eq("doctor_id", user!.id)
+        .single();
+
+      if (cartError) throw cartError;
+
+      const { data: lines, error: linesError } = await supabase
+        .from("cart_lines")
+        .select(`
+          *,
+          product:products(*)
+        `)
+        .eq("cart_id", cart.id);
+
+      if (linesError) throw linesError;
+
+      return { cart, lines: lines || [] };
+    },
+  });
+
+  // Fetch practice profile for practice shipping address
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user!.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Update practice address mutation
+  const updatePracticeAddress = useMutation({
+    mutationFn: async (address: any) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          shipping_address_street: address.street,
+          shipping_address_city: address.city,
+          shipping_address_state: address.state,
+          shipping_address_zip: address.zip,
+          shipping_address_formatted: address.formatted,
+        })
+        .eq("id", user!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+      toast.success("Practice address updated successfully");
+      setEditingAddress(null);
+    },
+    onError: (error) => {
+      console.error("Error updating practice address:", error);
+      toast.error("Failed to update practice address");
+    },
+  });
+
+  // Update patient address mutation
+  const updatePatientAddress = useMutation({
+    mutationFn: async ({ patientName, address }: { patientName: string; address: any }) => {
+      const { error } = await supabase
+        .from("cart_lines")
+        .update({
+          patient_address_street: address.street,
+          patient_address_city: address.city,
+          patient_address_state: address.state,
+          patient_address_zip: address.zip,
+          patient_address_formatted: address.formatted,
+          patient_address_validated: address.status === 'verified',
+          patient_address_validation_source: address.source || 'manual',
+        })
+        .eq("cart_id", cartData?.cart.id)
+        .eq("patient_name", patientName);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart", user?.id] });
+      toast.success("Patient address updated successfully");
+      setEditingAddress(null);
+    },
+    onError: (error) => {
+      console.error("Error updating patient address:", error);
+      toast.error("Failed to update patient address");
+    },
+  });
+
+  // Group cart lines by destination
+  const practiceOrders = cartData?.lines.filter(line => !line.patient_name) || [];
+  const patientGroups = cartData?.lines
+    .filter(line => line.patient_name)
+    .reduce((groups, line) => {
+      const key = line.patient_name || "Unknown Patient";
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(line);
+      return groups;
+    }, {} as Record<string, any[]>);
+
+  const getShippingSpeedLabel = (speed: string) => {
+    const labels = {
+      ground: "Ground Shipping (5-7 business days)",
+      priority: "Priority Shipping (3-5 business days)",
+      express: "Express Shipping (2 business days)",
+    };
+    return labels[speed as keyof typeof labels] || speed;
+  };
+
+  const hasAllAddresses = () => {
+    // Check practice address if there are practice orders
+    if (practiceOrders.length > 0) {
+      if (!profile?.shipping_address_street || !profile?.shipping_address_city || 
+          !profile?.shipping_address_state || !profile?.shipping_address_zip) {
+        return false;
+      }
+    }
+
+    // Check patient addresses
+    if (patientGroups && Object.keys(patientGroups).length > 0) {
+      for (const lines of Object.values(patientGroups)) {
+        const firstLine = lines[0];
+        if (!firstLine.patient_address_street || !firstLine.patient_address_city ||
+            !firstLine.patient_address_state || !firstLine.patient_address_zip) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const handleContinue = () => {
+    if (!hasAllAddresses()) {
+      toast.error("Please add delivery addresses for all orders");
+      return;
+    }
+
+    navigate("/checkout", { 
+      state: {
+        ...discountState,
+        addressesConfirmed: true
+      }
+    });
+  };
+
+  if (cartLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!cartData?.lines.length) {
+    return (
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Your cart is empty</CardTitle>
+          <CardDescription>Add some products to continue</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Progress Indicator */}
+      <div className="flex items-center justify-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <CheckCircle2 className="h-4 w-4 text-success" />
+          <span>Cart</span>
+        </div>
+        <div className="w-16 h-px bg-border" />
+        <div className="flex items-center gap-2 text-primary font-medium">
+          <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">2</div>
+          <span>Delivery</span>
+        </div>
+        <div className="w-16 h-px bg-border" />
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <div className="h-6 w-6 rounded-full border-2 flex items-center justify-center text-xs">3</div>
+          <span>Payment</span>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Confirm Delivery Information
+          </CardTitle>
+          <CardDescription>
+            Review and update shipping addresses for your orders
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Practice Orders */}
+          {practiceOrders.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Practice Order ({practiceOrders.length} {practiceOrders.length === 1 ? 'item' : 'items'})
+                </h3>
+              </div>
+
+              <div className="space-y-2 pl-7 text-sm">
+                {practiceOrders.map((line) => (
+                  <div key={line.id} className="text-muted-foreground">
+                    • {line.product?.name} (Qty: {line.quantity})
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 pl-7">
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{getShippingSpeedLabel(practiceOrders[0]?.shipping_speed || 'ground')}</span>
+              </div>
+
+              <div className="pl-7 space-y-2">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <div className="font-medium flex items-center gap-2">
+                      Delivery Address:
+                      {profile?.shipping_address_street && (
+                        <Badge variant="outline" className="text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      )}
+                    </div>
+                    {profile?.shipping_address_street ? (
+                      <div className="text-sm text-muted-foreground">
+                        <div>{profile.name}</div>
+                        <div>{profile.shipping_address_street}</div>
+                        <div>{profile.shipping_address_city}, {profile.shipping_address_state} {profile.shipping_address_zip}</div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        No address on file
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingAddress({
+                      type: 'practice',
+                      currentAddress: {
+                        street: profile?.shipping_address_street || '',
+                        city: profile?.shipping_address_city || '',
+                        state: profile?.shipping_address_state || '',
+                        zip: profile?.shipping_address_zip || '',
+                      }
+                    })}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {practiceOrders.length > 0 && patientGroups && Object.keys(patientGroups).length > 0 && (
+            <Separator />
+          )}
+
+          {/* Patient Orders */}
+          {patientGroups && Object.entries(patientGroups).map(([patientName, lines]) => (
+            <div key={patientName} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Order for {patientName} ({lines.length} {lines.length === 1 ? 'item' : 'items'})
+                </h3>
+              </div>
+
+              <div className="space-y-2 pl-7 text-sm">
+                {lines.map((line) => (
+                  <div key={line.id} className="text-muted-foreground">
+                    • {line.product?.name} (Qty: {line.quantity})
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 pl-7">
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{getShippingSpeedLabel(lines[0]?.shipping_speed || 'ground')}</span>
+              </div>
+
+              <div className="pl-7 space-y-2">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <div className="font-medium flex items-center gap-2">
+                      Delivery Address:
+                      {lines[0].patient_address_validated && (
+                        <Badge variant="outline" className="text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      )}
+                    </div>
+                    {lines[0].patient_address_street ? (
+                      <div className="text-sm text-muted-foreground">
+                        <div>{patientName}</div>
+                        <div>{lines[0].patient_address_street}</div>
+                        <div>{lines[0].patient_address_city}, {lines[0].patient_address_state} {lines[0].patient_address_zip}</div>
+                      </div>
+                    ) : lines[0].patient_address ? (
+                      <div className="text-sm text-muted-foreground">
+                        <div>{patientName}</div>
+                        <div>{lines[0].patient_address}</div>
+                        <div className="flex items-center gap-2 text-amber-600 mt-1">
+                          <AlertCircle className="h-4 w-4" />
+                          Please update to structured address format
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        No address on file
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingAddress({
+                      type: 'patient',
+                      patientName,
+                      currentAddress: {
+                        street: lines[0].patient_address_street || '',
+                        city: lines[0].patient_address_city || '',
+                        state: lines[0].patient_address_state || '',
+                        zip: lines[0].patient_address_zip || '',
+                      }
+                    })}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <Separator className="my-6" />
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/cart")}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Cart
+            </Button>
+            <Button
+              onClick={handleContinue}
+              disabled={!hasAllAddresses()}
+            >
+              Continue to Payment
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+
+          {!hasAllAddresses() && (
+            <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+              <AlertCircle className="h-4 w-4" />
+              Please add delivery addresses for all orders before continuing
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Address Editor Dialog */}
+      {editingAddress && (
+        <DeliveryAddressEditor
+          open={!!editingAddress}
+          onOpenChange={(open) => !open && setEditingAddress(null)}
+          addressType={editingAddress.type}
+          currentAddress={editingAddress.currentAddress}
+          onSave={(address) => {
+            if (editingAddress.type === 'practice') {
+              updatePracticeAddress.mutate(address);
+            } else if (editingAddress.patientName) {
+              updatePatientAddress.mutate({
+                patientName: editingAddress.patientName,
+                address
+              });
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}

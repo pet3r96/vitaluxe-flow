@@ -534,7 +534,14 @@ export type Database = {
           id: string
           order_notes: string | null
           patient_address: string | null
+          patient_address_city: string | null
           patient_address_encrypted: string | null
+          patient_address_formatted: string | null
+          patient_address_state: string | null
+          patient_address_street: string | null
+          patient_address_validated: boolean | null
+          patient_address_validation_source: string | null
+          patient_address_zip: string | null
           patient_email: string | null
           patient_email_encrypted: string | null
           patient_id: string | null
@@ -566,7 +573,14 @@ export type Database = {
           id?: string
           order_notes?: string | null
           patient_address?: string | null
+          patient_address_city?: string | null
           patient_address_encrypted?: string | null
+          patient_address_formatted?: string | null
+          patient_address_state?: string | null
+          patient_address_street?: string | null
+          patient_address_validated?: boolean | null
+          patient_address_validation_source?: string | null
+          patient_address_zip?: string | null
           patient_email?: string | null
           patient_email_encrypted?: string | null
           patient_id?: string | null
@@ -598,7 +612,14 @@ export type Database = {
           id?: string
           order_notes?: string | null
           patient_address?: string | null
+          patient_address_city?: string | null
           patient_address_encrypted?: string | null
+          patient_address_formatted?: string | null
+          patient_address_state?: string | null
+          patient_address_street?: string | null
+          patient_address_validated?: boolean | null
+          patient_address_validation_source?: string | null
+          patient_address_zip?: string | null
           patient_email?: string | null
           patient_email_encrypted?: string | null
           patient_id?: string | null

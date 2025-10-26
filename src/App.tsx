@@ -70,7 +70,8 @@ const Messages = lazy(() => import("./pages/Messages"));
 const Pharmacies = lazy(() => import("./pages/Pharmacies"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Cart = lazy(() => import("./pages/Cart"));
-const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation"));
+const DeliveryConfirmation = lazy(() => import("./pages/DeliveryConfirmation"));
+const Checkout = lazy(() => import("./pages/Checkout"));
 const Downlines = lazy(() => import("./pages/Downlines"));
 const MedSpas = lazy(() => import("./pages/MedSpas"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -175,7 +176,9 @@ const App = () => (
                                     <Route path="/pharmacies" element={<Pharmacies />} />
                                     <Route path="/reports" element={<Reports />} />
                                     <Route path="/cart" element={<Cart />} />
-                                    <Route path="/order-confirmation" element={<OrderConfirmation />} />
+                                    <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
+                                    <Route path="/checkout" element={<Checkout />} />
+                                    <Route path="/order-confirmation" element={<Checkout />} />
                                     <Route path="/downlines" element={<MyDownlines />} />
                                     <Route path="/med-spas" element={<MedSpas />} />
                                     <Route path="/profile" element={<Profile />} />

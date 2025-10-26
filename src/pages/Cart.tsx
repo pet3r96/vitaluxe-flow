@@ -380,7 +380,7 @@ export default function Cart() {
               <Button 
                 className="w-full min-h-[48px] text-base" 
                 size="lg"
-                onClick={() => navigate("/order-confirmation", { 
+                onClick={() => navigate("/delivery-confirmation", { 
                   state: { 
                     discountCode, 
                     discountPercentage,
@@ -389,10 +389,10 @@ export default function Cart() {
                   } 
                 })}
               >
-                Proceed to Confirmation
+                Continue to Delivery
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                Review and confirm your order on the next page
+                Review shipping addresses on the next page
               </p>
             </CardContent>
           </Card>
