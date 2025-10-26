@@ -202,14 +202,25 @@ export const OrdersDataTable = () => {
 
       // Filter by downline rep if role is downline
       if (effectiveRole === "downline") {
-        // Downlines see orders from practices linked to them
-        const { data: practices } = await supabase
-          .from("profiles")
+        // Get the downline's rep record first
+        const { data: downlineRep } = await supabase
+          .from("reps")
           .select("id")
-          .eq("linked_topline_id", effectiveUserId)  // practices linked to THIS downline
-          .eq("active", true);
+          .eq("user_id", effectiveUserId)
+          .eq("role", "downline")
+          .maybeSingle();
         
-        const practiceIds = practices?.map(p => p.id) || [];
+        if (!downlineRep) {
+          return []; // No rep record found
+        }
+        
+        // Get practices linked to this downline via rep_practice_links
+        const { data: practiceLinks } = await supabase
+          .from("rep_practice_links")
+          .select("practice_id")
+          .eq("rep_id", downlineRep.id);
+        
+        const practiceIds = practiceLinks?.map(pl => pl.practice_id) || [];
         
         if (practiceIds.length === 0) {
           return []; // No practices assigned, no orders
