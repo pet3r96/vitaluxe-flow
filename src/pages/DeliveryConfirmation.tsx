@@ -21,6 +21,8 @@ export default function DeliveryConfirmation() {
     type: 'practice' | 'patient';
     patientId?: string;
     patientName?: string;
+    lineIds?: string[];
+    oldPatientAddress?: string;
     currentAddress?: any;
   } | null>(null);
 
@@ -108,8 +110,10 @@ export default function DeliveryConfirmation() {
 
   // Update patient address mutation
   const updatePatientAddress = useMutation({
-    mutationFn: async ({ patientName, address }: { patientName: string; address: any }) => {
-      const { error } = await supabase
+    mutationFn: async ({ patientName, lineIds, address }: { patientName: string; lineIds: string[]; address: any }) => {
+      console.log('[DeliveryConfirmation] Updating patient address for:', patientName, 'Line IDs:', lineIds);
+      
+      const { data, error } = await supabase
         .from("cart_lines")
         .update({
           patient_address_street: address.street,
@@ -119,11 +123,20 @@ export default function DeliveryConfirmation() {
           patient_address_formatted: address.formatted,
           patient_address_validated: address.status === 'verified',
           patient_address_validation_source: address.source || 'manual',
+          patient_address: null, // Clear legacy field
         })
         .eq("cart_id", cartData?.cart.id)
-        .eq("patient_name", patientName);
+        .in("id", lineIds)
+        .select('id');
 
       if (error) throw error;
+      
+      console.log('[DeliveryConfirmation] Updated rows:', data?.length || 0);
+      
+      if (!data || data.length === 0) {
+        console.error('[DeliveryConfirmation] No rows updated! Line IDs:', lineIds);
+        throw new Error('No cart lines were updated. Please try again.');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
@@ -395,17 +408,21 @@ export default function DeliveryConfirmation() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setEditingAddress({
-                      type: 'patient',
-                      patientName,
-                      patientId: lines[0].patient_address ? lines[0].patient_address : undefined,
-                      currentAddress: {
-                        street: lines[0].patient_address_street || '',
-                        city: lines[0].patient_address_city || '',
-                        state: lines[0].patient_address_state || '',
-                        zip: lines[0].patient_address_zip || '',
-                      }
-                    })}
+                    onClick={() => {
+                      console.log('[DeliveryConfirmation] Editing patient address. Lines:', lines.map(l => l.id));
+                      setEditingAddress({
+                        type: 'patient',
+                        patientName,
+                        lineIds: lines.map(l => l.id),
+                        oldPatientAddress: lines[0].patient_address,
+                        currentAddress: {
+                          street: lines[0].patient_address_street || '',
+                          city: lines[0].patient_address_city || '',
+                          state: lines[0].patient_address_state || '',
+                          zip: lines[0].patient_address_zip || '',
+                        }
+                      });
+                    }}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     {!lines[0].patient_address_street && lines[0].patient_address ? (
@@ -458,13 +475,14 @@ export default function DeliveryConfirmation() {
           onOpenChange={(open) => !open && setEditingAddress(null)}
           addressType={editingAddress.type}
           currentAddress={editingAddress.currentAddress}
-          oldPatientAddress={editingAddress.patientId}
+          oldPatientAddress={editingAddress.oldPatientAddress}
           onSave={(address) => {
             if (editingAddress.type === 'practice') {
               updatePracticeAddress.mutate(address);
-            } else if (editingAddress.patientName) {
+            } else if (editingAddress.patientName && editingAddress.lineIds) {
               updatePatientAddress.mutate({
                 patientName: editingAddress.patientName,
+                lineIds: editingAddress.lineIds,
                 address
               });
             }
