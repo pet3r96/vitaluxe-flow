@@ -118,8 +118,16 @@ export default function DeliveryConfirmation() {
 
   // Update patient address mutation
   const updatePatientAddress = useMutation({
-    mutationFn: async ({ patientName, lineIds, address }: { patientName: string; lineIds: string[]; address: any }) => {
-      console.log('[DeliveryConfirmation] Updating patient address for:', patientName, 'Line IDs:', lineIds, 'Cart ID:', cartData?.cart.id);
+    mutationFn: async ({ patientName, lineIds, cartId, address }: { patientName: string; lineIds: string[]; cartId: string; address: any }) => {
+      console.log('[DeliveryConfirmation] Updating patient address for:', patientName, 'Line IDs:', lineIds, 'Cart ID:', cartId);
+      console.log('[DeliveryConfirmation] Address data being saved:', {
+        street: address.street,
+        city: address.city,
+        state: address.state,
+        zip: address.zip,
+        formatted: address.formatted,
+        status: address.status
+      });
       
       const { data, error } = await supabase
         .from("cart_lines")
@@ -133,7 +141,7 @@ export default function DeliveryConfirmation() {
           patient_address_validation_source: address.source || 'manual',
           patient_address: null, // Clear legacy field
         })
-        .eq("cart_id", cartData?.cart.id)
+        .eq("cart_id", cartId)
         .in("id", lineIds)
         .select('id');
 
@@ -143,38 +151,47 @@ export default function DeliveryConfirmation() {
         throw error;
       }
       
-      // Log result but don't fail on 0 rows (RLS may prevent data return)
-      console.log('[DeliveryConfirmation] Update result - rows returned:', data?.length || 0);
+      // Log detailed result
+      console.log('[DeliveryConfirmation] Update complete:', {
+        rowsUpdated: data?.length || 0,
+        cartId,
+        lineIds,
+        updatedRowIds: data?.map(d => d.id) || []
+      });
+      
+      if (!data || data.length === 0) {
+        console.warn('[DeliveryConfirmation] Warning: Update returned 0 rows. Check RLS policies or cart_id.');
+      }
       
       return { lineIds, address };
     },
-    onMutate: async ({ lineIds, address }) => {
-      // Optimistic update for immediate UI feedback
-      await queryClient.cancelQueries({ queryKey: ["cart", effectiveUserId] });
-      const previousData = queryClient.getQueryData(["cart", effectiveUserId]);
-      
-      queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
-        if (!old?.lines) return old;
-        return {
-          ...old,
-          lines: old.lines.map((line: any) => 
-            lineIds.includes(line.id) ? {
-              ...line,
-              patient_address_street: address.street,
-              patient_address_city: address.city,
-              patient_address_state: address.state,
-              patient_address_zip: address.zip,
-              patient_address_formatted: address.formatted,
-              patient_address_validated: address.status === 'verified',
-              patient_address_validation_source: address.source || 'manual',
-              patient_address: null,
-            } : line
-          ),
-        };
-      });
-      
-      return { previousData };
-    },
+    // Optimistic update temporarily disabled for debugging
+    // onMutate: async ({ lineIds, address }) => {
+    //   await queryClient.cancelQueries({ queryKey: ["cart", effectiveUserId] });
+    //   const previousData = queryClient.getQueryData(["cart", effectiveUserId]);
+    //   
+    //   queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
+    //     if (!old?.lines) return old;
+    //     return {
+    //       ...old,
+    //       lines: old.lines.map((line: any) => 
+    //         lineIds.includes(line.id) ? {
+    //           ...line,
+    //           patient_address_street: address.street,
+    //           patient_address_city: address.city,
+    //           patient_address_state: address.state,
+    //           patient_address_zip: address.zip,
+    //           patient_address_formatted: address.formatted,
+    //           patient_address_validated: address.status === 'verified',
+    //           patient_address_validation_source: address.source || 'manual',
+    //           patient_address: null,
+    //         } : line
+    //       ),
+    //     };
+    //   });
+    //   
+    //   return { previousData };
+    // },
     onSuccess: () => {
       console.log('[DeliveryConfirmation] Patient address saved, invalidating cache');
       queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
@@ -465,10 +482,15 @@ export default function DeliveryConfirmation() {
                         variant="secondary"
                         size="sm"
                         onClick={() => {
-                          console.log('[DeliveryConfirmation] Applying patient record address');
+                          if (!cartData?.cart?.id) {
+                            toast.error("Cart data not loaded. Please refresh the page.");
+                            return;
+                          }
+                          console.log('[DeliveryConfirmation] Applying patient record address with cart ID:', cartData.cart.id);
                           updatePatientAddress.mutate({
                             patientName,
                             lineIds: lines.map(l => l.id),
+                            cartId: cartData.cart.id,
                             address: {
                               street: lines[0].patient.address_street,
                               city: lines[0].patient.address_city,
@@ -490,7 +512,11 @@ export default function DeliveryConfirmation() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        console.log('[DeliveryConfirmation] Editing patient address. Lines:', lines.map(l => l.id));
+                        if (!cartData?.cart?.id) {
+                          toast.error("Cart data not loaded. Please refresh the page.");
+                          return;
+                        }
+                        console.log('[DeliveryConfirmation] Editing patient address. Lines:', lines.map(l => l.id), 'Cart ID:', cartData.cart.id);
                         setEditingAddress({
                           type: 'patient',
                           patientName,
@@ -562,9 +588,15 @@ export default function DeliveryConfirmation() {
             if (editingAddress.type === 'practice') {
               updatePracticeAddress.mutate(address);
             } else if (editingAddress.patientName && editingAddress.lineIds) {
+              if (!cartData?.cart?.id) {
+                toast.error("Cart data not loaded. Cannot save address.");
+                return;
+              }
+              console.log('[DeliveryConfirmation] Saving patient address with cart ID:', cartData.cart.id);
               updatePatientAddress.mutate({
                 patientName: editingAddress.patientName,
                 lineIds: editingAddress.lineIds,
+                cartId: cartData.cart.id,
                 address
               });
             }
