@@ -14,7 +14,7 @@ import { DeliveryAddressEditor } from "@/components/orders/DeliveryAddressEditor
 export default function DeliveryConfirmation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   
   const [editingAddress, setEditingAddress] = useState<{
@@ -33,13 +33,13 @@ export default function DeliveryConfirmation() {
 
   // Fetch cart data with patient groupings
   const { data: cartData, isLoading: cartLoading } = useQuery({
-    queryKey: ["cart", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["cart", effectiveUserId],
+    enabled: !!effectiveUserId,
     queryFn: async () => {
       const { data: cart, error: cartError } = await supabase
         .from("cart")
         .select("id")
-        .eq("doctor_id", user!.id)
+        .eq("doctor_id", effectiveUserId!)
         .single();
 
       if (cartError) throw cartError;
@@ -60,13 +60,13 @@ export default function DeliveryConfirmation() {
 
   // Fetch practice profile for practice shipping address
   const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["profile", effectiveUserId],
+    enabled: !!effectiveUserId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user!.id)
+        .eq("id", effectiveUserId!)
         .single();
 
       if (error) throw error;
@@ -86,12 +86,12 @@ export default function DeliveryConfirmation() {
           shipping_address_zip: address.zip,
           shipping_address_formatted: address.formatted,
         })
-        .eq("id", user!.id);
+        .eq("id", effectiveUserId!);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["profile", effectiveUserId] });
       toast.success("Practice address updated successfully");
       setEditingAddress(null);
     },
@@ -121,7 +121,7 @@ export default function DeliveryConfirmation() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
       toast.success("Patient address updated successfully");
       setEditingAddress(null);
     },
