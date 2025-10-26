@@ -4535,6 +4535,29 @@ export type Database = {
           },
         ]
       }
+      rep_earnings_view: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          description: string | null
+          doctor_id: string | null
+          earning_type: string | null
+          id: string | null
+          invoice_number: string | null
+          is_rx_required: boolean | null
+          order_status: string | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_notes: string | null
+          payment_status: string | null
+          pdf_url: string | null
+          practice_name: string | null
+          reference_number: string | null
+          related_id: string | null
+          rep_id: string | null
+        }
+        Relationships: []
+      }
       rep_productivity_summary: {
         Row: {
           assigned_topline_id: string | null

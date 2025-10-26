@@ -5,16 +5,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, FileText, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { Tag } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const RepProfitReports = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
+  const { toast } = useToast();
   const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");
 
   // Get rep ID
@@ -33,29 +35,16 @@ const RepProfitReports = () => {
     enabled: !!effectiveUserId,
   });
 
-  // Get profit details with order information, including Rx flag
-  const { data: profitDetails, isLoading } = useQuery({
-    queryKey: ["rep-profit-details", repData?.id, effectiveRole],
+  // Get unified earnings (commissions + practice dev fees)
+  const { data: earningsData, isLoading } = useQuery({
+    queryKey: ["rep-earnings", repData?.id, effectiveRole],
     enabled: !!repData?.id && !!effectiveRole,
     staleTime: 60000,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("order_profits")
-        .select(`
-          *,
-          orders:order_id (
-            id,
-            created_at,
-            status,
-            doctor_id,
-            profiles:doctor_id (name)
-          )
-        `)
-        .or(
-          effectiveRole === 'topline'
-            ? `topline_id.eq.${repData.id}`
-            : `downline_id.eq.${repData.id}`
-        )
+        .from("rep_earnings_view")
+        .select("*")
+        .eq("rep_id", repData.id)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -63,63 +52,65 @@ const RepProfitReports = () => {
     },
   });
 
-  // Filter profit details based on Rx status
-  const filteredProfitDetails = useMemo(() => {
-    if (!profitDetails) return [];
+  // Filter based on Rx (only relevant for product commissions)
+  const filteredEarnings = useMemo(() => {
+    if (!earningsData) return [];
     
     if (rxFilter === "non-rx") {
-      return profitDetails.filter(item => !item.is_rx_required);
+      return earningsData.filter(item => 
+        item.earning_type === 'practice_dev_fee' || !item.is_rx_required
+      );
     } else if (rxFilter === "rx-only") {
-      return profitDetails.filter(item => item.is_rx_required);
+      return earningsData.filter(item => 
+        item.earning_type !== 'practice_dev_fee' && item.is_rx_required
+      );
     }
-    return profitDetails;
-  }, [profitDetails, rxFilter]);
+    return earningsData;
+  }, [earningsData, rxFilter]);
 
-  const totalProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => item.orders?.status !== 'cancelled')
-      .reduce((sum, item) => {
-        const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
-        return sum + (parseFloat(profit?.toString() || '0'));
-      }, 0) || 0,
-    [filteredProfitDetails, effectiveRole]
+  const totalEarnings = useMemo(() => 
+    filteredEarnings
+      ?.filter(item => item.order_status !== 'cancelled')
+      .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0,
+    [filteredEarnings]
   );
 
-  const unpaidProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => item.payment_status !== 'completed' && item.orders?.status !== 'cancelled')
-      .reduce((sum, item) => {
-        const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
-        return sum + parseFloat(profit?.toString() || '0');
-      }, 0) || 0,
-    [filteredProfitDetails, effectiveRole]
+  const unpaidEarnings = useMemo(() => 
+    filteredEarnings
+      ?.filter(item => 
+        item.payment_status !== 'completed' && 
+        item.payment_status !== 'paid' &&
+        item.order_status !== 'cancelled'
+      )
+      .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0,
+    [filteredEarnings]
   );
 
-  const paidProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => item.payment_status === 'completed' && item.orders?.status !== 'cancelled')
-      .reduce((sum, item) => {
-        const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
-        return sum + parseFloat(profit?.toString() || '0');
-      }, 0) || 0,
-    [filteredProfitDetails, effectiveRole]
+  const paidEarnings = useMemo(() => 
+    filteredEarnings
+      ?.filter(item => 
+        (item.payment_status === 'completed' || item.payment_status === 'paid') &&
+        item.order_status !== 'cancelled'
+      )
+      .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0,
+    [filteredEarnings]
   );
 
-  const directSalesProfit = useMemo(() => {
+  // Sales breakdown (topline only)
+  const directSalesEarnings = useMemo(() => {
     if (effectiveRole !== 'topline') return 0;
-    return filteredProfitDetails
-      ?.filter(item => item.orders?.status !== 'cancelled')
-      .filter(item => !item.downline_id)
-      .reduce((sum, item) => sum + parseFloat(item.topline_profit?.toString() || '0'), 0) || 0;
-  }, [filteredProfitDetails, effectiveRole]);
+    return filteredEarnings
+      ?.filter(item => item.order_status !== 'cancelled')
+      .filter(item => item.earning_type === 'product_commission')
+      .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0;
+  }, [filteredEarnings, effectiveRole]);
 
-  const networkSalesProfit = useMemo(() => {
+  const practiceDevFees = useMemo(() => {
     if (effectiveRole !== 'topline') return 0;
-    return filteredProfitDetails
-      ?.filter(item => item.orders?.status !== 'cancelled')
-      .filter(item => item.downline_id)
-      .reduce((sum, item) => sum + parseFloat(item.topline_profit?.toString() || '0'), 0) || 0;
-  }, [filteredProfitDetails, effectiveRole]);
+    return filteredEarnings
+      ?.filter(item => item.earning_type === 'practice_dev_fee')
+      .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0;
+  }, [filteredEarnings, effectiveRole]);
 
   const {
     currentPage,
@@ -130,11 +121,11 @@ const RepProfitReports = () => {
     hasNextPage,
     hasPrevPage
   } = usePagination({
-    totalItems: filteredProfitDetails?.length || 0,
+    totalItems: filteredEarnings?.length || 0,
     itemsPerPage: 25
   });
 
-  const paginatedProfitDetails = filteredProfitDetails?.slice(startIndex, endIndex);
+  const paginatedEarnings = filteredEarnings?.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-6">
@@ -159,36 +150,32 @@ const RepProfitReports = () => {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Billed Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalProfit.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {rxFilter === "rx-only" 
-                ? "Rx orders (no commission)"
-                : rxFilter === "non-rx"
-                ? "Non-Rx commissions only"
-                : "All-time earnings"}
+              Commissions + Development Fees
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Unpaid Commission</CardTitle>
+            <CardTitle className="text-sm font-medium">Unpaid Earnings</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">${unpaidProfit.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-yellow-600">${unpaidEarnings.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">Pending payment</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Paid Commission</CardTitle>
+            <CardTitle className="text-sm font-medium">Paid Earnings</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${paidProfit.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-green-600">${paidEarnings.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">Received</p>
           </CardContent>
         </Card>
@@ -199,18 +186,18 @@ const RepProfitReports = () => {
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Tag className="h-4 w-4" />
-              Sales Breakdown
+              Earnings Breakdown
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <p className="text-sm text-muted-foreground">Direct Sales (No Downline)</p>
-                <p className="text-2xl font-bold">${directSalesProfit.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">Product Commissions</p>
+                <p className="text-2xl font-bold">${directSalesEarnings.toFixed(2)}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Network Sales (Via Downline)</p>
-                <p className="text-2xl font-bold">${networkSalesProfit.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">Practice Development Fees</p>
+                <p className="text-2xl font-bold">${practiceDevFees.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
@@ -219,80 +206,169 @@ const RepProfitReports = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Commission History</CardTitle>
+          <CardTitle>Earnings History</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
-                <TableHead>Order #</TableHead>
-                <TableHead>Practice</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Reference #</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Payment Status</TableHead>
-                <TableHead>Order Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={7} className="text-center">Loading...</TableCell>
                 </TableRow>
-              ) : paginatedProfitDetails?.length === 0 ? (
+              ) : paginatedEarnings?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No commission data yet
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    No earnings data yet
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedProfitDetails?.map((profit: any) => {
-                  const profitAmount = effectiveRole === 'topline' ? profit.topline_profit : profit.downline_profit;
-                  return (
-                    <TableRow key={profit.id}>
-                      <TableCell>{format(new Date(profit.created_at), "MMM dd, yyyy")}</TableCell>
-                      <TableCell className="font-mono text-sm">#{profit.orders?.id}</TableCell>
-                      <TableCell>{profit.orders?.profiles?.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>${parseFloat(profitAmount?.toString() || '0').toFixed(2)}</span>
-                          {profit.is_rx_required && (
-                            <Badge variant="outline" className="text-xs">Rx - No Commission</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={profit.payment_status === 'completed' ? 'default' : 'secondary'}>
-                          {profit.payment_status === 'completed' ? 'Paid' : 'Pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
+                paginatedEarnings?.map((earning: any) => (
+                  <TableRow key={`${earning.earning_type}-${earning.id}`}>
+                    <TableCell>
+                      {format(new Date(earning.created_at), "MMM dd, yyyy")}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Badge variant={
+                        earning.earning_type === 'practice_dev_fee' 
+                          ? 'default' 
+                          : 'secondary'
+                      }>
+                        {earning.earning_type === 'practice_dev_fee' 
+                          ? 'Dev Fee' 
+                          : 'Commission'}
+                      </Badge>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <span>{earning.description}</span>
+                        {earning.practice_name && (
+                          <span className="text-xs text-muted-foreground">
+                            {earning.practice_name}
+                          </span>
+                        )}
+                        {earning.is_rx_required && (
+                          <Badge variant="outline" className="text-xs w-fit">
+                            Rx - No Commission
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell className="font-mono text-sm">
+                      {earning.reference_number}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <span className="font-medium">
+                        ${parseFloat(earning.amount?.toString() || '0').toFixed(2)}
+                      </span>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
                         <Badge variant={
-                          profit.orders?.status === 'delivered' ? 'default' :
-                          profit.orders?.status === 'shipped' ? 'secondary' :
-                          profit.orders?.status === 'cancelled' ? 'destructive' : 'outline'
+                          earning.payment_status === 'completed' || earning.payment_status === 'paid' 
+                            ? 'default' 
+                            : 'secondary'
                         }>
-                          {profit.orders?.status}
+                          {earning.payment_status === 'completed' || earning.payment_status === 'paid' 
+                            ? 'Paid' 
+                            : 'Pending'}
                         </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                        
+                        {earning.earning_type === 'practice_dev_fee' && 
+                         earning.payment_status === 'paid' && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {earning.payment_method && (
+                              <div>Via: {earning.payment_method}</div>
+                            )}
+                            {earning.paid_at && (
+                              <div>
+                                Paid: {format(new Date(earning.paid_at), "MMM dd, yyyy")}
+                              </div>
+                            )}
+                            {earning.payment_notes && (
+                              <div className="italic">Note: {earning.payment_notes}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      {earning.earning_type === 'practice_dev_fee' && earning.pdf_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const { data, error } = await supabase.storage
+                                .from("practice-development-invoices")
+                                .createSignedUrl(earning.pdf_url, 3600);
+                              
+                              if (error) throw error;
+                              
+                              const response = await fetch(data.signedUrl);
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `${earning.invoice_number}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              window.URL.revokeObjectURL(url);
+                              
+                              toast({
+                                title: "Invoice downloaded",
+                                description: "Your invoice has been downloaded successfully."
+                              });
+                            } catch (error) {
+                              console.error("Error downloading invoice:", error);
+                              toast({
+                                title: "Download failed",
+                                description: "Failed to download invoice",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                          title="Download Invoice"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {filteredProfitDetails && filteredProfitDetails.length > 0 && (
+      {filteredEarnings && filteredEarnings.length > 0 && (
         <DataTablePagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={goToPage}
           hasNextPage={hasNextPage}
           hasPrevPage={hasPrevPage}
-          totalItems={filteredProfitDetails.length}
+          totalItems={filteredEarnings.length}
           startIndex={startIndex}
-          endIndex={Math.min(endIndex, filteredProfitDetails.length)}
+          endIndex={Math.min(endIndex, filteredEarnings.length)}
         />
       )}
     </div>

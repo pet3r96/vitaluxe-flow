@@ -177,10 +177,39 @@ export default function PracticeDevelopmentFeeManager() {
       
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["practice-development-invoices"] });
-      toast.success("Invoice marked as paid");
       setIsPaymentDialogOpen(false);
+      
+      // Auto-download the invoice PDF after marking as paid
+      if (selectedInvoice?.pdf_url) {
+        try {
+          const { data, error } = await supabase.storage
+            .from("practice-development-invoices")
+            .createSignedUrl(selectedInvoice.pdf_url, 3600);
+          
+          if (error) throw error;
+          
+          // Download the PDF
+          const response = await fetch(data.signedUrl);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${selectedInvoice.invoice_number}_PAID.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          toast.success("Invoice marked as paid and downloaded");
+        } catch (error) {
+          console.error("Error downloading invoice:", error);
+          toast.success("Invoice marked as paid (download failed - use Download button)");
+        }
+      } else {
+        toast.success("Invoice marked as paid");
+      }
     },
     onError: (error) => {
       console.error("Error marking as paid:", error);

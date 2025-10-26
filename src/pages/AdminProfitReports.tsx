@@ -30,44 +30,49 @@ const AdminProfitReports = () => {
   const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");
 
   // Get profit details with order and product information
-  const { data: profitDetails, isLoading } = useQuery({
-    queryKey: ["admin-profit-details"],
-    staleTime: 60000, // 1 minute
+  const { data: allEarnings, isLoading } = useQuery({
+    queryKey: ["admin-all-earnings"],
+    staleTime: 60000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get product commissions
+      const { data: commissions, error: commError } = await supabase
         .from("order_profits")
         .select(`
           *,
-          orders:order_id (
-            id,
-            created_at,
-            status,
-            doctor_id,
-            profiles:doctor_id (name)
-          ),
-          order_lines:order_line_id (
-            product_id,
-            products:product_id (name)
-          )
+          orders:order_id (id, created_at, status, doctor_id, profiles:doctor_id (name)),
+          order_lines:order_line_id (product_id, products:product_id (name))
         `)
         .order("created_at", { ascending: false });
       
-      if (error) throw error;
-      return data;
+      if (commError) throw commError;
+      
+      // Get practice dev fees
+      const { data: fees, error: feeError } = await supabase
+        .from("practice_development_fee_invoices")
+        .select(`
+          *,
+          reps!topline_rep_id (id, profiles:user_id (name))
+        `)
+        .eq("payment_status", "paid")
+        .order("paid_at", { ascending: false });
+      
+      if (feeError) throw feeError;
+      
+      return { commissions, fees };
     },
   });
 
   // Filter data based on Rx selection
   const filteredProfitDetails = useMemo(() => {
-    if (!profitDetails) return [];
+    if (!allEarnings?.commissions) return [];
     
     if (rxFilter === "non-rx") {
-      return profitDetails.filter(item => !item.is_rx_required);
+      return allEarnings.commissions.filter(item => !item.is_rx_required);
     } else if (rxFilter === "rx-only") {
-      return profitDetails.filter(item => item.is_rx_required);
+      return allEarnings.commissions.filter(item => item.is_rx_required);
     }
-    return profitDetails;
-  }, [profitDetails, rxFilter]);
+    return allEarnings.commissions;
+  }, [allEarnings?.commissions, rxFilter]);
 
   const totalAdminProfit = useMemo(() => 
     filteredProfitDetails
@@ -205,7 +210,7 @@ const AdminProfitReports = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Total Admin Revenue</CardTitle>
@@ -233,6 +238,22 @@ const AdminProfitReports = () => {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">${collectedAdminProfit.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">Delivered orders</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Practice Dev Fees Collected</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              ${(allEarnings?.fees || [])
+                .reduce((sum, f) => sum + parseFloat(f.amount?.toString() || '0'), 0)
+                .toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total fees from topline reps
+            </p>
           </CardContent>
         </Card>
 
