@@ -409,27 +409,24 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
             </div>
             <div>
               <p className="text-muted-foreground">Shipping Method</p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-medium">
-                  {order.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
-                  {' • '}
-                  {order.lines?.[0]?.shipping_speed === 'overnight' ? 'Overnight' :
-                   order.lines?.[0]?.shipping_speed === '2day' ? '2-Day' : 'Ground'}
-                </p>
+              <p className="font-medium">
+                {order.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
+                {' • '}
+                {order.lines?.[0]?.shipping_speed === 'overnight' ? 'Overnight' :
+                 order.lines?.[0]?.shipping_speed === '2day' ? '2-Day' : 'Ground'}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Prescription Required</p>
+              <p className="font-medium">
                 {hasRxRequiredProducts && hasNonRxProducts ? (
-                  <Badge variant="secondary" className="text-xs">
-                    Mixed (Rx + Non-Rx)
-                  </Badge>
+                  'Mixed (Yes & No)'
                 ) : hasRxRequiredProducts ? (
-                  <Badge variant="default" className="text-xs bg-blue-600">
-                    Rx Required
-                  </Badge>
+                  'Yes'
                 ) : (
-                  <Badge variant="outline" className="text-xs">
-                    No Rx Required
-                  </Badge>
+                  'No'
                 )}
-              </div>
+              </p>
             </div>
           </div>
         </CardContent>
