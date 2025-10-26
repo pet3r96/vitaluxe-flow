@@ -817,7 +817,7 @@ export default function Checkout() {
   }
 
   const cartLines = cart?.lines || [];
-  const isEmpty = cartLines.length === 0;
+  const isEmpty = !isLoading && cartLines.length === 0;
 
   if (isEmpty) {
     navigate("/cart");
