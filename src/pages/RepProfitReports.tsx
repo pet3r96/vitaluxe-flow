@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 const RepProfitReports = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const { toast } = useToast();
-  const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");
+  const [earningFilter, setEarningFilter] = useState<"all" | "non-rx" | "rx-only" | "dev-fees">("all");
 
   // Get rep ID
   const { data: repData } = useQuery({
@@ -52,65 +52,74 @@ const RepProfitReports = () => {
     },
   });
 
-  // Filter based on Rx (only relevant for product commissions)
+  // Filter based on earning type
   const filteredEarnings = useMemo(() => {
     if (!earningsData) return [];
     
-    if (rxFilter === "non-rx") {
+    if (earningFilter === "non-rx") {
+      // Only non-Rx product commissions
       return earningsData.filter(item => 
-        item.earning_type === 'practice_dev_fee' || !item.is_rx_required
+        item.earning_type === 'product_commission' && !item.is_rx_required
       );
-    } else if (rxFilter === "rx-only") {
+    } else if (earningFilter === "rx-only") {
+      // Only Rx-required product commissions
       return earningsData.filter(item => 
-        item.earning_type !== 'practice_dev_fee' && item.is_rx_required
+        item.earning_type === 'product_commission' && item.is_rx_required
+      );
+    } else if (earningFilter === "dev-fees") {
+      // Only Practice Development Fees
+      return earningsData.filter(item => 
+        item.earning_type === 'practice_dev_fee'
       );
     }
+    
+    // "all" - show everything
     return earningsData;
-  }, [earningsData, rxFilter]);
+  }, [earningsData, earningFilter]);
 
   const totalEarnings = useMemo(() => 
-    filteredEarnings
+    earningsData
       ?.filter(item => item.order_status !== 'cancelled')
       .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0,
-    [filteredEarnings]
+    [earningsData]
   );
 
   const unpaidEarnings = useMemo(() => 
-    filteredEarnings
+    earningsData
       ?.filter(item => 
         item.payment_status !== 'completed' && 
         item.payment_status !== 'paid' &&
         item.order_status !== 'cancelled'
       )
       .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0,
-    [filteredEarnings]
+    [earningsData]
   );
 
   const paidEarnings = useMemo(() => 
-    filteredEarnings
+    earningsData
       ?.filter(item => 
         (item.payment_status === 'completed' || item.payment_status === 'paid') &&
         item.order_status !== 'cancelled'
       )
       .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0,
-    [filteredEarnings]
+    [earningsData]
   );
 
   // Sales breakdown (topline only)
   const directSalesEarnings = useMemo(() => {
     if (effectiveRole !== 'topline') return 0;
-    return filteredEarnings
+    return earningsData
       ?.filter(item => item.order_status !== 'cancelled')
       .filter(item => item.earning_type === 'product_commission')
       .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0;
-  }, [filteredEarnings, effectiveRole]);
+  }, [earningsData, effectiveRole]);
 
   const practiceDevFees = useMemo(() => {
     if (effectiveRole !== 'topline') return 0;
-    return filteredEarnings
+    return earningsData
       ?.filter(item => item.earning_type === 'practice_dev_fee')
       .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0;
-  }, [filteredEarnings, effectiveRole]);
+  }, [earningsData, effectiveRole]);
 
   const {
     currentPage,
@@ -135,14 +144,15 @@ const RepProfitReports = () => {
           <p className="text-muted-foreground mt-2">Detailed breakdown of your earnings</p>
         </div>
         
-        <Select value={rxFilter} onValueChange={(value: any) => setRxFilter(value)}>
-          <SelectTrigger className="w-[200px]">
+        <Select value={earningFilter} onValueChange={(value: any) => setEarningFilter(value)}>
+          <SelectTrigger className="w-[220px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Orders</SelectItem>
-            <SelectItem value="non-rx">Non-Rx Only</SelectItem>
-            <SelectItem value="rx-only">Rx-Required Only</SelectItem>
+            <SelectItem value="all">All Earnings</SelectItem>
+            <SelectItem value="non-rx">Non-Rx Commissions</SelectItem>
+            <SelectItem value="rx-only">Rx Commissions</SelectItem>
+            <SelectItem value="dev-fees">Practice Dev Fees</SelectItem>
           </SelectContent>
         </Select>
       </div>
