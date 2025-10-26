@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -46,6 +46,14 @@ export default function Checkout() {
   // Get merchant fee
   const { calculateMerchantFee } = useMerchantFee();
   const merchantFeePercentage = location.state?.merchantFeePercentage || 3.75;
+
+  // Track component mount state to prevent operations during navigation
+  const [isMounted, setIsMounted] = useState(true);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   // Calculation functions - defined before useMemo to avoid initialization errors
   const calculateSubtotal = () => {
@@ -124,6 +132,11 @@ export default function Checkout() {
 
   // Helper to fetch fresh cart snapshot at mutation time
   const fetchCartSnapshot = async () => {
+    // Guard against calling during unmount
+    if (!isMounted || !effectiveUserId) {
+      throw new Error("Component is not ready");
+    }
+    
     const { data: cartData, error: cartError } = await supabase
       .from("cart")
       .select("id")
@@ -206,6 +219,11 @@ export default function Checkout() {
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
+      // Prevent mutation during navigation/unmount
+      if (!isMounted) {
+        throw new Error("Navigation in progress. Please wait and try again.");
+      }
+      
       // Always ensure we have a usable cart snapshot at the moment of click
       const latestCart = (cart?.lines && cart.lines.length > 0) ? cart : await fetchCartSnapshot();
       
@@ -725,6 +743,19 @@ export default function Checkout() {
     },
   });
 
+  // Safe mutation trigger that checks mount state
+  const handlePlaceOrder = () => {
+    if (!isMounted) {
+      toast({
+        title: "Please wait",
+        description: "Page is still loading. Please try again in a moment.",
+        variant: "destructive",
+      });
+      return;
+    }
+    checkoutMutation.mutate();
+  };
+
   const handlePrescriptionUpload = async (lineId: string, file: File) => {
     setUploadingPrescriptions(prev => ({ ...prev, [lineId]: true }));
     
@@ -1236,11 +1267,12 @@ export default function Checkout() {
         <Button
           size="lg"
           className="flex-1"
-          onClick={() => checkoutMutation.mutate()}
+          onClick={handlePlaceOrder}
           disabled={
             checkoutMutation.isPending || 
             !agreed ||
             isLoading ||
+            !isMounted ||
             !(cart?.lines && cart.lines.length > 0)
           }
         >
