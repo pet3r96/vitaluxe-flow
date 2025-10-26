@@ -55,23 +55,17 @@ const RepProductivityReport = () => {
   const filteredData = useMemo(() => {
     if (!productivityData) return [];
     
-    let filtered = productivityData;
+    // Only show topline reps (remove downlines from view)
+    let filtered = productivityData.filter(r => r.role === 'topline');
     
-    // Topline users see only their network (themselves + downlines)
+    // Topline users see only themselves
     if (effectiveRole === 'topline') {
-      const currentRepData = productivityData.find(r => r.user_id === effectiveUserId);
-      filtered = productivityData.filter(r => 
-        r.user_id === effectiveUserId || 
-        r.assigned_topline_id === currentRepData?.rep_id
-      );
+      filtered = filtered.filter(r => r.user_id === effectiveUserId);
     }
     
     // Admin can filter by specific topline
     if (effectiveRole === 'admin' && selectedTopline !== "all") {
-      filtered = productivityData.filter(r => 
-        r.rep_id === selectedTopline || 
-        r.assigned_topline_id === selectedTopline
-      );
+      filtered = filtered.filter(r => r.rep_id === selectedTopline);
     }
     
     return filtered;
@@ -119,7 +113,7 @@ const RepProductivityReport = () => {
                 <SelectValue placeholder="Filter by Topline" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Reps</SelectItem>
+                <SelectItem value="all">All Toplines</SelectItem>
                 {toplineReps.map((rep: any) => (
                   <SelectItem key={rep.id} value={rep.id}>
                     {rep.profiles?.name || rep.profiles?.email}
@@ -145,7 +139,7 @@ const RepProductivityReport = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryTotals.reps}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total representatives</p>
+            <p className="text-xs text-muted-foreground mt-1">Topline representatives</p>
           </CardContent>
         </Card>
 
@@ -211,8 +205,8 @@ const RepProductivityReport = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Rep Name</TableHead>
-                <TableHead>Role</TableHead>
                 <TableHead className="text-center">Practices</TableHead>
+                <TableHead className="text-center">Downlines</TableHead>
                 <TableHead className="text-center">Non-Rx Orders</TableHead>
                 <TableHead className="text-center">Rx Orders</TableHead>
                 <TableHead className="text-center">Total Orders</TableHead>
@@ -240,12 +234,8 @@ const RepProductivityReport = () => {
                         <p className="text-xs text-muted-foreground">{rep.rep_email}</p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={rep.role === 'topline' ? 'default' : 'secondary'}>
-                        {rep.role}
-                      </Badge>
-                    </TableCell>
                     <TableCell className="text-center">{rep.practice_count || 0}</TableCell>
+                    <TableCell className="text-center">{rep.downline_count || 0}</TableCell>
                     <TableCell className="text-center">{rep.non_rx_orders || 0}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">

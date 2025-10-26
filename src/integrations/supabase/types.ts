@@ -4389,6 +4389,7 @@ export type Database = {
       rep_productivity_summary: {
         Row: {
           assigned_topline_id: string | null
+          downline_count: number | null
           last_order_date: string | null
           non_rx_orders: number | null
           practice_count: number | null
@@ -4443,6 +4444,7 @@ export type Database = {
       rep_productivity_view: {
         Row: {
           assigned_topline_id: string | null
+          downline_count: number | null
           last_order_date: string | null
           non_rx_orders: number | null
           practice_count: number | null
