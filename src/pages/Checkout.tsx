@@ -630,7 +630,7 @@ export default function Checkout() {
         // All payments succeeded
         const orderCount = createdOrders.length;
         toast({
-          title: "Order Confirmed Successfully! 🎉",
+          title: "Order Placed Successfully! 🎉",
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
         });
         queryClient.invalidateQueries({ queryKey: ["cart"] });
@@ -651,8 +651,8 @@ export default function Checkout() {
     },
     onError: (error: any) => {
       toast({
-        title: "Order Confirmation Failed",
-        description: error.message || "Failed to confirm order. Please try again.",
+        title: "Order Placement Failed",
+        description: error.message || "Failed to place order. Please try again.",
         variant: "destructive",
       });
     },
@@ -1218,7 +1218,7 @@ export default function Checkout() {
           ) : (
             <>
               <CheckCircle2 className="h-4 w-4 mr-2" />
-              Confirm Order
+              Place Order
             </>
           )}
         </Button>
