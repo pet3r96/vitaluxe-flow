@@ -201,6 +201,25 @@ const PracticeProfitReports = () => {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {order.discount_code ? (
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="secondary" className="text-xs w-fit">
+                            {order.discount_code}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {order.discount_percentage}% off
+                          </span>
+                          {order.discount_amount && (
+                            <span className="text-xs text-green-600">
+                              -${parseFloat(order.discount_amount?.toString() || '0').toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">None</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={getStatusBadgeVariant(order.status)}>
                         {order.status || 'unknown'}
                       </Badge>
