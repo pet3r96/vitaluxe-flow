@@ -54,6 +54,12 @@ export const OrderDetailsDialog = ({
   // Determine if user can view PHI (HIPAA compliance)
   const canViewPHI = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
 
+  // Receipt downloads restricted to practice staff, pharmacies, and admins (not reps)
+  const canDownloadReceipt = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
+
+  // Prescription downloads restricted to practice staff, pharmacies, and admins (not reps)
+  const canDownloadPrescription = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
+
   // Query payment method details to display card info
   const { data: paymentMethodDetails } = useQuery({
     queryKey: ["payment-method", order.payment_method_id],
@@ -406,14 +412,16 @@ export const OrderDetailsDialog = ({
                 Order #{order.id.slice(0, 8)} - {new Date(order.created_at).toLocaleDateString()}
               </DialogDescription>
             </div>
-            <ReceiptDownloadButton
-              orderId={order.id}
-              orderDate={order.created_at}
-              practiceName={order.profiles?.name || "Practice"}
-              variant="outline"
-              size="sm"
-              showLabel
-            />
+            {canDownloadReceipt && (
+              <ReceiptDownloadButton
+                orderId={order.id}
+                orderDate={order.created_at}
+                practiceName={order.profiles?.name || "Practice"}
+                variant="outline"
+                size="sm"
+                showLabel
+              />
+            )}
           </div>
           {order.status !== 'cancelled' && canCancelOrder() && (
             <Button
@@ -701,19 +709,27 @@ export const OrderDetailsDialog = ({
                         </div>
                       )}
                       
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          const urlToUse = regeneratedPrescriptionUrls.get(line.id) || line.prescription_url;
-                          handleDownloadPrescription(urlToUse, line.patient_name);
-                        }}
-                        disabled={regeneratingUrls}
-                        className="w-full"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        {regeneratingUrls ? 'Preparing Download...' : 'Download Prescription'}
-                      </Button>
+                      {canDownloadPrescription ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            const urlToUse = regeneratedPrescriptionUrls.get(line.id) || line.prescription_url;
+                            handleDownloadPrescription(urlToUse, line.patient_name);
+                          }}
+                          disabled={regeneratingUrls}
+                          className="w-full"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          {regeneratingUrls ? 'Preparing Download...' : 'Download Prescription'}
+                        </Button>
+                      ) : (
+                        <Alert>
+                          <AlertDescription className="text-xs">
+                            Prescription on file. Contact practice or pharmacy for details.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
                   )}
 

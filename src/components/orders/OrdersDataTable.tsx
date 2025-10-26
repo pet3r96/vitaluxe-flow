@@ -780,8 +780,10 @@ export const OrdersDataTable = () => {
                           <Eye className="h-4 w-4" />
                         </Button>
 
-                        {/* Download Receipt Button (non-pharmacy only) */}
-                        {effectiveRole !== "pharmacy" && (
+                        {/* Download Receipt Button (practice staff, pharmacy, admin only - NOT reps) */}
+                        {effectiveRole !== "pharmacy" && 
+                         effectiveRole !== "topline" && 
+                         effectiveRole !== "downline" && (
                           <ReceiptDownloadButton
                             orderId={order.id}
                             orderDate={order.created_at}
@@ -789,8 +791,10 @@ export const OrdersDataTable = () => {
                           />
                         )}
 
-                        {/* Download Prescription Button (if exists, non-pharmacy only) */}
+                        {/* Download Prescription Button (practice staff, pharmacy, admin only - NOT reps) */}
                         {effectiveRole !== "pharmacy" && 
+                         effectiveRole !== "topline" && 
+                         effectiveRole !== "downline" && 
                          order.order_lines?.some((line: any) => line.prescription_url) && (
                           <Button
                             variant="ghost"

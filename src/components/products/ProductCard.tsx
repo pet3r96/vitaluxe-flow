@@ -99,6 +99,24 @@ export const ProductCard = memo(({
     }
 
     if (isToplineRep) {
+      // Don't show "Your Price" for RX products - no commission on prescriptions
+      if (product.requires_prescription) {
+        return (
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Practice Price:</span>
+              <span className="font-bold text-primary text-lg">
+                ${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              Prescription products: no rep commission
+            </p>
+          </div>
+        );
+      }
+      
+      // Show both prices for non-RX products
       return (
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
@@ -116,6 +134,24 @@ export const ProductCard = memo(({
     }
 
     if (isDownlineRep) {
+      // Don't show "Your Price" for RX products - no commission on prescriptions
+      if (product.requires_prescription) {
+        return (
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Practice Price:</span>
+              <span className="font-bold text-primary text-lg">
+                ${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              Prescription products: no rep commission
+            </p>
+          </div>
+        );
+      }
+      
+      // Show both prices for non-RX products
       return (
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
