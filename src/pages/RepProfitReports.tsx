@@ -226,6 +226,7 @@ const RepProfitReports = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
+                <TableHead>Order #</TableHead>
                 <TableHead>Practice</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Payment Status</TableHead>
@@ -235,11 +236,11 @@ const RepProfitReports = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={6} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : paginatedProfitDetails?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No commission data yet
                   </TableCell>
                 </TableRow>
@@ -249,6 +250,7 @@ const RepProfitReports = () => {
                   return (
                     <TableRow key={profit.id}>
                       <TableCell>{format(new Date(profit.created_at), "MMM dd, yyyy")}</TableCell>
+                      <TableCell className="font-mono text-sm">#{profit.orders?.id}</TableCell>
                       <TableCell>{profit.orders?.profiles?.name}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -280,16 +282,6 @@ const RepProfitReports = () => {
           </Table>
         </CardContent>
       </Card>
-
-      {rxFilter === "all" && filteredProfitDetails && filteredProfitDetails.length > 0 && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            * Rx-required products show $0 commission due to federal anti-kickback regulations. 
-            Use the filter above to view non-Rx orders separately.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {filteredProfitDetails && filteredProfitDetails.length > 0 && (
         <DataTablePagination

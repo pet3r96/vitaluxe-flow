@@ -206,7 +206,7 @@ export const ProductCard = memo(({
         {/* Product Info */}
         <div className={`space-y-2 flex flex-col items-start ${isAdmin ? 'h-[320px]' : 'h-[240px]'}`}>
           <h3 className="font-semibold text-lg line-clamp-2 h-[56px]">{product.name}</h3>
-          <div className="h-[40px]">
+          <div className="h-[28px]">
             {product.dosage && (
               <p className="text-sm text-muted-foreground line-clamp-2">{product.dosage}</p>
             )}
