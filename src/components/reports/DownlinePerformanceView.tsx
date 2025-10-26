@@ -156,12 +156,7 @@ const DownlinePerformanceView = () => {
                     <TableCell className="text-center">{downline.practice_count || 0}</TableCell>
                     <TableCell className="text-center">{downline.non_rx_orders || 0}</TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <span>{downline.rx_orders || 0}</span>
-                        {downline.rx_orders > 0 && (
-                          <Badge variant="outline" className="text-xs">$0</Badge>
-                        )}
-                      </div>
+                      {downline.rx_orders || 0}
                     </TableCell>
                     <TableCell className="text-center font-medium">{downline.total_orders || 0}</TableCell>
                     <TableCell className="text-right font-medium">
@@ -198,8 +193,6 @@ const DownlinePerformanceView = () => {
           <Alert>
             <AlertDescription className="text-sm">
               <strong>Activity Levels:</strong> Active = &gt;10 orders | Moderate = 1-10 orders | Inactive = 0 orders
-              <br />
-              * Rx orders show $0 commission due to federal anti-kickback regulations.
             </AlertDescription>
           </Alert>
         </>
