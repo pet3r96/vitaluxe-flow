@@ -93,12 +93,6 @@ export default function Checkout() {
   const calculateFinalTotal = () => {
     return calculateSubtotal() - calculateDiscountAmount() + calculateShipping() + merchantFeeAmount;
   };
-  const merchantFeeAmount = useMemo(() => {
-    if (location.state?.merchantFeeAmount) {
-      return location.state.merchantFeeAmount;
-    }
-    return calculateMerchantFee(calculateSubtotal() - calculateDiscountAmount(), calculateShipping());
-  }, [location.state, calculateMerchantFee]);
 
   const { data: cart, isLoading} = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -129,6 +123,25 @@ export default function Checkout() {
     staleTime: 5000,
     refetchOnWindowFocus: false,
   });
+
+  // Calculate merchant fee - must come after cart query to avoid TDZ
+  const merchantFeeAmount = useMemo(() => {
+    // Use passed merchant fee if available from navigation state
+    if (location.state?.merchantFeeAmount !== undefined) {
+      return location.state.merchantFeeAmount;
+    }
+    
+    // Cart must be loaded to calculate
+    if (!cart?.lines) {
+      return 0;
+    }
+    
+    const subtotal = calculateSubtotal();
+    const shipping = calculateShipping();
+    const discount = calculateDiscountAmount();
+    
+    return calculateMerchantFee(subtotal - discount, shipping);
+  }, [cart?.lines, discountPercentage, calculateMerchantFee, location.state?.merchantFeeAmount]);
 
   // Helper to fetch fresh cart snapshot at mutation time
   const fetchCartSnapshot = async () => {
@@ -876,6 +889,11 @@ export default function Checkout() {
   }
 
   const cartLines = cart?.lines || [];
+  
+  // Group practice orders together
+  const practiceLines = cartLines.filter((l: any) => l.patient_name === "Practice Order");
+  const otherLines = cartLines.filter((l: any) => l.patient_name !== "Practice Order");
+  
   const isEmpty = !isLoading && cartLines.length === 0;
 
   if (isEmpty) {
@@ -925,10 +943,70 @@ export default function Checkout() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {cartLines.map((line: any, index: number) => (
+          {/* Practice Orders Group */}
+          {practiceLines.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Practice Order ({practiceLines.length} {practiceLines.length === 1 ? "item" : "items"})
+              </h3>
+              <div className="space-y-4 pl-7">
+                {practiceLines.map((line: any, index: number) => (
+                  <div key={line.id}>
+                    {index > 0 && <Separator className="my-4" />}
+                    <div className="flex items-start gap-4">
+                      {line.product?.image_url && (
+                        <img
+                          src={line.product.image_url}
+                          alt={line.product.name}
+                          className="h-20 w-20 object-cover rounded-md border border-border"
+                        />
+                      )}
+                      <div className="flex-1 space-y-1">
+                        <h4 className="font-semibold text-lg">{line.product?.name}</h4>
+                        <p className="text-sm text-muted-foreground">{line.product?.dosage}</p>
+                        
+                        {line.order_notes && (
+                          <div className="mt-2 p-3 bg-accent/50 rounded-md text-sm border">
+                            <p className="font-semibold text-xs text-muted-foreground uppercase mb-1">Notes:</p>
+                            <p>{line.order_notes}</p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant="outline">
+                            Qty: {line.quantity}
+                          </Badge>
+                          <Badge variant="outline" className="capitalize">
+                            <Truck className="h-3 w-3 mr-1" />
+                            {line.shipping_speed === '2day' ? '2-Day' : 
+                             line.shipping_speed === 'overnight' ? 'Overnight' : 
+                             'Ground'} Shipping
+                          </Badge>
+                          <Badge variant="secondary">Practice Order</Badge>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-primary">
+                          ${(line.price_snapshot * line.quantity).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          ${line.price_snapshot.toFixed(2)} each
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {otherLines.length > 0 && <Separator className="my-6" />}
+            </div>
+          )}
+
+          {/* Patient Orders (non-practice) */}
+          {otherLines.map((line: any, index: number) => (
             <div key={line.id}>
               {index > 0 && <Separator className="my-4" />}
-                  <div className="flex items-start gap-4">
+              <div className="flex items-start gap-4">
                 {line.product?.image_url && (
                   <img
                     src={line.product.image_url}
@@ -940,8 +1018,7 @@ export default function Checkout() {
                   <h4 className="font-semibold text-lg">{line.product?.name}</h4>
                   <p className="text-sm text-muted-foreground">{line.product?.dosage}</p>
                   
-                  {/* Display prescription details if present */}
-                  {(line.custom_sig || line.custom_dosage) && line.patient_name !== "Practice Order" && (
+                  {(line.custom_sig || line.custom_dosage) && (
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md text-sm space-y-1 border border-blue-200 dark:border-blue-800">
                       <p className="font-semibold text-xs text-blue-700 dark:text-blue-300 uppercase">Prescription Details:</p>
                       {line.custom_dosage && (
@@ -959,7 +1036,6 @@ export default function Checkout() {
                     </div>
                   )}
                   
-                  {/* Display order notes if present */}
                   {line.order_notes && (
                     <div className="mt-2 p-3 bg-accent/50 rounded-md text-sm border">
                       <p className="font-semibold text-xs text-muted-foreground uppercase mb-1">Notes:</p>
@@ -977,11 +1053,7 @@ export default function Checkout() {
                        line.shipping_speed === 'overnight' ? 'Overnight' : 
                        'Ground'} Shipping
                     </Badge>
-                    {line.patient_name === "Practice Order" ? (
-                      <Badge variant="secondary">Practice Order</Badge>
-                    ) : (
-                      <Badge>Patient: {line.patient_name}</Badge>
-                    )}
+                    <Badge>Patient: {line.patient_name}</Badge>
                   </div>
                   {line.product?.requires_prescription && (
                     <div className="mt-2 space-y-2">
@@ -997,7 +1069,6 @@ export default function Checkout() {
                             Missing Prescription
                           </Badge>
                           
-                          {/* Upload Interface */}
                           {prescriptionFiles[line.id] || uploadingPrescriptions[line.id] ? (
                             <div className="relative p-2 border rounded-md bg-background text-sm">
                               <div className="flex items-center gap-2">
