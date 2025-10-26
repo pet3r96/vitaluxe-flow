@@ -2501,6 +2501,146 @@ export type Database = {
           },
         ]
       }
+      practice_development_fee_invoices: {
+        Row: {
+          amount: number
+          billing_month: string
+          created_at: string | null
+          created_by: string | null
+          due_date: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          invoice_template_data: Json
+          paid_at: string | null
+          payment_method: string | null
+          payment_notes: string | null
+          payment_status: string
+          pdf_url: string | null
+          topline_rep_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          billing_month: string
+          created_at?: string | null
+          created_by?: string | null
+          due_date: string
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          invoice_template_data: Json
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_status?: string
+          pdf_url?: string | null
+          topline_rep_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          billing_month?: string
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          invoice_template_data?: Json
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_status?: string
+          pdf_url?: string | null
+          topline_rep_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_development_fee_invoices_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "practice_development_fee_invoices_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "practice_development_fee_invoices_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_development_fees: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          created_by: string | null
+          effective_from: string
+          effective_until: string | null
+          id: string
+          monthly_amount: number
+          notes: string | null
+          topline_rep_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          monthly_amount: number
+          notes?: string | null
+          topline_rep_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          monthly_amount?: number
+          notes?: string | null
+          topline_rep_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_development_fees_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "practice_development_fees_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "practice_development_fees_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_payment_methods: {
         Row: {
           account_last_five: string | null

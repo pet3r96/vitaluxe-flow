@@ -5,6 +5,7 @@ import AdminProfitReports from "./AdminProfitReports";
 import RepProfitReports from "./RepProfitReports";
 import PracticeProfitReports from "./PracticeProfitReports";
 import ToplinePaymentManager from "@/components/admin/ToplinePaymentManager";
+import PracticeDevelopmentFeeManager from "@/components/admin/PracticeDevelopmentFeeManager";
 
 const Reports = () => {
   const { userRole, effectiveRole, isImpersonating } = useAuth();
@@ -24,6 +25,7 @@ const Reports = () => {
         <TabsList className="mb-4">
           <TabsTrigger value="profit-reports">Profit Reports</TabsTrigger>
           <TabsTrigger value="rep-payments">Rep Payments</TabsTrigger>
+          <TabsTrigger value="development-fees">Practice Development Fees</TabsTrigger>
         </TabsList>
         
         <TabsContent value="profit-reports">
@@ -32,6 +34,10 @@ const Reports = () => {
         
         <TabsContent value="rep-payments">
           <ToplinePaymentManager />
+        </TabsContent>
+        
+        <TabsContent value="development-fees">
+          <PracticeDevelopmentFeeManager />
         </TabsContent>
       </Tabs>
     );
