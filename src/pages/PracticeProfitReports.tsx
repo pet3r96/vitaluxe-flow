@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { DollarSign, Clock, CheckCircle, Tag } from "lucide-react";
+import { DollarSign, Clock, CheckCircle } from "lucide-react";
 
 const PracticeProfitReports = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -167,13 +167,13 @@ const PracticeProfitReports = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     Loading orders...
                   </TableCell>
                 </TableRow>
               ) : !paginatedOrders || paginatedOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No orders found
                   </TableCell>
                 </TableRow>
@@ -206,10 +206,12 @@ const PracticeProfitReports = () => {
                           <Badge variant="secondary" className="text-xs w-fit">
                             {order.discount_code}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {order.discount_percentage}% off
-                          </span>
-                          {order.discount_amount && (
+                          {order.discount_percentage > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {order.discount_percentage}% off
+                            </span>
+                          )}
+                          {order.discount_amount && parseFloat(order.discount_amount?.toString() || '0') > 0 && (
                             <span className="text-xs text-green-600">
                               -${parseFloat(order.discount_amount?.toString() || '0').toFixed(2)}
                             </span>
