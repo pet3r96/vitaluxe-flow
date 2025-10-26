@@ -210,7 +210,7 @@ const RepProductivityReport = () => {
                 <TableHead className="text-center">Non-Rx Orders</TableHead>
                 <TableHead className="text-center">Rx Orders</TableHead>
                 <TableHead className="text-center">Total Orders</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="text-right">$</TableHead>
                 <TableHead className="text-right">Commissions</TableHead>
               </TableRow>
             </TableHeader>
