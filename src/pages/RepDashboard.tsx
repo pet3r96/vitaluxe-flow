@@ -164,40 +164,53 @@ const RepDashboard = () => {
     enabled: !!repData?.id && effectiveRole === 'topline',
   });
 
-  // Get profit stats
+  // Get profit stats (commissions + practice dev fees for topline)
   const { data: profitStats } = useQuery({
     queryKey: ["rep-profit-stats", repData?.id, effectiveRole],
     staleTime: 0,
     queryFn: async () => {
       if (!repData?.id) return null;
       
-    let query = supabase
-      .from("order_profits")
-      .select(`
-        *,
-        orders:order_id (status)
-      `)
-      .eq("is_rx_required", false); // Exclude Rx orders (reps don't earn commission on Rx)
-      
+      // 1. Fetch product commissions
+      let query = supabase
+        .from("order_profits")
+        .select(`
+          *,
+          orders:order_id (status)
+        `)
+        .eq("is_rx_required", false); // Exclude Rx orders (reps don't earn commission on Rx)
+        
       if (effectiveRole === 'topline') {
         query = query.eq("topline_id", repData.id);
       } else {
         query = query.eq("downline_id", repData.id);
       }
       
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data: commissionsData, error: commissionsError } = await query;
+      if (commissionsError) throw commissionsError;
       
-      // Calculate total profit (excluding cancelled orders)
-      const totalProfit = data
+      // 2. Fetch paid Practice Development Fees (topline only)
+      let practiceDevFees: any[] = [];
+      if (effectiveRole === 'topline') {
+        const { data: feesData, error: feesError } = await supabase
+          .from("practice_development_fee_invoices")
+          .select("amount, payment_status")
+          .eq("topline_rep_id", repData.id)
+          .eq("payment_status", "paid"); // Only paid fees count as collected
+        
+        if (feesError) throw feesError;
+        practiceDevFees = feesData || [];
+      }
+      
+      // 3. Calculate product commission totals
+      const commissionTotal = commissionsData
         .filter(item => item.orders?.status !== 'cancelled')
         .reduce((sum, item) => {
           const profit = effectiveRole === 'topline' ? item.topline_profit : item.downline_profit;
           return sum + (parseFloat(profit?.toString() || '0'));
         }, 0);
       
-      // Calculate pending profit (orders pending or processing, excluding cancelled)
-      const pendingProfit = data
+      const commissionPending = commissionsData
         .filter(item => item.orders?.status !== 'cancelled')
         .filter(item => ['pending', 'processing'].includes(item.orders?.status || ''))
         .reduce((sum, item) => {
@@ -205,10 +218,16 @@ const RepDashboard = () => {
           return sum + (parseFloat(profit?.toString() || '0'));
         }, 0);
       
+      // 4. Calculate Practice Dev Fee totals (only paid fees)
+      const practiceDevTotal = practiceDevFees.reduce((sum, fee) => 
+        sum + parseFloat(fee.amount?.toString() || '0'), 0
+      );
+      
+      // 5. Combine totals
       return {
-        totalProfit,
-        pendingProfit,
-        collectedProfit: totalProfit - pendingProfit,
+        totalProfit: commissionTotal + practiceDevTotal,
+        pendingProfit: commissionPending, // Fees are only counted when paid, so they're never "pending"
+        collectedProfit: (commissionTotal - commissionPending) + practiceDevTotal,
       };
     },
     enabled: !!repData?.id,
@@ -237,7 +256,7 @@ const RepDashboard = () => {
       title: "Total Profit",
       value: `$${profitStats?.totalProfit?.toFixed(2) || '0.00'}`,
       icon: DollarSign,
-      description: "All-time earnings",
+      description: "Commissions + Development Fees",
     },
   ] : [
     {

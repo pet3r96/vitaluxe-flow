@@ -30,11 +30,11 @@ const AdminProfitReports = () => {
   const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");
 
   // Get profit details with order and product information
-  const { data: allEarnings, isLoading } = useQuery({
-    queryKey: ["admin-all-earnings"],
+  const { data: profitDetails, isLoading } = useQuery({
+    queryKey: ["admin-profit-details", rxFilter],
     staleTime: 60000,
     queryFn: async () => {
-      // Get product commissions
+      // Get product commissions only
       const { data: commissions, error: commError } = await supabase
         .from("order_profits")
         .select(`
@@ -46,33 +46,21 @@ const AdminProfitReports = () => {
       
       if (commError) throw commError;
       
-      // Get practice dev fees
-      const { data: fees, error: feeError } = await supabase
-        .from("practice_development_fee_invoices")
-        .select(`
-          *,
-          reps!topline_rep_id (id, profiles:user_id (name))
-        `)
-        .eq("payment_status", "paid")
-        .order("paid_at", { ascending: false });
-      
-      if (feeError) throw feeError;
-      
-      return { commissions, fees };
+      return commissions;
     },
   });
 
   // Filter data based on Rx selection
   const filteredProfitDetails = useMemo(() => {
-    if (!allEarnings?.commissions) return [];
+    if (!profitDetails) return [];
     
     if (rxFilter === "non-rx") {
-      return allEarnings.commissions.filter(item => !item.is_rx_required);
+      return profitDetails.filter(item => !item.is_rx_required);
     } else if (rxFilter === "rx-only") {
-      return allEarnings.commissions.filter(item => item.is_rx_required);
+      return profitDetails.filter(item => item.is_rx_required);
     }
-    return allEarnings.commissions;
-  }, [allEarnings?.commissions, rxFilter]);
+    return profitDetails;
+  }, [profitDetails, rxFilter]);
 
   const totalAdminProfit = useMemo(() => 
     filteredProfitDetails
@@ -210,7 +198,7 @@ const AdminProfitReports = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Total Admin Revenue</CardTitle>
@@ -238,22 +226,6 @@ const AdminProfitReports = () => {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">${collectedAdminProfit.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">Delivered orders</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Practice Dev Fees Collected</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              ${(allEarnings?.fees || [])
-                .reduce((sum, f) => sum + parseFloat(f.amount?.toString() || '0'), 0)
-                .toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Total fees from topline reps
-            </p>
           </CardContent>
         </Card>
 
