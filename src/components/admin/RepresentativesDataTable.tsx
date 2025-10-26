@@ -20,6 +20,15 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { AddRepresentativeDialog } from "./AddRepresentativeDialog";
 import { RepDetailsDialog } from "./RepDetailsDialog";
 
+const formatPhoneNumber = (phone: string | null | undefined) => {
+  if (!phone) return "Not Set";
+  const cleaned = phone.replace(/\D/g, "");
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+  return phone;
+};
+
 export const RepresentativesDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRep, setSelectedRep] = useState<any>(null);
@@ -53,6 +62,40 @@ export const RepresentativesDataTable = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch 2FA phone numbers for all reps
+  const { data: twoFAPhones } = useQuery({
+    queryKey: ["rep-2fa-phones"],
+    queryFn: async () => {
+      if (!reps) return {};
+      
+      const userIds = reps.map(r => r.user_id).filter(Boolean);
+      if (userIds.length === 0) return {};
+      
+      const { data: settings } = await supabase
+        .from("user_2fa_settings")
+        .select("user_id, phone_number_encrypted, is_enrolled, phone_verified")
+        .in("user_id", userIds);
+      
+      if (!settings) return {};
+      
+      const phoneMap: Record<string, string | null> = {};
+      
+      for (const setting of settings) {
+        if (setting.is_enrolled && setting.phone_number_encrypted) {
+          const { data: decrypted } = await supabase.rpc("decrypt_2fa_phone", {
+            p_encrypted_phone: setting.phone_number_encrypted
+          });
+          phoneMap[setting.user_id] = decrypted;
+        } else {
+          phoneMap[setting.user_id] = null;
+        }
+      }
+      
+      return phoneMap;
+    },
+    enabled: !!reps && reps.length > 0,
   });
 
   // Filter reps based on search query
@@ -153,12 +196,13 @@ export const RepresentativesDataTable = () => {
 
       {/* Data Table */}
       <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1000px]">
+        <div className="min-w-[1200px]">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Assigned To</TableHead>
                 <TableHead>Status</TableHead>
@@ -168,13 +212,13 @@ export const RepresentativesDataTable = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : !filteredReps || filteredReps.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No representatives found
                   </TableCell>
                 </TableRow>
@@ -183,6 +227,13 @@ export const RepresentativesDataTable = () => {
                   <TableRow key={rep.id}>
                     <TableCell className="font-medium">{rep.profiles?.name || "-"}</TableCell>
                     <TableCell>{rep.profiles?.email || "-"}</TableCell>
+                    <TableCell>
+                      {twoFAPhones?.[rep.user_id] ? (
+                        formatPhoneNumber(twoFAPhones[rep.user_id])
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Not Set</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={rep.role === "topline" ? "default" : "secondary"}>
                         {rep.role === "topline" ? "Topline" : "Downline"}
