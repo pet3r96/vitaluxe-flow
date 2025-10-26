@@ -4399,6 +4399,7 @@ export type Database = {
           rx_orders: number | null
           total_commissions: number | null
           total_orders: number | null
+          total_revenue: number | null
           user_id: string | null
         }
         Relationships: [
@@ -4452,6 +4453,7 @@ export type Database = {
           rx_orders: number | null
           total_commissions: number | null
           total_orders: number | null
+          total_revenue: number | null
           user_id: string | null
         }
         Relationships: [

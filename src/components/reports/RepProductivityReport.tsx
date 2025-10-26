@@ -79,12 +79,13 @@ const RepProductivityReport = () => {
 
   // Calculate summary totals
   const summaryTotals = useMemo(() => {
-    if (!filteredData) return { practices: 0, orders: 0, commissions: 0, reps: 0 };
+    if (!filteredData) return { practices: 0, orders: 0, commissions: 0, revenue: 0, reps: 0 };
     
     return {
       practices: filteredData.reduce((sum, r) => sum + (r.practice_count || 0), 0),
       orders: filteredData.reduce((sum, r) => sum + (r.total_orders || 0), 0),
       commissions: filteredData.reduce((sum, r) => sum + parseFloat(r.total_commissions?.toString() || '0'), 0),
+      revenue: filteredData.reduce((sum, r) => sum + parseFloat(r.total_revenue?.toString() || '0'), 0),
       reps: filteredData.length,
     };
   }, [filteredData]);
@@ -134,7 +135,7 @@ const RepProductivityReport = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -178,6 +179,19 @@ const RepProductivityReport = () => {
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
+              Total Revenue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${summaryTotals.revenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total markup from base</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
               Total Commissions
             </CardTitle>
           </CardHeader>
@@ -202,17 +216,18 @@ const RepProductivityReport = () => {
                 <TableHead className="text-center">Non-Rx Orders</TableHead>
                 <TableHead className="text-center">Rx Orders</TableHead>
                 <TableHead className="text-center">Total Orders</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
                 <TableHead className="text-right">Commissions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={8} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : paginatedData?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     No productivity data available
                   </TableCell>
                 </TableRow>
@@ -242,6 +257,9 @@ const RepProductivityReport = () => {
                     </TableCell>
                     <TableCell className="text-center font-medium">{rep.total_orders || 0}</TableCell>
                     <TableCell className="text-right font-medium">
+                      ${parseFloat(rep.total_revenue?.toString() || '0').toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
                       ${parseFloat(rep.total_commissions?.toString() || '0').toFixed(2)}
                     </TableCell>
                   </TableRow>
@@ -267,8 +285,8 @@ const RepProductivityReport = () => {
           
           <Alert>
             <AlertDescription className="text-sm">
-              * Rx orders show $0 commission due to federal anti-kickback regulations. 
-              Only non-Rx orders generate rep commissions.
+              <strong>Revenue</strong> shows total markup from base price (includes Rx admin profit + Non-Rx rep markup). 
+              <strong>Commissions</strong> show what reps earn (Non-Rx only, $0 for Rx due to federal anti-kickback regulations).
             </AlertDescription>
           </Alert>
         </>
