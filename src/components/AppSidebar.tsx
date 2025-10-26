@@ -39,6 +39,7 @@ const menuItems = {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Accounts", url: "/accounts", icon: Users },
     { title: "Practices", url: "/practices", icon: Stethoscope },
+    { title: "Representatives", url: "/representatives", icon: Users },
     { title: "Patients", url: "/patients", icon: Users },
     { title: "Products", url: "/products", icon: Package },
     { title: "Pharmacies", url: "/pharmacies", icon: Building2 },

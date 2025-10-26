@@ -61,6 +61,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Accounts = lazy(() => import("./pages/Accounts"));
 const Practices = lazy(() => import("./pages/Practices"));
+const Representatives = lazy(() => import("./pages/Representatives"));
 const Patients = lazy(() => import("./pages/Patients"));
 const Providers = lazy(() => import("./pages/Providers"));
 const Products = lazy(() => import("./pages/Products"));
@@ -165,6 +166,7 @@ const App = () => (
                                     <Route path="/dashboard" element={<DashboardRouter />} />
                                     <Route path="/accounts" element={<Accounts />} />
                                     <Route path="/practices" element={<Practices />} />
+                                    <Route path="/representatives" element={<Representatives />} />
                                     <Route path="/patients" element={<Patients />} />
                                     <Route path="/providers" element={<Providers />} />
                                     <Route path="/products" element={<Products />} />
