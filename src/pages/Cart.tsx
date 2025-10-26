@@ -127,14 +127,17 @@ export default function Cart() {
     }
   });
 
-  // Group cart lines by patient
+  // Group cart lines by patient - practice orders grouped together
   const patientGroups = useMemo(() => {
     if (!cart?.lines) return [];
     
     const groups: Record<string, any> = {};
     
     cart.lines.forEach((line: any) => {
-      const patientKey = line.patient_id || `practice_${line.id}`;
+      // All practice orders share the same key to group them together
+      const patientKey = line.patient_name === "Practice Order" 
+        ? "practice_order" 
+        : (line.patient_id || `unknown_${line.id}`);
       
       if (!groups[patientKey]) {
         groups[patientKey] = {
