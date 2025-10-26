@@ -324,6 +324,31 @@ export function validateWebhookRequest(data: any) {
   return validateInput(validations);
 }
 
+export function validateApprovePendingProductRequest(data: any): ValidationResult {
+  const validations: ValidationResult[] = [
+    validateUUID(data.requestId, 'requestId'),
+    validateEnum(data.action, 'action', ['approve', 'reject'], true),
+    validateString(data.adminNotes, 'adminNotes', { required: false, maxLength: 1000 }),
+  ];
+
+  if (data.action === 'reject') {
+    validations.push(
+      validateString(data.rejectionReason, 'rejectionReason', { required: true, maxLength: 500 })
+    );
+  }
+
+  if (data.action === 'approve') {
+    validations.push(
+      validateNumber(data.adminData?.base_price, 'base_price', { required: true, min: 0 }),
+      validateNumber(data.adminData?.retail_price, 'retail_price', { required: false, min: 0 }),
+      validateArray(data.adminData?.assigned_pharmacies, 'assigned_pharmacies', { required: true, minLength: 1 }),
+      validateEnum(data.adminData?.scope_type, 'scope_type', ['global', 'scoped'], false)
+    );
+  }
+
+  return validateInput(validations);
+}
+
 export function validateCalculateShippingRequest(data: any) {
   const validations = [
     validateUUID(data.pharmacy_id, 'pharmacy_id'),

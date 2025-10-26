@@ -6,12 +6,13 @@ import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
 import { RepsManagement } from "@/components/admin/RepsManagement";
 import { PendingRepsApproval } from "@/components/admin/PendingRepsApproval";
 import { PendingPracticesApproval } from "@/components/admin/PendingPracticesApproval";
+import { PendingProductsApproval } from "@/components/admin/PendingProductsApproval";
 import { ProductTypeManager } from "@/components/admin/ProductTypeManager";
 import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
@@ -47,6 +48,10 @@ const AdminSettings = () => {
           <TabsTrigger value="pending-practices" className="gap-2">
             <Building2 className="h-4 w-4" />
             Pending Practices
+          </TabsTrigger>
+          <TabsTrigger value="pending-products" className="gap-2">
+            <PackagePlus className="h-4 w-4" />
+            Pending Products
           </TabsTrigger>
           <TabsTrigger value="shipments" className="gap-2">
             <Truck className="h-4 w-4" />
@@ -145,6 +150,20 @@ const AdminSettings = () => {
             </CardHeader>
             <CardContent>
               <PendingPracticesApproval />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending-products" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Product Requests</CardTitle>
+              <CardDescription>
+                Review and approve product requests from pharmacies
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PendingProductsApproval />
             </CardContent>
           </Card>
         </TabsContent>

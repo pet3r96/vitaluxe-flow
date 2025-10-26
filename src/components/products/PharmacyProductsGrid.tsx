@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -12,15 +13,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Plus } from "lucide-react";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { RequestProductDialog } from "./RequestProductDialog";
 
 export const PharmacyProductsGrid = () => {
   const { effectiveUserId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [prescriptionFilter, setPrescriptionFilter] = useState<string>("all");
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
   // Get pharmacy ID for current user
   const { data: pharmacyData } = useQuery({
@@ -39,7 +42,7 @@ export const PharmacyProductsGrid = () => {
   });
 
   // Fetch products assigned to this pharmacy
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["pharmacy-products", pharmacyData?.id],
     queryFn: async () => {
       if (!pharmacyData?.id) return [];
@@ -119,6 +122,14 @@ export const PharmacyProductsGrid = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">My Products</h2>
+        <Button onClick={() => setRequestDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Request New Product
+        </Button>
+      </div>
+
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -274,6 +285,14 @@ export const PharmacyProductsGrid = () => {
           </div>
         </div>
       )}
+
+      <RequestProductDialog
+        open={requestDialogOpen}
+        onOpenChange={setRequestDialogOpen}
+        onSuccess={() => {
+          refetch();
+        }}
+      />
     </div>
   );
 };

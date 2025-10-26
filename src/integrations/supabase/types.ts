@@ -2279,6 +2279,101 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_product_requests: {
+        Row: {
+          admin_notes: string | null
+          assigned_pharmacies: string[] | null
+          assigned_topline_reps: string[] | null
+          base_price: number | null
+          created_at: string
+          created_by_user_id: string
+          dosage: string | null
+          downline_price: number | null
+          id: string
+          image_url: string | null
+          name: string
+          pharmacy_id: string
+          product_type_id: string | null
+          product_type_name: string | null
+          rejection_reason: string | null
+          requires_prescription: boolean
+          retail_price: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scope_type: string | null
+          sig: string | null
+          status: string
+          submitted_at: string
+          topline_price: number | null
+          updated_at: string
+          vitaluxe_price: number
+        }
+        Insert: {
+          admin_notes?: string | null
+          assigned_pharmacies?: string[] | null
+          assigned_topline_reps?: string[] | null
+          base_price?: number | null
+          created_at?: string
+          created_by_user_id: string
+          dosage?: string | null
+          downline_price?: number | null
+          id?: string
+          image_url?: string | null
+          name: string
+          pharmacy_id: string
+          product_type_id?: string | null
+          product_type_name?: string | null
+          rejection_reason?: string | null
+          requires_prescription?: boolean
+          retail_price?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scope_type?: string | null
+          sig?: string | null
+          status?: string
+          submitted_at?: string
+          topline_price?: number | null
+          updated_at?: string
+          vitaluxe_price: number
+        }
+        Update: {
+          admin_notes?: string | null
+          assigned_pharmacies?: string[] | null
+          assigned_topline_reps?: string[] | null
+          base_price?: number | null
+          created_at?: string
+          created_by_user_id?: string
+          dosage?: string | null
+          downline_price?: number | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          pharmacy_id?: string
+          product_type_id?: string | null
+          product_type_name?: string | null
+          rejection_reason?: string | null
+          requires_prescription?: boolean
+          retail_price?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scope_type?: string | null
+          sig?: string | null
+          status?: string
+          submitted_at?: string
+          topline_price?: number | null
+          updated_at?: string
+          vitaluxe_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_product_requests_product_type_id_fkey"
+            columns: ["product_type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pending_reps: {
         Row: {
           admin_notes: string | null
@@ -5014,6 +5109,8 @@ export type Database = {
         | "practice_approved"
         | "rep_approved"
         | "low_inventory"
+        | "product_request_approved"
+        | "product_request_rejected"
       order_status:
         | "pending"
         | "filled"
@@ -5173,6 +5270,8 @@ export const Constants = {
         "practice_approved",
         "rep_approved",
         "low_inventory",
+        "product_request_approved",
+        "product_request_rejected",
       ],
       order_status: [
         "pending",
