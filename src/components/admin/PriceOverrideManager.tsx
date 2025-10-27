@@ -479,13 +479,13 @@ export const PriceOverrideManager = () => {
                               {isToplineRep && (
                                 <>
                                   <TableCell className="text-right text-muted-foreground">
-                                    ${product.topline_price.toFixed(2)}
+                                    ${product.topline_price?.toFixed(2) ?? 'N/A'}
                                   </TableCell>
                                   <TableCell className="text-right">
                                     <Input
                                       type="text"
                                       inputMode="decimal"
-                                      placeholder={product.topline_price.toFixed(2)}
+                                      placeholder={product.topline_price?.toFixed(2) ?? '0.00'}
                                       value={values.topline}
                                       onChange={(e) => {
                                         const val = e.target.value;
@@ -502,13 +502,13 @@ export const PriceOverrideManager = () => {
                               {isDownlineRep && (
                                 <>
                                   <TableCell className="text-right text-muted-foreground">
-                                    ${product.downline_price.toFixed(2)}
+                                    ${product.downline_price?.toFixed(2) ?? 'N/A'}
                                   </TableCell>
                                   <TableCell className="text-right">
                                     <Input
                                       type="text"
                                       inputMode="decimal"
-                                      placeholder={product.downline_price.toFixed(2)}
+                                      placeholder={product.downline_price?.toFixed(2) ?? '0.00'}
                                       value={values.downline}
                                       onChange={(e) => {
                                         const val = e.target.value;
@@ -523,13 +523,13 @@ export const PriceOverrideManager = () => {
                               )}
                               
                               <TableCell className="text-right text-muted-foreground">
-                                ${product.retail_price.toFixed(2)}
+                                ${product.retail_price?.toFixed(2) ?? 'N/A'}
                               </TableCell>
                               <TableCell className="text-right">
                                 <Input
                                   type="text"
                                   inputMode="decimal"
-                                  placeholder={product.retail_price.toFixed(2)}
+                                  placeholder={product.retail_price?.toFixed(2) ?? '0.00'}
                                   value={values.retail}
                                   onChange={(e) => {
                                     const val = e.target.value;
