@@ -80,6 +80,12 @@ export const ProductsGrid = () => {
         `)
         .order("created_at", { ascending: false });
 
+      // Non-admins should only see active products
+      // Admins see all products to manage status
+      if (!viewingAsAdmin) {
+        query = query.eq('active', true);
+      }
+
       // For toplines, impersonated views, or non-admin users, filter by visibility
       if (isImpersonating || !viewingAsAdmin) {
         try {

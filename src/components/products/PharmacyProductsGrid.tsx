@@ -51,12 +51,13 @@ export const PharmacyProductsGrid = () => {
         .from("product_pharmacies")
         .select(`
           product_id,
-          products (
+          products!inner (
             *,
             product_types(id, name)
           )
         `)
-        .eq("pharmacy_id", pharmacyData.id);
+        .eq("pharmacy_id", pharmacyData.id)
+        .eq("products.active", true);
 
       if (error) throw error;
       
