@@ -74,8 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
   const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
   
-  // Hard 60-minute session timeout with activity refresh
-  const HARD_SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
+  // Hard 30-minute session timeout with activity refresh
+  const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
   const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // Refresh if < 5 minutes remaining
   const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
   const hardTimerRef = useRef<number | null>(null);
