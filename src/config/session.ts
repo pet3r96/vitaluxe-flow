@@ -1,22 +1,21 @@
 /**
- * Session Configuration - DEPRECATED
+ * Session Configuration
  * 
- * Idle timeout logic has been removed.
- * System now uses a simple 30-minute hard session timeout.
+ * System uses a hard session timeout with automatic refresh on user activity.
  * See AuthContext.tsx for implementation.
  * 
- * Hard timeout: 30 minutes from sign-in, regardless of activity.
- * Users are logged out and redirected to /auth with 2FA required on next login.
+ * Hard timeout: 60 minutes from sign-in.
+ * Activity refresh: Session extends automatically when user is active.
+ * Users are logged out after inactivity and redirected to /auth with 2FA required on next login.
  */
 
 export const SESSION_CONFIG = {
-  // DEPRECATED - No longer used for idle tracking
-  IDLE_TIMEOUT_MINUTES: 30,
-  WARNING_BEFORE_LOGOUT_MINUTES: 2,
-  ACTIVITY_UPDATE_INTERVAL_MS: 30000,
-  SESSION_CHECK_INTERVAL_MS: 60000,
-  ACTIVITY_EVENTS: ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'] as const,
+  // Hard session timeout (60 minutes)
+  HARD_TIMEOUT_MINUTES: 60,
   
-  // NEW: Hard session timeout (implemented in AuthContext.tsx)
-  HARD_TIMEOUT_MINUTES: 30,
+  // Activity refresh settings
+  REFRESH_ON_ACTIVITY: true,
+  REFRESH_THRESHOLD_MINUTES: 5,
+  ACTIVITY_CHECK_INTERVAL_MS: 30000,
+  ACTIVITY_EVENTS: ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'] as const,
 } as const;

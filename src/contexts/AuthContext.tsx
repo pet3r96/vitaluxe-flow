@@ -74,11 +74,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
   const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
   
-  // Hard 30-minute session timeout (no idle tracking)
-  const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  // Hard 60-minute session timeout with activity refresh
+  const HARD_SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
+  const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // Refresh if < 5 minutes remaining
   const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
   const hardTimerRef = useRef<number | null>(null);
   const checkIntervalRef = useRef<number | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
   
   const navigate = useNavigate();
   
@@ -220,9 +222,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             checkIntervalRef.current = null;
           }
           
-          // Set hard session expiration (30 minutes from now)
+          // Set hard session expiration (60 minutes from now)
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
+          lastActivityRef.current = Date.now();
           
           // Schedule primary hard timeout
           hardTimerRef.current = window.setTimeout(() => {
@@ -237,7 +240,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           logger.info('Session timer started', { 
             expiresAt: new Date(expireAt).toISOString(),
-            minutesRemaining: 30 
+            minutesRemaining: 60 
           });
           
           // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
@@ -414,6 +417,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
+
+  // Activity-based session refresh
+  useEffect(() => {
+    if (!session || !user) return;
+
+    const refreshSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error) {
+          logger.error('Failed to refresh session:', error);
+          return;
+        }
+        
+        // Extend session expiration
+        const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
+        localStorage.setItem(getSessionExpKey(user.id), String(expireAt));
+        
+        // Reset timer
+        if (hardTimerRef.current) {
+          clearTimeout(hardTimerRef.current);
+        }
+        hardTimerRef.current = window.setTimeout(() => {
+          void doHardSignOut();
+        }, HARD_SESSION_TIMEOUT_MS);
+        
+        logger.info('Session refreshed due to activity', {
+          expiresAt: new Date(expireAt).toISOString()
+        });
+      } catch (error) {
+        logger.error('Error refreshing session:', error);
+      }
+    };
+
+    const handleActivity = () => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastActivityRef.current;
+      
+      // Only refresh once every 5 minutes and if session is close to expiring
+      if (timeSinceLastActivity > REFRESH_THRESHOLD_MS) {
+        const expireAt = localStorage.getItem(getSessionExpKey(user.id));
+        if (expireAt) {
+          const timeRemaining = parseInt(expireAt) - now;
+          // Refresh if less than 5 minutes remaining
+          if (timeRemaining < REFRESH_THRESHOLD_MS && timeRemaining > 0) {
+            lastActivityRef.current = now;
+            void refreshSession();
+          }
+        }
+      }
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      window.addEventListener(event, handleActivity);
+    });
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+    };
+  }, [session, user]);
 
   // Impersonation permission now checked in parallel during fetchUserRole - removed redundant useEffect
 

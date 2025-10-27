@@ -163,6 +163,18 @@ export const PendingProductEditDialog = ({
 
     setLoading(true);
     try {
+      // Check session first
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/auth', 2000);
+        return;
+      }
+
       const csrfToken = await getCurrentCSRFToken();
 
       const { error } = await supabase.functions.invoke(
@@ -216,11 +228,22 @@ export const PendingProductEditDialog = ({
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error approving request:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to approve request",
-        variant: "destructive",
-      });
+      
+      // Handle session errors specifically
+      if (error?.message?.includes('session') || error?.message?.includes('Unauthorized') || error?.message?.includes('JWT')) {
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/auth', 2000);
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to approve request",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
