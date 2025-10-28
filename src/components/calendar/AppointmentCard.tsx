@@ -1,6 +1,7 @@
 import { format } from "date-fns";
-import { Clock, User, MapPin } from "lucide-react";
+import { Clock, User, MapPin, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface AppointmentCardProps {
   appointment: any;
@@ -15,10 +16,12 @@ const statusColors: Record<string, string> = {
   completed: 'bg-gray-100 border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100',
   cancelled: 'bg-red-100 border-red-300 text-red-900 dark:bg-red-950 dark:border-red-700 dark:text-red-100',
   no_show: 'bg-orange-100 border-orange-300 text-orange-900 dark:bg-orange-950 dark:border-orange-700 dark:text-orange-100',
+  checked_in: 'bg-amber-100 border-amber-400 text-amber-900 dark:bg-amber-950 dark:border-amber-600 dark:text-amber-100',
 };
 
 export function AppointmentCard({ appointment, onClick, isDragging, style }: AppointmentCardProps) {
   const statusColor = statusColors[appointment.status] || statusColors.scheduled;
+  const isWalkIn = appointment.appointment_type === 'walk_in' || appointment.status === 'checked_in';
   
   return (
     <div
@@ -31,6 +34,12 @@ export function AppointmentCard({ appointment, onClick, isDragging, style }: App
       )}
     >
       <div className="flex flex-col gap-1">
+        {isWalkIn && (
+          <Badge variant="secondary" className="w-fit text-[10px] py-0 px-1 bg-amber-500 text-white dark:bg-amber-600">
+            <Zap className="h-2.5 w-2.5 mr-0.5" />
+            WALK-IN
+          </Badge>
+        )}
         <div className="flex items-start justify-between gap-2">
           <p className="font-semibold text-sm leading-tight">
             {appointment.patient_accounts?.first_name} {appointment.patient_accounts?.last_name}

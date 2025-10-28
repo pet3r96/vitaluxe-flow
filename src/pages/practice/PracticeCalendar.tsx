@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings, Download } from "lucide-react";
+import { Plus, Settings, Download, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { CalendarHeader, CalendarView } from "@/components/calendar/CalendarHeader";
@@ -31,6 +31,7 @@ export default function PracticeCalendar() {
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
   const [defaultProviderId, setDefaultProviderId] = useState<string | undefined>();
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [isWalkIn, setIsWalkIn] = useState(false);
 
   const practiceId = effectivePracticeId || user?.id;
 
@@ -183,6 +184,14 @@ export default function PracticeCalendar() {
   const handleCreateAppointment = () => {
     setDefaultDate(undefined);
     setDefaultProviderId(undefined);
+    setIsWalkIn(false);
+    setCreateDialogOpen(true);
+  };
+
+  const handleWalkInAppointment = () => {
+    setDefaultDate(new Date());
+    setDefaultProviderId(undefined);
+    setIsWalkIn(true);
     setCreateDialogOpen(true);
   };
 
@@ -210,6 +219,10 @@ export default function PracticeCalendar() {
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
               Export
+            </Button>
+            <Button variant="secondary" onClick={handleWalkInAppointment}>
+              <Clock className="h-4 w-4 mr-2" />
+              Walk-in Patient
             </Button>
             <Button onClick={handleCreateAppointment}>
               <Plus className="h-4 w-4 mr-2" />
@@ -304,6 +317,7 @@ export default function PracticeCalendar() {
         defaultProviderId={defaultProviderId}
         providers={providers}
         rooms={rooms}
+        isWalkIn={isWalkIn}
       />
 
       <AppointmentDetailsDialog

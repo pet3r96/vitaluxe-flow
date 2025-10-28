@@ -25,6 +25,7 @@ interface CreateAppointmentDialogProps {
   defaultProviderId?: string;
   providers: any[];
   rooms: any[];
+  isWalkIn?: boolean;
 }
 
 export function CreateAppointmentDialog({
@@ -35,18 +36,30 @@ export function CreateAppointmentDialog({
   defaultProviderId,
   providers,
   rooms,
+  isWalkIn = false,
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const [selectedPatientId, setSelectedPatientId] = useState("");
+  
+  // For walk-ins, round current time to nearest 5 minutes
+  const getCurrentTimeRounded = () => {
+    const now = new Date();
+    const minutes = Math.round(now.getMinutes() / 5) * 5;
+    now.setMinutes(minutes);
+    now.setSeconds(0);
+    return now;
+  };
+  
+  const walkInDate = isWalkIn ? getCurrentTimeRounded() : (defaultDate || new Date());
   
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
       providerId: defaultProviderId || "",
       roomId: "",
-      appointmentDate: defaultDate ? format(defaultDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-      startTime: defaultDate ? format(defaultDate, 'HH:mm') : "09:00",
-      duration: "30",
-      appointmentType: "consultation",
+      appointmentDate: format(walkInDate, 'yyyy-MM-dd'),
+      startTime: format(walkInDate, 'HH:mm'),
+      duration: isWalkIn ? "15" : "30",
+      appointmentType: isWalkIn ? "walk_in" : "consultation",
       notes: "",
     },
   });
@@ -83,7 +96,7 @@ export function CreateAppointmentDialog({
           appointment_type: values.appointmentType,
           duration_minutes: parseInt(values.duration),
           notes: values.notes,
-          status: 'scheduled',
+          status: isWalkIn ? 'checked_in' : 'scheduled',
         })
         .select()
         .single();
@@ -93,7 +106,7 @@ export function CreateAppointmentDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
-      toast.success("Appointment created successfully");
+      toast.success(isWalkIn ? "Walk-in appointment created successfully" : "Appointment created successfully");
       reset();
       setSelectedPatientId("");
       onOpenChange(false);
@@ -115,7 +128,14 @@ export function CreateAppointmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Appointment</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {isWalkIn && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                WALK-IN
+              </span>
+            )}
+            {isWalkIn ? "Walk-in Patient" : "Create Appointment"}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -189,6 +209,8 @@ export function CreateAppointmentDialog({
                 id="appointmentDate"
                 type="date"
                 {...register("appointmentDate", { required: true })}
+                disabled={isWalkIn}
+                className={isWalkIn ? "bg-muted cursor-not-allowed" : ""}
               />
             </div>
 
@@ -198,6 +220,8 @@ export function CreateAppointmentDialog({
                 id="startTime"
                 type="time"
                 {...register("startTime", { required: true })}
+                disabled={isWalkIn}
+                className={isWalkIn ? "bg-muted cursor-not-allowed" : ""}
               />
             </div>
 
@@ -226,6 +250,7 @@ export function CreateAppointmentDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="walk_in">Walk-in</SelectItem>
                 <SelectItem value="consultation">Consultation</SelectItem>
                 <SelectItem value="follow_up">Follow-up</SelectItem>
                 <SelectItem value="procedure">Procedure</SelectItem>

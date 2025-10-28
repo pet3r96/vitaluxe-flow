@@ -1,5 +1,5 @@
 import { format, isSameDay, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar, Clock, User, MapPin, Phone, Mail } from "lucide-react";
+import { Calendar, Clock, User, MapPin, Phone, Mail, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -17,6 +17,7 @@ const statusConfig: Record<string, { label: string; variant: any }> = {
   completed: { label: 'Completed', variant: 'secondary' },
   cancelled: { label: 'Cancelled', variant: 'destructive' },
   no_show: { label: 'No Show', variant: 'destructive' },
+  checked_in: { label: 'Checked In', variant: 'default' },
 };
 
 export function AgendaView({ currentDate, appointments, onAppointmentClick }: AgendaViewProps) {
@@ -80,11 +81,15 @@ export function AgendaView({ currentDate, appointments, onAppointmentClick }: Ag
             <div className="space-y-2 pl-2">
               {dayAppointments.map((appointment) => {
                 const status = statusConfig[appointment.status] || statusConfig.scheduled;
+                const isWalkIn = appointment.appointment_type === 'walk_in' || appointment.status === 'checked_in';
                 
                 return (
                   <Card
                     key={appointment.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    className={cn(
+                      "cursor-pointer hover:shadow-md transition-shadow",
+                      isWalkIn && "border-l-4 border-l-amber-500"
+                    )}
                     onClick={() => onAppointmentClick(appointment)}
                   >
                     <CardContent className="p-4">
@@ -140,8 +145,14 @@ export function AgendaView({ currentDate, appointments, onAppointmentClick }: Ag
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
+                          {isWalkIn && (
+                            <Badge className="bg-amber-500 text-white hover:bg-amber-600">
+                              <Zap className="h-3 w-3 mr-1" />
+                              Walk-in
+                            </Badge>
+                          )}
                           <Badge variant={status.variant}>{status.label}</Badge>
-                          {appointment.appointment_type && (
+                          {appointment.appointment_type && appointment.appointment_type !== 'walk_in' && (
                             <Badge variant="outline" className="capitalize">
                               {appointment.appointment_type}
                             </Badge>
