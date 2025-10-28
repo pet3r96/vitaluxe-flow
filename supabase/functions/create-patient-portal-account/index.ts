@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
     }
 
     // Create patient_accounts record
+    // Status defaults to 'active' - invitation state tracked by last_login_at being null
     const { data: patientAccount, error: accountError } = await supabaseAdmin
       .from('patient_accounts')
       .insert({
@@ -177,7 +178,7 @@ Deno.serve(async (req) => {
         city: patient.city,
         state: patient.state,
         zip_code: patient.zip_code,
-        status: 'invited',
+        // Omit status field - defaults to 'active'
       })
       .select()
       .single();

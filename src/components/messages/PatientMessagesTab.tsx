@@ -123,7 +123,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
           practice_id: practiceId,
           sender_id: userId,
           sender_type: 'practice',
-          subject: 'Reply',
+          subject: 'Reply from Practice',
           message_body: message,
           urgency: selectedMessage?.urgency || 'normal',
         });
