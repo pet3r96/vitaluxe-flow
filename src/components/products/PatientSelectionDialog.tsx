@@ -90,35 +90,45 @@ export const PatientSelectionDialog = ({
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       
-      const { data, error } = await supabase
-        .from("providers" as any)
-        .select(`
-          id,
-          user_id,
-          active,
-          specialty,
-          profiles!inner(id, name, full_name, npi, dea)
-        `)
+      // Step 1: Get provider records
+      const { data: providerRecords, error: providerError } = await supabase
+        .from("providers")
+        .select("id, user_id, active")
         .eq("practice_id", effectivePracticeId)
-        .eq("active", true)
-        .order("created_at", { ascending: false });
+        .eq("active", true);
       
-      if (error) throw error;
-      const mappedData = (data || []).map((p: any) => {
-        // Use full_name if available, otherwise fall back to name
-        const displayName = p.profiles?.full_name || p.profiles?.name || 'Unknown Provider';
+      if (providerError) throw providerError;
+      if (!providerRecords || providerRecords.length === 0) return [];
+
+      // Step 2: Get profiles for those provider user accounts
+      const userIds = providerRecords.map((p: any) => p.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, name, full_name, npi, dea")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+
+      // Map profiles by id
+      const profilesById = new Map(
+        (profiles || []).map((prof: any) => [prof.id, prof])
+      );
+
+      // Combine provider + profile data
+      const mappedData = providerRecords.map((p: any) => {
+        const profile = profilesById.get(p.user_id);
+        const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
         
         return {
           id: p.id,
           user_id: p.user_id,
           prescriber_name: displayName,
-          specialty: p.specialty || '',
-          // Show actual NPI or hide if null
-          npi: p.profiles?.npi || '',
-          // Show actual DEA or hide if null
-          dea: p.profiles?.dea || ''
+          specialty: '',
+          npi: profile?.npi || '',
+          dea: profile?.dea || ''
         };
       });
+      
       return mappedData;
     },
     enabled: open && !!effectivePracticeId

@@ -151,9 +151,9 @@ export function CreateAppointmentDialog({
                 <SelectContent>
                   {providers && providers.length > 0 ? (
                     providers.map((provider) => (
-                      <SelectItem key={provider.id} value={provider.id}>
-                        {provider.first_name} {provider.last_name}
-                      </SelectItem>
+                  <SelectItem key={provider.id} value={provider.id}>
+                    {provider.full_name || `${provider.first_name} ${provider.last_name}`}
+                  </SelectItem>
                     ))
                   ) : (
                     <SelectItem value="no-providers-available" disabled>

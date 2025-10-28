@@ -61,36 +61,47 @@ Deno.serve(async (req) => {
       .eq('practice_id', practiceId)
       .maybeSingle();
 
-    // Get all providers for the practice with proper profile data
-    const { data: allProviders } = await supabaseClient
+    // Get all providers for the practice (step 1)
+    const { data: providerRecords } = await supabaseClient
       .from('providers')
-      .select(`
-        id, 
-        user_id, 
-        active,
-        profiles!inner(id, name, full_name)
-      `)
+      .select('id, user_id, active')
       .eq('practice_id', practiceId)
       .eq('active', true);
 
-    // Transform to use actual profile names
-    const transformedProviders = (allProviders || []).map((p: any) => {
-      // Use full_name if available, otherwise use name
-      const displayName = p.profiles?.full_name || p.profiles?.name || 'Unknown Provider';
-      const nameParts = displayName.trim().split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-      
-      return {
-        id: p.id,
-        user_id: p.user_id,
-        active: p.active,
-        first_name: firstName,
-        last_name: lastName,
-        full_name: displayName,
-        specialty: null
-      };
-    });
+    let transformedProviders: any[] = [];
+    
+    if (providerRecords && providerRecords.length > 0) {
+      // Get profiles for those provider user accounts (step 2)
+      const userIds = providerRecords.map(p => p.user_id);
+      const { data: providerProfiles } = await supabaseClient
+        .from('profiles')
+        .select('id, name, full_name')
+        .in('id', userIds);
+
+      // Map profiles by id for quick lookup
+      const profilesById = new Map(
+        (providerProfiles || []).map(prof => [prof.id, prof])
+      );
+
+      // Build transformed providers with correct names
+      transformedProviders = providerRecords.map((p: any) => {
+        const profile = profilesById.get(p.user_id);
+        const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
+        const nameParts = displayName.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        return {
+          id: p.id,
+          user_id: p.user_id,
+          active: p.active,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: displayName,
+          specialty: null
+        };
+      });
+    }
 
     // Get all rooms for the practice
     const { data: allRooms } = await supabaseClient

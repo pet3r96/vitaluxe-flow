@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 
 interface Provider {
   id: string;
-  first_name: string;
-  last_name: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
   specialty?: string;
 }
 
@@ -70,7 +71,7 @@ export function CalendarFilters({
                     htmlFor={`provider-${provider.id}`}
                     className="text-sm font-normal cursor-pointer flex-1"
                   >
-                    {provider.first_name} {provider.last_name}
+                    {provider.full_name || `${provider.first_name} ${provider.last_name}`}
                     {provider.specialty && (
                       <span className="text-xs text-muted-foreground ml-1">
                         ({provider.specialty})
