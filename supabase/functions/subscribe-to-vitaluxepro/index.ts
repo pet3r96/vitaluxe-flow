@@ -35,6 +35,23 @@ serve(async (req) => {
       });
     }
 
+    // Get the practice profile ID
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Profile lookup error:', profileError);
+      return new Response(
+        JSON.stringify({ error: "Practice profile not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const practiceId = profile.id;
+
     // Get request body
     const { payment_method_id } = await req.json();
 
@@ -44,7 +61,7 @@ serve(async (req) => {
         .from('practice_payment_methods')
         .select('*')
         .eq('id', payment_method_id)
-        .eq('practice_id', user.id)
+        .eq('practice_id', practiceId)
         .eq('status', 'active')
         .single();
 
@@ -77,7 +94,7 @@ serve(async (req) => {
     const { data: existingSub, error: checkError } = await supabaseClient
       .from("practice_subscriptions")
       .select("*")
-      .eq("practice_id", user.id)
+      .eq("practice_id", practiceId)
       .single();
 
     let subscription;
@@ -122,7 +139,7 @@ serve(async (req) => {
       const { data: newSub, error: subError } = await supabaseClient.rpc(
         "create_practice_subscription",
         {
-          p_practice_id: user.id,
+          p_practice_id: practiceId,
           p_start_trial: true,
         }
       );
@@ -150,7 +167,7 @@ serve(async (req) => {
 
     if (subscriptionTerms) {
       await supabaseClient.from('user_terms_acceptances').insert({
-        user_id: user.id,
+        user_id: practiceId,
         role: 'subscription',
         terms_version: subscriptionTerms.version,
         signature_name: user.email,
@@ -160,7 +177,7 @@ serve(async (req) => {
 
     // Log the subscription creation
     await supabaseClient.from("audit_logs").insert({
-      user_id: user.id,
+      user_id: practiceId,
       action_type: "subscription_started",
       entity_type: "practice_subscriptions",
       entity_id: subscription,
