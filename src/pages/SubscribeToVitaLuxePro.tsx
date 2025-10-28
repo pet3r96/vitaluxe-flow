@@ -179,9 +179,9 @@ export default function SubscribeToVitaLuxePro() {
           </Card>
 
           <div className="space-y-6">
-            <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800">
+            <Card className="bg-muted border-border">
               <CardHeader>
-                <CardTitle>Pricing</CardTitle>
+                <CardTitle className="text-muted-foreground">Pricing</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -194,11 +194,23 @@ export default function SubscribeToVitaLuxePro() {
                   </Badge>
                 </div>
                 <Separator />
-                <div className="text-sm space-y-2 text-amber-900 dark:text-amber-100">
-                  <p>✓ No credit card required for trial</p>
-                  <p>✓ Cancel anytime</p>
-                  <p>✓ Full feature access during trial</p>
-                  <p>✓ Automatic billing after trial</p>
+                <div className="text-sm space-y-2 text-foreground">
+                  <p className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    No credit card required for trial
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    Cancel anytime
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    Full feature access during trial
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    Automatic billing after trial
+                  </p>
                 </div>
               </CardContent>
             </Card>
