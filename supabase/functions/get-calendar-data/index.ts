@@ -61,12 +61,34 @@ Deno.serve(async (req) => {
       .eq('practice_id', practiceId)
       .maybeSingle();
 
-    // Get all providers for the practice
+    // Get all providers for the practice with flattened profile data
     const { data: allProviders } = await supabaseClient
       .from('providers')
-      .select('id, user_id, active, profiles!inner(name)')
+      .select(`
+        id, 
+        user_id, 
+        active,
+        profiles!inner(name)
+      `)
       .eq('practice_id', practiceId)
       .eq('active', true);
+
+    // Transform to flatten the structure and split name into first/last
+    const transformedProviders = (allProviders || []).map((p: any) => {
+      const fullName = p.profiles?.name || 'Unknown Provider';
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      return {
+        id: p.id,
+        user_id: p.user_id,
+        active: p.active,
+        first_name: firstName,
+        last_name: lastName,
+        specialty: null
+      };
+    });
 
     // Get all rooms for the practice
     const { data: allRooms } = await supabaseClient
@@ -85,7 +107,7 @@ Deno.serve(async (req) => {
           end_hour: 20,
           working_days: [1, 2, 3, 4, 5]
         },
-        providers: allProviders || [],
+        providers: transformedProviders || [],
         rooms: allRooms || []
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

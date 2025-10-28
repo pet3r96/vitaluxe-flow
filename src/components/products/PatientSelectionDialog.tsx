@@ -96,12 +96,12 @@ export const PatientSelectionDialog = ({
           id,
           user_id,
           active,
-          profiles!inner(
-            id,
-            name,
-            npi,
-            dea
-          )
+          first_name,
+          last_name,
+          specialty,
+          npi,
+          dea,
+          profiles!inner(name)
         `)
         .eq("practice_id", effectivePracticeId)
         .eq("active", true)
@@ -109,14 +109,20 @@ export const PatientSelectionDialog = ({
       
       if (error) throw error;
       const mappedData = (data || []).map((p: any) => {
+        // Use first_name/last_name if available, otherwise fall back to profiles.name
+        const displayName = p.first_name && p.last_name 
+          ? `${p.first_name} ${p.last_name}`
+          : p.profiles?.name || 'Unknown Provider';
+        
         return {
           id: p.id,
           user_id: p.user_id,
-          prescriber_name: p.profiles?.name || 'Unknown Provider',
-          // Show actual NPI or hide if null - don't show 'N/A'
-          npi: p.profiles?.npi || '',
-          // Show actual DEA or hide if null - don't show 'N/A'
-          dea: p.profiles?.dea || ''
+          prescriber_name: displayName,
+          specialty: p.specialty || '',
+          // Show actual NPI or hide if null
+          npi: p.npi || '',
+          // Show actual DEA or hide if null
+          dea: p.dea || ''
         };
       });
       return mappedData;
@@ -452,22 +458,24 @@ export const PatientSelectionDialog = ({
                 <div className="grid gap-3 pb-4 border-b">
                   <Label className="text-base font-semibold">Select Provider *</Label>
                   {providers.length === 1 ? (
-                    <div className="p-3 border rounded-md bg-muted">
+                   <div className="p-3 border rounded-md bg-muted">
                       <p className="text-sm font-medium">{providers[0].prescriber_name}</p>
-                      {providers[0].npi && (
-                        <p className="text-xs text-muted-foreground">Provider NPI: {providers[0].npi}</p>
-                      )}
+                      <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                        {providers[0].specialty && <p>Specialty: {providers[0].specialty}</p>}
+                        {providers[0].npi && <p>NPI: {providers[0].npi}</p>}
+                      </div>
                     </div>
                   ) : (
                     <RadioGroup value={selectedProviderId || ""} onValueChange={setSelectedProviderId}>
                       {providers.map((provider: any) => (
-                        <div key={provider.id} className="flex items-center space-x-2 p-2 border rounded-md">
+                        <div key={provider.id} className="flex items-center space-x-2 p-3 border rounded-md hover:bg-accent/50">
                           <RadioGroupItem value={provider.id} id={provider.id} />
                           <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
-                            <span className="font-medium">{provider.prescriber_name}</span>
-                            {provider.npi && (
-                              <span className="text-xs text-muted-foreground ml-2">NPI: {provider.npi}</span>
-                            )}
+                            <div className="font-medium">{provider.prescriber_name}</div>
+                            <div className="text-xs text-muted-foreground space-x-2 mt-0.5">
+                              {provider.specialty && <span>• {provider.specialty}</span>}
+                              {provider.npi && <span>• NPI: {provider.npi}</span>}
+                            </div>
                           </Label>
                         </div>
                       ))}

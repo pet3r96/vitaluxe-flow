@@ -35,7 +35,7 @@ export function DayView({
 
   const timeSlots = useMemo(() => {
     const slots = [];
-    for (let hour = startHour; hour <= endHour; hour++) {
+    for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += slotDuration) {
         slots.push({ hour, minute });
       }

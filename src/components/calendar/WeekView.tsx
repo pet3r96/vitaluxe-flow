@@ -35,10 +35,10 @@ export function WeekView({
     return providers.filter(p => selectedProviders.includes(p.id));
   }, [providers, selectedProviders]);
 
-  // Generate time slots
+  // Generate time slots - stop before endHour to prevent scrolling past
   const timeSlots = useMemo(() => {
     const slots = [];
-    for (let hour = startHour; hour <= endHour; hour++) {
+    for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += slotDuration) {
         slots.push({ hour, minute });
       }

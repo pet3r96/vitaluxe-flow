@@ -88,11 +88,11 @@ export default function PracticeCalendar() {
     enabled: !!practiceId,
   });
 
-  // Set up realtime subscription
+  // Set up realtime subscription for appointments and rooms
   useEffect(() => {
     if (!practiceId) return;
 
-    const channel = supabase
+    const appointmentsChannel = supabase
       .channel('calendar-changes')
       .on(
         'postgres_changes',
@@ -108,8 +108,25 @@ export default function PracticeCalendar() {
       )
       .subscribe();
 
+    const roomsChannel = supabase
+      .channel('room-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practice_rooms',
+          filter: `practice_id=eq.${practiceId}`,
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(roomsChannel);
     };
   }, [practiceId, refetch]);
 
