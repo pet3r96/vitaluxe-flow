@@ -3591,7 +3591,9 @@ export type Database = {
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
+          grace_period_ends_at: string | null
           id: string
+          last_payment_attempt_at: string | null
           monthly_price: number | null
           practice_id: string
           status: string
@@ -3605,7 +3607,9 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          grace_period_ends_at?: string | null
           id?: string
+          last_payment_attempt_at?: string | null
           monthly_price?: number | null
           practice_id: string
           status?: string
@@ -3619,7 +3623,9 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          grace_period_ends_at?: string | null
           id?: string
+          last_payment_attempt_at?: string | null
           monthly_price?: number | null
           practice_id?: string
           status?: string
@@ -5171,6 +5177,55 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trial_payment_reminders: {
+        Row: {
+          created_at: string | null
+          id: string
+          practice_id: string
+          reminder_type: string
+          sent_at: string | null
+          subscription_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          practice_id: string
+          reminder_type: string
+          sent_at?: string | null
+          subscription_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          practice_id?: string
+          reminder_type?: string
+          sent_at?: string | null
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_payment_reminders_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_payment_reminders_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_payment_reminders_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "practice_subscriptions"
             referencedColumns: ["id"]
           },
         ]

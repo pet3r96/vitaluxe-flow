@@ -2,10 +2,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface SubscriptionStatus {
   isSubscribed: boolean;
-  status: 'trial' | 'active' | 'cancelled' | 'expired' | 'payment_failed' | null;
+  status: 'trial' | 'active' | 'cancelled' | 'expired' | 'suspended' | 'payment_failed' | null;
   trialEndsAt: Date | null;
   currentPeriodEnd: Date | null;
   trialDaysRemaining: number | null;
+  gracePeriodEndsAt?: Date | null;
 }
 
 export const hasActiveSubscription = async (practiceId: string): Promise<boolean> => {
@@ -34,7 +35,7 @@ export const hasActiveSubscription = async (practiceId: string): Promise<boolean
 export const getSubscriptionStatus = async (practiceId: string): Promise<SubscriptionStatus> => {
   const { data, error } = await supabase
     .from('practice_subscriptions' as any)
-    .select('status, trial_ends_at, current_period_end')
+    .select('status, trial_ends_at, current_period_end, grace_period_ends_at')
     .eq('practice_id', practiceId)
     .maybeSingle();
     
@@ -44,7 +45,8 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
       status: null,
       trialEndsAt: null,
       currentPeriodEnd: null,
-      trialDaysRemaining: null
+      trialDaysRemaining: null,
+      gracePeriodEndsAt: null
     };
   }
   
@@ -64,13 +66,19 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
   if (subscription.status === 'active' && subscription.current_period_end) {
     isSubscribed = new Date(subscription.current_period_end) > now;
   }
+
+  // Suspended subscriptions are in grace period - still "subscribed" until grace period ends
+  if (subscription.status === 'suspended' && subscription.grace_period_ends_at) {
+    isSubscribed = new Date(subscription.grace_period_ends_at) > now;
+  }
   
   return {
     isSubscribed,
     status: subscription.status as any,
     trialEndsAt: subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null,
     currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end) : null,
-    trialDaysRemaining
+    trialDaysRemaining,
+    gracePeriodEndsAt: subscription.grace_period_ends_at ? new Date(subscription.grace_period_ends_at) : null
   };
 };
 
