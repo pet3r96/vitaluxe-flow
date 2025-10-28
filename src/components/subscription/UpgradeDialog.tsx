@@ -124,7 +124,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
           </div>
 
           <p className="text-xs text-center text-muted-foreground">
-            No credit card required for trial • Cancel anytime
+            Cancel Anytime • No Contracts • Billed automatically on 8th day
           </p>
         </div>
       </DialogContent>
