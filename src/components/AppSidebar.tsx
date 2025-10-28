@@ -71,8 +71,8 @@ const menuItems = {
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
     { title: "Triage Queue", url: "/triage-queue", icon: AlertCircle, isPro: true },
-    { title: "My Profile", url: "/profile", icon: UserCircle },
     { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "My Profile", url: "/profile", icon: UserCircle },
   ],
   provider: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -80,8 +80,8 @@ const menuItems = {
     { title: "Products", url: "/products", icon: Package },
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
     { title: "My Orders", url: "/orders", icon: FileText },
-    { title: "My Profile", url: "/profile", icon: UserCircle },
     { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "My Profile", url: "/profile", icon: UserCircle },
   ],
   pharmacy: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -114,9 +114,9 @@ const menuItems = {
   patient: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "My Appointments", url: "/appointments", icon: Calendar },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Medical Vault", url: "/medical-vault", icon: FileText },
     { title: "Documents", url: "/documents", icon: FileText },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "My Profile", url: "/profile", icon: UserCircle },
   ],
 };
