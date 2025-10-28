@@ -1,0 +1,68 @@
+import { format } from "date-fns";
+import { Clock, User, MapPin } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface AppointmentCardProps {
+  appointment: any;
+  onClick: () => void;
+  isDragging?: boolean;
+  style?: React.CSSProperties;
+}
+
+const statusColors: Record<string, string> = {
+  scheduled: 'bg-blue-100 border-blue-300 text-blue-900 dark:bg-blue-950 dark:border-blue-700 dark:text-blue-100',
+  confirmed: 'bg-green-100 border-green-300 text-green-900 dark:bg-green-950 dark:border-green-700 dark:text-green-100',
+  completed: 'bg-gray-100 border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100',
+  cancelled: 'bg-red-100 border-red-300 text-red-900 dark:bg-red-950 dark:border-red-700 dark:text-red-100',
+  no_show: 'bg-orange-100 border-orange-300 text-orange-900 dark:bg-orange-950 dark:border-orange-700 dark:text-orange-100',
+};
+
+export function AppointmentCard({ appointment, onClick, isDragging, style }: AppointmentCardProps) {
+  const statusColor = statusColors[appointment.status] || statusColors.scheduled;
+  
+  return (
+    <div
+      onClick={onClick}
+      style={style}
+      className={cn(
+        "p-2 rounded-md border-l-4 cursor-pointer transition-all hover:shadow-md",
+        statusColor,
+        isDragging && "opacity-50 cursor-move"
+      )}
+    >
+      <div className="flex flex-col gap-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-semibold text-sm leading-tight">
+            {appointment.patient_accounts?.first_name} {appointment.patient_accounts?.last_name}
+          </p>
+          <span className="text-xs whitespace-nowrap">
+            {format(new Date(appointment.start_time), 'h:mm a')}
+          </span>
+        </div>
+        
+        {appointment.providers && (
+          <div className="flex items-center gap-1 text-xs opacity-80">
+            <User className="h-3 w-3" />
+            <span>
+              {appointment.providers.first_name} {appointment.providers.last_name}
+            </span>
+          </div>
+        )}
+        
+        {appointment.practice_rooms && (
+          <div className="flex items-center gap-1 text-xs opacity-80">
+            <MapPin className="h-3 w-3" />
+            <span>{appointment.practice_rooms.name}</span>
+          </div>
+        )}
+        
+        {appointment.appointment_type && (
+          <div className="flex items-center gap-1 text-xs opacity-80">
+            <Clock className="h-3 w-3" />
+            <span className="capitalize">{appointment.appointment_type}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

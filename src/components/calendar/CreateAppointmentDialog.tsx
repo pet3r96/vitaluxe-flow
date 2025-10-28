@@ -1,0 +1,252 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+interface CreateAppointmentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  practiceId: string;
+  defaultDate?: Date;
+  defaultProviderId?: string;
+  providers: any[];
+  rooms: any[];
+}
+
+export function CreateAppointmentDialog({
+  open,
+  onOpenChange,
+  practiceId,
+  defaultDate,
+  defaultProviderId,
+  providers,
+  rooms,
+}: CreateAppointmentDialogProps) {
+  const queryClient = useQueryClient();
+  const [selectedPatientId, setSelectedPatientId] = useState("");
+  
+  const { register, handleSubmit, reset, watch, setValue } = useForm({
+    defaultValues: {
+      providerId: defaultProviderId || "",
+      roomId: "",
+      appointmentDate: defaultDate ? format(defaultDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+      startTime: defaultDate ? format(defaultDate, 'HH:mm') : "09:00",
+      duration: "30",
+      appointmentType: "consultation",
+      notes: "",
+    },
+  });
+
+  // Fetch patients for the practice
+  const { data: patients } = useQuery({
+    queryKey: ['practice-patients', practiceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('patient_accounts')
+        .select('id, first_name, last_name, email')
+        .eq('practice_id', practiceId)
+        .order('last_name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (values: any) => {
+      const startDateTime = new Date(`${values.appointmentDate}T${values.startTime}`);
+      const endDateTime = new Date(startDateTime.getTime() + parseInt(values.duration) * 60000);
+
+      const { data, error } = await supabase
+        .from('patient_appointments')
+        .insert({
+          patient_id: selectedPatientId,
+          practice_id: practiceId,
+          provider_id: values.providerId,
+          room_id: values.roomId || null,
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
+          appointment_type: values.appointmentType,
+          duration_minutes: parseInt(values.duration),
+          notes: values.notes,
+          status: 'scheduled',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      toast.success("Appointment created successfully");
+      reset();
+      setSelectedPatientId("");
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create appointment");
+    },
+  });
+
+  const onSubmit = (values: any) => {
+    if (!selectedPatientId) {
+      toast.error("Please select a patient");
+      return;
+    }
+    createMutation.mutate(values);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create Appointment</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="patient">Patient *</Label>
+            <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select patient" />
+              </SelectTrigger>
+              <SelectContent>
+                {patients?.map((patient) => (
+                  <SelectItem key={patient.id} value={patient.id}>
+                    {patient.first_name} {patient.last_name} ({patient.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="providerId">Provider *</Label>
+              <Select {...register("providerId", { required: true })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {providers.map((provider) => (
+                    <SelectItem key={provider.id} value={provider.id}>
+                      {provider.first_name} {provider.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="roomId">Room</Label>
+              <Select {...register("roomId")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select room (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No room</SelectItem>
+                  {rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="appointmentDate">Date *</Label>
+              <Input
+                id="appointmentDate"
+                type="date"
+                {...register("appointmentDate", { required: true })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Time *</Label>
+              <Input
+                id="startTime"
+                type="time"
+                {...register("startTime", { required: true })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duration (min) *</Label>
+              <Select {...register("duration", { required: true })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 min</SelectItem>
+                  <SelectItem value="30">30 min</SelectItem>
+                  <SelectItem value="45">45 min</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                  <SelectItem value="90">1.5 hours</SelectItem>
+                  <SelectItem value="120">2 hours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="appointmentType">Appointment Type</Label>
+            <Select {...register("appointmentType")}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="consultation">Consultation</SelectItem>
+                <SelectItem value="follow_up">Follow-up</SelectItem>
+                <SelectItem value="procedure">Procedure</SelectItem>
+                <SelectItem value="initial">Initial Visit</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              {...register("notes")}
+              rows={3}
+              placeholder="Add any notes about this appointment..."
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Creating..." : "Create Appointment"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

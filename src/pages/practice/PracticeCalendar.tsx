@@ -1,57 +1,171 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, User, Phone, Mail } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, Settings, Download } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
+import { CalendarHeader, CalendarView } from "@/components/calendar/CalendarHeader";
+import { CalendarFilters } from "@/components/calendar/CalendarFilters";
+import { WeekView } from "@/components/calendar/WeekView";
+import { DayView } from "@/components/calendar/DayView";
+import { MonthView } from "@/components/calendar/MonthView";
+import { AgendaView } from "@/components/calendar/AgendaView";
+import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
+import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 export default function PracticeCalendar() {
-  const queryClient = useQueryClient();
+  const { user, effectivePracticeId } = useAuth();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState<CalendarView>('week');
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [defaultDate, setDefaultDate] = useState<Date | undefined>();
+  const [defaultProviderId, setDefaultProviderId] = useState<string | undefined>();
 
-  const { data: appointments, isLoading } = useQuery({
-    queryKey: ["practice-appointments"],
+  const practiceId = effectivePracticeId || user?.id;
+
+  // Calculate date range based on view
+  const getDateRange = () => {
+    switch (view) {
+      case 'day':
+        return {
+          start: format(currentDate, 'yyyy-MM-dd'),
+          end: format(currentDate, 'yyyy-MM-dd')
+        };
+      case 'week':
+        const weekStart = startOfWeek(currentDate);
+        const weekEnd = endOfWeek(currentDate);
+        return {
+          start: format(weekStart, 'yyyy-MM-dd'),
+          end: format(weekEnd, 'yyyy-MM-dd')
+        };
+      case 'month':
+      case 'agenda':
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfMonth(currentDate);
+        return {
+          start: format(monthStart, 'yyyy-MM-dd'),
+          end: format(monthEnd, 'yyyy-MM-dd')
+        };
+      default:
+        return {
+          start: format(currentDate, 'yyyy-MM-dd'),
+          end: format(currentDate, 'yyyy-MM-dd')
+        };
+    }
+  };
+
+  // Fetch calendar data
+  const { data: calendarData, isLoading, refetch } = useQuery({
+    queryKey: ['calendar-data', practiceId, getDateRange(), selectedProviders, selectedRooms, selectedStatuses],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_appointments")
-        .select(`
-          *,
-          patient:patient_accounts(first_name, last_name, phone, email)
-        `)
-        .order("start_time", { ascending: true });
+      const dateRange = getDateRange();
+      
+      const { data, error } = await supabase.functions.invoke('get-calendar-data', {
+        body: {
+          practiceId,
+          startDate: `${dateRange.start}T00:00:00Z`,
+          endDate: `${dateRange.end}T23:59:59Z`,
+          providers: selectedProviders.length > 0 ? selectedProviders : undefined,
+          rooms: selectedRooms.length > 0 ? selectedRooms : undefined,
+          statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+        },
+      });
+
       if (error) throw error;
       return data;
     },
+    enabled: !!practiceId,
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from("patient_appointments")
-        .update({ status })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["practice-appointments"] });
-      toast.success("Appointment status updated");
-    },
-    onError: (error: any) => {
-      toast.error(error.message);
-    },
-  });
+  // Set up realtime subscription
+  useEffect(() => {
+    if (!practiceId) return;
 
-  const upcoming = appointments?.filter(
-    (a) => new Date(a.start_time) > new Date() && a.status !== "cancelled"
-  );
-  const past = appointments?.filter((a) => new Date(a.start_time) <= new Date());
+    const channel = supabase
+      .channel('calendar-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_appointments',
+          filter: `practice_id=eq.${practiceId}`,
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [practiceId, refetch]);
+
+  const appointments = calendarData?.appointments || [];
+  const settings = calendarData?.settings || {
+    slot_duration: 15,
+    start_hour: 7,
+    end_hour: 20,
+    working_days: [1, 2, 3, 4, 5],
+  };
+  const providers = calendarData?.providers || [];
+  const rooms = calendarData?.rooms || [];
+
+  const handleProviderToggle = (providerId: string) => {
+    setSelectedProviders((prev) =>
+      prev.includes(providerId)
+        ? prev.filter((id) => id !== providerId)
+        : [...prev, providerId]
+    );
+  };
+
+  const handleRoomToggle = (roomId: string) => {
+    setSelectedRooms((prev) =>
+      prev.includes(roomId)
+        ? prev.filter((id) => id !== roomId)
+        : [...prev, roomId]
+    );
+  };
+
+  const handleStatusToggle = (status: string) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(status)
+        ? prev.filter((s) => s !== status)
+        : [...prev, status]
+    );
+  };
+
+  const handleAppointmentClick = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleTimeSlotClick = (date: Date, providerId?: string) => {
+    setDefaultDate(date);
+    setDefaultProviderId(providerId);
+    setCreateDialogOpen(true);
+  };
+
+  const handleDateClick = (date: Date) => {
+    setCurrentDate(date);
+    setView('day');
+  };
+
+  const handleCreateAppointment = () => {
+    setDefaultDate(undefined);
+    setDefaultProviderId(undefined);
+    setCreateDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -62,114 +176,122 @@ export default function PracticeCalendar() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Appointment Calendar</h1>
-        <p className="text-muted-foreground">Manage patient appointments</p>
+    <div className="flex flex-col h-screen">
+      <div className="flex-none p-6 border-b">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Practice Calendar</h1>
+            <p className="text-muted-foreground">Manage appointments and schedules</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button onClick={handleCreateAppointment}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Appointment
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {appointments?.filter(
-                (a) =>
-                  format(new Date(a.start_time), "yyyy-MM-dd") ===
-                  format(new Date(), "yyyy-MM-dd")
-              ).length || 0}
-            </div>
-          </CardContent>
-        </Card>
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+          <div className="p-4 h-full overflow-y-auto">
+            <CalendarFilters
+              providers={providers}
+              rooms={rooms}
+              selectedProviders={selectedProviders}
+              selectedRooms={selectedRooms}
+              selectedStatuses={selectedStatuses}
+              onProviderToggle={handleProviderToggle}
+              onRoomToggle={handleRoomToggle}
+              onStatusToggle={handleStatusToggle}
+            />
+          </div>
+        </ResizablePanel>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcoming?.length || 0}</div>
-          </CardContent>
-        </Card>
+        <ResizableHandle withHandle />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {appointments?.filter((a) => a.status === "completed").length || 0}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <ResizablePanel defaultSize={80}>
+          <div className="p-6 h-full flex flex-col">
+            <CalendarHeader
+              currentDate={currentDate}
+              view={view}
+              onDateChange={setCurrentDate}
+              onViewChange={setView}
+            />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Appointments</CardTitle>
-          <CardDescription>Scheduled patient visits</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {upcoming && upcoming.length > 0 ? (
-            <div className="space-y-4">
-              {upcoming.map((appt: any) => (
-                <div key={appt.id} className="flex items-start justify-between p-4 border rounded-lg">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <p className="font-medium">
-                        {appt.patient?.first_name} {appt.patient?.last_name}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      <span>{format(new Date(appt.start_time), "MMMM dd, yyyy 'at' h:mm a")}</span>
-                    </div>
-                    {appt.patient?.phone && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        <span>{appt.patient.phone}</span>
-                      </div>
-                    )}
-                    {appt.patient?.email && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Mail className="h-3 w-3" />
-                        <span>{appt.patient.email}</span>
-                      </div>
-                    )}
-                    {appt.notes && (
-                      <p className="text-sm mt-2 p-2 bg-muted rounded">{appt.notes}</p>
-                    )}
-                  </div>
-                  <Select
-                    value={appt.status}
-                    onValueChange={(status) =>
-                      updateStatusMutation.mutate({ id: appt.id, status })
-                    }
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="scheduled">Scheduled</SelectItem>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="no_show">No Show</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
+            <div className="flex-1 mt-4 overflow-hidden">
+              {view === 'week' && (
+                <WeekView
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  startHour={settings.start_hour}
+                  endHour={settings.end_hour}
+                  slotDuration={settings.slot_duration}
+                  onAppointmentClick={handleAppointmentClick}
+                  onTimeSlotClick={handleTimeSlotClick}
+                  providers={providers}
+                  selectedProviders={selectedProviders}
+                />
+              )}
+
+              {view === 'day' && (
+                <DayView
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  startHour={settings.start_hour}
+                  endHour={settings.end_hour}
+                  slotDuration={settings.slot_duration}
+                  onAppointmentClick={handleAppointmentClick}
+                  onTimeSlotClick={handleTimeSlotClick}
+                  providers={providers}
+                  selectedProviders={selectedProviders}
+                />
+              )}
+
+              {view === 'month' && (
+                <MonthView
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  onDateClick={handleDateClick}
+                  onAppointmentClick={handleAppointmentClick}
+                />
+              )}
+
+              {view === 'agenda' && (
+                <AgendaView
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  onAppointmentClick={handleAppointmentClick}
+                />
+              )}
             </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">No upcoming appointments</p>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+
+      <CreateAppointmentDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        practiceId={practiceId!}
+        defaultDate={defaultDate}
+        defaultProviderId={defaultProviderId}
+        providers={providers}
+        rooms={rooms}
+      />
+
+      <AppointmentDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        appointment={selectedAppointment}
+      />
     </div>
   );
 }
