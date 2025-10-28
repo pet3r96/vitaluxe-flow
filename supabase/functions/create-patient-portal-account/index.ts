@@ -39,48 +39,54 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check for active impersonation
+    // Check for active impersonation using correct table and columns
     const { data: impersonation } = await supabaseAdmin
-      .from('impersonation_sessions')
-      .select('impersonated_user_id')
-      .eq('admin_id', user.id)
-      .eq('is_active', true)
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id, expires_at, created_at')
+      .eq('admin_user_id', user.id)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     let effectiveUserId = user.id;
+    const isImpersonating = !!impersonation;
     if (impersonation) {
       effectiveUserId = impersonation.impersonated_user_id;
-      console.log('[create-patient-portal-account] Impersonation detected:', {
-        admin: user.id,
-        impersonatedUser: effectiveUserId
-      });
     }
 
-    // Check if effective user is a practice owner or admin
+    // Check if effective user is a practice owner, admin, or provider
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', effectiveUserId)
-      .in('role', ['doctor', 'admin']);
+      .in('role', ['doctor', 'admin', 'provider']);
 
     if (!roles || roles.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'Only practice owners or admins can create portal accounts' }),
+        JSON.stringify({ 
+          code: 'unauthorized_role',
+          error: 'Only practice owners, providers, or admins can create portal accounts' 
+        }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Determine effective practice ID for subscription check
-    let effectivePracticeId: string;
+    let effectivePracticeId: string | null = null;
 
-    // Check if effective user is a doctor (practice owner)
+    // First, check if effective user is a doctor (practice owner)
     const { data: doctorProfile } = await supabaseAdmin
       .from('profiles')
       .select('id')
       .eq('id', effectiveUserId)
       .maybeSingle();
 
-    if (doctorProfile) {
+    // Check if this profile has doctor role
+    const isDoctorRole = roles.some(r => r.role === 'doctor');
+
+    if (doctorProfile && isDoctorRole) {
+      // Doctor/practice owner - practice_id is their own user_id
       effectivePracticeId = doctorProfile.id;
     } else {
       // Check if they're a provider
@@ -90,21 +96,34 @@ Deno.serve(async (req) => {
         .eq('user_id', effectiveUserId)
         .maybeSingle();
       
-      if (providerProfile) {
+      if (providerProfile && providerProfile.practice_id) {
         effectivePracticeId = providerProfile.practice_id;
-      } else {
-        return new Response(
-          JSON.stringify({ error: 'No practice context found' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
       }
+    }
+
+    // If no practice context found, return clear error
+    if (!effectivePracticeId) {
+      console.error('[create-patient-portal-account] No practice context:', {
+        authenticatedUser: user.id,
+        isImpersonating,
+        effectiveUserId,
+        roles: roles.map(r => r.role)
+      });
+      return new Response(
+        JSON.stringify({ 
+          code: 'no_practice_context',
+          error: 'No practice context found for this user. Practices must be linked to a doctor account or provider must be assigned to a practice.' 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('[create-patient-portal-account] Context:', {
       authenticatedUser: user.id,
-      isImpersonating: !!impersonation,
+      isImpersonating,
       effectiveUserId,
-      effectivePracticeId
+      effectivePracticeId,
+      resolvedAs: isDoctorRole ? 'doctor' : 'provider'
     });
 
     // Check if practice has active subscription (using effective practice)
@@ -174,7 +193,8 @@ Deno.serve(async (req) => {
     if (existingAccount) {
       return new Response(
         JSON.stringify({ 
-          error: 'Patient already has a portal account',
+          code: 'already_has_account',
+          error: `Patient already has a portal account (status: ${existingAccount.status})`,
           userId: existingAccount.user_id,
           status: existingAccount.status
         }),

@@ -110,9 +110,32 @@ const Patients = () => {
       queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
     },
     onError: (error: any) => {
-      toast.error('Failed to invite patient', {
-        description: error.message,
-      });
+      // Extract detailed error message from edge function response
+      const errorMessage = error?.context?.error || 
+                          error?.context?.body?.error || 
+                          error?.message || 
+                          "Failed to invite patient";
+      
+      const errorCode = error?.context?.code || error?.context?.body?.code;
+      
+      // Special handling for specific error codes
+      if (errorCode === 'already_has_account') {
+        toast.info('Patient Already Invited', {
+          description: errorMessage,
+        });
+      } else if (errorCode === 'no_practice_context') {
+        toast.error('Configuration Error', {
+          description: errorMessage,
+        });
+      } else if (errorCode === 'unauthorized_role') {
+        toast.error('Access Denied', {
+          description: errorMessage,
+        });
+      } else {
+        toast.error('Failed to invite patient', {
+          description: errorMessage,
+        });
+      }
     },
   });
 

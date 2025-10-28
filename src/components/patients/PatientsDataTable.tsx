@@ -177,9 +177,27 @@ export const PatientsDataTable = () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
     onError: (error: any) => {
+      // Extract detailed error message from edge function response
+      const errorMessage = error?.context?.error || 
+                          error?.context?.body?.error || 
+                          error?.message || 
+                          "Failed to grant portal access";
+      
+      const errorCode = error?.context?.code || error?.context?.body?.code;
+      
+      // Special handling for specific error codes
+      let title = "Error";
+      if (errorCode === 'already_has_account') {
+        title = "Already Invited";
+      } else if (errorCode === 'no_practice_context') {
+        title = "Configuration Error";
+      } else if (errorCode === 'unauthorized_role') {
+        title = "Access Denied";
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to grant portal access",
+        title,
+        description: errorMessage,
         variant: "destructive",
       });
     },
