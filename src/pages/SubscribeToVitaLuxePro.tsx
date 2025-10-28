@@ -54,7 +54,7 @@ export default function SubscribeToVitaLuxePro() {
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('subscribe-to-futuremd', {
+      const { data, error } = await supabase.functions.invoke('subscribe-to-vitaluxepro', {
         body: { practice_id: user.id }
       }) as any;
 

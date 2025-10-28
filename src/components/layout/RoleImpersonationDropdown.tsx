@@ -11,7 +11,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { UserCog, Shield, Stethoscope, Building2, Users, TrendingUp, Check, ChevronRight } from "lucide-react";
+import { UserCog, Shield, Stethoscope, Building2, Users, TrendingUp, Check, ChevronRight, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +22,7 @@ const roleConfig = {
   pharmacy: { label: "Pharmacy", icon: Building2 },
   topline: { label: "Topline Rep", icon: TrendingUp },
   downline: { label: "Downline Rep", icon: Users },
+  patient: { label: "Patient", icon: User },
 };
 
 export function RoleImpersonationDropdown() {
@@ -59,6 +60,7 @@ export function RoleImpersonationDropdown() {
         pharmacy: [],
         topline: [],
         downline: [],
+        patient: [],
       };
 
       rolesData?.forEach((roleItem: any) => {
@@ -87,6 +89,20 @@ export function RoleImpersonationDropdown() {
             name: ph.name as string,
             email: ph.contact_email as string,
           }));
+      }
+
+      // Fetch patient accounts
+      const { data: patientsData, error: patientsError } = await supabase
+        .from("patient_accounts")
+        .select("user_id, first_name, last_name, email")
+        .eq("status", "active");
+
+      if (!patientsError && patientsData) {
+        grouped.patient = patientsData.map((patient: any) => ({
+          id: patient.user_id as string,
+          name: `${patient.first_name} ${patient.last_name}`,
+          email: patient.email as string,
+        }));
       }
 
       return grouped;

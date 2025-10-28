@@ -22,6 +22,7 @@ import {
   Shield,
   Pill,
   Sparkles,
+  Calendar,
 } from "lucide-react";
 import {
   Sidebar,
@@ -103,6 +104,14 @@ const menuItems = {
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Profile", url: "/profile", icon: UserCircle },
+  ],
+  patient: [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "My Appointments", url: "/appointments", icon: Calendar },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "Medical Vault", url: "/medical-vault", icon: FileText },
+    { title: "Documents", url: "/documents", icon: FileText },
+    { title: "My Profile", url: "/profile", icon: UserCircle },
   ],
 };
 

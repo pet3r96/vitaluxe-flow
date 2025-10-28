@@ -7,6 +7,7 @@ const roleLabels: Record<string, string> = {
   pharmacy: "Pharmacy",
   topline: "Topline Rep",
   downline: "Downline Rep",
+  patient: "Patient",
 };
 
 export function ImpersonationBanner() {

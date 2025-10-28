@@ -12,10 +12,11 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, CreditCard } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
+import { SubscriptionManagement } from "@/components/admin/SubscriptionManagement";
 
 const AdminSettings = () => {
   return (
@@ -76,6 +77,10 @@ const AdminSettings = () => {
           <TabsTrigger value="price-overrides" className="gap-2">
             <DollarSign className="h-4 w-4" />
             Price Overrides
+          </TabsTrigger>
+          <TabsTrigger value="subscriptions" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Subscriptions
           </TabsTrigger>
           
           <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
@@ -232,6 +237,10 @@ const AdminSettings = () => {
               <PriceOverrideManager />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="subscriptions" className="space-y-4">
+          <SubscriptionManagement />
         </TabsContent>
 
         <TabsContent value="danger-zone" className="space-y-4">
