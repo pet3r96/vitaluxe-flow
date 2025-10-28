@@ -164,6 +164,7 @@ const App = () => (
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
+                  <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><SubscribeToVitaLuxePro /></ProtectedRoute>} />
                   <Route
                     path="/*"
                     element={
@@ -198,7 +199,6 @@ const App = () => (
                                     <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
                                     <Route path="/checkout" element={<Checkout />} />
                                     <Route path="/order-confirmation" element={<Checkout />} />
-                                    <Route path="/subscribe-to-vitaluxepro" element={<SubscribeToVitaLuxePro />} />
                                     <Route path="/downlines" element={<MyDownlines />} />
                                     <Route path="/med-spas" element={<MedSpas />} />
                                     <Route path="/profile" element={<Profile />} />

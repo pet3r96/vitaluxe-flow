@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, Sparkles, CreditCard } from "lucide-react";
+import { Loader2, Check, Sparkles, CreditCard, ArrowLeft } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 export default function SubscribeToVitaLuxePro() {
   const { user } = useAuth();
@@ -18,6 +21,34 @@ export default function SubscribeToVitaLuxePro() {
   const { toast } = useToast();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [termsContent, setTermsContent] = useState<string>("");
+  const [loadingTerms, setLoadingTerms] = useState(false);
+
+  useEffect(() => {
+    const fetchTerms = async () => {
+      setLoadingTerms(true);
+      try {
+        // @ts-ignore - Temporary workaround for Supabase type depth issue
+        const result = await supabase
+          .from('terms_and_conditions')
+          .select('content')
+          .eq('role', 'subscription')
+          .eq('active', true)
+          .single();
+
+        if (result.error) throw result.error;
+        setTermsContent(result.data?.content || "Terms not available.");
+      } catch (error) {
+        console.error('Error fetching terms:', error);
+        setTermsContent("Unable to load terms. Please contact support.");
+      } finally {
+        setLoadingTerms(false);
+      }
+    };
+
+    fetchTerms();
+  }, []);
 
   const features = [
     "Patient appointment booking with automated scheduling",
@@ -86,16 +117,26 @@ export default function SubscribeToVitaLuxePro() {
   };
 
   return (
-    <div className="container max-w-[1165px] mx-auto py-12 px-4">
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <Sparkles className="h-8 w-8 text-amber-500" />
-          <h1 className="text-4xl font-bold">VitaLuxePro</h1>
+    <div className="min-h-screen bg-background">
+      <div className="container max-w-[1165px] mx-auto py-12 px-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/dashboard')}
+          className="mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
+
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Sparkles className="h-8 w-8 text-amber-500" />
+            <h1 className="text-4xl font-bold">VitaLuxePro</h1>
+          </div>
+          <p className="text-xl text-muted-foreground">
+            Transform Your Practice with Complete Virtual Front Desk + EMR System
+          </p>
         </div>
-        <p className="text-xl text-muted-foreground">
-          Transform Your Practice with Complete Virtual Front Desk + EMR System
-        </p>
-      </div>
 
       <div className="grid gap-6 md:grid-cols-3 mb-8">
         <Card className="md:col-span-2">
@@ -179,9 +220,16 @@ export default function SubscribeToVitaLuxePro() {
                   className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   I agree to the{" "}
-                  <a href="#" className="underline text-primary">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowTermsDialog(true);
+                    }}
+                    className="underline text-primary hover:text-primary/80"
+                  >
                     VitaLuxePro Practice Development Terms
-                  </a>
+                  </button>
                 </label>
               </div>
 
@@ -211,6 +259,34 @@ export default function SubscribeToVitaLuxePro() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>VitaLuxePro Practice Development Terms</DialogTitle>
+            <DialogDescription>
+              Please review the terms and conditions for VitaLuxePro subscription
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh] pr-4">
+            {loadingTerms ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>{termsContent}</ReactMarkdown>
+              </div>
+            )}
+          </ScrollArea>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowTermsDialog(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   );
