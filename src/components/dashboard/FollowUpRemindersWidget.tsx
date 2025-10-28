@@ -1,0 +1,123 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Bell, Check, Calendar as CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { format, isPast, isToday } from "date-fns";
+import { toast } from "sonner";
+
+export function FollowUpRemindersWidget() {
+  const queryClient = useQueryClient();
+
+  const { data: followUps, isLoading } = useQuery({
+    queryKey: ["follow-up-reminders"],
+    queryFn: async () => {
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+      const { data, error } = await supabase
+        .from("patient_follow_ups")
+        .select(`
+          *,
+          patients(first_name, last_name)
+        `)
+        .eq("status", "pending")
+        .lte("follow_up_date", sevenDaysFromNow.toISOString().split("T")[0])
+        .order("follow_up_date", { ascending: true })
+        .limit(5);
+
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 300000, // 5 minutes
+  });
+
+  const markComplete = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("patient_follow_ups")
+        .update({ status: "completed", completed_at: new Date().toISOString() })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["follow-up-reminders"] });
+      toast.success("Follow-up marked as complete");
+    },
+    onError: (error) => {
+      toast.error("Failed to update follow-up");
+      console.error(error);
+    },
+  });
+
+  const getDateBadge = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isPast(date) && !isToday(date)) {
+      return <Badge variant="destructive">Overdue</Badge>;
+    }
+    if (isToday(date)) {
+      return <Badge className="bg-orange-500">Due Today</Badge>;
+    }
+    return <Badge variant="secondary">Upcoming</Badge>;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          Patient Follow-Ups
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 bg-muted animate-pulse rounded" />
+            ))}
+          </div>
+        ) : followUps && followUps.length > 0 ? (
+          <div className="space-y-3">
+            {followUps.map((followUp) => (
+              <div
+                key={followUp.id}
+                className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50"
+              >
+                <CalendarIcon className="h-4 w-4 mt-1 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">
+                    {followUp.patients?.first_name} {followUp.patients?.last_name}
+                  </div>
+                  <div className="text-sm text-muted-foreground truncate">
+                    {followUp.reason}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    {getDateBadge(followUp.follow_up_date)}
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(followUp.follow_up_date), "MMM d")}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => markComplete.mutate(followUp.id)}
+                  disabled={markComplete.isPending}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>No upcoming follow-ups</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
