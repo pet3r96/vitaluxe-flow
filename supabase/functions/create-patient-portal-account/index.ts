@@ -39,11 +39,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user is a practice owner or admin
+    // Check for active impersonation
+    const { data: impersonation } = await supabaseAdmin
+      .from('impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    let effectiveUserId = user.id;
+    if (impersonation) {
+      effectiveUserId = impersonation.impersonated_user_id;
+      console.log('[create-patient-portal-account] Impersonation detected:', {
+        admin: user.id,
+        impersonatedUser: effectiveUserId
+      });
+    }
+
+    // Check if effective user is a practice owner or admin
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .in('role', ['doctor', 'admin']);
 
     if (!roles || roles.length === 0) {
@@ -53,15 +70,53 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if practice has active subscription
+    // Determine effective practice ID for subscription check
+    let effectivePracticeId: string;
+
+    // Check if effective user is a doctor (practice owner)
+    const { data: doctorProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', effectiveUserId)
+      .maybeSingle();
+
+    if (doctorProfile) {
+      effectivePracticeId = doctorProfile.id;
+    } else {
+      // Check if they're a provider
+      const { data: providerProfile } = await supabaseAdmin
+        .from('providers')
+        .select('practice_id')
+        .eq('user_id', effectiveUserId)
+        .maybeSingle();
+      
+      if (providerProfile) {
+        effectivePracticeId = providerProfile.practice_id;
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'No practice context found' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    console.log('[create-patient-portal-account] Context:', {
+      authenticatedUser: user.id,
+      isImpersonating: !!impersonation,
+      effectiveUserId,
+      effectivePracticeId
+    });
+
+    // Check if practice has active subscription (using effective practice)
     const { data: subscription } = await supabaseAdmin
       .from('practice_subscriptions')
       .select('status')
-      .eq('practice_id', user.id)
-      .in('status', ['active', 'trialing'])
+      .eq('practice_id', effectivePracticeId)
+      .in('status', ['active', 'trial', 'trialing'])
       .maybeSingle();
 
     if (!subscription) {
+      console.log('[create-patient-portal-account] No subscription found for practice:', effectivePracticeId);
       return new Response(
         JSON.stringify({ error: 'VitaLuxePro subscription required to invite patients' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -77,11 +132,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch patient record
+    // Fetch patient record and verify it belongs to effective practice
     const { data: patient, error: patientError } = await supabaseAdmin
       .from('patients')
       .select('*')
       .eq('id', patientId)
+      .eq('practice_id', effectivePracticeId)
       .single();
 
     if (patientError || !patient) {
