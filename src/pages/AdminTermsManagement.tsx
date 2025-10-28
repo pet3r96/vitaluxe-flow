@@ -26,7 +26,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
   pharmacy: 'Pharmacy',
   subscription: 'VitaLuxePro Subscription',
   patient: 'Patient Portal',
-  staff: 'Staff Member'
+  staff: 'Practice Staff'
 };
 
 export default function AdminTermsManagement() {
@@ -61,7 +61,7 @@ export default function AdminTermsManagement() {
       .from('terms_and_conditions')
       .select('*')
       .eq('role', activeRole as any)
-      .single();
+      .maybeSingle();
 
     if (error) {
       import('@/lib/logger').then(({ logger }) => {
@@ -71,9 +71,16 @@ export default function AdminTermsManagement() {
       return;
     }
 
-    setTerms(data);
-    setTitle(data.title);
-    setContent(data.content);
+    if (data) {
+      setTerms(data);
+      setTitle(data.title);
+      setContent(data.content);
+    } else {
+      // No terms exist yet for this role - initialize empty state
+      setTerms(null);
+      setTitle("");
+      setContent("");
+    }
   };
 
   const loadAcceptances = async () => {
@@ -166,20 +173,40 @@ export default function AdminTermsManagement() {
     setSaving(true);
 
     try {
-      const { error } = await supabase
-        .from('terms_and_conditions')
-        .update({
-          title,
-          content,
-          version: (terms?.version || 0) + 1,
-          updated_at: new Date().toISOString(),
-          updated_by: (await supabase.auth.getUser()).data.user?.id
-        })
-        .eq('id', terms.id);
+      const currentUser = (await supabase.auth.getUser()).data.user?.id;
 
-      if (error) throw error;
+      if (terms?.id) {
+        // Update existing terms
+        const { error } = await supabase
+          .from('terms_and_conditions')
+          .update({
+            title,
+            content,
+            version: (terms?.version || 0) + 1,
+            updated_at: new Date().toISOString(),
+            updated_by: currentUser
+          })
+          .eq('id', terms.id);
 
-      toast.success("Terms updated successfully");
+        if (error) throw error;
+      } else {
+        // Insert new terms
+        const { error } = await supabase
+          .from('terms_and_conditions')
+          .insert({
+            role: activeRole as any,
+            title,
+            content,
+            version: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            updated_by: currentUser
+          });
+
+        if (error) throw error;
+      }
+
+      toast.success("Terms saved successfully");
       await loadTerms();
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
