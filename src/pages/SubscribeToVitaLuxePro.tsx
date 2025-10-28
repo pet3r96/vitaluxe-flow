@@ -197,7 +197,7 @@ export default function SubscribeToVitaLuxePro() {
                 <div className="text-sm space-y-2 text-foreground">
                   <p className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-600" />
-                    No credit card required for trial
+                    No Contracts
                   </p>
                   <p className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-600" />
