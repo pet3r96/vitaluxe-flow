@@ -67,11 +67,11 @@ export default function RepSubscriptionReferrals() {
   });
 
   // Calculate totals
-  const totalEarned = commissions?.reduce((sum, c) => sum + parseFloat(c.commission_amount || '0'), 0) || 0;
+  const totalEarned = commissions?.reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
   const pendingAmount = commissions?.filter(c => c.payment_status === 'pending')
-    .reduce((sum, c) => sum + parseFloat(c.commission_amount || '0'), 0) || 0;
+    .reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
   const paidAmount = commissions?.filter(c => c.payment_status === 'paid')
-    .reduce((sum, c) => sum + parseFloat(c.commission_amount || '0'), 0) || 0;
+    .reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
 
   const pagination = usePagination({ totalItems: commissions?.length || 0, itemsPerPage: 10 });
   
@@ -203,7 +203,7 @@ export default function RepSubscriptionReferrals() {
                               </Badge>
                             </TableCell>
                             <TableCell className="font-medium">
-                              ${parseFloat(commission.commission_amount || '0').toFixed(2)}
+                              ${(commission.commission_amount || 0).toFixed(2)}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(commission.payment_status || 'pending')}

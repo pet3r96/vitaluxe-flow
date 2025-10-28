@@ -128,9 +128,9 @@ export default function SubscriptionCommissionManager() {
 
   // Calculate totals
   const totalPending = commissions?.filter(c => c.payment_status === 'pending')
-    .reduce((sum, c) => sum + parseFloat(c.commission_amount || '0'), 0) || 0;
+    .reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
   const totalPaid = commissions?.filter(c => c.payment_status === 'paid')
-    .reduce((sum, c) => sum + parseFloat(c.commission_amount || '0'), 0) || 0;
+    .reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
 
   if (isLoading) return <div>Loading...</div>;
 
