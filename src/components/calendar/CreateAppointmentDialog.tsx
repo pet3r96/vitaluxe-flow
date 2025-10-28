@@ -77,7 +77,7 @@ export function CreateAppointmentDialog({
           patient_id: selectedPatientId,
           practice_id: practiceId,
           provider_id: values.providerId,
-          room_id: values.roomId || null,
+          room_id: values.roomId && values.roomId !== 'none' ? values.roomId : null,
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString(),
           appointment_type: values.appointmentType,
@@ -126,11 +126,17 @@ export function CreateAppointmentDialog({
                 <SelectValue placeholder="Select patient" />
               </SelectTrigger>
               <SelectContent>
-                {patients?.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.id}>
-                    {patient.first_name} {patient.last_name} ({patient.email})
+                {patients && patients.length > 0 ? (
+                  patients.map((patient) => (
+                    <SelectItem key={patient.id} value={patient.id}>
+                      {patient.first_name} {patient.last_name} ({patient.email})
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-patients-available" disabled>
+                    No patients found - please add patients first
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -143,11 +149,17 @@ export function CreateAppointmentDialog({
                   <SelectValue placeholder="Select provider" />
                 </SelectTrigger>
                 <SelectContent>
-                  {providers.map((provider) => (
-                    <SelectItem key={provider.id} value={provider.id}>
-                      {provider.first_name} {provider.last_name}
+                  {providers && providers.length > 0 ? (
+                    providers.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        {provider.first_name} {provider.last_name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-providers-available" disabled>
+                      No providers available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -159,7 +171,7 @@ export function CreateAppointmentDialog({
                   <SelectValue placeholder="Select room (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No room</SelectItem>
+                  <SelectItem value="none">No room</SelectItem>
                   {rooms.map((room) => (
                     <SelectItem key={room.id} value={room.id}>
                       {room.name}
