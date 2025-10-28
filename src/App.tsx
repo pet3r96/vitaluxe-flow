@@ -106,6 +106,8 @@ const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"))
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const TriageQueue = lazy(() => import("./pages/practice/TriageQueue"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
+const DocumentsAndForms = lazy(() => import("./pages/practice/DocumentsAndForms"));
+const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 
 // Loading fallback component
 const PageLoader = () => (
