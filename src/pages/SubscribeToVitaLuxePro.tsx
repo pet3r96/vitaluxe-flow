@@ -179,7 +179,7 @@ export default function SubscribeToVitaLuxePro() {
           </Card>
 
           <div className="space-y-6">
-            <Card className="bg-muted border-border">
+            <Card className="bg-accent/50 border-border">
               <CardHeader>
                 <CardTitle className="text-muted-foreground">Pricing</CardTitle>
               </CardHeader>

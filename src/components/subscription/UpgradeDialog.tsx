@@ -78,7 +78,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
         </DialogHeader>
 
         <div className="space-y-6 my-6">
-          <div className="bg-muted p-6 rounded-lg border border-border">
+          <div className="bg-accent/50 p-6 rounded-lg border border-border">
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$250</span>
               <span className="text-white">/month</span>
