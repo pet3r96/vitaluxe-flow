@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { Loader2, CreditCard, DollarSign, TrendingUp, CheckCircle, XCircle, Clock, Save, Edit2 } from "lucide-react";
 import { useState } from "react";
 
@@ -197,6 +197,12 @@ export function SubscriptionManagement() {
     );
   };
 
+  const calculateTrialDaysRemaining = (trialEndsAt: string | null) => {
+    if (!trialEndsAt) return null;
+    const daysRemaining = differenceInDays(new Date(trialEndsAt), new Date());
+    return daysRemaining > 0 ? daysRemaining : 0;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -262,6 +268,7 @@ export function SubscriptionManagement() {
               <TableRow>
                 <TableHead>Practice</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Trial Days Left</TableHead>
                 <TableHead>Trial Ends</TableHead>
                 <TableHead>Current Period End</TableHead>
                 <TableHead>Monthly Price</TableHead>
@@ -279,6 +286,15 @@ export function SubscriptionManagement() {
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(sub.status)}</TableCell>
+                  <TableCell>
+                    {sub.status === "trial" && sub.trial_ends_at ? (
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                        {calculateTrialDaysRemaining(sub.trial_ends_at)} days
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {sub.trial_ends_at
                       ? format(new Date(sub.trial_ends_at), "MMM dd, yyyy")
