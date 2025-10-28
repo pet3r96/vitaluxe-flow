@@ -152,7 +152,7 @@ export const PatientsDataTable = () => {
       // Fetch patient details for email
       const { data: patient } = await supabase
         .from('patients')
-        .select('email, name')
+        .select('email, name, practice_id')
         .eq('id', patientId)
         .single();
 
@@ -160,14 +160,16 @@ export const PatientsDataTable = () => {
         throw new Error('Patient email not found');
       }
 
-      // Send welcome email
+      // Send welcome email (token-based activation)
       const { error: emailError } = await supabase.functions.invoke(
         'send-patient-welcome-email',
         {
           body: {
+            userId: portalData.userId,
             email: patient.email,
-            patientName: patient.name,
-            tempPassword: portalData.tempPassword,
+            name: patient.name,
+            token: portalData.token,
+            practiceId: patient.practice_id,
           },
         }
       );

@@ -221,14 +221,53 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existingAccount) {
+      // If account exists but is not active, reactivate it
+      if (existingAccount.status !== 'active') {
+        await supabaseAdmin
+          .from('patient_accounts')
+          .update({ status: 'active' })
+          .eq('id', existingAccount.id);
+      }
+
+      // Create/refresh temp password token for re-invite
+      const reInviteToken = crypto.randomUUID();
+      const reInviteExpiresAt = new Date();
+      reInviteExpiresAt.setDate(reInviteExpiresAt.getDate() + 7);
+
+      await supabaseAdmin
+        .from('temp_password_tokens')
+        .insert({
+          user_id: existingAccount.user_id,
+          token: reInviteToken,
+          expires_at: reInviteExpiresAt.toISOString()
+        });
+
+      // Log audit event for re-invite
+      try {
+        await supabaseAdmin.rpc('log_audit_event', {
+          p_action_type: 'patient_portal_account_reinvited',
+          p_entity_type: 'patient_accounts',
+          p_entity_id: existingAccount.id,
+          p_details: {
+            patient_id: patientId,
+            practice_id: patient.practice_id,
+            created_by: user.id
+          }
+        });
+      } catch (auditError) {
+        console.error('Failed to log audit event (reinvite):', auditError);
+      }
+
       return new Response(
-        JSON.stringify({ 
-          code: 'already_has_account',
-          error: `Patient already has a portal account (status: ${existingAccount.status})`,
+        JSON.stringify({
+          success: true,
+          alreadyHadAccount: true,
           userId: existingAccount.user_id,
+          patientAccountId: existingAccount.id,
+          token: reInviteToken,
           status: existingAccount.status
         }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
