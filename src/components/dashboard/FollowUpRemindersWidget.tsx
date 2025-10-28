@@ -17,7 +17,7 @@ export function FollowUpRemindersWidget() {
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
       const { data, error } = await supabase
-        .from("patient_follow_ups")
+        .from("patient_follow_ups" as any)
         .select(`
           *,
           patients(first_name, last_name)
@@ -28,7 +28,7 @@ export function FollowUpRemindersWidget() {
         .limit(5);
 
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     refetchInterval: 300000, // 5 minutes
   });
@@ -36,7 +36,7 @@ export function FollowUpRemindersWidget() {
   const markComplete = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("patient_follow_ups")
+        .from("patient_follow_ups" as any)
         .update({ status: "completed", completed_at: new Date().toISOString() })
         .eq("id", id);
 

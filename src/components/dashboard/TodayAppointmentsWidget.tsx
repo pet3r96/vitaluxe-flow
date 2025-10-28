@@ -32,7 +32,7 @@ export function TodayAppointmentsWidget() {
         .limit(5);
 
       if (error) throw error;
-      return data;
+      return (data || []) as any[];
     },
     refetchInterval: 60000, // Refetch every minute
   });

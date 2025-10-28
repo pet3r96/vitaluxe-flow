@@ -24,9 +24,9 @@ export function AssignFormDialog({ formId, open, onOpenChange }: AssignFormDialo
   const { data: patients } = useQuery({
     queryKey: ["patients-select"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("patients").select("id, first_name, last_name").order("last_name");
+      const { data, error } = await supabase.from("patients" as any).select("id, first_name, last_name").order("last_name");
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: open,
   });

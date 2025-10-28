@@ -20,21 +20,21 @@ export function RecentActivityWidget({ className }: { className?: string }) {
         .from("patient_appointments")
         .select("id, status, updated_at, patient_accounts(full_name)")
         .order("updated_at", { ascending: false })
-        .limit(5);
+        .limit(5) as any;
 
       // Get recent documents (if accessible)
       const { data: documents } = await supabase
-        .from("provider_documents")
+        .from("provider_documents" as any)
         .select("id, document_name, status, updated_at")
         .order("updated_at", { ascending: false })
-        .limit(5);
+        .limit(5) as any;
 
       // Get recent form submissions
       const { data: forms } = await supabase
-        .from("patient_form_submissions")
+        .from("patient_form_submissions" as any)
         .select("id, status, updated_at, practice_forms(form_name)")
         .order("updated_at", { ascending: false })
-        .limit(5);
+        .limit(5) as any;
 
       // Combine and sort all activities
       const combined: any[] = [];

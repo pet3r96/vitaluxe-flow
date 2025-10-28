@@ -23,11 +23,11 @@ export function AssignDocumentDialog({ documentId, open, onOpenChange }: AssignD
     queryKey: ["patients-select"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patients")
+        .from("patients" as any)
         .select("id, first_name, last_name")
         .order("last_name");
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: open,
   });

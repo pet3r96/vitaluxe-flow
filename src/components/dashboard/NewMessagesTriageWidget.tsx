@@ -28,13 +28,13 @@ export function NewMessagesTriageWidget() {
     queryKey: ["pending-triages-count"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("triage_submissions")
+        .from("triage_submissions" as any)
         .select("id, created_at, patient_accounts!inner(full_name)")
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(3);
 
-      return data || [];
+      return (data || []) as any[];
     },
     refetchInterval: 30000,
   });

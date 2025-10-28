@@ -23,7 +23,7 @@ export function DocumentsTab() {
     queryKey: ["provider-documents", filters],
     queryFn: async () => {
       let query = supabase
-        .from("provider_documents")
+        .from("provider_documents" as any)
         .select(`
           *,
           patients(first_name, last_name)
@@ -48,7 +48,7 @@ export function DocumentsTab() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 

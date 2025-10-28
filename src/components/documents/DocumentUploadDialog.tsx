@@ -29,11 +29,11 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     queryKey: ["patients-select"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patients")
+        .from("patients" as any)
         .select("id, first_name, last_name")
         .order("last_name");
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: open,
   });
@@ -59,7 +59,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
         // Create document record
         const { data, error: insertError } = await supabase
-          .from("provider_documents")
+          .from("provider_documents" as any)
           .insert({
             practice_id: user?.id,
             document_name: file.name,

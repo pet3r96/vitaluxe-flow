@@ -12,12 +12,12 @@ export function CompletedFormsTab() {
     queryKey: ["completed-form-submissions"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_form_submissions")
+        .from("patient_form_submissions" as any)
         .select("*, practice_forms(form_name), patients(first_name, last_name)")
         .in("status", ["completed", "signed"])
         .order("completed_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 

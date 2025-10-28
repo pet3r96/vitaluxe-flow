@@ -35,7 +35,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
 
       // Delete record
       const { error } = await supabase
-        .from("provider_documents")
+        .from("provider_documents" as any)
         .delete()
         .eq("id", document.id);
 
