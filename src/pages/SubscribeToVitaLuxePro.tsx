@@ -85,24 +85,31 @@ export default function SubscribeToVitaLuxePro() {
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('subscribe-to-vitaluxepro', {
-        body: { 
-          practice_id: user.id
-        }
-      }) as any;
+      const { data, error } = await supabase.functions.invoke('subscribe-to-vitaluxepro');
 
-      if (error) throw error;
+      if (error || (data && (data as any).error)) {
+        const serverMsg = (data as any)?.details || (data as any)?.error;
+        const friendly = serverMsg?.includes('Practice')
+          ? serverMsg
+          : (error as any)?.message || 'Unable to process subscription. Please try again.';
+        toast({
+          title: 'Subscription Failed',
+          description: friendly,
+          variant: 'destructive'
+        });
+        return;
+      }
 
       toast({
-        title: "Welcome to VitaLuxePro! 🎉",
-        description: "Your 7-day free trial has started. Add a payment method in your Profile before the trial ends."
+        title: 'Welcome to VitaLuxePro! 🎉',
+        description: 'Your 7-day free trial has started. Add a payment method in your Profile before the trial ends.'
       });
 
       await refreshSubscription();
 
       setTimeout(() => {
         navigate('/dashboard');
-      }, 2000);
+      }, 1200);
 
     } catch (error: any) {
       console.error('Subscription error:', error);
