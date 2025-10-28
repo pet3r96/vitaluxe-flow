@@ -10,7 +10,6 @@ import { PendingProductsApproval } from "@/components/admin/PendingProductsAppro
 import { ProductTypeManager } from "@/components/admin/ProductTypeManager";
 import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
-import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
@@ -216,7 +215,6 @@ const AdminSettings = () => {
 
         <TabsContent value="utilities" className="space-y-4">
           <AdminPasswordChange />
-          <TestPasswordManager />
           <OrphanedUserFixer />
         </TabsContent>
 
