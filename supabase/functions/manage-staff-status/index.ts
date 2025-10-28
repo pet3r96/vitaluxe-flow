@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,100 +11,92 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const authHeader = req.headers.get('Authorization')!;
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { staffId, active } = await req.json();
-
-    if (!staffId || typeof active !== 'boolean') {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get staff record to verify ownership/access
-    const { data: staffRecord, error: staffError } = await supabase
-      .from('practice_staff')
-      .select('user_id, practice_id')
-      .eq('id', staffId)
-      .single();
-
-    if (staffError || !staffRecord) {
-      return new Response(
-        JSON.stringify({ error: 'Staff member not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check authorization (admin or practice owner)
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id);
 
-    const isAdmin = roles?.some(r => r.role === 'admin');
-    const isPracticeOwner = user.id === staffRecord.practice_id;
+    const userRoles = roles?.map(r => r.role) || [];
+    const isAdmin = userRoles.includes('admin');
+    const isDoctor = userRoles.includes('doctor');
 
-    if (!isAdmin && !isPracticeOwner) {
+    if (!isAdmin && !isDoctor) {
       return new Response(
-        JSON.stringify({ error: 'Not authorized to manage this staff member' }),
+        JSON.stringify({ error: 'Forbidden: Only admins and practice owners can manage staff' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update practice_staff record
-    const { error: updateStaffError } = await supabase
+    const { staffId, active } = await req.json();
+
+    if (!staffId) {
+      return new Response(
+        JSON.stringify({ error: 'Staff ID is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Updating staff ${staffId} active status to ${active}`);
+
+    if (!isAdmin) {
+      const { data: staffRecord } = await supabase
+        .from('practice_staff')
+        .select('practice_id')
+        .eq('user_id', staffId)
+        .single();
+
+      if (!staffRecord || staffRecord.practice_id !== user.id) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: You can only manage staff from your own practice' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const { data, error } = await supabase
       .from('practice_staff')
       .update({ active, updated_at: new Date().toISOString() })
-      .eq('id', staffId);
+      .eq('user_id', staffId)
+      .select()
+      .single();
 
-    if (updateStaffError) {
-      console.error('Error updating staff status:', updateStaffError);
+    if (error) {
+      console.error('Error updating staff status:', error);
       return new Response(
-        JSON.stringify({ error: 'Failed to update staff status' }),
+        JSON.stringify({ error: error.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update profile active status
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ active })
-      .eq('id', staffRecord.user_id);
-
-    if (profileError) {
-      console.error('Error updating profile status:', profileError);
-    }
+    console.log('Staff status updated successfully:', data);
 
     return new Response(
-      JSON.stringify({ success: true }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: true, data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Unexpected error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
