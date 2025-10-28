@@ -23,6 +23,7 @@ import {
   Pill,
   Sparkles,
   Calendar,
+  CreditCard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,6 +53,7 @@ const menuItems = {
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Rep Productivity", url: "/rep-productivity", icon: UserCog },
     { title: "Discount Codes", url: "/admin/discount-codes", icon: Tag },
+    { title: "Subscriptions", url: "/subscriptions", icon: CreditCard },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Security", url: "/security", icon: Shield },
     { title: "Terms Management", url: "/admin/terms", icon: FileText },

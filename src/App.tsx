@@ -78,6 +78,7 @@ const Downlines = lazy(() => import("./pages/Downlines"));
 const MedSpas = lazy(() => import("./pages/MedSpas"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const Security = lazy(() => import("./pages/Security"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const MyDownlines = lazy(() => import("./pages/MyDownlines"));
@@ -202,6 +203,7 @@ const App = () => (
                                     <Route path="/med-spas" element={<MedSpas />} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/admin-settings" element={<AdminSettings />} />
+                                    <Route path="/subscriptions" element={<Subscriptions />} />
                                     <Route path="/security" element={<Security />} />
                                     <Route path="/admin/terms" element={<AdminTermsManagement />} />
                                     <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />

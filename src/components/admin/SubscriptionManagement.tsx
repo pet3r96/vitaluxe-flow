@@ -5,14 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Loader2, CreditCard, DollarSign, TrendingUp, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Loader2, CreditCard, DollarSign, TrendingUp, CheckCircle, XCircle, Clock, Save, Edit2 } from "lucide-react";
 import { useState } from "react";
 
 export function SubscriptionManagement() {
   const queryClient = useQueryClient();
   const [selectedPractice, setSelectedPractice] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState<string>("");
+  const [editCommission, setEditCommission] = useState<string>("");
 
   // Fetch all subscriptions
   const { data: subscriptions, isLoading } = useQuery({
@@ -119,6 +123,64 @@ export function SubscriptionManagement() {
     },
   });
 
+  // Update subscription details mutation
+  const updateSubscription = useMutation({
+    mutationFn: async ({ id, monthly_price, rep_commission_percentage }: { 
+      id: string; 
+      monthly_price?: number; 
+      rep_commission_percentage?: number;
+    }) => {
+      const updates: any = {};
+      if (monthly_price !== undefined) updates.monthly_price = monthly_price;
+      if (rep_commission_percentage !== undefined) updates.rep_commission_percentage = rep_commission_percentage;
+
+      const { error } = await supabase
+        .from("practice_subscriptions")
+        .update(updates)
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["subscription-metrics"] });
+      toast.success("Subscription updated successfully");
+      setEditingId(null);
+      setEditPrice("");
+      setEditCommission("");
+    },
+    onError: (error) => {
+      toast.error("Failed to update subscription: " + error.message);
+    },
+  });
+
+  const handleEditClick = (sub: any) => {
+    setEditingId(sub.id);
+    setEditPrice(sub.monthly_price?.toString() || "250.00");
+    setEditCommission(sub.rep_commission_percentage?.toString() || "0");
+  };
+
+  const handleSaveClick = (id: string) => {
+    const price = parseFloat(editPrice);
+    const commission = parseFloat(editCommission);
+
+    if (isNaN(price) || price < 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+
+    if (isNaN(commission) || commission < 0 || commission > 100) {
+      toast.error("Commission must be between 0 and 100");
+      return;
+    }
+
+    updateSubscription.mutate({
+      id,
+      monthly_price: price,
+      rep_commission_percentage: commission,
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const styles = {
       active: "bg-green-500/10 text-green-500 border-green-500/20",
@@ -203,6 +265,7 @@ export function SubscriptionManagement() {
                 <TableHead>Trial Ends</TableHead>
                 <TableHead>Current Period End</TableHead>
                 <TableHead>Monthly Price</TableHead>
+                <TableHead>Rep Commission %</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -226,9 +289,70 @@ export function SubscriptionManagement() {
                       ? format(new Date(sub.current_period_end), "MMM dd, yyyy")
                       : "N/A"}
                   </TableCell>
-                  <TableCell>${Number(sub.monthly_price).toFixed(2)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
+                    {editingId === sub.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          className="w-24 h-8"
+                        />
+                      </div>
+                    ) : (
+                      <span className="font-medium">${Number(sub.monthly_price).toFixed(2)}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === sub.id ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={editCommission}
+                          onChange={(e) => setEditCommission(e.target.value)}
+                          className="w-20 h-8"
+                        />
+                        <span className="text-sm">%</span>
+                      </div>
+                    ) : (
+                      <span>{Number(sub.rep_commission_percentage || 0).toFixed(1)}%</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2 flex-wrap">
+                      {editingId === sub.id ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleSaveClick(sub.id)}
+                          disabled={updateSubscription.isPending}
+                        >
+                          {updateSubscription.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4 mr-1" />
+                              Save
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditClick(sub)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
