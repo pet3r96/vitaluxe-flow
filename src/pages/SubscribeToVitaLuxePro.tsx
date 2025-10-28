@@ -16,7 +16,7 @@ import ReactMarkdown from "react-markdown";
 
 export default function SubscribeToVitaLuxePro() {
   const { user } = useAuth();
-  const { refreshSubscription } = useSubscription();
+  const { isSubscribed, loading: subscriptionLoading, status, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -24,6 +24,17 @@ export default function SubscribeToVitaLuxePro() {
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsContent, setTermsContent] = useState<string>("");
   const [loadingTerms, setLoadingTerms] = useState(false);
+
+  // Redirect if already subscribed
+  useEffect(() => {
+    if (!subscriptionLoading && isSubscribed) {
+      toast({
+        title: "Already Subscribed",
+        description: `You already have an ${status} VitaLuxePro subscription.`,
+      });
+      navigate('/dashboard');
+    }
+  }, [isSubscribed, subscriptionLoading, status, navigate, toast]);
 
   useEffect(() => {
     const fetchTerms = async () => {
@@ -122,6 +133,15 @@ export default function SubscribeToVitaLuxePro() {
       setIsProcessing(false);
     }
   };
+
+  // Show loading while checking subscription status
+  if (subscriptionLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

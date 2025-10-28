@@ -197,8 +197,18 @@ serve(async (req) => {
 
         subscription = updated.id;
       } else if (existingSub.status === 'active' || existingSub.status === 'trial') {
+        const trialEndsAt = existingSub.trial_ends_at ? new Date(existingSub.trial_ends_at) : null;
+        const isInTrial = existingSub.status === 'trial';
+        
         return new Response(
-          JSON.stringify({ error: 'You already have an active subscription' }),
+          JSON.stringify({ 
+            error: 'You already have an active subscription',
+            details: isInTrial 
+              ? `Your trial period ends on ${trialEndsAt?.toLocaleDateString()}. You can add a payment method in your Profile settings.`
+              : 'Your VitaLuxePro subscription is currently active.',
+            subscription_status: existingSub.status,
+            trial_ends_at: existingSub.trial_ends_at,
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
