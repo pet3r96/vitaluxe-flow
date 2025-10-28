@@ -52,27 +52,9 @@ serve(async (req) => {
 
     const practiceId = profile.id;
 
-    // Get request body
-    const { payment_method_id } = await req.json();
-
-    // Validate payment method exists and belongs to practice
-    if (payment_method_id) {
-      const { data: paymentMethod, error: pmError } = await supabaseClient
-        .from('practice_payment_methods')
-        .select('*')
-        .eq('id', payment_method_id)
-        .eq('practice_id', practiceId)
-        .eq('status', 'active')
-        .single();
-
-      if (pmError || !paymentMethod) {
-        console.error('Payment method validation error:', pmError);
-        return new Response(
-          JSON.stringify({ error: "Valid payment method required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
+    // Get request body (payment_method_id is now optional for free trial)
+    const body = await req.json();
+    const payment_method_id = body?.payment_method_id || null;
 
     // Check if user is a practice (doctor role)
     const { data: userRoles, error: rolesError } = await supabaseClient
@@ -184,7 +166,8 @@ serve(async (req) => {
       details: {
         subscription_type: "vitaluxepro",
         trial_started: true,
-        payment_method_id: payment_method_id || null,
+        payment_method_id: payment_method_id,
+        payment_method_added: payment_method_id ? true : false,
       },
     });
 
