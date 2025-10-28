@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -14,6 +15,7 @@ import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonation
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
+import { UpgradePromptDialog } from "@/components/subscription/UpgradePromptDialog";
 import { SessionTimer } from "./components/auth/SessionTimer";
 
 // Helper function to retry dynamic imports on failure
@@ -89,6 +91,7 @@ const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
 const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"));
+const SubscribeToFutureMD = lazy(() => import("./pages/SubscribeToFutureMD"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -135,10 +138,12 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
           <AuthProvider>
-            <SessionTimerWrapper />
-            <GlobalImpersonationBanner>
-              <Global2FADialogs />
-              <Suspense fallback={<PageLoader />}>
+            <SubscriptionProvider>
+              <SessionTimerWrapper />
+              <GlobalImpersonationBanner>
+                <Global2FADialogs />
+                <UpgradePromptDialog />
+                <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
@@ -179,6 +184,7 @@ const App = () => (
                                     <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
                                     <Route path="/checkout" element={<Checkout />} />
                                     <Route path="/order-confirmation" element={<Checkout />} />
+                                    <Route path="/subscribe-to-futuremd" element={<SubscribeToFutureMD />} />
                                     <Route path="/downlines" element={<MyDownlines />} />
                                     <Route path="/med-spas" element={<MedSpas />} />
                                     <Route path="/profile" element={<Profile />} />
@@ -202,9 +208,10 @@ const App = () => (
                   />
                 </Routes>
               </Suspense>
-            </GlobalImpersonationBanner>
-        </AuthProvider>
-      </BrowserRouter>
+              </GlobalImpersonationBanner>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </BrowserRouter>
     </TooltipProvider>
       </ErrorBoundary>
     </ThemeProvider>

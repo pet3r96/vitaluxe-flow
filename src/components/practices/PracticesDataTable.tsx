@@ -139,7 +139,7 @@ export const PracticesDataTable = () => {
         .select(`
           practice_id,
           rep_id,
-          reps!inner(
+          reps!rep_practice_links_rep_id_fkey!inner(
             user_id,
             role
           )

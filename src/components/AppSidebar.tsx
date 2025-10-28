@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { NavLink, useLocation } from "react-router-dom";
+import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
 import {
   LayoutDashboard,
   Users,
@@ -18,6 +21,7 @@ import {
   Tag,
   Shield,
   Pill,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -105,8 +109,10 @@ const menuItems = {
 export function AppSidebar() {
   const { state } = useSidebar();
   const { effectiveRole, isImpersonating, isProviderAccount, signOut } = useAuth();
+  const { isSubscribed } = useSubscription();
   const location = useLocation();
   const currentPath = location.pathname;
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   let items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
   
@@ -163,7 +169,16 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <div className="mt-auto border-t border-sidebar-border p-4">
+      <div className="mt-auto border-t border-sidebar-border p-4 space-y-2">
+        {!isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'provider') && (
+          <Button
+            onClick={() => setShowUpgradeDialog(true)}
+            className="w-full justify-start bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
+          >
+            <Sparkles className="h-5 w-5" />
+            {!isCollapsed && <span className="ml-2">Upgrade to FutureMD Pro</span>}
+          </Button>
+        )}
         <Button
           variant="ghost"
           className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -173,6 +188,7 @@ export function AppSidebar() {
           {!isCollapsed && <span className="ml-2">Sign Out</span>}
         </Button>
       </div>
+      <UpgradeDialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog} />
     </Sidebar>
   );
 }
