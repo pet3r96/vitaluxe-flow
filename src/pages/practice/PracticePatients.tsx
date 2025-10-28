@@ -56,9 +56,9 @@ export default function PracticePatients() {
         throw accountError;
       }
 
-      if (accountData?.error) {
+      if (!accountData?.success) {
         console.error('[Patient Portal] Function returned error:', accountData);
-        throw new Error(accountData.error);
+        throw new Error(accountData?.error || 'Failed to create portal account');
       }
 
       // Get patient details
@@ -70,13 +70,13 @@ export default function PracticePatients() {
 
       if (!patient) throw new Error('Patient not found');
 
-      // Send welcome email
+      // Send welcome email (works for both new and re-invited patients)
       const { data: emailData, error: emailError } = await supabase.functions.invoke(
         'send-patient-welcome-email',
         {
           body: {
             userId: accountData.userId,
-            email: patient.email,
+            email: patient.email.toLowerCase(),
             name: patient.name,
             token: accountData.token,
             practiceId: patient.practice_id,
@@ -84,12 +84,18 @@ export default function PracticePatients() {
         }
       );
 
-      if (emailError) throw emailError;
+      if (emailError) {
+        console.error('[Patient Portal] Email error:', emailError);
+        throw emailError;
+      }
 
       return { accountData, emailData };
     },
-    onSuccess: () => {
-      toast.success('Welcome email sent successfully');
+    onSuccess: (data) => {
+      const message = data.accountData.alreadyHadAccount 
+        ? 'Portal invitation re-sent successfully'
+        : 'Welcome email sent successfully';
+      toast.success(message);
       queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
     },
     onError: (error: any) => {

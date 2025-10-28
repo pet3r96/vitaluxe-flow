@@ -2121,6 +2121,7 @@ export type Database = {
           emergency_contact_phone: string | null
           first_name: string
           id: string
+          invitation_sent_at: string | null
           last_login_at: string | null
           last_name: string
           phone: string | null
@@ -2141,6 +2142,7 @@ export type Database = {
           emergency_contact_phone?: string | null
           first_name: string
           id?: string
+          invitation_sent_at?: string | null
           last_login_at?: string | null
           last_name: string
           phone?: string | null
@@ -2161,6 +2163,7 @@ export type Database = {
           emergency_contact_phone?: string | null
           first_name?: string
           id?: string
+          invitation_sent_at?: string | null
           last_login_at?: string | null
           last_name?: string
           phone?: string | null
@@ -5935,15 +5938,23 @@ export type Database = {
       }
       v_patients_with_portal_status: {
         Row: {
+          address: string | null
+          birth_date: string | null
+          city: string | null
           email: string | null
           has_portal_access: boolean | null
+          invitation_sent_at: string | null
           last_login_at: string | null
           name: string | null
           patient_account_id: string | null
           patient_id: string | null
+          phone: string | null
+          portal_created_at: string | null
           portal_status: string | null
           practice_id: string | null
+          state: string | null
           user_id: string | null
+          zip_code: string | null
         }
         Relationships: []
       }

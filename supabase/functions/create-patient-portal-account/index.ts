@@ -212,15 +212,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if patient already has a portal account
+    // Normalize email to lowercase for case-insensitive matching
+    const normalizedEmail = patient.email.trim().toLowerCase();
+    console.log('[create-patient-portal-account] Normalized email:', normalizedEmail);
+
+    // Check if patient already has a portal account (case-insensitive)
     const { data: existingAccount } = await supabaseAdmin
       .from('patient_accounts')
       .select('id, user_id, status')
-      .eq('email', patient.email)
       .eq('practice_id', patient.practice_id)
+      .ilike('email', normalizedEmail)
       .maybeSingle();
 
     if (existingAccount) {
+      console.log('[create-patient-portal-account] Found existing account, re-inviting:', existingAccount.id);
+      
       // If account exists but is not active, reactivate it
       if (existingAccount.status !== 'active') {
         await supabaseAdmin
@@ -241,6 +247,12 @@ Deno.serve(async (req) => {
           token: reInviteToken,
           expires_at: reInviteExpiresAt.toISOString()
         });
+
+      // Update invitation_sent_at
+      await supabaseAdmin
+        .from('patient_accounts')
+        .update({ invitation_sent_at: new Date().toISOString() })
+        .eq('id', existingAccount.id);
 
       // Log audit event for re-invite
       try {
@@ -274,12 +286,13 @@ Deno.serve(async (req) => {
     // Generate secure temporary password
     const temporaryPassword = generateSecurePassword();
 
-    // Check if auth user exists
+    // Check if auth user exists (case-insensitive email lookup)
     let authUserId: string;
     const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
-    const foundUser = existingAuthUser?.users?.find(u => u.email === patient.email);
+    const foundUser = existingAuthUser?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
 
     if (foundUser) {
+      console.log('[create-patient-portal-account] Found existing auth user:', foundUser.id);
       // User exists in auth, update their password
       authUserId = foundUser.id;
       const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -292,22 +305,41 @@ Deno.serve(async (req) => {
         throw new Error(`Failed to update password: ${passwordError.message}`);
       }
     } else {
-      // Create new auth user
+      console.log('[create-patient-portal-account] Creating new auth user for:', normalizedEmail);
+      // Create new auth user with normalized email
       const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
-        email: patient.email,
+        email: normalizedEmail,
         password: temporaryPassword,
         email_confirm: true,
       });
 
-      if (createAuthError || !newAuthUser.user) {
-        console.error('Failed to create auth user:', createAuthError);
-        throw new Error(`Failed to create auth user: ${createAuthError?.message}`);
+      if (createAuthError) {
+        // Handle case where user already exists but wasn't found in listUsers (pagination issue)
+        if (createAuthError.message?.includes('already registered')) {
+          console.log('[create-patient-portal-account] User already registered, fetching existing user');
+          const { data: retryAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+          const retryFoundUser = retryAuthUser?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+          
+          if (retryFoundUser) {
+            authUserId = retryFoundUser.id;
+            // Update password for found user
+            await supabaseAdmin.auth.admin.updateUserById(authUserId, { password: temporaryPassword });
+          } else {
+            console.error('Failed to find user after registration error:', createAuthError);
+            throw new Error(`User registration conflict: ${createAuthError.message}`);
+          }
+        } else {
+          console.error('Failed to create auth user:', createAuthError);
+          throw new Error(`Failed to create auth user: ${createAuthError.message}`);
+        }
+      } else if (!newAuthUser.user) {
+        throw new Error('Failed to create auth user: No user returned');
+      } else {
+        authUserId = newAuthUser.user.id;
       }
-
-      authUserId = newAuthUser.user.id;
     }
 
-    // Create patient_accounts record
+    // Create patient_accounts record with normalized email
     // Status defaults to 'active' - invitation state tracked by last_login_at being null
     const { data: patientAccount, error: accountError } = await supabaseAdmin
       .from('patient_accounts')
@@ -316,13 +348,14 @@ Deno.serve(async (req) => {
         practice_id: patient.practice_id,
         first_name: patient.name.split(' ')[0] || patient.name,
         last_name: patient.name.split(' ').slice(1).join(' ') || '',
-        email: patient.email,
+        email: normalizedEmail,
         phone: patient.phone,
-        date_of_birth: patient.date_of_birth,
+        date_of_birth: patient.birth_date,
         address: patient.address,
-        city: patient.city,
-        state: patient.state,
-        zip_code: patient.zip_code,
+        city: patient.address_city,
+        state: patient.address_state,
+        zip_code: patient.address_zip,
+        invitation_sent_at: new Date().toISOString(),
         // Omit status field - defaults to 'active'
       })
       .select()
@@ -374,12 +407,15 @@ Deno.serve(async (req) => {
         p_details: {
           patient_id: patientId,
           practice_id: patient.practice_id,
-          created_by: user.id
+          created_by: user.id,
+          email: normalizedEmail
         }
       });
     } catch (auditError) {
       console.error('Failed to log audit event:', auditError);
     }
+
+    console.log('[create-patient-portal-account] Successfully created account:', patientAccount.id);
 
     return new Response(
       JSON.stringify({ 

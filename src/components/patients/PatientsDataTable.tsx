@@ -144,9 +144,9 @@ export const PatientsDataTable = () => {
         throw portalError;
       }
 
-      if (portalData?.error) {
+      if (!portalData?.success) {
         console.error('[Patient Portal] Function returned error:', portalData);
-        throw new Error(portalData.error);
+        throw new Error(portalData?.error || 'Failed to create portal account');
       }
 
       // Fetch patient details for email
@@ -160,13 +160,13 @@ export const PatientsDataTable = () => {
         throw new Error('Patient email not found');
       }
 
-      // Send welcome email (token-based activation)
+      // Send welcome email (works for both new and re-invited patients)
       const { error: emailError } = await supabase.functions.invoke(
         'send-patient-welcome-email',
         {
           body: {
             userId: portalData.userId,
-            email: patient.email,
+            email: patient.email.toLowerCase(),
             name: patient.name,
             token: portalData.token,
             practiceId: patient.practice_id,
@@ -174,32 +174,45 @@ export const PatientsDataTable = () => {
         }
       );
 
-      if (emailError) throw emailError;
+      if (emailError) {
+        console.error('[Patient Portal] Email error:', emailError);
+        throw emailError;
+      }
 
-      return { patientId };
+      return { portalData, patient };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const message = data.portalData.alreadyHadAccount 
+        ? 'Portal invitation re-sent successfully'
+        : 'Portal access granted and invitation email sent';
       toast({
         title: "Success",
-        description: "Portal access granted and invitation email sent",
+        description: message,
       });
       queryClient.invalidateQueries({ queryKey: ['patient-portal-status'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
     onError: (error: any) => {
-      // Extract detailed error message from edge function response
+      console.error('[Patient Portal] Invite failed:', error);
+      
+      // Extract error details
       const errorMessage = error?.context?.error || 
                           error?.context?.body?.error || 
                           error?.message || 
                           "Failed to grant portal access";
       
       const errorCode = error?.context?.code || error?.context?.body?.code;
+      const debugInfo = error?.context?.body?.debug;
+      
+      // Build description with debug info if available
+      let description = errorMessage;
+      if (debugInfo) {
+        description += `\n\nDebug: ${JSON.stringify(debugInfo)}`;
+      }
       
       // Special handling for specific error codes
       let title = "Error";
-      if (errorCode === 'already_has_account') {
-        title = "Already Invited";
-      } else if (errorCode === 'no_practice_context') {
+      if (errorCode === 'no_practice_context') {
         title = "Configuration Error";
       } else if (errorCode === 'unauthorized_role') {
         title = "Access Denied";
@@ -207,7 +220,7 @@ export const PatientsDataTable = () => {
       
       toast({
         title,
-        description: errorMessage,
+        description,
         variant: "destructive",
       });
     },
