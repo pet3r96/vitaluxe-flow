@@ -6,8 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const COMMISSION_RATE = 0.20; // 20% commission
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -21,13 +19,27 @@ serve(async (req) => {
 
     const { subscriptionId, practiceId } = await req.json();
 
-    // Get practice and linked topline rep
-    const { data: practice } = await supabaseClient
-      .from("profiles")
-      .select("id, linked_topline_id")
-      .eq("id", practiceId)
+    // Get subscription with commission percentage and status
+    const { data: subscription, error: subError } = await supabaseClient
+      .from("practice_subscriptions")
+      .select("*, profiles!practice_id(id, linked_topline_id)")
+      .eq("id", subscriptionId)
       .single();
 
+    if (subError || !subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    // Verify practice is past trial period
+    if (subscription.status === 'trial') {
+      return new Response(
+        JSON.stringify({ message: "Cannot calculate commission during trial period" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const practice = subscription.profiles;
+    
     if (!practice?.linked_topline_id) {
       return new Response(
         JSON.stringify({ message: "No representative assigned to this practice" }),
@@ -63,18 +75,21 @@ serve(async (req) => {
       throw new Error("No completed payment found");
     }
 
-    const commissionAmount = payment.amount * COMMISSION_RATE;
+    // Use custom commission rate or default to 20%
+    const commissionRate = (subscription.rep_commission_percentage || 20) / 100;
+    const commissionAmount = payment.amount * commissionRate;
 
-    // Record commission
+    // Record commission with pending payment status
     const { error: commissionError } = await supabaseClient
       .from("rep_subscription_commissions")
       .insert({
-        representative_id: rep.id,
+        rep_id: rep.id,
         practice_id: practiceId,
         subscription_id: subscriptionId,
         payment_id: payment.id,
         commission_amount: commissionAmount,
-        commission_date: new Date().toISOString()
+        commission_date: new Date().toISOString(),
+        payment_status: 'pending'
       });
 
     if (commissionError) throw commissionError;

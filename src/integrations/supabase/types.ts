@@ -4721,9 +4721,14 @@ export type Database = {
           commission_type: string
           created_at: string
           id: string
+          paid_at: string | null
+          paid_by: string | null
           paid_out: boolean | null
           paid_out_at: string | null
           payment_id: string | null
+          payment_method: string | null
+          payment_notes: string | null
+          payment_status: string | null
           period_end: string | null
           period_start: string | null
           practice_id: string
@@ -4736,9 +4741,14 @@ export type Database = {
           commission_type: string
           created_at?: string
           id?: string
+          paid_at?: string | null
+          paid_by?: string | null
           paid_out?: boolean | null
           paid_out_at?: string | null
           payment_id?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_status?: string | null
           period_end?: string | null
           period_start?: string | null
           practice_id: string
@@ -4751,9 +4761,14 @@ export type Database = {
           commission_type?: string
           created_at?: string
           id?: string
+          paid_at?: string | null
+          paid_by?: string | null
           paid_out?: boolean | null
           paid_out_at?: string | null
           payment_id?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_status?: string | null
           period_end?: string | null
           period_start?: string | null
           practice_id?: string
