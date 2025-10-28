@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreditCard, Building2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PaymentMethod {
   id: string;
@@ -29,16 +30,17 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { effectiveUserId } = useAuth();
 
   useEffect(() => {
-    loadPaymentMethods();
-  }, []);
+    if (effectiveUserId) {
+      loadPaymentMethods();
+    }
+  }, [effectiveUserId]);
 
   const loadPaymentMethods = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+      if (!effectiveUserId) {
         console.error('[PaymentMethodSelector] No authenticated user found');
         toast({
           title: "Authentication Required",
@@ -48,19 +50,19 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
         return;
       }
 
-      console.log('[PaymentMethodSelector] Loading payment methods for user:', user.id);
+      console.log('[PaymentMethodSelector] Loading payment methods for user:', effectiveUserId);
 
       const { data, error } = await supabase
         .from('practice_payment_methods')
         .select('*')
-        .eq('practice_id', user.id)
+        .eq('practice_id', effectiveUserId)
         .eq('status', 'active')
         .order('is_default', { ascending: false });
 
       console.log('[PaymentMethodSelector] Query result:', { 
         foundCount: data?.length || 0, 
         error: error?.message || null,
-        userId: user.id 
+        userId: effectiveUserId 
       });
 
       if (error) {
