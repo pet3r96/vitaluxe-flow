@@ -37,7 +37,18 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
   const loadPaymentMethods = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      
+      if (!user) {
+        console.error('[PaymentMethodSelector] No authenticated user found');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to continue",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('[PaymentMethodSelector] Loading payment methods for user:', user.id);
 
       const { data, error } = await supabase
         .from('practice_payment_methods')
@@ -46,20 +57,39 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
         .eq('status', 'active')
         .order('is_default', { ascending: false });
 
-      if (error) throw error;
+      console.log('[PaymentMethodSelector] Query result:', { 
+        foundCount: data?.length || 0, 
+        error: error?.message || null,
+        userId: user.id 
+      });
+
+      if (error) {
+        console.error('[PaymentMethodSelector] Database error:', error);
+        toast({
+          title: "Database Error",
+          description: `Failed to load payment methods: ${error.message}`,
+          variant: "destructive"
+        });
+        throw error;
+      }
 
       setPaymentMethods(data || []);
       
       // Auto-select default payment method
       const defaultMethod = data?.find(m => m.is_default);
       if (defaultMethod && !selectedMethodId) {
+        console.log('[PaymentMethodSelector] Auto-selecting default method:', defaultMethod.id);
         onMethodSelected(defaultMethod.id);
+      } else if (data && data.length > 0 && !selectedMethodId) {
+        console.log('[PaymentMethodSelector] Auto-selecting first method:', data[0].id);
+        onMethodSelected(data[0].id);
       }
     } catch (error: any) {
-      console.error('Error loading payment methods:', error);
+      console.error('[PaymentMethodSelector] Error loading payment methods:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
-        title: "Error",
-        description: "Failed to load payment methods",
+        title: "Error Loading Payment Methods",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -97,12 +127,18 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Your payment method will be charged $250/month after your 7-day free trial ends.
-          </p>
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <p className="text-amber-900 dark:text-amber-100 font-medium mb-2">
+              No Payment Methods Found
+            </p>
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              Your payment method will be charged $250/month after your 7-day free trial ends.
+              Please add a credit card or bank account to your profile to continue.
+            </p>
+          </div>
           <Button onClick={handleAddPaymentMethod} className="w-full">
             <Plus className="mr-2 h-4 w-4" />
-            Add Payment Method
+            Go to Profile → Add Payment Method
           </Button>
         </CardContent>
       </Card>

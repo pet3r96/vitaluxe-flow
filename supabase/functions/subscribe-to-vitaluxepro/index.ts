@@ -73,24 +73,72 @@ serve(async (req) => {
       );
     }
 
-    // Create subscription using helper function
-    const { data: subscription, error: subError } = await supabaseClient.rpc(
-      "create_practice_subscription",
-      {
-        p_practice_id: user.id,
-        p_start_trial: true,
-      }
-    );
+    // Check if subscription already exists (handle reactivation)
+    const { data: existingSub, error: checkError } = await supabaseClient
+      .from("practice_subscriptions")
+      .select("*")
+      .eq("practice_id", user.id)
+      .single();
 
-    if (subError) {
-      console.error("Error creating subscription:", subError);
-      return new Response(
-        JSON.stringify({ error: "Failed to create subscription", details: subError.message }),
+    let subscription;
+    
+    if (existingSub) {
+      // Subscription exists - reactivate if cancelled or expired
+      if (existingSub.status === 'cancelled' || existingSub.status === 'expired') {
+        console.log("Reactivating cancelled/expired subscription:", existingSub.id);
+        
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
+        const { data: updated, error: updateError } = await supabaseClient
+          .from("practice_subscriptions")
+          .update({
+            status: 'trial',
+            trial_ends_at: trialEndsAt.toISOString(),
+            cancelled_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingSub.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error("Error reactivating subscription:", updateError);
+          return new Response(
+            JSON.stringify({ error: "Failed to reactivate subscription", details: updateError.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        subscription = updated.id;
+      } else if (existingSub.status === 'active' || existingSub.status === 'trial') {
+        return new Response(
+          JSON.stringify({ error: "You already have an active subscription" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      // Create new subscription using helper function
+      const { data: newSub, error: subError } = await supabaseClient.rpc(
+        "create_practice_subscription",
         {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          p_practice_id: user.id,
+          p_start_trial: true,
         }
       );
+
+      if (subError) {
+        console.error("Error creating subscription:", subError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create subscription", details: subError.message }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      subscription = newSub;
     }
 
     // Record terms acceptance

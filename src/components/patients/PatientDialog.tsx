@@ -252,13 +252,25 @@ export const PatientDialog = ({
       };
 
       if (patient) {
-        // Update existing patient
-        const { error } = await supabase
+        // Update existing patient - CRITICAL: Verify patient.id to prevent cross-patient updates
+        if (!patient.id) {
+          throw new Error("Patient ID is required for updates");
+        }
+
+        console.log('[PatientDialog] Updating patient:', { 
+          patientId: patient.id, 
+          email: patientData.email 
+        });
+
+        const { error, count } = await supabase
           .from("patients")
           .update(patientData)
-          .eq("id", patient.id);
+          .eq("id", patient.id)
+          .select();
 
         if (error) throw error;
+        
+        console.log('[PatientDialog] Update affected rows:', count);
         toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient

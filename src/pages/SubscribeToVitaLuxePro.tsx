@@ -194,7 +194,7 @@ export default function SubscribeToVitaLuxePro() {
                   </Badge>
                 </div>
                 <Separator />
-                <div className="text-sm space-y-2">
+                <div className="text-sm space-y-2 text-amber-900 dark:text-amber-100">
                   <p>✓ No credit card required for trial</p>
                   <p>✓ Cancel anytime</p>
                   <p>✓ Full feature access during trial</p>
@@ -311,11 +311,11 @@ export default function SubscribeToVitaLuxePro() {
 
               <Separator />
 
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-2 text-sm">
-                <p className="font-medium text-blue-900 dark:text-blue-100">
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-2 text-sm">
+                <p className="font-medium text-amber-900 dark:text-amber-100">
                   📅 Trial Period Details
                 </p>
-                <ul className="space-y-1 text-blue-800 dark:text-blue-200 ml-4">
+                <ul className="space-y-1 text-amber-800 dark:text-amber-200 ml-4">
                   <li>• Your 7-day free trial starts immediately</li>
                   <li>• Full access to all VitaLuxePro features</li>
                   <li>• First charge on {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</li>
