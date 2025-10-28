@@ -661,6 +661,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cart_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "cart_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -1575,6 +1582,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "order_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "order_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -2232,6 +2246,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "patient_appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
             foreignKeyName: "patient_appointments_practice_id_fkey"
             columns: ["practice_id"]
             isOneToOne: false
@@ -2299,6 +2320,13 @@ export type Database = {
             referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
         ]
       }
       patient_medical_vault: {
@@ -2363,6 +2391,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "patient_medical_vault_provider_id_fkey"
@@ -2433,6 +2468,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_messages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "patient_messages_practice_id_fkey"
@@ -2514,6 +2556,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_triage_submissions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "patient_triage_submissions_practice_id_fkey"
@@ -5498,6 +5547,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cart_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "cart_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -5804,6 +5860,20 @@ export type Database = {
           phone_verified?: boolean | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      v_patients_with_portal_status: {
+        Row: {
+          email: string | null
+          has_portal_access: boolean | null
+          last_login_at: string | null
+          name: string | null
+          patient_account_id: string | null
+          patient_id: string | null
+          portal_status: string | null
+          practice_id: string | null
+          user_id: string | null
         }
         Relationships: []
       }
