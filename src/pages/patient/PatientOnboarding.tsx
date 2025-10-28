@@ -23,26 +23,35 @@ export default function PatientOnboarding() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Create patient account
-      await supabase.from("patient_accounts").insert({
-        user_id: user.id,
-        first_name: formData.get("first_name") as string,
-        last_name: formData.get("last_name") as string,
-        phone: formData.get("phone") as string,
-        date_of_birth: formData.get("date_of_birth") as string,
-        address: formData.get("address") as string,
-        city: formData.get("city") as string,
-        state: formData.get("state") as string,
-        zip_code: formData.get("zip_code") as string,
-      });
+      // Create patient account  
+      const { data: accountData, error: accountError } = await supabase
+        .from("patient_accounts")
+        .insert([{
+          email: user.email!,
+          first_name: formData.get("first_name") as string,
+          last_name: formData.get("last_name") as string,
+          phone: formData.get("phone") as string,
+          date_of_birth: formData.get("date_of_birth") as string,
+          address: formData.get("address") as string,
+          city: formData.get("city") as string,
+          state: formData.get("state") as string,
+          zip_code: formData.get("zip_code") as string,
+        } as any])
+        .select()
+        .single();
+
+      if (accountError) throw accountError;
 
       // Create medical vault
-      await supabase.from("patient_medical_vault").insert({
-        patient_id: user.id,
-        allergies: JSON.stringify(formData.get("allergies")?.toString().split(",").map(a => a.trim()).filter(Boolean) || []),
-        current_medications: JSON.stringify(formData.get("medications")?.toString().split(",").map(m => m.trim()).filter(Boolean) || []),
-        medical_conditions: JSON.stringify(formData.get("conditions")?.toString().split(",").map(c => c.trim()).filter(Boolean) || []),
-      });
+      const allergies = formData.get("allergies")?.toString().split(",").map(a => a.trim()).filter(Boolean) || [];
+      const medications = formData.get("medications")?.toString().split(",").map(m => m.trim()).filter(Boolean) || [];
+      const conditions = formData.get("conditions")?.toString().split(",").map(c => c.trim()).filter(Boolean) || [];
+      
+      await supabase.from("patient_medical_vault").insert([{
+        allergies: allergies,
+        current_medications: medications,
+        medical_conditions: conditions,
+      } as any]);
 
       toast.success("Welcome to VitaLuxePro!");
       navigate("/dashboard");

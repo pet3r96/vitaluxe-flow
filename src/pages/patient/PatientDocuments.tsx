@@ -55,12 +55,13 @@ export default function PatientDocuments() {
 
       const { error: dbError } = await supabase
         .from("patient_documents")
-        .insert({
-          document_type: documentType,
-          file_name: file.name,
-          file_path: filePath,
+        .insert([{
+          document_name: file.name,
+          storage_path: filePath,
           file_size: file.size,
-        });
+          mime_type: file.type,
+          document_type: documentType,
+        } as any]);
 
       if (dbError) throw dbError;
 

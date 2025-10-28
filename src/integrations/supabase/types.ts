@@ -2098,46 +2098,64 @@ export type Database = {
       }
       patient_accounts: {
         Row: {
+          address: string | null
+          city: string | null
           created_at: string
           date_of_birth: string | null
           email: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           first_name: string
           id: string
           last_login_at: string | null
           last_name: string
           phone: string | null
           practice_id: string
+          state: string | null
           status: string
           updated_at: string
           user_id: string
+          zip_code: string | null
         }
         Insert: {
+          address?: string | null
+          city?: string | null
           created_at?: string
           date_of_birth?: string | null
           email: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           first_name: string
           id?: string
           last_login_at?: string | null
           last_name: string
           phone?: string | null
           practice_id: string
+          state?: string | null
           status?: string
           updated_at?: string
           user_id: string
+          zip_code?: string | null
         }
         Update: {
+          address?: string | null
+          city?: string | null
           created_at?: string
           date_of_birth?: string | null
           email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           first_name?: string
           id?: string
           last_login_at?: string | null
           last_name?: string
           phone?: string | null
           practice_id?: string
+          state?: string | null
           status?: string
           updated_at?: string
           user_id?: string
+          zip_code?: string | null
         }
         Relationships: [
           {
@@ -2285,43 +2303,58 @@ export type Database = {
       }
       patient_medical_vault: {
         Row: {
+          allergies: Json | null
           attachments: Json | null
+          blood_type: string | null
           created_at: string
+          current_medications: Json | null
           date_recorded: string | null
           description: string | null
           id: string
+          medical_conditions: Json | null
           metadata: Json | null
           patient_id: string
           provider_id: string | null
           record_type: string
           title: string
           updated_at: string
+          vital_signs: Json | null
         }
         Insert: {
+          allergies?: Json | null
           attachments?: Json | null
+          blood_type?: string | null
           created_at?: string
+          current_medications?: Json | null
           date_recorded?: string | null
           description?: string | null
           id?: string
+          medical_conditions?: Json | null
           metadata?: Json | null
           patient_id: string
           provider_id?: string | null
           record_type: string
           title: string
           updated_at?: string
+          vital_signs?: Json | null
         }
         Update: {
+          allergies?: Json | null
           attachments?: Json | null
+          blood_type?: string | null
           created_at?: string
+          current_medications?: Json | null
           date_recorded?: string | null
           description?: string | null
           id?: string
+          medical_conditions?: Json | null
           metadata?: Json | null
           patient_id?: string
           provider_id?: string | null
           record_type?: string
           title?: string
           updated_at?: string
+          vital_signs?: Json | null
         }
         Relationships: [
           {
@@ -2349,6 +2382,7 @@ export type Database = {
           parent_message_id: string | null
           patient_id: string
           practice_id: string
+          provider_id: string | null
           read_at: string | null
           sender_id: string
           sender_type: string
@@ -2363,6 +2397,7 @@ export type Database = {
           parent_message_id?: string | null
           patient_id: string
           practice_id: string
+          provider_id?: string | null
           read_at?: string | null
           sender_id: string
           sender_type: string
@@ -2377,6 +2412,7 @@ export type Database = {
           parent_message_id?: string | null
           patient_id?: string
           practice_id?: string
+          provider_id?: string | null
           read_at?: string | null
           sender_id?: string
           sender_type?: string
@@ -2408,6 +2444,20 @@ export type Database = {
           {
             foreignKeyName: "patient_messages_practice_id_fkey"
             columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_messages_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_messages_provider_id_fkey"
+            columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]

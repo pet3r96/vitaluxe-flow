@@ -52,7 +52,7 @@ export default function PatientMedicalVault() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {medicalData?.allergies ? JSON.parse(medicalData.allergies).length : 0}
+                  {medicalData?.allergies ? (Array.isArray(medicalData.allergies) ? medicalData.allergies.length : 0) : 0}
                 </div>
               </CardContent>
             </Card>
@@ -64,7 +64,7 @@ export default function PatientMedicalVault() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {medicalData?.current_medications ? JSON.parse(medicalData.current_medications).length : 0}
+                  {medicalData?.current_medications ? (Array.isArray(medicalData.current_medications) ? medicalData.current_medications.length : 0) : 0}
                 </div>
               </CardContent>
             </Card>
@@ -76,7 +76,7 @@ export default function PatientMedicalVault() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {medicalData?.medical_conditions ? JSON.parse(medicalData.medical_conditions).length : 0}
+                  {medicalData?.medical_conditions ? (Array.isArray(medicalData.medical_conditions) ? medicalData.medical_conditions.length : 0) : 0}
                 </div>
               </CardContent>
             </Card>
@@ -88,12 +88,12 @@ export default function PatientMedicalVault() {
               <CardDescription>Most recent measurements</CardDescription>
             </CardHeader>
             <CardContent>
-              {medicalData?.vital_signs ? (
+              {medicalData?.vital_signs && typeof medicalData.vital_signs === 'object' ? (
                 <div className="grid gap-4 md:grid-cols-3">
-                  {Object.entries(JSON.parse(medicalData.vital_signs)).map(([key, value]) => (
+                  {Object.entries(medicalData.vital_signs).map(([key, value]) => (
                     <div key={key} className="space-y-1">
                       <p className="text-sm text-muted-foreground capitalize">{key.replace(/_/g, " ")}</p>
-                      <p className="text-lg font-medium">{value as string}</p>
+                      <p className="text-lg font-medium">{String(value)}</p>
                     </div>
                   ))}
                 </div>
@@ -108,7 +108,7 @@ export default function PatientMedicalVault() {
           <MedicalRecordCard
             title="Allergies"
             icon={AlertCircle}
-            items={medicalData?.allergies ? JSON.parse(medicalData.allergies) : []}
+            items={medicalData?.allergies && Array.isArray(medicalData.allergies) ? (medicalData.allergies as string[]) : []}
             emptyMessage="No allergies recorded"
           />
         </TabsContent>
@@ -117,7 +117,7 @@ export default function PatientMedicalVault() {
           <MedicalRecordCard
             title="Current Medications"
             icon={Pill}
-            items={medicalData?.current_medications ? JSON.parse(medicalData.current_medications) : []}
+            items={medicalData?.current_medications && Array.isArray(medicalData.current_medications) ? (medicalData.current_medications as string[]) : []}
             emptyMessage="No medications recorded"
           />
         </TabsContent>
@@ -126,7 +126,7 @@ export default function PatientMedicalVault() {
           <MedicalRecordCard
             title="Medical Conditions"
             icon={FileText}
-            items={medicalData?.medical_conditions ? JSON.parse(medicalData.medical_conditions) : []}
+            items={medicalData?.medical_conditions && Array.isArray(medicalData.medical_conditions) ? (medicalData.medical_conditions as string[]) : []}
             emptyMessage="No conditions recorded"
           />
         </TabsContent>

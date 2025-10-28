@@ -29,7 +29,7 @@ export default function PatientDashboard() {
       const { count, error } = await supabase
         .from("patient_messages")
         .select("*", { count: "exact", head: true })
-        .eq("read", false);
+        .is("read_at", null);
       if (error) throw error;
       return count || 0;
     },
