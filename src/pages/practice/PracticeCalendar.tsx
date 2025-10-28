@@ -16,6 +16,7 @@ import { AgendaView } from "@/components/calendar/AgendaView";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
 
 export default function PracticeCalendar() {
   const { user, effectivePracticeId } = useAuth();
@@ -29,6 +30,7 @@ export default function PracticeCalendar() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
   const [defaultProviderId, setDefaultProviderId] = useState<string | undefined>();
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   const practiceId = effectivePracticeId || user?.id;
 
@@ -184,7 +186,7 @@ export default function PracticeCalendar() {
             <p className="text-muted-foreground">Manage appointments and schedules</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
@@ -291,6 +293,14 @@ export default function PracticeCalendar() {
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
         appointment={selectedAppointment}
+      />
+
+      <CalendarSettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+        practiceId={practiceId!}
+        currentSettings={settings}
+        onSettingsUpdate={() => refetch()}
       />
     </div>
   );

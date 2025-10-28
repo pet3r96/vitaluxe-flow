@@ -359,6 +359,60 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_settings: {
+        Row: {
+          allow_overlap: boolean
+          buffer_time: number
+          created_at: string
+          end_hour: number
+          id: string
+          practice_id: string
+          slot_duration: number
+          start_hour: number
+          updated_at: string
+          working_days: number[]
+        }
+        Insert: {
+          allow_overlap?: boolean
+          buffer_time?: number
+          created_at?: string
+          end_hour?: number
+          id?: string
+          practice_id: string
+          slot_duration?: number
+          start_hour?: number
+          updated_at?: string
+          working_days?: number[]
+        }
+        Update: {
+          allow_overlap?: boolean
+          buffer_time?: number
+          created_at?: string
+          end_hour?: number
+          id?: string
+          practice_id?: string
+          slot_duration?: number
+          start_hour?: number
+          updated_at?: string
+          working_days?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_settings_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_settings_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action_type: string
@@ -2204,6 +2258,7 @@ export type Database = {
           patient_id: string
           practice_id: string
           provider_id: string | null
+          room_id: string | null
           start_time: string
           status: string
           updated_at: string
@@ -2220,6 +2275,7 @@ export type Database = {
           patient_id: string
           practice_id: string
           provider_id?: string | null
+          room_id?: string | null
           start_time: string
           status?: string
           updated_at?: string
@@ -2236,6 +2292,7 @@ export type Database = {
           patient_id?: string
           practice_id?: string
           provider_id?: string | null
+          room_id?: string | null
           start_time?: string
           status?: string
           updated_at?: string
@@ -2274,6 +2331,13 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_appointments_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "practice_rooms"
             referencedColumns: ["id"]
           },
         ]
@@ -3595,6 +3659,60 @@ export type Database = {
           },
           {
             foreignKeyName: "provider_payment_methods_provider_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_rooms: {
+        Row: {
+          active: boolean
+          capacity: number | null
+          color: string
+          created_at: string
+          description: string | null
+          equipment: Json | null
+          id: string
+          name: string
+          practice_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          capacity?: number | null
+          color?: string
+          created_at?: string
+          description?: string | null
+          equipment?: Json | null
+          id?: string
+          name: string
+          practice_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          capacity?: number | null
+          color?: string
+          created_at?: string
+          description?: string | null
+          equipment?: Json | null
+          id?: string
+          name?: string
+          practice_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_rooms_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_rooms_practice_id_fkey"
             columns: ["practice_id"]
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"

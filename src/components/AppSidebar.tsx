@@ -63,28 +63,33 @@ const menuItems = {
   ],
   doctor: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Patients", url: "/patients", icon: Users },
-    { title: "Providers", url: "/providers", icon: UserCog },
     { title: "Products", url: "/products", icon: Package },
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
+    { title: "Patients", url: "/patients", icon: Users },
+    { title: "Providers", url: "/providers", icon: UserCog },
     { title: "My Orders", url: "/orders", icon: FileText },
     { title: "Reports", url: "/reports", icon: FileText },
-    { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
-    { title: "Triage Queue", url: "/triage-queue", icon: AlertCircle, isPro: true },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "My Profile", url: "/profile", icon: UserCircle },
+    { title: "PRO_SEPARATOR", url: "", icon: null, isPro: false },
+    { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
     { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
+    { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },
+    { title: "Patient Inbox", url: "/patient-inbox", icon: Inbox, isPro: true },
     { title: "My Subscription", url: "/my-subscription", icon: CreditCard, isPro: true },
   ],
   provider: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Patients", url: "/patients", icon: Users },
     { title: "Products", url: "/products", icon: Package },
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
+    { title: "Patients", url: "/patients", icon: Users },
     { title: "My Orders", url: "/orders", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "My Profile", url: "/profile", icon: UserCircle },
+    { title: "PRO_SEPARATOR", url: "", icon: null, isPro: false },
+    { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
     { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
+    { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },
   ],
   pharmacy: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -173,6 +178,15 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item: any) => {
+                if (item.title === "PRO_SEPARATOR") {
+                  return (
+                    <div key="pro-separator" className="px-3 py-3 mt-4">
+                      <div className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
+                        Pro Features
+                      </div>
+                    </div>
+                  );
+                }
                 const isProFeature = item.isPro && !isSubscribed;
                 return (
                   <SidebarMenuItem key={item.title}>

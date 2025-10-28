@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       .select(`
         *,
         patient_accounts!inner(id, first_name, last_name, phone, email),
-        providers!inner(id, first_name, last_name, specialty),
+        providers!inner(id, user_id, profiles!inner(name)),
         practice_rooms(id, name, color)
       `)
       .eq('practice_id', practiceId)
@@ -64,10 +64,9 @@ Deno.serve(async (req) => {
     // Get all providers for the practice
     const { data: allProviders } = await supabaseClient
       .from('providers')
-      .select('id, first_name, last_name, specialty, status')
+      .select('id, user_id, active, profiles!inner(name)')
       .eq('practice_id', practiceId)
-      .eq('status', 'active')
-      .order('first_name');
+      .eq('active', true);
 
     // Get all rooms for the practice
     const { data: allRooms } = await supabaseClient
