@@ -144,7 +144,7 @@ export function CreateAppointmentDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="providerId">Provider *</Label>
-              <Select {...register("providerId", { required: true })}>
+              <Select value={watch("providerId")} onValueChange={(value) => setValue("providerId", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select provider" />
                 </SelectTrigger>
@@ -166,7 +166,7 @@ export function CreateAppointmentDialog({
 
             <div className="space-y-2">
               <Label htmlFor="roomId">Room</Label>
-              <Select {...register("roomId")}>
+              <Select value={watch("roomId")} onValueChange={(value) => setValue("roomId", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select room (optional)" />
                 </SelectTrigger>
@@ -203,7 +203,7 @@ export function CreateAppointmentDialog({
 
             <div className="space-y-2">
               <Label htmlFor="duration">Duration (min) *</Label>
-              <Select {...register("duration", { required: true })}>
+              <Select value={watch("duration")} onValueChange={(value) => setValue("duration", value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -221,7 +221,7 @@ export function CreateAppointmentDialog({
 
           <div className="space-y-2">
             <Label htmlFor="appointmentType">Appointment Type</Label>
-            <Select {...register("appointmentType")}>
+            <Select value={watch("appointmentType")} onValueChange={(value) => setValue("appointmentType", value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
