@@ -43,20 +43,20 @@ export function QuickActionsPanel() {
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {actions.map((action) => {
             const Icon = action.icon;
             return (
               <Button
                 key={action.label}
                 variant="outline"
-                className="h-auto flex-col items-start p-4 hover:bg-accent"
+                className="w-full min-h-[84px] justify-start items-start p-4 hover:bg-accent flex-col text-left"
                 onClick={action.onClick}
               >
                 <Icon className={`h-6 w-6 mb-2 ${action.color}`} />
                 <div className="text-left">
                   <div className="font-semibold text-sm">{action.label}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
+                  <div className="text-xs text-muted-foreground mt-1 whitespace-normal leading-tight">
                     {action.description}
                   </div>
                 </div>
