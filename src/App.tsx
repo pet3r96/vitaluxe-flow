@@ -16,6 +16,7 @@ import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { UpgradePromptDialog } from "@/components/subscription/UpgradePromptDialog";
+import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
 import { SessionTimer } from "./components/auth/SessionTimer";
 
 // Helper function to retry dynamic imports on failure
@@ -223,14 +224,14 @@ const App = () => (
                                     <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                     <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                     <Route path="/shipping" element={<PharmacyShipping />} />
-                                    <Route path="/appointments" element={<PatientAppointments />} />
-                                    <Route path="/medical-vault" element={<PatientMedicalVault />} />
+                                    <Route path="/appointments" element={<SubscriptionProtectedRoute><PatientAppointments /></SubscriptionProtectedRoute>} />
+                                    <Route path="/medical-vault" element={<SubscriptionProtectedRoute><PatientMedicalVault /></SubscriptionProtectedRoute>} />
                                     <Route path="/documents" element={<PatientDocuments />} />
-                                    <Route path="/triage" element={<PatientTriage />} />
-                                    <Route path="/practice-calendar" element={<PracticeCalendar />} />
-                                    <Route path="/patient-inbox" element={<PatientInbox />} />
-                                    <Route path="/triage-queue" element={<TriageQueue />} />
-                                    <Route path="/practice-patients" element={<PracticePatients />} />
+                                    <Route path="/triage" element={<SubscriptionProtectedRoute><PatientTriage /></SubscriptionProtectedRoute>} />
+                                    <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
+                                    <Route path="/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
+                                    <Route path="/triage-queue" element={<SubscriptionProtectedRoute><TriageQueue /></SubscriptionProtectedRoute>} />
+                                    <Route path="/practice-patients" element={<SubscriptionProtectedRoute><PracticePatients /></SubscriptionProtectedRoute>} />
                                     <Route path="*" element={<NotFound />} />
                                   </Routes>
                                 </Suspense>

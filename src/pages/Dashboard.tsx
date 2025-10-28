@@ -1,14 +1,19 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Card } from "@/components/ui/card";
-import { Package, ShoppingCart, Users, DollarSign, Clock } from "lucide-react";
+import { Package, ShoppingCart, Users, DollarSign, Clock, Sparkles, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { logger } from "@/lib/logger";
 
 // Dashboard component with real-time stats
 const Dashboard = () => {
-  const { user, effectiveRole, effectiveUserId, isImpersonating } = useAuth();
+  const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount } = useAuth();
+  const { isSubscribed, status, trialDaysRemaining } = useSubscription();
+  const navigate = useNavigate();
 
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
@@ -419,7 +424,53 @@ const Dashboard = () => {
             Role: {effectiveRole}
           </p>
         )}
+        {status === 'trial' && trialDaysRemaining !== null && (
+          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">
+              Trial: {trialDaysRemaining} days remaining
+            </span>
+          </div>
+        )}
       </div>
+
+      {!isSubscribed && effectiveRole === 'doctor' && !isProviderAccount && (
+        <Card className="p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="rounded-full bg-primary/20 p-4 shrink-0">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">Unlock VitaLuxePro Features</h2>
+              <p className="text-muted-foreground">
+                Get access to patient appointments, secure messaging, digital EMR, AI-assisted triage, and more with a 7-day free trial.
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                {[
+                  "Patient Appointment Booking",
+                  "Secure Patient Messaging",
+                  "Digital EMR & Medical Vault",
+                  "AI-Assisted Triage System",
+                  "Practice Calendar Management",
+                  "Advanced Patient Portal"
+                ].map((feature) => (
+                  <li key={feature} className="flex items-center gap-2 text-sm">
+                    <Lock className="h-4 w-4 text-primary shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <Button 
+              onClick={() => navigate("/subscribe-to-vitaluxepro")}
+              size="lg"
+              className="bg-primary hover:bg-primary/90 shrink-0"
+            >
+              Start Free Trial
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat) => (

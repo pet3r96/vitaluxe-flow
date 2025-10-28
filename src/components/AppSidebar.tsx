@@ -24,6 +24,8 @@ import {
   Sparkles,
   Calendar,
   CreditCard,
+  Lock,
+  Inbox,
 } from "lucide-react";
 import {
   Sidebar,
@@ -67,6 +69,10 @@ const menuItems = {
     { title: "My Cart", url: "/cart", icon: ShoppingCart },
     { title: "My Orders", url: "/orders", icon: FileText },
     { title: "Reports", url: "/reports", icon: FileText },
+    { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
+    { title: "Patient Inbox", url: "/patient-inbox", icon: Inbox, isPro: true },
+    { title: "Triage Queue", url: "/triage-queue", icon: AlertCircle, isPro: true },
+    { title: "Practice Patients", url: "/practice-patients", icon: Users, isPro: true },
     { title: "My Profile", url: "/profile", icon: UserCircle },
     { title: "Messages", url: "/messages", icon: MessageSquare },
   ],
@@ -165,16 +171,35 @@ export function AppSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="min-h-[44px]">
-                    <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                      {!isCollapsed && <span className="text-sm sm:text-base">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item: any) => {
+                const isProFeature = item.isPro && !isSubscribed;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild className="min-h-[44px]">
+                      <NavLink 
+                        to={item.url} 
+                        end 
+                        className={({ isActive }) => {
+                          const baseClass = getNavCls({ isActive });
+                          return isProFeature 
+                            ? `${baseClass} opacity-60` 
+                            : baseClass;
+                        }}
+                      >
+                        <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                        {!isCollapsed && (
+                          <span className="text-sm sm:text-base flex items-center gap-2 flex-1">
+                            {item.title}
+                            {item.isPro && !isSubscribed && (
+                              <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
+                            )}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
