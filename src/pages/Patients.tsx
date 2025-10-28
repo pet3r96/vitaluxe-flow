@@ -76,7 +76,15 @@ const Patients = () => {
         { body: { patientId } }
       );
 
-      if (accountError) throw accountError;
+      if (accountError) {
+        console.error('[Patient Portal] Edge function invocation error:', accountError);
+        throw accountError;
+      }
+
+      if (accountData?.error) {
+        console.error('[Patient Portal] Function returned error:', accountData);
+        throw new Error(accountData.error);
+      }
 
       // Get patient details
       const { data: patient } = await supabase

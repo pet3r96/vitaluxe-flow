@@ -127,20 +127,50 @@ Deno.serve(async (req) => {
     });
 
     // Check if practice has active subscription (using effective practice)
-    const { data: subscription } = await supabaseAdmin
+    const { data: subscription, error: subError } = await supabaseAdmin
       .from('practice_subscriptions')
-      .select('status')
+      .select('status, trial_ends_at, current_period_end')
       .eq('practice_id', effectivePracticeId)
       .in('status', ['active', 'trial', 'trialing'])
       .maybeSingle();
 
     if (!subscription) {
-      console.log('[create-patient-portal-account] No subscription found for practice:', effectivePracticeId);
+      console.error('[create-patient-portal-account] Subscription check failed:', {
+        effectivePracticeId,
+        effectiveUserId,
+        isDoctorRole,
+        subError,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Check if ANY subscription exists for debugging
+      const { data: anySubscription } = await supabaseAdmin
+        .from('practice_subscriptions')
+        .select('status, trial_ends_at, current_period_end, practice_id')
+        .eq('practice_id', effectivePracticeId)
+        .maybeSingle();
+      
+      console.error('[create-patient-portal-account] Any subscription found:', anySubscription);
+      
       return new Response(
-        JSON.stringify({ error: 'VitaLuxePro subscription required to invite patients' }),
+        JSON.stringify({ 
+          error: 'VitaLuxePro subscription required to invite patients',
+          debug: {
+            practiceId: effectivePracticeId,
+            subscriptionFound: !!anySubscription,
+            subscriptionStatus: anySubscription?.status,
+            subscriptionTrial: anySubscription?.trial_ends_at,
+            queryError: subError?.message
+          }
+        }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    console.log('[create-patient-portal-account] Subscription verified:', {
+      practiceId: effectivePracticeId,
+      status: subscription.status
+    });
 
     const { patientId }: CreatePortalAccountRequest = await req.json();
 

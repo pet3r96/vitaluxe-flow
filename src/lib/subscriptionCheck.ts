@@ -33,13 +33,20 @@ export const hasActiveSubscription = async (practiceId: string): Promise<boolean
 };
 
 export const getSubscriptionStatus = async (practiceId: string): Promise<SubscriptionStatus> => {
+  console.log('[SubscriptionCheck] Checking subscription for practice:', practiceId);
+  
   const { data, error } = await supabase
     .from('practice_subscriptions' as any)
     .select('status, trial_ends_at, current_period_end, grace_period_ends_at')
     .eq('practice_id', practiceId)
     .maybeSingle();
     
+  if (error) {
+    console.error('[SubscriptionCheck] Query error:', error);
+  }
+  
   if (error || !data || typeof data !== 'object') {
+    console.log('[SubscriptionCheck] No subscription found for practice:', practiceId);
     return {
       isSubscribed: false,
       status: null,
@@ -49,6 +56,12 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
       gracePeriodEndsAt: null
     };
   }
+  
+  console.log('[SubscriptionCheck] Found subscription:', {
+    status: (data as any).status,
+    trial_ends_at: (data as any).trial_ends_at,
+    current_period_end: (data as any).current_period_end
+  });
   
   const subscription = data as any;
   const now = new Date();

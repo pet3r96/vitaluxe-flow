@@ -14,10 +14,11 @@ interface UseUpgradePromptReturn {
 }
 
 export const useUpgradePrompt = (): UseUpgradePromptReturn => {
-  const { user, effectiveRole } = useAuth();
+  const { user, effectiveRole, effectivePracticeId } = useAuth();
   const { isSubscribed } = useSubscription();
   const [shouldShow, setShouldShow] = useState(false);
   const [loginCount, setLoginCount] = useState(0);
+  const [hasCheckedThisSession, setHasCheckedThisSession] = useState(false);
 
   useEffect(() => {
     if (effectiveRole !== 'doctor') {
@@ -30,23 +31,31 @@ export const useUpgradePrompt = (): UseUpgradePromptReturn => {
       return;
     }
 
+    // Only check once per React session to prevent duplicate prompts
+    if (hasCheckedThisSession) return;
+
     const storedCount = parseInt(sessionStorage.getItem('loginCount') || '0', 10);
     const newCount = storedCount + 1;
     sessionStorage.setItem('loginCount', newCount.toString());
     setLoginCount(newCount);
 
     if (newCount === 2 && user?.id) {
+      setHasCheckedThisSession(true);
       checkShouldShow();
     }
-  }, [user?.id, effectiveRole, isSubscribed]);
+  }, [user?.id, effectiveRole, isSubscribed, effectivePracticeId, hasCheckedThisSession]);
 
   const checkShouldShow = async () => {
     if (!user?.id) return;
     
-    const should = await shouldShowUpgradePrompt(user.id);
+    // Use proper practice ID context (same logic as SubscriptionContext)
+    const practiceIdToCheck = effectivePracticeId || user.id;
+    console.log('[useUpgradePrompt] Checking for practice:', practiceIdToCheck);
+    
+    const should = await shouldShowUpgradePrompt(practiceIdToCheck);
     if (should) {
       setShouldShow(true);
-      await updateUpgradePromptShown(user.id);
+      await updateUpgradePromptShown(practiceIdToCheck);
     }
   };
 
@@ -56,7 +65,8 @@ export const useUpgradePrompt = (): UseUpgradePromptReturn => {
 
   const dismissPermanently = async () => {
     if (!user?.id) return;
-    await dismissUpgradePromptPermanently(user.id);
+    const practiceIdToCheck = effectivePracticeId || user.id;
+    await dismissUpgradePromptPermanently(practiceIdToCheck);
     setShouldShow(false);
   };
 

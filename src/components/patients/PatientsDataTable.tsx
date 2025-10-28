@@ -139,7 +139,15 @@ export const PatientsDataTable = () => {
         { body: { patientId } }
       );
 
-      if (portalError) throw portalError;
+      if (portalError) {
+        console.error('[Patient Portal] Edge function invocation error:', portalError);
+        throw portalError;
+      }
+
+      if (portalData?.error) {
+        console.error('[Patient Portal] Function returned error:', portalData);
+        throw new Error(portalData.error);
+      }
 
       // Fetch patient details for email
       const { data: patient } = await supabase
