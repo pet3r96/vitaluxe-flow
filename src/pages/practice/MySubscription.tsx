@@ -13,7 +13,7 @@ import { InvoiceList } from "@/components/subscription/InvoiceList";
 import { SubscriptionActionsCard } from "@/components/subscription/SubscriptionActionsCard";
 
 export default function MySubscription() {
-  const { effectiveRole, isProviderAccount } = useAuth();
+  const { effectiveRole, isProviderAccount, effectivePracticeId, user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
@@ -30,7 +30,16 @@ export default function MySubscription() {
     const fetchSubscriptionData = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase.functions.invoke('get-subscription-details');
+        
+        // Build headers with impersonation context if needed
+        const headers: Record<string, string> = {};
+        if (effectivePracticeId && effectivePracticeId !== user?.id) {
+          headers['x-impersonated-practice-id'] = effectivePracticeId;
+        }
+        
+        const { data, error } = await supabase.functions.invoke('get-subscription-details', {
+          headers
+        });
         
         if (error) throw error;
         
@@ -46,7 +55,7 @@ export default function MySubscription() {
     if (!isProviderAccount) {
       fetchSubscriptionData();
     }
-  }, [isProviderAccount]);
+  }, [isProviderAccount, effectivePracticeId, user?.id]);
 
   if (isProviderAccount) {
     return null;

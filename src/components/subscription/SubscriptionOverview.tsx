@@ -70,10 +70,10 @@ export function SubscriptionOverview({ subscription }: SubscriptionOverviewProps
               {subscription.status === 'trial' ? 'Trial Ends' : 'Next Billing Date'}
             </p>
             <p className="text-lg font-semibold">
-              {subscription.trial_end_date 
-                ? format(new Date(subscription.trial_end_date), 'MMM dd, yyyy')
-                : subscription.next_billing_date 
-                  ? format(new Date(subscription.next_billing_date), 'MMM dd, yyyy')
+              {subscription.trial_ends_at 
+                ? format(new Date(subscription.trial_ends_at), 'MMM dd, yyyy')
+                : subscription.current_period_end 
+                  ? format(new Date(subscription.current_period_end), 'MMM dd, yyyy')
                   : 'N/A'}
             </p>
           </div>

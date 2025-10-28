@@ -38,11 +38,18 @@ serve(async (req) => {
       );
     }
 
+    // Check for impersonation
+    const impersonationHeader = req.headers.get('x-impersonated-practice-id');
+    const practiceIdToQuery = impersonationHeader || user.id;
+
+    console.log('[get-subscription-details] Querying for practice:', practiceIdToQuery, 
+                'impersonated:', !!impersonationHeader);
+
     // Get subscription details
     const { data: subscription, error: subError } = await supabaseAdmin
       .from('practice_subscriptions')
       .select('*')
-      .eq('practice_id', user.id)
+      .eq('practice_id', practiceIdToQuery)
       .single();
 
     if (subError) {
@@ -53,7 +60,7 @@ serve(async (req) => {
     const { data: paymentMethods, error: pmError } = await supabaseAdmin
       .from('practice_payment_methods')
       .select('*')
-      .eq('practice_id', user.id)
+      .eq('practice_id', practiceIdToQuery)
       .order('is_default', { ascending: false });
 
     if (pmError) {
@@ -64,7 +71,7 @@ serve(async (req) => {
     const { data: invoices, error: invError } = await supabaseAdmin
       .from('subscription_invoices')
       .select('*')
-      .eq('practice_id', user.id)
+      .eq('practice_id', practiceIdToQuery)
       .order('invoice_date', { ascending: false })
       .limit(12);
 
