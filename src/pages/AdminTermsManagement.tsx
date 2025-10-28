@@ -16,7 +16,7 @@ import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
-type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy' | 'subscription';
+type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy' | 'subscription' | 'patient' | 'staff';
 
 const ROLE_LABELS: Record<AppRole, string> = {
   doctor: 'Practice',
@@ -24,7 +24,9 @@ const ROLE_LABELS: Record<AppRole, string> = {
   topline: 'Topline Rep',
   downline: 'Downline Rep',
   pharmacy: 'Pharmacy',
-  subscription: 'VitaLuxePro Subscription'
+  subscription: 'VitaLuxePro Subscription',
+  patient: 'Patient Portal',
+  staff: 'Staff Member'
 };
 
 export default function AdminTermsManagement() {
