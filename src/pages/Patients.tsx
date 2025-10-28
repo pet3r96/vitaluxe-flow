@@ -19,6 +19,7 @@ const Patients = () => {
   const { user, effectiveRole } = useAuth();
   const { isSubscribed } = useSubscription();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<'all' | 'not_invited' | 'invited' | 'active'>('all');
   const [bulkInviteDialogOpen, setBulkInviteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -40,13 +41,27 @@ const Patients = () => {
     enabled: !!user && (effectiveRole === 'doctor' || effectiveRole === 'provider'),
   });
 
-  // Filter patients
+  // Filter patients by search
   const filteredPatients = patientsWithStatus.filter(patient =>
     patient.name.toLowerCase().includes(search.toLowerCase())
   );
 
   // Get patients without portal access
   const patientsWithoutPortal = filteredPatients.filter(p => !p.has_portal_access);
+  
+  // Apply status filter
+  const displayedPatients = filteredPatients.filter(patient => {
+    switch (statusFilter) {
+      case 'not_invited':
+        return !patient.has_portal_access;
+      case 'invited':
+        return patient.portal_status === 'invited' && !patient.last_login_at;
+      case 'active':
+        return patient.portal_status === 'active' && patient.last_login_at;
+      default:
+        return true;
+    }
+  });
 
   // Invite individual patient mutation
   const invitePatientMutation = useMutation({
@@ -122,16 +137,12 @@ const Patients = () => {
 
       <Tabs defaultValue="records" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="records" className="gap-2">
-            <Users className="w-4 h-4" />
+          <TabsTrigger value="records">
+            <Users className="w-4 h-4 mr-2" />
             Patient Records
           </TabsTrigger>
-          <TabsTrigger value="portal" className="gap-2">
-            {isSubscribed ? (
-              <UserPlus className="w-4 h-4" />
-            ) : (
-              <Lock className="w-4 h-4" />
-            )}
+          <TabsTrigger value="portal">
+            <UserPlus className="w-4 h-4 mr-2" />
             Portal Access
           </TabsTrigger>
         </TabsList>
@@ -146,36 +157,69 @@ const Patients = () => {
             upgradeMessage="Invite patients to the secure portal with VitaLuxePro"
           >
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search patients..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-10"
-                  />
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search patients..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  {patientsWithoutPortal.length > 0 && statusFilter === 'not_invited' && (
+                    <Button
+                      onClick={() => setBulkInviteDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Invite All ({patientsWithoutPortal.length})
+                    </Button>
+                  )}
                 </div>
-                {patientsWithoutPortal.length > 0 && (
+                
+                <div className="flex gap-2 flex-wrap">
                   <Button
-                    onClick={() => setBulkInviteDialogOpen(true)}
-                    className="gap-2"
+                    variant={statusFilter === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setStatusFilter('all')}
                   >
-                    <UserPlus className="w-4 h-4" />
-                    Invite All ({patientsWithoutPortal.length})
+                    All ({filteredPatients.length})
                   </Button>
-                )}
+                  <Button
+                    variant={statusFilter === 'not_invited' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setStatusFilter('not_invited')}
+                  >
+                    Not Invited ({patientsWithoutPortal.length})
+                  </Button>
+                  <Button
+                    variant={statusFilter === 'invited' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setStatusFilter('invited')}
+                  >
+                    Invited ({filteredPatients.filter(p => p.portal_status === 'invited' && !p.last_login_at).length})
+                  </Button>
+                  <Button
+                    variant={statusFilter === 'active' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setStatusFilter('active')}
+                  >
+                    Active ({filteredPatients.filter(p => p.portal_status === 'active' && p.last_login_at).length})
+                  </Button>
+                </div>
               </div>
 
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading patients...</div>
-              ) : filteredPatients.length === 0 ? (
+              ) : displayedPatients.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {search ? 'No patients found matching your search' : 'No patients yet'}
+                  {search ? 'No patients found matching your search' : 'No patients match the selected filter'}
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {filteredPatients.map(patient => (
+                  {displayedPatients.map(patient => (
                     <Card key={patient.patient_id} className="p-4">
                       <div className="flex justify-between items-start gap-4">
                         <div className="flex-1 space-y-2">

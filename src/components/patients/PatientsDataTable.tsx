@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import type { Database } from "@/integrations/supabase/types";
 import {
   Table,
@@ -13,8 +14,10 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Edit } from "lucide-react";
+import { Plus, Search, Edit, UserPlus, CheckCircle, Lock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PatientDialog } from "./PatientDialog";
+import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
@@ -22,7 +25,9 @@ import { formatPhoneNumber } from "@/lib/validators";
 import { logger } from "@/lib/logger";
 
 export const PatientsDataTable = () => {
-  const { effectiveRole, effectivePracticeId } = useAuth();
+  const { effectiveRole, effectivePracticeId, user } = useAuth();
+  const { isSubscribed } = useSubscription();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -105,6 +110,93 @@ export const PatientsDataTable = () => {
 
   const isAdmin = effectiveRole === "admin";
 
+  // Fetch portal status for patients
+  const { data: portalStatusMap } = useQuery({
+    queryKey: ['patient-portal-status', effectivePracticeId],
+    queryFn: async () => {
+      if (!effectivePracticeId) return new Map();
+      
+      const { data } = await supabase
+        .from('v_patients_with_portal_status')
+        .select('patient_id, has_portal_access, portal_status')
+        .eq('practice_id', effectivePracticeId);
+      
+      return new Map(data?.map(p => [p.patient_id, p]) || []);
+    },
+    enabled: !!effectivePracticeId && !isAdmin,
+  });
+
+  // Grant portal access mutation
+  const invitePatientMutation = useMutation({
+    mutationFn: async (patientId: string) => {
+      if (!isSubscribed) {
+        throw new Error('VitaLuxePro subscription required');
+      }
+
+      // Create portal account
+      const { data: portalData, error: portalError } = await supabase.functions.invoke(
+        'create-patient-portal-account',
+        { body: { patientId } }
+      );
+
+      if (portalError) throw portalError;
+
+      // Fetch patient details for email
+      const { data: patient } = await supabase
+        .from('patients')
+        .select('email, name')
+        .eq('id', patientId)
+        .single();
+
+      if (!patient?.email) {
+        throw new Error('Patient email not found');
+      }
+
+      // Send welcome email
+      const { error: emailError } = await supabase.functions.invoke(
+        'send-patient-welcome-email',
+        {
+          body: {
+            email: patient.email,
+            patientName: patient.name,
+            tempPassword: portalData.tempPassword,
+          },
+        }
+      );
+
+      if (emailError) throw emailError;
+
+      return { patientId };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Portal access granted and invitation email sent",
+      });
+      queryClient.invalidateQueries({ queryKey: ['patient-portal-status'] });
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to grant portal access",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleGrantPortalAccess = (patientId: string) => {
+    if (!isSubscribed) {
+      toast({
+        title: "VitaLuxePro Required",
+        description: "Upgrade to invite patients to the portal",
+        variant: "destructive",
+      });
+      return;
+    }
+    invitePatientMutation.mutate(patientId);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -170,13 +262,51 @@ export const PatientsDataTable = () => {
                   )}
                   <TableCell className="text-right">
                     {!isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditPatient(patient)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditPatient(patient)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        
+                        <TooltipProvider>
+                          {isSubscribed && !portalStatusMap?.get(patient.id)?.has_portal_access ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleGrantPortalAccess(patient.id)}
+                                  disabled={invitePatientMutation.isPending}
+                                >
+                                  <UserPlus className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Grant Portal Access</TooltipContent>
+                            </Tooltip>
+                          ) : portalStatusMap?.get(patient.id)?.has_portal_access ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-center w-9 h-9">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>Portal Access Granted</TooltipContent>
+                            </Tooltip>
+                          ) : !isSubscribed ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-center w-9 h-9">
+                                  <Lock className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>VitaLuxePro Required</TooltipContent>
+                            </Tooltip>
+                          ) : null}
+                        </TooltipProvider>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
