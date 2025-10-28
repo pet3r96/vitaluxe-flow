@@ -53,6 +53,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check if practice has active subscription
+    const { data: subscription } = await supabaseAdmin
+      .from('practice_subscriptions')
+      .select('status')
+      .eq('practice_id', user.id)
+      .in('status', ['active', 'trialing'])
+      .maybeSingle();
+
+    if (!subscription) {
+      return new Response(
+        JSON.stringify({ error: 'VitaLuxePro subscription required to invite patients' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { patientId }: CreatePortalAccountRequest = await req.json();
 
     if (!patientId) {

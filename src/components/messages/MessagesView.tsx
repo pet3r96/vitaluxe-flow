@@ -2,22 +2,25 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, Send, AlertCircle, Headset } from "lucide-react";
+import { MessageCircle, Send, AlertCircle, Headset, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { logger } from "@/lib/logger";
 import { useMessageAlerts } from "@/hooks/useMessageAlerts";
+import { PatientMessagesTab } from "./PatientMessagesTab";
 
 export const MessagesView = () => {
-  const { user, effectiveUserId, effectiveRole } = useAuth();
+  const { user, effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
+  const { isSubscribed } = useSubscription();
   const queryClient = useQueryClient();
   const { markThreadAsRead } = useMessageAlerts();
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
@@ -31,7 +34,7 @@ export const MessagesView = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [dispositionType, setDispositionType] = useState<string>("");
   const [dispositionNotes, setDispositionNotes] = useState<string>("");
-  const [activeTicketTab, setActiveTicketTab] = useState<"support" | "order_issues">("support");
+  const [activeTicketTab, setActiveTicketTab] = useState<"support" | "order_issues" | "patient_messages">("support");
   
   // Pagination state
   const [supportPage, setSupportPage] = useState(1);
@@ -676,7 +679,7 @@ export const MessagesView = () => {
         {/* Admin View: Tabbed Interface */}
         {isAdmin ? (
           <Tabs value={activeTicketTab} onValueChange={(v: any) => setActiveTicketTab(v)} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="support" className="gap-2">
                 <Headset className="h-4 w-4" />
                 Support ({supportTickets.length})
@@ -684,6 +687,10 @@ export const MessagesView = () => {
               <TabsTrigger value="order_issues" className="gap-2">
                 <AlertCircle className="h-4 w-4" />
                 Order Issues ({orderIssueTickets.length})
+              </TabsTrigger>
+              <TabsTrigger value="patient_messages" className="gap-2" disabled={!isSubscribed}>
+                <MessageSquare className="h-4 w-4" />
+                Patient Messages
               </TabsTrigger>
             </TabsList>
 
@@ -833,6 +840,29 @@ export const MessagesView = () => {
                   startIndex={orderIssuesStartIndex}
                   endIndex={orderIssuesEndIndex}
                 />
+              )}
+            </TabsContent>
+
+            {/* Patient Messages Tab */}
+            <TabsContent value="patient_messages" className="flex-1 flex flex-col mt-4">
+              {isSubscribed ? (
+                <PatientMessagesTab
+                  practiceId={effectivePracticeId || user?.id || ''}
+                  userId={user?.id || ''}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <Card className="p-6 max-w-md text-center">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">Patient Messaging</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Communicate securely with patients through the portal with VitaLuxePro
+                    </p>
+                    <Button onClick={() => window.location.href = '/subscribe-to-vitaluxepro'}>
+                      Upgrade to VitaLuxePro
+                    </Button>
+                  </Card>
+                </div>
               )}
             </TabsContent>
           </Tabs>

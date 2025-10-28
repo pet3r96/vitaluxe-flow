@@ -2419,10 +2419,15 @@ export type Database = {
           practice_id: string
           provider_id: string | null
           read_at: string | null
+          resolution_notes: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
           sender_id: string
           sender_type: string
           subject: string
           updated_at: string
+          urgency: string | null
         }
         Insert: {
           attachments?: Json | null
@@ -2434,10 +2439,15 @@ export type Database = {
           practice_id: string
           provider_id?: string | null
           read_at?: string | null
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           sender_id: string
           sender_type: string
           subject: string
           updated_at?: string
+          urgency?: string | null
         }
         Update: {
           attachments?: Json | null
@@ -2449,10 +2459,15 @@ export type Database = {
           practice_id?: string
           provider_id?: string | null
           read_at?: string | null
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           sender_id?: string
           sender_type?: string
           subject?: string
           updated_at?: string
+          urgency?: string | null
         }
         Relationships: [
           {
