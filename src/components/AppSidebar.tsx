@@ -75,7 +75,6 @@ const menuItems = {
     { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
     { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
     { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },
-    { title: "Patient Inbox", url: "/patient-inbox", icon: Inbox, isPro: true },
     { title: "My Subscription", url: "/my-subscription", icon: CreditCard, isPro: true },
   ],
   provider: [
