@@ -92,6 +92,14 @@ const RepProductivityReport = lazy(() => import("./components/reports/RepProduct
 const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"));
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
+const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
+const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
+const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
+const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
+const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
+const PatientTriage = lazy(() => import("./pages/patient/PatientTriage"));
+const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
+const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -150,6 +158,7 @@ const App = () => (
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
+                  <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
                   <Route
                     path="/*"
                     element={
@@ -196,6 +205,10 @@ const App = () => (
                                     <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                     <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                     <Route path="/shipping" element={<PharmacyShipping />} />
+                                    <Route path="/appointments" element={<PatientAppointments />} />
+                                    <Route path="/medical-vault" element={<PatientMedicalVault />} />
+                                    <Route path="/documents" element={<PatientDocuments />} />
+                                    <Route path="/triage" element={<PatientTriage />} />
                                     <Route path="*" element={<NotFound />} />
                                   </Routes>
                                 </Suspense>
