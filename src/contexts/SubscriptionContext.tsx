@@ -51,8 +51,31 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const status = await getSubscriptionStatus(practiceIdToCheck);
-      setSubscriptionStatus(status);
+      // If impersonating (effectivePracticeId differs from user.id), use edge function
+      // to bypass RLS issues during impersonation
+      if (effectivePracticeId && effectivePracticeId !== user.id) {
+        console.log('[SubscriptionContext] Using edge function for impersonation', { effectivePracticeId });
+        const { data, error } = await supabase.functions.invoke('get-practice-subscription-status');
+        
+        if (error) {
+          console.error('[SubscriptionContext] Edge function error:', error);
+          throw error;
+        }
+        
+        if (data) {
+          setSubscriptionStatus({
+            isSubscribed: data.isSubscribed,
+            status: data.status,
+            trialEndsAt: data.trialEndsAt,
+            currentPeriodEnd: data.currentPeriodEnd,
+            trialDaysRemaining: data.trialDaysRemaining
+          });
+        }
+      } else {
+        // Direct query for non-impersonation cases
+        const status = await getSubscriptionStatus(practiceIdToCheck);
+        setSubscriptionStatus(status);
+      }
     } catch (error) {
       console.error('Error fetching subscription status:', error);
     } finally {

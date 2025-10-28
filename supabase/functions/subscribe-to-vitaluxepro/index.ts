@@ -12,6 +12,7 @@ serve(async (req) => {
   }
 
   try {
+    // Auth check with user's JWT
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -27,6 +28,12 @@ serve(async (req) => {
       data: { user },
       error: userError,
     } = await supabaseClient.auth.getUser();
+
+    // Service role client for DB operations (bypasses RLS)
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
 
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -51,8 +58,8 @@ serve(async (req) => {
     const actorUserId = user.id;
     const actorEmail = user.email || null;
 
-    // 1) Check if admin is impersonating someone
-    const { data: impSession, error: impErr } = await supabaseClient
+    // 1) Check if admin is impersonating someone (use service role)
+    const { data: impSession, error: impErr } = await supabaseAdmin
       .from('active_impersonation_sessions')
       .select('impersonated_user_id, impersonated_role, expires_at, created_at')
       .eq('admin_user_id', actorUserId)
@@ -77,7 +84,7 @@ serve(async (req) => {
           practiceId = impSession.impersonated_user_id;
           console.log('[subscribe-to-vitaluxepro] Using impersonated doctor as practice', { practiceId });
         } else if (impSession.impersonated_role === 'provider') {
-          const { data: provider, error: provErr } = await supabaseClient
+          const { data: provider, error: provErr } = await supabaseAdmin
             .from('providers')
             .select('practice_id')
             .eq('user_id', impSession.impersonated_user_id)
@@ -96,7 +103,7 @@ serve(async (req) => {
 
     // 2) If not impersonating or unresolved, check self role: doctor -> self id
     if (!practiceId) {
-      const { data: userRoles, error: rolesError } = await supabaseClient
+      const { data: userRoles, error: rolesError } = await supabaseAdmin
         .from('user_roles')
         .select('role')
         .eq('user_id', actorUserId);
@@ -112,7 +119,7 @@ serve(async (req) => {
 
     // 3) If still unresolved, check if actor is a provider -> BLOCK THEM
     if (!practiceId) {
-      const { data: selfProvider, error: selfProvErr } = await supabaseClient
+      const { data: selfProvider, error: selfProvErr } = await supabaseAdmin
         .from('providers')
         .select('practice_id')
         .eq('user_id', actorUserId)
@@ -141,8 +148,8 @@ serve(async (req) => {
       );
     }
 
-    // Validate the practice profile exists
-    const { data: profile, error: profileError } = await supabaseClient
+    // Validate the practice profile exists (use service role)
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id')
       .eq('id', practiceId)
@@ -158,12 +165,14 @@ serve(async (req) => {
 
     console.log('[subscribe-to-vitaluxepro] Effective practice resolved', { practiceId, actorUserId, impersonatedRole });
 
-    // Check if subscription already exists (handle reactivation)
-    const { data: existingSub } = await supabaseClient
+    // Check if subscription already exists (use service role)
+    const { data: existingSub } = await supabaseAdmin
       .from('practice_subscriptions')
       .select('*')
       .eq('practice_id', practiceId)
       .maybeSingle();
+
+    console.log('[subscribe-to-vitaluxepro] Existing subscription check:', existingSub);
 
     let subscription;
 
@@ -175,7 +184,7 @@ serve(async (req) => {
         const trialEndsAt = new Date();
         trialEndsAt.setDate(trialEndsAt.getDate() + 7);
 
-        const { data: updated, error: updateError } = await supabaseClient
+        const { data: updated, error: updateError } = await supabaseAdmin
           .from('practice_subscriptions')
           .update({
             status: 'trial',
@@ -197,24 +206,26 @@ serve(async (req) => {
 
         subscription = updated.id;
       } else if (existingSub.status === 'active' || existingSub.status === 'trial') {
+        console.log('[subscribe-to-vitaluxepro] Existing subscription found with status:', existingSub.status);
         const trialEndsAt = existingSub.trial_ends_at ? new Date(existingSub.trial_ends_at) : null;
         const isInTrial = existingSub.status === 'trial';
         
         return new Response(
           JSON.stringify({ 
-            error: 'You already have an active subscription',
-            details: isInTrial 
-              ? `Your trial period ends on ${trialEndsAt?.toLocaleDateString()}. You can add a payment method in your Profile settings.`
-              : 'Your VitaLuxePro subscription is currently active.',
+            success: true,
+            alreadySubscribed: true,
             subscription_status: existingSub.status,
             trial_ends_at: existingSub.trial_ends_at,
+            message: isInTrial 
+              ? `Your trial period ends on ${trialEndsAt?.toLocaleDateString()}. You can add a payment method in your Profile settings.`
+              : 'Your VitaLuxePro subscription is currently active.',
           }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     } else {
-      // Create new subscription using helper function (RPC)
-      const { data: newSub, error: subError } = await supabaseClient.rpc(
+      // Create new subscription using helper function (RPC with service role)
+      const { data: newSub, error: subError } = await supabaseAdmin.rpc(
         'create_practice_subscription',
         {
           p_practice_id: practiceId,
@@ -233,15 +244,15 @@ serve(async (req) => {
       subscription = newSub;
     }
 
-    // Record terms acceptance (if terms exist)
-    const { data: subscriptionTerms } = await supabaseClient
+    // Record terms acceptance (if terms exist) - use service role
+    const { data: subscriptionTerms } = await supabaseAdmin
       .from('terms_and_conditions')
       .select('*')
       .eq('role', 'subscription')
       .single();
 
     if (subscriptionTerms) {
-      await supabaseClient.from('user_terms_acceptances').insert({
+      await supabaseAdmin.from('user_terms_acceptances').insert({
         user_id: practiceId,
         role: 'subscription',
         terms_version: subscriptionTerms.version,
@@ -250,8 +261,8 @@ serve(async (req) => {
       });
     }
 
-    // Log the subscription creation
-    await supabaseClient.from('audit_logs').insert({
+    // Log the subscription creation - use service role
+    await supabaseAdmin.from('audit_logs').insert({
       user_id: practiceId,
       action_type: 'subscription_started',
       entity_type: 'practice_subscriptions',

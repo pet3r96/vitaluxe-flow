@@ -98,29 +98,52 @@ export default function SubscribeToVitaLuxePro() {
     try {
       const { data, error } = await supabase.functions.invoke('subscribe-to-vitaluxepro');
 
-      if (error || (data && (data as any).error)) {
-        const serverMsg = (data as any)?.details || (data as any)?.error;
-        const friendly = serverMsg?.includes('Practice')
-          ? serverMsg
-          : (error as any)?.message || 'Unable to process subscription. Please try again.';
+      if (error) {
+        console.error('[SubscribeToVitaLuxePro] Edge function error:', error);
         toast({
           title: 'Subscription Failed',
-          description: friendly,
+          description: error.message || 'Unable to process subscription. Please try again.',
           variant: 'destructive'
         });
         return;
       }
 
-      toast({
-        title: 'Welcome to VitaLuxePro! 🎉',
-        description: 'Your 7-day free trial has started. Add a payment method in your Profile before the trial ends.'
-      });
+      // Handle success response
+      if (data?.success) {
+        if (data.alreadySubscribed) {
+          // Already has an active subscription
+          toast({
+            title: 'Already Subscribed',
+            description: data.message || 'You already have an active VitaLuxePro subscription.',
+          });
+        } else {
+          // New subscription created
+          toast({
+            title: 'Welcome to VitaLuxePro! 🎉',
+            description: 'Your 7-day free trial has started. Add a payment method in your Profile before the trial ends.'
+          });
+        }
 
-      await refreshSubscription();
+        await refreshSubscription();
 
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1200);
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1200);
+      } else if (data?.success === false) {
+        // Business logic error (e.g., provider cannot subscribe)
+        toast({
+          title: 'Subscription Not Allowed',
+          description: data.message || data.details || 'Unable to process subscription.',
+          variant: 'destructive'
+        });
+      } else {
+        // Unexpected response format
+        toast({
+          title: 'Subscription Failed',
+          description: 'Unexpected response from server. Please try again.',
+          variant: 'destructive'
+        });
+      }
 
     } catch (error: any) {
       console.error('Subscription error:', error);
