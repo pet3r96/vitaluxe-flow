@@ -103,6 +103,7 @@ const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding")
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const TriageQueue = lazy(() => import("./pages/practice/TriageQueue"));
+const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -215,6 +216,7 @@ const App = () => (
                                     <Route path="/practice-calendar" element={<PracticeCalendar />} />
                                     <Route path="/patient-inbox" element={<PatientInbox />} />
                                     <Route path="/triage-queue" element={<TriageQueue />} />
+                                    <Route path="/practice-patients" element={<PracticePatients />} />
                                     <Route path="*" element={<NotFound />} />
                                   </Routes>
                                 </Suspense>
