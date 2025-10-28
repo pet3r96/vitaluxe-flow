@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
 
-   env:
+ env:
   AWS_REGION: us-west-2
   AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_STAGING }}
