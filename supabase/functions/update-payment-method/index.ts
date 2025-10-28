@@ -38,11 +38,11 @@ serve(async (req) => {
       );
     }
 
-    const { paymentMethodId, setAsDefault } = await req.json();
+    const { payment_method_id, is_default } = await req.json();
 
-    if (!paymentMethodId) {
+    if (!payment_method_id) {
       return new Response(
-        JSON.stringify({ error: 'paymentMethodId is required' }),
+        JSON.stringify({ error: 'payment_method_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -51,7 +51,7 @@ serve(async (req) => {
     const { data: paymentMethod, error: pmError } = await supabaseAdmin
       .from('practice_payment_methods')
       .select('*')
-      .eq('id', paymentMethodId)
+      .eq('id', payment_method_id)
       .eq('practice_id', user.id)
       .single();
 
@@ -62,7 +62,7 @@ serve(async (req) => {
       );
     }
 
-    if (setAsDefault) {
+    if (is_default) {
       // Unset all other payment methods as default
       await supabaseAdmin
         .from('practice_payment_methods')
@@ -73,7 +73,7 @@ serve(async (req) => {
       const { error: updateError } = await supabaseAdmin
         .from('practice_payment_methods')
         .update({ is_default: true })
-        .eq('id', paymentMethodId);
+        .eq('id', payment_method_id);
 
       if (updateError) {
         return new Response(
@@ -87,12 +87,12 @@ serve(async (req) => {
         user_id: user.id,
         action_type: 'payment_method_updated',
         entity_type: 'payment_method',
-        entity_id: paymentMethodId,
+        entity_id: payment_method_id,
         details: { set_as_default: true },
       });
     }
 
-    console.log(`Payment method ${paymentMethodId} updated for user ${user.id}`);
+    console.log(`Payment method ${payment_method_id} updated for user ${user.id}`);
 
     return new Response(
       JSON.stringify({ success: true, message: 'Payment method updated successfully' }),

@@ -9,29 +9,25 @@ export function QuickActionsPanel() {
   const actions = [
     {
       icon: Calendar,
-      label: "View My Schedule",
-      description: "See your appointments",
+      label: "View My Schedule (See your appointments)",
       onClick: () => navigate("/practice-calendar"),
       color: "text-primary",
     },
     {
       icon: Users,
-      label: "Review Patient Vault",
-      description: "Access patient records",
+      label: "Review Patient Vault (Access patient records)",
       onClick: () => navigate("/patients"),
       color: "text-blue-600",
     },
     {
       icon: FileText,
-      label: "Documents & Forms",
-      description: "Manage files and forms",
+      label: "Documents & Forms (Manage files and forms)",
       onClick: () => navigate("/documents-and-forms"),
       color: "text-green-600",
     },
     {
       icon: AlertCircle,
-      label: "Patient Follow-Ups",
-      description: "View reminders",
+      label: "Patient Follow-Ups (View reminders)",
       onClick: () => navigate("/patients"),
       color: "text-orange-600",
     },
@@ -50,16 +46,11 @@ export function QuickActionsPanel() {
               <Button
                 key={action.label}
                 variant="outline"
-                className="w-full min-h-[84px] justify-start items-start p-4 hover:bg-accent flex-col text-left"
+                className="w-full justify-start items-center p-4 hover:bg-accent gap-3"
                 onClick={action.onClick}
               >
-                <Icon className={`h-6 w-6 mb-2 ${action.color}`} />
-                <div className="text-left">
-                  <div className="font-semibold text-sm">{action.label}</div>
-                  <div className="text-xs text-muted-foreground mt-1 whitespace-normal leading-tight">
-                    {action.description}
-                  </div>
-                </div>
+                <Icon className={`h-6 w-6 flex-shrink-0 ${action.color}`} />
+                <div className="font-medium text-sm text-left">{action.label}</div>
               </Button>
             );
           })}
