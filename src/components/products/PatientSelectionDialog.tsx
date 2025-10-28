@@ -96,12 +96,8 @@ export const PatientSelectionDialog = ({
           id,
           user_id,
           active,
-          first_name,
-          last_name,
           specialty,
-          npi,
-          dea,
-          profiles!inner(name)
+          profiles!inner(id, name, full_name, npi, dea)
         `)
         .eq("practice_id", effectivePracticeId)
         .eq("active", true)
@@ -109,10 +105,8 @@ export const PatientSelectionDialog = ({
       
       if (error) throw error;
       const mappedData = (data || []).map((p: any) => {
-        // Use first_name/last_name if available, otherwise fall back to profiles.name
-        const displayName = p.first_name && p.last_name 
-          ? `${p.first_name} ${p.last_name}`
-          : p.profiles?.name || 'Unknown Provider';
+        // Use full_name if available, otherwise fall back to name
+        const displayName = p.profiles?.full_name || p.profiles?.name || 'Unknown Provider';
         
         return {
           id: p.id,
@@ -120,9 +114,9 @@ export const PatientSelectionDialog = ({
           prescriber_name: displayName,
           specialty: p.specialty || '',
           // Show actual NPI or hide if null
-          npi: p.npi || '',
+          npi: p.profiles?.npi || '',
           // Show actual DEA or hide if null
-          dea: p.dea || ''
+          dea: p.profiles?.dea || ''
         };
       });
       return mappedData;
@@ -453,8 +447,8 @@ export const PatientSelectionDialog = ({
           {/* PAGE 1: Details Section */}
           {currentStep === 'details' && (
             <>
-              {/* Provider Selection for Practices */}
-              {effectiveRole === "doctor" && providers && providers.length > 0 && (
+              {/* Provider Selection */}
+              {providers && providers.length > 0 && (
                 <div className="grid gap-3 pb-4 border-b">
                   <Label className="text-base font-semibold">Select Provider *</Label>
                   {providers.length === 1 ? (

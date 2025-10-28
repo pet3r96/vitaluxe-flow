@@ -61,22 +61,23 @@ Deno.serve(async (req) => {
       .eq('practice_id', practiceId)
       .maybeSingle();
 
-    // Get all providers for the practice with flattened profile data
+    // Get all providers for the practice with proper profile data
     const { data: allProviders } = await supabaseClient
       .from('providers')
       .select(`
         id, 
         user_id, 
         active,
-        profiles!inner(name)
+        profiles!inner(id, name, full_name)
       `)
       .eq('practice_id', practiceId)
       .eq('active', true);
 
-    // Transform to flatten the structure and split name into first/last
+    // Transform to use actual profile names
     const transformedProviders = (allProviders || []).map((p: any) => {
-      const fullName = p.profiles?.name || 'Unknown Provider';
-      const nameParts = fullName.trim().split(' ');
+      // Use full_name if available, otherwise use name
+      const displayName = p.profiles?.full_name || p.profiles?.name || 'Unknown Provider';
+      const nameParts = displayName.trim().split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
       
@@ -86,6 +87,7 @@ Deno.serve(async (req) => {
         active: p.active,
         first_name: firstName,
         last_name: lastName,
+        full_name: displayName,
         specialty: null
       };
     });
