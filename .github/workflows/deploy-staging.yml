@@ -15,13 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
 
-    env:
-      AWS_REGION: us-west-2
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      ECR_REPOSITORY: 382806778137.dkr.ecr.us-west-2.amazonaws.com/vitaluxe-app-staging
-      LIGHTSAIL_SERVICE_NAME: vitaluxe-staging
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+   env:
+  AWS_REGION: us-west-2
+  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_STAGING }}
+  LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME_STAGING }}
+  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
       - name: Checkout repository
