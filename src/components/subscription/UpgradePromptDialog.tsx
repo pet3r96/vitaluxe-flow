@@ -33,7 +33,7 @@ export const UpgradePromptDialog = () => {
       <AlertDialog open={shouldShow && !showFullDialog} onOpenChange={(open) => !open && dismiss()}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>✨ Upgrade to FutureMD Pro</AlertDialogTitle>
+            <AlertDialogTitle>✨ Upgrade to VitaLuxePro</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>Transform your practice with our complete virtual front desk + EMR system.</p>
               <p className="font-semibold text-foreground">$250/month • 7-Day Free Trial</p>

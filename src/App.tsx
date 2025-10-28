@@ -91,7 +91,7 @@ const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
 const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"));
-const SubscribeToFutureMD = lazy(() => import("./pages/SubscribeToFutureMD"));
+const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -184,7 +184,7 @@ const App = () => (
                                     <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
                                     <Route path="/checkout" element={<Checkout />} />
                                     <Route path="/order-confirmation" element={<Checkout />} />
-                                    <Route path="/subscribe-to-futuremd" element={<SubscribeToFutureMD />} />
+                                    <Route path="/subscribe-to-vitaluxepro" element={<SubscribeToVitaLuxePro />} />
                                     <Route path="/downlines" element={<MyDownlines />} />
                                     <Route path="/med-spas" element={<MedSpas />} />
                                     <Route path="/profile" element={<Profile />} />

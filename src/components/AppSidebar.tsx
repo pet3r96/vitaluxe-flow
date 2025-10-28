@@ -176,7 +176,7 @@ export function AppSidebar() {
             className="w-full justify-start bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
           >
             <Sparkles className="h-5 w-5" />
-            {!isCollapsed && <span className="ml-2">Upgrade to FutureMD Pro</span>}
+            {!isCollapsed && <span className="ml-2 text-sm">Upgrade to Pro</span>}
           </Button>
         )}
         <Button

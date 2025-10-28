@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, Sparkles } from "lucide-react";
 
-export default function SubscribeToFutureMD() {
+export default function SubscribeToVitaLuxePro() {
   const { user } = useAuth();
   const { refreshSubscription } = useSubscription();
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ export default function SubscribeToFutureMD() {
     if (!agreedToTerms) {
       toast({
         title: "Agreement Required",
-        description: "Please agree to the FutureMD Practice Development Terms to continue.",
+        description: "Please agree to the VitaLuxePro Practice Development Terms to continue.",
         variant: "destructive"
       });
       return;
@@ -61,7 +61,7 @@ export default function SubscribeToFutureMD() {
       if (error) throw error;
 
       toast({
-        title: "Welcome to FutureMD Pro! 🎉",
+        title: "Welcome to VitaLuxePro! 🎉",
         description: "Your 7-day free trial has started. All premium features are now unlocked."
       });
 
@@ -88,7 +88,7 @@ export default function SubscribeToFutureMD() {
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-2 mb-4">
           <Sparkles className="h-8 w-8 text-amber-500" />
-          <h1 className="text-4xl font-bold">FutureMD Pro</h1>
+          <h1 className="text-4xl font-bold">VitaLuxePro</h1>
         </div>
         <p className="text-xl text-muted-foreground">
           Transform Your Practice with Complete Virtual Front Desk + EMR System
@@ -157,7 +157,7 @@ export default function SubscribeToFutureMD() {
                 >
                   I agree to the{" "}
                   <a href="#" className="underline text-primary">
-                    FutureMD Practice Development Terms
+                    VitaLuxePro Practice Development Terms
                   </a>
                 </label>
               </div>

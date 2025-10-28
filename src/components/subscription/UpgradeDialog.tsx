@@ -61,7 +61,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
 
   const handleStartTrial = () => {
     onOpenChange(false);
-    navigate('/subscribe-to-futuremd');
+    navigate('/subscribe-to-vitaluxepro');
   };
 
   return (
@@ -70,7 +70,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-6 w-6 text-amber-500" />
-            <DialogTitle className="text-2xl">Transform Your Practice with FutureMD Pro</DialogTitle>
+            <DialogTitle className="text-2xl">Transform Your Practice with VitaLuxePro</DialogTitle>
           </div>
           <DialogDescription className="text-base">
             Upgrade to a complete virtual front desk + EMR-lite system
