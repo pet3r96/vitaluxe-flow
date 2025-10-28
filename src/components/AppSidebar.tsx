@@ -73,6 +73,8 @@ const menuItems = {
     { title: "Triage Queue", url: "/triage-queue", icon: AlertCircle, isPro: true },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "My Profile", url: "/profile", icon: UserCircle },
+    { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
+    { title: "My Subscription", url: "/my-subscription", icon: CreditCard, isPro: true },
   ],
   provider: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -82,6 +84,7 @@ const menuItems = {
     { title: "My Orders", url: "/orders", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "My Profile", url: "/profile", icon: UserCircle },
+    { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
   ],
   pharmacy: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },

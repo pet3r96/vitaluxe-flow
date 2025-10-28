@@ -1,15 +1,23 @@
+import { useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationItem } from "./NotificationItem";
 import { Button } from "@/components/ui/button";
-import { CheckCheck, Loader2, Bell } from "lucide-react";
+import { CheckCheck, Loader2, Bell, Settings } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NotificationPreferencesDialog } from "./NotificationPreferencesDialog";
 
 export function NotificationPanel() {
   const { notifications, loading, markAllAsRead, unreadCount, markAsRead, deleteNotification } = useNotifications();
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [filterType, setFilterType] = useState<string | null>(null);
 
-  const unreadNotifications = notifications.filter((n) => !n.read);
-  const readNotifications = notifications.filter((n) => n.read);
+  const filteredNotifications = filterType 
+    ? notifications.filter(n => n.notification_type === filterType)
+    : notifications;
+
+  const unreadNotifications = filteredNotifications.filter((n) => !n.read);
+  const readNotifications = filteredNotifications.filter((n) => n.read);
 
   if (loading) {
     return (
@@ -29,20 +37,41 @@ export function NotificationPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {unreadCount > 0 && (
-        <div className="flex justify-end mb-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={markAllAsRead}
-            className="text-xs"
-          >
-            <CheckCheck className="h-4 w-4 mr-1" />
-            Mark all as read
-          </Button>
+    <>
+      <div className="flex flex-col h-full">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPreferences(true)}
+              className="text-xs"
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Preferences
+            </Button>
+          </div>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={markAllAsRead}
+              className="text-xs"
+            >
+              <CheckCheck className="h-4 w-4 mr-1" />
+              Mark all as read
+            </Button>
+          )}
         </div>
-      )}
+
+        <Tabs defaultValue="all" className="mb-2" onValueChange={(v) => setFilterType(v === 'all' ? null : v)}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+            <TabsTrigger value="patient_message_received" className="text-xs">Messages</TabsTrigger>
+            <TabsTrigger value="appointment_booked" className="text-xs">Appointments</TabsTrigger>
+            <TabsTrigger value="form_completed" className="text-xs">Forms</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
       <Tabs defaultValue="unread" className="flex-1 flex flex-col">
         <TabsList className="grid w-full grid-cols-2">
@@ -94,6 +123,12 @@ export function NotificationPanel() {
           </ScrollArea>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+
+      <NotificationPreferencesDialog
+        open={showPreferences}
+        onOpenChange={setShowPreferences}
+      />
+    </>
   );
 }

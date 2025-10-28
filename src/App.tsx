@@ -229,6 +229,8 @@ const App = () => (
                                     <Route path="/documents" element={<PatientDocuments />} />
                                     <Route path="/triage" element={<SubscriptionProtectedRoute><PatientTriage /></SubscriptionProtectedRoute>} />
                                     <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
+                                    <Route path="/documents-and-forms" element={<SubscriptionProtectedRoute><DocumentsAndForms /></SubscriptionProtectedRoute>} />
+                                    <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
                                     {/* Patient Inbox removed - now integrated into Messages */}
                                     <Route path="/triage-queue" element={<SubscriptionProtectedRoute><TriageQueue /></SubscriptionProtectedRoute>} />
                                     {/* Redirect old practice-patients route to new merged Patients page */}

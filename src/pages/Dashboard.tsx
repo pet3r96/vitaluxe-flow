@@ -8,6 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { logger } from "@/lib/logger";
+import { TodayAppointmentsWidget } from "@/components/dashboard/TodayAppointmentsWidget";
+import { NewMessagesTriageWidget } from "@/components/dashboard/NewMessagesTriageWidget";
+import { RecentActivityWidget } from "@/components/dashboard/RecentActivityWidget";
+import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
+import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpRemindersWidget";
 
 // Dashboard component with real-time stats
 const Dashboard = () => {
@@ -472,7 +477,22 @@ const Dashboard = () => {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+      {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider') ? (
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <TodayAppointmentsWidget />
+            <NewMessagesTriageWidget />
+            <FollowUpRemindersWidget />
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <RecentActivityWidget />
+            </div>
+            <QuickActionsPanel />
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat) => (
           <Card
             key={stat.title}
@@ -496,16 +516,19 @@ const Dashboard = () => {
             </p>
           </Card>
         ))}
-      </div>
+        </div>
+      )}
 
-      <Card className="p-6 bg-card border-border shadow-gold">
+      {!isSubscribed && (
+        <Card className="p-6 bg-card border-border shadow-gold">
         <h2 className="text-2xl font-semibold mb-4 text-primary">
           Recent Activity
         </h2>
         <p className="text-muted-foreground">
           No recent activity to display.
         </p>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 };
