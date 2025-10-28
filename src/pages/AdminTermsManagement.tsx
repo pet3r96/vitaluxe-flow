@@ -57,13 +57,29 @@ export default function AdminTermsManagement() {
   }, []);
 
   const loadTerms = async () => {
-    const { data, error } = await supabase
-      .from('terms_and_conditions')
-      .select('*')
-      .eq('role', activeRole as any)
-      .order('version', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    let data: any = null;
+    let error: any = null;
+
+    if (activeRole === 'patient') {
+      const res = await supabase
+        .from('patient_portal_terms')
+        .select('*')
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      data = res.data;
+      error = res.error;
+    } else {
+      const res = await supabase
+        .from('terms_and_conditions')
+        .select('*')
+        .eq('role', activeRole as any)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error) {
       import('@/lib/logger').then(({ logger }) => {
@@ -177,35 +193,67 @@ export default function AdminTermsManagement() {
     try {
       const currentUser = (await supabase.auth.getUser()).data.user?.id;
 
-      if (terms?.id) {
-        // Update existing terms
-        const { error } = await supabase
-          .from('terms_and_conditions')
-          .update({
-            title,
-            content,
-            version: (terms?.version || 0) + 1,
-            updated_at: new Date().toISOString(),
-            updated_by: currentUser
-          })
-          .eq('id', terms.id);
+      if (activeRole === 'patient') {
+        if (terms?.id) {
+          // Update existing patient portal terms
+          const { error } = await supabase
+            .from('patient_portal_terms')
+            .update({
+              title,
+              content,
+              version: (terms?.version || 0) + 1,
+              updated_at: new Date().toISOString(),
+              updated_by: currentUser
+            })
+            .eq('id', terms.id);
 
-        if (error) throw error;
+          if (error) throw error;
+        } else {
+          // Insert new patient portal terms
+          const { error } = await supabase
+            .from('patient_portal_terms')
+            .insert({
+              title,
+              content,
+              version: 1,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              updated_by: currentUser
+            });
+
+          if (error) throw error;
+        }
       } else {
-        // Insert new terms
-        const { error } = await supabase
-          .from('terms_and_conditions')
-          .insert({
-            role: activeRole as any,
-            title,
-            content,
-            version: 1,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            updated_by: currentUser
-          });
+        if (terms?.id) {
+          // Update existing terms
+          const { error } = await supabase
+            .from('terms_and_conditions')
+            .update({
+              title,
+              content,
+              version: (terms?.version || 0) + 1,
+              updated_at: new Date().toISOString(),
+              updated_by: currentUser
+            })
+            .eq('id', terms.id);
 
-        if (error) throw error;
+          if (error) throw error;
+        } else {
+          // Insert new terms
+          const { error } = await supabase
+            .from('terms_and_conditions')
+            .insert({
+              role: activeRole as any,
+              title,
+              content,
+              version: 1,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              updated_by: currentUser
+            });
+
+          if (error) throw error;
+        }
       }
 
       toast.success("Terms saved successfully");
