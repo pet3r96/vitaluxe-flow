@@ -61,6 +61,8 @@ export default function AdminTermsManagement() {
       .from('terms_and_conditions')
       .select('*')
       .eq('role', activeRole as any)
+      .order('version', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {
