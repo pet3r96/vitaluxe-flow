@@ -131,7 +131,7 @@ const menuItems = {
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { effectiveRole, isImpersonating, isProviderAccount, signOut } = useAuth();
+  const { effectiveRole, isImpersonating, isProviderAccount, isStaffAccount, signOut } = useAuth();
   const { isSubscribed } = useSubscription();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -139,10 +139,12 @@ export function AppSidebar() {
 
   let items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
   
-  // Hide "Providers" and "Reports" tabs for provider accounts
-  if (effectiveRole === 'doctor' && isProviderAccount) {
+  // Hide "Providers", "Reports", and "My Staff" for provider/staff accounts
+  if (effectiveRole === 'doctor' && (isProviderAccount || isStaffAccount)) {
     items = items.filter(item => 
-      item.title !== "Providers" && item.title !== "Reports"
+      item.title !== "Providers" && 
+      item.title !== "Reports" &&
+      item.title !== "My Staff"
     );
   }
   

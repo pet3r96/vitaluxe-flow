@@ -24,6 +24,7 @@ interface AuthContextType {
   effectivePracticeId: string | null;
   canImpersonate: boolean;
   isProviderAccount: boolean;
+  isStaffAccount: boolean;
   mustChangePassword: boolean;
   termsAccepted: boolean;
   requires2FASetup: boolean;
@@ -63,6 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false); // Only for critical operations (sign in/out)
   const [initializing, setInitializing] = useState(true); // Only for first-time bootstrap
   const [isProviderAccount, setIsProviderAccount] = useState(false);
+  const [isStaffAccount, setIsStaffAccount] = useState(false);
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -538,8 +540,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('user_id', effectiveUserId)
             .maybeSingle();
           
-          setIsProviderAccount(!error && data !== null);
-        } 
+          if (!error && data !== null) {
+            setIsProviderAccount(true);
+            setIsStaffAccount(false);
+          } else {
+            // Check if this is a staff account
+            const { data: staffData, error: staffError } = await supabase
+              .from('practice_staff')
+              .select('practice_id')
+              .eq('user_id', effectiveUserId)
+              .maybeSingle();
+
+            if (!staffError && staffData?.practice_id) {
+              setEffectivePracticeId(staffData.practice_id);
+              setIsStaffAccount(true);
+              setIsProviderAccount(false);
+              logger.info('Auth: doctor is staff member', logger.sanitize({ practiceId: staffData.practice_id }));
+            } else {
+              setIsProviderAccount(false);
+              setIsStaffAccount(false);
+            }
+          }
+        }
         // If role is provider, fetch the practice_id from providers table
         else if (effectiveRole === 'provider') {
           const { data, error } = await supabase
@@ -1308,6 +1330,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       effectivePracticeId,
       canImpersonate,
       isProviderAccount,
+      isStaffAccount,
       mustChangePassword,
       termsAccepted,
       passwordStatusChecked,
