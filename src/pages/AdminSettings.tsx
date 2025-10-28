@@ -16,6 +16,7 @@ import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, A
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
+import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 
 const AdminSettings = () => {
   return (
@@ -211,6 +212,7 @@ const AdminSettings = () => {
         </TabsContent>
 
         <TabsContent value="system" className="space-y-4">
+          <TwoFactorToggle />
           <MerchantFeeSettings />
         </TabsContent>
 

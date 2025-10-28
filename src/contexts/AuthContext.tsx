@@ -73,6 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user2FAPhone, setUser2FAPhone] = useState<string | null>(null);
   const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
   const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
+  const [twoFAEnforcementEnabled, setTwoFAEnforcementEnabled] = useState<boolean>(true);
   
   // Hard 30-minute session timeout with activity refresh
   const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -93,9 +94,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const effectiveUserId = impersonatedUserId || user?.id || null;
   const canImpersonate = userRole === 'admin' && canImpersonateDb;
 
+  // Function to fetch 2FA enforcement setting
+  const fetchTwoFAEnforcementSetting = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'two_fa_enforcement_enabled')
+        .single();
+      
+      if (error) throw error;
+      
+      // Parse the setting value (stored as string 'true'/'false')
+      const isEnabled = data.setting_value === 'true';
+      setTwoFAEnforcementEnabled(isEnabled);
+      return isEnabled;
+    } catch (error) {
+      logger.error('Error fetching 2FA enforcement setting', error);
+      // Default to enabled for security
+      setTwoFAEnforcementEnabled(true);
+      return true;
+    }
+  };
+
   // Function to check GHL 2FA status
   const check2FAStatus = async (userId: string) => {
     console.log('[AuthContext] check2FAStatus - START for userId:', userId);
+    
+    // Check if 2FA enforcement is enabled system-wide
+    const isEnforced = await fetchTwoFAEnforcementSetting();
+    
+    if (!isEnforced) {
+      console.log('[AuthContext] check2FAStatus - 2FA enforcement DISABLED system-wide');
+      setRequires2FASetup(false);
+      setRequires2FAVerify(false);
+      setTwoFAStatusChecked(true);
+      return;
+    }
     
     try {
       // Query the decrypted view to get actual phone number instead of [ENCRYPTED]
