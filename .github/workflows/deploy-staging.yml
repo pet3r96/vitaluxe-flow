@@ -3,8 +3,8 @@ name: Deploy Vitaluxe Staging
 on:
   push:
     branches:
-      - develop  # Deploy staging when develop updates
-  workflow_dispatch:  # Allow manual trigger
+      - develop
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -14,7 +14,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: staging
-    
+
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_STAGING }}
@@ -58,21 +58,23 @@ jobs:
       - name: Login & Push to Staging ECR
         run: |
           echo "🔐 Logging into ECR..."
+          REGISTRY_URL=$(echo "$ECR_REPOSITORY" | cut -d'/' -f1)
+
           aws ecr get-login-password --region "$AWS_REGION" \
-            | docker login --username AWS --password-stdin "$(echo "$ECR_REPOSITORY" | cut -d'/' -f1).dkr.ecr.$AWS_REGION.amazonaws.com"
-          
+            | docker login --username AWS --password-stdin "$REGISTRY_URL"
+
           echo "🏷️ Tagging image..."
           docker tag vitaluxe-staging:latest "$ECR_REPOSITORY:latest"
-          
+
           echo "📦 Pushing image to ECR..."
           docker push "$ECR_REPOSITORY:latest"
 
       - name: Deploy to Lightsail
         run: |
           SERVICE_NAME_CLEAN=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
-          
-          echo "🚀 Deploying new image to Lightsail service: $SERVICE_NAME_CLEAN"
-          
+
+          echo "🚀 Deploying to Lightsail: $SERVICE_NAME_CLEAN"
+
           aws lightsail create-container-service-deployment \
             --service-name "$SERVICE_NAME_CLEAN" \
             --containers "{
@@ -90,10 +92,10 @@ jobs:
         run: |
           SERVICE_NAME_CLEAN=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
 
-          echo "🔍 Fetching service URL..."
+          echo "🔍 Fetching URL..."
           URL=$(aws lightsail get-container-services \
             --service-name "$SERVICE_NAME_CLEAN" \
             --query "containerServices[0].url" \
             --output text)
-          
+
           echo "🌍 Staging URL: $URL"
