@@ -72,6 +72,7 @@ const menuItems = {
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "My Profile", url: "/profile", icon: UserCircle },
     { title: "PRO_SEPARATOR", url: "", icon: null, isPro: false },
+    { title: "My Staff", url: "/staff", icon: Users, isPro: true },
     { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
     { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
     { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },

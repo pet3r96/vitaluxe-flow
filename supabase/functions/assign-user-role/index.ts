@@ -31,7 +31,7 @@ interface SignupRequest {
   name: string;
   fullName?: string;
   prescriberName?: string;
-  role: 'admin' | 'doctor' | 'practice' | 'pharmacy' | 'topline' | 'downline' | 'provider';
+  role: 'admin' | 'doctor' | 'practice' | 'pharmacy' | 'topline' | 'downline' | 'provider' | 'staff';
   parentId?: string;
   csrfToken?: string; // Optional - fallback if header is stripped
   isSelfSignup?: boolean; // Flag for self-signup flow
@@ -58,6 +58,8 @@ interface SignupRequest {
     linkedToplineId?: string;
     // Provider fields
     practiceId?: string;
+    // Staff fields
+    roleType?: string;
   };
   contractFile?: {
     name: string;
@@ -305,6 +307,19 @@ serve(async (req) => {
       if (!signupData.fullName || !signupData.prescriberName) {
         return new Response(
           JSON.stringify({ error: 'Providers must provide Full Name and Prescriber Name' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else if (signupData.role === 'staff') {
+      if (!signupData.roleData.practiceId) {
+        return new Response(
+          JSON.stringify({ error: 'Staff members must be linked to a practice' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!signupData.roleData.roleType) {
+        return new Response(
+          JSON.stringify({ error: 'Staff members must have a role type' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

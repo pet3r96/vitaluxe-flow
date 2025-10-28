@@ -3720,6 +3720,51 @@ export type Database = {
           },
         ]
       }
+      practice_staff: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          practice_id: string
+          role_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          practice_id: string
+          role_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          practice_id?: string
+          role_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_staff_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_staff_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -4108,6 +4153,7 @@ export type Database = {
           shipping_address_verified_at: string | null
           shipping_address_zip: string | null
           shipping_preference: string | null
+          staff_role_type: string | null
           status: string | null
           temp_password: boolean | null
           updated_at: string | null
@@ -4160,6 +4206,7 @@ export type Database = {
           shipping_address_verified_at?: string | null
           shipping_address_zip?: string | null
           shipping_preference?: string | null
+          staff_role_type?: string | null
           status?: string | null
           temp_password?: boolean | null
           updated_at?: string | null
@@ -4212,6 +4259,7 @@ export type Database = {
           shipping_address_verified_at?: string | null
           shipping_address_zip?: string | null
           shipping_preference?: string | null
+          staff_role_type?: string | null
           status?: string | null
           temp_password?: boolean | null
           updated_at?: string | null
@@ -6355,6 +6403,7 @@ export type Database = {
         | "downline"
         | "provider"
         | "subscription"
+        | "staff"
       notification_type:
         | "message"
         | "order_status"
@@ -6516,6 +6565,7 @@ export const Constants = {
         "downline",
         "provider",
         "subscription",
+        "staff",
       ],
       notification_type: [
         "message",

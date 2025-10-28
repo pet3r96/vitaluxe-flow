@@ -23,6 +23,7 @@ const roleConfig = {
   topline: { label: "Topline Rep", icon: TrendingUp },
   downline: { label: "Downline Rep", icon: Users },
   patient: { label: "Patient", icon: User },
+  staff: { label: "Staff", icon: Users },
 };
 
 export function RoleImpersonationDropdown() {
@@ -44,7 +45,7 @@ export function RoleImpersonationDropdown() {
       const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role")
-        .in("role", ["doctor", "provider", "pharmacy", "topline", "downline"]);
+        .in("role", ["doctor", "provider", "pharmacy", "topline", "downline", "staff"]);
 
       if (rolesError) throw rolesError;
 
@@ -61,6 +62,7 @@ export function RoleImpersonationDropdown() {
         topline: [],
         downline: [],
         patient: [],
+        staff: [],
       };
 
       rolesData?.forEach((roleItem: any) => {
