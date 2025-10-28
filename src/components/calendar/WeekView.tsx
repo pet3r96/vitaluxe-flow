@@ -113,7 +113,11 @@ export function WeekView({
       </div>
 
       {/* Time grid */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div 
+        ref={scrollRef} 
+        className="flex-1 overflow-y-auto"
+        style={{ maxHeight: `${(endHour - startHour) * 60}px` }}
+      >
         <div className="flex relative">
           {/* Time labels */}
           <div className="w-16 flex-shrink-0">

@@ -100,7 +100,11 @@ export function DayView({
         ))}
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div 
+        ref={scrollRef} 
+        className="flex-1 overflow-y-auto"
+        style={{ maxHeight: `${(endHour - startHour) * 80}px` }}
+      >
         <div className="flex relative">
           {/* Time labels */}
           <div className="w-20 flex-shrink-0">
