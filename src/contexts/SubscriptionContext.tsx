@@ -10,7 +10,7 @@ interface SubscriptionContextType extends SubscriptionStatus {
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
-  const { user, effectiveRole } = useAuth();
+  const { user, effectiveRole, effectivePracticeId } = useAuth();
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({
     isSubscribed: false,
     status: null,
@@ -33,8 +33,24 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    // For providers, check their parent practice's subscription
+    // For doctors, check their own subscription (user.id === practice_id)
+    const practiceIdToCheck = effectivePracticeId || user.id;
+    
+    if (!practiceIdToCheck) {
+      setSubscriptionStatus({
+        isSubscribed: false,
+        status: null,
+        trialEndsAt: null,
+        currentPeriodEnd: null,
+        trialDaysRemaining: null
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      const status = await getSubscriptionStatus(user.id);
+      const status = await getSubscriptionStatus(practiceIdToCheck);
       setSubscriptionStatus(status);
     } catch (error) {
       console.error('Error fetching subscription status:', error);
@@ -45,7 +61,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     refreshSubscription();
-  }, [user?.id, effectiveRole]);
+  }, [user?.id, effectiveRole, effectivePracticeId]);
 
   return (
     <SubscriptionContext.Provider

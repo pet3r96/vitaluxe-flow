@@ -142,6 +142,18 @@ const SessionTimerWrapper = () => {
     );
 };
 
+// Wrapper to protect SubscribeToVitaLuxePro route - only practice owners (doctors who are NOT provider accounts)
+const SubscribeToVitaLuxeProWrapper = () => {
+  const { effectiveRole, isProviderAccount } = useAuth();
+  const location = useLocation();
+  
+  if (effectiveRole !== 'doctor' || isProviderAccount) {
+    return <NotFound />;
+  }
+  
+  return <SubscribeToVitaLuxePro />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -164,7 +176,7 @@ const App = () => (
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
-                  <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><SubscribeToVitaLuxePro /></ProtectedRoute>} />
+                  <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><SubscribeToVitaLuxeProWrapper /></ProtectedRoute>} />
                   <Route
                     path="/*"
                     element={

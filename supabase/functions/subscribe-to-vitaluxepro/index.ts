@@ -110,7 +110,7 @@ serve(async (req) => {
       }
     }
 
-    // 3) If still unresolved, check if actor is a provider -> resolve provider.practice_id
+    // 3) If still unresolved, check if actor is a provider -> BLOCK THEM
     if (!practiceId) {
       const { data: selfProvider, error: selfProvErr } = await supabaseClient
         .from('providers')
@@ -118,9 +118,15 @@ serve(async (req) => {
         .eq('user_id', actorUserId)
         .single();
       if (!selfProvErr && selfProvider?.practice_id) {
-        practiceId = selfProvider.practice_id as string;
-        impersonatedRole = impersonatedRole || 'provider';
-        console.log('[subscribe-to-vitaluxepro] Using self provider.practice_id', { practiceId });
+        // Provider trying to subscribe directly - BLOCK THIS
+        console.warn('[subscribe-to-vitaluxepro] Provider attempted direct subscription - blocked', { actorUserId });
+        return new Response(
+          JSON.stringify({
+            error: 'Providers cannot subscribe directly',
+            details: 'Only practice owners can manage VitaLuxePro subscriptions. Please contact your practice administrator.',
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 

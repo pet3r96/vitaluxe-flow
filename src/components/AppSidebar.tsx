@@ -181,7 +181,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <div className="mt-auto border-t border-sidebar-border p-4 space-y-2">
-        {!isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'provider') && (
+        {!isSubscribed && effectiveRole === 'doctor' && !isProviderAccount && (
           <Button
             onClick={() => setShowUpgradeDialog(true)}
             className="w-full justify-start bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"

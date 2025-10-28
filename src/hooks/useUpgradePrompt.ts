@@ -20,7 +20,7 @@ export const useUpgradePrompt = (): UseUpgradePromptReturn => {
   const [loginCount, setLoginCount] = useState(0);
 
   useEffect(() => {
-    if (effectiveRole !== 'doctor' && effectiveRole !== 'provider') {
+    if (effectiveRole !== 'doctor') {
       setShouldShow(false);
       return;
     }
