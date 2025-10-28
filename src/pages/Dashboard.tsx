@@ -405,7 +405,7 @@ const Dashboard = () => {
       icon: DollarSign,
       description: effectiveRole === "doctor" ? "Total amount paid by practice" : (effectiveRole as any) === "provider" ? "Your pending revenue" : "Pending orders revenue",
       isLoading: pendingRevenueLoading,
-      hidden: effectiveRole === "pharmacy" || effectiveRole === "provider",
+      hidden: true, // Hidden for ALL practices per user request
     },
     {
       title: "Collected Revenue",
@@ -424,11 +424,6 @@ const Dashboard = () => {
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
           Welcome back, {user?.email}
         </p>
-        {effectiveRole && (
-          <p className="text-sm text-primary mt-1 capitalize">
-            Role: {effectiveRole}
-          </p>
-        )}
         {status === 'trial' && trialDaysRemaining !== null && (
           <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -477,22 +472,8 @@ const Dashboard = () => {
         </Card>
       )}
 
-      {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider') ? (
-        <>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <TodayAppointmentsWidget />
-            <NewMessagesTriageWidget />
-            <FollowUpRemindersWidget />
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="md:col-span-2">
-              <RecentActivityWidget />
-            </div>
-            <QuickActionsPanel />
-          </div>
-        </>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+      {/* Stats cards - Always visible for all users */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat) => (
           <Card
             key={stat.title}
@@ -516,7 +497,21 @@ const Dashboard = () => {
             </p>
           </Card>
         ))}
-        </div>
+      </div>
+
+      {/* V2 Widgets - Only for subscribed doctor/provider */}
+      {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider') && (
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <TodayAppointmentsWidget />
+            <NewMessagesTriageWidget />
+            <FollowUpRemindersWidget />
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <RecentActivityWidget />
+            <QuickActionsPanel />
+          </div>
+        </>
       )}
 
       {!isSubscribed && (
