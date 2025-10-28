@@ -1,0 +1,163 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { CreditCard, Building2, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+
+interface PaymentMethod {
+  id: string;
+  payment_type: string;
+  card_type?: string;
+  card_last_five?: string;
+  bank_name?: string;
+  account_last_five?: string;
+  is_default: boolean;
+}
+
+interface PaymentMethodSelectorProps {
+  onMethodSelected: (methodId: string) => void;
+  selectedMethodId: string | null;
+}
+
+export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: PaymentMethodSelectorProps) => {
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    loadPaymentMethods();
+  }, []);
+
+  const loadPaymentMethods = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('practice_payment_methods')
+        .select('*')
+        .eq('practice_id', user.id)
+        .eq('status', 'active')
+        .order('is_default', { ascending: false });
+
+      if (error) throw error;
+
+      setPaymentMethods(data || []);
+      
+      // Auto-select default payment method
+      const defaultMethod = data?.find(m => m.is_default);
+      if (defaultMethod && !selectedMethodId) {
+        onMethodSelected(defaultMethod.id);
+      }
+    } catch (error: any) {
+      console.error('Error loading payment methods:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load payment methods",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddPaymentMethod = () => {
+    navigate('/profile?tab=payment');
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment Method</CardTitle>
+          <CardDescription>Loading payment methods...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (paymentMethods.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment Method Required</CardTitle>
+          <CardDescription>
+            You need to add a payment method before subscribing to VitaLuxePro
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Your payment method will be charged $250/month after your 7-day free trial ends.
+          </p>
+          <Button onClick={handleAddPaymentMethod} className="w-full">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Payment Method
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Select Payment Method</CardTitle>
+        <CardDescription>
+          Choose which payment method to use for your subscription
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <RadioGroup value={selectedMethodId || ''} onValueChange={onMethodSelected}>
+          {paymentMethods.map((method) => (
+            <div key={method.id} className="flex items-center space-x-3 space-y-0">
+              <RadioGroupItem value={method.id} id={method.id} />
+              <Label
+                htmlFor={method.id}
+                className="flex-1 flex items-center justify-between cursor-pointer p-3 rounded-lg border border-input hover:bg-accent"
+              >
+                <div className="flex items-center gap-3">
+                  {method.payment_type === 'credit_card' ? (
+                    <CreditCard className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                  )}
+                  <div>
+                    <div className="font-medium">
+                      {method.payment_type === 'credit_card' 
+                        ? `${method.card_type} •••• ${method.card_last_five}`
+                        : `${method.bank_name} •••• ${method.account_last_five}`
+                      }
+                    </div>
+                  </div>
+                </div>
+                {method.is_default && (
+                  <Badge variant="secondary" className="ml-2">Default</Badge>
+                )}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+
+        <Button 
+          variant="outline" 
+          onClick={handleAddPaymentMethod}
+          className="w-full"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add New Payment Method
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};

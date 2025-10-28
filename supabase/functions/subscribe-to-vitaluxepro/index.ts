@@ -35,6 +35,28 @@ serve(async (req) => {
       });
     }
 
+    // Get request body
+    const { payment_method_id } = await req.json();
+
+    // Validate payment method exists and belongs to practice
+    if (payment_method_id) {
+      const { data: paymentMethod, error: pmError } = await supabaseClient
+        .from('practice_payment_methods')
+        .select('*')
+        .eq('id', payment_method_id)
+        .eq('practice_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (pmError || !paymentMethod) {
+        console.error('Payment method validation error:', pmError);
+        return new Response(
+          JSON.stringify({ error: "Valid payment method required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Check if user is a practice (doctor role)
     const { data: userRoles, error: rolesError } = await supabaseClient
       .from("user_roles")
@@ -71,6 +93,23 @@ serve(async (req) => {
       );
     }
 
+    // Record terms acceptance
+    const { data: subscriptionTerms } = await supabaseClient
+      .from('terms_and_conditions')
+      .select('*')
+      .eq('role', 'subscription')
+      .single();
+
+    if (subscriptionTerms) {
+      await supabaseClient.from('user_terms_acceptances').insert({
+        user_id: user.id,
+        role: 'subscription',
+        terms_version: subscriptionTerms.version,
+        signature_name: user.email,
+        accepted_at: new Date().toISOString(),
+      });
+    }
+
     // Log the subscription creation
     await supabaseClient.from("audit_logs").insert({
       user_id: user.id,
@@ -80,6 +119,7 @@ serve(async (req) => {
       details: {
         subscription_type: "vitaluxepro",
         trial_started: true,
+        payment_method_id: payment_method_id || null,
       },
     });
 

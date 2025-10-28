@@ -6155,6 +6155,7 @@ export type Database = {
         | "topline"
         | "downline"
         | "provider"
+        | "subscription"
       notification_type:
         | "message"
         | "order_status"
@@ -6315,6 +6316,7 @@ export const Constants = {
         "topline",
         "downline",
         "provider",
+        "subscription",
       ],
       notification_type: [
         "message",

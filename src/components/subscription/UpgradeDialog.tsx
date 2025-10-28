@@ -66,7 +66,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[872px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-6 w-6 text-amber-500" />
@@ -80,7 +80,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
         <div className="space-y-6 my-6">
           <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-6 rounded-lg border border-amber-200 dark:border-amber-800">
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$250</span>
+              <span className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$250</span>
               <span className="text-muted-foreground/70">/month</span>
             </div>
             <Badge className="bg-amber-500 hover:bg-amber-600 text-white">

@@ -16,14 +16,15 @@ import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
-type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy';
+type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy' | 'subscription';
 
 const ROLE_LABELS: Record<AppRole, string> = {
   doctor: 'Practice',
   provider: 'Provider',
   topline: 'Topline Rep',
   downline: 'Downline Rep',
-  pharmacy: 'Pharmacy'
+  pharmacy: 'Pharmacy',
+  subscription: 'VitaLuxePro Subscription'
 };
 
 export default function AdminTermsManagement() {
@@ -57,7 +58,7 @@ export default function AdminTermsManagement() {
     const { data, error } = await supabase
       .from('terms_and_conditions')
       .select('*')
-      .eq('role', activeRole)
+      .eq('role', activeRole as any)
       .single();
 
     if (error) {
@@ -299,10 +300,11 @@ export default function AdminTermsManagement() {
       </div>
 
       <Tabs defaultValue="editor" className="space-y-4">
-        <TabsList className="grid-cols-1 sm:grid-cols-3">
+        <TabsList className="grid-cols-1 sm:grid-cols-4">
           <TabsTrigger value="editor">Terms Editor</TabsTrigger>
           <TabsTrigger value="acceptances">User Acceptances</TabsTrigger>
           <TabsTrigger value="checkout">Checkout Attestation</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription Terms</TabsTrigger>
         </TabsList>
 
         <TabsContent value="editor" className="space-y-4">
@@ -563,6 +565,28 @@ export default function AdminTermsManagement() {
                   </div>
                 </>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subscription" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>VitaLuxePro Subscription Terms</CardTitle>
+              <CardDescription>Manage subscription-specific terms and conditions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setActiveRole('subscription');
+                  // Force switch to editor tab
+                  const editorTab = document.querySelector('[value="editor"]') as HTMLElement;
+                  editorTab?.click();
+                }}
+              >
+                Edit Subscription Terms
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
