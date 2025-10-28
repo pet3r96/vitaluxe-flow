@@ -84,9 +84,9 @@ export const StaffDataTable = () => {
     enabled: !!effectiveUserId
   });
 
-  const toggleStatus = async (staffId: string, currentStatus: boolean) => {
+  const toggleStatus = async (staffUserId: string, currentStatus: boolean) => {
     const { data, error } = await supabase.functions.invoke('manage-staff-status', {
-      body: { staffId, active: !currentStatus }
+      body: { staffId: staffUserId, active: !currentStatus }
     });
 
     const serverMessage = (error as any)?.message || (typeof data === 'object' && (data as any)?.error);
@@ -187,7 +187,7 @@ export const StaffDataTable = () => {
                       </Button>
                       <Switch
                         checked={staffMember.active}
-                        onCheckedChange={() => toggleStatus(staffMember.id, staffMember.active)}
+                        onCheckedChange={() => toggleStatus(staffMember.user_id, staffMember.active)}
                       />
                     </div>
                   </TableCell>

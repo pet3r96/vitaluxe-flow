@@ -45,48 +45,95 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { staffId, active } = await req.json();
+    const body = await req.json();
+    const { staffId, active } = body;
 
-    if (!staffId) {
+    if (!staffId || typeof active !== 'boolean') {
       return new Response(
-        JSON.stringify({ error: 'Staff ID is required' }),
+        JSON.stringify({ error: 'Staff ID and active status are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Updating staff ${staffId} active status to ${active}`);
+    console.log(`[manage-staff-status] User ${user.id} attempting to update staff ${staffId} to active=${active}`);
 
+    // Ownership check for non-admins
     if (!isAdmin) {
-      const { data: staffRecord } = await supabase
+      // Try to find by user_id first
+      let { data: staffRecord } = await supabase
         .from('practice_staff')
-        .select('practice_id')
+        .select('practice_id, id')
         .eq('user_id', staffId)
-        .single();
+        .maybeSingle();
 
-      if (!staffRecord || staffRecord.practice_id !== user.id) {
+      // Fallback: try by id if not found by user_id
+      if (!staffRecord) {
+        console.log(`[manage-staff-status] Staff not found by user_id, trying by id`);
+        const fallback = await supabase
+          .from('practice_staff')
+          .select('practice_id, user_id')
+          .eq('id', staffId)
+          .maybeSingle();
+        
+        staffRecord = fallback.data;
+      }
+
+      if (!staffRecord) {
+        console.error(`[manage-staff-status] Staff record not found for staffId=${staffId}`);
         return new Response(
-          JSON.stringify({ error: 'Forbidden: You can only manage staff from your own practice' }),
+          JSON.stringify({ error: 'Staff member not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (staffRecord.practice_id !== user.id) {
+        console.error(`[manage-staff-status] Forbidden: staff practice_id=${staffRecord.practice_id} != user.id=${user.id}`);
+        return new Response(
+          JSON.stringify({ error: 'You can only manage staff from your own practice' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
-    const { data, error } = await supabase
+    // Attempt update by user_id first
+    let { data, error } = await supabase
       .from('practice_staff')
       .update({ active, updated_at: new Date().toISOString() })
       .eq('user_id', staffId)
       .select()
-      .single();
+      .maybeSingle();
+
+    // Fallback: try by id if no rows affected
+    if (!data && !error) {
+      console.log(`[manage-staff-status] No rows updated by user_id, trying by id`);
+      const fallback = await supabase
+        .from('practice_staff')
+        .update({ active, updated_at: new Date().toISOString() })
+        .eq('id', staffId)
+        .select()
+        .maybeSingle();
+      
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
-      console.error('Error updating staff status:', error);
+      console.error('[manage-staff-status] Error updating staff status:', error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: 'Failed to update staff status' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Staff status updated successfully:', data);
+    if (!data) {
+      console.error(`[manage-staff-status] No staff record found to update for staffId=${staffId}`);
+      return new Response(
+        JSON.stringify({ error: 'Staff member not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[manage-staff-status] Staff status updated successfully:', data.id);
 
     return new Response(
       JSON.stringify({ success: true, data }),
