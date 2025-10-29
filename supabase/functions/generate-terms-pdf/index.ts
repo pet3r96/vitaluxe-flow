@@ -8,6 +8,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const LOGO_URL = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/practice-documents/logo.png`;
+
+// Helper function to fetch logo as base64
+async function fetchLogoAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    return base64;
+  } catch (error) {
+    console.warn('Failed to fetch logo:', error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -115,9 +131,21 @@ serve(async (req) => {
       doc.text(`Document Version ${terms.version}`, 7.95, 10.5, { align: 'right' });
     };
 
-    // Professional Header
+    // Professional Header with Logo
+    const logoBase64 = await fetchLogoAsBase64(LOGO_URL);
+    
     doc.setFillColor(200, 166, 75); // Gold color
     doc.rect(0, 0, 8.5, 1, 'F');
+    
+    if (logoBase64) {
+      try {
+        // Add logo on left side of header
+        doc.addImage(logoBase64, 'PNG', 0.5, 0.25, 0.5, 0.5);
+      } catch (e) {
+        console.warn('Failed to add logo to PDF:', e);
+      }
+    }
+    
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');

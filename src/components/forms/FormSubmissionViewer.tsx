@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface FormSubmissionViewerProps {
   open: boolean;
@@ -16,9 +18,28 @@ export function FormSubmissionViewer({ open, onOpenChange, submission }: FormSub
   const formData = submission.form_data || {};
   const signatureData = submission.signature_data;
 
-  const downloadPDF = () => {
-    // TODO: Implement PDF generation
-    alert("PDF download coming soon");
+  const downloadPDF = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-form-submission-pdf', {
+        body: { submissionId: submission.id }
+      });
+      
+      if (error) throw error;
+      
+      if (data.pdfUrl) {
+        // Download the PDF
+        const link = document.createElement('a');
+        link.href = data.pdfUrl;
+        const formName = submission.practice_forms?.form_name?.replace(/[^a-z0-9]/gi, '_') || 'form';
+        const patientName = submission.patients?.last_name?.replace(/[^a-z0-9]/gi, '_') || 'patient';
+        link.download = `${formName}_${patientName}.pdf`;
+        link.click();
+        toast.success('PDF downloaded successfully');
+      }
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      toast.error('Failed to generate PDF');
+    }
   };
 
   return (
