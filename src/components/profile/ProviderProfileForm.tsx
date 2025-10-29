@@ -22,6 +22,7 @@ import { Loader2, Save, KeyRound, Building2, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const providerFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required").max(100),
@@ -87,7 +88,7 @@ export const ProviderProfileForm = () => {
     values: profile ? {
       full_name: profile.full_name || "",
       email: profile.email || "",
-      phone: profile.phone || "",
+      phone: profile.phone ? profile.phone.replace(/\D/g, "") : "",
       npi: sanitizeEncrypted(profile.npi),
       dea: sanitizeEncrypted(profile.dea),
       license_number: sanitizeEncrypted(profile.license_number),
@@ -217,15 +218,10 @@ export const ProviderProfileForm = () => {
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="tel"
-                      placeholder="1234567890" 
-                      maxLength={10}
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        field.onChange(value);
-                      }}
+                    <PhoneInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="(555) 123-4567"
                     />
                   </FormControl>
                   <FormDescription>

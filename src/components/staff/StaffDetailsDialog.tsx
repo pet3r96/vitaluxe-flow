@@ -28,7 +28,7 @@ export const StaffDetailsDialog = ({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: staff.profiles?.name || "",
-    phone: staff.profiles?.phone || "",
+    phone: staff.profiles?.phone ? staff.profiles.phone.replace(/\D/g, "") : "",
   });
 
   const isPractice = effectiveRole === "doctor" && effectiveUserId === staff.practice_id;
@@ -176,7 +176,7 @@ export const StaffDetailsDialog = ({
                   setIsEditing(false);
                   setFormData({
                     fullName: staff.profiles?.name || "",
-                    phone: staff.profiles?.phone || "",
+                    phone: staff.profiles?.phone ? staff.profiles.phone.replace(/\D/g, "") : "",
                   });
                 }}
                 disabled={loading}

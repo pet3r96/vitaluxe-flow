@@ -80,7 +80,7 @@ export function PharmacyProfileForm() {
       form.reset({
         name: pharmacy.name || "",
         contact_email: pharmacy.contact_email || "",
-        phone: pharmacy.phone || "",
+        phone: pharmacy.phone ? pharmacy.phone.replace(/\D/g, "") : "",
         address: {
           street: pharmacy.address_street || "",
           city: pharmacy.address_city || "",

@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Edit2, Save, X, Loader2 } from "lucide-react";
 import { sanitizeEncrypted } from "@/lib/utils";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { formatPhoneNumber } from "@/lib/validators";
 
 interface ProviderDetailsDialogProps {
   open: boolean;
@@ -32,7 +34,7 @@ export const ProviderDetailsDialog = ({
     npi: sanitizeEncrypted(provider.profiles?.npi),
     dea: sanitizeEncrypted(provider.profiles?.dea),
     licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
-    phone: provider.profiles?.phone || "",
+    phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
   });
 
   const isPractice = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
@@ -218,12 +220,13 @@ export const ProviderDetailsDialog = ({
           <div className="space-y-2">
             <Label>Phone</Label>
             {isEditing ? (
-              <Input
+              <PhoneInput
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(phone) => setFormData({ ...formData, phone })}
+                placeholder="(555) 123-4567"
               />
             ) : (
-              <div className="p-2 bg-muted rounded-md">{provider.profiles?.phone || "N/A"}</div>
+              <div className="p-2 bg-muted rounded-md">{formatPhoneNumber(provider.profiles?.phone)}</div>
             )}
           </div>
 
@@ -239,7 +242,7 @@ export const ProviderDetailsDialog = ({
                     npi: sanitizeEncrypted(provider.profiles?.npi),
                     dea: sanitizeEncrypted(provider.profiles?.dea),
                     licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
-                    phone: provider.profiles?.phone || "",
+                    phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
                   });
                 }}
                 disabled={loading}

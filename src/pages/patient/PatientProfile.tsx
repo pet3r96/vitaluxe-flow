@@ -43,8 +43,8 @@ export default function PatientProfile() {
   // Initialize state from profile data
   useEffect(() => {
     if (profile) {
-      setPhone(profile.phone || "");
-      setEmergencyPhone(profile.emergency_contact_phone || "");
+      setPhone(profile.phone ? profile.phone.replace(/\D/g, "") : "");
+      setEmergencyPhone(profile.emergency_contact_phone ? profile.emergency_contact_phone.replace(/\D/g, "") : "");
       
       // Initialize address value from profile
       if (profile.address) {

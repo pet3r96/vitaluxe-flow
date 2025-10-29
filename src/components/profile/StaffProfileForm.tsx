@@ -73,7 +73,7 @@ export const StaffProfileForm = () => {
     values: staffData ? {
       name: staffData.name || "",
       email: staffData.email || "",
-      phone: staffData.phone || "",
+      phone: staffData.phone ? staffData.phone.replace(/\D/g, "") : "",
     } : undefined,
   });
 
