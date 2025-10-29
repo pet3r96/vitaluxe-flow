@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { PracticeProfileForm } from "@/components/profile/PracticeProfileForm";
 import { ProviderProfileForm } from "@/components/profile/ProviderProfileForm";
 import { RepProfileForm } from "@/components/profile/RepProfileForm";
+import { PharmacyProfileForm } from "@/components/profile/PharmacyProfileForm";
 import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSection";
 import PatientProfile from "@/pages/patient/PatientProfile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,7 +15,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   
   const isRep = effectiveRole === "topline" || effectiveRole === "downline";
-  const allowedRoles = ["doctor", "topline", "downline", "provider", "patient"];
+  const allowedRoles = ["doctor", "topline", "downline", "provider", "patient", "pharmacy"];
 
   useEffect(() => {
     const checkProviderStatus = async () => {
@@ -70,9 +71,11 @@ const Profile = () => {
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
           {isRep 
             ? "Your Contact Information & Account Settings"
-            : isProvider 
-              ? "Your Professional Credentials & Contact Information" 
-              : "Manage your personal information and account settings"}
+            : effectiveRole === "pharmacy"
+              ? "Your Pharmacy Information & Account Settings"
+              : isProvider 
+                ? "Your Professional Credentials & Contact Information" 
+                : "Manage your personal information and account settings"}
         </p>
       </div>
 
@@ -81,6 +84,8 @@ const Profile = () => {
           <RepProfileForm />
         ) : effectiveRole === "patient" ? (
           <PatientProfile />
+        ) : effectiveRole === "pharmacy" ? (
+          <PharmacyProfileForm />
         ) : isProvider ? (
           <>
             <ProviderProfileForm />

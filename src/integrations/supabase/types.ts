@@ -3330,6 +3330,7 @@ export type Database = {
           id: string
           name: string
           parent_id: string | null
+          phone: string | null
           priority_map: Json | null
           states_serviced: string[] | null
           updated_at: string | null
@@ -3351,6 +3352,7 @@ export type Database = {
           id?: string
           name: string
           parent_id?: string | null
+          phone?: string | null
           priority_map?: Json | null
           states_serviced?: string[] | null
           updated_at?: string | null
@@ -3372,6 +3374,7 @@ export type Database = {
           id?: string
           name?: string
           parent_id?: string | null
+          phone?: string | null
           priority_map?: Json | null
           states_serviced?: string[] | null
           updated_at?: string | null
