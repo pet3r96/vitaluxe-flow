@@ -90,38 +90,38 @@ export const PatientSelectionDialog = ({
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       
-      const { data, error } = await supabase
+      // Step 1: Fetch providers for this practice
+      const { data: providerRows, error: providerError } = await supabase
         .from("providers" as any)
-        .select(`
-          id,
-          user_id,
-          active,
-          profiles!providers_user_id_fkey!inner(
-            id,
-            full_name,
-            company,
-            name,
-            npi,
-            dea
-          )
-        `)
+        .select("id, user_id, active, created_at")
         .eq("practice_id", effectivePracticeId)
         .eq("active", true)
         .order("created_at", { ascending: false });
       
-      if (error) throw error;
-      const mappedData = (data || []).map((p: any) => {
+      if (providerError) throw providerError;
+      if (!providerRows || providerRows.length === 0) return [];
+      
+      // Step 2: Fetch profiles for these providers
+      const userIds = providerRows.map((p: any) => p.user_id);
+      const { data: profileRows, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, company, name, npi, dea")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+      
+      // Step 3: Map the data together
+      const mappedData = providerRows.map((p: any) => {
+        const profile = profileRows?.find((pr: any) => pr.id === p.user_id);
         return {
           id: p.id,
           user_id: p.user_id,
-          prescriber_name: p.profiles?.full_name || 
-                           p.profiles?.company || 
-                           p.profiles?.name?.split('@')[0] || 
+          prescriber_name: profile?.full_name || 
+                           profile?.company || 
+                           profile?.name?.split('@')[0] || 
                            'Unknown Provider',
-          // Show actual NPI or hide if null - don't show 'N/A'
-          npi: p.profiles?.npi || '',
-          // Show actual DEA or hide if null - don't show 'N/A'
-          dea: p.profiles?.dea || ''
+          npi: profile?.npi || '',
+          dea: profile?.dea || ''
         };
       });
       return mappedData;
@@ -154,23 +154,30 @@ export const PatientSelectionDialog = ({
     queryFn: async () => {
       if (!selectedProviderId) return null;
       
-      const { data, error } = await supabase
+      // Step 1: Fetch provider to get user_id
+      const { data: provider, error: providerError } = await supabase
         .from("providers")
-        .select(`
-          id,
-          profiles!inner(
-            id,
-            name,
-            npi,
-            dea,
-            license_number
-          )
-        `)
+        .select("id, user_id")
         .eq("id", selectedProviderId)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
-      return data;
+      if (providerError) throw providerError;
+      if (!provider) return null;
+      
+      // Step 2: Fetch their profile
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, name, npi, dea, license_number")
+        .eq("id", provider.user_id)
+        .maybeSingle();
+      
+      if (profileError) throw profileError;
+      
+      // Return in the expected format
+      return {
+        id: provider.id,
+        profiles: profile
+      };
     },
     enabled: !!selectedProviderId && currentStep === 'prescription' && prescriptionMethod === 'written'
   });
