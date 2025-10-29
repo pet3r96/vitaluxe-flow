@@ -135,6 +135,42 @@ export const StaffDetailsDialog = ({
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>Ordering Privileges</Label>
+            <div className="flex items-center justify-between p-3 border rounded-md">
+              <div className="flex items-center gap-2">
+                <Badge variant={staff.can_order ? "default" : "secondary"}>
+                  {staff.can_order ? "Allowed" : "Restricted"}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Can place orders on behalf of practice
+                </span>
+              </div>
+              {(isPractice || isAdmin) && (
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={staff.can_order}
+                    onChange={async (e) => {
+                      try {
+                        const { error } = await supabase.functions.invoke('manage-staff-status', {
+                          body: { staffId: staff.user_id, canOrder: e.target.checked }
+                        });
+                        if (error) throw error;
+                        toast.success('Ordering privileges updated');
+                        onSuccess();
+                      } catch (error: any) {
+                        toast.error('Failed to update privileges');
+                      }
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                </label>
+              )}
+            </div>
+          </div>
+
           {isEditing && (
             <div className="flex justify-end gap-2">
               <Button

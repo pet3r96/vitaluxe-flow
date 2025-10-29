@@ -46,11 +46,11 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { staffId, active } = body;
+    const { staffId, active, canOrder } = body;
 
-    if (!staffId || typeof active !== 'boolean') {
+    if (!staffId) {
       return new Response(
-        JSON.stringify({ error: 'Staff ID and active status are required' }),
+        JSON.stringify({ error: 'Staff ID is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -95,10 +95,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Build update object dynamically
+    const updateData: any = { updated_at: new Date().toISOString() };
+    if (active !== undefined) updateData.active = active;
+    if (canOrder !== undefined) updateData.can_order = canOrder;
+
     // Attempt update by user_id first
     let { data, error } = await supabase
       .from('practice_staff')
-      .update({ active, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('user_id', staffId)
       .select()
       .maybeSingle();
@@ -108,7 +113,7 @@ Deno.serve(async (req) => {
       console.log(`[manage-staff-status] No rows updated by user_id, trying by id`);
       const fallback = await supabase
         .from('practice_staff')
-        .update({ active, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', staffId)
         .select()
         .maybeSingle();

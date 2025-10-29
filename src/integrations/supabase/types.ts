@@ -359,6 +359,42 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_service_types: {
+        Row: {
+          active: boolean | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          requires_provider: boolean | null
+          sort_order: number | null
+          typical_duration_minutes: number | null
+        }
+        Insert: {
+          active?: boolean | null
+          category: string
+          created_at?: string
+          description?: string | null
+          id: string
+          name: string
+          requires_provider?: boolean | null
+          sort_order?: number | null
+          typical_duration_minutes?: number | null
+        }
+        Update: {
+          active?: boolean | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          requires_provider?: boolean | null
+          sort_order?: number | null
+          typical_duration_minutes?: number | null
+        }
+        Relationships: []
+      }
       appointment_settings: {
         Row: {
           allow_overlap: boolean
@@ -2259,6 +2295,8 @@ export type Database = {
           practice_id: string
           provider_id: string | null
           room_id: string | null
+          service_description: string | null
+          service_type: string | null
           start_time: string
           status: string
           updated_at: string
@@ -2276,6 +2314,8 @@ export type Database = {
           practice_id: string
           provider_id?: string | null
           room_id?: string | null
+          service_description?: string | null
+          service_type?: string | null
           start_time: string
           status?: string
           updated_at?: string
@@ -2293,6 +2333,8 @@ export type Database = {
           practice_id?: string
           provider_id?: string | null
           room_id?: string | null
+          service_description?: string | null
+          service_type?: string | null
           start_time?: string
           status?: string
           updated_at?: string
@@ -3270,6 +3312,70 @@ export type Database = {
             columns: ["practice_id"]
             isOneToOne: true
             referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_blocked_time: {
+        Row: {
+          block_type: string
+          blocked_by: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          practice_id: string
+          provider_id: string | null
+          reason: string | null
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          block_type: string
+          blocked_by: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          practice_id: string
+          provider_id?: string | null
+          reason?: string | null
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          block_type?: string
+          blocked_by?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          practice_id?: string
+          provider_id?: string | null
+          reason?: string | null
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_blocked_time_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_blocked_time_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_blocked_time_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
             referencedColumns: ["id"]
           },
         ]
@@ -6256,6 +6362,21 @@ export type Database = {
         Returns: string
       }
       encrypt_plaid_token: { Args: { p_token: string }; Returns: string }
+      get_appointments_during_blocked_time: {
+        Args: {
+          p_end_time: string
+          p_practice_id: string
+          p_provider_id: string
+          p_start_time: string
+        }
+        Returns: {
+          appointment_id: string
+          end_time: string
+          patient_name: string
+          provider_name: string
+          start_time: string
+        }[]
+      }
       get_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_client_ip: { Args: never; Returns: string }
       get_current_user_rep_id: { Args: never; Returns: string }

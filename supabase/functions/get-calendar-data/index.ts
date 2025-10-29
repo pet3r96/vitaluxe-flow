@@ -190,6 +190,13 @@ Deno.serve(async (req) => {
       .eq('active', true)
       .order('name');
 
+    // Fetch blocked time for the date range
+    const { data: blockedTime } = await supabaseClient
+      .from('practice_blocked_time')
+      .select('*')
+      .eq('practice_id', practiceId)
+      .or(`start_time.lte.${endDate},end_time.gte.${startDate}`);
+
     return new Response(
       JSON.stringify({
         appointments: appointments || [],
@@ -200,7 +207,8 @@ Deno.serve(async (req) => {
           working_days: [1, 2, 3, 4, 5]
         },
         providers: transformedProviders || [],
-        rooms: allRooms || []
+        rooms: allRooms || [],
+        blockedTime: blockedTime || []
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

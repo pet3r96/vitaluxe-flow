@@ -17,6 +17,7 @@ import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointment
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
+import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
 
 export default function PracticeCalendar() {
   const { user, effectivePracticeId, isProviderAccount, effectiveRole, effectiveUserId } = useAuth();
@@ -32,6 +33,7 @@ export default function PracticeCalendar() {
   const [defaultProviderId, setDefaultProviderId] = useState<string | undefined>();
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [isWalkIn, setIsWalkIn] = useState(false);
+  const [blockTimeOpen, setBlockTimeOpen] = useState(false);
 
   const practiceId = effectivePracticeId || user?.id;
   const isProviderView = effectiveRole === 'provider';
@@ -226,6 +228,10 @@ export default function PracticeCalendar() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setBlockTimeOpen(true)}>
+              <Clock className="h-4 w-4 mr-2" />
+              Block Time
+            </Button>
             <Button variant="secondary" onClick={handleWalkInAppointment}>
               <Clock className="h-4 w-4 mr-2" />
               Walk-in Patient
@@ -340,6 +346,19 @@ export default function PracticeCalendar() {
         practiceId={practiceId!}
         currentSettings={settings}
         onSettingsUpdate={() => refetch()}
+      />
+
+      <BlockTimeDialog
+        open={blockTimeOpen}
+        onOpenChange={setBlockTimeOpen}
+        practiceId={practiceId!}
+        providers={providers}
+        isProviderAccount={isProviderAccount}
+        defaultProviderId={isProviderAccount && providers.length === 1 ? providers[0].id : undefined}
+        onSuccess={() => {
+          refetch();
+          setBlockTimeOpen(false);
+        }}
       />
     </div>
   );

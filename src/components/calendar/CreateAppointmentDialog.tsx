@@ -62,6 +62,8 @@ export function CreateAppointmentDialog({
       startTime: format(walkInDate, 'HH:mm'),
       duration: isWalkIn ? "15" : "30",
       appointmentType: isWalkIn ? "walk_in" : "consultation",
+      serviceType: "",
+      serviceDescription: "",
       notes: "",
     },
   });
@@ -75,6 +77,21 @@ export function CreateAppointmentDialog({
         .select('id, first_name, last_name, email')
         .eq('practice_id', practiceId)
         .order('last_name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  // Fetch service types
+  const { data: serviceTypes } = useQuery({
+    queryKey: ['appointment-service-types'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('appointment_service_types')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order');
       if (error) throw error;
       return data;
     },
@@ -97,6 +114,8 @@ export function CreateAppointmentDialog({
           end_time: endDateTime.toISOString(),
           appointment_type: values.appointmentType,
           duration_minutes: parseInt(values.duration),
+          service_type: values.serviceType,
+          service_description: values.serviceDescription,
           notes: values.notes,
           status: isWalkIn ? 'checked_in' : 'scheduled',
         })
@@ -121,6 +140,14 @@ export function CreateAppointmentDialog({
   const onSubmit = (values: any) => {
     if (!selectedPatientId) {
       toast.error("Please select a patient");
+      return;
+    }
+    if (!values.serviceType) {
+      toast.error("Please select a service type");
+      return;
+    }
+    if (!values.serviceDescription) {
+      toast.error("Please provide a service description");
       return;
     }
     createMutation.mutate(values);
@@ -266,6 +293,49 @@ export function CreateAppointmentDialog({
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="serviceType">Service Type *</Label>
+            <Select 
+              value={watch("serviceType")} 
+              onValueChange={(value) => {
+                setValue("serviceType", value);
+                const serviceType = serviceTypes?.find(st => st.id === value);
+                if (serviceType?.typical_duration_minutes) {
+                  setValue("duration", serviceType.typical_duration_minutes.toString());
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select service type" />
+              </SelectTrigger>
+              <SelectContent>
+                {serviceTypes?.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {watch("serviceType") && (
+            <div className="space-y-2">
+              <Label htmlFor="serviceDescription">Service Description *</Label>
+              <Textarea
+                id="serviceDescription"
+                {...register("serviceDescription", { required: true })}
+                rows={2}
+                placeholder="Describe the specific service or treatment..."
+                className="resize-none"
+              />
+              {serviceTypes?.find(st => st.id === watch("serviceType"))?.description && (
+                <p className="text-xs text-muted-foreground">
+                  {serviceTypes.find(st => st.id === watch("serviceType"))?.description}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
