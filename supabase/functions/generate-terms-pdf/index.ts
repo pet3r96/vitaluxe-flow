@@ -119,7 +119,7 @@ serve(async (req) => {
 
     // Fetch terms content
     const { data: terms, error: termsError } = await supabase
-      .from('terms_and_conditions')
+      .from('patient_portal_terms')
       .select('*')
       .eq('id', terms_id)
       .single();
@@ -435,8 +435,8 @@ serve(async (req) => {
     doc.text(`Email:`, 1.25, infoY + 0.55);
     doc.text(`${profile?.email}`, 2.5, infoY + 0.55);
     
-    doc.text(`Role:`, 1.25, infoY + 0.8);
-    doc.text(`${terms.role.charAt(0).toUpperCase() + terms.role.slice(1)}`, 2.5, infoY + 0.8);
+    doc.text(`Document Version:`, 1.25, infoY + 0.8);
+    doc.text(`${terms.version}`, 2.5, infoY + 0.8);
 
     // Acceptance metadata
     doc.setFontSize(9);
