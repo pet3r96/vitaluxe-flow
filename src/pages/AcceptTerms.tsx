@@ -39,11 +39,16 @@ export default function AcceptTerms() {
     if (!user || !effectiveRole || (effectiveRole === 'admin' && !isImpersonating)) return;
 
     const fetchTerms = async () => {
-      const { data, error } = await supabase
-        .from('terms_and_conditions')
-        .select('*')
-        .eq('role', effectiveRole as any)
-        .maybeSingle();
+      let query = supabase.from('terms_and_conditions').select('*');
+      
+      // Special handling for patients - they use a hardcoded UUID instead of role enum
+      if (effectiveRole === 'patient') {
+        query = query.eq('id', '00000000-0000-0000-0000-000000000001');
+      } else {
+        query = query.eq('role', effectiveRole as any);
+      }
+      
+      const { data, error } = await query.maybeSingle();
 
       if (error) {
         import('@/lib/logger').then(({ logger }) => {
