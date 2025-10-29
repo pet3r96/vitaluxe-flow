@@ -10,6 +10,16 @@ import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { Loader2, CreditCard, DollarSign, TrendingUp, CheckCircle, XCircle, Clock, Save, Edit2 } from "lucide-react";
 import { useState } from "react";
+import { usePagination } from "@/hooks/usePagination";
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious,
+  PaginationEllipsis
+} from "@/components/ui/pagination";
 
 export function SubscriptionManagement() {
   const queryClient = useQueryClient();
@@ -73,6 +83,13 @@ export function SubscriptionManagement() {
       return data;
     },
     enabled: !!selectedPractice,
+  });
+
+  // Initialize pagination
+  const pagination = usePagination({
+    totalItems: subscriptions?.length || 0,
+    itemsPerPage: 25,
+    initialPage: 1
   });
 
   // Cancel subscription mutation
@@ -277,7 +294,7 @@ export function SubscriptionManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subscriptions?.map((sub: any) => (
+              {subscriptions?.slice(pagination.startIndex, pagination.endIndex).map((sub: any) => (
                 <TableRow key={sub.id}>
                   <TableCell>
                     <div>
@@ -469,6 +486,64 @@ export function SubscriptionManagement() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {subscriptions && subscriptions.length > 25 && (
+            <div className="mt-6 space-y-4">
+              <div className="text-sm text-muted-foreground text-center">
+                Showing {pagination.startIndex + 1}-{Math.min(pagination.endIndex, subscriptions.length)} of {subscriptions.length} subscriptions
+              </div>
+              
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (pagination.hasPrevPage) pagination.prevPage();
+                      }}
+                      className={!pagination.hasPrevPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: Math.min(pagination.totalPages, 7) }, (_, i) => {
+                    if (pagination.totalPages <= 7) {
+                      return i + 1;
+                    }
+                    // Show first, last, current and surrounding pages
+                    if (i === 0) return 1;
+                    if (i === 6) return pagination.totalPages;
+                    if (i === 3) return pagination.currentPage;
+                    if (i < 3) return Math.max(2, pagination.currentPage - (3 - i));
+                    return Math.min(pagination.totalPages - 1, pagination.currentPage + (i - 3));
+                  }).map((page, idx) => (
+                    <PaginationItem key={idx}>
+                      <PaginationLink
+                        onClick={(e) => {
+                          e.preventDefault();
+                          pagination.goToPage(page);
+                        }}
+                        isActive={pagination.currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (pagination.hasNextPage) pagination.nextPage();
+                      }}
+                      className={!pagination.hasNextPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
