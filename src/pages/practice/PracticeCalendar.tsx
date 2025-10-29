@@ -19,7 +19,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
 
 export default function PracticeCalendar() {
-  const { user, effectivePracticeId, isProviderAccount } = useAuth();
+  const { user, effectivePracticeId, isProviderAccount, effectiveRole, effectiveUserId } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('week');
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
@@ -34,6 +34,7 @@ export default function PracticeCalendar() {
   const [isWalkIn, setIsWalkIn] = useState(false);
 
   const practiceId = effectivePracticeId || user?.id;
+  const isProviderView = effectiveRole === 'provider';
 
   // Calculate date range based on view
   const getDateRange = () => {
@@ -68,7 +69,7 @@ export default function PracticeCalendar() {
 
   // Fetch calendar data
   const { data: calendarData, isLoading, refetch } = useQuery({
-    queryKey: ['calendar-data', practiceId, getDateRange(), selectedProviders, selectedRooms, selectedStatuses],
+    queryKey: ['calendar-data', practiceId, getDateRange(), selectedProviders, selectedRooms, selectedStatuses, isProviderView],
     queryFn: async () => {
       const dateRange = getDateRange();
       
@@ -80,6 +81,7 @@ export default function PracticeCalendar() {
           providers: selectedProviders.length > 0 ? selectedProviders : undefined,
           rooms: selectedRooms.length > 0 ? selectedRooms : undefined,
           statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+          effectiveProviderUserId: isProviderView ? effectiveUserId : undefined,
         },
       });
 
@@ -248,6 +250,7 @@ export default function PracticeCalendar() {
               onProviderToggle={handleProviderToggle}
               onRoomToggle={handleRoomToggle}
               onStatusToggle={handleStatusToggle}
+              isProviderView={isProviderView}
             />
           </div>
         </ResizablePanel>

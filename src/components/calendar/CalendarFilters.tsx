@@ -27,6 +27,7 @@ interface CalendarFiltersProps {
   onProviderToggle: (providerId: string) => void;
   onRoomToggle: (roomId: string) => void;
   onStatusToggle: (status: string) => void;
+  isProviderView?: boolean;
 }
 
 const appointmentStatuses = [
@@ -46,6 +47,7 @@ export function CalendarFilters({
   onProviderToggle,
   onRoomToggle,
   onStatusToggle,
+  isProviderView = false,
 }: CalendarFiltersProps) {
   return (
     <Card className="h-fit">
@@ -53,38 +55,42 @@ export function CalendarFilters({
         <CardTitle className="text-base">Filters</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Providers Filter */}
-        <div className="space-y-3">
-          <Label className="text-sm font-semibold">Providers</Label>
-          {providers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No providers found</p>
-          ) : (
-            <div className="space-y-2">
-              {providers.map((provider) => (
-                <div key={provider.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`provider-${provider.id}`}
-                    checked={selectedProviders.includes(provider.id)}
-                    onCheckedChange={() => onProviderToggle(provider.id)}
-                  />
-                  <Label
-                    htmlFor={`provider-${provider.id}`}
-                    className="text-sm font-normal cursor-pointer flex-1"
-                  >
-                    {provider.full_name || `${provider.first_name} ${provider.last_name}`}
-                    {provider.specialty && (
-                      <span className="text-xs text-muted-foreground ml-1">
-                        ({provider.specialty})
-                      </span>
-                    )}
-                  </Label>
+        {/* Providers Filter - Hidden for provider view */}
+        {!isProviderView && (
+          <>
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Providers</Label>
+              {providers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No providers found</p>
+              ) : (
+                <div className="space-y-2">
+                  {providers.map((provider) => (
+                    <div key={provider.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`provider-${provider.id}`}
+                        checked={selectedProviders.includes(provider.id)}
+                        onCheckedChange={() => onProviderToggle(provider.id)}
+                      />
+                      <Label
+                        htmlFor={`provider-${provider.id}`}
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        {provider.full_name || `${provider.first_name} ${provider.last_name}`}
+                        {provider.specialty && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({provider.specialty})
+                          </span>
+                        )}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
 
-        <Separator />
+            <Separator />
+          </>
+        )}
 
         {/* Rooms Filter */}
         <div className="space-y-3">

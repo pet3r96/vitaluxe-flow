@@ -14,20 +14,56 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const { practiceId, startDate, endDate, providers, rooms, statuses } = await req.json();
+    const { practiceId, startDate, endDate, providers, rooms, statuses, effectiveProviderUserId } = await req.json();
 
     if (!practiceId || !startDate || !endDate) {
       throw new Error('Missing required fields: practiceId, startDate, endDate');
     }
 
-    // Check if logged-in user is a provider
-    const { data: providerRecord } = await supabaseClient
-      .from('providers')
-      .select('id, practice_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Detect caller role
+    const { data: userRoles } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+    
+    const callerRole = userRoles?.[0]?.role || null;
+    console.log('Caller role:', callerRole, 'User ID:', user.id);
 
-    const isProviderUser = !!providerRecord;
+    // Determine provider scoping
+    let providerRecord = null;
+    let isProviderScoped = false;
+
+    if (callerRole === 'provider') {
+      // Provider accounts: scope to their own provider record
+      const { data } = await supabaseClient
+        .from('providers')
+        .select('id, practice_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      providerRecord = data;
+      isProviderScoped = !!providerRecord;
+      console.log('Provider scope (by role):', isProviderScoped, 'Provider ID:', providerRecord?.id);
+    } else if (callerRole === 'admin' && effectiveProviderUserId) {
+      // Admin impersonating provider: scope to the effective provider
+      const { data } = await supabaseClient
+        .from('providers')
+        .select('id, practice_id')
+        .eq('user_id', effectiveProviderUserId)
+        .maybeSingle();
+      
+      if (!data) {
+        throw new Error('Provider not found for effective user');
+      }
+      
+      if (data.practice_id !== practiceId) {
+        throw new Error('Provider does not belong to the specified practice');
+      }
+      
+      providerRecord = data;
+      isProviderScoped = true;
+      console.log('Provider scope (admin impersonation):', isProviderScoped, 'Effective Provider ID:', providerRecord?.id);
+    }
 
     // Build query
     let query = supabaseClient
@@ -43,13 +79,14 @@ Deno.serve(async (req) => {
       .lte('start_time', endDate)
       .order('start_time', { ascending: true });
 
-    // If user is a provider, filter to only their appointments
-    if (isProviderUser && providerRecord) {
+    // If provider-scoped, filter to only their appointments
+    if (isProviderScoped && providerRecord) {
       query = query.eq('provider_id', providerRecord.id);
+      console.log('Filtering appointments to provider:', providerRecord.id);
     }
 
-    // Apply filters
-    if (providers && providers.length > 0) {
+    // Apply filters (ignore provider filters if provider-scoped)
+    if (!isProviderScoped && providers && providers.length > 0) {
       query = query.in('provider_id', providers);
     }
 
@@ -78,12 +115,14 @@ Deno.serve(async (req) => {
     // Get providers based on user type
     let transformedProviders: any[] = [];
     
-    if (isProviderUser && providerRecord) {
-      // Provider users only see themselves in the provider list
+    if (isProviderScoped && providerRecord) {
+      // Provider-scoped users only see themselves in the provider list
+      const effectiveUserId = effectiveProviderUserId || user.id;
+      
       const { data: providerProfile } = await supabaseClient
         .from('profiles')
         .select('id, name, full_name')
-        .eq('id', user.id)
+        .eq('id', effectiveUserId)
         .single();
 
       if (providerProfile) {
@@ -92,13 +131,14 @@ Deno.serve(async (req) => {
         
         transformedProviders = [{
           id: providerRecord.id,
-          user_id: user.id,
+          user_id: effectiveUserId,
           active: true,
           first_name: nameParts[0] || '',
           last_name: nameParts.slice(1).join(' ') || '',
           full_name: displayName,
           specialty: null
         }];
+        console.log('Returning single provider:', transformedProviders[0]);
       }
     } else {
       // Practice owners/staff see all providers (step 1)
