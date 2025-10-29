@@ -542,9 +542,6 @@ serve(async (req) => {
       console.log('Terms PDF uploaded to Supabase Storage:', fileName);
     }
 
-    // Determine the target user's role
-    let userRole = 'patient'; // Default to patient
-    
     // Check if user is a patient
     const { data: patientAccount } = await supabase
       .from('patient_accounts')
@@ -552,41 +549,66 @@ serve(async (req) => {
       .eq('user_id', targetUserId)
       .maybeSingle();
     
+    // Record acceptance in appropriate table based on user type
+    let acceptance: any;
+    let acceptanceError: any;
+    
     if (patientAccount) {
-      userRole = 'patient';
+      // Patient - use patient_terms_acceptances table
+      console.log('Recording patient terms acceptance for user:', targetUserId);
+      const result = await supabase
+        .from('patient_terms_acceptances')
+        .upsert({
+          user_id: targetUserId,
+          terms_id: terms.id,
+          terms_version: terms.version,
+          signature_name,
+          signed_pdf_url: fileName,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          accepted_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,terms_id',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single();
+      
+      acceptance = result.data;
+      acceptanceError = result.error;
     } else {
-      // Check user_roles table for provider/admin/rep
+      // Provider/staff - use user_terms_acceptances table with app_role
+      console.log('Recording provider/staff terms acceptance for user:', targetUserId);
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', targetUserId)
         .maybeSingle();
       
-      if (roleData?.role) {
-        userRole = roleData.role;
-      }
+      const userRole = roleData?.role || 'provider'; // Default to provider if no role found
+      
+      const result = await supabase
+        .from('user_terms_acceptances')
+        .upsert({
+          user_id: targetUserId,
+          terms_id: terms.id,
+          role: userRole,
+          terms_version: terms.version,
+          signature_name,
+          signed_pdf_url: fileName,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          accepted_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,terms_id',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single();
+      
+      acceptance = result.data;
+      acceptanceError = result.error;
     }
-    
-    // Record acceptance in database (for target user)
-    // Use upsert to handle cases where user re-accepts terms
-    const { data: acceptance, error: acceptanceError } = await supabase
-      .from('user_terms_acceptances')
-      .upsert({
-        user_id: targetUserId,
-        terms_id: terms.id,
-        role: userRole,
-        terms_version: terms.version,
-        signature_name,
-        signed_pdf_url: fileName,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        accepted_at: new Date().toISOString() // Explicitly update timestamp
-      }, {
-        onConflict: 'user_id,terms_id', // Handle duplicate key constraint
-        ignoreDuplicates: false // Update existing records
-      })
-      .select()
-      .single();
 
     if (acceptanceError) {
       console.error('Acceptance error:', acceptanceError);

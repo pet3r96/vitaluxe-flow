@@ -2909,6 +2909,42 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_terms_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          ip_address: string | null
+          signature_name: string
+          signed_pdf_url: string | null
+          terms_id: string
+          terms_version: number
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          signature_name: string
+          signed_pdf_url?: string | null
+          terms_id: string
+          terms_version: number
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          signature_name?: string
+          signed_pdf_url?: string | null
+          terms_id?: string
+          terms_version?: number
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       patients: {
         Row: {
           address: string | null

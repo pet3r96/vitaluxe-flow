@@ -731,7 +731,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         roleResult,
         providerResult,
         impersonationResult,
-        passwordResult
+        passwordResult,
+        patientTermsResult
       ] = await Promise.allSettled([
         // 1. Fetch role
         supabase
@@ -754,6 +755,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         supabase
           .from('user_password_status')
           .select('must_change_password, terms_accepted')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        
+        // 5. Check patient terms acceptance
+        supabase
+          .from('patient_terms_acceptances')
+          .select('id')
           .eq('user_id', userId)
           .maybeSingle()
       ]);
@@ -812,12 +820,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTermsAccepted(true);
       } else if (passwordResult.status === 'fulfilled' && passwordResult.value.data) {
         setMustChangePassword(passwordResult.value.data.must_change_password || false);
-        setTermsAccepted(passwordResult.value.data.terms_accepted || false);
+        
+        // Check terms acceptance from either user_password_status OR patient_terms_acceptances
+        const termsAcceptInStatus = passwordResult.value.data.terms_accepted || false;
+        const hasPatientTerms = patientTermsResult.status === 'fulfilled' && patientTermsResult.value.data !== null;
+        setTermsAccepted(termsAcceptInStatus || hasPatientTerms);
       } else {
-        // FALLBACK: If password check failed, use safe defaults
+        // FALLBACK: If password check failed, check if patient has terms acceptance
+        const hasPatientTerms = patientTermsResult.status === 'fulfilled' && patientTermsResult.value.data !== null;
         logger.warn('Password status check failed, using safe defaults');
         setMustChangePassword(false);
-        setTermsAccepted(false);
+        setTermsAccepted(hasPatientTerms);
       }
       // ALWAYS set this to true, even if checks fail
       setPasswordStatusChecked(true);
@@ -912,8 +925,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Not impersonating: direct read
       logger.info('checkPasswordStatus direct read of user_password_status and profiles');
       
-      // Check both user_password_status and profiles.temp_password
-      const [passwordStatusResult, profileResult] = await Promise.all([
+      // Check password status, profile, and patient terms acceptance
+      const [passwordStatusResult, profileResult, patientTermsResult] = await Promise.all([
         supabase
           .from('user_password_status')
           .select('must_change_password, terms_accepted')
@@ -923,6 +936,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .from('profiles')
           .select('temp_password')
           .eq('id', uid)
+          .maybeSingle(),
+        supabase
+          .from('patient_terms_acceptances')
+          .select('id')
+          .eq('user_id', uid)
           .maybeSingle()
       ]);
 
@@ -941,7 +959,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Check if user has temp_password flag set
       const hasTempPassword = profileResult.data?.temp_password || false;
       const mustChange = passwordStatusResult.data?.must_change_password || false;
-      const termsAccept = passwordStatusResult.data?.terms_accepted || false;
+      
+      // Check if terms are accepted - either in user_password_status OR patient_terms_acceptances
+      const termsAcceptInStatus = passwordStatusResult.data?.terms_accepted || false;
+      const hasPatientTermsAcceptance = patientTermsResult.data !== null;
+      const termsAccept = termsAcceptInStatus || hasPatientTermsAcceptance;
 
       // If user has temp_password flag, they must change password regardless of other flags
       const finalMustChange = mustChange || hasTempPassword;
