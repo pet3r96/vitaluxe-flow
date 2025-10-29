@@ -27,15 +27,26 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
   const [message, setMessage] = useState("");
 
   // Get patient's practice info using edge function to handle impersonation correctly
-  const { data: practiceData, isLoading: isLoadingPractice } = useQuery({
+  const { data: practiceData, isLoading: isLoadingPractice, error: practiceError } = useQuery({
     queryKey: ["patient-practice-info"],
     queryFn: async () => {
+      console.log("🔄 Invoking get-patient-practice edge function...");
+      
       const { data, error } = await supabase.functions.invoke("get-patient-practice");
       
+      console.log("📦 Edge function response:", { data, error });
+      
       if (error) {
-        console.error("Failed to fetch practice info:", error);
-        throw error;
+        console.error("❌ Failed to fetch practice info:", error);
+        throw new Error(`Edge function error: ${error.message}`);
       }
+      
+      if (!data) {
+        console.error("❌ No data returned from edge function");
+        throw new Error("No data returned from practice lookup");
+      }
+      
+      console.log("✅ Practice data retrieved:", data);
       
       return data as {
         patientAccountId: string;
@@ -48,6 +59,8 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
       };
     },
     enabled: open,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const sendMutation = useMutation({
@@ -114,7 +127,17 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
         {isLoadingPractice ? (
           <div className="flex items-center justify-center p-4">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Loading practice information...</span>
           </div>
+        ) : practiceError ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load practice information. Please try again.
+              <br />
+              <span className="text-xs mt-1 block">Error: {practiceError.message}</span>
+            </AlertDescription>
+          </Alert>
         ) : hasPractice ? (
           <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
             <Building2 className="h-5 w-5 text-primary" />

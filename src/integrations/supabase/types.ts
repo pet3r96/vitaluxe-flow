@@ -2597,36 +2597,48 @@ export type Database = {
       patient_documents: {
         Row: {
           created_at: string
+          custom_title: string | null
           document_name: string
           document_type: string
           file_size: number | null
+          hidden_by_patient: boolean | null
           id: string
           mime_type: string | null
+          notes: string | null
           patient_id: string
+          share_with_practice: boolean | null
           storage_path: string
           updated_at: string
           uploaded_by: string | null
         }
         Insert: {
           created_at?: string
+          custom_title?: string | null
           document_name: string
           document_type: string
           file_size?: number | null
+          hidden_by_patient?: boolean | null
           id?: string
           mime_type?: string | null
+          notes?: string | null
           patient_id: string
+          share_with_practice?: boolean | null
           storage_path: string
           updated_at?: string
           uploaded_by?: string | null
         }
         Update: {
           created_at?: string
+          custom_title?: string | null
           document_name?: string
           document_type?: string
           file_size?: number | null
+          hidden_by_patient?: boolean | null
           id?: string
           mime_type?: string | null
+          notes?: string | null
           patient_id?: string
+          share_with_practice?: boolean | null
           storage_path?: string
           updated_at?: string
           uploaded_by?: string | null
