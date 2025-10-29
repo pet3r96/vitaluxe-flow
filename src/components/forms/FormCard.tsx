@@ -53,13 +53,7 @@ export function FormCard({ form, onAssign, onEdit, onArchive, onDuplicate }: For
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">{form.form_type}</p>
           
-          <div className="flex items-center gap-2">
-            {form.is_pdf_template ? (
-              <Badge variant="secondary">PDF Template</Badge>
-            ) : (
-              <Badge variant="secondary">Digital Form</Badge>
-            )}
-          </div>
+          <Badge variant="secondary">Digital Form</Badge>
 
           <p className="text-xs text-muted-foreground">
             Created {format(new Date(form.created_at), "MMM d, yyyy")}

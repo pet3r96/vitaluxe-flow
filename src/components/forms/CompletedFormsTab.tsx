@@ -1,18 +1,14 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FormSubmissionViewer } from "./FormSubmissionViewer";
+import { toast } from "sonner";
 
 export function CompletedFormsTab() {
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
-  const [showViewer, setShowViewer] = useState(false);
-
   const { data: submissions, isLoading } = useQuery({
     queryKey: ["completed-form-submissions"],
     queryFn: async () => {
@@ -50,10 +46,7 @@ export function CompletedFormsTab() {
                 <Button 
                   size="sm" 
                   variant="outline"
-                  onClick={() => {
-                    setSelectedSubmission(sub);
-                    setShowViewer(true);
-                  }}
+                  onClick={() => toast.info("Form viewer coming soon")}
                 >
                   <Eye className="h-4 w-4" />
                 </Button>
@@ -62,12 +55,6 @@ export function CompletedFormsTab() {
           </CardContent>
         </Card>
       ))}
-
-      <FormSubmissionViewer
-        open={showViewer}
-        onOpenChange={setShowViewer}
-        submission={selectedSubmission}
-      />
     </div>
   );
 }
