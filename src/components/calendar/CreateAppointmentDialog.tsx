@@ -26,6 +26,7 @@ interface CreateAppointmentDialogProps {
   providers: any[];
   rooms: any[];
   isWalkIn?: boolean;
+  isProviderAccount?: boolean;
 }
 
 export function CreateAppointmentDialog({
@@ -37,6 +38,7 @@ export function CreateAppointmentDialog({
   providers,
   rooms,
   isWalkIn = false,
+  isProviderAccount = false,
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -54,7 +56,7 @@ export function CreateAppointmentDialog({
   
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
-      providerId: defaultProviderId || "",
+      providerId: defaultProviderId || (isProviderAccount && providers.length === 1 ? providers[0].id : ""),
       roomId: "",
       appointmentDate: format(walkInDate, 'yyyy-MM-dd'),
       startTime: format(walkInDate, 'HH:mm'),
@@ -161,46 +163,51 @@ export function CreateAppointmentDialog({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="providerId">Provider *</Label>
-              <Select value={watch("providerId")} onValueChange={(value) => setValue("providerId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  {providers && providers.length > 0 ? (
-                    providers.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    {provider.full_name || `${provider.first_name} ${provider.last_name}`}
-                  </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-providers-available" disabled>
-                      No providers available
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                {!isProviderAccount && (
+                  <div className="space-y-2">
+                    <Label htmlFor="providerId">Provider *</Label>
+                    <Select 
+                      value={watch("providerId")} 
+                      onValueChange={(value) => setValue("providerId", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {providers && providers.length > 0 ? (
+                          providers.map((provider) => (
+                            <SelectItem key={provider.id} value={provider.id}>
+                              {provider.full_name || `${provider.first_name} ${provider.last_name}`}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-providers-available" disabled>
+                            No providers available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-            <div className="space-y-2">
-              <Label htmlFor="roomId">Room</Label>
-              <Select value={watch("roomId")} onValueChange={(value) => setValue("roomId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select room (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No room</SelectItem>
-                  {rooms.map((room) => (
-                    <SelectItem key={room.id} value={room.id}>
-                      {room.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                <div className={`space-y-2 ${isProviderAccount ? 'col-span-2' : ''}`}>
+                  <Label htmlFor="roomId">Room</Label>
+                  <Select value={watch("roomId")} onValueChange={(value) => setValue("roomId", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select room (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No room</SelectItem>
+                      {rooms.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">

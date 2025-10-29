@@ -19,7 +19,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
 
 export default function PracticeCalendar() {
-  const { user, effectivePracticeId } = useAuth();
+  const { user, effectivePracticeId, isProviderAccount } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('week');
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
@@ -322,6 +322,7 @@ export default function PracticeCalendar() {
         providers={providers}
         rooms={rooms}
         isWalkIn={isWalkIn}
+        isProviderAccount={isProviderAccount}
       />
 
       <AppointmentDetailsDialog
