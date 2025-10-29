@@ -14,6 +14,7 @@ import { MessagesAndChatWidget } from "@/components/dashboard/MessagesAndChatWid
 import { RecentActivityWidget } from "@/components/dashboard/RecentActivityWidget";
 import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpRemindersWidget";
+import { WaitingRoomWidget } from "@/components/dashboard/WaitingRoomWidget";
 import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
 
 // Dashboard component with real-time stats
@@ -510,9 +511,10 @@ const Dashboard = () => {
       {/* V2 Widgets - Only for subscribed doctor/provider */}
       {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider') && (
         <>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <TodayAppointmentsWidget />
             <MessagesAndChatWidget />
+            <WaitingRoomWidget />
             <FollowUpRemindersWidget />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
