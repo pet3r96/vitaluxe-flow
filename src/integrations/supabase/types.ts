@@ -6977,6 +6977,11 @@ export type Database = {
         | "follow_up_overdue"
         | "follow_up_upcoming"
         | "follow_up_assigned"
+        | "practice_message_received"
+        | "appointment_confirmed"
+        | "appointment_rescheduled"
+        | "appointment_cancelled"
+        | "document_assigned"
       order_status:
         | "pending"
         | "filled"
@@ -7144,6 +7149,11 @@ export const Constants = {
         "follow_up_overdue",
         "follow_up_upcoming",
         "follow_up_assigned",
+        "practice_message_received",
+        "appointment_confirmed",
+        "appointment_rescheduled",
+        "appointment_cancelled",
+        "document_assigned",
       ],
       order_status: [
         "pending",

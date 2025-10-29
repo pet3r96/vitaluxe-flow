@@ -25,7 +25,15 @@ interface NotificationPreference {
   sms_enabled: boolean;
 }
 
-const NOTIFICATION_TYPES = [
+const PATIENT_NOTIFICATION_TYPES = [
+  { value: 'practice_message_received', label: 'Practice Messages', description: 'When your practice sends you a message' },
+  { value: 'appointment_confirmed', label: 'Appointment Confirmations', description: 'When your appointment is confirmed' },
+  { value: 'appointment_rescheduled', label: 'Appointment Changes', description: 'When your appointment is rescheduled' },
+  { value: 'appointment_cancelled', label: 'Appointment Cancellations', description: 'When an appointment is cancelled' },
+  { value: 'document_assigned', label: 'New Documents', description: 'When documents are shared with you' },
+];
+
+const PROVIDER_NOTIFICATION_TYPES = [
   { value: 'patient_message_received', label: 'Patient Messages', description: 'When a patient sends you a message' },
   { value: 'appointment_booked', label: 'Appointments Booked', description: 'When a patient books an appointment' },
   { value: 'appointment_cancelled', label: 'Appointments Cancelled', description: 'When an appointment is cancelled' },
@@ -36,6 +44,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
   const [preferences, setPreferences] = useState<Record<string, NotificationPreference>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -49,6 +58,15 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Fetch user role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      setUserRole(roleData?.role || '');
 
       const { data, error } = await supabase
         .from('notification_preferences')
@@ -66,8 +84,9 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
         };
       });
 
-      // Set defaults for missing types
-      NOTIFICATION_TYPES.forEach(type => {
+      // Set defaults for missing types based on user role
+      const notificationTypes = roleData?.role === 'patient' ? PATIENT_NOTIFICATION_TYPES : PROVIDER_NOTIFICATION_TYPES;
+      notificationTypes.forEach(type => {
         if (!prefsMap[type.value]) {
           prefsMap[type.value] = {
             notification_type: type.value,
@@ -154,7 +173,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
           </div>
         ) : (
           <div className="space-y-6 py-4">
-            {NOTIFICATION_TYPES.map((type, index) => (
+            {(userRole === 'patient' ? PATIENT_NOTIFICATION_TYPES : PROVIDER_NOTIFICATION_TYPES).map((type, index) => (
               <div key={type.value}>
                 {index > 0 && <Separator className="my-4" />}
                 <div className="space-y-3">

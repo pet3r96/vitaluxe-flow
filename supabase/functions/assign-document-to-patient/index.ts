@@ -143,10 +143,13 @@ serve(async (req) => {
     if (patientAccounts && patientAccounts.length > 0) {
       const notifications = patientAccounts.map(account => ({
         user_id: account.user_id,
-        title: 'New Document Assigned',
-        message: message || `A new document "${document?.document_name}" has been assigned to you`,
-        type: 'document_assigned',
-        related_id: documentId,
+        title: 'New Document Available',
+        message: message || `"${document?.document_name}" has been assigned to you`,
+        notification_type: 'document_assigned',
+        severity: 'info',
+        entity_type: 'provider_document',
+        entity_id: documentId,
+        action_url: '/documents',
       }));
 
       await supabaseAdmin.from('notifications').insert(notifications);

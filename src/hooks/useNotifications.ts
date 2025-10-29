@@ -186,11 +186,14 @@ export function useNotifications() {
             setNotifications((prev) => [newNotification, ...prev]);
             setUnreadCount((prev) => prev + 1);
 
-            // Show toast for new notification
+            // Show toast for new notification with enhanced styling
             toast({
               title: newNotification.title,
               description: newNotification.message,
-              variant: newNotification.severity === "error" ? "destructive" : "default",
+              variant: newNotification.severity === "error" || newNotification.severity === "warning" 
+                ? "destructive" 
+                : "default",
+              duration: newNotification.notification_type.includes('appointment') ? 10000 : 5000,
             });
           }
         )
