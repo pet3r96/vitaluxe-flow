@@ -16,6 +16,22 @@ Deno.serve(async (req) => {
 
     console.log('User authenticated:', user.id);
 
+    // Check for active impersonation session
+    const { data: impersonationSession } = await supabaseClient
+      .from('impersonation_sessions')
+      .select('impersonated_user_id, impersonated_role')
+      .eq('admin_user_id', user.id)
+      .eq('active', true)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+
+    // Use impersonated user ID if impersonating as patient, otherwise use actual user ID
+    const effectiveUserId = (impersonationSession?.impersonated_role === 'patient') 
+      ? impersonationSession.impersonated_user_id 
+      : user.id;
+
+    console.log('Effective user ID:', effectiveUserId, 'Impersonating:', !!impersonationSession);
+
     const { subject, message } = await req.json();
 
     if (!message?.trim()) throw new Error('Message body is required');
@@ -24,7 +40,7 @@ Deno.serve(async (req) => {
     const { data: patientAccount, error: patientError } = await supabaseClient
       .from('patient_accounts')
       .select('id, practice_id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .single();
 
     console.log('Patient account lookup:', { patientAccount, error: patientError });
@@ -40,7 +56,7 @@ Deno.serve(async (req) => {
     const insertPayload = {
       patient_id: patientAccount.id,
       practice_id: patientAccount.practice_id,
-      sender_id: user.id,
+      sender_id: effectiveUserId,
       sender_type: 'patient',
       message_body: message,
       subject: subject || 'Patient Message',
