@@ -30,8 +30,8 @@ export function DayView({
   blockedTime = [],
 }: DayViewProps) {
   const HOUR_HEIGHT = 80;
-  const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
-  const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour ?? 20));
+  const safeStart = Math.max(0, Math.min(23, (startHour ?? 7) - 1));
+  const safeEnd = Math.max(safeStart + 1, Math.min(24, (endHour ?? 20) + 1));
   const slotPx = (HOUR_HEIGHT * slotDuration) / 60;
   
   const scrollRef = useRef<HTMLDivElement>(null);
