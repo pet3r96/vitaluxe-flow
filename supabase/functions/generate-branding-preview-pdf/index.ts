@@ -1,50 +1,71 @@
-import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import jsPDF from "https://esm.sh/jspdf@2.5.1";
 
-// @ts-ignore: jsPDF types
-import jsPDF from 'npm:jspdf@2.5.2';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 /**
  * Fetch practice branding (logo URL and practice name)
  */
 const getPracticeBranding = async (supabase: any, userId: string) => {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('practice_id')
-    .eq('id', userId)
-    .single();
-
-  if (!profile?.practice_id) return { logoUrl: null, practiceName: null };
-
+  // Fetch branding directly by practice_id = user.id
   const { data: branding } = await supabase
     .from('practice_branding')
     .select('logo_url, practice_name')
-    .eq('practice_id', profile.practice_id)
-    .single();
+    .eq('practice_id', userId)
+    .maybeSingle();
+
+  // Fallback to profile name if branding name not set
+  let practiceName = branding?.practice_name;
+  if (!practiceName) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company, name')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    practiceName = profile?.company || profile?.name || 'VITALUXE SERVICES LLC';
+  }
 
   return {
     logoUrl: branding?.logo_url || null,
-    practiceName: branding?.practice_name || null,
+    practiceName,
   };
 };
 
 /**
- * Fetch logo image and convert to base64
+ * Fetch logo image and convert to base64 with content type detection
  */
-const fetchLogoAsBase64 = async (url: string): Promise<string | null> => {
+const fetchLogoAsBase64 = async (url: string): Promise<{ base64: string; format: string } | null> => {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
+    
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Skip SVG as jsPDF doesn't support it natively
+    if (contentType.includes('svg')) {
+      console.log('SVG logos are not supported in PDF generation');
+      return null;
+    }
+    
     const buffer = await response.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-    return base64;
+    
+    // Determine format for jsPDF
+    const format = contentType.includes('png') ? 'PNG' : 'JPEG';
+    
+    return { base64, format };
   } catch (error) {
     console.error('Error fetching logo:', error);
     return null;
   }
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -100,11 +121,9 @@ Deno.serve(async (req) => {
     // Add logo if available
     if (logoUrl) {
       try {
-        const logoBase64 = await fetchLogoAsBase64(logoUrl);
-        if (logoBase64) {
-          // Determine image format from URL
-          const imageFormat = logoUrl.toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
-          pdf.addImage(logoBase64, imageFormat, 15, 8, 15, 15);
+        const logoData = await fetchLogoAsBase64(logoUrl);
+        if (logoData) {
+          pdf.addImage(logoData.base64, logoData.format, 15, 8, 15, 15);
           console.log('Logo added to PDF');
         }
       } catch (error) {
@@ -119,34 +138,7 @@ Deno.serve(async (req) => {
     const nameX = logoUrl ? 35 : 15;
     pdf.text(displayName, nameX, 18);
 
-    // Reset text color for content
-    pdf.setTextColor(0, 0, 0);
-    yPosition = 45;
-
-    // Add preview content
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Branding Preview', 15, yPosition);
-    
-    yPosition += 10;
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-    
-    const previewText = [
-      'This is a preview of how your practice branding will appear on generated PDFs.',
-      '',
-      'Your logo and practice name will be displayed at the top of all documents,',
-      'including patient forms, terms and conditions, and other official documents.',
-      '',
-      'If you are satisfied with how your branding looks, you can close this preview.',
-      'If you would like to make adjustments, return to the branding settings and',
-      'upload a different logo or update your practice name.',
-    ];
-
-    previewText.forEach((line) => {
-      pdf.text(line, 15, yPosition);
-      yPosition += 6;
-    });
+    // No additional content - header-only preview
 
     // Generate PDF as base64
     const pdfBase64 = pdf.output('datauristring').split(',')[1];

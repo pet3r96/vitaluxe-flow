@@ -37,12 +37,6 @@ export function LogoPreview({ logoUrl, practiceName = "" }: LogoPreviewProps) {
         </div>
       </div>
 
-      {/* Mock PDF Content Preview */}
-      <div className="p-6 space-y-2 bg-muted/20">
-        <div className="h-3 bg-muted rounded w-3/4"></div>
-        <div className="h-3 bg-muted rounded w-1/2"></div>
-        <div className="h-3 bg-muted rounded w-2/3"></div>
-      </div>
     </div>
   );
 }

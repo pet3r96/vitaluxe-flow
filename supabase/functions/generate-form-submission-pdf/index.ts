@@ -7,29 +7,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to get practice logo URL
-async function getPracticeLogoUrl(supabase: any, userId: string): Promise<string | null> {
+// Helper function to get practice branding (logo + name)
+async function getPracticeBranding(supabase: any, userId: string): Promise<{ logoUrl: string | null; practiceName: string }> {
   try {
-    // Get practice_id (user might be practice owner or provider)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .single();
-
-    if (!profile) return null;
-
-    // Get practice branding
     const { data: branding } = await supabase
       .from('practice_branding')
-      .select('logo_url')
-      .eq('practice_id', profile.id)
+      .select('logo_url, practice_name')
+      .eq('practice_id', userId)
       .maybeSingle();
 
-    return branding?.logo_url || null;
+    let practiceName = branding?.practice_name;
+    if (!practiceName) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company, name')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      practiceName = profile?.company || profile?.name || 'VITALUXE SERVICES LLC';
+    }
+
+    return {
+      logoUrl: branding?.logo_url || null,
+      practiceName,
+    };
   } catch (error) {
-    console.warn('Failed to get practice logo:', error);
-    return null;
+    console.warn('Failed to get practice branding:', error);
+    return { logoUrl: null, practiceName: 'VITALUXE SERVICES LLC' };
   }
 }
 
@@ -82,7 +86,7 @@ serve(async (req) => {
       .from('patient_form_submissions')
       .select(`
         *,
-        practice_forms(form_name, form_schema),
+        practice_forms(form_name, form_schema, is_pdf_template, pdf_storage_path),
         patients(first_name, last_name),
         patient_accounts(full_name, email)
       `)
@@ -93,14 +97,33 @@ serve(async (req) => {
       throw new Error('Submission not found');
     }
 
+    // If this is an uploaded PDF form (not a created form), return the original PDF
+    if (submission.practice_forms.is_pdf_template && submission.practice_forms.pdf_storage_path) {
+      const { data: signedUrl } = await supabase.storage
+        .from('provider-documents')
+        .createSignedUrl(submission.practice_forms.pdf_storage_path, 3600);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          pdfUrl: signedUrl?.signedUrl || '',
+          fileName: submission.practice_forms.pdf_storage_path
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+
     // Generate PDF using jsPDF
     const doc = new jsPDF({
       unit: 'in',
       format: 'letter'
     });
 
-    // Fetch logo dynamically from practice branding
-    const logoUrl = await getPracticeLogoUrl(supabase, user.id);
+    // Fetch branding dynamically (logo + practice name)
+    const { logoUrl, practiceName } = await getPracticeBranding(supabase, user.id);
     const logoBase64 = logoUrl ? await fetchLogoAsBase64(logoUrl) : null;
 
     // Professional Header with Logo
@@ -118,7 +141,7 @@ serve(async (req) => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('VITALUXE SERVICES LLC', 4.25, 0.65, { align: 'center' });
+    doc.text(practiceName, 4.25, 0.65, { align: 'center' });
 
     // Document Title
     doc.setDrawColor(200, 166, 75);

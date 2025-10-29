@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ export function LogoTab() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [practiceName, setPracticeName] = useState("");
+  const debounceTimerRef = useRef<NodeJS.Timeout>();
 
   // Get current user's practice_id
   const { data: profile } = useQuery({
@@ -155,7 +156,7 @@ export function LogoTab() {
     },
   });
 
-  // Update practice name mutation
+  // Update practice name mutation (silent background save)
   const updateNameMutation = useMutation({
     mutationFn: async (newName: string) => {
       if (!profile?.id) throw new Error("No practice ID");
@@ -171,22 +172,74 @@ export function LogoTab() {
         });
 
       if (error) throw error;
+      return newName;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["practice-branding"] });
-      toast({
-        title: "Practice name updated",
-        description: "Your branding has been saved",
-      });
     },
     onError: (error: Error) => {
       toast({
-        title: "Update failed",
+        title: "Auto-save failed",
         description: error.message,
         variant: "destructive",
       });
     },
   });
+
+  // Explicit save with toast
+  const handleExplicitSave = useCallback(() => {
+    updateNameMutation.mutate(practiceName, {
+      onSuccess: () => {
+        toast({
+          title: "Practice name saved",
+          description: "Your branding has been updated",
+        });
+      },
+    });
+  }, [practiceName, updateNameMutation, toast]);
+
+  // Debounced auto-save
+  const handleNameChange = useCallback((value: string) => {
+    setPracticeName(value);
+    
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set new timer for auto-save
+    debounceTimerRef.current = setTimeout(() => {
+      updateNameMutation.mutate(value);
+    }, 800);
+  }, [updateNameMutation]);
+
+  // Auto-save on blur
+  const handleBlur = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    updateNameMutation.mutate(practiceName);
+  }, [practiceName, updateNameMutation]);
+
+  // Save on Enter key
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      handleExplicitSave();
+    }
+  }, [handleExplicitSave]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   // Generate preview PDF
   const generatePreviewPDF = useCallback(async () => {
@@ -265,7 +318,7 @@ export function LogoTab() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => updateNameMutation.mutate(practiceName)}
+                onClick={handleExplicitSave}
                 disabled={updateNameMutation.isPending}
               >
                 Save Name
@@ -275,12 +328,14 @@ export function LogoTab() {
               id="practice-name"
               type="text"
               value={practiceName}
-              onChange={(e) => setPracticeName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
               placeholder="Leave blank for white-label (logo only)"
               className="w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <p className="text-xs text-muted-foreground">
-              This name will appear next to your logo on PDFs. Leave blank to show only your logo.
+              This name will appear next to your logo on created forms. Auto-saves as you type.
             </p>
           </div>
 
