@@ -72,7 +72,7 @@ const Profile = () => {
             ? "Your Contact Information & Account Settings"
             : isProvider 
               ? "Your Professional Credentials & Contact Information" 
-              : "Practice Information, Shipping & Bank Account Details"}
+              : "Manage your personal information and account settings"}
         </p>
       </div>
 
