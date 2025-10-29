@@ -2,15 +2,20 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { FormCard } from "./FormCard";
 import { AssignFormDialog } from "./AssignFormDialog";
+import { FormBuilder } from "./FormBuilder";
+import { UploadFormDialog } from "./UploadFormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export function FormsTab() {
   const [showAssign, setShowAssign] = useState(false);
   const [selectedFormId, setSelectedFormId] = useState("");
+  const [showFormBuilder, setShowFormBuilder] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [editingForm, setEditingForm] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const { data: forms, isLoading } = useQuery({
@@ -44,8 +49,9 @@ export function FormsTab() {
     },
   });
 
-  const handleEdit = () => {
-    toast.info("Form builder coming soon");
+  const handleEdit = (form: any) => {
+    setEditingForm(form);
+    setShowFormBuilder(true);
   };
 
   const handleArchive = (formId: string) => {
@@ -60,8 +66,15 @@ export function FormsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => toast.info("Form builder coming soon")}>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setShowUploadDialog(true)}>
+          <Upload className="h-4 w-4 mr-2" />
+          Upload PDF Form
+        </Button>
+        <Button onClick={() => {
+          setEditingForm(null);
+          setShowFormBuilder(true);
+        }}>
           <Plus className="h-4 w-4 mr-2" />
           Create Form
         </Button>
@@ -83,7 +96,7 @@ export function FormsTab() {
                 setSelectedFormId(formId);
                 setShowAssign(true);
               }}
-              onEdit={handleEdit}
+              onEdit={() => handleEdit(form)}
               onArchive={() => handleArchive(form.id)}
               onDuplicate={handleDuplicate}
             />
@@ -96,7 +109,7 @@ export function FormsTab() {
           <p className="text-muted-foreground mb-4">
             Create your first form template to get started
           </p>
-          <Button onClick={() => toast.info("Form builder coming soon")}>
+          <Button onClick={() => setShowFormBuilder(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Create Form
           </Button>
@@ -107,6 +120,20 @@ export function FormsTab() {
         formId={selectedFormId}
         open={showAssign}
         onOpenChange={setShowAssign}
+      />
+
+      <FormBuilder
+        open={showFormBuilder}
+        onOpenChange={(open) => {
+          setShowFormBuilder(open);
+          if (!open) setEditingForm(null);
+        }}
+        form={editingForm}
+      />
+
+      <UploadFormDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
       />
     </div>
   );

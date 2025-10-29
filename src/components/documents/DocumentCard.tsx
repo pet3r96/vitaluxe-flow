@@ -5,6 +5,8 @@ import { FileText, Download, Trash2, UserPlus, Eye, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { AssignDocumentDialog } from "./AssignDocumentDialog";
+import { EditDocumentDialog } from "./EditDocumentDialog";
+import { DocumentViewer } from "./DocumentViewer";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +25,8 @@ interface DocumentCardProps {
 export function DocumentCard({ document }: DocumentCardProps) {
   const queryClient = useQueryClient();
   const [showAssign, setShowAssign] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showViewer, setShowViewer] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -91,11 +95,15 @@ export function DocumentCard({ document }: DocumentCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowViewer(true)}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  View
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={downloadDocument}>
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info("Edit feature coming soon")}>
+                <DropdownMenuItem onClick={() => setShowEdit(true)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </DropdownMenuItem>
@@ -141,6 +149,18 @@ export function DocumentCard({ document }: DocumentCardProps) {
         documentId={document.id}
         open={showAssign}
         onOpenChange={setShowAssign}
+      />
+      
+      <EditDocumentDialog
+        open={showEdit}
+        onOpenChange={setShowEdit}
+        document={document}
+      />
+
+      <DocumentViewer
+        open={showViewer}
+        onOpenChange={setShowViewer}
+        document={document}
       />
     </>
   );
