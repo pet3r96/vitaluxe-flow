@@ -46,7 +46,7 @@ export function WaitingRoomPanel({
           patient:patient_accounts(*),
           provider:providers!patient_appointments_provider_id_fkey(
             id,
-            user:profiles(name)
+            user:profiles(full_name)
           )
         `)
         .eq("practice_id", practiceId)
@@ -114,9 +114,17 @@ export function WaitingRoomPanel({
   const getWaitTimeColor = (checkedInAt: string) => {
     const minutes = differenceInMinutes(new Date(), new Date(checkedInAt));
 
-    if (minutes < 5) return "bg-green-50 hover:!bg-green-100 border-l-4 border-l-green-500";
-    if (minutes < 10) return "bg-yellow-50 hover:!bg-yellow-100 border-l-4 border-l-yellow-500";
-    return "bg-red-50 hover:!bg-red-100 border-l-4 border-l-red-500 animate-pulse";
+    if (minutes < 5) return "bg-black text-white border-l-4 border-l-green-500 hover:bg-gray-900";
+    if (minutes < 10) return "bg-black text-white border-l-4 border-l-yellow-500 hover:bg-gray-900";
+    return "bg-black text-white border-l-4 border-l-red-500 hover:bg-gray-900 animate-pulse";
+  };
+
+  const getWaitTimeIconColor = (checkedInAt: string) => {
+    const minutes = differenceInMinutes(new Date(), new Date(checkedInAt));
+    
+    if (minutes < 5) return "text-green-500";
+    if (minutes < 10) return "text-yellow-500";
+    return "text-red-500";
   };
 
   const getWaitTimeText = (checkedInAt: string) => {
@@ -189,7 +197,7 @@ export function WaitingRoomPanel({
                       )}
                     </TableCell>
                     <TableCell>
-                      {appointment.provider?.user?.name || "Unassigned"}
+                      {appointment.provider?.user?.full_name || "Unassigned"}
                     </TableCell>
                     <TableCell>
                       {appointment.checked_in_at
@@ -202,7 +210,7 @@ export function WaitingRoomPanel({
                     <TableCell className="font-semibold">
                       {appointment.checked_in_at ? (
                         <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
+                          <Clock className={cn("h-3 w-3", getWaitTimeIconColor(appointment.checked_in_at))} />
                           {getWaitTimeText(appointment.checked_in_at)}
                         </div>
                       ) : (
