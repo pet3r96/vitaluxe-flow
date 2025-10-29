@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HoursOfOperationForm } from "./HoursOfOperationForm";
 import { RoomsManagerTable } from "./RoomsManagerTable";
+import { CalendarSyncManager } from "./CalendarSyncManager";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CalendarSettingsDialogProps {
   open: boolean;
@@ -27,6 +29,7 @@ export function CalendarSettingsDialog({
   onSettingsUpdate,
 }: CalendarSettingsDialogProps) {
   const [activeTab, setActiveTab] = useState("hours");
+  const { user } = useAuth();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -39,9 +42,10 @@ export function CalendarSettingsDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="hours">Hours of Operation</TabsTrigger>
             <TabsTrigger value="rooms">Rooms Manager</TabsTrigger>
+            <TabsTrigger value="sync">Calendar Sync</TabsTrigger>
           </TabsList>
 
           <TabsContent value="hours" className="space-y-4">
@@ -57,6 +61,13 @@ export function CalendarSettingsDialog({
 
           <TabsContent value="rooms" className="space-y-4">
             <RoomsManagerTable practiceId={practiceId} />
+          </TabsContent>
+
+          <TabsContent value="sync" className="space-y-4">
+            <CalendarSyncManager 
+              practiceId={practiceId} 
+              userId={user?.id || ""} 
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>

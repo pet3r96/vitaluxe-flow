@@ -536,6 +536,36 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_sync_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          last_accessed_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cart: {
         Row: {
           created_at: string | null
