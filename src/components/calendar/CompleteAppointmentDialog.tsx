@@ -363,7 +363,7 @@ export function CompleteAppointmentDialog({
                         <SelectItem value="unassigned">Unassigned</SelectItem>
                         {(staffMembers as any)?.map((staff: any) => (
                           <SelectItem key={staff.id} value={staff.id}>
-                            {staff.name}
+                            {staff.name} ({staff.role_display})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -501,7 +501,7 @@ export function CompleteAppointmentDialog({
                       <SelectContent>
                         {providers?.map((provider) => (
                           <SelectItem key={provider.id} value={provider.id}>
-                            {provider.user?.profiles?.full_name || "Unknown"}
+                            {provider.full_name || "Unknown"}
                           </SelectItem>
                         ))}
                       </SelectContent>
