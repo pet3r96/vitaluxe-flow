@@ -190,6 +190,16 @@ export function AppointmentDetailsDialog({
                   </div>
                 )}
 
+                {appointment.service_type && (
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div className="text-sm">
+                      <div className="text-muted-foreground text-xs">Service Type</div>
+                      <div className="font-medium">{appointment.service_type}</div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Status:</span>
                   <Select value={status} onValueChange={handleStatusChange}>
@@ -214,6 +224,16 @@ export function AppointmentDetailsDialog({
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Notes</h3>
                   <p className="text-sm bg-muted p-3 rounded">{appointment.notes}</p>
+                </div>
+              </>
+            )}
+
+            {appointment.service_description && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Service Description</h3>
+                  <p className="text-sm bg-muted p-3 rounded">{appointment.service_description}</p>
                 </div>
               </>
             )}
