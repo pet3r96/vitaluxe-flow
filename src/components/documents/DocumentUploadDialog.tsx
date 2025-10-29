@@ -147,14 +147,12 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lab_result">Lab Result</SelectItem>
-                <SelectItem value="clinical_note">Clinical Note</SelectItem>
-                <SelectItem value="consent_form">Consent Form</SelectItem>
-                <SelectItem value="prescription">Prescription</SelectItem>
-                <SelectItem value="imaging">Imaging</SelectItem>
-                <SelectItem value="referral">Referral</SelectItem>
+                <SelectItem value="lab_results">Lab Results</SelectItem>
+                <SelectItem value="referrals">Referrals</SelectItem>
+                <SelectItem value="consents">Consents</SelectItem>
+                <SelectItem value="prescriptions">Prescriptions</SelectItem>
                 <SelectItem value="insurance">Insurance</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="internal_docs">Internal Docs</SelectItem>
               </SelectContent>
             </Select>
           </div>

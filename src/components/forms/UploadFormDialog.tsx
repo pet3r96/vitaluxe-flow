@@ -38,7 +38,7 @@ export function UploadFormDialog({ open, onOpenChange }: UploadFormDialogProps) 
         .from("practice_forms" as any)
         .insert([{
           form_name: formName || file.name,
-          form_type: "pdf_template",
+          form_type: "custom",
           form_schema: { version: "1.0", pdf_template: true } as any,
           is_pdf_template: true,
           pdf_storage_path: filePath,
