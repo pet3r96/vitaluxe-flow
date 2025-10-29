@@ -50,14 +50,18 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
       }
 
       // Create a direct download link (HIPAA compliant - no browser cache)
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = data.signedUrl;
       link.download = document.document_name; // Force download instead of opening
       link.target = '_blank'; // Fallback for some browsers
       link.rel = 'noopener noreferrer'; // Security
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      window.document.body.appendChild(link);
+      try {
+        link.click();
+      } catch {
+        window.open(data.signedUrl, '_blank');
+      }
+      window.document.body.removeChild(link);
 
       toast.success("Document downloaded");
     } catch (error) {
