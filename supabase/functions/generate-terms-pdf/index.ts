@@ -124,7 +124,13 @@ serve(async (req) => {
       .eq('id', terms_id)
       .single();
 
-    if (termsError || !terms) {
+    if (termsError) {
+      console.error('Error fetching terms:', termsError);
+      throw new Error(`Terms fetch error: ${termsError.message}`);
+    }
+    
+    if (!terms) {
+      console.error('Terms not found for ID:', terms_id);
       throw new Error('Terms not found');
     }
 
