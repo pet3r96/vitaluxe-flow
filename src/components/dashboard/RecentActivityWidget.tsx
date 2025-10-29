@@ -59,10 +59,10 @@ export function RecentActivityWidget({ className }: { className?: string }) {
         });
       });
 
-      // Sort by time and take top 10
+      // Sort by time and take top 5
       return combined
         .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-        .slice(0, 10);
+        .slice(0, 5);
     },
     refetchInterval: 60000,
   });
