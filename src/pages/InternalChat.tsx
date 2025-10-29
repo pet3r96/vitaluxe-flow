@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,6 +50,27 @@ export default function InternalChat() {
     }
   });
 
+  // Fetch practice team members for sender name lookups
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['practice-team-members', practiceId],
+    queryFn: async () => {
+      if (!practiceId) return [];
+      const { data, error } = await supabase.rpc('get_practice_team_members', {
+        p_practice_id: practiceId
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!practiceId
+  });
+
+  // Create a map of userId -> team member for quick lookups
+  const teamMap = useMemo(() => {
+    return Object.fromEntries(
+      teamMembers.map((m: any) => [m.user_id, m])
+    );
+  }, [teamMembers]);
+
   // Fetch messages with filters
   const { data: messagesData = [], isLoading: messagesLoading } = useQuery({
     queryKey: ['internal-messages', practiceId, filterTab, searchQuery, selectedPatientFilter],
@@ -60,7 +81,6 @@ export default function InternalChat() {
         .from('internal_messages')
         .select(`
           *,
-          sender:profiles!internal_messages_created_by_fkey(name),
           patient:patients(id, name),
           recipients:internal_message_recipients(
             id,
@@ -94,15 +114,16 @@ export default function InternalChat() {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Transform data to include counts
+      // Transform data to include counts and enrich with sender names
       return data.map((msg: any) => ({
         ...msg,
+        sender: { name: teamMap[msg.created_by]?.name || 'Unknown' },
         reply_count: msg.replies?.length || 0,
         unread_count: msg.recipients?.filter((r: any) => r.recipient_id === effectiveUserId && !r.read_at).length || 0,
         has_attachments: (msg.attached_document_ids?.length || 0) > 0 || (msg.attached_form_ids?.length || 0) > 0
       }));
     },
-    enabled: !!practiceId
+    enabled: !!practiceId && teamMembers.length > 0
   });
 
   // Fetch patients for filter
@@ -130,15 +151,21 @@ export default function InternalChat() {
         .from('internal_messages')
         .select(`
           *,
-          sender:profiles!internal_messages_created_by_fkey(id, name),
           patient:patients(id, name)
         `)
         .eq('id', selectedMessageId)
         .single();
       if (error) throw error;
-      return data;
+      // Enrich with sender name
+      return {
+        ...data,
+        sender: {
+          id: data.created_by,
+          name: teamMap[data.created_by]?.name || 'Unknown'
+        }
+      };
     },
-    enabled: !!selectedMessageId
+    enabled: !!selectedMessageId && teamMembers.length > 0
   });
 
   // Fetch replies
@@ -148,16 +175,20 @@ export default function InternalChat() {
       if (!selectedMessageId) return [];
       const { data, error } = await supabase
         .from('internal_message_replies')
-        .select(`
-          *,
-          sender:profiles!internal_message_replies_sender_id_fkey(id, name)
-        `)
+        .select('*')
         .eq('message_id', selectedMessageId)
         .order('created_at');
       if (error) throw error;
-      return data;
+      // Enrich with sender names
+      return data.map((reply: any) => ({
+        ...reply,
+        sender: {
+          id: reply.sender_id,
+          name: teamMap[reply.sender_id]?.name || 'Unknown'
+        }
+      }));
     },
-    enabled: !!selectedMessageId
+    enabled: !!selectedMessageId && teamMembers.length > 0
   });
 
   // Fetch recipients for selected message
