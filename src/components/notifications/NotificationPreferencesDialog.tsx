@@ -59,14 +59,15 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch user role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
+      // Check if user is a patient (check patient_accounts table)
+      const { data: patientAccount } = await supabase
+        .from('patient_accounts')
+        .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      setUserRole(roleData?.role || '');
+      const isPatient = !!patientAccount;
+      setUserRole(isPatient ? 'patient' : 'provider');
 
       const { data, error } = await supabase
         .from('notification_preferences')
@@ -85,7 +86,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       });
 
       // Set defaults for missing types based on user role
-      const notificationTypes = roleData?.role === 'patient' ? PATIENT_NOTIFICATION_TYPES : PROVIDER_NOTIFICATION_TYPES;
+      const notificationTypes = isPatient ? PATIENT_NOTIFICATION_TYPES : PROVIDER_NOTIFICATION_TYPES;
       notificationTypes.forEach(type => {
         if (!prefsMap[type.value]) {
           prefsMap[type.value] = {
