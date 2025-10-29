@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Trash2, FileCheck } from "lucide-react";
+import { Upload, Trash2 } from "lucide-react";
 import { LogoPreview } from "./LogoPreview";
 
 export function LogoTab() {
@@ -187,28 +187,6 @@ export function LogoTab() {
     },
   });
 
-  // Generate test PDF
-  const generateTestPDF = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-terms-pdf", {
-        body: { test: true },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Test PDF generated",
-        description: "Check your downloads folder",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Test failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
-
   const handleFileSelect = useCallback(
     (file: File) => {
       setIsUploading(true);
@@ -336,24 +314,14 @@ export function LogoTab() {
             </Button>
 
             {branding?.logo_url && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => removeLogoMutation.mutate()}
-                  disabled={removeLogoMutation.isPending}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Remove Logo
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={generateTestPDF}
-                >
-                  <FileCheck className="h-4 w-4 mr-2" />
-                  Test PDF
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                onClick={() => removeLogoMutation.mutate()}
+                disabled={removeLogoMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remove Logo
+              </Button>
             )}
           </div>
         </div>
