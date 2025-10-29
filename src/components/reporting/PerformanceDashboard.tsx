@@ -14,24 +14,19 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
   const { data: metrics, isLoading } = useQuery({
     queryKey: ["performance-metrics", dateRange],
     queryFn: async () => {
+      const from = new Date(dateRange.from);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(dateRange.to);
+      to.setHours(23, 59, 59, 999);
+
       const { data: appointments, error } = await supabase
         .from("patient_appointments")
-        .select(`
-          id,
-          status,
-          start_time,
-          end_time,
-          service_type,
-          cancellation_reason,
-          providers (
-            id,
-            users (
-              full_name
-            )
-          )
-        `)
-        .gte("start_time", dateRange.from.toISOString())
-        .lte("start_time", dateRange.to.toISOString());
+        .select(
+          "id, status, start_time, end_time, service_type, cancellation_reason, provider_id, patient_id"
+        )
+        .gte("start_time", from.toISOString())
+        .lte("start_time", to.toISOString())
+        .order("start_time", { ascending: true });
 
       if (error) throw error;
 
@@ -43,21 +38,16 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
       const { count: newPatients } = await supabase
         .from("patient_accounts")
         .select("*", { count: 'exact', head: true })
-        .gte("created_at", dateRange.from.toISOString())
-        .lte("created_at", dateRange.to.toISOString());
+        .gte("created_at", from.toISOString())
+        .lte("created_at", to.toISOString());
 
       const providerStats = appointments?.reduce((acc: any, apt: any) => {
-        const provider = Array.isArray(apt.providers) ? apt.providers[0] : apt.providers;
-        const providerId = provider?.id;
-        const providerName = provider?.users ? 
-          (Array.isArray(provider.users) ? provider.users[0]?.full_name : provider.users.full_name) 
-          : 'Unknown';
-
+        const providerId = (apt as any).provider_id;
         if (!providerId) return acc;
 
         if (!acc[providerId]) {
           acc[providerId] = {
-            name: providerName,
+            name: `Provider ${String(providerId).slice(0, 6)}`,
             total: 0,
             cancelled: 0,
             completed: 0,
@@ -69,8 +59,7 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
         if (apt.status === 'completed') acc[providerId].completed++;
 
         return acc;
-      }, {});
-
+      }, {} as Record<string, any>);
       return {
         totalAppts,
         cancelled,

@@ -24,26 +24,18 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
   const { data: dailyData, isLoading } = useQuery({
     queryKey: ["end-of-day", dateRange],
     queryFn: async () => {
+      const from = new Date(dateRange.from);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(dateRange.to);
+      to.setHours(23, 59, 59, 999);
+
       const { data: appointments, error } = await supabase
         .from("patient_appointments")
-        .select(`
-          id,
-          status,
-          start_time,
-          end_time,
-          service_type,
-          patients (
-            first_name,
-            last_name
-          ),
-          providers (
-            users (
-              full_name
-            )
-          )
-        `)
-        .gte("start_time", dateRange.from.toISOString())
-        .lte("start_time", dateRange.to.toISOString())
+        .select(
+          "id, status, start_time, end_time, service_type, patient_id, provider_id, cancellation_reason"
+        )
+        .gte("start_time", from.toISOString())
+        .lte("start_time", to.toISOString())
         .order("start_time", { ascending: true });
 
       if (error) throw error;
@@ -57,8 +49,30 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
       const { count: messageCount } = await supabase
         .from("messages")
         .select("*", { count: 'exact', head: true })
-        .gte("created_at", dateRange.from.toISOString())
-        .lte("created_at", dateRange.to.toISOString());
+        .gte("created_at", from.toISOString())
+        .lte("created_at", to.toISOString());
+
+      const patientIds = Array.from(
+        new Set((appointments || []).map((a: any) => a.patient_id).filter(Boolean))
+      );
+
+      let patientMap: Record<string, { first_name?: string; last_name?: string }> = {};
+      if (patientIds.length > 0) {
+        const { data: patientsRes } = await supabase
+          .from("patient_accounts")
+          .select("id, first_name, last_name")
+          .in("id", patientIds as any);
+        patientMap = Object.fromEntries((patientsRes || []).map((p: any) => [p.id, p]));
+      }
+
+      const enrichedAppointments = (appointments || []).map((apt: any) => {
+        const patient = apt.patient_id ? patientMap[apt.patient_id] : undefined;
+        const patientName = patient
+          ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unknown'
+          : 'Unknown';
+        const providerDisplay = apt.provider_id ? `Provider ${String(apt.provider_id).slice(0, 6)}` : 'N/A';
+        return { ...apt, patientName, providerDisplay };
+      });
 
       return {
         scheduled,
@@ -66,7 +80,7 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
         noShows,
         cancelled,
         messagesSent: messageCount || 0,
-        appointments: appointments || [],
+        appointments: enrichedAppointments,
       };
     },
   });
@@ -114,15 +128,9 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
       doc.setFontSize(9);
       
       dailyData?.appointments.slice(0, 20).forEach((apt: any) => {
-        const patient = Array.isArray(apt.patients) ? apt.patients[0] : apt.patients;
-        const provider = Array.isArray(apt.providers) ? apt.providers[0] : apt.providers;
-        const providerUsers = provider?.users ? 
-          (Array.isArray(provider.users) ? provider.users[0] : provider.users) 
-          : null;
-
         const time = format(new Date(apt.start_time), "h:mm a");
-        const patientName = patient ? `${patient.first_name} ${patient.last_name}` : 'Unknown';
-        const providerName = providerUsers?.full_name || 'N/A';
+        const patientName = apt.patientName || 'Unknown';
+        const providerName = apt.providerDisplay || 'N/A';
         const status = apt.status;
 
         const line = `${time} | ${patientName} | ${providerName} | ${status}`;
@@ -240,21 +248,15 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
                   </TableRow>
                 ) : (
                   dailyData?.appointments.map((apt: any) => {
-                    const patient = Array.isArray(apt.patients) ? apt.patients[0] : apt.patients;
-                    const provider = Array.isArray(apt.providers) ? apt.providers[0] : apt.providers;
-                    const providerUsers = provider?.users ? 
-                      (Array.isArray(provider.users) ? provider.users[0] : provider.users) 
-                      : null;
-
                     return (
                       <TableRow key={apt.id}>
                         <TableCell className="font-medium">
                           {format(new Date(apt.start_time), "h:mm a")}
                         </TableCell>
                         <TableCell>
-                          {patient ? `${patient.first_name} ${patient.last_name}` : 'Unknown'}
+                          {apt.patientName || 'Unknown'}
                         </TableCell>
-                        <TableCell>{providerUsers?.full_name || 'N/A'}</TableCell>
+                        <TableCell>{apt.providerDisplay || 'N/A'}</TableCell>
                         <TableCell>{apt.service_type || 'General'}</TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
