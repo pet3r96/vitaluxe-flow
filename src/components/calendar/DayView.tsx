@@ -149,16 +149,17 @@ export function DayView({
 
           {/* Provider columns */}
           {filteredProviders.map((provider) => (
-            <div key={provider.id} className="flex-1 border-r last:border-r-0 relative">
+            <div key={provider.id} className="flex-1 border-r last:border-r-0 relative"
+              style={{
+                backgroundImage: `repeating-linear-gradient(to bottom, hsl(var(--border) / 0.25) 0px, hsl(var(--border) / 0.25) 1px, transparent 1px, transparent ${slotPx}px), repeating-linear-gradient(to bottom, hsl(var(--border)) 0px, hsl(var(--border)) 2px, transparent 2px, transparent ${HOUR_HEIGHT}px)`
+              }}
+            >
               {timeSlots.map(({ hour, minute }) => {
                 const slotDate = setHours(setMinutes(currentDate, minute), hour);
                 return (
                   <div
                     key={`${hour}-${minute}`}
-                    className={cn(
-                      "border-b cursor-pointer hover:bg-accent/50 transition-colors",
-                      minute === 0 && "border-b-2"
-                    )}
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
                     style={{ height: `${slotPx}px` }}
                     onClick={() => onTimeSlotClick(slotDate, provider.id)}
                   />
