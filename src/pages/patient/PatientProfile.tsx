@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,20 +13,20 @@ import { NotificationPreferencesDialog } from "@/components/notifications/Notifi
 import { ActivityLogSection } from "@/components/patient/ActivityLogSection";
 
 export default function PatientProfile() {
+  const { effectiveUserId } = useAuth();
   const [editing, setEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
   const { data: profile, refetch, isLoading, error } = useQuery({
-    queryKey: ["patient-profile"],
+    queryKey: ["patient-profile", effectiveUserId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!effectiveUserId) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
         .from("patient_accounts")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .maybeSingle();
 
       if (error) throw error;
@@ -35,13 +36,12 @@ export default function PatientProfile() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates: any) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!effectiveUserId) throw new Error("Not authenticated");
 
       const { error } = await supabase
         .from("patient_accounts")
         .update(updates)
-        .eq("user_id", user.id);
+        .eq("user_id", effectiveUserId);
 
       if (error) throw error;
     },
