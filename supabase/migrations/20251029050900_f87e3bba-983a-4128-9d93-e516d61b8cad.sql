@@ -1,0 +1,118 @@
+-- Fix notify_due_follow_ups function to use correct patient field
+CREATE OR REPLACE FUNCTION notify_due_follow_ups()
+RETURNS void AS $$
+DECLARE
+  follow_up RECORD;
+  notification_type_val TEXT;
+  notification_title TEXT;
+  notification_message TEXT;
+  severity_val TEXT;
+BEGIN
+  FOR follow_up IN 
+    SELECT f.*, 
+           p.name as patient_name
+    FROM patient_follow_ups f
+    JOIN patients p ON f.patient_id = p.id
+    WHERE f.status = 'pending'
+      AND f.follow_up_date <= CURRENT_DATE + INTERVAL '1 day'
+      AND NOT EXISTS (
+        SELECT 1 FROM notifications n
+        WHERE n.entity_id = f.id::TEXT
+          AND n.entity_type = 'follow_up'
+          AND n.created_at::DATE = CURRENT_DATE
+      )
+  LOOP
+    IF follow_up.follow_up_date < CURRENT_DATE THEN
+      notification_type_val := 'follow_up_overdue';
+      notification_title := 'Overdue Follow-Up';
+      notification_message := follow_up.patient_name || ' - Follow-up was due on ' || 
+                              TO_CHAR(follow_up.follow_up_date, 'Mon DD, YYYY');
+      severity_val := 'error';
+    ELSIF follow_up.follow_up_date = CURRENT_DATE THEN
+      notification_type_val := 'follow_up_due_today';
+      notification_title := 'Follow-Up Due Today';
+      notification_message := follow_up.patient_name || ' - ' || follow_up.reason;
+      severity_val := 'warning';
+    ELSE
+      notification_type_val := 'follow_up_upcoming';
+      notification_title := 'Upcoming Follow-Up';
+      notification_message := follow_up.patient_name || ' - Due ' || 
+                              TO_CHAR(follow_up.follow_up_date, 'Mon DD, YYYY');
+      severity_val := 'info';
+    END IF;
+    
+    INSERT INTO notifications (
+      user_id,
+      notification_type,
+      severity,
+      category,
+      title,
+      message,
+      entity_type,
+      entity_id,
+      action_url,
+      metadata
+    ) VALUES (
+      COALESCE(follow_up.assigned_to, follow_up.created_by),
+      notification_type_val::notification_type,
+      severity_val,
+      'clinical',
+      notification_title,
+      notification_message,
+      'follow_up',
+      follow_up.id::TEXT,
+      '/patients/' || follow_up.patient_id || '?tab=follow-ups',
+      jsonb_build_object(
+        'patient_id', follow_up.patient_id,
+        'follow_up_date', follow_up.follow_up_date,
+        'priority', follow_up.priority
+      )
+    );
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Fix notify_follow_up_assignment trigger function
+CREATE OR REPLACE FUNCTION notify_follow_up_assignment()
+RETURNS TRIGGER AS $$
+DECLARE
+  patient_name TEXT;
+  creator_name TEXT;
+BEGIN
+  IF NEW.assigned_to IS NOT NULL AND (TG_OP = 'INSERT' OR OLD.assigned_to IS DISTINCT FROM NEW.assigned_to) THEN
+    SELECT name INTO patient_name FROM patients WHERE id = NEW.patient_id;
+    SELECT name INTO creator_name FROM profiles WHERE id = NEW.created_by;
+    
+    INSERT INTO notifications (
+      user_id,
+      notification_type,
+      severity,
+      category,
+      title,
+      message,
+      entity_type,
+      entity_id,
+      action_url,
+      metadata
+    ) VALUES (
+      NEW.assigned_to,
+      'follow_up_assigned',
+      'info',
+      'clinical',
+      'Follow-Up Assigned',
+      creator_name || ' assigned you a follow-up for ' || patient_name || ' on ' || 
+      TO_CHAR(NEW.follow_up_date, 'Mon DD, YYYY'),
+      'follow_up',
+      NEW.id::TEXT,
+      '/patients/' || NEW.patient_id || '?tab=follow-ups',
+      jsonb_build_object(
+        'patient_id', NEW.patient_id,
+        'follow_up_date', NEW.follow_up_date,
+        'reason', NEW.reason
+      )
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

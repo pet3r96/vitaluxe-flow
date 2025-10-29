@@ -2474,6 +2474,154 @@ export type Database = {
           },
         ]
       }
+      patient_follow_ups: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_notes: string | null
+          created_at: string
+          created_by: string
+          follow_up_date: string
+          follow_up_time: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          priority: string | null
+          reason: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          created_by: string
+          follow_up_date: string
+          follow_up_time?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          priority?: string | null
+          reason: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          created_by?: string
+          follow_up_date?: string
+          follow_up_time?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          priority?: string | null
+          reason?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_follow_ups_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_follow_ups_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
+      patient_form_submissions: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          completed_at: string | null
+          created_at: string
+          custom_instructions: string | null
+          due_date: string | null
+          expires_at: string | null
+          form_data: Json | null
+          form_id: string
+          id: string
+          patient_id: string
+          signature_data: Json | null
+          signed_at: string | null
+          started_at: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          custom_instructions?: string | null
+          due_date?: string | null
+          expires_at?: string | null
+          form_data?: Json | null
+          form_id: string
+          id?: string
+          patient_id: string
+          signature_data?: Json | null
+          signed_at?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          custom_instructions?: string | null
+          due_date?: string | null
+          expires_at?: string | null
+          form_data?: Json | null
+          form_id?: string
+          id?: string
+          patient_id?: string
+          signature_data?: Json | null
+          signed_at?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_form_submissions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "practice_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_form_submissions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_form_submissions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       patient_medical_vault: {
         Row: {
           allergies: Json | null
@@ -3622,7 +3770,9 @@ export type Database = {
           form_type: string
           id: string
           is_active: boolean | null
+          is_pdf_template: boolean | null
           is_required: boolean | null
+          pdf_storage_path: string | null
           practice_id: string
           updated_at: string
         }
@@ -3634,7 +3784,9 @@ export type Database = {
           form_type: string
           id?: string
           is_active?: boolean | null
+          is_pdf_template?: boolean | null
           is_required?: boolean | null
+          pdf_storage_path?: string | null
           practice_id: string
           updated_at?: string
         }
@@ -3646,7 +3798,9 @@ export type Database = {
           form_type?: string
           id?: string
           is_active?: boolean | null
+          is_pdf_template?: boolean | null
           is_required?: boolean | null
+          pdf_storage_path?: string | null
           practice_id?: string
           updated_at?: string
         }
@@ -4471,6 +4625,84 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_documents: {
+        Row: {
+          assigned_patient_id: string | null
+          assigned_staff_id: string | null
+          created_at: string
+          document_name: string
+          document_type: string
+          file_size: number | null
+          id: string
+          is_internal: boolean | null
+          mime_type: string | null
+          notes: string | null
+          practice_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          storage_path: string
+          tags: string[] | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          assigned_patient_id?: string | null
+          assigned_staff_id?: string | null
+          created_at?: string
+          document_name: string
+          document_type: string
+          file_size?: number | null
+          id?: string
+          is_internal?: boolean | null
+          mime_type?: string | null
+          notes?: string | null
+          practice_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          storage_path: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          assigned_patient_id?: string | null
+          assigned_staff_id?: string | null
+          created_at?: string
+          document_name?: string
+          document_type?: string
+          file_size?: number | null
+          id?: string
+          is_internal?: boolean | null
+          mime_type?: string | null
+          notes?: string | null
+          practice_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          storage_path?: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -6580,6 +6812,7 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: undefined
       }
+      notify_due_follow_ups: { Args: never; Returns: undefined }
       recompute_order_profits: {
         Args: { p_order_ids?: string[]; p_status_filter?: string[] }
         Returns: {
@@ -6626,6 +6859,10 @@ export type Database = {
         | "low_inventory"
         | "product_request_approved"
         | "product_request_rejected"
+        | "follow_up_due_today"
+        | "follow_up_overdue"
+        | "follow_up_upcoming"
+        | "follow_up_assigned"
       order_status:
         | "pending"
         | "filled"
@@ -6789,6 +7026,10 @@ export const Constants = {
         "low_inventory",
         "product_request_approved",
         "product_request_rejected",
+        "follow_up_due_today",
+        "follow_up_overdue",
+        "follow_up_upcoming",
+        "follow_up_assigned",
       ],
       order_status: [
         "pending",

@@ -20,7 +20,7 @@ export function FollowUpRemindersWidget() {
         .from("patient_follow_ups" as any)
         .select(`
           *,
-          patients(first_name, last_name)
+          patients(name)
         `)
         .eq("status", "pending")
         .lte("follow_up_date", sevenDaysFromNow.toISOString().split("T")[0])
@@ -83,27 +83,41 @@ export function FollowUpRemindersWidget() {
             {followUps.map((followUp) => (
               <div
                 key={followUp.id}
-                className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50"
+                className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                onClick={() => window.location.href = `/patients/${followUp.patient_id}?tab=follow-ups`}
               >
                 <CalendarIcon className="h-4 w-4 mt-1 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">
-                    {followUp.patients?.first_name} {followUp.patients?.last_name}
+                    {followUp.patients?.name}
                   </div>
                   <div className="text-sm text-muted-foreground truncate">
                     {followUp.reason}
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {getDateBadge(followUp.follow_up_date)}
                     <span className="text-xs text-muted-foreground">
                       {format(new Date(followUp.follow_up_date), "MMM d")}
                     </span>
+                    {followUp.priority && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        followUp.priority === 'urgent' ? 'bg-destructive text-destructive-foreground' :
+                        followUp.priority === 'high' ? 'bg-orange-500 text-white' :
+                        followUp.priority === 'medium' ? 'bg-yellow-500 text-white' :
+                        'bg-blue-500 text-white'
+                      }`}>
+                        {followUp.priority}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => markComplete.mutate(followUp.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markComplete.mutate(followUp.id);
+                  }}
                   disabled={markComplete.isPending}
                 >
                   <Check className="h-4 w-4" />

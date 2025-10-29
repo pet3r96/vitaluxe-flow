@@ -43,7 +43,12 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
       onMarkAsRead(notification.id);
     }
     if (notification.action_url) {
-      navigate(notification.action_url);
+      // Handle follow-up notifications specially to navigate to patient chart
+      if (notification.entity_type === 'follow_up' && notification.metadata?.patient_id) {
+        navigate(`/patients/${notification.metadata.patient_id}?tab=follow-ups`);
+      } else {
+        navigate(notification.action_url);
+      }
     }
   };
 
