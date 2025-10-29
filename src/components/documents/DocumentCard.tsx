@@ -61,14 +61,17 @@ export function DocumentCard({ document }: DocumentCardProps) {
         .createSignedUrl(document.storage_path, 60);
 
       if (error || !data) {
-        toast.error("Failed to download document");
+        console.error("Failed to create signed URL:", error);
+        toast.error("Failed to generate download link");
         return;
       }
 
       // Download the file as a blob for HIPAA compliance
       const response = await fetch(data.signedUrl);
       if (!response.ok) {
-        throw new Error('Failed to download document');
+        console.error("Failed to fetch document:", response.status, response.statusText);
+        toast.error("Failed to fetch document from storage");
+        return;
       }
 
       const blob = await response.blob();
@@ -83,6 +86,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
 
       toast.success("Document downloaded");
     } catch (error) {
+      console.error("Download error:", error);
       toast.error("Failed to download document");
     }
   };

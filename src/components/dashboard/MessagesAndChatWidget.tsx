@@ -139,7 +139,8 @@ export function MessagesAndChatWidget() {
           table: 'internal_messages',
           filter: `practice_id=eq.${effectivePracticeId}`,
         },
-        () => {
+        (payload) => {
+          console.log("Internal messages change detected:", payload);
           queryClient.invalidateQueries({ queryKey: ["unread-internal-chat", user.id, effectiveRole, effectivePracticeId] });
         }
       )
