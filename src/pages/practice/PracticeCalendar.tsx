@@ -252,41 +252,6 @@ export default function PracticeCalendar() {
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Filters Sheet Trigger */}
-        <div className="flex-none px-6 py-2 border-b">
-          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-                {(selectedProviders.length > 0 || selectedRooms.length > 0 || selectedStatuses.length > 0) && (
-                  <Badge variant="secondary" className="ml-2">
-                    {selectedProviders.length + selectedRooms.length + selectedStatuses.length}
-                  </Badge>
-                )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[350px] sm:w-[400px] overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Calendar Filters</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6">
-                <CalendarFilters
-                  providers={providers}
-                  rooms={rooms}
-                  selectedProviders={selectedProviders}
-                  selectedRooms={selectedRooms}
-                  selectedStatuses={selectedStatuses}
-                  onProviderToggle={handleProviderToggle}
-                  onRoomToggle={handleRoomToggle}
-                  onStatusToggle={handleStatusToggle}
-                  isProviderView={isProviderView}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-
         {/* Full-width calendar */}
         <div className="flex-1 p-6 flex flex-col overflow-hidden">
           <CalendarHeader
@@ -294,6 +259,9 @@ export default function PracticeCalendar() {
             view={view}
             onDateChange={setCurrentDate}
             onViewChange={setView}
+            filtersOpen={filtersOpen}
+            onFiltersOpenChange={setFiltersOpen}
+            filterCount={selectedProviders.length + selectedRooms.length + selectedStatuses.length}
           />
 
           <div className="flex-1 mt-4 overflow-hidden">
@@ -354,6 +322,28 @@ export default function PracticeCalendar() {
           currentDate={currentDate}
         />
       </div>
+
+      {/* Filters Sheet */}
+      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <SheetContent side="left" className="w-[350px] sm:w-[400px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Calendar Filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <CalendarFilters
+              providers={providers}
+              rooms={rooms}
+              selectedProviders={selectedProviders}
+              selectedRooms={selectedRooms}
+              selectedStatuses={selectedStatuses}
+              onProviderToggle={handleProviderToggle}
+              onRoomToggle={handleRoomToggle}
+              onStatusToggle={handleStatusToggle}
+              isProviderView={isProviderView}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <CreateAppointmentDialog
         open={createDialogOpen}

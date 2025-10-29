@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, startOfWeek, startOfMonth, startOfDay } from "date-fns";
 import {
   Select,
@@ -18,9 +19,20 @@ interface CalendarHeaderProps {
   view: CalendarView;
   onDateChange: (date: Date) => void;
   onViewChange: (view: CalendarView) => void;
+  filtersOpen?: boolean;
+  onFiltersOpenChange?: (open: boolean) => void;
+  filterCount?: number;
 }
 
-export function CalendarHeader({ currentDate, view, onDateChange, onViewChange }: CalendarHeaderProps) {
+export function CalendarHeader({ 
+  currentDate, 
+  view, 
+  onDateChange, 
+  onViewChange,
+  filtersOpen,
+  onFiltersOpenChange,
+  filterCount = 0
+}: CalendarHeaderProps) {
   const getDateDisplay = () => {
     switch (view) {
       case 'day':
@@ -75,6 +87,22 @@ export function CalendarHeader({ currentDate, view, onDateChange, onViewChange }
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pb-4 border-b">
       <div className="flex items-center gap-2">
+        {onFiltersOpenChange && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onFiltersOpenChange(!filtersOpen)}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {filterCount > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {filterCount}
+              </Badge>
+            )}
+          </Button>
+        )}
+        
         <Button variant="outline" size="sm" onClick={handleToday}>
           Today
         </Button>
@@ -87,8 +115,7 @@ export function CalendarHeader({ currentDate, view, onDateChange, onViewChange }
         
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="min-w-[200px] justify-start">
-              <CalendarIcon className="h-4 w-4 mr-2" />
+            <Button variant="outline" className="min-w-[200px]">
               {getDateDisplay()}
             </Button>
           </PopoverTrigger>
