@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
         patient:patient_accounts(first_name, last_name),
         provider:providers!patient_appointments_provider_id_fkey(
           id,
-          user:profiles!providers_user_id_fkey(name)
+          user:profiles(name)
         ),
         room:practice_rooms(name),
         service_type_info:appointment_service_types(name)
