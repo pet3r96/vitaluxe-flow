@@ -44,28 +44,24 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
         .createSignedUrl(document.storage_path, 60);
 
       if (error || !data) {
-        toast.error("Failed to download document");
+        console.error("Failed to create signed URL:", error);
+        toast.error("Failed to generate download link");
         return;
       }
 
-      // Download the file as a blob for HIPAA compliance
-      const response = await fetch(data.signedUrl);
-      if (!response.ok) {
-        throw new Error('Failed to download document');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Create a direct download link (HIPAA compliant - no browser cache)
       const link = document.createElement('a');
-      link.href = url;
-      link.download = document.document_name;
+      link.href = data.signedUrl;
+      link.download = document.document_name; // Force download instead of opening
+      link.target = '_blank'; // Fallback for some browsers
+      link.rel = 'noopener noreferrer'; // Security
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
 
       toast.success("Document downloaded");
     } catch (error) {
+      console.error("Download error:", error);
       toast.error("Failed to download document");
     }
   };

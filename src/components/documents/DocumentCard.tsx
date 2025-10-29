@@ -66,23 +66,15 @@ export function DocumentCard({ document }: DocumentCardProps) {
         return;
       }
 
-      // Download the file as a blob for HIPAA compliance
-      const response = await fetch(data.signedUrl);
-      if (!response.ok) {
-        console.error("Failed to fetch document:", response.status, response.statusText);
-        toast.error("Failed to fetch document from storage");
-        return;
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Create a direct download link (HIPAA compliant - no browser cache)
       const link = document.createElement('a');
-      link.href = url;
-      link.download = document.document_name;
+      link.href = data.signedUrl;
+      link.download = document.document_name; // Force download instead of opening
+      link.target = '_blank'; // Fallback for some browsers
+      link.rel = 'noopener noreferrer'; // Security
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
 
       toast.success("Document downloaded");
     } catch (error) {
