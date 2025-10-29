@@ -12,10 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock } from "lucide-react";
+import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { RescheduleAppointmentDialog } from "./RescheduleAppointmentDialog";
+import { CreateFollowUpFromAppointmentDialog } from "./CreateFollowUpFromAppointmentDialog";
 
 interface AppointmentDetailsDialogProps {
   open: boolean;
@@ -45,6 +46,7 @@ export function AppointmentDetailsDialog({
   const queryClient = useQueryClient();
   const [status, setStatus] = useState(appointment?.status);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [followUpOpen, setFollowUpOpen] = useState(false);
 
   // Sync status with appointment prop
   useEffect(() => {
@@ -336,6 +338,14 @@ export function AppointmentDetailsDialog({
 
                 <Button
                   variant="outline"
+                  onClick={() => setFollowUpOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Create Follow-Up
+                </Button>
+                
+                <Button
+                  variant="outline"
                   onClick={() => setRescheduleOpen(true)}
                 >
                   <CalendarClock className="h-4 w-4 mr-2" />
@@ -360,6 +370,12 @@ export function AppointmentDetailsDialog({
           queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
           onOpenChange(false);
         }}
+      />
+      
+      <CreateFollowUpFromAppointmentDialog
+        open={followUpOpen}
+        onOpenChange={setFollowUpOpen}
+        appointment={appointment}
       />
     </>
   );

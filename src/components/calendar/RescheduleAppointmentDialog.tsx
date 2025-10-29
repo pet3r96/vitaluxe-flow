@@ -16,6 +16,8 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Calendar } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState } from "react";
 
 interface RescheduleAppointmentDialogProps {
   open: boolean;
@@ -35,6 +37,7 @@ export function RescheduleAppointmentDialog({
   onSuccess,
 }: RescheduleAppointmentDialogProps) {
   const queryClient = useQueryClient();
+  const [createFollowUp, setCreateFollowUp] = useState(false);
   
   const appointmentDate = new Date(appointment.start_time);
   const duration = Math.max(1, Math.round((new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) / 60000));
@@ -105,12 +108,40 @@ export function RescheduleAppointmentDialog({
 
       if (updateError) throw updateError;
 
+      // Create follow-up if requested
+      if (createFollowUp) {
+        const startDateTime = new Date(`${values.appointmentDate}T${values.startTime}`);
+        const followUpDate = new Date(startDateTime);
+        followUpDate.setDate(followUpDate.getDate() + 7); // Default 1 week later
+
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          await supabase.from("patient_follow_ups" as any).insert({
+            patient_id: appointment.patient_id,
+            created_by: user.id,
+            assigned_to: values.providerId,
+            follow_up_date: followUpDate.toISOString().split('T')[0],
+            follow_up_time: "09:00",
+            reason: values.serviceType || values.serviceDescription || "Follow-up appointment",
+            notes: `Follow-up for rescheduled appointment`,
+            priority: "medium",
+            status: "pending",
+          });
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
-      toast.success("Appointment rescheduled successfully");
+      queryClient.invalidateQueries({ queryKey: ['patient-follow-ups'] });
+      toast.success(
+        createFollowUp
+          ? "Appointment rescheduled and follow-up created"
+          : "Appointment rescheduled successfully"
+      );
       onOpenChange(false);
+      setCreateFollowUp(false);
       onSuccess?.();
     },
     onError: (error: any) => {
@@ -299,6 +330,20 @@ export function RescheduleAppointmentDialog({
               rows={3}
               placeholder="Add any notes about this appointment..."
             />
+          </div>
+
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox
+              id="create-follow-up-reschedule"
+              checked={createFollowUp}
+              onCheckedChange={(checked) => setCreateFollowUp(checked as boolean)}
+            />
+            <Label
+              htmlFor="create-follow-up-reschedule"
+              className="text-sm font-normal cursor-pointer"
+            >
+              Create a follow-up (1 week after rescheduled time)
+            </Label>
           </div>
 
           <div className="flex justify-end gap-2">

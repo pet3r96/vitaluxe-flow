@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CreateAppointmentDialogProps {
   open: boolean;
@@ -41,7 +43,9 @@ export function CreateAppointmentDialog({
   isProviderAccount = false,
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
+  const { effectiveUserId } = useAuth();
   const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [createFollowUp, setCreateFollowUp] = useState(false);
   
   // For walk-ins, round current time to nearest 5 minutes
   const getCurrentTimeRounded = () => {
@@ -123,14 +127,39 @@ export function CreateAppointmentDialog({
         .single();
 
       if (error) throw error;
+
+      // Create follow-up if requested
+      if (createFollowUp && data && effectiveUserId) {
+        const followUpDate = new Date(startDateTime);
+        followUpDate.setDate(followUpDate.getDate() + 7); // Default 1 week later
+
+        await supabase.from("patient_follow_ups" as any).insert({
+          patient_id: selectedPatientId,
+          created_by: effectiveUserId,
+          assigned_to: values.providerId,
+          follow_up_date: followUpDate.toISOString().split('T')[0],
+          follow_up_time: "09:00",
+          reason: values.serviceType || values.serviceDescription || "Follow-up appointment",
+          notes: `Follow-up for appointment on ${values.appointmentDate}`,
+          priority: "medium",
+          status: "pending",
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
       queryClient.invalidateQueries({ queryKey: ['waiting-room'] });
-      toast.success(isWalkIn ? "Walk-in appointment created successfully" : "Appointment created successfully");
+      queryClient.invalidateQueries({ queryKey: ['patient-follow-ups'] });
+      toast.success(
+        createFollowUp 
+          ? (isWalkIn ? "Walk-in and follow-up created" : "Appointment and follow-up created")
+          : (isWalkIn ? "Walk-in appointment created successfully" : "Appointment created successfully")
+      );
       reset();
       setSelectedPatientId("");
+      setCreateFollowUp(false);
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -346,6 +375,20 @@ export function CreateAppointmentDialog({
               rows={3}
               placeholder="Add any notes about this appointment..."
             />
+          </div>
+
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox
+              id="create-follow-up"
+              checked={createFollowUp}
+              onCheckedChange={(checked) => setCreateFollowUp(checked as boolean)}
+            />
+            <Label
+              htmlFor="create-follow-up"
+              className="text-sm font-normal cursor-pointer"
+            >
+              Create a follow-up (1 week after this appointment)
+            </Label>
           </div>
 
           <div className="flex justify-end gap-2">
