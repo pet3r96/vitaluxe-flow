@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -299,22 +300,14 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
 
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input
+          <PhoneInput
             id="phone"
-            type="tel"
             value={formData.phone || ""}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '');
+            onChange={(value) => {
               setFormData({ ...formData, phone: value });
               setValidationErrors({ ...validationErrors, phone: "" });
             }}
-            onBlur={() => {
-              const result = validatePhone(formData.phone);
-              setValidationErrors({ ...validationErrors, phone: result.error || "" });
-            }}
-            placeholder="1234567890"
-            maxLength={10}
-            className={validationErrors.phone ? "border-destructive" : ""}
+            placeholder="(555) 123-4567"
           />
           {validationErrors.phone && (
             <p className="text-sm text-destructive">{validationErrors.phone}</p>

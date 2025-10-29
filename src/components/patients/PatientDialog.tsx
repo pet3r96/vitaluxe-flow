@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -367,24 +368,14 @@ export const PatientDialog = ({
 
               <div className="grid gap-2">
                 <Label htmlFor="phone">Phone (Optional)</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  type="tel"
                   value={formData.phone}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
+                  onChange={(value) => {
                     setFormData({ ...formData, phone: value });
                     setValidationErrors({ ...validationErrors, phone: "" });
                   }}
-                  onBlur={() => {
-                    if (formData.phone) {
-                      const result = validatePhone(formData.phone);
-                      setValidationErrors({ ...validationErrors, phone: result.error || "" });
-                    }
-                  }}
-                  placeholder="1234567890"
-                  maxLength={10}
-                  className={validationErrors.phone ? "border-destructive" : ""}
+                  placeholder="(555) 123-4567"
                 />
                 {validationErrors.phone && (
                   <p className="text-sm text-destructive">{validationErrors.phone}</p>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2 } from "lucide-react";
@@ -13,6 +14,7 @@ export default function PatientOnboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [phone, setPhone] = useState("");
 
   const handleComplete = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,7 +32,7 @@ export default function PatientOnboarding() {
           email: user.email!,
           first_name: formData.get("first_name") as string,
           last_name: formData.get("last_name") as string,
-          phone: formData.get("phone") as string,
+          phone: phone,
           date_of_birth: formData.get("date_of_birth") as string,
           address: formData.get("address") as string,
           city: formData.get("city") as string,
@@ -89,7 +91,13 @@ export default function PatientOnboarding() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone *</Label>
-                    <Input id="phone" name="phone" type="tel" required />
+                    <PhoneInput
+                      id="phone"
+                      value={phone}
+                      onChange={setPhone}
+                      placeholder="(555) 123-4567"
+                      required
+                    />
                   </div>
                 </div>
                 <Button type="button" onClick={() => setStep(2)} className="w-full">

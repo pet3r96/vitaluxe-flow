@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/vitaluxe-logo-dark-bg.png";
@@ -412,7 +413,12 @@ const Auth = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 123-4567" className="bg-input border-border text-foreground" />
+                    <PhoneInput
+                      id="phone"
+                      value={phone}
+                      onChange={setPhone}
+                      placeholder="(555) 123-4567"
+                    />
                   </div>
 
                   <GoogleAddressAutocomplete label="Practice Address" value={address} onChange={setAddress} placeholder="Start typing your practice address..." required />

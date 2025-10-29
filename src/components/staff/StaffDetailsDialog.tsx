@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -114,17 +115,13 @@ export const StaffDetailsDialog = ({
           <div className="space-y-2">
             <Label>Phone</Label>
             {isEditing ? (
-              <Input
-                type="tel"
+              <PhoneInput
                 value={formData.phone}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '');
-                  setFormData({ ...formData, phone: value });
-                }}
-                maxLength={10}
+                onChange={(value) => setFormData({ ...formData, phone: value })}
+                placeholder="(555) 123-4567"
               />
             ) : (
-              <div className="p-2 bg-muted rounded-md">{staff.profiles?.phone || "N/A"}</div>
+              <div className="p-2 bg-muted rounded-md">{formData.phone || "N/A"}</div>
             )}
           </div>
 

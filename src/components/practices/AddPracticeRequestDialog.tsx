@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -168,23 +169,15 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  type="tel"
                   value={formData.phone}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
+                  onChange={(value) => {
                     setFormData({ ...formData, phone: value });
                     setValidationErrors({ ...validationErrors, phone: "" });
                   }}
-                  onBlur={() => {
-                    const result = validatePhone(formData.phone);
-                    setValidationErrors({ ...validationErrors, phone: result.error || "" });
-                  }}
-                  placeholder="1234567890"
-                  maxLength={10}
+                  placeholder="(555) 123-4567"
                   required
-                  className={validationErrors.phone ? "border-destructive" : ""}
                 />
                 {validationErrors.phone && (
                   <p className="text-sm text-destructive">{validationErrors.phone}</p>

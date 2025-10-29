@@ -21,6 +21,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -431,21 +432,14 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone *</Label>
-                  <Input
+                  <PhoneInput
                     id="phone"
-                    type="tel"
-                    placeholder="1234567890 (10 digits)"
-                    maxLength={10}
                     value={formData.phone}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
+                    onChange={(value) => {
                       setFormData({ ...formData, phone: value });
+                      setValidationErrors({ ...validationErrors, phone: "" });
                     }}
-                    onBlur={() => {
-                      const result = validatePhone(formData.phone);
-                      setValidationErrors({ ...validationErrors, phone: result.error || "" });
-                    }}
-                    className={validationErrors.phone ? "border-destructive" : ""}
+                    placeholder="(555) 123-4567"
                     required
                   />
                   {validationErrors.phone && (

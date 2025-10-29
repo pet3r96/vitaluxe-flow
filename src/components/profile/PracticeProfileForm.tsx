@@ -29,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Save, KeyRound, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
 
@@ -260,15 +261,10 @@ export const PracticeProfileForm = () => {
                 <FormItem>
                   <FormLabel>Practice Phone Number</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="tel"
-                      placeholder="1234567890" 
-                      maxLength={10}
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        field.onChange(value);
-                      }}
+                    <PhoneInput
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="(555) 123-4567"
                     />
                   </FormControl>
                   <FormDescription>
