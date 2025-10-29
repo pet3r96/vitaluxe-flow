@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CheckCheck, User, ExternalLink, Trash2, CheckCircle } from "lucide-react";
+import { CheckCheck, User, ExternalLink, Trash2, CheckCircle, RotateCcw } from "lucide-react";
 import { PriorityBadge } from "./PriorityBadge";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +23,7 @@ interface MessageDetailsProps {
   message: any;
   recipients: any[];
   onMarkComplete: () => Promise<void>;
+  onReopen: () => Promise<void>;
   onDelete: () => Promise<void>;
 }
 
@@ -30,6 +31,7 @@ export function MessageDetails({
   message,
   recipients,
   onMarkComplete,
+  onReopen,
   onDelete
 }: MessageDetailsProps) {
   const navigate = useNavigate();
@@ -158,7 +160,7 @@ export function MessageDetails({
             <CardTitle className="text-lg">Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {!message.completed && (
+            {!message.completed ? (
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -166,6 +168,15 @@ export function MessageDetails({
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Mark as Complete
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={onReopen}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reopen Message
               </Button>
             )}
             

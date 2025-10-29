@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Send, CheckCircle, User, ExternalLink, Info } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, User, ExternalLink, Info, RotateCcw } from "lucide-react";
 import { PriorityBadge } from "./PriorityBadge";
 import { MessageBubble } from "./MessageBubble";
 import { format } from "date-fns";
@@ -17,6 +17,7 @@ interface MessageThreadProps {
   onClose: () => void;
   onSendReply: (body: string) => Promise<void>;
   onMarkComplete: () => Promise<void>;
+  onReopen: () => Promise<void>;
   onShowDetails: () => void;
   loading: boolean;
 }
@@ -28,6 +29,7 @@ export function MessageThread({
   onClose,
   onSendReply,
   onMarkComplete,
+  onReopen,
   onShowDetails,
   loading
 }: MessageThreadProps) {
@@ -109,10 +111,15 @@ export function MessageThread({
           <Button variant="ghost" size="icon" onClick={onShowDetails} className="lg:hidden">
             <Info className="h-4 w-4" />
           </Button>
-          {!message.completed && (
+          {!message.completed ? (
             <Button variant="outline" size="sm" onClick={onMarkComplete}>
               <CheckCircle className="mr-2 h-4 w-4" />
               Complete
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={onReopen}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reopen
             </Button>
           )}
         </div>

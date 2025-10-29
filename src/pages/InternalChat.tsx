@@ -123,7 +123,7 @@ export default function InternalChat() {
         has_attachments: (msg.attached_document_ids?.length || 0) > 0 || (msg.attached_form_ids?.length || 0) > 0
       }));
     },
-    enabled: !!practiceId && teamMembers.length > 0
+    enabled: !!practiceId
   });
 
   // Fetch patients for filter
@@ -165,7 +165,7 @@ export default function InternalChat() {
         }
       };
     },
-    enabled: !!selectedMessageId && teamMembers.length > 0
+    enabled: !!selectedMessageId
   });
 
   // Fetch replies
@@ -188,7 +188,7 @@ export default function InternalChat() {
         }
       }));
     },
-    enabled: !!selectedMessageId && teamMembers.length > 0
+    enabled: !!selectedMessageId
   });
 
   // Fetch recipients for selected message
@@ -279,6 +279,29 @@ export default function InternalChat() {
     },
     onError: () => {
       toast.error('Failed to mark message as complete');
+    }
+  });
+
+  // Reopen message mutation
+  const reopenMessageMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('internal_messages')
+        .update({
+          completed: false,
+          completed_at: null,
+          completed_by: null
+        })
+        .eq('id', selectedMessageId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['internal-message', selectedMessageId] });
+      toast.success('Message reopened');
+    },
+    onError: () => {
+      toast.error('Failed to reopen message');
     }
   });
 
@@ -381,6 +404,7 @@ export default function InternalChat() {
               onClose={() => setSelectedMessageId(null)}
               onSendReply={(body) => sendReplyMutation.mutateAsync(body)}
               onMarkComplete={() => markCompleteMutation.mutateAsync()}
+              onReopen={() => reopenMessageMutation.mutateAsync()}
               onShowDetails={() => setShowDetailsMobile(true)}
               loading={messageLoading}
             />
@@ -414,6 +438,7 @@ export default function InternalChat() {
             onClose={() => setSelectedMessageId(null)}
             onSendReply={(body) => sendReplyMutation.mutateAsync(body)}
             onMarkComplete={() => markCompleteMutation.mutateAsync()}
+            onReopen={() => reopenMessageMutation.mutateAsync()}
             onShowDetails={() => {}}
             loading={messageLoading}
           />
@@ -423,6 +448,7 @@ export default function InternalChat() {
               message={selectedMessage}
               recipients={recipients}
               onMarkComplete={() => markCompleteMutation.mutateAsync()}
+              onReopen={() => reopenMessageMutation.mutateAsync()}
               onDelete={() => deleteMessageMutation.mutateAsync()}
             />
           )}
@@ -437,6 +463,7 @@ export default function InternalChat() {
               message={selectedMessage}
               recipients={recipients}
               onMarkComplete={() => markCompleteMutation.mutateAsync()}
+              onReopen={() => reopenMessageMutation.mutateAsync()}
               onDelete={() => deleteMessageMutation.mutateAsync()}
             />
           )}
