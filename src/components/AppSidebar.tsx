@@ -26,6 +26,7 @@ import {
   CreditCard,
   Lock,
   Inbox,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -77,6 +78,7 @@ const menuItems = {
     { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
     { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },
     { title: "My Subscription", url: "/my-subscription", icon: CreditCard, isPro: true },
+    { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
   ],
   provider: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -139,6 +141,7 @@ const menuItems = {
     { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
     { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
     { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },
+    { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
   ],
 };
 
@@ -161,7 +164,8 @@ export function AppSidebar() {
       item.title !== "Providers" && 
       item.title !== "Reports" &&
       item.title !== "My Staff" &&
-      item.title !== "My Subscription"
+      item.title !== "My Subscription" &&
+      item.title !== "Practice Reporting"
     );
   }
   

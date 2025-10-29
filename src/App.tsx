@@ -110,6 +110,7 @@ const TriageQueue = lazy(() => import("./pages/practice/TriageQueue"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
 const DocumentsAndForms = lazy(() => import("./pages/practice/DocumentsAndForms"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
+const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -236,6 +237,7 @@ const App = () => (
                                     <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
                                     <Route path="/documents-and-forms" element={<SubscriptionProtectedRoute><DocumentsAndForms /></SubscriptionProtectedRoute>} />
                                     <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
+                                    <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
                                     {/* Patient Inbox removed - now integrated into Messages */}
                                     <Route path="/triage-queue" element={<SubscriptionProtectedRoute><TriageQueue /></SubscriptionProtectedRoute>} />
                                     {/* Redirect old practice-patients route to new merged Patients page */}
