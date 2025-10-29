@@ -12,6 +12,7 @@ import { Send, Circle, Info, AlertCircle, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CreateInternalMessageDialogProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function CreateInternalMessageDialog({
   practiceId,
   onSuccess
 }: CreateInternalMessageDialogProps) {
+  const { effectiveUserId } = useAuth();
   const [messageType, setMessageType] = useState<'general' | 'announcement' | 'patient_specific'>('general');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [subject, setSubject] = useState('');
@@ -79,6 +81,10 @@ export function CreateInternalMessageDialog({
   };
 
   const handleSend = async () => {
+    if (!effectiveUserId) {
+      toast.error('Not authorized to send messages. Please refresh and try again.');
+      return;
+    }
     if (!subject.trim() || !body.trim() || selectedRecipients.length === 0) {
       toast.error('Please fill in all required fields and select at least one recipient');
       return;
@@ -96,6 +102,7 @@ export function CreateInternalMessageDialog({
         .from('internal_messages')
         .insert({
           practice_id: practiceId,
+          created_by: effectiveUserId,
           subject,
           body,
           message_type: messageType,
