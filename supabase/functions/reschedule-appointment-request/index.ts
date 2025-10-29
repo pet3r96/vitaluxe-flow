@@ -14,38 +14,33 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const { providerId, appointmentDate, appointmentTime, reasonForVisit, visitType, notes } = await req.json();
+    const { appointmentId, newDate, newTime, reason } = await req.json();
 
-    // Get patient's assigned practice from patient_accounts
-    const { data: patientAccount, error: patientError } = await supabaseClient
-      .from('patient_accounts')
-      .select('practice_id, id')
-      .eq('user_id', user.id)
+    // Verify patient owns this appointment
+    const { data: appointment, error: fetchError } = await supabaseClient
+      .from('patient_appointments')
+      .select('id, patient_accounts!inner(user_id)')
+      .eq('id', appointmentId)
+      .eq('patient_accounts.user_id', user.id)
       .single();
 
-    if (patientError || !patientAccount) {
-      throw new Error('Patient account not found. Please contact your healthcare provider.');
+    if (fetchError || !appointment) {
+      throw new Error('Appointment not found or access denied');
     }
 
-    const fullDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
-    const endDateTime = new Date(fullDateTime.getTime() + 60 * 60 * 1000); // +1 hour default
-
+    // Update appointment with reschedule request
     const { data, error } = await supabaseClient
       .from('patient_appointments')
-      .insert({
-        patient_id: patientAccount.id,
-        practice_id: patientAccount.practice_id,
-        provider_id: providerId || null,
-        start_time: fullDateTime.toISOString(),
-        end_time: endDateTime.toISOString(),
-        reason_for_visit: reasonForVisit,
-        visit_type: visitType || 'in_person',
-        status: 'pending',
+      .update({
+        requested_date: newDate,
+        requested_time: newTime,
+        reschedule_requested_at: new Date().toISOString(),
+        reschedule_reason: reason,
         confirmation_type: 'pending',
-        requested_date: appointmentDate,
-        requested_time: appointmentTime,
-        notes
+        status: 'pending',
+        updated_at: new Date().toISOString()
       })
+      .eq('id', appointmentId)
       .select()
       .single();
 

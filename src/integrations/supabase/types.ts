@@ -2460,13 +2460,21 @@ export type Database = {
           cancelled_by: string | null
           checked_in_at: string | null
           completed_at: string | null
+          confirmation_type: string | null
           created_at: string
           end_time: string
           id: string
+          modified_at: string | null
+          modified_by: string | null
           notes: string | null
           patient_id: string
           practice_id: string
           provider_id: string | null
+          reason_for_visit: string | null
+          requested_date: string | null
+          requested_time: string | null
+          reschedule_reason: string | null
+          reschedule_requested_at: string | null
           room_id: string | null
           service_description: string | null
           service_type: string | null
@@ -2474,6 +2482,8 @@ export type Database = {
           status: string
           treatment_started_at: string | null
           updated_at: string
+          visit_summary_url: string | null
+          visit_type: string | null
         }
         Insert: {
           appointment_type: string
@@ -2482,13 +2492,21 @@ export type Database = {
           cancelled_by?: string | null
           checked_in_at?: string | null
           completed_at?: string | null
+          confirmation_type?: string | null
           created_at?: string
           end_time: string
           id?: string
+          modified_at?: string | null
+          modified_by?: string | null
           notes?: string | null
           patient_id: string
           practice_id: string
           provider_id?: string | null
+          reason_for_visit?: string | null
+          requested_date?: string | null
+          requested_time?: string | null
+          reschedule_reason?: string | null
+          reschedule_requested_at?: string | null
           room_id?: string | null
           service_description?: string | null
           service_type?: string | null
@@ -2496,6 +2514,8 @@ export type Database = {
           status?: string
           treatment_started_at?: string | null
           updated_at?: string
+          visit_summary_url?: string | null
+          visit_type?: string | null
         }
         Update: {
           appointment_type?: string
@@ -2504,13 +2524,21 @@ export type Database = {
           cancelled_by?: string | null
           checked_in_at?: string | null
           completed_at?: string | null
+          confirmation_type?: string | null
           created_at?: string
           end_time?: string
           id?: string
+          modified_at?: string | null
+          modified_by?: string | null
           notes?: string | null
           patient_id?: string
           practice_id?: string
           provider_id?: string | null
+          reason_for_visit?: string | null
+          requested_date?: string | null
+          requested_time?: string | null
+          reschedule_reason?: string | null
+          reschedule_requested_at?: string | null
           room_id?: string | null
           service_description?: string | null
           service_type?: string | null
@@ -2518,6 +2546,8 @@ export type Database = {
           status?: string
           treatment_started_at?: string | null
           updated_at?: string
+          visit_summary_url?: string | null
+          visit_type?: string | null
         }
         Relationships: [
           {

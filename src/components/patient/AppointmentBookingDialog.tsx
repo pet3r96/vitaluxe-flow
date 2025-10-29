@@ -18,33 +18,49 @@ interface AppointmentBookingDialogProps {
 
 export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: AppointmentBookingDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [selectedPractice, setSelectedPractice] = useState("");
 
-  const { data: practices } = useQuery({
-    queryKey: ["available-practices"],
+  // Fetch patient's assigned practice
+  const { data: patientAccount } = useQuery({
+    queryKey: ["patient-account"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, name, address_city, address_state")
-        .in("id", (await supabase.from("user_roles").select("user_id").eq("role", "doctor")).data?.map(r => r.user_id) || []);
+        .from("patient_accounts")
+        .select("id, practice_id, profiles!patient_accounts_practice_id_fkey(name, address_city, address_state)")
+        .eq("user_id", user.id)
+        .single();
+      
       if (error) throw error;
       return data;
     },
   });
 
+  // Fetch providers for the patient's assigned practice only
   const { data: providers } = useQuery({
-    queryKey: ["practice-providers", selectedPractice],
+    queryKey: ["practice-providers", patientAccount?.practice_id],
     queryFn: async () => {
-      if (!selectedPractice) return [];
+      if (!patientAccount?.practice_id) return [];
       const { data, error } = await supabase
         .from("providers")
         .select("user_id, profiles!providers_user_id_fkey(name)")
-        .eq("practice_id", selectedPractice);
+        .eq("practice_id", patientAccount.practice_id);
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedPractice,
+    enabled: !!patientAccount?.practice_id,
   });
+
+  const commonReasons = [
+    'Annual checkup',
+    'Follow-up visit',
+    'New patient consultation',
+    'Specific concern',
+    'Medication review',
+    'Lab results review',
+    'Other'
+  ];
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -54,18 +70,18 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       const formData = new FormData(e.currentTarget);
       const { error } = await supabase.functions.invoke("book-appointment", {
         body: {
-          practiceId: formData.get("practice_id"),
           providerId: formData.get("provider_id") || null,
           appointmentDate: formData.get("appointment_date"),
           appointmentTime: formData.get("appointment_time"),
           reasonForVisit: formData.get("reason"),
+          visitType: formData.get("visit_type"),
           notes: formData.get("notes"),
         },
       });
 
       if (error) throw error;
 
-      toast.success("Appointment request sent successfully");
+      toast.success("Appointment request sent to your practice");
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -89,33 +105,22 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="practice_id">Select Practice *</Label>
-            <Select
-              name="practice_id"
-              value={selectedPractice}
-              onValueChange={setSelectedPractice}
-              required
-            >
-              <SelectTrigger id="practice_id">
-                <SelectValue placeholder="Choose a practice" />
-              </SelectTrigger>
-              <SelectContent>
-                {practices?.map((practice: any) => (
-                  <SelectItem key={practice.id} value={practice.id}>
-                    {practice.name} - {practice.address_city}, {practice.address_state}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {patientAccount && (
+            <div className="space-y-2 p-3 bg-muted rounded-lg">
+              <Label className="text-sm text-muted-foreground">Your Practice</Label>
+              <p className="font-medium">{patientAccount.profiles?.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {patientAccount.profiles?.address_city}, {patientAccount.profiles?.address_state}
+              </p>
+            </div>
+          )}
 
-          {selectedPractice && providers && providers.length > 0 && (
+          {providers && providers.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="provider_id">Select Provider (Optional)</Label>
               <Select name="provider_id">
                 <SelectTrigger id="provider_id">
-                  <SelectValue placeholder="Any provider" />
+                  <SelectValue placeholder="Any available provider" />
                 </SelectTrigger>
                 <SelectContent>
                   {providers.map((provider: any) => (
@@ -127,6 +132,19 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
               </Select>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="visit_type">Visit Type *</Label>
+            <Select name="visit_type" defaultValue="in_person" required>
+              <SelectTrigger id="visit_type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in_person">In-Person</SelectItem>
+                <SelectItem value="virtual">Virtual</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="grid gap-4 grid-cols-2">
             <div className="space-y-2">
@@ -152,12 +170,18 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
 
           <div className="space-y-2">
             <Label htmlFor="reason">Reason for Visit *</Label>
-            <Input
-              id="reason"
-              name="reason"
-              placeholder="e.g., Annual checkup, Follow-up"
-              required
-            />
+            <Select name="reason" required>
+              <SelectTrigger id="reason">
+                <SelectValue placeholder="Select reason" />
+              </SelectTrigger>
+              <SelectContent>
+                {commonReasons.map((reason) => (
+                  <SelectItem key={reason} value={reason}>
+                    {reason}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
