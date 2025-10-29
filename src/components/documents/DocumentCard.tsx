@@ -146,7 +146,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Scope Badge - Practice vs Patient */}
-            {document.assigned_patient_id ? (
+            {document.assigned_patient_id || (document.provider_document_patients && document.provider_document_patients.length > 0) ? (
               <Badge className="bg-green-500 text-white">
                 Patient Document
               </Badge>
@@ -156,16 +156,24 @@ export function DocumentCard({ document }: DocumentCardProps) {
               </Badge>
             )}
             
+            {/* Patient name badge - shown inline for direct assignment */}
+            {document.assigned_patient_id && document.patients?.name && (
+              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                {document.patients.name}
+              </Badge>
+            )}
+            
+            {/* Patient name badge - shown inline for multi-assignment (first patient + count) */}
+            {document.provider_document_patients && document.provider_document_patients.length > 0 && (
+              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                {document.provider_document_patients[0]?.patients?.name}
+                {document.provider_document_patients.length > 1 && ` +${document.provider_document_patients.length - 1}`}
+              </Badge>
+            )}
+            
             <Badge className={getStatusColor(document.status)}>
               {document.status}
             </Badge>
-            
-            {/* Show patient name badge inline if directly assigned */}
-            {document.assigned_patient_id && document.patients?.name && (
-              <Badge variant="outline">
-                👤 {document.patients.name}
-              </Badge>
-            )}
             
             {document.tags?.map((tag: string) => (
               <Badge key={tag} variant="outline">
@@ -174,21 +182,14 @@ export function DocumentCard({ document }: DocumentCardProps) {
             ))}
           </div>
 
-          {/* Display assigned patients as badges */}
-          {document.provider_document_patients && document.provider_document_patients.length > 0 && (
+          {/* Display full list of assigned patients for multi-assignment */}
+          {document.provider_document_patients && document.provider_document_patients.length > 1 && (
             <div className="flex flex-wrap gap-1">
               {document.provider_document_patients.map((assignment: any) => (
                 <Badge key={assignment.patient_id} variant="outline" className="text-xs">
                   👤 {assignment.patients?.name}
                 </Badge>
               ))}
-            </div>
-          )}
-          
-          {/* Legacy single-patient assignment (if still used) */}
-          {document.patients && !document.provider_document_patients?.length && (
-            <div className="text-sm font-medium text-muted-foreground">
-              Patient: {document.patients.name}
             </div>
           )}
 
