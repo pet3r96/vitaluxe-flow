@@ -42,6 +42,13 @@ export const MessagesView = () => {
   const [allTicketsPage, setAllTicketsPage] = useState(1);
 
 
+  // Redirect patients to their dedicated messaging interface
+  useEffect(() => {
+    if (effectiveRole === 'patient') {
+      window.location.href = '/patient-messages';
+    }
+  }, [effectiveRole]);
+
   // Check if user is admin
   useEffect(() => {
     const checkAdminStatus = async () => {

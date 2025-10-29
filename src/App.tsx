@@ -234,6 +234,7 @@ const App = () => (
                                     <Route path="/appointments" element={<PatientAppointments />} />
                                     <Route path="/medical-vault" element={<PatientMedicalVault />} />
                                     <Route path="/documents" element={<PatientDocuments />} />
+                                    <Route path="/patient-messages" element={<PatientMessages />} />
                                     <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
                                     <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                     <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />

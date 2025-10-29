@@ -125,7 +125,7 @@ const menuItems = {
     { title: "My Appointments", url: "/appointments", icon: Calendar },
     { title: "Medical Vault", url: "/medical-vault", icon: FileText },
     { title: "Documents", url: "/documents", icon: FileText },
-    { title: "Support/Messages", url: "/messages", icon: MessageSquare },
+    { title: "Support/Messages", url: "/patient-messages", icon: MessageSquare },
     { title: "My Profile", url: "/profile", icon: UserCircle },
   ],
   staff: [
