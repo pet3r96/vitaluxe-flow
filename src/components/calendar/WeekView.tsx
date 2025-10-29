@@ -66,29 +66,28 @@ export function WeekView({
     }
   }, [startHour, endHour, appointments.length]);
 
-  // Calculate appointment positions
+  // Calculate appointment positions with bounds checking
   const getAppointmentStyle = (appointment: any) => {
     const start = new Date(appointment.start_time);
     const end = new Date(appointment.end_time);
     const startMinutes = start.getHours() * 60 + start.getMinutes();
     const endMinutes = end.getHours() * 60 + end.getMinutes();
+    
+    // Clamp to operational hours
+    const minMinutes = startHour * 60;
+    const maxMinutes = endHour * 60;
+    
+    // Don't render if completely outside operational hours
+    if (endMinutes <= minMinutes || startMinutes >= maxMinutes) {
+      return { display: 'none' };
+    }
+    
+    const clampedStart = Math.max(minMinutes, Math.min(maxMinutes, startMinutes));
+    const clampedEnd = Math.max(minMinutes, Math.min(maxMinutes, endMinutes));
+    
     const slotHeight = 60; // px per hour
-    
-    const top = ((startMinutes - (startHour * 60)) / 60) * slotHeight;
-    const height = ((endMinutes - startMinutes) / 60) * slotHeight;
-    
-    console.log('🗓️ Appointment Positioning Debug:', {
-      rawStartTime: appointment.start_time,
-      rawEndTime: appointment.end_time,
-      parsedStart: start.toLocaleString(),
-      parsedEnd: end.toLocaleString(),
-      startHour,
-      startMinutes,
-      endMinutes,
-      calculatedTop: top,
-      calculatedHeight: height,
-      patientName: appointment.patient_name
-    });
+    const top = ((clampedStart - minMinutes) / 60) * slotHeight;
+    const height = ((clampedEnd - clampedStart) / 60) * slotHeight;
     
     return {
       top: `${top}px`,
