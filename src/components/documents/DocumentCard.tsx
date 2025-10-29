@@ -66,19 +66,21 @@ export function DocumentCard({ document }: DocumentCardProps) {
         return;
       }
 
-      // Create a direct download link (HIPAA compliant - no browser cache)
-      const link = window.document.createElement('a');
-      link.href = data.signedUrl;
-      link.download = document.document_name; // Force download instead of opening
-      link.target = '_blank'; // Fallback for some browsers
-      link.rel = 'noopener noreferrer'; // Security
-      window.document.body.appendChild(link);
-      try {
-        link.click();
-      } catch {
-        window.open(data.signedUrl, '_blank');
+      // Fetch as blob and download (HIPAA compliant - no new tabs)
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download document');
       }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = document.document_name;
+      window.document.body.appendChild(link);
+      link.click();
       window.document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
       toast.success("Document downloaded");
     } catch (error) {
