@@ -30,6 +30,60 @@ Deno.serve(async (req) => {
     const fullDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
     const endDateTime = new Date(fullDateTime.getTime() + 60 * 60 * 1000); // +1 hour default
 
+    // Validation 1: Check if date is in the past
+    if (fullDateTime <= new Date()) {
+      throw new Error('Cannot book appointments in the past');
+    }
+
+    // Validation 2: Check if practice is open on this day
+    const dayOfWeek = fullDateTime.getDay();
+    const { data: hours, error: hoursError } = await supabaseClient
+      .from('practice_calendar_hours')
+      .select('start_time, end_time, is_closed')
+      .eq('practice_id', patientAccount.practice_id)
+      .eq('day_of_week', dayOfWeek)
+      .maybeSingle();
+
+    if (hoursError) throw hoursError;
+
+    if (!hours || hours.is_closed) {
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      throw new Error(`Practice is closed on ${dayNames[dayOfWeek]}s`);
+    }
+
+    // Validation 3: Check if time is within business hours
+    if (appointmentTime < hours.start_time || appointmentTime >= hours.end_time) {
+      throw new Error(`Practice hours are ${hours.start_time} - ${hours.end_time}`);
+    }
+
+    // Validation 4: Check if time is blocked
+    const { data: blocked, error: blockedError } = await supabaseClient
+      .from('practice_blocked_time')
+      .select('reason')
+      .eq('practice_id', patientAccount.practice_id)
+      .lte('start_time', fullDateTime.toISOString())
+      .gte('end_time', fullDateTime.toISOString())
+      .maybeSingle();
+
+    if (blockedError) throw blockedError;
+    if (blocked) {
+      throw new Error(`This time slot is blocked${blocked.reason ? ': ' + blocked.reason : ''}`);
+    }
+
+    // Validation 5: Check for appointment conflicts
+    const { data: conflicts, error: conflictError } = await supabaseClient
+      .from('patient_appointments')
+      .select('id')
+      .eq('practice_id', patientAccount.practice_id)
+      .not('status', 'in', '(cancelled,no_show)')
+      .lt('start_time', endDateTime.toISOString())
+      .gt('end_time', fullDateTime.toISOString());
+
+    if (conflictError) throw conflictError;
+    if (conflicts && conflicts.length > 0) {
+      throw new Error('This time slot is already booked. Please choose another time.');
+    }
+
     const { data, error } = await supabaseClient
       .from('patient_appointments')
       .insert({
