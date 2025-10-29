@@ -8,22 +8,28 @@ import { Eye } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormSubmissionViewer } from "./FormSubmissionViewer";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function CompletedFormsTab() {
+  const { effectivePracticeId } = useAuth();
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [showViewer, setShowViewer] = useState(false);
 
   const { data: submissions, isLoading } = useQuery({
-    queryKey: ["completed-form-submissions"],
+    queryKey: ["completed-form-submissions", effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) return [];
+      
       const { data, error } = await supabase
         .from("patient_form_submissions" as any)
-        .select("*, practice_forms(form_name), patients(first_name, last_name)")
+        .select("*, practice_forms!inner(form_name, practice_id), patients(first_name, last_name)")
         .in("status", ["completed", "signed"])
+        .eq("practice_forms.practice_id", effectivePracticeId)
         .order("completed_at", { ascending: false });
       if (error) throw error;
       return data as any[];
     },
+    enabled: !!effectivePracticeId,
   });
 
   if (isLoading) {

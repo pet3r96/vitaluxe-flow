@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FormBuilderProps {
   open: boolean;
@@ -24,6 +25,7 @@ interface FormField {
 }
 
 export function FormBuilder({ open, onOpenChange, form }: FormBuilderProps) {
+  const { effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("intake");
@@ -68,8 +70,7 @@ export function FormBuilder({ open, onOpenChange, form }: FormBuilderProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!effectivePracticeId) throw new Error("No practice ID available");
 
       const formSchema = {
         version: "1.0",
@@ -99,7 +100,7 @@ export function FormBuilder({ open, onOpenChange, form }: FormBuilderProps) {
             form_name: formName,
             form_type: formType,
             form_schema: formSchema as any,
-            practice_id: user.id,
+            practice_id: effectivePracticeId,
           }]);
         if (error) throw error;
       }

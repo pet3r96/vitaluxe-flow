@@ -17,7 +17,7 @@ interface DocumentUploadDialogProps {
 }
 
 export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialogProps) {
-  const { user } = useAuth();
+  const { effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
   const [files, setFiles] = useState<File[]>([]);
   const [documentType, setDocumentType] = useState("");
@@ -26,16 +26,18 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
   const [patientId, setPatientId] = useState("");
 
   const { data: patients } = useQuery({
-    queryKey: ["patients-select"],
+    queryKey: ["patients-select", effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) return [];
       const { data, error } = await supabase
         .from("patients" as any)
         .select("id, first_name, last_name")
+        .eq("practice_id", effectivePracticeId)
         .order("last_name");
       if (error) throw error;
       return data as any[];
     },
-    enabled: open,
+    enabled: open && !!effectivePracticeId,
   });
 
   const uploadMutation = useMutation({
@@ -45,10 +47,12 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
       const uploadedDocs = [];
 
+      if (!effectivePracticeId) throw new Error("No practice ID available");
+
       for (const file of files) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${user?.id}/${fileName}`;
+        const filePath = `${effectivePracticeId}/documents/${fileName}`;
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage
@@ -61,7 +65,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         const { data, error: insertError } = await supabase
           .from("provider_documents" as any)
           .insert({
-            practice_id: user?.id,
+            practice_id: effectivePracticeId,
             document_name: file.name,
             document_type: documentType,
             storage_path: filePath,

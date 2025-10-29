@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AssignDocumentDialogProps {
   documentId: string;
@@ -15,21 +16,24 @@ interface AssignDocumentDialogProps {
 }
 
 export function AssignDocumentDialog({ documentId, open, onOpenChange }: AssignDocumentDialogProps) {
+  const { effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
   const [patientId, setPatientId] = useState("");
   const [message, setMessage] = useState("");
 
   const { data: patients } = useQuery({
-    queryKey: ["patients-select"],
+    queryKey: ["patients-select", effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) return [];
       const { data, error } = await supabase
         .from("patients" as any)
         .select("id, first_name, last_name")
+        .eq("practice_id", effectivePracticeId)
         .order("last_name");
       if (error) throw error;
       return data as any[];
     },
-    enabled: open,
+    enabled: open && !!effectivePracticeId,
   });
 
   const assignMutation = useMutation({

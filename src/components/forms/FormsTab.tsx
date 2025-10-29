@@ -9,8 +9,10 @@ import { FormBuilder } from "./FormBuilder";
 import { UploadFormDialog } from "./UploadFormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function FormsTab() {
+  const { effectivePracticeId } = useAuth();
   const [showAssign, setShowAssign] = useState(false);
   const [selectedFormId, setSelectedFormId] = useState("");
   const [showFormBuilder, setShowFormBuilder] = useState(false);
@@ -19,16 +21,19 @@ export function FormsTab() {
   const queryClient = useQueryClient();
 
   const { data: forms, isLoading } = useQuery({
-    queryKey: ["practice-forms"],
+    queryKey: ["practice-forms", effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) return [];
       const { data, error } = await supabase
         .from("practice_forms")
         .select("*")
+        .eq("practice_id", effectivePracticeId)
         .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!effectivePracticeId,
   });
 
   const archiveFormMutation = useMutation({

@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AssignFormDialogProps {
   formId: string;
@@ -16,19 +17,25 @@ interface AssignFormDialogProps {
 }
 
 export function AssignFormDialog({ formId, open, onOpenChange }: AssignFormDialogProps) {
+  const { effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
   const [patientIds, setPatientIds] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState("");
   const [instructions, setInstructions] = useState("");
 
   const { data: patients } = useQuery({
-    queryKey: ["patients-select"],
+    queryKey: ["patients-select", effectivePracticeId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("patients" as any).select("id, first_name, last_name").order("last_name");
+      if (!effectivePracticeId) return [];
+      const { data, error } = await supabase
+        .from("patients" as any)
+        .select("id, first_name, last_name")
+        .eq("practice_id", effectivePracticeId)
+        .order("last_name");
       if (error) throw error;
       return data as any[];
     },
-    enabled: open,
+    enabled: open && !!effectivePracticeId,
   });
 
   const assignMutation = useMutation({

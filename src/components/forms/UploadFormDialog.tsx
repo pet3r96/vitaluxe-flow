@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UploadFormDialogProps {
   open: boolean;
@@ -14,6 +15,7 @@ interface UploadFormDialogProps {
 }
 
 export function UploadFormDialog({ open, onOpenChange }: UploadFormDialogProps) {
+  const { effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
   const [formName, setFormName] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -21,12 +23,10 @@ export function UploadFormDialog({ open, onOpenChange }: UploadFormDialogProps) 
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("No file selected");
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!effectivePracticeId) throw new Error("No practice ID available");
 
       // Upload to storage
-      const filePath = `forms/${Date.now()}-${file.name}`;
+      const filePath = `${effectivePracticeId}/forms/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from("provider-documents")
         .upload(filePath, file);
@@ -42,7 +42,7 @@ export function UploadFormDialog({ open, onOpenChange }: UploadFormDialogProps) 
           form_schema: { version: "1.0", pdf_template: true } as any,
           is_pdf_template: true,
           pdf_storage_path: filePath,
-          practice_id: user.id,
+          practice_id: effectivePracticeId,
         }]);
 
       if (insertError) throw insertError;

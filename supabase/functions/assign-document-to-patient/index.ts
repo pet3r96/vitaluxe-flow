@@ -38,12 +38,54 @@ serve(async (req) => {
       );
     }
 
+    // Resolve effectivePracticeId (same pattern as generate-branding-preview-pdf)
+    let effectivePracticeId = user.id;
+
+    const { data: impersonation } = await supabaseAdmin
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .maybeSingle();
+
+    if (impersonation?.impersonated_user_id) {
+      effectivePracticeId = impersonation.impersonated_user_id;
+      console.log(`Using impersonated practice: ${effectivePracticeId}`);
+    }
+
     const { documentId, patientId, message } = await req.json();
 
     if (!documentId || !patientId) {
       return new Response(
         JSON.stringify({ error: 'documentId and patientId are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify document belongs to this practice
+    const { data: docCheck } = await supabaseAdmin
+      .from('provider_documents')
+      .select('practice_id')
+      .eq('id', documentId)
+      .single();
+
+    if (!docCheck || docCheck.practice_id !== effectivePracticeId) {
+      return new Response(
+        JSON.stringify({ error: 'Document not found or access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify patient belongs to this practice
+    const { data: patientCheck } = await supabaseAdmin
+      .from('patients')
+      .select('practice_id')
+      .eq('id', patientId)
+      .single();
+
+    if (!patientCheck || patientCheck.practice_id !== effectivePracticeId) {
+      return new Response(
+        JSON.stringify({ error: 'Patient not found or access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -91,10 +133,11 @@ serve(async (req) => {
         document_name: document.document_name,
         patient_id: patientId,
         message,
+        effective_practice_id: effectivePracticeId,
       },
     });
 
-    console.log(`Document ${documentId} assigned to patient ${patientId}`);
+    console.log(`Document ${documentId} assigned to patient ${patientId} by practice ${effectivePracticeId}`);
 
     return new Response(
       JSON.stringify({ success: true, message: 'Document assigned successfully' }),

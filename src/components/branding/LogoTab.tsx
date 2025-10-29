@@ -359,7 +359,11 @@ export function LogoTab() {
           {/* Preview Section */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium">PDF Header Preview</h3>
-            <LogoPreview logoUrl={branding?.logo_url} practiceName={practiceName} />
+            <LogoPreview
+              logoUrl={branding?.logo_url}
+              logoStoragePath={branding?.logo_storage_path}
+              practiceName={practiceName}
+            />
             <p className="text-xs text-muted-foreground">
               This is how your logo will appear on all generated PDFs
             </p>

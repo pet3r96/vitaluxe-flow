@@ -7,8 +7,10 @@ import { DocumentUploadDialog } from "./DocumentUploadDialog";
 import { DocumentCard } from "./DocumentCard";
 import { DocumentFilters } from "./DocumentFilters";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function DocumentsTab() {
+  const { effectivePracticeId } = useAuth();
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -23,14 +25,17 @@ export function DocumentsTab() {
   });
 
   const { data: documents, isLoading } = useQuery({
-    queryKey: ["provider-documents", filters],
+    queryKey: ["provider-documents", effectivePracticeId, filters],
     queryFn: async () => {
+      if (!effectivePracticeId) return [];
+      
       let query = supabase
         .from("provider_documents" as any)
         .select(`
           *,
           patients(first_name, last_name)
         `)
+        .eq("practice_id", effectivePracticeId)
         .order("created_at", { ascending: false });
 
       if (filters.patientId && filters.patientId !== "all") {
@@ -62,6 +67,7 @@ export function DocumentsTab() {
       if (error) throw error;
       return data as any[];
     },
+    enabled: !!effectivePracticeId,
   });
 
   return (
