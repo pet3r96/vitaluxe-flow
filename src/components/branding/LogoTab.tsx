@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Trash2 } from "lucide-react";
+import { Upload, Trash2, FileCheck } from "lucide-react";
 import { LogoPreview } from "./LogoPreview";
+import { downloadPdfFromBase64 } from "@/lib/pdfGenerator";
 
 export function LogoTab() {
   const { toast } = useToast();
@@ -187,6 +188,29 @@ export function LogoTab() {
     },
   });
 
+  // Generate preview PDF
+  const generatePreviewPDF = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-branding-preview-pdf");
+
+      if (error) throw error;
+
+      if (data?.pdfBase64) {
+        downloadPdfFromBase64(data.pdfBase64, data.filename || "Branding_Preview.pdf");
+        toast({
+          title: "Preview generated",
+          description: "Your branding preview PDF has been downloaded",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Preview failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
   const handleFileSelect = useCallback(
     (file: File) => {
       setIsUploading(true);
@@ -321,6 +345,16 @@ export function LogoTab() {
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Remove Logo
+              </Button>
+            )}
+
+            {(branding?.logo_url || practiceName) && (
+              <Button
+                variant="outline"
+                onClick={generatePreviewPDF}
+              >
+                <FileCheck className="h-4 w-4 mr-2" />
+                Preview PDF
               </Button>
             )}
           </div>
