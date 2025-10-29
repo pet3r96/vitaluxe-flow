@@ -95,6 +95,7 @@ export function CreateInternalMessageDialog({
       const { data: message, error: messageError } = await supabase
         .from('internal_messages')
         .insert({
+          practice_id: practiceId,
           subject,
           body,
           message_type: messageType,
