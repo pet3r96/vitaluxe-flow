@@ -57,20 +57,34 @@ function parseUserAgent(userAgent: string | null): string {
 export function ActivityLogSection() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [displayLimit, setDisplayLimit] = useState(5);
+  const [showAll, setShowAll] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchSessions();
   }, []);
 
-  const fetchSessions = async () => {
+  const fetchSessions = async (limit?: number) => {
     try {
+      setLoadingMore(true);
+      
+      // Get total count
+      const { count } = await supabase
+        .from('active_sessions')
+        .select('*', { count: 'exact', head: true });
+      
+      setTotalCount(count || 0);
+
+      // Fetch sessions with limit
       const { data, error } = await supabase
         .from('active_sessions')
         .select('id, last_activity, ip_address, user_agent')
         .order('last_activity', { ascending: false })
-        .limit(10);
+        .limit(limit || displayLimit);
 
       if (error) throw error;
       setSessions(data || []);
@@ -83,7 +97,19 @@ export function ActivityLogSection() {
       });
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
+  };
+
+  const handleLoadMore = () => {
+    const newLimit = displayLimit + 5;
+    setDisplayLimit(newLimit);
+    fetchSessions(newLimit);
+  };
+
+  const handleLoadAll = () => {
+    setShowAll(true);
+    fetchSessions(totalCount);
   };
 
   const handleSignOutAllDevices = async () => {
@@ -193,34 +219,72 @@ export function ActivityLogSection() {
         {sessions.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4">No recent activity found.</p>
         ) : (
-          <div className="space-y-4">
-            {sessions.map((session, index) => (
-              <div
-                key={session.id}
-                className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Monitor className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium">
-                      {parseUserAgent(session.user_agent)}
+          <>
+            <div className="space-y-4">
+              {sessions.map((session, index) => (
+                <div
+                  key={session.id}
+                  className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-medium">
+                        {parseUserAgent(session.user_agent)}
+                      </p>
+                      {index === 0 && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      IP: {maskIP(session.ip_address)}
                     </p>
-                    {index === 0 && (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                        Current
-                      </span>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(session.last_activity), "MMM d, yyyy 'at' h:mm a")}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    IP: {maskIP(session.ip_address)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(session.last_activity), "MMM d, yyyy 'at' h:mm a")}
-                  </p>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            
+            {/* Session count and load more buttons */}
+            <div className="mt-4 pt-4 border-t space-y-3">
+              <p className="text-xs text-muted-foreground text-center">
+                Showing {sessions.length} of {totalCount} sessions
+              </p>
+              
+              {sessions.length < totalCount && (
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More (5)'
+                    )}
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadAll}
+                    disabled={loadingMore}
+                  >
+                    Load All ({totalCount - sessions.length} more)
+                  </Button>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

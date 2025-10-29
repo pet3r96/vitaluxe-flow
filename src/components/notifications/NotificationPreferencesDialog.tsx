@@ -60,6 +60,8 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       if (!user) return;
 
       // Check if user is a patient (check patient_accounts table)
+      // NOTE: Notification preferences are PER-USER, not per-practice
+      // Each user has their own rows in notification_preferences table with unique user_id
       const { data: patientAccount } = await supabase
         .from('patient_accounts')
         .select('id')
@@ -69,6 +71,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       const isPatient = !!patientAccount;
       setUserRole(isPatient ? 'patient' : 'provider');
 
+      // Fetch this user's notification preferences (scoped to user_id)
       const { data, error } = await supabase
         .from('notification_preferences')
         .select('*')

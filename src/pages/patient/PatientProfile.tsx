@@ -72,12 +72,25 @@ export default function PatientProfile() {
     });
   };
 
+  const hasIncompleteProfile = profile && (!profile.first_name || !profile.last_name || !profile.date_of_birth || !profile.address);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
         <p className="text-muted-foreground">Manage your personal information and account settings</p>
       </div>
+
+      {/* Profile Incomplete Warning */}
+      {hasIncompleteProfile && (
+        <Card className="border-warning bg-warning/10">
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-warning-foreground">
+              Your profile is incomplete. Please fill in all required information to ensure proper access to services.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Email Section (Read-only) */}
       <Card>
@@ -90,7 +103,7 @@ export default function PatientProfile() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <p className="text-sm font-medium">{profile?.email || "Not set"}</p>
+            <p className="text-sm font-medium">{profile?.email || "Email not available"}</p>
             <p className="text-xs text-muted-foreground">
               Email cannot be changed. Contact support if you need assistance.
             </p>
@@ -122,7 +135,8 @@ export default function PatientProfile() {
                   <Input
                     id="first_name"
                     name="first_name"
-                    defaultValue={profile?.first_name}
+                    defaultValue={profile?.first_name || ''}
+                    placeholder="Enter your first name"
                     disabled={!editing}
                     required
                   />
@@ -132,7 +146,8 @@ export default function PatientProfile() {
                   <Input
                     id="last_name"
                     name="last_name"
-                    defaultValue={profile?.last_name}
+                    defaultValue={profile?.last_name || ''}
+                    placeholder="Enter your last name"
                     disabled={!editing}
                     required
                   />
@@ -146,7 +161,8 @@ export default function PatientProfile() {
                     id="date_of_birth"
                     name="date_of_birth"
                     type="date"
-                    defaultValue={profile?.date_of_birth}
+                    defaultValue={profile?.date_of_birth || ''}
+                    placeholder="YYYY-MM-DD"
                     disabled={!editing}
                     required
                   />
@@ -157,7 +173,8 @@ export default function PatientProfile() {
                     id="phone"
                     name="phone"
                     type="tel"
-                    defaultValue={profile?.phone}
+                    defaultValue={profile?.phone || ''}
+                    placeholder="(555) 123-4567"
                     disabled={!editing}
                     required
                   />
@@ -178,7 +195,8 @@ export default function PatientProfile() {
                 <Input
                   id="address"
                   name="address"
-                  defaultValue={profile?.address}
+                  defaultValue={profile?.address || ''}
+                  placeholder="123 Main Street"
                   disabled={!editing}
                 />
               </div>
@@ -189,7 +207,8 @@ export default function PatientProfile() {
                   <Input
                     id="city"
                     name="city"
-                    defaultValue={profile?.city}
+                    defaultValue={profile?.city || ''}
+                    placeholder="City"
                     disabled={!editing}
                   />
                 </div>
@@ -198,7 +217,8 @@ export default function PatientProfile() {
                   <Input
                     id="state"
                     name="state"
-                    defaultValue={profile?.state}
+                    defaultValue={profile?.state || ''}
+                    placeholder="State"
                     disabled={!editing}
                   />
                 </div>
@@ -207,7 +227,8 @@ export default function PatientProfile() {
                   <Input
                     id="zip_code"
                     name="zip_code"
-                    defaultValue={profile?.zip_code}
+                    defaultValue={profile?.zip_code || ''}
+                    placeholder="12345"
                     disabled={!editing}
                   />
                 </div>
@@ -228,7 +249,8 @@ export default function PatientProfile() {
                   <Input
                     id="emergency_contact_name"
                     name="emergency_contact_name"
-                    defaultValue={profile?.emergency_contact_name}
+                    defaultValue={profile?.emergency_contact_name || ''}
+                    placeholder="Emergency contact name"
                     disabled={!editing}
                   />
                 </div>
@@ -238,7 +260,8 @@ export default function PatientProfile() {
                     id="emergency_contact_phone"
                     name="emergency_contact_phone"
                     type="tel"
-                    defaultValue={profile?.emergency_contact_phone}
+                    defaultValue={profile?.emergency_contact_phone || ''}
+                    placeholder="(555) 123-4567"
                     disabled={!editing}
                   />
                 </div>
