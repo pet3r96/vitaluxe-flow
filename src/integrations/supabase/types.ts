@@ -1593,34 +1593,28 @@ export type Database = {
       notification_preferences: {
         Row: {
           created_at: string
-          email_notifications: boolean | null
+          email_enabled: boolean
           id: string
-          order_delivered_alerts: boolean | null
-          order_shipped_alerts: boolean | null
-          order_status_updates: boolean | null
-          sms_notifications: boolean | null
+          notification_type: string
+          sms_enabled: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          email_notifications?: boolean | null
+          email_enabled?: boolean
           id?: string
-          order_delivered_alerts?: boolean | null
-          order_shipped_alerts?: boolean | null
-          order_status_updates?: boolean | null
-          sms_notifications?: boolean | null
+          notification_type: string
+          sms_enabled?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          email_notifications?: boolean | null
+          email_enabled?: boolean
           id?: string
-          order_delivered_alerts?: boolean | null
-          order_shipped_alerts?: boolean | null
-          order_status_updates?: boolean | null
-          sms_notifications?: boolean | null
+          notification_type?: string
+          sms_enabled?: boolean
           updated_at?: string
           user_id?: string
         }
