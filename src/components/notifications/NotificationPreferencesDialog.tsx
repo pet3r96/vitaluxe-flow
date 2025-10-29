@@ -27,7 +27,6 @@ interface NotificationPreference {
 
 const NOTIFICATION_TYPES = [
   { value: 'patient_message_received', label: 'Patient Messages', description: 'When a patient sends you a message' },
-  { value: 'triage_submission_received', label: 'Triage Submissions', description: 'When a patient submits a triage form' },
   { value: 'appointment_booked', label: 'Appointments Booked', description: 'When a patient books an appointment' },
   { value: 'appointment_cancelled', label: 'Appointments Cancelled', description: 'When an appointment is cancelled' },
   { value: 'form_completed', label: 'Forms Completed', description: 'When a patient completes an assigned form' },

@@ -51,11 +51,6 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
       icon: Bell,
       title: "Automated SMS Reminders",
       description: "Reduce no-shows with smart notifications"
-    },
-    {
-      icon: Bot,
-      title: "AI-Assisted Triage",
-      description: "Intelligent symptom checker for patients"
     }
   ];
 

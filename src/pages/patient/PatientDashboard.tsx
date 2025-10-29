@@ -144,10 +144,6 @@ export default function PatientDashboard() {
               <MessageSquare className="mr-2 h-4 w-4" />
               Message Provider
             </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => navigate("/triage")}>
-              <Activity className="mr-2 h-4 w-4" />
-              AI Symptom Checker
-            </Button>
           </CardContent>
         </Card>
       </div>

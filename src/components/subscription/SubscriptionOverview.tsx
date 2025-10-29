@@ -24,7 +24,6 @@ export function SubscriptionOverview({ subscription }: SubscriptionOverviewProps
     "Complete digital EMR and medical vault system",
     "Practice analytics and revenue dashboard",
     "Automated SMS appointment reminders",
-    "AI-assisted patient triage and symptom checker",
     "Document management and e-signature workflows",
     "Multi-provider calendar with availability management",
     "Practice automation tools and workflows",

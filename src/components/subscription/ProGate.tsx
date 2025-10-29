@@ -56,10 +56,6 @@ export function ProGate({ children }: ProGateProps) {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">✓</span>
-                  <span>AI-assisted patient triage</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-0.5">✓</span>
                   <span>Staff management and access controls</span>
                 </li>
               </ul>

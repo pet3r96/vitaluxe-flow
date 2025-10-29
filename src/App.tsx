@@ -102,12 +102,10 @@ const InternalChat = lazy(() => import("./pages/InternalChat"));
 const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
 const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
 const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
-const PatientTriage = lazy(() => import("./pages/patient/PatientTriage"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
-const TriageQueue = lazy(() => import("./pages/practice/TriageQueue"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
 const DocumentsAndForms = lazy(() => import("./pages/practice/DocumentsAndForms"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
@@ -236,14 +234,12 @@ const App = () => (
                                     <Route path="/appointments" element={<SubscriptionProtectedRoute><PatientAppointments /></SubscriptionProtectedRoute>} />
                                     <Route path="/medical-vault" element={<SubscriptionProtectedRoute><PatientMedicalVault /></SubscriptionProtectedRoute>} />
                                     <Route path="/documents" element={<PatientDocuments />} />
-                                    <Route path="/triage" element={<SubscriptionProtectedRoute><PatientTriage /></SubscriptionProtectedRoute>} />
                                     <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
                                     <Route path="/documents-and-forms" element={<SubscriptionProtectedRoute><DocumentsAndForms /></SubscriptionProtectedRoute>} />
                                     <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
                                     <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
                                     <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
                                     {/* Patient Inbox removed - now integrated into Messages */}
-                                    <Route path="/triage-queue" element={<SubscriptionProtectedRoute><TriageQueue /></SubscriptionProtectedRoute>} />
                                     {/* Redirect old practice-patients route to new merged Patients page */}
                                     <Route path="/practice-patients" element={<Navigate to="/patients" replace />} />
                                     <Route path="*" element={<NotFound />} />

@@ -104,7 +104,6 @@ export function CancelSubscriptionDialog({
               <li>Patient appointment booking</li>
               <li>Secure patient messaging</li>
               <li>Digital EMR & medical vault</li>
-              <li>AI-assisted triage system</li>
               <li>All VitaLuxePro premium features</li>
             </ul>
           </AlertDescription>

@@ -67,7 +67,6 @@ export default function SubscribeToVitaLuxePro() {
     "Complete digital EMR and medical vault system",
     "Practice analytics and revenue dashboard",
     "Automated SMS appointment reminders via Twilio",
-    "AI-assisted patient triage and symptom checker",
     "Document management and e-signature workflows",
     "Multi-provider calendar with availability management",
     "Practice automation tools and workflows",

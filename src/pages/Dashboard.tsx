@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { logger } from "@/lib/logger";
 import { PRO_MONTHLY_PRICE_STR, TRIAL_DESCRIPTION } from "@/lib/pricing";
 import { TodayAppointmentsWidget } from "@/components/dashboard/TodayAppointmentsWidget";
-import { NewMessagesTriageWidget } from "@/components/dashboard/NewMessagesTriageWidget";
+import { MessagesAndChatWidget } from "@/components/dashboard/MessagesAndChatWidget";
 import { RecentActivityWidget } from "@/components/dashboard/RecentActivityWidget";
 import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpRemindersWidget";
@@ -452,14 +452,13 @@ const Dashboard = () => {
             <div className="flex-1 space-y-2">
               <h2 className="text-2xl font-bold text-foreground">Unlock VitaLuxePro Features</h2>
               <p className="text-muted-foreground">
-                Get access to patient appointments, secure messaging, digital EMR, AI-assisted triage, and more with a {TRIAL_DESCRIPTION}.
+                Get access to patient appointments, secure messaging, digital EMR, and more with a {TRIAL_DESCRIPTION}.
               </p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
                 {[
                   "Patient Appointment Booking",
                   "Secure Patient Messaging",
                   "Digital EMR & Medical Vault",
-                  "AI-Assisted Triage System",
                   "Practice Calendar Management",
                   "Advanced Patient Portal"
                 ].map((feature) => (
@@ -513,7 +512,7 @@ const Dashboard = () => {
         <>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <TodayAppointmentsWidget />
-            <NewMessagesTriageWidget />
+            <MessagesAndChatWidget />
             <FollowUpRemindersWidget />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
