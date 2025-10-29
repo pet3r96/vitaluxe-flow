@@ -98,6 +98,7 @@ const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
 const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
+const InternalChat = lazy(() => import("./pages/InternalChat"));
 const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
 const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
 const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
@@ -240,6 +241,7 @@ const App = () => (
                                     <Route path="/documents-and-forms" element={<SubscriptionProtectedRoute><DocumentsAndForms /></SubscriptionProtectedRoute>} />
                                     <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
                                     <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
+                                    <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
                                     {/* Patient Inbox removed - now integrated into Messages */}
                                     <Route path="/triage-queue" element={<SubscriptionProtectedRoute><TriageQueue /></SubscriptionProtectedRoute>} />
                                     {/* Redirect old practice-patients route to new merged Patients page */}

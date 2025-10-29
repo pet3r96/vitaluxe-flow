@@ -79,6 +79,7 @@ const menuItems = {
     { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },
     { title: "My Subscription", url: "/my-subscription", icon: CreditCard, isPro: true },
     { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
+    { title: "Internal Chat", url: "/internal-chat", icon: Inbox, isPro: true },
   ],
   provider: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -142,6 +143,7 @@ const menuItems = {
     { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
     { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },
     { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
+    { title: "Internal Chat", url: "/internal-chat", icon: Inbox, isPro: true },
   ],
 };
 
