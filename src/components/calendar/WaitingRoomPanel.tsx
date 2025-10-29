@@ -114,9 +114,9 @@ export function WaitingRoomPanel({
   const getWaitTimeColor = (checkedInAt: string) => {
     const minutes = differenceInMinutes(new Date(), new Date(checkedInAt));
 
-    if (minutes < 5) return "bg-green-50 border-l-4 border-l-green-500";
-    if (minutes < 10) return "bg-yellow-50 border-l-4 border-l-yellow-500";
-    return "bg-red-50 border-l-4 border-l-red-500 animate-pulse";
+    if (minutes < 5) return "bg-green-50 hover:!bg-green-100 border-l-4 border-l-green-500";
+    if (minutes < 10) return "bg-yellow-50 hover:!bg-yellow-100 border-l-4 border-l-yellow-500";
+    return "bg-red-50 hover:!bg-red-100 border-l-4 border-l-red-500 animate-pulse";
   };
 
   const getWaitTimeText = (checkedInAt: string) => {
