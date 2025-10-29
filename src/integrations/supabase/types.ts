@@ -6806,6 +6806,29 @@ export type Database = {
         }[]
       }
       get_my_topline_rep_id: { Args: never; Returns: string }
+      get_patient_unified_documents: {
+        Args: { p_patient_id: string }
+        Returns: {
+          assigned_by: string
+          assignment_message: string
+          bucket_name: string
+          created_at: string
+          custom_title: string
+          document_name: string
+          document_type: string
+          file_size: number
+          hidden_by_patient: boolean
+          id: string
+          is_provider_document: boolean
+          mime_type: string
+          notes: string
+          patient_id: string
+          share_with_practice: boolean
+          source: string
+          storage_path: string
+          updated_at: string
+        }[]
+      }
       get_practice_assignable_users: {
         Args: { p_practice_id: string }
         Returns: {
