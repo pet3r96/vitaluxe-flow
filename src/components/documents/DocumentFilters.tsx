@@ -14,6 +14,9 @@ interface DocumentFiltersProps {
     status: string;
     dateFrom: string;
     dateTo: string;
+    uploadedBy: string;
+    isInternal: string;
+    assignedStaffId: string;
   };
   onFiltersChange: (filters: any) => void;
 }
@@ -31,6 +34,20 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
     },
   });
 
+  const { data: staff } = useQuery({
+    queryKey: ["staff-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .or("role.eq.admin,role.eq.provider")
+        .order("full_name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const handleReset = () => {
     onFiltersChange({
       patientId: "",
@@ -38,13 +55,16 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
       status: "",
       dateFrom: "",
       dateTo: "",
+      uploadedBy: "",
+      isInternal: "",
+      assignedStaffId: "",
     });
   };
 
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <Label>Patient</Label>
             <Select
@@ -123,6 +143,63 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
               value={filters.dateTo}
               onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
             />
+          </div>
+
+          <div>
+            <Label>Uploaded By</Label>
+            <Select
+              value={filters.uploadedBy}
+              onValueChange={(value) => onFiltersChange({ ...filters, uploadedBy: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All uploaders" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All uploaders</SelectItem>
+                {staff?.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Visibility</Label>
+            <Select
+              value={filters.isInternal}
+              onValueChange={(value) => onFiltersChange({ ...filters, isInternal: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All documents" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All documents</SelectItem>
+                <SelectItem value="false">Patient-visible</SelectItem>
+                <SelectItem value="true">Internal only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Assigned Staff</Label>
+            <Select
+              value={filters.assignedStaffId}
+              onValueChange={(value) => onFiltersChange({ ...filters, assignedStaffId: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All staff" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All staff</SelectItem>
+                {staff?.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

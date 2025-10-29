@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FormSubmissionViewer } from "./FormSubmissionViewer";
 
 export function CompletedFormsTab() {
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [showViewer, setShowViewer] = useState(false);
+
   const { data: submissions, isLoading } = useQuery({
     queryKey: ["completed-form-submissions"],
     queryFn: async () => {
@@ -42,12 +47,27 @@ export function CompletedFormsTab() {
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant={sub.status === "signed" ? "default" : "secondary"}>{sub.status}</Badge>
-                <Button size="sm" variant="outline"><Eye className="h-4 w-4" /></Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedSubmission(sub);
+                    setShowViewer(true);
+                  }}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
       ))}
+
+      <FormSubmissionViewer
+        open={showViewer}
+        onOpenChange={setShowViewer}
+        submission={selectedSubmission}
+      />
     </div>
   );
 }

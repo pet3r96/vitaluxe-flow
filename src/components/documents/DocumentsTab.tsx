@@ -17,6 +17,9 @@ export function DocumentsTab() {
     status: "",
     dateFrom: "",
     dateTo: "",
+    uploadedBy: "",
+    isInternal: "",
+    assignedStaffId: "",
   });
 
   const { data: documents, isLoading } = useQuery({
@@ -44,6 +47,15 @@ export function DocumentsTab() {
       }
       if (filters.dateTo) {
         query = query.lte("created_at", filters.dateTo);
+      }
+      if (filters.uploadedBy) {
+        query = query.eq("uploaded_by", filters.uploadedBy);
+      }
+      if (filters.isInternal) {
+        query = query.eq("is_internal", filters.isInternal === "true");
+      }
+      if (filters.assignedStaffId) {
+        query = query.eq("assigned_staff_id", filters.assignedStaffId);
       }
 
       const { data, error } = await query;
