@@ -191,9 +191,15 @@ export function CompleteAppointmentDialog({
       toast.error("Please provide a reason for the follow-up");
       return;
     }
-    if (scheduleNextAppointment === "yes" && !data.nextApptProvider) {
-      toast.error("Please select a provider for the next appointment");
-      return;
+    if (scheduleNextAppointment === "yes") {
+      if (!data.nextApptProvider) {
+        toast.error("Please select a provider for the next appointment");
+        return;
+      }
+      if (!data.nextApptServiceType) {
+        toast.error("Please select a service type for the next appointment");
+        return;
+      }
     }
     completeMutation.mutate(data);
   };
@@ -540,7 +546,7 @@ export function CompleteAppointmentDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nextApptServiceType">Service Type</Label>
+                  <Label htmlFor="nextApptServiceType">Service Type *</Label>
                   <Select
                     value={watch("nextApptServiceType")}
                     onValueChange={(value) => setValue("nextApptServiceType", value)}
@@ -550,7 +556,7 @@ export function CompleteAppointmentDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {serviceTypes?.map((type) => (
-                        <SelectItem key={type.id} value={type.name}>
+                        <SelectItem key={type.id} value={type.id}>
                           {type.name}
                         </SelectItem>
                       ))}

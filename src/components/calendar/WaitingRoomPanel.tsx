@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { differenceInMinutes, format } from "date-fns";
 import { Clock, User, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import {
   Table,
   TableBody,
@@ -84,8 +84,8 @@ export function WaitingRoomPanel({
     };
   }, [practiceId, refetch]);
 
-  const handleStartTreatment = async (appointmentId: string) => {
-    try {
+  const startTreatmentMutation = useOptimisticMutation(
+    async (appointmentId: string) => {
       const { error } = await supabase
         .from("patient_appointments")
         .update({
@@ -93,22 +93,21 @@ export function WaitingRoomPanel({
           treatment_started_at: new Date().toISOString(),
         })
         .eq("id", appointmentId);
-
       if (error) throw error;
-
-      toast({
-        title: "Treatment started",
-        description: "Patient status updated to being treated",
-      });
-
-      refetch();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    },
+    {
+      queryKey: ["waiting-room", practiceId, currentDate],
+      updateFn: (oldData: any, appointmentId: string) => {
+        // Optimistically remove appointment from waiting room
+        return oldData?.filter((apt: any) => apt.id !== appointmentId) || [];
+      },
+      successMessage: "Treatment started - patient moved to being treated",
+      errorMessage: "Failed to start treatment",
     }
+  );
+
+  const handleStartTreatment = (appointmentId: string) => {
+    startTreatmentMutation.mutate(appointmentId);
   };
 
   const getWaitTimeColor = (checkedInAt: string) => {

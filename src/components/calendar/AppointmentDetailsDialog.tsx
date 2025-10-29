@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -105,8 +106,8 @@ export function AppointmentDetailsDialog({
     },
   });
 
-  const startTreatmentMutation = useMutation({
-    mutationFn: async () => {
+  const startTreatmentMutation = useOptimisticMutation(
+    async () => {
       const { error } = await supabase
         .from("patient_appointments")
         .update({
@@ -114,19 +115,27 @@ export function AppointmentDetailsDialog({
           treatment_started_at: new Date().toISOString(),
         })
         .eq("id", appointment.id);
-
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["calendar-data"] });
-      queryClient.invalidateQueries({ queryKey: ["waiting-room"] });
-      toast.success("Treatment started");
+      // Close dialog after successful start
       onOpenChange(false);
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to start treatment");
-    },
-  });
+    {
+      queryKey: ["calendar-data"],
+      updateFn: (oldData: any) => {
+        // Optimistically update appointment status in cache
+        return oldData?.map((apt: any) => 
+          apt.id === appointment.id 
+            ? { ...apt, status: "being_treated", treatment_started_at: new Date().toISOString() }
+            : apt
+        );
+      },
+      successMessage: "Treatment started",
+      errorMessage: "Failed to start treatment",
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["waiting-room"] });
+      }
+    }
+  );
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
