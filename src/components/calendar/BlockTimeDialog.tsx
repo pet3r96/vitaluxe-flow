@@ -93,18 +93,28 @@ export const BlockTimeDialog = ({
   };
 
   const checkConflicts = async () => {
-    const startDateTime = `${formData.startDate}T${formData.startTime}:00`;
-    const endDateTime = `${formData.endDate}T${formData.endTime}:00`;
+    try {
+      const startDateTime = `${formData.startDate}T${formData.startTime}:00`;
+      const endDateTime = `${formData.endDate}T${formData.endTime}:00`;
 
-    const { data, error } = await supabase.rpc('get_appointments_during_blocked_time', {
-      p_practice_id: practiceId,
-      p_provider_id: formData.blockType === 'provider_unavailable' ? formData.providerId : null,
-      p_start_time: startDateTime,
-      p_end_time: endDateTime
-    });
+      const { data, error } = await supabase.rpc('get_appointments_during_blocked_time', {
+        p_practice_id: practiceId,
+        p_provider_id: formData.blockType === 'provider_unavailable' ? formData.providerId : null,
+        p_start_time: startDateTime,
+        p_end_time: endDateTime
+      });
 
-    if (!error && data) {
-      setConflicts(data);
+      if (error) {
+        console.error('Error checking conflicts:', error);
+        throw error;
+      }
+
+      setConflicts(data || []);
+      return data || [];
+    } catch (error: any) {
+      console.error('Conflict check failed:', error);
+      toast.error('Failed to check for conflicts: ' + (error.message || 'Unknown error'));
+      throw error;
     }
   };
 
@@ -157,11 +167,18 @@ export const BlockTimeDialog = ({
 
   const handleNext = async () => {
     if (step === 3) {
-      await checkConflicts();
-      if (conflicts.length > 0) {
-        setStep(4);
-      } else {
-        await handleSubmit();
+      try {
+        setLoading(true);
+        const conflictResults = await checkConflicts();
+        setLoading(false);
+        
+        if (conflictResults && conflictResults.length > 0) {
+          setStep(4);
+        } else {
+          await handleSubmit();
+        }
+      } catch (error) {
+        setLoading(false);
       }
     } else {
       setStep(step + 1);
