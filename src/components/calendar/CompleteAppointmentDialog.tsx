@@ -53,14 +53,14 @@ export function CompleteAppointmentDialog({
       followUpTime: "09:00",
       followUpReason: `Follow-up on ${appointment?.service_type || "treatment"}`,
       followUpPriority: "medium",
-      followUpAssignedTo: appointment?.provider_id || "",
+      followUpAssignedTo: appointment?.provider_id || "unassigned",
       followUpNotes: "",
       // Next appointment fields
       nextApptDate: format(addWeeks(new Date(), 2), "yyyy-MM-dd"),
       nextApptTime: "09:00",
       nextApptDuration: "30",
       nextApptProvider: appointment?.provider_id || "",
-      nextApptRoom: appointment?.room_id || "",
+      nextApptRoom: appointment?.room_id || "none",
       nextApptServiceType: appointment?.service_type || "",
     },
   });
@@ -116,7 +116,7 @@ export function CompleteAppointmentDialog({
           .insert({
             patient_id: appointment.patient_id,
             created_by: effectiveUserId,
-            assigned_to: data.followUpAssignedTo || null,
+            assigned_to: data.followUpAssignedTo === "unassigned" ? null : data.followUpAssignedTo,
             follow_up_date: data.followUpDate,
             follow_up_time: data.followUpTime || null,
             reason: data.followUpReason,
@@ -360,7 +360,7 @@ export function CompleteAppointmentDialog({
                         <SelectValue placeholder="Select staff member" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Unassigned</SelectItem>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
                         {(staffMembers as any)?.map((staff: any) => (
                           <SelectItem key={staff.id} value={staff.id}>
                             {staff.name}
