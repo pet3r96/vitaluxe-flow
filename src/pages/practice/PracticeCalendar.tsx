@@ -340,6 +340,8 @@ export default function PracticeCalendar() {
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
         appointment={selectedAppointment}
+        providers={providers}
+        rooms={rooms}
       />
 
       <CalendarSettingsDialog

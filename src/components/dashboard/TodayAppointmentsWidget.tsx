@@ -101,6 +101,8 @@ export function TodayAppointmentsWidget() {
           appointment={selectedAppointment}
           open={!!selectedAppointment}
           onOpenChange={(open) => !open && setSelectedAppointment(null)}
+          providers={[]}
+          rooms={[]}
         />
       )}
     </>
