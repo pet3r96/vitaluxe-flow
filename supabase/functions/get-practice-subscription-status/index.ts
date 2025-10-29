@@ -78,6 +78,16 @@ serve(async (req) => {
             practiceId = provider.practice_id as string;
             console.log('[get-practice-subscription-status] Using provider.practice_id from impersonation', { practiceId });
           }
+        } else if (impSession.impersonated_role === 'staff') {
+          const { data: staff, error: staffErr } = await supabaseAdmin
+            .from('practice_staff')
+            .select('practice_id')
+            .eq('user_id', impSession.impersonated_user_id)
+            .maybeSingle();
+          if (!staffErr && staff?.practice_id) {
+            practiceId = staff.practice_id as string;
+            console.log('[get-practice-subscription-status] Using practice_staff.practice_id from impersonation', { practiceId });
+          }
         }
       }
     }
@@ -107,6 +117,19 @@ serve(async (req) => {
       if (!selfProvErr && selfProvider?.practice_id) {
         practiceId = selfProvider.practice_id as string;
         console.log('[get-practice-subscription-status] Using self provider.practice_id', { practiceId });
+      }
+    }
+
+    // 4) Check if self is staff member
+    if (!practiceId) {
+      const { data: selfStaff, error: selfStaffErr } = await supabaseAdmin
+        .from('practice_staff')
+        .select('practice_id')
+        .eq('user_id', actorUserId)
+        .maybeSingle();
+      if (!selfStaffErr && selfStaff?.practice_id) {
+        practiceId = selfStaff.practice_id as string;
+        console.log('[get-practice-subscription-status] Using self practice_staff.practice_id', { practiceId });
       }
     }
 
