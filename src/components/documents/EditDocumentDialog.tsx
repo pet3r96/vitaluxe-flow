@@ -50,8 +50,8 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients" as any)
-        .select("id, first_name, last_name")
-        .order("last_name");
+        .select("id, name")
+        .order("name");
       if (error) throw error;
       return data as any[];
     },
@@ -203,7 +203,7 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
                 <SelectItem value="none">None</SelectItem>
                 {patients?.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.first_name} {p.last_name}
+                    {p.name}
                   </SelectItem>
                 ))}
               </SelectContent>

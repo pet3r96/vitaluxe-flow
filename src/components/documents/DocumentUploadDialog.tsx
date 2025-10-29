@@ -68,10 +68,11 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         // Assign to selected patients if any
         if (selectedPatientIds.length > 0 && document) {
           const documentId = (document as any).id;
+          const { data: { user } } = await supabase.auth.getUser();
           const assignments = selectedPatientIds.map(patientId => ({
             document_id: documentId,
             patient_id: patientId,
-            assigned_by: effectivePracticeId,
+            assigned_by: user?.id || effectivePracticeId,
           }));
 
           const { error: assignError } = await supabase

@@ -32,9 +32,9 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
       if (!effectivePracticeId) return [];
       const { data, error } = await supabase
         .from("patients" as any)
-        .select("id, first_name, last_name")
+        .select("id, name")
         .eq("practice_id", effectivePracticeId)
-        .order("last_name");
+        .order("name");
       if (error) throw error;
       return data as any[];
     },
@@ -108,7 +108,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
                 <SelectItem value="all">All patients</SelectItem>
                 {patients?.map((patient) => (
                   <SelectItem key={patient.id} value={patient.id}>
-                    {patient.first_name} {patient.last_name}
+                    {patient.name}
                   </SelectItem>
                 ))}
               </SelectContent>

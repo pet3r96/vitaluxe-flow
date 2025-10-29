@@ -26,9 +26,9 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
       console.log("Fetching patients for practice:", effectivePracticeId);
       const { data, error } = await supabase
         .from("patients" as any)
-        .select("id, first_name, last_name")
+        .select("id, name")
         .eq("practice_id", effectivePracticeId)
-        .order("last_name");
+        .order("name");
       if (error) {
         console.error("Error fetching patients:", error);
         throw error;
@@ -73,8 +73,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
 
   const filteredPatients = patients?.filter(patient => {
     if (!searchQuery) return true;
-    const fullName = `${patient.first_name} ${patient.last_name}`.toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase());
+    return patient.name.toLowerCase().includes(searchQuery.toLowerCase());
   }) || [];
 
   const togglePatient = (patientId: string) => {
@@ -110,7 +109,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
           <span className="text-sm text-muted-foreground">Selected:</span>
           {selectedPatients.map(patient => (
             <Badge key={patient.id} variant="secondary" className="gap-1">
-              {patient.first_name} {patient.last_name}
+              {patient.name}
               <button
                 type="button"
                 onClick={() => removePatient(patient.id)}
@@ -152,7 +151,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
               return (
                 <CommandItem
                   key={patient.id}
-                  value={`${patient.first_name} ${patient.last_name}`}
+                  value={patient.name}
                   onSelect={() => togglePatient(patient.id)}
                   className="flex items-center gap-2 cursor-pointer"
                 >
@@ -161,7 +160,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
                     onCheckedChange={() => togglePatient(patient.id)}
                   />
                   <span>
-                    {patient.last_name}, {patient.first_name}
+                    {patient.name}
                   </span>
                 </CommandItem>
               );

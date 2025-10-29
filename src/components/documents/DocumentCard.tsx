@@ -146,7 +146,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
 
           {document.patients && (
             <div className="text-sm font-medium text-muted-foreground">
-              Patient: {document.patients.first_name} {document.patients.last_name}
+              Patient: {document.patients.name}
             </div>
           )}
 
