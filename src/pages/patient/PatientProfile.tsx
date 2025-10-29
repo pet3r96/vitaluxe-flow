@@ -173,11 +173,6 @@ export default function PatientProfile() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
-        <p className="text-muted-foreground">Manage your personal information and account settings</p>
-      </div>
-
       {/* Profile Incomplete Warning */}
       {hasIncompleteProfile && (
         <Card className="border-warning bg-warning/10">
