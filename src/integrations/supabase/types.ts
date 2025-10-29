@@ -2681,7 +2681,7 @@ export type Database = {
             foreignKeyName: "patient_follow_ups_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
-            referencedRelation: "patients"
+            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -2689,7 +2689,7 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
-            referencedColumns: ["patient_id"]
+            referencedColumns: ["patient_account_id"]
           },
         ]
       }
