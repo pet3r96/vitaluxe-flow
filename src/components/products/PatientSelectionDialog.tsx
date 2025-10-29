@@ -96,7 +96,7 @@ export const PatientSelectionDialog = ({
           id,
           user_id,
           active,
-          profiles!inner(
+          profiles!providers_user_id_fkey!inner(
             id,
             full_name,
             company,
