@@ -26,41 +26,65 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
+  console.log("🔍 NewMessageDialog rendered, open:", open);
+
   // Get patient's practice info using edge function to handle impersonation correctly
-  const { data: practiceData, isLoading: isLoadingPractice, error: practiceError } = useQuery({
-    queryKey: ["patient-practice-info"],
+  const { data: practiceData, isLoading: isLoadingPractice, error: practiceError, refetch } = useQuery<{
+    patientAccountId: string;
+    practiceId: string | null;
+    practice: {
+      name: string | null;
+      city: string | null;
+      state: string | null;
+    } | null;
+  }>({
+    queryKey: ["patient-practice-info", open],
     queryFn: async () => {
-      console.log("🔄 Invoking get-patient-practice edge function...");
+      console.log("🔄 [QUERY START] Invoking get-patient-practice edge function...");
+      console.log("📋 Current auth session:", await supabase.auth.getSession());
       
-      const { data, error } = await supabase.functions.invoke("get-patient-practice");
-      
-      console.log("📦 Edge function response:", { data, error });
-      
-      if (error) {
-        console.error("❌ Failed to fetch practice info:", error);
-        throw new Error(`Edge function error: ${error.message}`);
+      try {
+        const { data, error } = await supabase.functions.invoke("get-patient-practice");
+        
+        console.log("📦 Edge function raw response:", { data, error });
+        
+        if (error) {
+          console.error("❌ Edge function error object:", JSON.stringify(error, null, 2));
+          throw new Error(`Edge function error: ${error.message || JSON.stringify(error)}`);
+        }
+        
+        if (!data) {
+          console.error("❌ No data returned from edge function");
+          throw new Error("No data returned from practice lookup");
+        }
+        
+        console.log("✅ Practice data retrieved successfully:", JSON.stringify(data, null, 2));
+        
+        return data as {
+          patientAccountId: string;
+          practiceId: string | null;
+          practice: {
+            name: string | null;
+            city: string | null;
+            state: string | null;
+          } | null;
+        };
+      } catch (err) {
+        console.error("💥 Exception in queryFn:", err);
+        throw err;
       }
-      
-      if (!data) {
-        console.error("❌ No data returned from edge function");
-        throw new Error("No data returned from practice lookup");
-      }
-      
-      console.log("✅ Practice data retrieved:", data);
-      
-      return data as {
-        patientAccountId: string;
-        practiceId: string | null;
-        practice: {
-          name: string | null;
-          city: string | null;
-          state: string | null;
-        } | null;
-      };
     },
     enabled: open,
-    retry: 2,
-    retryDelay: 1000,
+    retry: 1,
+    retryDelay: 500,
+    staleTime: 0,
+  });
+
+  console.log("📊 Query state:", { 
+    isLoading: isLoadingPractice, 
+    hasError: !!practiceError, 
+    hasData: !!practiceData,
+    data: practiceData 
   });
 
   const sendMutation = useMutation({
