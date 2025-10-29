@@ -121,21 +121,41 @@ serve(async (req) => {
       }
     }
 
-    // Fetch terms content
-    const { data: terms, error: termsError } = await supabase
+    // Fetch terms content from patient or staff tables
+    let terms: any = null;
+    let isPatientTerms = false;
+
+    // Try patient terms first
+    const patientTermsRes = await supabase
       .from('patient_portal_terms')
       .select('*')
       .eq('id', terms_id)
-      .single();
+      .maybeSingle();
 
-    if (termsError) {
-      console.error('Error fetching terms:', termsError);
-      throw new Error(`Terms fetch error: ${termsError.message}`);
+    if (patientTermsRes.data) {
+      terms = patientTermsRes.data;
+      isPatientTerms = true;
+    } else {
+      // Fallback to staff/provider terms
+      const staffTermsRes = await supabase
+        .from('terms_and_conditions')
+        .select('*')
+        .eq('id', terms_id)
+        .maybeSingle();
+
+      if (staffTermsRes.error) {
+        console.error('Error fetching terms:', staffTermsRes.error);
+      }
+      terms = staffTermsRes.data;
+      isPatientTerms = false;
     }
-    
+
     if (!terms) {
       console.error('Terms not found for ID:', terms_id);
-      throw new Error('Terms not found');
+      return new Response(
+        JSON.stringify({ error: 'Terms not found', details: { terms_id } }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Fetch user profile for the target user
@@ -542,77 +562,87 @@ serve(async (req) => {
       console.log('Terms PDF uploaded to Supabase Storage:', fileName);
     }
 
-    // Check if user is a patient
-    const { data: patientAccount } = await supabase
-      .from('patient_accounts')
-      .select('user_id')
-      .eq('user_id', targetUserId)
-      .maybeSingle();
-    
-    // Record acceptance in appropriate table based on user type
+    // Record acceptance based on which terms table matched
     let acceptance: any;
     let acceptanceError: any;
-    
-    if (patientAccount) {
-      // Patient - use patient_terms_acceptances table
+
+    if (isPatientTerms) {
       console.log('Recording patient terms acceptance for user:', targetUserId);
       const result = await supabase
         .from('patient_terms_acceptances')
-        .upsert({
-          user_id: targetUserId,
-          terms_id: terms.id,
-          terms_version: terms.version,
-          signature_name,
-          signed_pdf_url: fileName,
-          ip_address: ipAddress,
-          user_agent: userAgent,
-          accepted_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,terms_id',
-          ignoreDuplicates: false
-        })
+        .upsert(
+          {
+            user_id: targetUserId,
+            terms_id: terms.id,
+            terms_version: terms.version,
+            signature_name,
+            signed_pdf_url: fileName,
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            accepted_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_id,terms_id',
+            ignoreDuplicates: false,
+          },
+        )
         .select()
         .single();
-      
+
       acceptance = result.data;
       acceptanceError = result.error;
     } else {
-      // Provider/staff - use user_terms_acceptances table with app_role
       console.log('Recording provider/staff terms acceptance for user:', targetUserId);
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', targetUserId)
         .maybeSingle();
-      
-      const userRole = roleData?.role || 'provider'; // Default to provider if no role found
-      
+
+      // Never write 'patient' into app_role enum for this table
+      const rawRole = roleData?.role;
+      const userRole = rawRole === 'patient' ? 'provider' : (rawRole || 'provider');
+
       const result = await supabase
         .from('user_terms_acceptances')
-        .upsert({
-          user_id: targetUserId,
-          terms_id: terms.id,
-          role: userRole,
-          terms_version: terms.version,
-          signature_name,
-          signed_pdf_url: fileName,
-          ip_address: ipAddress,
-          user_agent: userAgent,
-          accepted_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,terms_id',
-          ignoreDuplicates: false
-        })
+        .upsert(
+          {
+            user_id: targetUserId,
+            terms_id: terms.id,
+            role: userRole,
+            terms_version: terms.version,
+            signature_name,
+            signed_pdf_url: fileName,
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            accepted_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_id,terms_id',
+            ignoreDuplicates: false,
+          },
+        )
         .select()
         .single();
-      
+
       acceptance = result.data;
       acceptanceError = result.error;
     }
 
     if (acceptanceError) {
       console.error('Acceptance error:', acceptanceError);
-      throw new Error('Failed to record acceptance');
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to record acceptance',
+          details: {
+            message: acceptanceError.message,
+            code: acceptanceError.code,
+            hint: acceptanceError.hint,
+            table: isPatientTerms ? 'patient_terms_acceptances' : 'user_terms_acceptances',
+          },
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
 
     // Update user_password_status (for target user) - using UPSERT to handle missing rows
@@ -665,10 +695,13 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: 'An error occurred processing the request' }),
+      JSON.stringify({
+        error: error?.message || 'An error occurred processing the request',
+        details: error?.stack || null,
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
+        status: 400,
       }
     );
   }

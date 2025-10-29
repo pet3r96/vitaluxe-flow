@@ -147,7 +147,12 @@ export default function AcceptTerms() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        const backendError = (data as any)?.error || (error as any)?.message || "Failed to accept terms";
+        const details = (data as any)?.details;
+        toast.error(details ? `${backendError} — ${typeof details === 'string' ? details : JSON.stringify(details)}` : backendError);
+        return;
+      }
 
       if (data.success) {
         // Set session flag to prevent re-prompts in this session
@@ -164,7 +169,10 @@ export default function AcceptTerms() {
         
         navigate("/");
       } else {
-        throw new Error(data.error || "Failed to accept terms");
+        const backendError = (data as any)?.error || "Failed to accept terms";
+        const details = (data as any)?.details;
+        toast.error(details ? `${backendError} — ${typeof details === 'string' ? details : JSON.stringify(details)}` : backendError);
+        return;
       }
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
