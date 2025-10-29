@@ -40,20 +40,18 @@ export function AppointmentCard({ appointment, onClick, isDragging, style }: App
             WALK-IN
           </Badge>
         )}
-        <div className="flex items-start justify-between gap-2">
-          <p className="font-semibold text-sm leading-tight line-clamp-2">
-            {appointment.patient_accounts?.first_name} {appointment.patient_accounts?.last_name}
-          </p>
-          <span className="text-xs whitespace-nowrap shrink-0">
-            {format(new Date(appointment.start_time), 'h:mm a')}
-          </span>
-        </div>
+        <p className="font-semibold text-sm leading-tight line-clamp-2">
+          {appointment.patient_accounts?.first_name} {appointment.patient_accounts?.last_name}
+        </p>
         
         {appointment.providers && (
           <div className="flex items-center gap-1 text-xs opacity-80">
             <User className="h-3 w-3 shrink-0" />
             <span className="truncate">
               {appointment.providers.first_name} {appointment.providers.last_name}
+            </span>
+            <span className="text-xs whitespace-nowrap shrink-0 ml-auto">
+              {format(new Date(appointment.start_time), 'h:mm a')}
             </span>
           </div>
         )}
