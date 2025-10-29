@@ -7,41 +7,26 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, Trash2, FileCheck } from "lucide-react";
 import { LogoPreview } from "./LogoPreview";
 import { downloadPdfFromBase64 } from "@/lib/pdfGenerator";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function LogoTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { effectivePracticeId } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [practiceName, setPracticeName] = useState("");
   const debounceTimerRef = useRef<NodeJS.Timeout>();
 
-  // Get current user's practice_id
-  const { data: profile } = useQuery({
-    queryKey: ["user-profile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-      return profile;
-    },
-  });
-
   // Fetch current branding
   const { data: branding, isLoading } = useQuery({
-    queryKey: ["practice-branding", profile?.id],
-    enabled: !!profile?.id,
+    queryKey: ["practice-branding", effectivePracticeId],
+    enabled: !!effectivePracticeId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("practice_branding")
         .select("*")
-        .eq("practice_id", profile!.id)
+        .eq("practice_id", effectivePracticeId!)
         .maybeSingle();
 
       if (error) throw error;
@@ -58,7 +43,7 @@ export function LogoTab() {
   // Upload logo mutation
   const uploadLogoMutation = useMutation({
     mutationFn: async (file: File) => {
-      if (!profile?.id) throw new Error("No practice ID");
+      if (!effectivePracticeId) throw new Error("No practice ID");
 
       // Validate file
       if (!file.type.startsWith("image/")) {
@@ -70,7 +55,7 @@ export function LogoTab() {
 
       // Upload to storage
       const fileExt = file.name.split(".").pop();
-      const filePath = `${profile.id}/logo.${fileExt}`;
+      const filePath = `${effectivePracticeId}/logo.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("provider-documents")
@@ -87,7 +72,7 @@ export function LogoTab() {
       const { error: dbError } = await supabase
         .from("practice_branding")
         .upsert({
-          practice_id: profile.id,
+          practice_id: effectivePracticeId,
           logo_url: publicUrl,
           logo_storage_path: filePath,
           practice_name: practiceName || null,
@@ -136,7 +121,7 @@ export function LogoTab() {
           logo_storage_path: null,
           updated_at: new Date().toISOString(),
         })
-        .eq("practice_id", profile!.id);
+        .eq("practice_id", effectivePracticeId!);
 
       if (dbError) throw dbError;
     },
@@ -159,12 +144,12 @@ export function LogoTab() {
   // Update practice name mutation (silent background save)
   const updateNameMutation = useMutation({
     mutationFn: async (newName: string) => {
-      if (!profile?.id) throw new Error("No practice ID");
+      if (!effectivePracticeId) throw new Error("No practice ID");
 
       const { error } = await supabase
         .from("practice_branding")
         .upsert({
-          practice_id: profile.id,
+          practice_id: effectivePracticeId,
           practice_name: newName || null,
           updated_at: new Date().toISOString(),
         }, {
