@@ -4603,6 +4603,58 @@ export type Database = {
           },
         ]
       }
+      provider_document_patients: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          created_at: string | null
+          document_id: string
+          id: string
+          message: string | null
+          patient_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          document_id: string
+          id?: string
+          message?: string | null
+          patient_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          document_id?: string
+          id?: string
+          message?: string | null
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_document_patients_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "provider_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       provider_documents: {
         Row: {
           assigned_patient_id: string | null

@@ -52,11 +52,11 @@ serve(async (req) => {
       console.log(`Using impersonated practice: ${effectivePracticeId}`);
     }
 
-    const { documentId, patientId, message } = await req.json();
+    const { documentId, patientIds, message } = await req.json();
 
-    if (!documentId || !patientId) {
+    if (!documentId || !patientIds || !Array.isArray(patientIds) || patientIds.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'documentId and patientId are required' }),
+        JSON.stringify({ error: 'documentId and patientIds (array) are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -75,52 +75,71 @@ serve(async (req) => {
       );
     }
 
-    // Verify patient belongs to this practice
-    const { data: patientCheck } = await supabaseAdmin
+    // Verify all patients belong to this practice
+    const { data: patientsCheck } = await supabaseAdmin
       .from('patients')
-      .select('practice_id')
-      .eq('id', patientId)
-      .single();
+      .select('id, practice_id')
+      .in('id', patientIds);
 
-    if (!patientCheck || patientCheck.practice_id !== effectivePracticeId) {
+    if (!patientsCheck || patientsCheck.length !== patientIds.length) {
       return new Response(
-        JSON.stringify({ error: 'Patient not found or access denied' }),
+        JSON.stringify({ error: 'One or more patients not found' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update document with assigned patient
-    const { data: document, error: updateError } = await supabaseAdmin
+    const invalidPatients = patientsCheck.filter(p => p.practice_id !== effectivePracticeId);
+    if (invalidPatients.length > 0) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied to one or more patients' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get document info
+    const { data: document } = await supabaseAdmin
       .from('provider_documents')
-      .update({ assigned_patient_id: patientId })
-      .eq('id', documentId)
       .select('document_name, practice_id')
+      .eq('id', documentId)
       .single();
 
-    if (updateError) {
-      console.error('Error assigning document:', updateError);
+    // Insert assignments into junction table
+    const assignments = patientIds.map(patientId => ({
+      document_id: documentId,
+      patient_id: patientId,
+      assigned_by: user.id,
+      message,
+    }));
+
+    const { error: assignError } = await supabaseAdmin
+      .from('provider_document_patients')
+      .insert(assignments);
+
+    if (assignError) {
+      console.error('Error assigning document:', assignError);
       return new Response(
-        JSON.stringify({ error: updateError.message }),
+        JSON.stringify({ error: assignError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get patient account for notification
-    const { data: patientAccount } = await supabaseAdmin
+    // Get patient accounts for notifications
+    const { data: patientAccounts } = await supabaseAdmin
       .from('patient_accounts')
-      .select('user_id, full_name')
-      .eq('patient_id', patientId)
-      .single();
+      .select('user_id, full_name, patient_id')
+      .in('patient_id', patientIds);
 
-    // Create notification for patient
-    if (patientAccount?.user_id) {
-      await supabaseAdmin.from('notifications').insert({
-        user_id: patientAccount.user_id,
+    // Create notifications for each patient
+    if (patientAccounts && patientAccounts.length > 0) {
+      const notifications = patientAccounts.map(account => ({
+        user_id: account.user_id,
         title: 'New Document Assigned',
-        message: message || `A new document "${document.document_name}" has been assigned to you`,
+        message: message || `A new document "${document?.document_name}" has been assigned to you`,
         type: 'document_assigned',
         related_id: documentId,
-      });
+      }));
+
+      await supabaseAdmin.from('notifications').insert(notifications);
     }
 
     // Create audit log
@@ -130,17 +149,21 @@ serve(async (req) => {
       entity_type: 'provider_document',
       entity_id: documentId,
       details: {
-        document_name: document.document_name,
-        patient_id: patientId,
+        document_name: document?.document_name,
+        patient_ids: patientIds,
+        patient_count: patientIds.length,
         message,
         effective_practice_id: effectivePracticeId,
       },
     });
 
-    console.log(`Document ${documentId} assigned to patient ${patientId} by practice ${effectivePracticeId}`);
+    console.log(`Document ${documentId} assigned to ${patientIds.length} patients by practice ${effectivePracticeId}`);
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Document assigned successfully' }),
+      JSON.stringify({ 
+        success: true, 
+        message: `Document assigned to ${patientIds.length} patient${patientIds.length === 1 ? '' : 's'} successfully` 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

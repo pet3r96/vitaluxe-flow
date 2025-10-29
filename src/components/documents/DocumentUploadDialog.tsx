@@ -3,9 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiPatientSelect } from "./MultiPatientSelect";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
@@ -23,22 +24,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
   const [documentType, setDocumentType] = useState("");
   const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
-  const [patientId, setPatientId] = useState("");
-
-  const { data: patients } = useQuery({
-    queryKey: ["patients-select", effectivePracticeId],
-    queryFn: async () => {
-      if (!effectivePracticeId) return [];
-      const { data, error } = await supabase
-        .from("patients" as any)
-        .select("id, first_name, last_name")
-        .eq("practice_id", effectivePracticeId)
-        .order("last_name");
-      if (error) throw error;
-      return data as any[];
-    },
-    enabled: open && !!effectivePracticeId,
-  });
+  const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -62,7 +48,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         if (uploadError) throw uploadError;
 
         // Create document record
-        const { data, error: insertError } = await supabase
+        const { data: document, error: insertError } = await supabase
           .from("provider_documents" as any)
           .insert({
             practice_id: effectivePracticeId,
@@ -72,14 +58,32 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             file_size: file.size,
             mime_type: file.type,
             tags: tags ? tags.split(",").map(t => t.trim()) : [],
-            assigned_patient_id: (patientId && patientId !== "none") ? patientId : null,
             notes: notes || null,
           })
           .select()
           .single();
 
         if (insertError) throw insertError;
-        uploadedDocs.push(data);
+
+        // Assign to selected patients if any
+        if (selectedPatientIds.length > 0 && document) {
+          const documentId = (document as any).id;
+          const assignments = selectedPatientIds.map(patientId => ({
+            document_id: documentId,
+            patient_id: patientId,
+            assigned_by: effectivePracticeId,
+          }));
+
+          const { error: assignError } = await supabase
+            .from("provider_document_patients" as any)
+            .insert(assignments);
+
+          if (assignError) {
+            console.error("Error assigning to patients:", assignError);
+          }
+        }
+
+        uploadedDocs.push(document);
       }
 
       return uploadedDocs;
@@ -100,7 +104,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     setDocumentType("");
     setTags("");
     setNotes("");
-    setPatientId("none");
+    setSelectedPatientIds([]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,7 +115,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Upload Documents</DialogTitle>
         </DialogHeader>
@@ -171,20 +175,11 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
           </div>
 
           <div>
-            <Label>Assign to Patient (optional)</Label>
-            <Select value={patientId} onValueChange={setPatientId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select patient" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {patients?.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.id}>
-                    {patient.first_name} {patient.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Assign to Patients (optional)</Label>
+            <MultiPatientSelect
+              selectedPatientIds={selectedPatientIds}
+              onSelectedChange={setSelectedPatientIds}
+            />
           </div>
 
           <div>
