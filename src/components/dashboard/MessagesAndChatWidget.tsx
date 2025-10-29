@@ -70,24 +70,35 @@ export function MessagesAndChatWidget() {
 
       try {
         // Query practice-wide incomplete messages
-        const { data, error } = await supabase
+        const { data: messages, error } = await supabase
           .from("internal_messages")
-          .select(`
-            id,
-            subject,
-            completed,
-            creator:profiles!internal_messages_created_by_fkey(name)
-          `)
+          .select("id, subject, created_by, completed")
           .eq("practice_id", effectivePracticeId)
           .eq("completed", false)
           .order("created_at", { ascending: false })
           .limit(3);
 
         if (error) throw error;
+        if (!messages || messages.length === 0) {
+          return { count: 0, senders: [] };
+        }
+
+        // Get unique creator IDs
+        const creatorIds = [...new Set(messages.map(m => m.created_by))];
+
+        // Fetch creator names
+        const { data: creators } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", creatorIds);
+
+        // Map creator names to messages
+        const creatorsMap = new Map(creators?.map(c => [c.id, c.name]) || []);
+        const senders = messages.map(m => creatorsMap.get(m.created_by) || "Unknown");
 
         return {
-          count: data?.length || 0,
-          senders: data?.map((m: any) => m.creator?.name || "Unknown").slice(0, 3) || []
+          count: messages.length,
+          senders: senders.slice(0, 3)
         };
       } catch (error) {
         console.error("Failed to fetch internal chat:", error);
