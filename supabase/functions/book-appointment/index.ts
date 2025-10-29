@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
         appointment_date: fullDateTime.toISOString(),
         reason_for_visit: reasonForVisit,
         notes,
-        status: 'pending'
+        status: 'scheduled'
       })
       .select()
       .single();
