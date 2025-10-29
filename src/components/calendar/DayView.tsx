@@ -149,7 +149,7 @@ export function DayView({
 
           {/* Provider columns */}
           {filteredProviders.map((provider) => (
-            <div key={provider.id} className="flex-1 border-r last:border-r-0 relative"
+            <div key={provider.id} className="flex-1 border-r last:border-r-0 relative h-full"
               style={{
                 backgroundImage: `repeating-linear-gradient(to bottom, hsl(var(--border) / 0.25) 0px, hsl(var(--border) / 0.25) 1px, transparent 1px, transparent ${slotPx}px), repeating-linear-gradient(to bottom, hsl(var(--border)) 0px, hsl(var(--border)) 2px, transparent 2px, transparent ${HOUR_HEIGHT}px)`
               }}

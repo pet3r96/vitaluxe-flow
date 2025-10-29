@@ -160,58 +160,59 @@ export function WeekView({
 
           {/* Day columns */}
           {daysOfWeek.map((day) => (
-            <div key={day.toString()} className="flex-1 border-r last:border-r-0">
-              {filteredProviders.map((provider, providerIndex) => (
-                <div
-                  key={provider.id}
-                  className={cn(
-                    "relative",
-                    providerIndex > 0 && "border-l border-dashed"
-                  )}
-                  style={{
-                    minWidth: `${100 / filteredProviders.length}%`,
-                    backgroundImage: `repeating-linear-gradient(to bottom, hsl(var(--border) / 0.25) 0px, hsl(var(--border) / 0.25) 1px, transparent 1px, transparent ${slotPx}px), repeating-linear-gradient(to bottom, hsl(var(--border)) 0px, hsl(var(--border)) 2px, transparent 2px, transparent ${HOUR_HEIGHT}px)`
-                  }}
-                >
-                  {timeSlots.map(({ hour, minute }) => {
-                    const slotDate = setHours(setMinutes(day, minute), hour);
-                    return (
-                      <div
-                        key={`${hour}-${minute}`}
-                        className="cursor-pointer hover:bg-accent/50 transition-colors"
-                        style={{ height: `${slotPx}px` }}
-                        onClick={() => onTimeSlotClick(slotDate, provider.id)}
-                      />
-                    );
-                  })}
-                  
-                  {/* Appointments overlay */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="relative h-full">
-                      {getAppointmentsForDayAndProvider(day, provider.id).map((appointment) => {
-                        const baseStyle = getAppointmentStyle(appointment);
-                        return (
-                          <div
-                            key={appointment.id}
-                            className="absolute pointer-events-auto px-0.5"
-                            style={{
-                              ...baseStyle,
-                              left: `${appointment.columnLeft}%`,
-                              width: `${appointment.columnWidth}%`,
-                              zIndex: appointment.columnIndex
-                            }}
-                          >
-                            <AppointmentCard
-                              appointment={appointment}
-                              onClick={() => onAppointmentClick(appointment)}
-                            />
-                          </div>
-                        );
-                      })}
+            <div key={day.toString()} className="flex-1 border-r last:border-r-0 h-full">
+              <div className="flex h-full">
+                {filteredProviders.map((provider, providerIndex) => (
+                  <div
+                    key={provider.id}
+                    className={cn(
+                      "flex-1 relative h-full",
+                      providerIndex > 0 && "border-l border-dashed"
+                    )}
+                    style={{
+                      backgroundImage: `repeating-linear-gradient(to bottom, hsl(var(--border) / 0.25) 0px, hsl(var(--border) / 0.25) 1px, transparent 1px, transparent ${slotPx}px), repeating-linear-gradient(to bottom, hsl(var(--border)) 0px, hsl(var(--border)) 2px, transparent 2px, transparent ${HOUR_HEIGHT}px)`
+                    }}
+                  >
+                    {timeSlots.map(({ hour, minute }) => {
+                      const slotDate = setHours(setMinutes(day, minute), hour);
+                      return (
+                        <div
+                          key={`${hour}-${minute}`}
+                          className="cursor-pointer hover:bg-accent/50 transition-colors"
+                          style={{ height: `${slotPx}px` }}
+                          onClick={() => onTimeSlotClick(slotDate, provider.id)}
+                        />
+                      );
+                    })}
+                    
+                    {/* Appointments overlay */}
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="relative h-full">
+                        {getAppointmentsForDayAndProvider(day, provider.id).map((appointment) => {
+                          const baseStyle = getAppointmentStyle(appointment);
+                          return (
+                            <div
+                              key={appointment.id}
+                              className="absolute pointer-events-auto px-0.5"
+                              style={{
+                                ...baseStyle,
+                                left: `${appointment.columnLeft}%`,
+                                width: `${appointment.columnWidth}%`,
+                                zIndex: appointment.columnIndex
+                              }}
+                            >
+                              <AppointmentCard
+                                appointment={appointment}
+                                onClick={() => onAppointmentClick(appointment)}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ))}
         </div>
