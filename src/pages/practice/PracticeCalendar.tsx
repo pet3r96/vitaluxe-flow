@@ -18,6 +18,8 @@ import { AgendaView } from "@/components/calendar/AgendaView";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { WaitingRoomPanel } from "@/components/calendar/WaitingRoomPanel";
+import { BeingTreatedPanel } from "@/components/calendar/BeingTreatedPanel";
+import { CompleteAppointmentDialog } from "@/components/calendar/CompleteAppointmentDialog";
 
 import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
 import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
@@ -40,6 +42,8 @@ export default function PracticeCalendar() {
   const [blockTimeOpen, setBlockTimeOpen] = useState(false);
   const [printDayOpen, setPrintDayOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [appointmentToComplete, setAppointmentToComplete] = useState<any>(null);
 
   const practiceId = effectivePracticeId || user?.id;
   const isProviderView = effectiveRole === 'provider';
@@ -206,6 +210,11 @@ export default function PracticeCalendar() {
     setCreateDialogOpen(true);
   };
 
+  const handleCompleteAppointment = (appointment: any) => {
+    setAppointmentToComplete(appointment);
+    setCompleteDialogOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -314,13 +323,23 @@ export default function PracticeCalendar() {
           </div>
         </div>
 
-        {/* Waiting Room Panel - Below Calendar */}
-        <WaitingRoomPanel
-          practiceId={practiceId}
-          providers={providers}
-          onAppointmentClick={handleAppointmentClick}
-          currentDate={currentDate}
-        />
+      {/* Waiting Room Panel - Below Calendar */}
+      <WaitingRoomPanel
+        practiceId={practiceId}
+        providers={providers}
+        onAppointmentClick={handleAppointmentClick}
+        currentDate={currentDate}
+      />
+
+      {/* Being Treated Panel - Below Waiting Room */}
+      <BeingTreatedPanel
+        practiceId={practiceId}
+        providers={providers}
+        rooms={rooms}
+        onCompleteAppointment={handleCompleteAppointment}
+        onAppointmentClick={handleAppointmentClick}
+        currentDate={currentDate}
+      />
       </div>
 
       {/* Filters Sheet */}
@@ -395,6 +414,18 @@ export default function PracticeCalendar() {
         isProviderAccount={isProviderAccount}
         currentProviderId={isProviderAccount && providers.length === 1 ? providers[0].id : undefined}
         currentProviderName={isProviderAccount && providers.length === 1 ? providers[0].name : undefined}
+      />
+
+      <CompleteAppointmentDialog
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
+        appointment={appointmentToComplete}
+        providers={providers}
+        rooms={rooms}
+        onSuccess={() => {
+          refetch();
+          setCompleteDialogOpen(false);
+        }}
       />
     </div>
   );
