@@ -27,6 +27,11 @@ export function WeekView({
   providers,
   selectedProviders,
 }: WeekViewProps) {
+  const HOUR_HEIGHT = 60;
+  const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
+  const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour ?? 20));
+  const slotPx = (HOUR_HEIGHT * slotDuration) / 60;
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const weekStart = startOfWeek(currentDate);
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -36,16 +41,16 @@ export function WeekView({
     return providers.filter(p => selectedProviders.includes(p.id));
   }, [providers, selectedProviders]);
 
-  // Generate time slots - stop before endHour to prevent scrolling past
+  // Generate time slots using safe operational hours
   const timeSlots = useMemo(() => {
     const slots = [];
-    for (let hour = startHour; hour < endHour; hour++) {
+    for (let hour = safeStart; hour < safeEnd; hour++) {
       for (let minute = 0; minute < 60; minute += slotDuration) {
         slots.push({ hour, minute });
       }
     }
     return slots;
-  }, [startHour, endHour, slotDuration]);
+  }, [safeStart, safeEnd, slotDuration]);
 
   // Auto-scroll to current time on mount
   useEffect(() => {
@@ -54,17 +59,17 @@ export function WeekView({
         setTimeout(() => {
           if (scrollRef.current) {
             const currentHour = new Date().getHours();
-            const targetHour = currentHour >= startHour && currentHour < endHour 
+            const targetHour = currentHour >= safeStart && currentHour < safeEnd 
               ? currentHour 
-              : Math.max(startHour, 8);
+              : Math.max(safeStart, 8);
             
-            const scrollPosition = ((targetHour - startHour) / (endHour - startHour)) * scrollRef.current.scrollHeight;
+            const scrollPosition = ((targetHour - safeStart) / (safeEnd - safeStart)) * scrollRef.current.scrollHeight;
             scrollRef.current.scrollTop = Math.max(0, scrollPosition - 100);
           }
         }, 100);
       });
     }
-  }, [startHour, endHour, appointments.length]);
+  }, [safeStart, safeEnd, appointments.length]);
 
   // Calculate appointment positions with bounds checking
   const getAppointmentStyle = (appointment: any) => {
@@ -74,8 +79,8 @@ export function WeekView({
     const endMinutes = end.getHours() * 60 + end.getMinutes();
     
     // Clamp to operational hours
-    const minMinutes = startHour * 60;
-    const maxMinutes = endHour * 60;
+    const minMinutes = safeStart * 60;
+    const maxMinutes = safeEnd * 60;
     
     // Don't render if completely outside operational hours
     if (endMinutes <= minMinutes || startMinutes >= maxMinutes) {
@@ -85,9 +90,8 @@ export function WeekView({
     const clampedStart = Math.max(minMinutes, Math.min(maxMinutes, startMinutes));
     const clampedEnd = Math.max(minMinutes, Math.min(maxMinutes, endMinutes));
     
-    const slotHeight = 60; // px per hour
-    const top = ((clampedStart - minMinutes) / 60) * slotHeight;
-    const height = ((clampedEnd - clampedStart) / 60) * slotHeight;
+    const top = ((clampedStart - minMinutes) / 60) * HOUR_HEIGHT;
+    const height = ((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT;
     
     return {
       top: `${top}px`,
@@ -140,14 +144,14 @@ export function WeekView({
       <div 
         ref={scrollRef} 
         className="flex-1 overflow-y-auto"
-        style={{ maxHeight: `${(endHour - startHour) * 60}px` }}
+        style={{ height: `${HOUR_HEIGHT * (safeEnd - safeStart)}px` }}
       >
         <div className="flex relative">
           {/* Time labels */}
           <div className="w-16 flex-shrink-0">
             {timeSlots.map(({ hour, minute }) => (
               minute === 0 && (
-                <div key={`${hour}-${minute}`} className="h-[60px] pr-2 text-right text-xs text-muted-foreground border-r">
+                <div key={`${hour}-${minute}`} className="pr-2 text-right text-xs text-muted-foreground border-r" style={{ height: `${HOUR_HEIGHT}px` }}>
                   {format(setHours(setMinutes(new Date(), minute), hour), 'h a')}
                 </div>
               )
@@ -172,9 +176,10 @@ export function WeekView({
                       <div
                         key={`${hour}-${minute}`}
                         className={cn(
-                          "h-[60px] border-b cursor-pointer hover:bg-accent/50 transition-colors",
+                          "border-b cursor-pointer hover:bg-accent/50 transition-colors",
                           minute === 0 && "border-b-2"
                         )}
+                        style={{ height: `${slotPx}px` }}
                         onClick={() => onTimeSlotClick(slotDate, provider.id)}
                       />
                     );

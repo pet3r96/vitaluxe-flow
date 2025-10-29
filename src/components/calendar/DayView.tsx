@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect } from "react";
-import { format, setHours, setMinutes } from "date-fns";
+import { format, setHours, setMinutes, isSameDay } from "date-fns";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
 import { detectOverlaps } from "@/lib/calendarUtils";
@@ -27,6 +27,11 @@ export function DayView({
   providers,
   selectedProviders,
 }: DayViewProps) {
+  const HOUR_HEIGHT = 80;
+  const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
+  const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour ?? 20));
+  const slotPx = (HOUR_HEIGHT * slotDuration) / 60;
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const filteredProviders = useMemo(() => {
@@ -36,13 +41,13 @@ export function DayView({
 
   const timeSlots = useMemo(() => {
     const slots = [];
-    for (let hour = startHour; hour < endHour; hour++) {
+    for (let hour = safeStart; hour < safeEnd; hour++) {
       for (let minute = 0; minute < 60; minute += slotDuration) {
         slots.push({ hour, minute });
       }
     }
     return slots;
-  }, [startHour, endHour, slotDuration]);
+  }, [safeStart, safeEnd, slotDuration]);
 
   useEffect(() => {
     if (scrollRef.current && appointments.length >= 0) {
@@ -50,17 +55,17 @@ export function DayView({
         setTimeout(() => {
           if (scrollRef.current) {
             const currentHour = new Date().getHours();
-            const targetHour = currentHour >= startHour && currentHour < endHour 
+            const targetHour = currentHour >= safeStart && currentHour < safeEnd 
               ? currentHour 
-              : Math.max(startHour, 8);
+              : Math.max(safeStart, 8);
             
-            const scrollPosition = ((targetHour - startHour) / (endHour - startHour)) * scrollRef.current.scrollHeight;
+            const scrollPosition = ((targetHour - safeStart) / (safeEnd - safeStart)) * scrollRef.current.scrollHeight;
             scrollRef.current.scrollTop = Math.max(0, scrollPosition - 100);
           }
         }, 100);
       });
     }
-  }, [startHour, endHour, appointments.length]);
+  }, [safeStart, safeEnd, appointments.length]);
 
   const getAppointmentStyle = (appointment: any) => {
     const start = new Date(appointment.start_time);
@@ -69,8 +74,8 @@ export function DayView({
     const endMinutes = end.getHours() * 60 + end.getMinutes();
     
     // Clamp to operational hours
-    const minMinutes = startHour * 60;
-    const maxMinutes = endHour * 60;
+    const minMinutes = safeStart * 60;
+    const maxMinutes = safeEnd * 60;
     
     // Don't render if completely outside operational hours
     if (endMinutes <= minMinutes || startMinutes >= maxMinutes) {
@@ -80,9 +85,8 @@ export function DayView({
     const clampedStart = Math.max(minMinutes, Math.min(maxMinutes, startMinutes));
     const clampedEnd = Math.max(minMinutes, Math.min(maxMinutes, endMinutes));
     
-    const slotHeight = 80;
-    const top = ((clampedStart - minMinutes) / 60) * slotHeight;
-    const height = ((clampedEnd - clampedStart) / 60) * slotHeight;
+    const top = ((clampedStart - minMinutes) / 60) * HOUR_HEIGHT;
+    const height = ((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT;
     
     return {
       top: `${top}px`,
@@ -92,8 +96,10 @@ export function DayView({
   };
 
   const getAppointmentsForProvider = (providerId: string) => {
-    const providerAppointments = appointments.filter(appt => appt.provider_id === providerId);
-    return detectOverlaps(providerAppointments);
+    const dayProviderAppointments = appointments.filter(appt =>
+      appt.provider_id === providerId && isSameDay(new Date(appt.start_time), currentDate)
+    );
+    return detectOverlaps(dayProviderAppointments);
   };
 
   if (filteredProviders.length === 0) {
@@ -127,14 +133,14 @@ export function DayView({
       <div 
         ref={scrollRef} 
         className="flex-1 overflow-y-auto"
-        style={{ maxHeight: `${(endHour - startHour) * 80}px` }}
+        style={{ height: `${HOUR_HEIGHT * (safeEnd - safeStart)}px` }}
       >
         <div className="flex relative">
           {/* Time labels */}
           <div className="w-20 flex-shrink-0">
             {timeSlots.map(({ hour, minute }) => (
               minute === 0 && (
-                <div key={`${hour}-${minute}`} className="h-[80px] pr-3 text-right text-sm text-muted-foreground border-r">
+                <div key={`${hour}-${minute}`} className="pr-3 text-right text-sm text-muted-foreground border-r" style={{ height: `${HOUR_HEIGHT}px` }}>
                   {format(setHours(setMinutes(new Date(), minute), hour), 'h:mm a')}
                 </div>
               )
@@ -150,9 +156,10 @@ export function DayView({
                   <div
                     key={`${hour}-${minute}`}
                     className={cn(
-                      "h-[80px] border-b cursor-pointer hover:bg-accent/50 transition-colors",
+                      "border-b cursor-pointer hover:bg-accent/50 transition-colors",
                       minute === 0 && "border-b-2"
                     )}
+                    style={{ height: `${slotPx}px` }}
                     onClick={() => onTimeSlotClick(slotDate, provider.id)}
                   />
                 );
