@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function MessagesAndChatWidget() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, effectiveRole, effectivePracticeId } = useAuth();
 
   // Fetch unread patient messages (support tickets)
   const { data: unreadMessages } = useQuery({
@@ -17,54 +17,82 @@ export function MessagesAndChatWidget() {
     queryFn: async () => {
       if (!user?.id) return { count: 0, subjects: [] };
       
-      const { data, error } = await supabase
-        .from("message_threads")
-        .select(`
-          id,
-          subject,
-          messages!inner(created_at, sender_id)
-        `)
-        .contains("participant_ids", [user.id])
-        .order("messages(created_at)", { ascending: false })
-        .limit(3);
+      try {
+        // First, get thread IDs where user is a participant
+        const { data: participantThreads, error: participantError } = await supabase
+          .from("thread_participants")
+          .select("thread_id")
+          .eq("user_id", user.id);
 
-      if (error) throw error;
+        if (participantError) throw participantError;
+        
+        const threadIds = participantThreads?.map(pt => pt.thread_id) || [];
+        if (threadIds.length === 0) return { count: 0, subjects: [] };
 
-      // Filter to only unread threads (where latest message is not from current user)
-      const unreadThreads = data?.filter((thread: any) => {
-        const messages = Array.isArray(thread.messages) ? thread.messages : [thread.messages];
-        const latestMessage = messages[0];
-        return latestMessage?.sender_id !== user.id;
-      }) || [];
+        // Then get the threads with their latest messages
+        const { data: threads, error: threadsError } = await supabase
+          .from("message_threads")
+          .select(`
+            id,
+            subject,
+            messages!inner(created_at, sender_id)
+          `)
+          .in("id", threadIds)
+          .order("created_at", { ascending: false })
+          .limit(3);
 
-      return {
-        count: unreadThreads.length,
-        subjects: unreadThreads.map((t: any) => t.subject).slice(0, 3)
-      };
+        if (threadsError) throw threadsError;
+
+        // Filter to only unread threads (where latest message is not from current user)
+        const unreadThreads = threads?.filter((thread: any) => {
+          const messages = Array.isArray(thread.messages) ? thread.messages : [thread.messages];
+          const latestMessage = messages[0];
+          return latestMessage?.sender_id !== user.id;
+        }) || [];
+
+        return {
+          count: unreadThreads.length,
+          subjects: unreadThreads.map((t: any) => t.subject).slice(0, 3)
+        };
+      } catch (error) {
+        console.error("Failed to fetch messages:", error);
+        return { count: 0, subjects: [] };
+      }
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Fetch unread internal chat messages
   const { data: unreadInternalChat } = useQuery({
-    queryKey: ["unread-internal-chat", user?.id],
+    queryKey: ["unread-internal-chat", user?.id, effectiveRole, effectivePracticeId],
     queryFn: async () => {
       if (!user?.id) return { count: 0, senders: [] };
 
-      const { data, error } = await supabase
-        .from("internal_messages")
-        .select("id, subject, sender:profiles!internal_messages_sender_id_fkey(name)")
-        .contains("recipient_ids", [user.id])
-        .is("read_at", null)
-        .order("created_at", { ascending: false })
-        .limit(3);
+      try {
+        // Query practice-wide incomplete messages
+        const { data, error } = await supabase
+          .from("internal_messages")
+          .select(`
+            id,
+            subject,
+            completed,
+            creator:profiles!internal_messages_created_by_fkey(name)
+          `)
+          .eq("practice_id", effectivePracticeId)
+          .eq("completed", false)
+          .order("created_at", { ascending: false })
+          .limit(3);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      return {
-        count: data?.length || 0,
-        senders: data?.map((m: any) => m.sender?.name || "Unknown").slice(0, 3) || []
-      };
+        return {
+          count: data?.length || 0,
+          senders: data?.map((m: any) => m.creator?.name || "Unknown").slice(0, 3) || []
+        };
+      } catch (error) {
+        console.error("Failed to fetch internal chat:", error);
+        return { count: 0, senders: [] };
+      }
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });

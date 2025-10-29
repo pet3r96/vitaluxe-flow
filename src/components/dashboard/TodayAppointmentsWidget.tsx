@@ -23,7 +23,7 @@ export function TodayAppointmentsWidget() {
         .from("patient_appointments")
         .select(`
           *,
-          patient_account:patient_accounts(full_name)
+          patient_account:patient_accounts(id, first_name, last_name)
         `)
         .gte("start_time", today.toISOString())
         .lt("start_time", tomorrow.toISOString())
@@ -74,7 +74,9 @@ export function TodayAppointmentsWidget() {
                     <Clock className="h-4 w-4 mt-1 text-muted-foreground" />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">
-                        {appointment.patient_account?.full_name || "Unknown Patient"}
+                        {appointment.patient_account 
+                          ? `${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`
+                          : "Unknown Patient"}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {format(new Date(appointment.start_time), "h:mm a")}

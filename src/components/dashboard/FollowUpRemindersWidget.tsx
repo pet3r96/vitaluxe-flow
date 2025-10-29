@@ -20,7 +20,7 @@ export function FollowUpRemindersWidget() {
         .from("patient_follow_ups" as any)
         .select(`
           *,
-          patients(name)
+          patient:patient_accounts!patient_follow_ups_patient_id_fkey(id, first_name, last_name)
         `)
         .eq("status", "pending")
         .lte("follow_up_date", sevenDaysFromNow.toISOString().split("T")[0])
@@ -89,7 +89,9 @@ export function FollowUpRemindersWidget() {
                 <CalendarIcon className="h-4 w-4 mt-1 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">
-                    {followUp.patients?.name}
+                    {followUp.patient 
+                      ? `${followUp.patient.first_name} ${followUp.patient.last_name}`
+                      : "Unknown Patient"}
                   </div>
                   <div className="text-sm text-muted-foreground truncate">
                     {followUp.reason}
