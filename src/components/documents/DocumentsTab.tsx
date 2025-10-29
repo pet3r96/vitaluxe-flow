@@ -87,7 +87,7 @@ export function DocumentsTab() {
           filter: `practice_id=eq.${effectivePracticeId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId, filters] });
+          queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId] });
         }
       )
       .subscribe();
@@ -102,7 +102,7 @@ export function DocumentsTab() {
           table: 'provider_document_patients',
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId, filters] });
+          queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId] });
         }
       )
       .subscribe();
@@ -111,7 +111,7 @@ export function DocumentsTab() {
       supabase.removeChannel(documentsChannel);
       supabase.removeChannel(assignmentsChannel);
     };
-  }, [effectivePracticeId, filters, queryClient]);
+  }, [effectivePracticeId, queryClient]);
 
   return (
     <div className="space-y-4">

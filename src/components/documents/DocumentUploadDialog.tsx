@@ -90,7 +90,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
       return uploadedDocs;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["provider-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId] });
       toast.success(`${files.length} document(s) uploaded successfully`);
       onOpenChange(false);
       resetForm();
