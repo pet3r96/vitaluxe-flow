@@ -228,7 +228,7 @@ export const BlockTimeDialog = ({
                 <SelectContent>
                   {providers.map((provider) => (
                     <SelectItem key={provider.id} value={provider.id}>
-                      {provider.name}
+                      {provider.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
