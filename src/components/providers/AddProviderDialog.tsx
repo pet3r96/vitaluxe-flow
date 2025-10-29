@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 import { getCurrentCSRFToken } from "@/lib/csrf";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface AddProviderDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface AddProviderDialogProps {
 
 export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }: AddProviderDialogProps) => {
   const { effectiveUserId, effectiveRole } = useAuth();
+  const { isSubscribed, status, trialEndsAt, currentPeriodEnd } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [selectedPractice, setSelectedPractice] = useState(practiceId || "");
   const [validationErrors, setValidationErrors] = useState({
@@ -78,6 +80,16 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check Pro subscription requirement
+    const hasActivePro = 
+      (status === 'trial' && trialEndsAt && new Date(trialEndsAt) > new Date()) ||
+      (status === 'active' && currentPeriodEnd && new Date(currentPeriodEnd) > new Date());
+    
+    if (!hasActivePro) {
+      toast.error("VitaLuxePro subscription required to add providers. Please upgrade your practice subscription.");
+      return;
+    }
     
     // Validate required NPI field first
     if (!formData.npi || !formData.npi.trim()) {

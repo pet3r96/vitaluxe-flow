@@ -127,6 +127,19 @@ const menuItems = {
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "My Profile", url: "/profile", icon: UserCircle },
   ],
+  staff: [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Products", url: "/products", icon: Package },
+    { title: "My Cart", url: "/cart", icon: ShoppingCart },
+    { title: "Patients", url: "/patients", icon: Users },
+    { title: "My Orders", url: "/orders", icon: FileText },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "My Profile", url: "/profile", icon: UserCircle },
+    { title: "PRO_SEPARATOR", url: "", icon: null, isPro: false },
+    { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
+    { title: "Documents & Forms", url: "/documents-and-forms", icon: FileText, isPro: true },
+    { title: "Triage Center", url: "/triage-queue", icon: AlertCircle, isPro: true },
+  ],
 };
 
 export function AppSidebar() {
@@ -139,12 +152,16 @@ export function AppSidebar() {
 
   let items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
   
-  // Hide "Providers", "Reports", and "My Staff" for provider/staff accounts
-  if (effectiveRole === 'doctor' && (isProviderAccount || isStaffAccount)) {
+  if (isStaffAccount) {
+    // Staff get their own dedicated menu with Pro features
+    items = menuItems.staff;
+  } else if (effectiveRole === 'doctor' && isProviderAccount) {
+    // Providers: filter out practice-only items
     items = items.filter(item => 
       item.title !== "Providers" && 
       item.title !== "Reports" &&
-      item.title !== "My Staff"
+      item.title !== "My Staff" &&
+      item.title !== "My Subscription"
     );
   }
   
@@ -189,7 +206,7 @@ export function AppSidebar() {
                     </div>
                   );
                 }
-                const isProFeature = item.isPro && !isSubscribed;
+                const isProFeature = item.isPro && !isSubscribed && !isProviderAccount && !isStaffAccount;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild className="min-h-[44px]">
@@ -223,7 +240,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <div className="mt-auto border-t border-sidebar-border p-4 space-y-2">
-        {!isSubscribed && effectiveRole === 'doctor' && !isProviderAccount && (
+        {!isSubscribed && effectiveRole === 'doctor' && !isProviderAccount && !isStaffAccount && (
           <Button
             onClick={() => setShowUpgradeDialog(true)}
             className="w-full justify-start bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"

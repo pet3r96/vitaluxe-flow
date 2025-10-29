@@ -206,20 +206,24 @@ export default function PracticeCalendar() {
   return (
     <div className="flex flex-col h-screen">
       <div className="flex-none p-6 border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Practice Calendar</h1>
-            <p className="text-muted-foreground">Manage appointments and schedules</p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Practice Calendar</h1>
+              <p className="text-muted-foreground">Manage appointments and schedules</p>
+            </div>
+            <div className="flex gap-2 ml-8">
+              <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
             <Button variant="secondary" onClick={handleWalkInAppointment}>
               <Clock className="h-4 w-4 mr-2" />
               Walk-in Patient
