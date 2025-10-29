@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings, Download, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Settings, Download, Clock, Filter } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { CalendarHeader, CalendarView } from "@/components/calendar/CalendarHeader";
@@ -15,7 +17,7 @@ import { MonthView } from "@/components/calendar/MonthView";
 import { AgendaView } from "@/components/calendar/AgendaView";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+
 import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
 import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
 import { PrintDayDialog } from "@/components/calendar/PrintDayDialog";
@@ -36,6 +38,7 @@ export default function PracticeCalendar() {
   const [isWalkIn, setIsWalkIn] = useState(false);
   const [blockTimeOpen, setBlockTimeOpen] = useState(false);
   const [printDayOpen, setPrintDayOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const practiceId = effectivePracticeId || user?.id;
   const isProviderView = effectiveRole === 'provider';
@@ -247,85 +250,101 @@ export default function PracticeCalendar() {
         </div>
       </div>
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-          <div className="p-4 h-full overflow-y-auto">
-            <CalendarFilters
-              providers={providers}
-              rooms={rooms}
-              selectedProviders={selectedProviders}
-              selectedRooms={selectedRooms}
-              selectedStatuses={selectedStatuses}
-              onProviderToggle={handleProviderToggle}
-              onRoomToggle={handleRoomToggle}
-              onStatusToggle={handleStatusToggle}
-              isProviderView={isProviderView}
-            />
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        <ResizablePanel defaultSize={80}>
-          <div className="p-6 h-full flex flex-col">
-            <CalendarHeader
-              currentDate={currentDate}
-              view={view}
-              onDateChange={setCurrentDate}
-              onViewChange={setView}
-            />
-
-            <div className="flex-1 mt-4 overflow-hidden">
-              {view === 'week' && (
-                <WeekView
-                  currentDate={currentDate}
-                  appointments={appointments}
-                  blockedTime={blockedTime}
-                  startHour={settings.start_hour}
-                  endHour={settings.end_hour}
-                  slotDuration={settings.slot_duration}
-                  onAppointmentClick={handleAppointmentClick}
-                  onTimeSlotClick={handleTimeSlotClick}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {/* Filters Sheet Trigger */}
+        <div className="flex-none px-6 py-2 border-b">
+          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+                {(selectedProviders.length > 0 || selectedRooms.length > 0 || selectedStatuses.length > 0) && (
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedProviders.length + selectedRooms.length + selectedStatuses.length}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[350px] sm:w-[400px] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Calendar Filters</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6">
+                <CalendarFilters
                   providers={providers}
+                  rooms={rooms}
                   selectedProviders={selectedProviders}
+                  selectedRooms={selectedRooms}
+                  selectedStatuses={selectedStatuses}
+                  onProviderToggle={handleProviderToggle}
+                  onRoomToggle={handleRoomToggle}
+                  onStatusToggle={handleStatusToggle}
+                  isProviderView={isProviderView}
                 />
-              )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
 
-              {view === 'day' && (
-                <DayView
-                  currentDate={currentDate}
-                  appointments={appointments}
-                  blockedTime={blockedTime}
-                  startHour={settings.start_hour}
-                  endHour={settings.end_hour}
-                  slotDuration={settings.slot_duration}
-                  onAppointmentClick={handleAppointmentClick}
-                  onTimeSlotClick={handleTimeSlotClick}
-                  providers={providers}
-                  selectedProviders={selectedProviders}
-                />
-              )}
+        {/* Full-width calendar */}
+        <div className="flex-1 p-6 flex flex-col overflow-hidden">
+          <CalendarHeader
+            currentDate={currentDate}
+            view={view}
+            onDateChange={setCurrentDate}
+            onViewChange={setView}
+          />
 
-              {view === 'month' && (
-                <MonthView
-                  currentDate={currentDate}
-                  appointments={appointments}
-                  onDateClick={handleDateClick}
-                  onAppointmentClick={handleAppointmentClick}
-                />
-              )}
+          <div className="flex-1 mt-4 overflow-hidden">
+            {view === 'week' && (
+              <WeekView
+                currentDate={currentDate}
+                appointments={appointments}
+                blockedTime={blockedTime}
+                startHour={settings.start_hour}
+                endHour={settings.end_hour}
+                slotDuration={settings.slot_duration}
+                onAppointmentClick={handleAppointmentClick}
+                onTimeSlotClick={handleTimeSlotClick}
+                providers={providers}
+                selectedProviders={selectedProviders}
+              />
+            )}
 
-              {view === 'agenda' && (
-                <AgendaView
-                  currentDate={currentDate}
-                  appointments={appointments}
-                  onAppointmentClick={handleAppointmentClick}
-                />
-              )}
-            </div>
+            {view === 'day' && (
+              <DayView
+                currentDate={currentDate}
+                appointments={appointments}
+                blockedTime={blockedTime}
+                startHour={settings.start_hour}
+                endHour={settings.end_hour}
+                slotDuration={settings.slot_duration}
+                onAppointmentClick={handleAppointmentClick}
+                onTimeSlotClick={handleTimeSlotClick}
+                providers={providers}
+                selectedProviders={selectedProviders}
+              />
+            )}
+
+            {view === 'month' && (
+              <MonthView
+                currentDate={currentDate}
+                appointments={appointments}
+                onDateClick={handleDateClick}
+                onAppointmentClick={handleAppointmentClick}
+              />
+            )}
+
+            {view === 'agenda' && (
+              <AgendaView
+                currentDate={currentDate}
+                appointments={appointments}
+                onAppointmentClick={handleAppointmentClick}
+              />
+            )}
           </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </div>
+      </div>
 
       <CreateAppointmentDialog
         open={createDialogOpen}
