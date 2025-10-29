@@ -22,6 +22,19 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const refreshSubscription = async () => {
+    // Patients always have access (grandfathered in once created)
+    if (effectiveRole === 'patient') {
+      setSubscriptionStatus({
+        isSubscribed: true,
+        status: 'active',
+        trialEndsAt: null,
+        currentPeriodEnd: null,
+        trialDaysRemaining: null
+      });
+      setLoading(false);
+      return;
+    }
+
     // Allow doctor, provider, and staff roles (staff inherit practice subscription via effectivePracticeId)
     if (!user?.id || !effectivePracticeId) {
       setSubscriptionStatus({

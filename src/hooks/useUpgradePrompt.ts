@@ -14,14 +14,15 @@ interface UseUpgradePromptReturn {
 }
 
 export const useUpgradePrompt = (): UseUpgradePromptReturn => {
-  const { user, effectiveRole, effectivePracticeId } = useAuth();
+  const { user, effectiveRole, effectivePracticeId, isProviderAccount } = useAuth();
   const { isSubscribed } = useSubscription();
   const [shouldShow, setShouldShow] = useState(false);
   const [loginCount, setLoginCount] = useState(0);
   const [hasCheckedThisSession, setHasCheckedThisSession] = useState(false);
 
   useEffect(() => {
-    if (effectiveRole !== 'doctor') {
+    // Only show for practice owners (doctors who are NOT provider accounts)
+    if (effectiveRole !== 'doctor' || isProviderAccount) {
       setShouldShow(false);
       return;
     }
