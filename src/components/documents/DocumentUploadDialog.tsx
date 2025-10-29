@@ -68,19 +68,31 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         // Assign to selected patients if any
         if (selectedPatientIds.length > 0 && document) {
           const documentId = (document as any).id;
-          const { data: { user } } = await supabase.auth.getUser();
-          const assignments = selectedPatientIds.map(patientId => ({
-            document_id: documentId,
-            patient_id: patientId,
-            assigned_by: user?.id || effectivePracticeId,
-          }));
 
-          const { error: assignError } = await supabase
-            .from("provider_document_patients" as any)
-            .insert(assignments);
+          // For single patient, also set legacy assigned_patient_id field for backward compatibility
+          if (selectedPatientIds.length === 1) {
+            const { error: updateError } = await supabase
+              .from("provider_documents" as any)
+              .update({ assigned_patient_id: selectedPatientIds[0] })
+              .eq("id", documentId);
+
+            if (updateError) {
+              console.error("Error setting assigned_patient_id:", updateError);
+            }
+          }
+
+          // Use backend function to create assignments (same as manual assign dialog)
+          const { error: assignError } = await supabase.functions.invoke("assign-document-to-patient", {
+            body: { 
+              documentId, 
+              patientIds: selectedPatientIds, 
+              message: notes || undefined 
+            },
+          });
 
           if (assignError) {
-            console.error("Error assigning to patients:", assignError);
+            console.error("Error assigning via function:", assignError);
+            toast.error("Document uploaded, but patient assignment failed. You can assign it from the card menu.");
           }
         }
 
