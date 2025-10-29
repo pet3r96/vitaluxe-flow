@@ -202,4 +202,36 @@ All colors MUST be HSL.
     list-style-type: disc;
     margin-bottom: 0.25rem;
   }
+
+  /* Blocked time visual indicators */
+  .blocked-time-slot {
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(239, 68, 68, 0.05),
+      rgba(239, 68, 68, 0.05) 10px,
+      rgba(239, 68, 68, 0.1) 10px,
+      rgba(239, 68, 68, 0.1) 20px
+    );
+    cursor: not-allowed;
+    pointer-events: none;
+    border: 1px dashed rgba(239, 68, 68, 0.3);
+  }
+
+  .provider-unavailable {
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(156, 163, 175, 0.05),
+      rgba(156, 163, 175, 0.05) 10px,
+      rgba(156, 163, 175, 0.1) 10px,
+      rgba(156, 163, 175, 0.1) 20px
+    );
+    cursor: not-allowed;
+    pointer-events: none;
+    border: 1px dashed rgba(156, 163, 175, 0.3);
+  }
+
+  .service-badge-medical { @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200; }
+  .service-badge-cosmetic { @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200; }
+  .service-badge-wellness { @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200; }
+  .service-badge-diagnostic { @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200; }
 }
