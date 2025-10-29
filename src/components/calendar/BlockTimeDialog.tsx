@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -242,18 +243,16 @@ export const BlockTimeDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Start Date</Label>
-                  <input
+                  <Input
                     type="date"
-                    className="w-full px-3 py-2 border rounded-md"
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Start Time</Label>
-                  <input
+                  <Input
                     type="time"
-                    className="w-full px-3 py-2 border rounded-md"
                     value={formData.startTime}
                     onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                   />
@@ -263,18 +262,16 @@ export const BlockTimeDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>End Date</Label>
-                  <input
+                  <Input
                     type="date"
-                    className="w-full px-3 py-2 border rounded-md"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>End Time</Label>
-                  <input
+                  <Input
                     type="time"
-                    className="w-full px-3 py-2 border rounded-md"
                     value={formData.endTime}
                     onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                   />
