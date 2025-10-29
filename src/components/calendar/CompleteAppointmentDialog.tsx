@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { addDays, addWeeks, addMonths, format } from "date-fns";
+import { addWeeks, addMonths, format } from "date-fns";
 
 interface CompleteAppointmentDialogProps {
   open: boolean;
@@ -190,9 +190,6 @@ export function CompleteAppointmentDialog({
   const setQuickFollowUpDate = (preset: string) => {
     let date: Date;
     switch (preset) {
-      case "3d":
-        date = addDays(new Date(), 3);
-        break;
       case "1w":
         date = addWeeks(new Date(), 1);
         break;
@@ -201,6 +198,9 @@ export function CompleteAppointmentDialog({
         break;
       case "1m":
         date = addMonths(new Date(), 1);
+        break;
+      case "3m":
+        date = addMonths(new Date(), 3);
         break;
       default:
         date = addWeeks(new Date(), 1);
@@ -277,14 +277,6 @@ export function CompleteAppointmentDialog({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setQuickFollowUpDate("3d")}
-                    >
-                      3 Days
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
                       onClick={() => setQuickFollowUpDate("1w")}
                     >
                       1 Week
@@ -304,6 +296,14 @@ export function CompleteAppointmentDialog({
                       onClick={() => setQuickFollowUpDate("1m")}
                     >
                       1 Month
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setQuickFollowUpDate("3m")}
+                    >
+                      3 Months
                     </Button>
                   </div>
                 </div>
