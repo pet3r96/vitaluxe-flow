@@ -26,7 +26,7 @@ export default function PatientProfile() {
         .from("patient_accounts")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -101,11 +101,20 @@ export default function PatientProfile() {
 
   if (!profile) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center space-y-2">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading profile...</p>
-        </div>
+      <div className="container max-w-4xl py-8">
+        <Card className="border-warning">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <p className="text-lg font-semibold">Profile Not Found</p>
+              <p className="text-muted-foreground">
+                Your patient profile hasn't been created yet. Please contact your practice to set up your account.
+              </p>
+              <Button onClick={() => refetch()}>
+                Refresh
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
