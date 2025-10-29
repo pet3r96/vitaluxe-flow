@@ -21,6 +21,7 @@ interface ProductCardProps {
   isToplineRep: boolean;
   isDownlineRep: boolean;
   role: string | null;
+  canOrder: boolean;
   isHiddenFromDownline?: boolean;
   onEdit: (product: any) => void;
   onDelete: (product: any) => void;
@@ -35,6 +36,7 @@ export const ProductCard = memo(({
   isToplineRep,
   isDownlineRep,
   role,
+  canOrder,
   isHiddenFromDownline,
   onEdit,
   onDelete,
@@ -260,8 +262,8 @@ export const ProductCard = memo(({
       </CardContent>
 
       <CardFooter className="p-4 pt-0 flex gap-2">
-        {/* Provider Actions */}
-        {isProvider && (
+        {/* Provider and Staff with ordering privileges Actions */}
+        {canOrder && (
           <Button
             className="w-full"
             onClick={() => onAddToCart(product)}

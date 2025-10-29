@@ -19,6 +19,7 @@ import { ProductCard } from "./ProductCard";
 import { CartSheet } from "./CartSheet";
 import { usePagination } from "@/hooks/usePagination";
 import { useCartCount } from "@/hooks/useCartCount";
+import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
 import { extractStateWithFallback, isValidStateCode } from "@/lib/addressUtils";
@@ -57,6 +58,7 @@ export const ProductsGrid = () => {
   // Only real non-impersonating admins bypass visibility filtering
   const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
 
+  const { canOrder } = useStaffOrderingPrivileges();
   const { data: cartCount } = useCartCount(effectiveUserId);
 
   const { data: products, isLoading, refetch } = useQuery({
@@ -717,6 +719,7 @@ export const ProductsGrid = () => {
                 isToplineRep={isToplineRep}
                 isDownlineRep={isDownlineRep}
                 role={effectiveRole}
+                canOrder={canOrder}
                 isHiddenFromDownline={isToplineRep && visibilitySettings?.[product.id] === false}
                 onEdit={(product) => {
                   setSelectedProduct(product);
