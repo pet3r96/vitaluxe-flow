@@ -17,13 +17,16 @@ Deno.serve(async (req) => {
     console.log('User authenticated:', user.id);
 
     // Check for active impersonation session
-    const { data: impersonationSession } = await supabaseClient
-      .from('impersonation_sessions')
+    const { data: impersonationSession, error: impersonationError } = await supabaseClient
+      .from('active_impersonation_sessions')
       .select('impersonated_user_id, impersonated_role')
       .eq('admin_user_id', user.id)
-      .eq('active', true)
-      .gt('expires_at', new Date().toISOString())
-      .single();
+      .maybeSingle();
+
+    if (impersonationError) {
+      console.error('Impersonation check error:', impersonationError);
+      // Continue without impersonation if query fails
+    }
 
     // Use impersonated user ID if impersonating as patient, otherwise use actual user ID
     const effectiveUserId = (impersonationSession?.impersonated_role === 'patient') 
