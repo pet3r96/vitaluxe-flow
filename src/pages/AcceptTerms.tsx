@@ -39,16 +39,30 @@ export default function AcceptTerms() {
     if (!user || !effectiveRole || (effectiveRole === 'admin' && !isImpersonating)) return;
 
     const fetchTerms = async () => {
-      let query = supabase.from('terms_and_conditions').select('*');
-      
-      // Special handling for patients - they use a hardcoded UUID instead of role enum
+      let data: any = null;
+      let error: any = null;
+
+      // Special handling for patients - they use a separate table
       if (effectiveRole === 'patient') {
-        query = query.eq('id', '00000000-0000-0000-0000-000000000001');
+        const res = await supabase
+          .from('patient_portal_terms')
+          .select('*')
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = res.data;
+        error = res.error;
       } else {
-        query = query.eq('role', effectiveRole as any);
+        const res = await supabase
+          .from('terms_and_conditions')
+          .select('*')
+          .eq('role', effectiveRole as any)
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = res.data;
+        error = res.error;
       }
-      
-      const { data, error } = await query.maybeSingle();
 
       if (error) {
         import('@/lib/logger').then(({ logger }) => {
