@@ -5,36 +5,67 @@ import { MessageSquare, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function NewMessagesTriageWidget() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { data: unreadMessages } = useQuery({
-    queryKey: ["unread-messages-count"],
+    queryKey: ["unread-messages-count", user?.id],
     queryFn: async () => {
+      if (!user?.id) return [];
+      
+      // Query for unread messages using message_thread_read_status
+      const { data: readStatus } = await supabase
+        .from("message_thread_read_status")
+        .select("thread_id")
+        .eq("user_id", user.id)
+        .is("last_read_at", null)
+        .limit(3);
+
+      if (!readStatus || readStatus.length === 0) return [];
+
+      const threadIds = readStatus.map(status => status.thread_id);
+      
       const { data: threads } = await supabase
         .from("message_threads")
-        .select("id, subject, updated_at, messages!inner(read)")
-        .eq("messages.read", false)
+        .select("id, subject, updated_at")
+        .in("id", threadIds)
         .order("updated_at", { ascending: false })
         .limit(3);
 
       return threads || [];
     },
     refetchInterval: 30000,
+    enabled: !!user?.id,
   });
 
   const { data: pendingTriages } = useQuery({
     queryKey: ["pending-triages-count"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("triage_submissions" as any)
-        .select("id, created_at, patient_accounts!inner(full_name)")
+      // @ts-ignore - Avoid deep type instantiation
+      const { data: triages } = await supabase
+        .from("patient_triage_submissions")
+        .select("id, created_at, patient_id")
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(3);
 
-      return (data || []) as any[];
+      if (!triages || triages.length === 0) return [];
+
+      // Fetch patient names separately to avoid type issues
+      const patientIds = triages.map((t: any) => t.patient_id);
+      const { data: patients } = await supabase
+        .from("patient_accounts")
+        .select("id, first_name, last_name")
+        .in("id", patientIds);
+
+      // Combine the data
+      return triages.map((triage: any) => ({
+        ...triage,
+        patient_accounts: patients?.find(p => p.id === triage.patient_id)
+      }));
     },
     refetchInterval: 30000,
   });
@@ -97,7 +128,7 @@ export function NewMessagesTriageWidget() {
                   onClick={() => navigate("/triage-queue")}
                 >
                   <div className="font-medium truncate">
-                    {triage.patient_accounts?.full_name}
+                    {triage.patient_accounts?.first_name} {triage.patient_accounts?.last_name}
                   </div>
                 </div>
               ))}
