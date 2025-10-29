@@ -6699,6 +6699,10 @@ export type Database = {
     }
     Functions: {
       archive_old_audit_logs: { Args: never; Returns: number }
+      can_access_practice_messages: {
+        Args: { _actor: string; _practice_id: string }
+        Returns: boolean
+      }
       can_cancel_order: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
