@@ -300,7 +300,7 @@ const Dashboard = () => {
           .neq("status", "cancelled")
           .neq("payment_status", "payment_failed")
           .eq("doctor_id", effectiveUserId)
-          .eq("status", "completed");
+          .eq("payment_status", "paid");
         data = result.data;
       } else if (effectiveRole === "provider" as any) {
         // Get provider id first
@@ -311,7 +311,7 @@ const Dashboard = () => {
           .single();
         
         if (providerData) {
-          // Sum order line prices where provider prescribed and order is completed
+          // Sum order line prices where provider prescribed and order is paid
           const { data: orderLines } = await supabase
             .from("order_lines")
             .select(`
@@ -321,7 +321,8 @@ const Dashboard = () => {
             `)
             .eq("provider_id", providerData.id)
             .neq("orders.payment_status", "payment_failed")
-            .eq("orders.status", "completed");
+            .neq("orders.status", "cancelled")
+            .eq("orders.payment_status", "paid");
           
           // Calculate total from order lines (price * quantity)
           const total = orderLines?.reduce((sum: number, line: any) => 
@@ -338,7 +339,7 @@ const Dashboard = () => {
           .maybeSingle();
         
         if (pharmacyData) {
-          // Sum order line prices where pharmacy is assigned and order is completed
+          // Sum order line prices where pharmacy is assigned and order is paid
           const { data: orderLines } = await supabase
             .from("order_lines")
             .select(`
@@ -348,7 +349,8 @@ const Dashboard = () => {
             `)
             .eq("assigned_pharmacy_id", pharmacyData.id)
             .neq("orders.payment_status", "payment_failed")
-            .eq("orders.status", "completed");
+            .neq("orders.status", "cancelled")
+            .eq("orders.payment_status", "paid");
           
           // Calculate total from order lines (price * quantity)
           const total = orderLines?.reduce((sum: number, line: any) => 
@@ -362,7 +364,7 @@ const Dashboard = () => {
           .select("total_amount")
           .neq("status", "cancelled")
           .neq("payment_status", "payment_failed")
-          .eq("status", "completed");
+          .eq("payment_status", "paid");
         data = result.data;
       }
       
@@ -414,7 +416,7 @@ const Dashboard = () => {
       title: "Collected Revenue",
       value: collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Practice collected revenue" : (effectiveRole as any) === "provider" ? "Your collected revenue" : "Completed orders revenue",
+      description: effectiveRole === "doctor" ? "Practice collected revenue" : (effectiveRole as any) === "provider" ? "Your collected revenue" : "Paid orders revenue",
       isLoading: collectedRevenueLoading,
       hidden: effectiveRole === "pharmacy" || effectiveRole === "provider" || effectiveRole === "doctor",
     },
