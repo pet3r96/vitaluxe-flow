@@ -217,36 +217,36 @@ export default function PracticeCalendar() {
   return (
     <div className="flex flex-col h-screen">
       <div className="flex-none p-6 border-b">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Practice Calendar</h1>
-              <p className="text-muted-foreground">Manage appointments and schedules</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Practice Calendar</h1>
+            <p className="text-muted-foreground">Manage appointments and schedules</p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setBlockTimeOpen(true)}>
+                <Clock className="h-4 w-4 mr-2" />
+                Block Time
+              </Button>
+              <Button variant="secondary" onClick={handleWalkInAppointment}>
+                <Clock className="h-4 w-4 mr-2" />
+                Walk-in Patient
+              </Button>
+              <Button onClick={handleCreateAppointment}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Appointment
+              </Button>
             </div>
-            <div className="flex gap-2 ml-8">
+            <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </Button>
-            <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
-              <Download className="h-4 w-4 mr-2" />
-              Print Day
-            </Button>
+              <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
+                <Download className="h-4 w-4 mr-2" />
+                Print Day
+              </Button>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setBlockTimeOpen(true)}>
-              <Clock className="h-4 w-4 mr-2" />
-              Block Time
-            </Button>
-            <Button variant="secondary" onClick={handleWalkInAppointment}>
-              <Clock className="h-4 w-4 mr-2" />
-              Walk-in Patient
-            </Button>
-            <Button onClick={handleCreateAppointment}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Appointment
-            </Button>
           </div>
         </div>
       </div>
