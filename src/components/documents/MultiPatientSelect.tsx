@@ -18,20 +18,29 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
   const { effectivePracticeId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: patients, isLoading } = useQuery({
+  const { data: patients, isLoading, error: queryError } = useQuery({
     queryKey: ["patients-select", effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) return [];
+      console.log("Fetching patients for practice:", effectivePracticeId);
       const { data, error } = await supabase
         .from("patients" as any)
         .select("id, first_name, last_name")
         .eq("practice_id", effectivePracticeId)
         .order("last_name");
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching patients:", error);
+        throw error;
+      }
+      console.log("Patients fetched:", data?.length || 0);
       return data as any[];
     },
     enabled: !!effectivePracticeId,
   });
+
+  if (queryError) {
+    console.error("Query error:", queryError);
+  }
 
   const selectedPatients = patients?.filter(p => selectedPatientIds.includes(p.id)) || [];
 
