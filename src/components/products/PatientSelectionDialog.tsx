@@ -99,6 +99,8 @@ export const PatientSelectionDialog = ({
           profiles!inner(
             id,
             full_name,
+            company,
+            name,
             npi,
             dea
           )
@@ -112,7 +114,10 @@ export const PatientSelectionDialog = ({
         return {
           id: p.id,
           user_id: p.user_id,
-          prescriber_name: p.profiles?.full_name || 'Unknown Provider',
+          prescriber_name: p.profiles?.full_name || 
+                           p.profiles?.company || 
+                           p.profiles?.name?.split('@')[0] || 
+                           'Unknown Provider',
           // Show actual NPI or hide if null - don't show 'N/A'
           npi: p.profiles?.npi || '',
           // Show actual DEA or hide if null - don't show 'N/A'
