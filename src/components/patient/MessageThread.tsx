@@ -21,7 +21,7 @@ export function MessageThread({ threadId }: MessageThreadProps) {
       const { data, error } = await supabase
         .from("patient_messages")
         .select("*")
-        .eq("id", threadId)
+        .or(`id.eq.${threadId},thread_id.eq.${threadId}`)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
@@ -35,8 +35,7 @@ export function MessageThread({ threadId }: MessageThreadProps) {
 
       const { error } = await supabase.functions.invoke("send-patient-message", {
         body: {
-          practiceId: firstMsg.practice_id,
-          providerId: firstMsg.provider_id,
+          subject: firstMsg.subject || 'Re: Patient Message',
           message: messageText,
         },
       });
@@ -78,7 +77,7 @@ export function MessageThread({ threadId }: MessageThreadProps) {
                   : "bg-muted mr-8"
               }`}
             >
-              <p className="text-sm">{msg.message}</p>
+              <p className="text-sm whitespace-pre-wrap">{msg.message_body}</p>
               <p className="text-xs opacity-75 mt-1">
                 {format(new Date(msg.created_at), "MMM dd, h:mm a")}
               </p>
