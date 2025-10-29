@@ -113,7 +113,6 @@ export function CreateAppointmentDialog({
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString(),
           appointment_type: values.appointmentType,
-          duration_minutes: parseInt(values.duration),
           service_type: values.serviceType,
           service_description: values.serviceDescription,
           notes: values.notes,

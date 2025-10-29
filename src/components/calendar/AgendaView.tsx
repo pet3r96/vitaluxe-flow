@@ -157,11 +157,14 @@ export function AgendaView({ currentDate, appointments, onAppointmentClick }: Ag
                               {appointment.appointment_type}
                             </Badge>
                           )}
-                          {appointment.duration_minutes && (
-                            <span className="text-xs text-muted-foreground">
-                              {appointment.duration_minutes} min
-                            </span>
-                          )}
+                          {(() => {
+                            const durationMins = Math.max(1, Math.round((new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) / 60000));
+                            return (
+                              <span className="text-xs text-muted-foreground">
+                                {durationMins} min
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                     </CardContent>

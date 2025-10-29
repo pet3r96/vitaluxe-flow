@@ -144,7 +144,7 @@ export function AppointmentDetailsDialog({
                     {format(new Date(appointment.end_time), 'h:mm a')}
                   </div>
                   <div className="text-muted-foreground">
-                    {appointment.duration_minutes} minutes
+                    {Math.max(1, Math.round((new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) / 60000))} minutes
                   </div>
                 </div>
               </div>
