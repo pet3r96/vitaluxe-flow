@@ -2287,6 +2287,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          checked_in_at: string | null
           created_at: string
           end_time: string
           id: string
@@ -2299,6 +2300,7 @@ export type Database = {
           service_type: string | null
           start_time: string
           status: string
+          treatment_started_at: string | null
           updated_at: string
         }
         Insert: {
@@ -2306,6 +2308,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          checked_in_at?: string | null
           created_at?: string
           end_time: string
           id?: string
@@ -2318,6 +2321,7 @@ export type Database = {
           service_type?: string | null
           start_time: string
           status?: string
+          treatment_started_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -2325,6 +2329,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          checked_in_at?: string | null
           created_at?: string
           end_time?: string
           id?: string
@@ -2337,6 +2342,7 @@ export type Database = {
           service_type?: string | null
           start_time?: string
           status?: string
+          treatment_started_at?: string | null
           updated_at?: string
         }
         Relationships: [

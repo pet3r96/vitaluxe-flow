@@ -72,7 +72,9 @@ Deno.serve(async (req) => {
         *,
         patient_accounts!inner(id, first_name, last_name, phone, email),
         providers!inner(id, user_id, profiles!inner(name)),
-        practice_rooms(id, name, color)
+        practice_rooms(id, name, color),
+        checked_in_at,
+        treatment_started_at
       `)
       .eq('practice_id', practiceId)
       .gte('start_time', startDate)

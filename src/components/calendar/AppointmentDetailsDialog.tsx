@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,6 +28,8 @@ interface AppointmentDetailsDialogProps {
 const statusOptions = [
   { value: 'scheduled', label: 'Scheduled' },
   { value: 'confirmed', label: 'Confirmed' },
+  { value: 'checked_in', label: 'Checked In' },
+  { value: 'being_treated', label: 'Being Treated' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'no_show', label: 'No Show' },
@@ -44,21 +46,83 @@ export function AppointmentDetailsDialog({
   const [status, setStatus] = useState(appointment?.status);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
 
+  // Sync status with appointment prop
+  useEffect(() => {
+    if (appointment?.status) {
+      setStatus(appointment.status);
+    }
+  }, [appointment?.status]);
+
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
+      const updateData: any = { status: newStatus, updated_at: new Date().toISOString() };
+      
+      // Set timestamps based on status
+      if (newStatus === "checked_in") {
+        updateData.checked_in_at = new Date().toISOString();
+      } else if (newStatus === "being_treated") {
+        updateData.treatment_started_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('patient_appointments')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', appointment.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      queryClient.invalidateQueries({ queryKey: ['waiting-room'] });
       toast.success("Appointment status updated");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update status");
       setStatus(appointment?.status);
+    },
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("patient_appointments")
+        .update({
+          status: "checked_in",
+          checked_in_at: new Date().toISOString(),
+        })
+        .eq("id", appointment.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-data"] });
+      queryClient.invalidateQueries({ queryKey: ["waiting-room"] });
+      toast.success("Patient checked in and added to waiting room");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to check in patient");
+    },
+  });
+
+  const startTreatmentMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("patient_appointments")
+        .update({
+          status: "being_treated",
+          treatment_started_at: new Date().toISOString(),
+        })
+        .eq("id", appointment.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-data"] });
+      queryClient.invalidateQueries({ queryKey: ["waiting-room"] });
+      toast.success("Treatment started");
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to start treatment");
     },
   });
 
@@ -241,7 +305,7 @@ export function AppointmentDetailsDialog({
             <Separator />
 
             {/* Actions */}
-            <div className="flex justify-between">
+            <div className="flex justify-between flex-wrap gap-2">
               <Button
                 variant="destructive"
                 onClick={handleDelete}
@@ -249,7 +313,27 @@ export function AppointmentDetailsDialog({
               >
                 Delete Appointment
               </Button>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                {(status === "scheduled" || status === "confirmed") && (
+                  <Button
+                    onClick={() => checkInMutation.mutate()}
+                    disabled={checkInMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {checkInMutation.isPending ? "Checking In..." : "Check In"}
+                  </Button>
+                )}
+                
+                {status === "checked_in" && (
+                  <Button
+                    onClick={() => startTreatmentMutation.mutate()}
+                    disabled={startTreatmentMutation.isPending}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {startTreatmentMutation.isPending ? "Starting..." : "Start Treatment"}
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   onClick={() => setRescheduleOpen(true)}

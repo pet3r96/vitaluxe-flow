@@ -14,10 +14,11 @@ interface AgendaViewProps {
 const statusConfig: Record<string, { label: string; variant: any }> = {
   scheduled: { label: 'Scheduled', variant: 'default' },
   confirmed: { label: 'Confirmed', variant: 'default' },
+  checked_in: { label: 'Checked In', variant: 'default' },
+  being_treated: { label: 'Being Treated', variant: 'default' },
   completed: { label: 'Completed', variant: 'secondary' },
   cancelled: { label: 'Cancelled', variant: 'destructive' },
   no_show: { label: 'No Show', variant: 'destructive' },
-  checked_in: { label: 'Checked In', variant: 'default' },
 };
 
 export function AgendaView({ currentDate, appointments, onAppointmentClick }: AgendaViewProps) {

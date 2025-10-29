@@ -117,6 +117,7 @@ export function CreateAppointmentDialog({
           service_description: values.serviceDescription,
           notes: values.notes,
           status: isWalkIn ? 'checked_in' : 'scheduled',
+          checked_in_at: isWalkIn ? new Date().toISOString() : null,
         })
         .select()
         .single();
@@ -126,6 +127,7 @@ export function CreateAppointmentDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      queryClient.invalidateQueries({ queryKey: ['waiting-room'] });
       toast.success(isWalkIn ? "Walk-in appointment created successfully" : "Appointment created successfully");
       reset();
       setSelectedPatientId("");

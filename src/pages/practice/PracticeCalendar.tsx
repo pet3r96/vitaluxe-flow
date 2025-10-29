@@ -17,6 +17,7 @@ import { MonthView } from "@/components/calendar/MonthView";
 import { AgendaView } from "@/components/calendar/AgendaView";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
+import { WaitingRoomPanel } from "@/components/calendar/WaitingRoomPanel";
 
 import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
 import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
@@ -344,6 +345,14 @@ export default function PracticeCalendar() {
             )}
           </div>
         </div>
+
+        {/* Waiting Room Panel - Below Calendar */}
+        <WaitingRoomPanel
+          practiceId={practiceId}
+          providers={providers}
+          onAppointmentClick={handleAppointmentClick}
+          currentDate={currentDate}
+        />
       </div>
 
       <CreateAppointmentDialog
