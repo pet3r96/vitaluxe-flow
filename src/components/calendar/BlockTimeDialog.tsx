@@ -169,14 +169,10 @@ export const BlockTimeDialog = ({
     if (step === 3) {
       try {
         setLoading(true);
-        const conflictResults = await checkConflicts();
+        await checkConflicts();
         setLoading(false);
-        
-        if (conflictResults && conflictResults.length > 0) {
-          setStep(4);
-        } else {
-          await handleSubmit();
-        }
+        // Always proceed to confirmation step; do not submit yet
+        setStep(4);
       } catch (error) {
         setLoading(false);
       }
@@ -189,7 +185,7 @@ export const BlockTimeDialog = ({
     if (step === 1) return !!formData.blockType;
     if (step === 2 && formData.blockType === 'provider_unavailable') return !!formData.providerId;
     if (step === 3) return !!formData.reason;
-    if (step === 4) return acknowledgedConflicts;
+    if (step === 4) return conflicts.length === 0 || acknowledgedConflicts;
     return true;
   };
 
@@ -339,34 +335,42 @@ export const BlockTimeDialog = ({
             </div>
           )}
 
-          {/* Step 4: Conflicts Warning */}
-          {step === 4 && conflicts.length > 0 && (
-            <Alert variant="destructive">
+          {/* Step 4: Conflicts Warning or Confirmation */}
+          {step === 4 && (
+            <Alert variant={conflicts.length > 0 ? "destructive" : "default"}>
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Conflicting Appointments Found</AlertTitle>
+              <AlertTitle>
+                {conflicts.length > 0 ? `Conflicting Appointments Found` : `No Conflicts Found`}
+              </AlertTitle>
               <AlertDescription>
-                <p className="mb-3">You have {conflicts.length} appointment(s) scheduled during this time:</p>
-                <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
-                  {conflicts.map((appt) => (
-                    <div key={appt.appointment_id} className="p-2 bg-background rounded text-sm">
-                      <div className="font-medium">{appt.patient_name}</div>
-                      <div className="text-muted-foreground text-xs">
-                        {format(new Date(appt.start_time), 'MMM d, h:mm a')} - {format(new Date(appt.end_time), 'h:mm a')}
-                        {appt.provider_name && ` • ${appt.provider_name}`}
-                      </div>
+                {conflicts.length > 0 ? (
+                  <>
+                    <p className="mb-3">You have {conflicts.length} appointment(s) scheduled during this time:</p>
+                    <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
+                      {conflicts.map((appt) => (
+                        <div key={appt.appointment_id} className="p-2 bg-background rounded text-sm">
+                          <div className="font-medium">{appt.patient_name}</div>
+                          <div className="text-muted-foreground text-xs">
+                            {format(new Date(appt.start_time), 'MMM d, h:mm a')} - {format(new Date(appt.end_time), 'h:mm a')}
+                            {appt.provider_name && ` • ${appt.provider_name}`}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="acknowledge"
-                    checked={acknowledgedConflicts}
-                    onCheckedChange={(checked) => setAcknowledgedConflicts(checked as boolean)}
-                  />
-                  <label htmlFor="acknowledge" className="text-sm font-medium cursor-pointer">
-                    I understand and will reschedule these appointments
-                  </label>
-                </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="acknowledge"
+                        checked={acknowledgedConflicts}
+                        onCheckedChange={(checked) => setAcknowledgedConflicts(checked as boolean)}
+                      />
+                      <label htmlFor="acknowledge" className="text-sm font-medium cursor-pointer">
+                        I understand and will reschedule these appointments
+                      </label>
+                    </div>
+                  </>
+                ) : (
+                  <p>✓ No appointments conflict with this blocked time. You can proceed to block the time.</p>
+                )}
               </AlertDescription>
             </Alert>
           )}
@@ -388,7 +392,7 @@ export const BlockTimeDialog = ({
               onClick={step === 4 ? handleSubmit : handleNext}
               disabled={!canProceed() || loading}
             >
-              {loading ? 'Processing...' : step === 4 ? 'Block Time Anyway' : step === 3 ? 'Check Conflicts' : 'Next'}
+              {loading ? 'Processing...' : step === 4 ? (conflicts.length > 0 ? 'Block Time Anyway' : 'Confirm & Block Time') : step === 3 ? 'Check Conflicts' : 'Next'}
             </Button>
           </div>
         </div>
