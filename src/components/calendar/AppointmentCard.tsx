@@ -28,7 +28,7 @@ export function AppointmentCard({ appointment, onClick, isDragging, style }: App
       onClick={onClick}
       style={style}
       className={cn(
-        "p-2 rounded-md border-l-4 cursor-pointer transition-all hover:shadow-md",
+        "p-2 rounded-md border-l-4 cursor-pointer transition-all hover:shadow-md overflow-visible",
         statusColor,
         isDragging && "opacity-50 cursor-move"
       )}
@@ -41,18 +41,18 @@ export function AppointmentCard({ appointment, onClick, isDragging, style }: App
           </Badge>
         )}
         <div className="flex items-start justify-between gap-2">
-          <p className="font-semibold text-sm leading-tight">
+          <p className="font-semibold text-sm leading-tight line-clamp-2">
             {appointment.patient_accounts?.first_name} {appointment.patient_accounts?.last_name}
           </p>
-          <span className="text-xs whitespace-nowrap">
+          <span className="text-xs whitespace-nowrap shrink-0">
             {format(new Date(appointment.start_time), 'h:mm a')}
           </span>
         </div>
         
         {appointment.providers && (
           <div className="flex items-center gap-1 text-xs opacity-80">
-            <User className="h-3 w-3" />
-            <span>
+            <User className="h-3 w-3 shrink-0" />
+            <span className="truncate">
               {appointment.providers.first_name} {appointment.providers.last_name}
             </span>
           </div>
@@ -60,15 +60,15 @@ export function AppointmentCard({ appointment, onClick, isDragging, style }: App
         
         {appointment.practice_rooms && (
           <div className="flex items-center gap-1 text-xs opacity-80">
-            <MapPin className="h-3 w-3" />
-            <span>{appointment.practice_rooms.name}</span>
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{appointment.practice_rooms.name}</span>
           </div>
         )}
         
         {appointment.appointment_type && (
           <div className="flex items-center gap-1 text-xs opacity-80">
-            <Clock className="h-3 w-3" />
-            <span className="capitalize">{appointment.appointment_type}</span>
+            <Clock className="h-3 w-3 shrink-0" />
+            <span className="capitalize truncate">{appointment.appointment_type}</span>
           </div>
         )}
       </div>

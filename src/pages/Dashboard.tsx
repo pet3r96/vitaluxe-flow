@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { logger } from "@/lib/logger";
+import { PRO_MONTHLY_PRICE_STR, TRIAL_DESCRIPTION } from "@/lib/pricing";
 import { TodayAppointmentsWidget } from "@/components/dashboard/TodayAppointmentsWidget";
 import { NewMessagesTriageWidget } from "@/components/dashboard/NewMessagesTriageWidget";
 import { RecentActivityWidget } from "@/components/dashboard/RecentActivityWidget";
@@ -443,7 +444,7 @@ const Dashboard = () => {
             <div className="flex-1 space-y-2">
               <h2 className="text-2xl font-bold text-foreground">Unlock VitaLuxePro Features</h2>
               <p className="text-muted-foreground">
-                Get access to patient appointments, secure messaging, digital EMR, AI-assisted triage, and more with a 7-day free trial.
+                Get access to patient appointments, secure messaging, digital EMR, AI-assisted triage, and more with a {TRIAL_DESCRIPTION}.
               </p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
                 {[

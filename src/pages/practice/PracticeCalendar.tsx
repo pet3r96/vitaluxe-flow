@@ -138,6 +138,7 @@ export default function PracticeCalendar() {
   }, [practiceId, refetch]);
 
   const appointments = calendarData?.appointments || [];
+  const blockedTime = calendarData?.blockedTime || [];
   const settings = calendarData?.settings || {
     slot_duration: 15,
     start_hour: 7,
@@ -279,6 +280,7 @@ export default function PracticeCalendar() {
                 <WeekView
                   currentDate={currentDate}
                   appointments={appointments}
+                  blockedTime={blockedTime}
                   startHour={settings.start_hour}
                   endHour={settings.end_hour}
                   slotDuration={settings.slot_duration}
@@ -293,6 +295,7 @@ export default function PracticeCalendar() {
                 <DayView
                   currentDate={currentDate}
                   appointments={appointments}
+                  blockedTime={blockedTime}
                   startHour={settings.start_hour}
                   endHour={settings.end_hour}
                   slotDuration={settings.slot_duration}

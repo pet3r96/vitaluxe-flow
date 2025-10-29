@@ -14,6 +14,7 @@ interface DayViewProps {
   onTimeSlotClick: (date: Date, providerId?: string) => void;
   providers: any[];
   selectedProviders: string[];
+  blockedTime?: any[];
 }
 
 export function DayView({
@@ -26,6 +27,7 @@ export function DayView({
   onTimeSlotClick,
   providers,
   selectedProviders,
+  blockedTime = [],
 }: DayViewProps) {
   const HOUR_HEIGHT = 80;
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
@@ -102,6 +104,47 @@ export function DayView({
     return detectOverlaps(dayProviderAppointments);
   };
 
+  const getBlockedTimesForProvider = (providerId: string) => {
+    return blockedTime.filter((block) => {
+      const blockStart = new Date(block.start_time);
+      const blockEnd = new Date(block.end_time);
+      const dayMatch = isSameDay(blockStart, currentDate) || 
+                       (blockStart <= currentDate && blockEnd >= currentDate);
+      
+      if (block.block_type === 'practice_closure') {
+        return dayMatch;
+      }
+      
+      if (block.block_type === 'provider_unavailable') {
+        return dayMatch && block.provider_id === providerId;
+      }
+      
+      return false;
+    });
+  };
+
+  const getBlockedTimeStyle = (block: any) => {
+    const blockStart = new Date(block.start_time);
+    const blockEnd = new Date(block.end_time);
+    
+    const dayStart = new Date(currentDate);
+    dayStart.setHours(safeStart, 0, 0, 0);
+    const dayEnd = new Date(currentDate);
+    dayEnd.setHours(safeEnd, 0, 0, 0);
+    
+    const clampedStart = blockStart < dayStart ? dayStart : blockStart;
+    const clampedEnd = blockEnd > dayEnd ? dayEnd : blockEnd;
+    
+    const startMinutes = (clampedStart.getHours() - safeStart) * 60 + clampedStart.getMinutes();
+    const endMinutes = (clampedEnd.getHours() - safeStart) * 60 + clampedEnd.getMinutes();
+    const durationMinutes = endMinutes - startMinutes;
+    
+    const top = (startMinutes / 60) * HOUR_HEIGHT;
+    const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 64);
+    
+    return { top: `${top}px`, height: `${height}px` };
+  };
+
   if (filteredProviders.length === 0) {
     return (
       <div className="flex items-center justify-center h-96 text-muted-foreground">
@@ -132,7 +175,7 @@ export function DayView({
 
       <div 
         ref={scrollRef} 
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-hidden"
         style={{ height: `${HOUR_HEIGHT * (safeEnd - safeStart)}px` }}
       >
         <div className="flex relative">
@@ -166,6 +209,22 @@ export function DayView({
                 );
               })}
               
+              {/* Blocked time overlays */}
+              {getBlockedTimesForProvider(provider.id).map((block) => {
+                const blockStyle = getBlockedTimeStyle(block);
+                return (
+                  <div
+                    key={block.id}
+                    className="absolute inset-x-0 blocked-time-slot pointer-events-none flex items-center justify-center px-2"
+                    style={blockStyle}
+                  >
+                    <span className="text-xs font-medium text-muted-foreground text-center">
+                      Blocked: {block.reason || 'Unavailable'}
+                    </span>
+                  </div>
+                );
+              })}
+
               {/* Appointments overlay */}
               <div className="absolute inset-0 pointer-events-none">
                 <div className="relative h-full">
@@ -179,6 +238,7 @@ export function DayView({
                           ...baseStyle,
                           left: `${appointment.columnLeft}%`,
                           width: `${appointment.columnWidth}%`,
+                          minHeight: '64px',
                           zIndex: appointment.columnIndex
                         }}
                       >

@@ -207,6 +207,20 @@ All colors MUST be HSL.
     margin-top: 0;
   }
 
+  /* Blocked time slot styling */
+  .blocked-time-slot {
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.95),
+      rgba(255, 255, 255, 0.95) 10px,
+      rgba(0, 0, 0, 0.03) 10px,
+      rgba(0, 0, 0, 0.03) 20px
+    );
+    border: 1px solid hsl(var(--border));
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
   .terms-content ul {
     margin-top: 0.5rem;
     margin-bottom: 1.5rem;

@@ -14,6 +14,7 @@ interface WeekViewProps {
   onTimeSlotClick: (date: Date, providerId?: string) => void;
   providers: any[];
   selectedProviders: string[];
+  blockedTime?: any[];
 }
 
 export function WeekView({
@@ -26,6 +27,7 @@ export function WeekView({
   onTimeSlotClick,
   providers,
   selectedProviders,
+  blockedTime = [],
 }: WeekViewProps) {
   const HOUR_HEIGHT = 60;
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
@@ -109,6 +111,46 @@ export function WeekView({
     return detectOverlaps(dayProviderAppointments);
   };
 
+  const getBlockedTimesForDayAndProvider = (day: Date, providerId: string) => {
+    return blockedTime.filter((block) => {
+      const blockStart = new Date(block.start_time);
+      const blockEnd = new Date(block.end_time);
+      const dayMatch = isSameDay(blockStart, day) || (blockStart <= day && blockEnd >= day);
+      
+      if (block.block_type === 'practice_closure') {
+        return dayMatch;
+      }
+      
+      if (block.block_type === 'provider_unavailable') {
+        return dayMatch && block.provider_id === providerId;
+      }
+      
+      return false;
+    });
+  };
+
+  const getBlockedTimeStyle = (block: any, day: Date) => {
+    const blockStart = new Date(block.start_time);
+    const blockEnd = new Date(block.end_time);
+    
+    const dayStart = new Date(day);
+    dayStart.setHours(safeStart, 0, 0, 0);
+    const dayEnd = new Date(day);
+    dayEnd.setHours(safeEnd, 0, 0, 0);
+    
+    const clampedStart = blockStart < dayStart ? dayStart : blockStart;
+    const clampedEnd = blockEnd > dayEnd ? dayEnd : blockEnd;
+    
+    const startMinutes = (clampedStart.getHours() - safeStart) * 60 + clampedStart.getMinutes();
+    const endMinutes = (clampedEnd.getHours() - safeStart) * 60 + clampedEnd.getMinutes();
+    const durationMinutes = endMinutes - startMinutes;
+    
+    const top = (startMinutes / 60) * HOUR_HEIGHT;
+    const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 40);
+    
+    return { top: `${top}px`, height: `${height}px` };
+  };
+
   if (filteredProviders.length === 0) {
     return (
       <div className="flex items-center justify-center h-96 text-muted-foreground">
@@ -143,7 +185,7 @@ export function WeekView({
       {/* Time grid */}
       <div 
         ref={scrollRef} 
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-hidden"
         style={{ height: `${HOUR_HEIGHT * (safeEnd - safeStart)}px` }}
       >
         <div className="flex relative">
@@ -185,6 +227,22 @@ export function WeekView({
                       );
                     })}
                     
+                    {/* Blocked time overlays */}
+                    {getBlockedTimesForDayAndProvider(day, provider.id).map((block) => {
+                      const blockStyle = getBlockedTimeStyle(block, day);
+                      return (
+                        <div
+                          key={block.id}
+                          className="absolute inset-x-0 blocked-time-slot pointer-events-none flex items-center justify-center px-2"
+                          style={blockStyle}
+                        >
+                          <span className="text-xs font-medium text-muted-foreground text-center">
+                            Blocked: {block.reason || 'Unavailable'}
+                          </span>
+                        </div>
+                      );
+                    })}
+
                     {/* Appointments overlay */}
                     <div className="absolute inset-0 pointer-events-none">
                       <div className="relative h-full">
@@ -198,6 +256,7 @@ export function WeekView({
                                 ...baseStyle,
                                 left: `${appointment.columnLeft}%`,
                                 width: `${appointment.columnWidth}%`,
+                                minHeight: '64px',
                                 zIndex: appointment.columnIndex
                               }}
                             >

@@ -18,11 +18,16 @@ Deno.serve(async (req) => {
 
     // Validation
     if (!practiceId || !blockType || !startTime || !endTime) {
-      throw new Error('Missing required fields');
+      throw new Error('Missing required fields: practiceId, blockType, startTime, and endTime are required');
     }
 
     if (blockType === 'provider_unavailable' && !providerId) {
-      throw new Error('Provider ID required for provider unavailable blocks');
+      throw new Error('Provider ID is required for provider unavailable blocks');
+    }
+
+    // Validate time range
+    if (new Date(endTime) <= new Date(startTime)) {
+      throw new Error('End time must be after start time');
     }
 
     // Check permissions

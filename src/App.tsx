@@ -18,6 +18,7 @@ import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { UpgradePromptDialog } from "@/components/subscription/UpgradePromptDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
 import { SessionTimer } from "./components/auth/SessionTimer";
+import { ProGate } from "./components/subscription/ProGate";
 
 // Helper function to retry dynamic imports on failure
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
@@ -206,7 +207,7 @@ const App = () => (
                                     <Route path="/representatives" element={<Representatives />} />
                                     <Route path="/patients" element={<Patients />} />
                                     <Route path="/providers" element={<Providers />} />
-                                    <Route path="/staff" element={<Staff />} />
+                                    <Route path="/staff" element={<SubscriptionProtectedRoute><ProGate><Staff /></ProGate></SubscriptionProtectedRoute>} />
                                     <Route path="/products" element={<Products />} />
                                     <Route path="/orders" element={<Orders />} />
                                     <Route path="/messages" element={<Messages />} />
