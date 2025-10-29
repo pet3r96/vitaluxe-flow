@@ -106,7 +106,7 @@ export function AppointmentDetailsDialog({
     },
   });
 
-  const startTreatmentMutation = useOptimisticMutation(
+  const startTreatmentMutation = useOptimisticMutation<void, void>(
     async () => {
       const { error } = await supabase
         .from("patient_appointments")

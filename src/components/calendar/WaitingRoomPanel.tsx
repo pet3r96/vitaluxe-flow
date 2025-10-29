@@ -32,7 +32,7 @@ export function WaitingRoomPanel({
 
   // Fetch checked-in appointments
   const { data: waitingPatients = [], refetch } = useQuery({
-    queryKey: ["waiting-room", practiceId, currentDate],
+    queryKey: ["waiting-room", practiceId, currentDate.toISOString()],
     queryFn: async () => {
       const startOfDay = new Date(currentDate);
       startOfDay.setHours(0, 0, 0, 0);
@@ -84,7 +84,7 @@ export function WaitingRoomPanel({
     };
   }, [practiceId, refetch]);
 
-  const startTreatmentMutation = useOptimisticMutation(
+  const startTreatmentMutation = useOptimisticMutation<void, string>(
     async (appointmentId: string) => {
       const { error } = await supabase
         .from("patient_appointments")
@@ -96,7 +96,7 @@ export function WaitingRoomPanel({
       if (error) throw error;
     },
     {
-      queryKey: ["waiting-room", practiceId, currentDate],
+      queryKey: ["waiting-room", practiceId, currentDate.toISOString()],
       updateFn: (oldData: any, appointmentId: string) => {
         // Optimistically remove appointment from waiting room
         return oldData?.filter((apt: any) => apt.id !== appointmentId) || [];

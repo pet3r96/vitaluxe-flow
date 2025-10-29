@@ -14,6 +14,7 @@ import { NewMessagesTriageWidget } from "@/components/dashboard/NewMessagesTriag
 import { RecentActivityWidget } from "@/components/dashboard/RecentActivityWidget";
 import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpRemindersWidget";
+import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
 
 // Dashboard component with real-time stats
 const Dashboard = () => {
@@ -420,17 +421,24 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">Dashboard</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          Welcome back, {user?.email}
-        </p>
-        {status === 'trial' && trialDaysRemaining !== null && (
-          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-primary">
-              Trial: {trialDaysRemaining} days remaining
-            </span>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+            Welcome back, {user?.email}
+          </p>
+          {status === 'trial' && trialDaysRemaining !== null && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">
+                Trial: {trialDaysRemaining} days remaining
+              </span>
+            </div>
+          )}
+        </div>
+        {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider') && (
+          <div className="w-64">
+            <PatientQuickSearch />
           </div>
         )}
       </div>

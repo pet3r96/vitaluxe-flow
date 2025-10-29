@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PatientsDataTable } from "@/components/patients/PatientsDataTable";
 import { Users, Lock, UserPlus } from "lucide-react";
@@ -18,6 +19,7 @@ import { toast } from "sonner";
 const Patients = () => {
   const { user, effectiveRole } = useAuth();
   const { isSubscribed } = useSubscription();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'not_invited' | 'invited' | 'active'>('all');
   const [bulkInviteDialogOpen, setBulkInviteDialogOpen] = useState(false);
@@ -55,9 +57,9 @@ const Patients = () => {
       case 'not_invited':
         return !patient.has_portal_access;
       case 'invited':
-        return patient.portal_status === 'invited' && !patient.last_login_at;
+        return patient.has_portal_access && !patient.last_login_at;
       case 'active':
-        return patient.portal_status === 'active' && patient.last_login_at;
+        return patient.has_portal_access && patient.last_login_at;
       default:
         return true;
     }
@@ -230,14 +232,14 @@ const Patients = () => {
                     size="sm"
                     onClick={() => setStatusFilter('invited')}
                   >
-                    Invited ({filteredPatients.filter(p => p.portal_status === 'invited' && !p.last_login_at).length})
+                    Invited ({filteredPatients.filter(p => p.has_portal_access && !p.last_login_at).length})
                   </Button>
                   <Button
                     variant={statusFilter === 'active' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setStatusFilter('active')}
                   >
-                    Active ({filteredPatients.filter(p => p.portal_status === 'active' && p.last_login_at).length})
+                    Active ({filteredPatients.filter(p => p.has_portal_access && p.last_login_at).length})
                   </Button>
                 </div>
               </div>
@@ -255,7 +257,12 @@ const Patients = () => {
                       <div className="flex justify-between items-start gap-4">
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-3">
-                            <h3 className="font-semibold text-lg">{patient.name}</h3>
+                            <h3 
+                              className="font-semibold text-lg cursor-pointer hover:text-primary transition-colors"
+                              onClick={() => navigate(`/patients/${patient.patient_id}`)}
+                            >
+                              {patient.name}
+                            </h3>
                             <PatientPortalStatusBadge
                               hasPortalAccount={patient.has_portal_access}
                               status={patient.portal_status as 'active' | 'invited' | null}
