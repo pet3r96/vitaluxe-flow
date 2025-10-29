@@ -16,7 +16,7 @@ export default function PatientProfile() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
-  const { data: profile, refetch, isLoading } = useQuery({
+  const { data: profile, refetch, isLoading, error } = useQuery({
     queryKey: ["patient-profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -78,6 +78,34 @@ export default function PatientProfile() {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container max-w-4xl py-8">
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive">
+              Error loading profile: {error.message}
+            </p>
+            <Button onClick={() => refetch()} className="mt-4">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-center space-y-2">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
       </div>
     );
   }
