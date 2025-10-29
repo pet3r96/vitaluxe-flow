@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +6,12 @@ import { MessageSquare, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 export function MessagesAndChatWidget() {
   const navigate = useNavigate();
   const { user, effectiveRole, effectivePracticeId } = useAuth();
+  const queryClient = useQueryClient();
 
   // Fetch unread patient messages (support tickets)
   const { data: unreadMessages } = useQuery({
@@ -59,7 +61,7 @@ export function MessagesAndChatWidget() {
         return { count: 0, subjects: [] };
       }
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 0,
   });
 
   // Fetch unread internal chat messages
@@ -105,8 +107,49 @@ export function MessagesAndChatWidget() {
         return { count: 0, senders: [] };
       }
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 0,
   });
+
+  // Real-time subscriptions for instant updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const messagesChannel = supabase
+      .channel('patient-messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["unread-patient-messages", user.id] });
+        }
+      )
+      .subscribe();
+
+    const internalChannel = supabase
+      .channel('internal-messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'internal_messages',
+          filter: `practice_id=eq.${effectivePracticeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["unread-internal-chat", user.id, effectiveRole, effectivePracticeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(internalChannel);
+    };
+  }, [user?.id, effectivePracticeId, effectiveRole, queryClient]);
 
   return (
     <Card>

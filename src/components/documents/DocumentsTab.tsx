@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Filter } from "lucide-react";
@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function DocumentsTab() {
   const { effectivePracticeId } = useAuth();
+  const queryClient = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -68,7 +69,49 @@ export function DocumentsTab() {
       return data as any[];
     },
     enabled: !!effectivePracticeId,
+    staleTime: 0,
   });
+
+  // Real-time subscription for instant document updates
+  useEffect(() => {
+    if (!effectivePracticeId) return;
+
+    const documentsChannel = supabase
+      .channel('documents-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'provider_documents',
+          filter: `practice_id=eq.${effectivePracticeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId, filters] });
+        }
+      )
+      .subscribe();
+
+    const assignmentsChannel = supabase
+      .channel('document-assignments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'provider_document_patients',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId, filters] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(documentsChannel);
+      supabase.removeChannel(assignmentsChannel);
+    };
+  }, [effectivePracticeId, filters, queryClient]);
 
   return (
     <div className="space-y-4">

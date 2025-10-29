@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock } from "lucide-react";
@@ -7,10 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInMinutes } from "date-fns";
+import { useEffect } from "react";
 
 export function WaitingRoomWidget() {
   const navigate = useNavigate();
   const { effectivePracticeId } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: waitingPatients, isLoading } = useQuery({
     queryKey: ["waiting-room-dashboard", effectivePracticeId],
@@ -32,9 +34,34 @@ export function WaitingRoomWidget() {
       if (error) throw error;
       return (data || []) as any[];
     },
-    refetchInterval: 30000, // Refetch every 30 seconds for real-time sync
+    staleTime: 0,
     enabled: !!effectivePracticeId,
   });
+
+  // Real-time subscription for instant updates
+  useEffect(() => {
+    if (!effectivePracticeId) return;
+
+    const channel = supabase
+      .channel('waiting-room-widget-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_appointments',
+          filter: `practice_id=eq.${effectivePracticeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["waiting-room-dashboard", effectivePracticeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [effectivePracticeId, queryClient]);
 
   const getWaitTimeColor = (minutes: number) => {
     if (minutes < 5) return "text-success";

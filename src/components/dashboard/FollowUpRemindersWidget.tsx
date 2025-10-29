@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isPast, isToday } from "date-fns";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export function FollowUpRemindersWidget() {
   const queryClient = useQueryClient();
@@ -30,8 +31,30 @@ export function FollowUpRemindersWidget() {
       if (error) throw error;
       return data as any[];
     },
-    refetchInterval: 300000, // 5 minutes
+    staleTime: 0,
   });
+
+  // Real-time subscription for instant updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('follow-ups-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_follow_ups',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["follow-up-reminders"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const markComplete = useMutation({
     mutationFn: async (id: string) => {

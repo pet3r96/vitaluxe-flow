@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -16,6 +16,7 @@ interface MultiPatientSelectProps {
 
 export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: MultiPatientSelectProps) {
   const { effectivePracticeId } = useAuth();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: patients, isLoading, error: queryError } = useQuery({
@@ -36,7 +37,33 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
       return data as any[];
     },
     enabled: !!effectivePracticeId,
+    staleTime: 0,
   });
+
+  // Real-time subscription for instant patient list updates
+  useEffect(() => {
+    if (!effectivePracticeId) return;
+
+    const channel = supabase
+      .channel('patients-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patients',
+          filter: `practice_id=eq.${effectivePracticeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["patients-select", effectivePracticeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [effectivePracticeId, queryClient]);
 
   if (queryError) {
     console.error("Query error:", queryError);

@@ -1,15 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 
 export function TodayAppointmentsWidget() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const queryClient = useQueryClient();
 
   const { data: appointments, isLoading } = useQuery({
     queryKey: ["today-appointments"],
@@ -34,8 +35,30 @@ export function TodayAppointmentsWidget() {
       if (error) throw error;
       return (data || []) as any[];
     },
-    refetchInterval: 60000, // Refetch every minute
+    staleTime: 0,
   });
+
+  // Real-time subscription for instant updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('today-appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_appointments',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["today-appointments"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
