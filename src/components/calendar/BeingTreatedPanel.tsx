@@ -187,7 +187,7 @@ export function BeingTreatedPanel({
                       <TableCell>{getProviderName(appointment.provider_id)}</TableCell>
                       <TableCell>
                         {appointment.practice_rooms ? (
-                          <Badge variant="outline" className="bg-purple-50 dark:bg-purple-900/20">
+                          <Badge variant="secondary">
                             {appointment.practice_rooms.name}
                           </Badge>
                         ) : (
