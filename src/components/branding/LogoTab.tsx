@@ -90,6 +90,8 @@ export function LogoTab() {
           logo_storage_path: filePath,
           practice_name: practiceName || null,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'practice_id'
         });
 
       if (dbError) throw dbError;
@@ -163,6 +165,8 @@ export function LogoTab() {
           practice_id: profile.id,
           practice_name: newName || null,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'practice_id'
         });
 
       if (error) throw error;
