@@ -76,7 +76,6 @@ export function LogoTab() {
           practice_id: effectivePracticeId,
           logo_url: publicUrl,
           logo_storage_path: filePath,
-          practice_name: practiceName || null,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'practice_id'
@@ -93,7 +92,7 @@ export function LogoTab() {
         practice_id: effectivePracticeId,
         logo_url: publicUrl,
         logo_storage_path: filePath,
-        practice_name: practiceName || null,
+        practice_name: prev?.practice_name ?? null,
         updated_at: new Date().toISOString(),
       }));
       
@@ -144,7 +143,7 @@ export function LogoTab() {
         ...(prev || {}),
         logo_url: null,
         logo_storage_path: null,
-        practice_name: practiceName || null,
+        practice_name: prev?.practice_name ?? null,
         updated_at: new Date().toISOString(),
       }));
       
