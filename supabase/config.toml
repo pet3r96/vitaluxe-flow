@@ -158,3 +158,6 @@ verify_jwt = true
 
 [functions.send-patient-message]
 verify_jwt = true
+
+[functions.get-patient-practice]
+verify_jwt = true
