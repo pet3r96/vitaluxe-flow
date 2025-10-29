@@ -173,7 +173,7 @@ export function SubscriptionManagement() {
 
   const handleEditClick = (sub: any) => {
     setEditingId(sub.id);
-    setEditPrice(sub.monthly_price?.toString() || "250.00");
+    setEditPrice(sub.monthly_price?.toString() || "99.99");
     setEditCommission(sub.rep_commission_percentage?.toString() || "0");
   };
 

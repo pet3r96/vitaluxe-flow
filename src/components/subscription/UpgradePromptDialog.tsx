@@ -37,8 +37,8 @@ export const UpgradePromptDialog = () => {
             <AlertDialogDescription className="space-y-2">
               <p>Transform your practice with our complete virtual front desk + EMR system.</p>
               <p className="font-semibold">
-                <span className="text-2xl bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$250</span>
-                <span className="text-muted-foreground/70">/month</span>
+                <span className="text-2xl bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$99.99</span>
+                <span className="text-muted-foreground/70">/month + processing fees</span>
                 <span className="ml-2">• 7-Day Free Trial</span>
               </p>
               <p className="text-sm">

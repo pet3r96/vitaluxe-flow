@@ -61,7 +61,7 @@ export function SubscriptionOverview({ subscription }: SubscriptionOverviewProps
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Monthly Price</p>
-            <p className="text-2xl font-bold">${subscription.monthly_price || '250'}</p>
+            <p className="text-2xl font-bold">${subscription.monthly_price || '99.99'} <span className="text-sm text-muted-foreground font-normal">+ processing fees</span></p>
           </div>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground flex items-center gap-1">

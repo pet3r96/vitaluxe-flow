@@ -40,7 +40,7 @@ serve(async (req) => {
       {
         body: {
           customerProfileId: practice.authorizenet_customer_profile_id,
-          amount: subscription.monthly_price || 99.00,
+          amount: subscription.monthly_price || 99.99,
           description: `VitaLuxePro Subscription - ${new Date().toLocaleDateString()}`
         }
       }
@@ -55,7 +55,7 @@ serve(async (req) => {
       .insert({
         subscription_id: subscription.id,
         practice_id: subscription.practice_id,
-        amount: subscription.monthly_price || 99.00,
+        amount: subscription.monthly_price || 99.99,
         payment_date: new Date().toISOString(),
         status: chargeResult?.success ? "completed" : "failed",
         transaction_id: chargeResult?.transactionId,

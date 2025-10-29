@@ -215,8 +215,8 @@ export default function SubscribeToVitaLuxePro() {
             <CardContent className="space-y-4">
               <div>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$250</span>
-                  <span className="text-muted-foreground/70">/month</span>
+                  <span className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$99.99</span>
+                  <span className="text-muted-foreground/70">/month + processing fees</span>
                 </div>
                 <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
                   7-Day Free Trial
