@@ -6,10 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Lock, Bell } from "lucide-react";
+import { ChangePasswordDialog } from "@/components/patient/ChangePasswordDialog";
+import { NotificationPreferencesDialog } from "@/components/notifications/NotificationPreferencesDialog";
+import { ActivityLogSection } from "@/components/patient/ActivityLogSection";
 
 export default function PatientProfile() {
   const [editing, setEditing] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
   const { data: profile, refetch } = useQuery({
     queryKey: ["patient-profile"],
@@ -69,22 +74,46 @@ export default function PatientProfile() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
-          <p className="text-muted-foreground">Manage your personal information</p>
-        </div>
-        {!editing && (
-          <Button onClick={() => setEditing(true)}>Edit Profile</Button>
-        )}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
+        <p className="text-muted-foreground">Manage your personal information and account settings</p>
       </div>
+
+      {/* Email Section (Read-only) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email Address
+          </CardTitle>
+          <CardDescription>Your account email address</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{profile?.email || "Not set"}</p>
+            <p className="text-xs text-muted-foreground">
+              Email cannot be changed. Contact support if you need assistance.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <form onSubmit={handleSubmit}>
         <div className="grid gap-6">
+          {/* Personal Information Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>Your basic details</CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Personal Information</CardTitle>
+                  <CardDescription>Your basic details</CardDescription>
+                </div>
+                {!editing && (
+                  <Button onClick={() => setEditing(true)} size="sm" type="button">
+                    Edit
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -137,6 +166,7 @@ export default function PatientProfile() {
             </CardContent>
           </Card>
 
+          {/* Address Section */}
           <Card>
             <CardHeader>
               <CardTitle>Address</CardTitle>
@@ -185,6 +215,7 @@ export default function PatientProfile() {
             </CardContent>
           </Card>
 
+          {/* Emergency Contact Section */}
           <Card>
             <CardHeader>
               <CardTitle>Emergency Contact</CardTitle>
@@ -220,7 +251,10 @@ export default function PatientProfile() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setEditing(false)}
+                onClick={() => {
+                  setEditing(false);
+                  refetch();
+                }}
               >
                 Cancel
               </Button>
@@ -234,6 +268,53 @@ export default function PatientProfile() {
           )}
         </div>
       </form>
+
+      {/* Security Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5" />
+            Security
+          </CardTitle>
+          <CardDescription>Manage your password and account security</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => setShowPasswordDialog(true)} variant="outline">
+            <Lock className="mr-2 h-4 w-4" />
+            Change Password
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Notification Preferences Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Preferences
+          </CardTitle>
+          <CardDescription>Manage your email and SMS notification settings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => setShowNotificationsDialog(true)} variant="outline">
+            <Bell className="mr-2 h-4 w-4" />
+            Manage Notifications
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Account Activity Section */}
+      <ActivityLogSection />
+
+      {/* Dialogs */}
+      <ChangePasswordDialog 
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+      />
+      <NotificationPreferencesDialog
+        open={showNotificationsDialog}
+        onOpenChange={setShowNotificationsDialog}
+      />
     </div>
   );
 }

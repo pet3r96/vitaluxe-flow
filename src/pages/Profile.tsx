@@ -3,6 +3,7 @@ import { PracticeProfileForm } from "@/components/profile/PracticeProfileForm";
 import { ProviderProfileForm } from "@/components/profile/ProviderProfileForm";
 import { RepProfileForm } from "@/components/profile/RepProfileForm";
 import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSection";
+import PatientProfile from "@/pages/patient/PatientProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -13,7 +14,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   
   const isRep = effectiveRole === "topline" || effectiveRole === "downline";
-  const allowedRoles = ["doctor", "topline", "downline", "provider"];
+  const allowedRoles = ["doctor", "topline", "downline", "provider", "patient"];
 
   useEffect(() => {
     const checkProviderStatus = async () => {
@@ -78,6 +79,8 @@ const Profile = () => {
       <div className="space-y-6">
         {isRep ? (
           <RepProfileForm />
+        ) : effectiveRole === "patient" ? (
+          <PatientProfile />
         ) : isProvider ? (
           <>
             <ProviderProfileForm />
