@@ -1,8 +1,10 @@
 interface LogoPreviewProps {
   logoUrl?: string | null;
+  practiceName?: string;
 }
 
-export function LogoPreview({ logoUrl }: LogoPreviewProps) {
+export function LogoPreview({ logoUrl, practiceName = "" }: LogoPreviewProps) {
+  const displayName = practiceName || "VITALUXE SERVICES LLC";
   return (
     <div className="border rounded-lg overflow-hidden bg-background">
       {/* Mock PDF Header */}
@@ -25,11 +27,13 @@ export function LogoPreview({ logoUrl }: LogoPreviewProps) {
           )}
 
           {/* Company Text */}
-          <div className="flex-1">
-            <h1 className="text-white font-bold text-lg tracking-wide">
-              VITALUXE SERVICES LLC
-            </h1>
-          </div>
+          {displayName && (
+            <div className="flex-1">
+              <h1 className="text-white font-bold text-lg tracking-wide">
+                {displayName}
+              </h1>
+            </div>
+          )}
         </div>
       </div>
 

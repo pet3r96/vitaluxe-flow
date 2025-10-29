@@ -8,29 +8,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to get practice logo URL
-async function getPracticeLogoUrl(supabase: any, userId: string): Promise<string | null> {
+// Helper function to get practice logo URL and name
+async function getPracticeBranding(supabase: any, userId: string): Promise<{ logoUrl: string | null; practiceName: string | null }> {
   try {
     // Get practice_id (user might be practice owner or provider)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, company')
       .eq('id', userId)
       .single();
 
-    if (!profile) return null;
+    if (!profile) return { logoUrl: null, practiceName: null };
 
     // Get practice branding
     const { data: branding } = await supabase
       .from('practice_branding')
-      .select('logo_url')
+      .select('logo_url, practice_name')
       .eq('practice_id', profile.id)
       .maybeSingle();
 
-    return branding?.logo_url || null;
+    const practiceName = branding?.practice_name || profile.company || 'VITALUXE SERVICES LLC';
+    return { 
+      logoUrl: branding?.logo_url || null,
+      practiceName 
+    };
   } catch (error) {
-    console.warn('Failed to get practice logo:', error);
-    return null;
+    console.warn('Failed to get practice branding:', error);
+    return { logoUrl: null, practiceName: 'VITALUXE SERVICES LLC' };
   }
 }
 
@@ -162,7 +166,7 @@ serve(async (req) => {
     };
 
     // Professional Header with Logo
-    const logoUrl = await getPracticeLogoUrl(supabase, user.id);
+    const { logoUrl, practiceName } = await getPracticeBranding(supabase, user.id);
     const logoBase64 = logoUrl ? await fetchLogoAsBase64(logoUrl) : null;
     
     doc.setFillColor(200, 166, 75); // Gold color
@@ -177,10 +181,13 @@ serve(async (req) => {
       }
     }
     
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('VITALUXE SERVICES LLC', 4.25, 0.65, { align: 'center' });
+    // Only display practice name if it exists
+    if (practiceName) {
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text(practiceName, 4.25, 0.65, { align: 'center' });
+    }
 
     // Document Title with Border
     doc.setDrawColor(200, 166, 75);

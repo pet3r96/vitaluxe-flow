@@ -3721,6 +3721,7 @@ export type Database = {
           logo_storage_path: string | null
           logo_url: string | null
           practice_id: string
+          practice_name: string | null
           updated_at: string | null
         }
         Insert: {
@@ -3729,6 +3730,7 @@ export type Database = {
           logo_storage_path?: string | null
           logo_url?: string | null
           practice_id: string
+          practice_name?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -3737,6 +3739,7 @@ export type Database = {
           logo_storage_path?: string | null
           logo_url?: string | null
           practice_id?: string
+          practice_name?: string | null
           updated_at?: string | null
         }
         Relationships: [

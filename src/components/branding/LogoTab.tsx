@@ -12,6 +12,7 @@ export function LogoTab() {
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [practiceName, setPracticeName] = useState("");
 
   // Get current user's practice_id
   const { data: profile } = useQuery({
@@ -42,6 +43,12 @@ export function LogoTab() {
         .maybeSingle();
 
       if (error) throw error;
+      
+      // Set practice name from database
+      if (data?.practice_name) {
+        setPracticeName(data.practice_name);
+      }
+      
       return data;
     },
   });
@@ -64,14 +71,14 @@ export function LogoTab() {
       const filePath = `${profile.id}/logo.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("practice-documents")
+        .from("provider-documents")
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from("practice-documents")
+        .from("provider-documents")
         .getPublicUrl(filePath);
 
       // Update database
@@ -81,6 +88,7 @@ export function LogoTab() {
           practice_id: profile.id,
           logo_url: publicUrl,
           logo_storage_path: filePath,
+          practice_name: practiceName || null,
           updated_at: new Date().toISOString(),
         });
 
@@ -111,7 +119,7 @@ export function LogoTab() {
 
       // Delete from storage
       const { error: storageError } = await supabase.storage
-        .from("practice-documents")
+        .from("provider-documents")
         .remove([branding.logo_storage_path]);
 
       if (storageError) throw storageError;
@@ -138,6 +146,37 @@ export function LogoTab() {
     onError: (error: Error) => {
       toast({
         title: "Remove failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update practice name mutation
+  const updateNameMutation = useMutation({
+    mutationFn: async (newName: string) => {
+      if (!profile?.id) throw new Error("No practice ID");
+
+      const { error } = await supabase
+        .from("practice_branding")
+        .upsert({
+          practice_id: profile.id,
+          practice_name: newName || null,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["practice-branding"] });
+      toast({
+        title: "Practice name updated",
+        description: "Your branding has been saved",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
         description: error.message,
         variant: "destructive",
       });
@@ -211,10 +250,38 @@ export function LogoTab() {
             </p>
           </div>
 
+          {/* Practice Name Input */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="practice-name" className="text-sm font-medium">
+                Practice Name (Optional)
+              </label>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => updateNameMutation.mutate(practiceName)}
+                disabled={updateNameMutation.isPending}
+              >
+                Save Name
+              </Button>
+            </div>
+            <input
+              id="practice-name"
+              type="text"
+              value={practiceName}
+              onChange={(e) => setPracticeName(e.target.value)}
+              placeholder="Leave blank for white-label (logo only)"
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <p className="text-xs text-muted-foreground">
+              This name will appear next to your logo on PDFs. Leave blank to show only your logo.
+            </p>
+          </div>
+
           {/* Preview Section */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium">PDF Header Preview</h3>
-            <LogoPreview logoUrl={branding?.logo_url} />
+            <LogoPreview logoUrl={branding?.logo_url} practiceName={practiceName} />
             <p className="text-xs text-muted-foreground">
               This is how your logo will appear on all generated PDFs
             </p>
