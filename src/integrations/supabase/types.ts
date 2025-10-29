@@ -3714,6 +3714,48 @@ export type Database = {
           },
         ]
       }
+      practice_branding: {
+        Row: {
+          created_at: string | null
+          id: string
+          logo_storage_path: string | null
+          logo_url: string | null
+          practice_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          logo_storage_path?: string | null
+          logo_url?: string | null
+          practice_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          logo_storage_path?: string | null
+          logo_url?: string | null
+          practice_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_branding_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_branding_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_calendar_hours: {
         Row: {
           created_at: string

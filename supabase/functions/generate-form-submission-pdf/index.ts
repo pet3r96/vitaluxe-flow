@@ -7,7 +7,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const LOGO_URL = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/practice-documents/logo.png`;
+// Helper function to get practice logo URL
+async function getPracticeLogoUrl(supabase: any, userId: string): Promise<string | null> {
+  try {
+    // Get practice_id (user might be practice owner or provider)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (!profile) return null;
+
+    // Get practice branding
+    const { data: branding } = await supabase
+      .from('practice_branding')
+      .select('logo_url')
+      .eq('practice_id', profile.id)
+      .maybeSingle();
+
+    return branding?.logo_url || null;
+  } catch (error) {
+    console.warn('Failed to get practice logo:', error);
+    return null;
+  }
+}
 
 // Helper function to fetch logo as base64
 async function fetchLogoAsBase64(url: string): Promise<string | null> {
@@ -75,8 +99,9 @@ serve(async (req) => {
       format: 'letter'
     });
 
-    // Fetch logo
-    const logoBase64 = await fetchLogoAsBase64(LOGO_URL);
+    // Fetch logo dynamically from practice branding
+    const logoUrl = await getPracticeLogoUrl(supabase, user.id);
+    const logoBase64 = logoUrl ? await fetchLogoAsBase64(logoUrl) : null;
 
     // Professional Header with Logo
     doc.setFillColor(200, 166, 75); // Gold color

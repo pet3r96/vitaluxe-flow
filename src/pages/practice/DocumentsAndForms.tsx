@@ -2,7 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentsTab } from "@/components/documents/DocumentsTab";
 import { FormsTab } from "@/components/forms/FormsTab";
 import { CompletedFormsTab } from "@/components/forms/CompletedFormsTab";
-import { FileText, ClipboardList, CheckSquare } from "lucide-react";
+import { LogoTab } from "@/components/branding/LogoTab";
+import { FileText, ClipboardList, CheckSquare, Image } from "lucide-react";
 
 export default function DocumentsAndForms() {
   return (
@@ -15,7 +16,7 @@ export default function DocumentsAndForms() {
       </div>
 
       <Tabs defaultValue="documents" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="documents" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             My Documents
@@ -27,6 +28,10 @@ export default function DocumentsAndForms() {
           <TabsTrigger value="completed" className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4" />
             Completed Forms
+          </TabsTrigger>
+          <TabsTrigger value="logo" className="flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            My Logo
           </TabsTrigger>
         </TabsList>
 
@@ -40,6 +45,10 @@ export default function DocumentsAndForms() {
 
         <TabsContent value="completed" className="mt-6">
           <CompletedFormsTab />
+        </TabsContent>
+
+        <TabsContent value="logo" className="mt-6">
+          <LogoTab />
         </TabsContent>
       </Tabs>
     </div>
