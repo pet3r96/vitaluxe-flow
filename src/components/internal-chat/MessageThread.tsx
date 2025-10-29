@@ -126,7 +126,7 @@ export function MessageThread({
       </div>
 
       {/* Message Body */}
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-3">
         {/* Original Message */}
         <div className="mb-6 p-4 bg-muted rounded-lg">
           <div className="flex items-center gap-2 mb-2">
@@ -150,7 +150,7 @@ export function MessageThread({
 
       {/* Reply Input */}
       {!message.completed && (
-        <div className="p-4 border-t bg-background">
+        <div className="p-2 border-t bg-background">
           <div className="flex gap-2">
             <Textarea
               placeholder="Type a reply..."

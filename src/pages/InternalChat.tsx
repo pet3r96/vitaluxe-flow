@@ -375,7 +375,7 @@ export default function InternalChat() {
 
   return (
     <>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="flex h-[85vh] overflow-hidden bg-background">
         {/* Mobile: Show list or thread */}
         <div className="flex flex-1 lg:hidden">
           {!selectedMessageId ? (
