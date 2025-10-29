@@ -5,19 +5,25 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseClient = createClient(
+    const authHeader = req.headers.get('Authorization') || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    
+    if (!token) throw new Error('Missing authorization token');
+
+    // Create service role client for auth and impersonation queries
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    // Verify user authentication
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !user) throw new Error('Not authenticated');
 
     console.log('User authenticated:', user.id);
 
-    // Check for active impersonation session
-    const { data: impersonationSession, error: impersonationError } = await supabaseClient
+    // Check for active impersonation session using service role
+    const { data: impersonationSession, error: impersonationError } = await supabaseAdmin
       .from('active_impersonation_sessions')
       .select('impersonated_user_id, impersonated_role')
       .eq('admin_user_id', user.id)
@@ -25,7 +31,6 @@ Deno.serve(async (req) => {
 
     if (impersonationError) {
       console.error('Impersonation check error:', impersonationError);
-      // Continue without impersonation if query fails
     }
 
     // Use impersonated user ID if impersonating as patient, otherwise use actual user ID
@@ -34,6 +39,13 @@ Deno.serve(async (req) => {
       : user.id;
 
     console.log('Effective user ID:', effectiveUserId, 'Impersonating:', !!impersonationSession);
+
+    // Create authenticated client for data operations
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
 
     const { subject, message } = await req.json();
 
