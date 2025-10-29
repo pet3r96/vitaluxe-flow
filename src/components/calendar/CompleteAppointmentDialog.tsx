@@ -98,6 +98,17 @@ export function CompleteAppointmentDialog({
     mutationFn: async (data: any) => {
       if (!effectiveUserId) throw new Error("Not authenticated");
 
+      // Validate patient exists before proceeding
+      const { data: patientCheck, error: patientError } = await supabase
+        .from("patient_accounts")
+        .select("id")
+        .eq("id", appointment.patient_id)
+        .single();
+
+      if (patientError || !patientCheck) {
+        throw new Error("Invalid patient reference. Please contact support.");
+      }
+
       // 1. Complete the appointment
       const { error: updateError } = await supabase
         .from("patient_appointments")
