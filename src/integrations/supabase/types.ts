@@ -2465,6 +2465,7 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           checked_in_at: string | null
+          completed_at: string | null
           created_at: string
           end_time: string
           id: string
@@ -2486,6 +2487,7 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           checked_in_at?: string | null
+          completed_at?: string | null
           created_at?: string
           end_time: string
           id?: string
@@ -2507,6 +2509,7 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           checked_in_at?: string | null
+          completed_at?: string | null
           created_at?: string
           end_time?: string
           id?: string
