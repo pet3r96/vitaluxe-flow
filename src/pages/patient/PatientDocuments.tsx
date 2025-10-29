@@ -187,7 +187,7 @@ export default function PatientDocuments() {
         share_with_practice: shareWithPractice,
         custom_title: documentType === "other" ? customTitle : null,
         uploaded_by: user?.id,
-      } as any);
+      });
 
       if (dbError) throw dbError;
     },
