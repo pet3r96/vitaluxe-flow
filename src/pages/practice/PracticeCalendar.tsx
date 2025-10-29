@@ -18,6 +18,7 @@ import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetai
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
 import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
+import { PrintDayDialog } from "@/components/calendar/PrintDayDialog";
 
 export default function PracticeCalendar() {
   const { user, effectivePracticeId, isProviderAccount, effectiveRole, effectiveUserId } = useAuth();
@@ -34,6 +35,7 @@ export default function PracticeCalendar() {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [isWalkIn, setIsWalkIn] = useState(false);
   const [blockTimeOpen, setBlockTimeOpen] = useState(false);
+  const [printDayOpen, setPrintDayOpen] = useState(false);
 
   const practiceId = effectivePracticeId || user?.id;
   const isProviderView = effectiveRole === 'provider';
@@ -221,10 +223,10 @@ export default function PracticeCalendar() {
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+            <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
+              <Download className="h-4 w-4 mr-2" />
+              Print Day
+            </Button>
             </div>
           </div>
           <div className="flex gap-2">
@@ -359,6 +361,17 @@ export default function PracticeCalendar() {
           refetch();
           setBlockTimeOpen(false);
         }}
+      />
+
+      <PrintDayDialog
+        open={printDayOpen}
+        onOpenChange={setPrintDayOpen}
+        practiceId={practiceId!}
+        providers={providers}
+        currentDate={currentDate}
+        isProviderAccount={isProviderAccount}
+        currentProviderId={isProviderAccount && providers.length === 1 ? providers[0].id : undefined}
+        currentProviderName={isProviderAccount && providers.length === 1 ? providers[0].name : undefined}
       />
     </div>
   );
