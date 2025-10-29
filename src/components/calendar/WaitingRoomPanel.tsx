@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInMinutes, format } from "date-fns";
 import { Clock, User, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export function WaitingRoomPanel({
   currentDate,
 }: WaitingRoomPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch checked-in appointments
   const { data: waitingPatients = [], refetch } = useQuery({
@@ -103,6 +104,12 @@ export function WaitingRoomPanel({
       },
       successMessage: "Treatment started - patient moved to being treated",
       errorMessage: "Failed to start treatment",
+      onSuccess: () => {
+        // Invalidate Being Treated panel to show patient instantly
+        queryClient.invalidateQueries({
+          queryKey: ["being-treated-appointments", practiceId],
+        });
+      },
     }
   );
 
