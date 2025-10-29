@@ -224,7 +224,7 @@ export function AppSidebar() {
                         {!isCollapsed && (
                           <span className="text-sm sm:text-base flex items-center gap-2 flex-1">
                             {item.title}
-                            {item.isPro && !isSubscribed && (
+                            {item.isPro && !isSubscribed && !isProviderAccount && !isStaffAccount && (
                               <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
                             )}
                           </span>

@@ -56,7 +56,9 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       // to bypass RLS issues during impersonation
       if (effectivePracticeId && effectivePracticeId !== user.id) {
         console.log('[SubscriptionContext] Using edge function for impersonation', { effectivePracticeId });
-        const { data, error } = await supabase.functions.invoke('get-practice-subscription-status');
+        const { data, error } = await supabase.functions.invoke('get-practice-subscription-status', {
+          body: { practiceId: effectivePracticeId }
+        });
         
         if (error) {
           console.error('[SubscriptionContext] Edge function error:', error);

@@ -3,17 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useStaffOrderingPrivileges = () => {
-  const { user, isStaffAccount } = useAuth();
+  const { effectiveUserId, isStaffAccount } = useAuth();
   
   const { data: canOrder = true, isLoading } = useQuery({
-    queryKey: ['staff-ordering-privileges', user?.id],
+    queryKey: ['staff-ordering-privileges', effectiveUserId],
     queryFn: async () => {
-      if (!isStaffAccount || !user?.id) return true;
+      if (!isStaffAccount || !effectiveUserId) return true;
       
       const { data, error } = await supabase
         .from('practice_staff')
         .select('can_order')
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .single();
       
       if (error) {
@@ -23,7 +23,7 @@ export const useStaffOrderingPrivileges = () => {
       
       return data?.can_order ?? false;
     },
-    enabled: isStaffAccount && !!user?.id,
+    enabled: isStaffAccount && !!effectiveUserId,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
   

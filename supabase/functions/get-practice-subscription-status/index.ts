@@ -44,6 +44,18 @@ serve(async (req) => {
     const actorUserId = user.id;
     console.log('[get-practice-subscription-status] Actor user:', actorUserId);
 
+    // Parse optional practiceId hint from request body
+    let hintedPracticeId: string | null = null;
+    try {
+      const body = await req.json();
+      if (body?.practiceId) {
+        hintedPracticeId = body.practiceId;
+        console.log('[get-practice-subscription-status] Received practiceId hint:', hintedPracticeId);
+      }
+    } catch {
+      // No body or invalid JSON, continue without hint
+    }
+
     // Resolve effective practice using same logic as subscribe-to-vitaluxepro
     let practiceId: string | null = null;
 
@@ -130,6 +142,80 @@ serve(async (req) => {
       if (!selfStaffErr && selfStaff?.practice_id) {
         practiceId = selfStaff.practice_id as string;
         console.log('[get-practice-subscription-status] Using self practice_staff.practice_id', { practiceId });
+      }
+    }
+
+    // 5) Validate and use hinted practiceId if still not resolved
+    if (!practiceId && hintedPracticeId) {
+      console.log('[get-practice-subscription-status] Validating hinted practiceId', { hintedPracticeId });
+      
+      // Validate that actor is legitimately related to this practice
+      let isValid = false;
+
+      // Check if impersonation session relates to this practice
+      if (impSession && !isValid) {
+        const exp = impSession.expires_at ? new Date(impSession.expires_at) : null;
+        const isExpired = exp ? exp < new Date() : false;
+        if (!isExpired) {
+          if (impSession.impersonated_role === 'doctor' && impSession.impersonated_user_id === hintedPracticeId) {
+            isValid = true;
+          } else if (impSession.impersonated_role === 'provider') {
+            const { data: impProvider } = await supabaseAdmin
+              .from('providers')
+              .select('practice_id')
+              .eq('user_id', impSession.impersonated_user_id)
+              .eq('practice_id', hintedPracticeId)
+              .maybeSingle();
+            if (impProvider) isValid = true;
+          } else if (impSession.impersonated_role === 'staff') {
+            const { data: impStaff } = await supabaseAdmin
+              .from('practice_staff')
+              .select('practice_id')
+              .eq('user_id', impSession.impersonated_user_id)
+              .eq('practice_id', hintedPracticeId)
+              .maybeSingle();
+            if (impStaff) isValid = true;
+          }
+        }
+      }
+
+      // Check if actor is directly a doctor with matching id
+      if (!isValid && actorUserId === hintedPracticeId) {
+        const { data: userRoles } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', actorUserId);
+        if (userRoles?.some((r: any) => r.role === 'doctor')) {
+          isValid = true;
+        }
+      }
+
+      // Check if actor is provider/staff related to this practice
+      if (!isValid) {
+        const { data: actorProvider } = await supabaseAdmin
+          .from('providers')
+          .select('practice_id')
+          .eq('user_id', actorUserId)
+          .eq('practice_id', hintedPracticeId)
+          .maybeSingle();
+        if (actorProvider) isValid = true;
+      }
+
+      if (!isValid) {
+        const { data: actorStaff } = await supabaseAdmin
+          .from('practice_staff')
+          .select('practice_id')
+          .eq('user_id', actorUserId)
+          .eq('practice_id', hintedPracticeId)
+          .maybeSingle();
+        if (actorStaff) isValid = true;
+      }
+
+      if (isValid) {
+        practiceId = hintedPracticeId;
+        console.log('[get-practice-subscription-status] Using validated hinted practiceId', { practiceId });
+      } else {
+        console.warn('[get-practice-subscription-status] Hinted practiceId failed validation', { hintedPracticeId });
       }
     }
 
