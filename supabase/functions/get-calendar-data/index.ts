@@ -20,6 +20,15 @@ Deno.serve(async (req) => {
       throw new Error('Missing required fields: practiceId, startDate, endDate');
     }
 
+    // Check if logged-in user is a provider
+    const { data: providerRecord } = await supabaseClient
+      .from('providers')
+      .select('id, practice_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const isProviderUser = !!providerRecord;
+
     // Build query
     let query = supabaseClient
       .from('patient_appointments')
@@ -33,6 +42,11 @@ Deno.serve(async (req) => {
       .gte('start_time', startDate)
       .lte('start_time', endDate)
       .order('start_time', { ascending: true });
+
+    // If user is a provider, filter to only their appointments
+    if (isProviderUser && providerRecord) {
+      query = query.eq('provider_id', providerRecord.id);
+    }
 
     // Apply filters
     if (providers && providers.length > 0) {
@@ -61,46 +75,71 @@ Deno.serve(async (req) => {
       .eq('practice_id', practiceId)
       .maybeSingle();
 
-    // Get all providers for the practice (step 1)
-    const { data: providerRecords } = await supabaseClient
-      .from('providers')
-      .select('id, user_id, active')
-      .eq('practice_id', practiceId)
-      .eq('active', true);
-
+    // Get providers based on user type
     let transformedProviders: any[] = [];
     
-    if (providerRecords && providerRecords.length > 0) {
-      // Get profiles for those provider user accounts (step 2)
-      const userIds = providerRecords.map(p => p.user_id);
-      const { data: providerProfiles } = await supabaseClient
+    if (isProviderUser && providerRecord) {
+      // Provider users only see themselves in the provider list
+      const { data: providerProfile } = await supabaseClient
         .from('profiles')
         .select('id, name, full_name')
-        .in('id', userIds);
+        .eq('id', user.id)
+        .single();
 
-      // Map profiles by id for quick lookup
-      const profilesById = new Map(
-        (providerProfiles || []).map(prof => [prof.id, prof])
-      );
-
-      // Build transformed providers with correct names
-      transformedProviders = providerRecords.map((p: any) => {
-        const profile = profilesById.get(p.user_id);
-        const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
+      if (providerProfile) {
+        const displayName = providerProfile.full_name || providerProfile.name || 'Unknown Provider';
         const nameParts = displayName.trim().split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
         
-        return {
-          id: p.id,
-          user_id: p.user_id,
-          active: p.active,
-          first_name: firstName,
-          last_name: lastName,
+        transformedProviders = [{
+          id: providerRecord.id,
+          user_id: user.id,
+          active: true,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
           full_name: displayName,
           specialty: null
-        };
-      });
+        }];
+      }
+    } else {
+      // Practice owners/staff see all providers (step 1)
+      const { data: providerRecords } = await supabaseClient
+        .from('providers')
+        .select('id, user_id, active')
+        .eq('practice_id', practiceId)
+        .eq('active', true);
+      
+      if (providerRecords && providerRecords.length > 0) {
+        // Get profiles for those provider user accounts (step 2)
+        const userIds = providerRecords.map(p => p.user_id);
+        const { data: providerProfiles } = await supabaseClient
+          .from('profiles')
+          .select('id, name, full_name')
+          .in('id', userIds);
+
+        // Map profiles by id for quick lookup
+        const profilesById = new Map(
+          (providerProfiles || []).map(prof => [prof.id, prof])
+        );
+
+        // Build transformed providers with correct names
+        transformedProviders = providerRecords.map((p: any) => {
+          const profile = profilesById.get(p.user_id);
+          const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
+          const nameParts = displayName.trim().split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
+          return {
+            id: p.id,
+            user_id: p.user_id,
+            active: p.active,
+            first_name: firstName,
+            last_name: lastName,
+            full_name: displayName,
+            specialty: null
+          };
+        });
+      }
     }
 
     // Get all rooms for the practice

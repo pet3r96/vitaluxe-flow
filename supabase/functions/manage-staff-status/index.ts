@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
         console.log(`[manage-staff-status] Staff not found by user_id, trying by id`);
         const fallback = await supabase
           .from('practice_staff')
-          .select('practice_id, user_id')
+          .select('practice_id, id')
           .eq('id', staffId)
           .maybeSingle();
         
