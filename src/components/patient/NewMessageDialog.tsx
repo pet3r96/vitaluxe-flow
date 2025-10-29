@@ -36,7 +36,7 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
         .from("patient_accounts")
         .select("*, profiles!patient_accounts_practice_id_fkey(name, address_city, address_state)")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -64,7 +64,10 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
       onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to send message");
+      const bodyError = error?.context?.body?.error || error?.context?.body?.message;
+      const isNetwork = error?.name === 'FunctionsFetchError' || /Failed to send a request/i.test(error?.message ?? '');
+      const msg = bodyError || (isNetwork ? "We couldn't reach the messaging service. Please try again in a moment." : (error?.message || "Failed to send message"));
+      toast.error(msg);
     },
   });
 

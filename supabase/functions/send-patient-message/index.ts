@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       .from('patient_accounts')
       .select('id, practice_id')
       .eq('user_id', effectiveUserId)
-      .single();
+      .maybeSingle();
 
     console.log('Patient account lookup:', { patientAccount, error: patientError });
 
