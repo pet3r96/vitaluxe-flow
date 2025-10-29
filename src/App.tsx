@@ -231,8 +231,8 @@ const App = () => (
                                     <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                     <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                     <Route path="/shipping" element={<PharmacyShipping />} />
-                                    <Route path="/appointments" element={<SubscriptionProtectedRoute><PatientAppointments /></SubscriptionProtectedRoute>} />
-                                    <Route path="/medical-vault" element={<SubscriptionProtectedRoute><PatientMedicalVault /></SubscriptionProtectedRoute>} />
+                                    <Route path="/appointments" element={<PatientAppointments />} />
+                                    <Route path="/medical-vault" element={<PatientMedicalVault />} />
                                     <Route path="/documents" element={<PatientDocuments />} />
                                     <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
                                     <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
