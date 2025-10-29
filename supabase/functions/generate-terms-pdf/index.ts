@@ -542,6 +542,31 @@ serve(async (req) => {
       console.log('Terms PDF uploaded to Supabase Storage:', fileName);
     }
 
+    // Determine the target user's role
+    let userRole = 'patient'; // Default to patient
+    
+    // Check if user is a patient
+    const { data: patientAccount } = await supabase
+      .from('patient_accounts')
+      .select('user_id')
+      .eq('user_id', targetUserId)
+      .maybeSingle();
+    
+    if (patientAccount) {
+      userRole = 'patient';
+    } else {
+      // Check user_roles table for provider/admin/rep
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+      
+      if (roleData?.role) {
+        userRole = roleData.role;
+      }
+    }
+    
     // Record acceptance in database (for target user)
     // Use upsert to handle cases where user re-accepts terms
     const { data: acceptance, error: acceptanceError } = await supabase
@@ -549,7 +574,7 @@ serve(async (req) => {
       .upsert({
         user_id: targetUserId,
         terms_id: terms.id,
-        role: terms.role,
+        role: userRole,
         terms_version: terms.version,
         signature_name,
         signed_pdf_url: fileName,
