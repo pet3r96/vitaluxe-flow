@@ -51,8 +51,8 @@ export function WaitingRoomPanel({
         `)
         .eq("practice_id", practiceId)
         .eq("status", "checked_in")
-        .gte("start_time", startOfDay.toISOString())
-        .lte("start_time", endOfDay.toISOString())
+        .gte("checked_in_at", startOfDay.toISOString())
+        .lte("checked_in_at", endOfDay.toISOString())
         .order("checked_in_at", { ascending: true });
 
       if (error) throw error;
