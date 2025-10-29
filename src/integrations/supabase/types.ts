@@ -3753,6 +3753,7 @@ export type Database = {
       practice_staff: {
         Row: {
           active: boolean
+          can_order: boolean
           created_at: string
           id: string
           practice_id: string
@@ -3762,6 +3763,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          can_order?: boolean
           created_at?: string
           id?: string
           practice_id: string
@@ -3771,6 +3773,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          can_order?: boolean
           created_at?: string
           id?: string
           practice_id?: string

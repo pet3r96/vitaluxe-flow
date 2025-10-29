@@ -3,11 +3,49 @@ import { ToplineProductVisibilityManager } from "@/components/products/ToplinePr
 import { PharmacyProductsGrid } from "@/components/products/PharmacyProductsGrid";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Products = () => {
   const { effectiveRole } = useAuth();
+  const { canOrder, isLoading, isStaffAccount } = useStaffOrderingPrivileges();
   const isTopline = effectiveRole === "topline";
   const isPharmacy = effectiveRole === "pharmacy";
+
+  // Show loading skeleton while checking staff privileges
+  if (isLoading && isStaffAccount) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Product Management</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+            Loading...
+          </p>
+        </div>
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    );
+  }
+
+  // Staff without ordering privileges cannot access products
+  if (isStaffAccount && !canOrder) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Product Management</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+            Access restricted
+          </p>
+        </div>
+        <Alert>
+          <AlertDescription>
+            You don't have permission to access products or place orders. Please contact your practice administrator to request ordering privileges.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   if (isPharmacy) {
     return (

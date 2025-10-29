@@ -20,9 +20,11 @@ import { AddCreditCardDialog } from "@/components/profile/AddCreditCardDialog";
 import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
 import { logger } from "@/lib/logger";
+import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Checkout() {
-  const { effectiveUserId, user } = useAuth();
+  const { effectiveUserId, effectivePracticeId, user, isStaffAccount } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -30,6 +32,7 @@ export default function Checkout() {
   const [uploadingPrescriptions, setUploadingPrescriptions] = useState<Record<string, boolean>>({});
   const [prescriptionFiles, setPrescriptionFiles] = useState<Record<string, File>>({});
   const [prescriptionPreviews, setPrescriptionPreviews] = useState<Record<string, string>>({});
+  const { canOrder, isLoading: checkingPrivileges } = useStaffOrderingPrivileges();
   
   // Payment method state
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>("");
@@ -46,6 +49,45 @@ export default function Checkout() {
   // Get merchant fee
   const { calculateMerchantFee } = useMerchantFee();
   const merchantFeePercentage = location.state?.merchantFeePercentage || 3.75;
+
+  // Staff without ordering privileges cannot access checkout
+  if (checkingPrivileges && isStaffAccount) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
+  }
+
+  if (isStaffAccount && !canOrder) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Checkout</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>
+                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
+              </AlertDescription>
+            </Alert>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/cart')}
+              className="mt-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Cart
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // For staff members with ordering privileges, use practice payment methods
+  const practiceIdForPayment = isStaffAccount ? effectivePracticeId : effectiveUserId;
 
   // Track component mount state to prevent operations during navigation
   const [isMounted, setIsMounted] = useState(true);
@@ -190,14 +232,14 @@ export default function Checkout() {
     enabled: !!effectiveUserId,
   });
 
-  // Fetch payment methods (credit cards only)
+  // Fetch payment methods (credit cards only) - use practice payment methods for staff
   const { data: paymentMethods } = useQuery({
-    queryKey: ["payment-methods", effectiveUserId],
+    queryKey: ["payment-methods", practiceIdForPayment],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("practice_payment_methods")
         .select("*")
-        .eq("practice_id", effectiveUserId)
+        .eq("practice_id", practiceIdForPayment)
         .eq("payment_type", "credit_card")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });

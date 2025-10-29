@@ -12,6 +12,9 @@ import { DiscountCodeInput } from "@/components/orders/DiscountCodeInput";
 import { ShippingSpeedSelector } from "@/components/cart/ShippingSpeedSelector";
 import { Separator } from "@/components/ui/separator";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
+import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Cart() {
   const { effectiveUserId, user } = useAuth();
@@ -21,6 +24,38 @@ export default function Cart() {
   const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const { feePercentage, calculateMerchantFee } = useMerchantFee();
+  const { canOrder, isLoading: checkingPrivileges, isStaffAccount } = useStaffOrderingPrivileges();
+
+  // Staff without ordering privileges cannot access cart
+  if (checkingPrivileges && isStaffAccount) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    );
+  }
+
+  if (isStaffAccount && !canOrder) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-6 w-6" />
+              Cart
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>
+                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],

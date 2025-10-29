@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -43,6 +44,7 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
     email: "",
     phone: "",
     roleType: "",
+    canOrder: false,
   });
 
   const { data: practices } = useQuery({
@@ -76,6 +78,7 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
       email: "",
       phone: "",
       roleType: "",
+      canOrder: false,
     });
     setSelectedPractice(practiceId || "");
   };
@@ -134,6 +137,7 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
             practiceId: targetPracticeId,
             roleType: formData.roleType,
             phone: formData.phone,
+            canOrder: formData.canOrder,
           }
         },
         headers: {
@@ -245,6 +249,26 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="canOrder" className="font-medium">
+                  Ordering Privileges
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow this staff member to place orders on behalf of the practice
+                </p>
+              </div>
+              <Switch
+                id="canOrder"
+                checked={formData.canOrder}
+                onCheckedChange={(checked) => 
+                  setFormData({ ...formData, canOrder: checked })
+                }
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2">

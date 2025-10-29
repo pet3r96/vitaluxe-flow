@@ -153,6 +153,7 @@ export const StaffDataTable = () => {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Role Type</TableHead>
+              <TableHead>Ordering</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -167,6 +168,11 @@ export const StaffDataTable = () => {
                   <TableCell>{staffMember.profiles?.phone || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{staffMember.role_type}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={staffMember.can_order ? "default" : "secondary"}>
+                      {staffMember.can_order ? "Allowed" : "Restricted"}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={staffMember.active ? "default" : "secondary"}>
@@ -195,7 +201,7 @@ export const StaffDataTable = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   No staff members found. Add your first staff member to get started.
                 </TableCell>
               </TableRow>

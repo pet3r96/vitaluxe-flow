@@ -22,7 +22,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const refreshSubscription = async () => {
-    if (!user?.id || (effectiveRole !== 'doctor' && effectiveRole !== 'provider')) {
+    // Allow doctor, provider, and staff roles (staff inherit practice subscription via effectivePracticeId)
+    if (!user?.id || !effectivePracticeId) {
       setSubscriptionStatus({
         isSubscribed: false,
         status: null,
