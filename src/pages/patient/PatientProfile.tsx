@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,16 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, Bell } from "lucide-react";
+import { Loader2, Mail, Lock, Bell, CheckCircle2 } from "lucide-react";
 import { ChangePasswordDialog } from "@/components/patient/ChangePasswordDialog";
 import { NotificationPreferencesDialog } from "@/components/notifications/NotificationPreferencesDialog";
 import { ActivityLogSection } from "@/components/patient/ActivityLogSection";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
+import { validatePhone } from "@/lib/validators";
 
 export default function PatientProfile() {
   const { effectiveUserId } = useAuth();
   const [editing, setEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
+  const [addressValue, setAddressValue] = useState<AddressValue>({});
 
   const { data: profile, refetch, isLoading, error } = useQuery({
     queryKey: ["patient-profile", effectiveUserId],
@@ -33,6 +39,29 @@ export default function PatientProfile() {
       return data;
     },
   });
+
+  // Initialize state from profile data
+  useEffect(() => {
+    if (profile) {
+      setPhone(profile.phone || "");
+      setEmergencyPhone(profile.emergency_contact_phone || "");
+      
+      // Initialize address value from profile
+      if (profile.address) {
+        setAddressValue({
+          street: profile.address || "",
+          city: profile.city || "",
+          state: profile.state || "",
+          zip: profile.zip_code || "",
+          formatted: profile.address ? 
+            `${profile.address}${profile.city ? ', ' + profile.city : ''}${profile.state ? ', ' + profile.state : ''}${profile.zip_code ? ' ' + profile.zip_code : ''}` 
+            : "",
+          status: "verified",
+          source: "manual"
+        });
+      }
+    }
+  }, [profile]);
 
   const updateMutation = useMutation({
     mutationFn: async (updates: any) => {
@@ -58,17 +87,40 @@ export default function PatientProfile() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+
+    // Validate phone numbers before submission
+    const phoneValidation = validatePhone(phone);
+    if (!phoneValidation.valid) {
+      toast.error(phoneValidation.error || "Invalid phone number");
+      return;
+    }
+
+    // Validate emergency contact phone if provided
+    if (emergencyPhone && emergencyPhone !== "") {
+      const emergencyPhoneValidation = validatePhone(emergencyPhone);
+      if (!emergencyPhoneValidation.valid) {
+        toast.error("Invalid emergency contact phone: " + emergencyPhoneValidation.error);
+        return;
+      }
+    }
+
+    // Validate address if changed
+    if (addressValue.street && addressValue.status !== "verified") {
+      toast.error("Please select a valid address from the suggestions");
+      return;
+    }
+
     updateMutation.mutate({
       first_name: formData.get("first_name"),
       last_name: formData.get("last_name"),
-      phone: formData.get("phone"),
+      phone: phone,
       date_of_birth: formData.get("date_of_birth"),
-      address: formData.get("address"),
-      city: formData.get("city"),
-      state: formData.get("state"),
-      zip_code: formData.get("zip_code"),
+      address: addressValue.street || "",
+      city: addressValue.city || "",
+      state: addressValue.state || "",
+      zip_code: addressValue.zip || "",
       emergency_contact_name: formData.get("emergency_contact_name"),
-      emergency_contact_phone: formData.get("emergency_contact_phone"),
+      emergency_contact_phone: emergencyPhone,
     });
   };
 
@@ -214,12 +266,11 @@ export default function PatientProfile() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input
+                  <PhoneInput
                     id="phone"
                     name="phone"
-                    type="tel"
-                    defaultValue={profile?.phone || ''}
-                    placeholder="(555) 123-4567"
+                    value={phone}
+                    onChange={setPhone}
                     disabled={!editing}
                     required
                   />
@@ -232,52 +283,48 @@ export default function PatientProfile() {
           <Card>
             <CardHeader>
               <CardTitle>Address</CardTitle>
-              <CardDescription>Your mailing address</CardDescription>
+              <CardDescription>Your mailing address - validated with Google</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="address">Street Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  defaultValue={profile?.address || ''}
-                  placeholder="123 Main Street"
-                  disabled={!editing}
-                />
-              </div>
+              <GoogleAddressAutocomplete
+                value={addressValue}
+                onChange={setAddressValue}
+                label="Street Address"
+                disabled={!editing}
+                placeholder="Start typing your address..."
+              />
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    name="city"
-                    defaultValue={profile?.city || ''}
-                    placeholder="City"
-                    disabled={!editing}
-                  />
+              {addressValue.street && (
+                <div className="grid gap-4 md:grid-cols-3 pt-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">City</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{addressValue.city || "-"}</p>
+                      {addressValue.status === "verified" && (
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">State</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{addressValue.state || "-"}</p>
+                      {addressValue.status === "verified" && (
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">ZIP Code</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{addressValue.zip || "-"}</p>
+                      {addressValue.status === "verified" && (
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    name="state"
-                    defaultValue={profile?.state || ''}
-                    placeholder="State"
-                    disabled={!editing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">ZIP Code</Label>
-                  <Input
-                    id="zip_code"
-                    name="zip_code"
-                    defaultValue={profile?.zip_code || ''}
-                    placeholder="12345"
-                    disabled={!editing}
-                  />
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -301,12 +348,11 @@ export default function PatientProfile() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="emergency_contact_phone">Contact Phone</Label>
-                  <Input
+                  <PhoneInput
                     id="emergency_contact_phone"
                     name="emergency_contact_phone"
-                    type="tel"
-                    defaultValue={profile?.emergency_contact_phone || ''}
-                    placeholder="(555) 123-4567"
+                    value={emergencyPhone}
+                    onChange={setEmergencyPhone}
                     disabled={!editing}
                   />
                 </div>
