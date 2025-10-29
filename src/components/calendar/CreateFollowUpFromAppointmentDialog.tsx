@@ -226,11 +226,9 @@ export function CreateFollowUpFromAppointmentDialog({
                 onValueChange={(value) => setValue("assigned_to", value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select staff member" />
+                  <SelectValue placeholder="Unassigned - Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
-                  
                   {(staffMembers as any)?.filter?.((s: any) => s.role === "admin")?.length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
