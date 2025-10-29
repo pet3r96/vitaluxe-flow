@@ -175,7 +175,7 @@ export function DayView({
 
       <div 
         ref={scrollRef} 
-        className="flex-1 overflow-y-auto pt-4 pb-20"
+        className="flex-1 overflow-y-auto pt-12 pb-20"
         style={{ height: `${HOUR_HEIGHT * (safeEnd - safeStart)}px` }}
       >
         <div className="flex relative">
