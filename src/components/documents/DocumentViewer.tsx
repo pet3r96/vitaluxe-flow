@@ -38,16 +38,36 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
   };
 
   const downloadDocument = async () => {
-    const { data, error } = await supabase.storage
-      .from("provider-documents")
-      .createSignedUrl(document.storage_path, 60);
+    try {
+      const { data, error } = await supabase.storage
+        .from("provider-documents")
+        .createSignedUrl(document.storage_path, 60);
 
-    if (error || !data) {
+      if (error || !data) {
+        toast.error("Failed to download document");
+        return;
+      }
+
+      // Download the file as a blob for HIPAA compliance
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = document.document_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Document downloaded");
+    } catch (error) {
       toast.error("Failed to download document");
-      return;
     }
-
-    window.open(data.signedUrl, "_blank");
   };
 
   const isPDF = document?.mime_type === "application/pdf";
