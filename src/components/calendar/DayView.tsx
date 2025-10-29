@@ -72,6 +72,19 @@ export function DayView({
     const top = ((startMinutes - (startHour * 60)) / 60) * slotHeight;
     const height = ((endMinutes - startMinutes) / 60) * slotHeight;
     
+    console.log('🗓️ Day View Appointment Debug:', {
+      rawStartTime: appointment.start_time,
+      rawEndTime: appointment.end_time,
+      parsedStart: start.toLocaleString(),
+      parsedEnd: end.toLocaleString(),
+      startHour,
+      startMinutes,
+      endMinutes,
+      calculatedTop: top,
+      calculatedHeight: height,
+      patientName: appointment.patient_name
+    });
+    
     return {
       top: `${top}px`,
       height: `${Math.max(height, 50)}px`,
