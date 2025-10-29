@@ -16,7 +16,7 @@ export default function PatientProfile() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
-  const { data: profile, refetch } = useQuery({
+  const { data: profile, refetch, isLoading } = useQuery({
     queryKey: ["patient-profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -74,6 +74,14 @@ export default function PatientProfile() {
 
   const hasIncompleteProfile = profile && (!profile.first_name || !profile.last_name || !profile.date_of_birth || !profile.address);
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -111,7 +119,7 @@ export default function PatientProfile() {
         </CardContent>
       </Card>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} key={profile?.id}>
         <div className="grid gap-6">
           {/* Personal Information Section */}
           <Card>
