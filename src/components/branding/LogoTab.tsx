@@ -31,10 +31,11 @@ export function LogoTab() {
 
       if (error) throw error;
       
-      // Set practice name from database
-      if (data?.practice_name) {
-        setPracticeName(data.practice_name);
-      }
+      // Set practice name from database (rehydrate even if empty string)
+      setPracticeName(data?.practice_name ?? "");
+      
+      // Diagnostic log
+      console.info("[LogoTab] Loaded branding for practice:", effectivePracticeId, data);
       
       return data;
     },
@@ -85,8 +86,20 @@ export function LogoTab() {
 
       return { publicUrl, filePath };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["practice-branding"] });
+    onSuccess: ({ publicUrl, filePath }) => {
+      // Optimistically update cache immediately
+      queryClient.setQueryData(["practice-branding", effectivePracticeId], (prev: any) => ({
+        ...(prev || {}),
+        practice_id: effectivePracticeId,
+        logo_url: publicUrl,
+        logo_storage_path: filePath,
+        practice_name: practiceName || null,
+        updated_at: new Date().toISOString(),
+      }));
+      
+      // Invalidate with specific key
+      queryClient.invalidateQueries({ queryKey: ["practice-branding", effectivePracticeId] });
+      
       toast({
         title: "Success",
         description: "Logo uploaded! It will now appear on all generated PDFs",
@@ -126,7 +139,18 @@ export function LogoTab() {
       if (dbError) throw dbError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["practice-branding"] });
+      // Optimistically update cache immediately
+      queryClient.setQueryData(["practice-branding", effectivePracticeId], (prev: any) => ({
+        ...(prev || {}),
+        logo_url: null,
+        logo_storage_path: null,
+        practice_name: practiceName || null,
+        updated_at: new Date().toISOString(),
+      }));
+      
+      // Invalidate with specific key
+      queryClient.invalidateQueries({ queryKey: ["practice-branding", effectivePracticeId] });
+      
       toast({
         title: "Logo removed",
         description: "PDFs will now use text-only headers",
@@ -159,8 +183,17 @@ export function LogoTab() {
       if (error) throw error;
       return newName;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["practice-branding"] });
+    onSuccess: (newName) => {
+      // Optimistically update cache immediately
+      queryClient.setQueryData(["practice-branding", effectivePracticeId], (prev: any) => ({
+        ...(prev || {}),
+        practice_id: effectivePracticeId,
+        practice_name: newName || null,
+        updated_at: new Date().toISOString(),
+      }));
+      
+      // Invalidate with specific key
+      queryClient.invalidateQueries({ queryKey: ["practice-branding", effectivePracticeId] });
     },
     onError: (error: Error) => {
       toast({
