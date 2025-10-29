@@ -271,7 +271,7 @@ export function LogoTab() {
               value={practiceName}
               onChange={(e) => setPracticeName(e.target.value)}
               placeholder="Leave blank for white-label (logo only)"
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <p className="text-xs text-muted-foreground">
               This name will appear next to your logo on PDFs. Leave blank to show only your logo.
