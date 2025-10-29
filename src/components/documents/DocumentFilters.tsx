@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DocumentFiltersProps {
   filters: {
@@ -22,30 +23,59 @@ interface DocumentFiltersProps {
 }
 
 export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersProps) {
+  // Get effectivePracticeId from context
+  const { effectivePracticeId } = useAuth();
+
   const { data: patients } = useQuery({
-    queryKey: ["patients-select"],
+    queryKey: ["patients-select", effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) return [];
       const { data, error } = await supabase
         .from("patients" as any)
         .select("id, first_name, last_name")
+        .eq("practice_id", effectivePracticeId)
         .order("last_name");
       if (error) throw error;
       return data as any[];
     },
+    enabled: !!effectivePracticeId,
   });
 
   const { data: staff } = useQuery({
-    queryKey: ["staff-users"],
+    queryKey: ["staff-users", effectivePracticeId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .or("role.eq.admin,role.eq.provider")
-        .order("full_name");
+      if (!effectivePracticeId) return [];
       
-      if (error) throw error;
-      return data;
+      // Get practice staff
+      const { data: staffData, error: staffError } = await supabase
+        .from("practice_staff")
+        .select("user_id, profiles!inner(id, full_name)")
+        .eq("practice_id", effectivePracticeId);
+      
+      if (staffError) throw staffError;
+
+      // Get providers
+      const { data: providerData, error: providerError } = await supabase
+        .from("providers")
+        .select("user_id, profiles!inner(id, full_name)")
+        .eq("practice_id", effectivePracticeId);
+      
+      if (providerError) throw providerError;
+
+      // Combine and dedupe
+      const allStaff = [
+        ...(staffData?.map((s: any) => ({ id: s.profiles.id, full_name: s.profiles.full_name })) || []),
+        ...(providerData?.map((p: any) => ({ id: p.profiles.id, full_name: p.profiles.full_name })) || []),
+      ];
+      
+      // Remove duplicates based on id
+      const uniqueStaff = allStaff.filter((staff, index, self) =>
+        index === self.findIndex((s) => s.id === staff.id)
+      );
+      
+      return uniqueStaff.sort((a, b) => a.full_name.localeCompare(b.full_name));
     },
+    enabled: !!effectivePracticeId,
   });
 
   const handleReset = () => {

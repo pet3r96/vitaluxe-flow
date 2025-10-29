@@ -123,6 +123,17 @@ export function DocumentCard({ document }: DocumentCardProps) {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Scope Badge - Practice vs Patient */}
+            {document.assigned_patient_id ? (
+              <Badge className="bg-green-500 text-white">
+                Patient Document
+              </Badge>
+            ) : (
+              <Badge className="bg-blue-500 text-white">
+                Practice Document
+              </Badge>
+            )}
+            
             <Badge className={getStatusColor(document.status)}>
               {document.status}
             </Badge>
@@ -134,8 +145,8 @@ export function DocumentCard({ document }: DocumentCardProps) {
           </div>
 
           {document.patients && (
-            <div className="text-sm text-muted-foreground">
-              Assigned to: {document.patients.first_name} {document.patients.last_name}
+            <div className="text-sm font-medium text-muted-foreground">
+              Patient: {document.patients.first_name} {document.patients.last_name}
             </div>
           )}
 

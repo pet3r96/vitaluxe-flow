@@ -29,13 +29,6 @@ export function RecentActivityWidget({ className }: { className?: string }) {
         .order("updated_at", { ascending: false })
         .limit(5) as any;
 
-      // Get recent form submissions
-      const { data: forms } = await supabase
-        .from("patient_form_submissions" as any)
-        .select("id, status, updated_at, practice_forms(form_name)")
-        .order("updated_at", { ascending: false })
-        .limit(5) as any;
-
       // Combine and sort all activities
       const combined: any[] = [];
 
@@ -63,15 +56,6 @@ export function RecentActivityWidget({ className }: { className?: string }) {
           icon: FileText,
           description: `Document "${doc.document_name}" ${doc.status}`,
           time: doc.updated_at,
-        });
-      });
-
-      forms?.forEach((form) => {
-        combined.push({
-          type: "form",
-          icon: CheckCircle,
-          description: `Form "${form.practice_forms?.form_name}" ${form.status}`,
-          time: form.updated_at,
         });
       });
 

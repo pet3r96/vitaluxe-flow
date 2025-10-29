@@ -21,8 +21,8 @@ export function QuickActionsPanel() {
     },
     {
       icon: FileText,
-      label: "Documents & Forms (Manage files and forms)",
-      onClick: () => navigate("/documents-and-forms"),
+      label: "Document Center (Manage practice and patient files)",
+      onClick: () => navigate("/document-center"),
       color: "text-green-600",
     },
     {

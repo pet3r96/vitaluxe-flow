@@ -107,7 +107,7 @@ const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding")
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
-const DocumentsAndForms = lazy(() => import("./pages/practice/DocumentsAndForms"));
+const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
@@ -235,7 +235,7 @@ const App = () => (
                                     <Route path="/medical-vault" element={<SubscriptionProtectedRoute><PatientMedicalVault /></SubscriptionProtectedRoute>} />
                                     <Route path="/documents" element={<PatientDocuments />} />
                                     <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
-                                    <Route path="/documents-and-forms" element={<SubscriptionProtectedRoute><DocumentsAndForms /></SubscriptionProtectedRoute>} />
+                                    <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                     <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
                                     <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
                                     <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
