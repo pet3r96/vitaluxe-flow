@@ -767,9 +767,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ]);
 
       // Process role
-      const role = roleResult.status === 'fulfilled' && roleResult.value.data?.role 
+      let role: string | null = roleResult.status === 'fulfilled' && roleResult.value.data?.role 
         ? roleResult.value.data.role 
         : null;
+      
+      // If no role found in user_roles, check if user is a patient
+      if (!role) {
+        logger.info('No role in user_roles, checking patient_accounts');
+        const { data: patientData } = await supabase
+          .from('patient_accounts')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (patientData) {
+          logger.info('User identified as patient via patient_accounts');
+          role = 'patient';
+        }
+      }
       
       if (!role) throw new Error('No role found');
       

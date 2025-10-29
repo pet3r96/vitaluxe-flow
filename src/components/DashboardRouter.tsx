@@ -11,6 +11,8 @@ const LoadingFallback = () => (
   </div>
 );
 
+const PatientDashboard = lazy(() => import("@/pages/patient/PatientDashboard"));
+
 export default function DashboardRouter() {
   const { effectiveRole } = useAuth();
   
@@ -18,6 +20,8 @@ export default function DashboardRouter() {
     <Suspense fallback={<LoadingFallback />}>
       {effectiveRole === 'topline' || effectiveRole === 'downline' ? (
         <RepDashboard />
+      ) : effectiveRole === 'patient' ? (
+        <PatientDashboard />
       ) : (
         <Dashboard />
       )}
