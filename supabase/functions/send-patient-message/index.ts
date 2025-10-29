@@ -14,6 +14,8 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    console.log('User authenticated:', user.id);
+
     const { subject, message } = await req.json();
 
     if (!message?.trim()) throw new Error('Message body is required');
@@ -25,6 +27,8 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
+    console.log('Patient account lookup:', { patientAccount, error: patientError });
+
     if (patientError || !patientAccount) {
       throw new Error('Patient account not found');
     }
@@ -33,19 +37,28 @@ Deno.serve(async (req) => {
       throw new Error('No practice assigned to your account');
     }
 
+    const insertPayload = {
+      patient_id: patientAccount.id,
+      practice_id: patientAccount.practice_id,
+      sender_id: user.id,
+      sender_type: 'patient',
+      message_body: message,
+      subject: subject || 'Patient Message',
+      read_at: null
+    };
+
+    console.log('Attempting to insert message:', insertPayload);
+
     const { error } = await supabaseClient
       .from('patient_messages')
-      .insert({
-        patient_id: patientAccount.id,
-        practice_id: patientAccount.practice_id,
-        sender_id: user.id,
-        sender_type: 'patient',
-        message_body: message,
-        subject: subject || 'Patient Message',
-        read_at: null
-      });
+      .insert(insertPayload);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database insert error:', error);
+      throw new Error(`Failed to send message: ${error.message || 'Unknown database error'}`);
+    }
+
+    console.log('Message sent successfully');
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
