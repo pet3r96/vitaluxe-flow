@@ -96,10 +96,24 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Generating branding preview PDF for user: ${user.id}`);
+    // Check for active impersonation
+    let effectivePracticeId = user.id;
+
+    const { data: impersonation } = await supabase
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .maybeSingle();
+
+    if (impersonation?.impersonated_user_id) {
+      effectivePracticeId = impersonation.impersonated_user_id;
+      console.log(`Using impersonated practice: ${effectivePracticeId}`);
+    }
+
+    console.log(`Generating branding preview PDF for user: ${user.id}${effectivePracticeId !== user.id ? ` (impersonating: ${effectivePracticeId})` : ''}`);
 
     // Fetch practice branding
-    const { logoUrl, practiceName } = await getPracticeBranding(supabase, user.id);
+    const { logoUrl, practiceName } = await getPracticeBranding(supabase, effectivePracticeId);
     
     const displayName = practiceName || "VITALUXE SERVICES LLC";
     console.log(`Using practice name: ${displayName}, Logo URL: ${logoUrl}`);
