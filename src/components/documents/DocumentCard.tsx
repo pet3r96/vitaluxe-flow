@@ -164,7 +164,19 @@ export function DocumentCard({ document }: DocumentCardProps) {
             ))}
           </div>
 
-          {document.patients && (
+          {/* Display assigned patients as badges */}
+          {document.provider_document_patients && document.provider_document_patients.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {document.provider_document_patients.map((assignment: any) => (
+                <Badge key={assignment.patient_id} variant="outline" className="text-xs">
+                  👤 {assignment.patients?.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+          
+          {/* Legacy single-patient assignment (if still used) */}
+          {document.patients && !document.provider_document_patients?.length && (
             <div className="text-sm font-medium text-muted-foreground">
               Patient: {document.patients.name}
             </div>

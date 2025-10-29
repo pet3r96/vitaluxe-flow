@@ -54,7 +54,10 @@ serve(async (req) => {
 
     const { documentId, patientIds, message } = await req.json();
 
+    console.log('Assign document request:', { documentId, patientIds, message, effectivePracticeId });
+
     if (!documentId || !patientIds || !Array.isArray(patientIds) || patientIds.length === 0) {
+      console.error('Invalid request parameters:', { documentId, patientIds });
       return new Response(
         JSON.stringify({ error: 'documentId and patientIds (array) are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -69,6 +72,7 @@ serve(async (req) => {
       .single();
 
     if (!docCheck || docCheck.practice_id !== effectivePracticeId) {
+      console.error('Document access denied:', { docCheck, effectivePracticeId });
       return new Response(
         JSON.stringify({ error: 'Document not found or access denied' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -82,6 +86,11 @@ serve(async (req) => {
       .in('id', patientIds);
 
     if (!patientsCheck || patientsCheck.length !== patientIds.length) {
+      console.error('Patient verification failed:', { 
+        requested: patientIds.length, 
+        found: patientsCheck?.length,
+        patientIds 
+      });
       return new Response(
         JSON.stringify({ error: 'One or more patients not found' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -90,6 +99,7 @@ serve(async (req) => {
 
     const invalidPatients = patientsCheck.filter(p => p.practice_id !== effectivePracticeId);
     if (invalidPatients.length > 0) {
+      console.error('Invalid patients for practice:', { invalidPatients, effectivePracticeId });
       return new Response(
         JSON.stringify({ error: 'Access denied to one or more patients' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

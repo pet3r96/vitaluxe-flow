@@ -34,7 +34,11 @@ export function DocumentsTab() {
         .from("provider_documents" as any)
         .select(`
           *,
-          patients(name)
+          patients(name),
+          provider_document_patients(
+            patient_id,
+            patients(name)
+          )
         `)
         .eq("practice_id", effectivePracticeId)
         .order("created_at", { ascending: false });

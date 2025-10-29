@@ -33,7 +33,7 @@ export function AssignDocumentDialog({ documentId, open, onOpenChange }: AssignD
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["provider-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId] });
       toast.success("Document assigned successfully");
       onOpenChange(false);
       setSelectedPatientIds([]);
