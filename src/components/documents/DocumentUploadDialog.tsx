@@ -68,7 +68,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             file_size: file.size,
             mime_type: file.type,
             tags: tags ? tags.split(",").map(t => t.trim()) : [],
-            assigned_patient_id: patientId || null,
+            assigned_patient_id: (patientId && patientId !== "none") ? patientId : null,
             notes: notes || null,
           })
           .select()
@@ -96,7 +96,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     setDocumentType("");
     setTags("");
     setNotes("");
-    setPatientId("");
+    setPatientId("none");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,7 +175,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
                 <SelectValue placeholder="Select patient" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {patients?.map((patient) => (
                   <SelectItem key={patient.id} value={patient.id}>
                     {patient.first_name} {patient.last_name}

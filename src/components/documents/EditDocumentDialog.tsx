@@ -38,8 +38,8 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
         tags: document.tags || [],
         notes: document.notes || "",
         status: document.status || "uploaded",
-        assigned_patient_id: document.assigned_patient_id || "",
-        assigned_staff_id: document.assigned_staff_id || "",
+        assigned_patient_id: document.assigned_patient_id || "none",
+        assigned_staff_id: document.assigned_staff_id || "none",
         is_internal: document.is_internal || false,
       });
     }
@@ -78,8 +78,8 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
         tags: formData.tags,
         notes: formData.notes,
         status: formData.status,
-        assigned_patient_id: formData.assigned_patient_id || null,
-        assigned_staff_id: formData.assigned_staff_id || null,
+        assigned_patient_id: (formData.assigned_patient_id && formData.assigned_patient_id !== "none") ? formData.assigned_patient_id : null,
+        assigned_staff_id: (formData.assigned_staff_id && formData.assigned_staff_id !== "none") ? formData.assigned_staff_id : null,
         is_internal: formData.is_internal,
       };
 
@@ -200,7 +200,7 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
                 <SelectValue placeholder="Select patient (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {patients?.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.first_name} {p.last_name}
@@ -220,7 +220,7 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
                 <SelectValue placeholder="Select staff (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {staff?.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.full_name}

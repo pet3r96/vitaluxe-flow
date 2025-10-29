@@ -50,14 +50,14 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
 
   const handleReset = () => {
     onFiltersChange({
-      patientId: "",
-      documentType: "",
-      status: "",
+      patientId: "all",
+      documentType: "all",
+      status: "all",
       dateFrom: "",
       dateTo: "",
-      uploadedBy: "",
-      isInternal: "",
-      assignedStaffId: "",
+      uploadedBy: "all",
+      isInternal: "all",
+      assignedStaffId: "all",
     });
   };
 
@@ -75,7 +75,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
                 <SelectValue placeholder="All patients" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All patients</SelectItem>
+                <SelectItem value="all">All patients</SelectItem>
                 {patients?.map((patient) => (
                   <SelectItem key={patient.id} value={patient.id}>
                     {patient.first_name} {patient.last_name}
@@ -95,7 +95,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All types</SelectItem>
+                <SelectItem value="all">All types</SelectItem>
                 <SelectItem value="lab_result">Lab Result</SelectItem>
                 <SelectItem value="clinical_note">Clinical Note</SelectItem>
                 <SelectItem value="consent_form">Consent Form</SelectItem>
@@ -118,7 +118,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All statuses</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="uploaded">Uploaded</SelectItem>
                 <SelectItem value="reviewed">Reviewed</SelectItem>
                 <SelectItem value="signed">Signed</SelectItem>
@@ -155,7 +155,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
                 <SelectValue placeholder="All uploaders" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All uploaders</SelectItem>
+                <SelectItem value="all">All uploaders</SelectItem>
                 {staff?.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.full_name}
@@ -175,7 +175,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
                 <SelectValue placeholder="All documents" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All documents</SelectItem>
+                <SelectItem value="all">All documents</SelectItem>
                 <SelectItem value="false">Patient-visible</SelectItem>
                 <SelectItem value="true">Internal only</SelectItem>
               </SelectContent>
@@ -192,7 +192,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
                 <SelectValue placeholder="All staff" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All staff</SelectItem>
+                <SelectItem value="all">All staff</SelectItem>
                 {staff?.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.full_name}

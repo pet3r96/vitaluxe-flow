@@ -12,14 +12,14 @@ export function DocumentsTab() {
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    patientId: "",
-    documentType: "",
-    status: "",
+    patientId: "all",
+    documentType: "all",
+    status: "all",
     dateFrom: "",
     dateTo: "",
-    uploadedBy: "",
-    isInternal: "",
-    assignedStaffId: "",
+    uploadedBy: "all",
+    isInternal: "all",
+    assignedStaffId: "all",
   });
 
   const { data: documents, isLoading } = useQuery({
@@ -33,13 +33,13 @@ export function DocumentsTab() {
         `)
         .order("created_at", { ascending: false });
 
-      if (filters.patientId) {
+      if (filters.patientId && filters.patientId !== "all") {
         query = query.eq("assigned_patient_id", filters.patientId);
       }
-      if (filters.documentType) {
+      if (filters.documentType && filters.documentType !== "all") {
         query = query.eq("document_type", filters.documentType);
       }
-      if (filters.status) {
+      if (filters.status && filters.status !== "all") {
         query = query.eq("status", filters.status);
       }
       if (filters.dateFrom) {
@@ -48,13 +48,13 @@ export function DocumentsTab() {
       if (filters.dateTo) {
         query = query.lte("created_at", filters.dateTo);
       }
-      if (filters.uploadedBy) {
+      if (filters.uploadedBy && filters.uploadedBy !== "all") {
         query = query.eq("uploaded_by", filters.uploadedBy);
       }
-      if (filters.isInternal) {
+      if (filters.isInternal && filters.isInternal !== "all") {
         query = query.eq("is_internal", filters.isInternal === "true");
       }
-      if (filters.assignedStaffId) {
+      if (filters.assignedStaffId && filters.assignedStaffId !== "all") {
         query = query.eq("assigned_staff_id", filters.assignedStaffId);
       }
 
