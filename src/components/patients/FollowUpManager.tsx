@@ -46,7 +46,39 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as any[];
+
+      // Enrich with role information
+      const enrichedData = await Promise.all(
+        (data || []).map(async (followUp: any) => {
+          if (followUp.assigned_to) {
+            const { data: roleData } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", followUp.assigned_to)
+              .limit(1)
+              .single();
+
+            return {
+              ...followUp,
+              assigned_user: {
+                ...followUp.assigned_user,
+                role: roleData?.role,
+                role_display:
+                  roleData?.role === "admin"
+                    ? "Admin"
+                    : roleData?.role === "provider"
+                    ? "Provider"
+                    : roleData?.role === "staff"
+                    ? "Staff"
+                    : roleData?.role,
+              },
+            };
+          }
+          return followUp;
+        })
+      );
+
+      return enrichedData;
     },
   });
 
@@ -187,7 +219,14 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       {followUp.assigned_user && (
-                        <span>Assigned to: {followUp.assigned_user.name}</span>
+                        <span className="flex items-center gap-2">
+                          Assigned to: {followUp.assigned_user.name}
+                          {followUp.assigned_user.role_display && (
+                            <Badge variant="outline" className="text-xs">
+                              {followUp.assigned_user.role_display}
+                            </Badge>
+                          )}
+                        </span>
                       )}
                       <span>Created by: {followUp.creator?.name || "Unknown"}</span>
                     </div>

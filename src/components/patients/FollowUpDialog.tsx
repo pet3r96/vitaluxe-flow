@@ -49,16 +49,25 @@ export function FollowUpDialog({
   });
 
   const { data: staffMembers } = useQuery({
-    queryKey: ["staff-members"],
+    queryKey: ["staff-members", patientId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, name")
-        .in("id", [
-          ...(await supabase.from("user_roles").select("user_id").eq("role", "doctor")).data?.map(r => r.user_id) || [],
-          ...(await supabase.from("user_roles").select("user_id").eq("role", "provider")).data?.map(r => r.user_id) || [],
-        ])
-        .order("name");
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error("Not authenticated");
+
+      // Get the patient's practice_id
+      const { data: patientData, error: patientError } = await supabase
+        .from("patients")
+        .select("practice_id")
+        .eq("id", patientId)
+        .single();
+
+      if (patientError) throw patientError;
+      if (!patientData) throw new Error("Patient not found");
+
+      // Fetch all assignable users for this practice
+      const { data, error } = await supabase.rpc("get_practice_assignable_users", {
+        p_practice_id: patientData.practice_id,
+      });
 
       if (error) throw error;
       return data;
@@ -190,11 +199,58 @@ export function FollowUpDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Unassigned</SelectItem>
-                  {staffMembers?.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id}>
-                      {staff.name}
-                    </SelectItem>
-                  ))}
+                  
+                  {(staffMembers as any)?.filter?.((s: any) => s.role === "admin")?.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                        Admin
+                      </div>
+                      {(staffMembers as any)
+                        ?.filter?.((s: any) => s.role === "admin")
+                        .map((staff: any) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.name}
+                          </SelectItem>
+                        ))}
+                    </>
+                  )}
+                  
+                  {(staffMembers as any)?.filter?.((s: any) => s.role === "provider")?.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1 pt-2">
+                        Providers
+                      </div>
+                      {(staffMembers as any)
+                        ?.filter?.((s: any) => s.role === "provider")
+                        .map((staff: any) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.name}
+                          </SelectItem>
+                        ))}
+                    </>
+                  )}
+                  
+                  {(staffMembers as any)?.filter?.((s: any) => s.role === "staff")?.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1 pt-2">
+                        Staff
+                      </div>
+                      {(staffMembers as any)
+                        ?.filter?.((s: any) => s.role === "staff")
+                        .map((staff: any) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            <div className="flex flex-col">
+                              <span>{staff.name}</span>
+                              {staff.staff_role_type && (
+                                <span className="text-xs text-muted-foreground">
+                                  {staff.staff_role_type}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

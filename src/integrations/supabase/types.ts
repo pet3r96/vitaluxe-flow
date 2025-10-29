@@ -6708,6 +6708,16 @@ export type Database = {
         }[]
       }
       get_my_topline_rep_id: { Args: never; Returns: string }
+      get_practice_assignable_users: {
+        Args: { p_practice_id: string }
+        Returns: {
+          id: string
+          name: string
+          role: string
+          role_display: string
+          staff_role_type: string
+        }[]
+      }
       get_rep_earnings: {
         Args: { _rep_id: string }
         Returns: {
