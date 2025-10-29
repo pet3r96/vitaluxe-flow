@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect } from "react";
 import { format, setHours, setMinutes } from "date-fns";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
+import { detectOverlaps } from "@/lib/calendarUtils";
 
 interface DayViewProps {
   currentDate: Date;
@@ -69,7 +70,8 @@ export function DayView({
   };
 
   const getAppointmentsForProvider = (providerId: string) => {
-    return appointments.filter(appt => appt.provider_id === providerId);
+    const providerAppointments = appointments.filter(appt => appt.provider_id === providerId);
+    return detectOverlaps(providerAppointments);
   };
 
   if (filteredProviders.length === 0) {
@@ -136,19 +138,27 @@ export function DayView({
               
               {/* Appointments overlay */}
               <div className="absolute inset-0 pointer-events-none">
-                <div className="relative h-full px-1">
-                  {getAppointmentsForProvider(provider.id).map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      className="absolute left-1 right-1 pointer-events-auto"
-                      style={getAppointmentStyle(appointment)}
-                    >
-                      <AppointmentCard
-                        appointment={appointment}
-                        onClick={() => onAppointmentClick(appointment)}
-                      />
-                    </div>
-                  ))}
+                <div className="relative h-full">
+                  {getAppointmentsForProvider(provider.id).map((appointment) => {
+                    const baseStyle = getAppointmentStyle(appointment);
+                    return (
+                      <div
+                        key={appointment.id}
+                        className="absolute pointer-events-auto px-0.5"
+                        style={{
+                          ...baseStyle,
+                          left: `${appointment.columnLeft}%`,
+                          width: `${appointment.columnWidth}%`,
+                          zIndex: appointment.columnIndex
+                        }}
+                      >
+                        <AppointmentCard
+                          appointment={appointment}
+                          onClick={() => onAppointmentClick(appointment)}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

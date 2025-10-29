@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect } from "react";
 import { format, addDays, startOfWeek, isSameDay, setHours, setMinutes } from "date-fns";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
+import { detectOverlaps } from "@/lib/calendarUtils";
 
 interface WeekViewProps {
   currentDate: Date;
@@ -74,11 +75,12 @@ export function WeekView({
   };
 
   const getAppointmentsForDayAndProvider = (day: Date, providerId: string) => {
-    return appointments.filter(
+    const dayProviderAppointments = appointments.filter(
       (appt) =>
         isSameDay(new Date(appt.start_time), day) &&
         appt.provider_id === providerId
     );
+    return detectOverlaps(dayProviderAppointments);
   };
 
   if (filteredProviders.length === 0) {
@@ -159,18 +161,26 @@ export function WeekView({
                   {/* Appointments overlay */}
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="relative h-full">
-                      {getAppointmentsForDayAndProvider(day, provider.id).map((appointment) => (
-                        <div
-                          key={appointment.id}
-                          className="absolute left-0 right-0 px-1 pointer-events-auto"
-                          style={getAppointmentStyle(appointment)}
-                        >
-                          <AppointmentCard
-                            appointment={appointment}
-                            onClick={() => onAppointmentClick(appointment)}
-                          />
-                        </div>
-                      ))}
+                      {getAppointmentsForDayAndProvider(day, provider.id).map((appointment) => {
+                        const baseStyle = getAppointmentStyle(appointment);
+                        return (
+                          <div
+                            key={appointment.id}
+                            className="absolute pointer-events-auto px-0.5"
+                            style={{
+                              ...baseStyle,
+                              left: `${appointment.columnLeft}%`,
+                              width: `${appointment.columnWidth}%`,
+                              zIndex: appointment.columnIndex
+                            }}
+                          >
+                            <AppointmentCard
+                              appointment={appointment}
+                              onClick={() => onAppointmentClick(appointment)}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
