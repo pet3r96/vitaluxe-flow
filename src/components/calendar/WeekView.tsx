@@ -49,12 +49,22 @@ export function WeekView({
 
   // Auto-scroll to current time on mount
   useEffect(() => {
-    if (scrollRef.current) {
-      const currentHour = new Date().getHours();
-      const scrollPosition = ((currentHour - startHour) / (endHour - startHour)) * scrollRef.current.scrollHeight;
-      scrollRef.current.scrollTop = Math.max(0, scrollPosition - 100);
+    if (scrollRef.current && appointments.length >= 0) {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (scrollRef.current) {
+            const currentHour = new Date().getHours();
+            const targetHour = currentHour >= startHour && currentHour < endHour 
+              ? currentHour 
+              : Math.max(startHour, 8);
+            
+            const scrollPosition = ((targetHour - startHour) / (endHour - startHour)) * scrollRef.current.scrollHeight;
+            scrollRef.current.scrollTop = Math.max(0, scrollPosition - 100);
+          }
+        }, 100);
+      });
     }
-  }, [startHour, endHour]);
+  }, [startHour, endHour, appointments.length]);
 
   // Calculate appointment positions
   const getAppointmentStyle = (appointment: any) => {
