@@ -45,7 +45,7 @@ export function PrintDayDialog({
 
   const effectiveProviderName = isProviderAccount ? currentProviderName :
                                 selectedProvider === "all" ? "All Providers" :
-                                providers.find(p => p.id === selectedProvider)?.name || "Selected Provider";
+                                providers.find(p => p.id === selectedProvider)?.full_name || "Selected Provider";
 
   // Load preview count
   const loadPreview = async () => {
@@ -218,7 +218,7 @@ export function PrintDayDialog({
                   <div key={provider.id} className="flex items-center space-x-2">
                     <RadioGroupItem value={provider.id} id={provider.id} />
                     <Label htmlFor={provider.id} className="font-normal cursor-pointer">
-                      {provider.name}
+                      {provider.full_name}
                     </Label>
                   </div>
                 ))}
