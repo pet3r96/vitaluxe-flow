@@ -25,6 +25,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
   const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
+  const [documentNames, setDocumentNames] = useState<{[key: number]: string}>({});
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -37,12 +38,18 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     mutationFn: async () => {
       if (files.length === 0) throw new Error("No files selected");
       if (!documentType) throw new Error("Document type is required");
+      
+      const missingNames = files.some((_, idx) => !documentNames[idx]?.trim());
+      if (missingNames) throw new Error("Please provide a name for all documents");
 
       const uploadedDocs = [];
 
       if (!effectivePracticeId) throw new Error("No practice ID available");
 
-      for (const file of files) {
+      for (let idx = 0; idx < files.length; idx++) {
+        const file = files[idx];
+        const customDocumentName = documentNames[idx]?.trim();
+        
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${effectivePracticeId}/documents/${fileName}`;
@@ -57,7 +64,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         // Create document record via edge function (bypasses RLS)
         const { data: result, error: createError } = await supabase.functions.invoke("create-provider-document", {
           body: {
-            document_name: file.name,
+            document_name: customDocumentName,
             document_type: documentType,
             storage_path: filePath,
             file_size: file.size,
@@ -110,6 +117,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     setTags("");
     setNotes("");
     setSelectedPatientIds([]);
+    setDocumentNames({});
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,18 +143,34 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
             />
             {files.length > 0 && (
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-3 border rounded-md p-3 bg-muted/20">
                 {files.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm">
-                    <Upload className="h-4 w-4" />
-                    <span className="flex-1">{file.name}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setFiles(files.filter((_, i) => i !== idx))}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                  <div key={idx} className="space-y-2 pb-3 border-b last:border-b-0 last:pb-0">
+                    <div className="flex items-center gap-2">
+                      <Upload className="h-4 w-4 text-muted-foreground" />
+                      <span className="flex-1 text-sm text-muted-foreground">{file.name}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setFiles(files.filter((_, i) => i !== idx));
+                          const newNames = {...documentNames};
+                          delete newNames[idx];
+                          setDocumentNames(newNames);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Document Name *</Label>
+                      <Input
+                        placeholder="e.g., Patient Lab Results, Insurance Card, Consent Form"
+                        value={documentNames[idx] || ""}
+                        onChange={(e) => setDocumentNames({...documentNames, [idx]: e.target.value})}
+                        className="mt-1"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -203,7 +227,12 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             </Button>
             <Button
               onClick={() => uploadMutation.mutate()}
-              disabled={uploadMutation.isPending || files.length === 0 || !documentType}
+              disabled={
+                uploadMutation.isPending || 
+                files.length === 0 || 
+                !documentType ||
+                files.some((_, idx) => !documentNames[idx]?.trim())
+              }
             >
               {uploadMutation.isPending ? "Uploading..." : "Upload"}
             </Button>
