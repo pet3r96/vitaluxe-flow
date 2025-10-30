@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-export type DocumentTypeFilter = "all" | "insurance_card" | "drivers_license" | "id_card" | "prescription" | "lab_result" | "medical_record" | "consent_form" | "referral" | "other";
+export type DocumentTypeFilter = "all" | "insurance" | "drivers_license" | "id" | "prescription" | "lab_result" | "imaging" | "referral" | "other";
 export type SourceFilter = "all" | "patient_upload" | "provider_assigned";
 
 interface PatientDocumentFiltersProps {
@@ -58,13 +58,12 @@ export function PatientDocumentFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="insurance_card">Insurance Card</SelectItem>
-              <SelectItem value="drivers_license">Drivers License</SelectItem>
-              <SelectItem value="id_card">ID Card</SelectItem>
+              <SelectItem value="insurance">Insurance Card</SelectItem>
+              <SelectItem value="drivers_license">Driver's License</SelectItem>
+              <SelectItem value="id">ID Card</SelectItem>
               <SelectItem value="prescription">Prescription</SelectItem>
               <SelectItem value="lab_result">Lab Result</SelectItem>
-              <SelectItem value="medical_record">Medical Record</SelectItem>
-              <SelectItem value="consent_form">Consent Form</SelectItem>
+              <SelectItem value="imaging">Imaging</SelectItem>
               <SelectItem value="referral">Referral</SelectItem>
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>

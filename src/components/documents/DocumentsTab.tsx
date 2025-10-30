@@ -96,6 +96,15 @@ export function DocumentsTab() {
 
   return (
     <div className="space-y-4">
+      {/* Debug info in dev mode */}
+      {import.meta.env.DEV && (
+        <div className="text-xs text-muted-foreground font-mono p-2 bg-muted rounded">
+          <div>Role: {effectiveRole}</div>
+          <div>Practice ID: {effectivePracticeId || 'None'}</div>
+          <div>Documents loaded: {documents?.length || 0}</div>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button onClick={() => setShowFilters(!showFilters)} variant="outline">

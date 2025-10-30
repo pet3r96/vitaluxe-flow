@@ -251,9 +251,14 @@ export default function PatientDocuments() {
       queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
     },
     onError: (error: any) => {
+      const errorMessage = error.message || "Could not upload document";
+      const isConstraintError = errorMessage.includes("patient_documents_document_type_check");
+      
       toast({
         title: "Upload Failed",
-        description: error.message || "Could not upload document",
+        description: isConstraintError 
+          ? "Invalid document type. Please select one of the supported types."
+          : errorMessage,
         variant: "destructive",
       });
     },
@@ -470,13 +475,12 @@ export default function PatientDocuments() {
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="insurance_card">Insurance Card</SelectItem>
-                  <SelectItem value="drivers_license">Drivers License</SelectItem>
-                  <SelectItem value="id_card">ID Card</SelectItem>
+                  <SelectItem value="insurance">Insurance Card</SelectItem>
+                  <SelectItem value="drivers_license">Driver's License</SelectItem>
+                  <SelectItem value="id">ID Card</SelectItem>
                   <SelectItem value="prescription">Prescription</SelectItem>
                   <SelectItem value="lab_result">Lab Result</SelectItem>
-                  <SelectItem value="medical_record">Medical Record</SelectItem>
-                  <SelectItem value="consent_form">Consent Form</SelectItem>
+                  <SelectItem value="imaging">Imaging</SelectItem>
                   <SelectItem value="referral">Referral</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
