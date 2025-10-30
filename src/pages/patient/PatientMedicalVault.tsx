@@ -15,7 +15,7 @@ import { PharmaciesSection } from "@/components/medical-vault/PharmaciesSection"
 import { EmergencyContactsSection } from "@/components/medical-vault/EmergencyContactsSection";
 
 export default function PatientMedicalVault() {
-  // Get patient account
+  // Get patient account - check for impersonation first
   const { data: patientAccount, isLoading, error } = useQuery({
     queryKey: ["patient-account"],
     queryFn: async () => {
@@ -24,11 +24,17 @@ export default function PatientMedicalVault() {
       
       if (!user) throw new Error("Not authenticated");
       
+      // Check for active impersonation session
+      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+      
+      console.log("👤 Effective user ID (impersonated or real):", effectiveUserId);
+      
       const { data, error } = await supabase
         .from("patient_accounts")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+        .select("id, first_name, last_name, practice_id")
+        .eq("user_id", effectiveUserId)
+        .maybeSingle();
       
       console.log("📋 Patient account query result:", data, error);
       
