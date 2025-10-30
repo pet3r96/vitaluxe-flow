@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function DocumentsTab() {
-  const { effectivePracticeId, effectiveRole } = useAuth();
+  const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -27,19 +27,47 @@ export function DocumentsTab() {
   });
 
   const { data: documents, isLoading } = useQuery({
-    queryKey: ["provider-documents", effectivePracticeId, effectiveRole, filters],
+    queryKey: ["provider-documents", effectivePracticeId, effectiveRole, effectiveUserId, filters],
     queryFn: async () => {
-      // Admins can view all documents; others require a practice context
       const isAdmin = effectiveRole === 'admin';
-      if (!effectivePracticeId && !isAdmin) return [];
+      
+      // Robust practice ID resolution
+      let resolvedPracticeId = effectivePracticeId;
+      
+      if (!resolvedPracticeId && !isAdmin) {
+        // Fallback: resolve practice ID based on role
+        if (effectiveRole === 'doctor') {
+          // Doctor is the practice owner
+          resolvedPracticeId = effectiveUserId;
+        } else if (effectiveRole === 'provider') {
+          // Query providers table
+          const { data: providerData } = await supabase
+            .from("providers")
+            .select("practice_id")
+            .eq("user_id", effectiveUserId)
+            .single();
+          resolvedPracticeId = providerData?.practice_id;
+        } else if (effectiveRole === 'staff') {
+          // Query practice_staff table
+          const { data: staffData } = await supabase
+            .from("practice_staff")
+            .select("practice_id")
+            .eq("user_id", effectiveUserId)
+            .single();
+          resolvedPracticeId = staffData?.practice_id;
+        }
+      }
+      
+      // If no practice ID resolved and not admin, return empty
+      if (!resolvedPracticeId && !isAdmin) return [];
       
       let query = supabase
         .from("provider_documents" as any)
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (effectivePracticeId) {
-        query = query.eq("practice_id", effectivePracticeId);
+      if (resolvedPracticeId) {
+        query = query.eq("practice_id", resolvedPracticeId);
       }
 
       if (filters.patientId && filters.patientId !== "all") {
@@ -68,10 +96,13 @@ export function DocumentsTab() {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error("Query error:", error);
+        throw error;
+      }
       return data as any[];
     },
-    enabled: effectiveRole === 'admin' || !!effectivePracticeId,
+    enabled: effectiveRole === 'admin' || !!effectivePracticeId || !!effectiveUserId,
     staleTime: 0,
   });
 

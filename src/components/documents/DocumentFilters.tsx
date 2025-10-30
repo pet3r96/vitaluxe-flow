@@ -126,13 +126,12 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All types</SelectItem>
-                <SelectItem value="lab_result">Lab Result</SelectItem>
-                <SelectItem value="clinical_note">Clinical Note</SelectItem>
-                <SelectItem value="consent_form">Consent Form</SelectItem>
-                <SelectItem value="prescription">Prescription</SelectItem>
-                <SelectItem value="imaging">Imaging</SelectItem>
-                <SelectItem value="referral">Referral</SelectItem>
+                <SelectItem value="lab_results">Lab Results</SelectItem>
+                <SelectItem value="consents">Consents</SelectItem>
+                <SelectItem value="prescriptions">Prescriptions</SelectItem>
+                <SelectItem value="referrals">Referrals</SelectItem>
                 <SelectItem value="insurance">Insurance</SelectItem>
+                <SelectItem value="internal_docs">Internal Docs</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>

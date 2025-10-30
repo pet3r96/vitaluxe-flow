@@ -135,6 +135,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {
       all: filteredDocuments?.length || 0,
+      uploaded: 0,
       pending: 0,
       reviewed: 0,
       signed: 0,
@@ -204,6 +205,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses ({statusCounts.all})</SelectItem>
+            <SelectItem value="uploaded">Uploaded ({statusCounts.uploaded})</SelectItem>
             <SelectItem value="pending">Pending ({statusCounts.pending})</SelectItem>
             <SelectItem value="reviewed">Reviewed ({statusCounts.reviewed})</SelectItem>
             <SelectItem value="signed">Signed ({statusCounts.signed})</SelectItem>
