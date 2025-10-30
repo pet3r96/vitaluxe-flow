@@ -98,6 +98,16 @@ export function CreateInternalMessageDialog({
 
     setSending(true);
     try {
+      console.log('📨 Sending internal message:', {
+        practice_id: practiceId,
+        created_by: effectiveUserId,
+        subject,
+        message_type: messageType,
+        priority,
+        patient_id: regardingPatient,
+        recipient_count: selectedRecipients.length
+      });
+
       // Send to practice team via internal_messages
       const { data: message, error: messageError } = await supabase
         .from('internal_messages')
@@ -113,26 +123,37 @@ export function CreateInternalMessageDialog({
         .select()
         .single();
 
-      if (messageError) throw messageError;
+      if (messageError) {
+        console.error('❌ Error inserting internal_messages:', messageError);
+        throw new Error(`Failed to create message: ${messageError.message || JSON.stringify(messageError)}`);
+      }
+
+      console.log('✅ Message created:', message.id);
 
       // Add recipients
+      const recipientsData = selectedRecipients.map(recipientId => ({
+        message_id: message.id,
+        recipient_id: recipientId
+      }));
+
+      console.log('📬 Adding recipients:', recipientsData);
+
       const { error: recipientsError } = await supabase
         .from('internal_message_recipients')
-        .insert(
-          selectedRecipients.map(recipientId => ({
-            message_id: message.id,
-            recipient_id: recipientId
-          }))
-        );
+        .insert(recipientsData);
 
-      if (recipientsError) throw recipientsError;
+      if (recipientsError) {
+        console.error('❌ Error inserting internal_message_recipients:', recipientsError);
+        throw new Error(`Failed to add recipients: ${recipientsError.message || JSON.stringify(recipientsError)}`);
+      }
 
+      console.log('✅ Recipients added successfully');
       toast.success('Message sent to practice team');
       onSuccess();
       handleClose();
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+    } catch (error: any) {
+      console.error('❌ Error sending internal message:', error);
+      toast.error(error.message || 'Failed to send message');
     } finally {
       setSending(false);
     }
