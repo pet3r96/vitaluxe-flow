@@ -121,9 +121,8 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
         ) : (
           <div className="space-y-3">
             {requestedAppointments.map((appointment) => {
-              const patientName = appointment.patient_accounts?.profiles?.full_name || 
-                                 appointment.patient_accounts?.profiles?.name || 
-                                 'Unknown Patient';
+              const patientProfile = appointment?.patient_accounts?.profiles;
+              const patientName = patientProfile?.full_name || patientProfile?.name || 'Unknown Patient';
               const isReschedule = !!appointment.reschedule_requested_at;
               const requestedAt = appointment.reschedule_requested_at || appointment.start_time;
 

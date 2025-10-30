@@ -158,7 +158,7 @@ export default function PatientAppointments() {
 
   const handleAddToCalendar = async (appointmentId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke("generate-calendar-event", {
+      const { data, error } = await supabase.functions.invoke("export-calendar-ics", {
         body: { appointmentId },
       });
 
@@ -386,6 +386,23 @@ export default function PatientAppointments() {
           onSuccess={refetch}
         />
       )}
+
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this appointment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the visit from your upcoming list and the practice calendar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>Keep Appointment</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancel} disabled={isCancelling}>
+              {isCancelling ? "Cancelling..." : "Yes, Cancel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

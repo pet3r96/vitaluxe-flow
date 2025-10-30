@@ -22,7 +22,7 @@ export function RecentActivityWidget({ className }: { className?: string }) {
       // Get recent appointments
       const { data: appointments } = await supabase
         .from("patient_appointments")
-        .select("id, status, updated_at, practice_id, patient_accounts(full_name)")
+        .select("id, status, updated_at, practice_id, patient_accounts(id, first_name, last_name)")
         .eq("practice_id", effectivePracticeId)
         .order("updated_at", { ascending: false })
         .limit(5) as any;
@@ -48,10 +48,13 @@ export function RecentActivityWidget({ className }: { className?: string }) {
       });
 
       appointments?.forEach((appt) => {
+        const patientName = appt.patient_accounts 
+          ? `${appt.patient_accounts.first_name || ''} ${appt.patient_accounts.last_name || ''}`.trim() || 'Patient'
+          : 'Patient';
         combined.push({
           type: "appointment",
           icon: Calendar,
-          description: `Appointment ${appt.status} - ${appt.patient_accounts?.full_name}`,
+          description: `Appointment ${appt.status} - ${patientName}`,
           time: appt.updated_at,
         });
       });
