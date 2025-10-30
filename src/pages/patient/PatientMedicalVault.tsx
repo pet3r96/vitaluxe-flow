@@ -106,80 +106,80 @@ export default function PatientMedicalVault() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Medical Vault Header - Modern Design */}
+      {/* Medical Vault Header - Compact Modern Design */}
       <Card className="border-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white shadow-2xl overflow-hidden relative">
         {/* Animated gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-yellow-600/5 to-transparent animate-pulse"></div>
         
-        <CardHeader className="relative z-10 py-12">
+        <CardHeader className="relative z-10 py-8">
           {/* Centered Content Container */}
-          <div className="flex flex-col items-center justify-center space-y-6 max-w-4xl mx-auto">
+          <div className="flex flex-col items-center justify-center space-y-4 max-w-4xl mx-auto">
             
-            {/* Modern Shield Icon with Glow Effect */}
+            {/* Modern Shield Icon with Glow Effect - 30% smaller */}
             <div className="relative">
-              <div className="absolute inset-0 bg-yellow-500/30 blur-3xl rounded-full animate-pulse"></div>
-              <ShieldCheck className="h-24 w-24 text-yellow-500 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
+              <div className="absolute inset-0 bg-yellow-500/30 blur-2xl rounded-full animate-pulse"></div>
+              <ShieldCheck className="h-16 w-16 text-yellow-500 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
             </div>
             
-            {/* Title */}
-            <div className="text-center space-y-2">
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+            {/* Title - 30% smaller */}
+            <div className="text-center space-y-1">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
                 Medical Vault
               </h1>
-              <p className="text-gray-300 text-sm md:text-base font-light tracking-wide">
+              <p className="text-gray-300 text-xs md:text-sm font-light tracking-wide">
                 Secure Health Information
               </p>
             </div>
             
-      {/* Patient Name Badge */}
-      <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-8 py-3 shadow-xl">
-        <p className="text-lg md:text-xl font-semibold text-white">
-          {isLoading ? (
-            <span className="animate-pulse">Loading...</span>
-          ) : error ? (
-            <span className="text-red-300">Error loading patient data</span>
-          ) : patientAccount?.first_name && patientAccount?.last_name ? (
-            `${patientAccount.first_name} ${patientAccount.last_name}`
-          ) : patientAccount?.first_name || patientAccount?.last_name ? (
-            `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim()
-          ) : (
-            'Patient Name Not Set'
-          )}
-        </p>
-      </div>
+            {/* Patient Name Badge - 30% smaller */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-2 shadow-xl">
+              <p className="text-base md:text-lg font-semibold text-white">
+                {isLoading ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : error ? (
+                  <span className="text-red-300">Error loading patient data</span>
+                ) : patientAccount?.first_name && patientAccount?.last_name ? (
+                  `${patientAccount.first_name} ${patientAccount.last_name}`
+                ) : patientAccount?.first_name || patientAccount?.last_name ? (
+                  `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim()
+                ) : (
+                  'Patient Name Not Set'
+                )}
+              </p>
+            </div>
             
-            {/* Action Buttons - Modern Glass Morphism Style */}
-            <div className="flex flex-wrap gap-3 justify-center pt-4">
+            {/* Action Buttons - 30% smaller */}
+            <div className="flex flex-wrap gap-2 justify-center pt-2">
               <Button 
                 variant="outline" 
-                size="lg"
+                size="default"
                 className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3.5 w-3.5" />
                 View
               </Button>
               <Button 
                 variant="outline" 
-                size="lg"
+                size="default"
                 className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
               >
-                <Printer className="h-4 w-4" />
+                <Printer className="h-3.5 w-3.5" />
                 Print
               </Button>
               <Button 
                 variant="outline" 
-                size="lg"
+                size="default"
                 className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-3.5 w-3.5" />
                 Download
               </Button>
               <Button 
                 variant="outline" 
-                size="lg"
+                size="default"
                 className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
               >
-                <Share2 className="h-4 w-4" />
+                <Share2 className="h-3.5 w-3.5" />
                 Share
               </Button>
             </div>

@@ -26,20 +26,30 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
   });
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-rose-500/10 to-pink-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+      {/* Animated border glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-rose-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      
+      <CardHeader className="relative z-10">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Emergency Contacts
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg">
+              <Phone className="h-6 w-6 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent font-bold">
+              Emergency Contacts
+            </span>
           </CardTitle>
-          <Button size="sm" variant="outline">
-            <Plus className="h-4 w-4 mr-1" />
+          <Button 
+            size="sm" 
+            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+          >
+            <Plus className="h-4 w-4" />
             Add
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative z-10">
         {contacts && contacts.length > 0 ? (
           <div className="space-y-3">
             {contacts.map((contact) => (
