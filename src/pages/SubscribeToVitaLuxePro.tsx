@@ -36,6 +36,28 @@ export default function SubscribeToVitaLuxePro() {
     }
   }, [effectiveRole, navigate, toast]);
 
+  // Redirect staff members - only practice owners manage subscriptions
+  useEffect(() => {
+    if (effectiveRole === 'staff') {
+      toast({
+        title: "Not Available for Staff",
+        description: "Your practice's subscription is managed by the practice owner. Please contact your doctor if you have questions.",
+      });
+      navigate('/dashboard');
+    }
+  }, [effectiveRole, navigate, toast]);
+
+  // Redirect providers - check with their practice owner
+  useEffect(() => {
+    if (effectiveRole === 'provider') {
+      toast({
+        title: "Contact Your Practice",
+        description: "Subscription management is handled by your parent practice. Please contact your practice administrator for access to Pro features.",
+      });
+      navigate('/dashboard');
+    }
+  }, [effectiveRole, navigate, toast]);
+
   // Redirect if already subscribed
   useEffect(() => {
     if (!subscriptionLoading && isSubscribed) {

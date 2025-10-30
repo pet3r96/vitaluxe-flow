@@ -12,8 +12,8 @@ export const PracticeOnlyRoute = ({ children }: PracticeOnlyRouteProps) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Allow doctor, provider, staff (practice-related roles) and admin
-    const allowedRoles = ['doctor', 'provider', 'staff', 'admin'];
+    // Only practice owners (doctors) and admins can manage subscriptions
+    const allowedRoles = ['doctor', 'admin'];
     
     if (!loading && effectiveRole && !allowedRoles.includes(effectiveRole)) {
       toast.error("This page is only for medical practices", {

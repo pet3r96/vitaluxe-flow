@@ -231,7 +231,7 @@ export function AppSidebar() {
                     </div>
                   );
                 }
-                const isProFeature = item.isPro && !isSubscribed && !isProviderAccount && !isStaffAccount;
+                const isProFeature = item.isPro && !isSubscribed && !isStaffAccount;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild className="min-h-[44px]">
@@ -249,9 +249,9 @@ export function AppSidebar() {
                         {!isCollapsed && (
                           <span className="text-sm sm:text-base flex items-center gap-2 flex-1">
                             {item.title}
-                            {item.isPro && !isSubscribed && !isProviderAccount && !isStaffAccount && (
-                              <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
-                            )}
+                {item.isPro && !isSubscribed && !isStaffAccount && (
+                  <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
+                )}
                           </span>
                         )}
                       </NavLink>
@@ -265,7 +265,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <div className="mt-auto border-t border-sidebar-border p-4 space-y-2">
-        {!isSubscribed && effectiveRole === 'doctor' && !isProviderAccount && !isStaffAccount && (
+        {!isSubscribed && effectiveRole === 'doctor' && !isStaffAccount && (
           <Button
             onClick={() => setShowUpgradeDialog(true)}
             className="w-full justify-start bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
