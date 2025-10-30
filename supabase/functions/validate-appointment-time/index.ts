@@ -88,7 +88,11 @@ Deno.serve(async (req) => {
     const startTimeStr = practiceHours.start_time.toString();
     const endTimeStr = practiceHours.end_time.toString();
     
-    // Format times for display
+    // Helpers
+    const normalizeTime = (time: string) => {
+      const parts = time.split(':');
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    };
     const formatTime = (time: string) => {
       const [h, m] = time.split(':');
       const hour = parseInt(h);
@@ -97,7 +101,12 @@ Deno.serve(async (req) => {
       return `${displayHour}:${m} ${ampm}`;
     };
     
-    if (appointmentTime < startTimeStr) {
+    const appointmentTimeNorm = normalizeTime(appointmentTime);
+    const appointmentEndTimeNorm = normalizeTime(appointmentEndTime);
+    const startTimeNorm = normalizeTime(startTimeStr);
+    const endTimeNorm = normalizeTime(endTimeStr);
+    
+    if (appointmentTimeNorm < startTimeNorm) {
       return new Response(
         JSON.stringify({
           valid: false,
@@ -108,7 +117,7 @@ Deno.serve(async (req) => {
       );
     }
     
-    if (appointmentEndTime > endTimeStr) {
+    if (appointmentEndTimeNorm > endTimeNorm) {
       return new Response(
         JSON.stringify({
           valid: false,

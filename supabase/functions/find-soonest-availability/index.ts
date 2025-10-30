@@ -75,6 +75,7 @@ Deno.serve(async (req) => {
       const startMin = parseInt(startTimeStr.split(':')[1]);
       const endHour = parseInt(endTimeStr.split(':')[0]);
       const endMin = parseInt(endTimeStr.split(':')[1]);
+      console.log('[find-soonest-availability] Day', dayOfWeek, 'hours', { startTimeStr, endTimeStr, duration });
       
       const startMinutes = startHour * 60 + startMin;
       const endMinutes = endHour * 60 + endMin;
@@ -143,6 +144,7 @@ Deno.serve(async (req) => {
         const ampm = slotHour >= 12 ? 'PM' : 'AM';
         const displayTime = `${displayHour}:${String(slotMin).padStart(2, '0')} ${ampm}`;
         
+        console.log('[find-soonest-availability] Found slot', { date: dateStr, time: timeSlot, displayTime, day: dayName });
         return new Response(
           JSON.stringify({
             available: true,

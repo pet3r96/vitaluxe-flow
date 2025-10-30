@@ -37,8 +37,24 @@ export default function PatientAppointments() {
       
       if (error) throw error;
       
-      // RPC now returns JSONB directly, parse it
-      return data || [];
+      // Normalize RPC response to array
+      const raw: any = data;
+      let parsed: any[] = [];
+      try {
+        if (typeof raw === 'string') {
+          parsed = JSON.parse(raw);
+        } else if (Array.isArray(raw)) {
+          parsed = raw;
+        } else if (raw && typeof raw === 'object' && Array.isArray((raw as any).appointments)) {
+          parsed = (raw as any).appointments;
+        } else if (raw && typeof raw === 'object') {
+          const maybeArray = (raw as any).data;
+          if (Array.isArray(maybeArray)) parsed = maybeArray;
+        }
+      } catch (e) {
+        console.warn('[PatientAppointments] Failed to parse appointments JSON', e);
+      }
+      return parsed;
     },
   });
 
