@@ -103,9 +103,19 @@ export default function PracticeCalendar() {
     enabled: !!practiceId,
   });
 
-  // Set up realtime subscription for appointments and rooms
+  // Set up realtime subscription for appointments and rooms with debouncing
   useEffect(() => {
     if (!practiceId) return;
+    
+    let debounceTimeout: NodeJS.Timeout;
+    
+    const debouncedRefetch = () => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        console.log('🔄 Refetching calendar data...');
+        refetch();
+      }, 300); // 300ms debounce
+    };
 
     const appointmentsChannel = supabase
       .channel('calendar-changes')
@@ -117,8 +127,9 @@ export default function PracticeCalendar() {
           table: 'patient_appointments',
           filter: `practice_id=eq.${practiceId}`,
         },
-        () => {
-          refetch();
+        (payload) => {
+          console.log('📅 Appointment changed:', payload.eventType);
+          debouncedRefetch();
         }
       )
       .subscribe();
@@ -133,13 +144,15 @@ export default function PracticeCalendar() {
           table: 'practice_rooms',
           filter: `practice_id=eq.${practiceId}`,
         },
-        () => {
-          refetch();
+        (payload) => {
+          console.log('🚪 Room changed:', payload.eventType);
+          debouncedRefetch();
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimeout);
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(roomsChannel);
     };

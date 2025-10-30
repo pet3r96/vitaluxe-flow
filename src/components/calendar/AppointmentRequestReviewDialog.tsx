@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, Calendar, Clock, User, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { CheckCircle, XCircle, Calendar, Clock, User, AlertTriangle, Edit2 } from "lucide-react";
+import { format, parse } from "date-fns";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,6 +28,9 @@ export const AppointmentRequestReviewDialog = ({
   const [isDeclining, setIsDeclining] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [conflicts, setConflicts] = useState<any[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedDate, setEditedDate] = useState("");
+  const [editedTime, setEditedTime] = useState("");
 
   const patientName = appointment.patient_accounts?.profiles?.full_name || 
                      appointment.patient_accounts?.profiles?.name || 
@@ -36,10 +40,17 @@ export const AppointmentRequestReviewDialog = ({
                       'Not specified';
   const isReschedule = !!appointment.reschedule_requested_at;
 
-  const checkConflicts = async () => {
-    const startTime = new Date(appointment.start_time);
-    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1 hour
+  // Initialize edit fields with requested or current values
+  useEffect(() => {
+    if (appointment) {
+      const requestedDate = appointment.requested_date || format(new Date(appointment.start_time), 'yyyy-MM-dd');
+      const requestedTime = appointment.requested_time || format(new Date(appointment.start_time), 'HH:mm');
+      setEditedDate(requestedDate);
+      setEditedTime(requestedTime);
+    }
+  }, [appointment]);
 
+  const checkConflicts = async (startTime: Date, endTime: Date) => {
     const { data } = await supabase
       .from('patient_appointments')
       .select('id, start_time, end_time, patient_accounts(profiles(full_name, name))')
@@ -56,7 +67,16 @@ export const AppointmentRequestReviewDialog = ({
   const handleAccept = async () => {
     setIsAccepting(true);
     try {
-      const hasConflicts = await checkConflicts();
+      // Calculate new start/end times from edited date/time
+      const originalStart = new Date(appointment.start_time);
+      const originalEnd = new Date(appointment.end_time);
+      const duration = originalEnd.getTime() - originalStart.getTime();
+
+      const newStartTime = new Date(`${editedDate}T${editedTime}`);
+      const newEndTime = new Date(newStartTime.getTime() + duration);
+
+      // Check for conflicts with the new time
+      const hasConflicts = await checkConflicts(newStartTime, newEndTime);
       if (hasConflicts) {
         toast({
           title: "Conflict Detected",
@@ -67,23 +87,44 @@ export const AppointmentRequestReviewDialog = ({
         return;
       }
 
-      const { error } = await supabase
-        .from('patient_appointments')
-        .update({
-          confirmation_type: 'confirmed',
-          status: 'scheduled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', appointment.id);
+      // If this is a reschedule, use the edge function
+      if (isReschedule) {
+        const { error } = await supabase.functions.invoke('approve-reschedule-request', {
+          body: {
+            appointmentId: appointment.id,
+            action: 'move',
+            ignoreConflicts: false,
+          }
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // For new appointments, update directly
+        const { error } = await supabase
+          .from('patient_appointments')
+          .update({
+            start_time: newStartTime.toISOString(),
+            end_time: newEndTime.toISOString(),
+            confirmation_type: 'confirmed',
+            status: 'scheduled',
+            requested_date: null,
+            requested_time: null,
+            reschedule_reason: null,
+            reschedule_requested_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', appointment.id);
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Appointment Confirmed",
-        description: `${patientName}'s appointment has been confirmed.`,
+        description: `${patientName}'s appointment has been confirmed for ${format(newStartTime, 'MMMM d, yyyy at h:mm a')}.`,
       });
 
       onSuccess();
+      onOpenChange(false);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -155,25 +196,71 @@ export const AppointmentRequestReviewDialog = ({
             <p className="text-lg font-semibold">{patientName}</p>
           </div>
 
-          {/* Requested Time */}
+          {/* Requested Time - Editable */}
           <div className="p-4 border border-border rounded-lg space-y-3">
-            <h3 className="font-semibold text-sm text-muted-foreground">
-              {isReschedule ? 'New Requested Time' : 'Requested Time'}
-            </h3>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span className="font-medium">
-                  {format(new Date(appointment.requested_date || appointment.start_time), 'EEEE, MMMM d, yyyy')}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                <span className="font-medium">
-                  {appointment.requested_time || format(new Date(appointment.start_time), 'h:mm a')}
-                </span>
-              </div>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm text-muted-foreground">
+                {isReschedule ? 'New Requested Time' : 'Requested Time'}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="h-8 text-xs"
+              >
+                <Edit2 className="h-3 w-3 mr-1" />
+                {isEditing ? 'Cancel Edit' : 'Edit Time'}
+              </Button>
             </div>
+            
+            {!isEditing ? (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="font-medium">
+                    {format(new Date(`${editedDate}T${editedTime}`), 'EEEE, MMMM d, yyyy')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="font-medium">
+                    {format(new Date(`${editedDate}T${editedTime}`), 'h:mm a')}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="edit-date" className="text-xs">Date</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editedDate}
+                    onChange={(e) => setEditedDate(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-time" className="text-xs">Time</Label>
+                  <Input
+                    id="edit-time"
+                    type="time"
+                    value={editedTime}
+                    onChange={(e) => setEditedTime(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                {(editedDate !== (appointment.requested_date || format(new Date(appointment.start_time), 'yyyy-MM-dd')) ||
+                  editedTime !== (appointment.requested_time || format(new Date(appointment.start_time), 'HH:mm'))) && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      You've modified the requested time. The patient will be notified of the approved time.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Provider */}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, formatDistanceToNow } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppointmentRequestReviewDialog } from "@/components/calendar/AppointmentRequestReviewDialog";
 import { cn } from "@/lib/utils";
 
@@ -85,8 +85,30 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
       if (error) throw error;
       return data as RequestedAppointment[];
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  // Real-time subscription for instant updates (replaces 30-second polling)
+  useEffect(() => {
+    const channel = supabase
+      .channel('requested-appointments-realtime')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'patient_appointments'
+        },
+        (payload) => {
+          console.log('📋 Appointment request changed:', payload.eventType);
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   return (
     <>

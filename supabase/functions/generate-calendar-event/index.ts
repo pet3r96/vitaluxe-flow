@@ -21,13 +21,16 @@ Deno.serve(async (req) => {
       .from('patient_appointments')
       .select(`
         *,
-        practice:profiles!patient_appointments_practice_id_fkey(name, address_street, address_city, address_state, address_zip),
-        provider:profiles!patient_appointments_provider_id_fkey(name)
+        practice:profiles!patient_appointments_practice_id_fkey(full_name, name, address_street, address_city, address_state, address_zip),
+        provider:profiles!patient_appointments_provider_id_fkey(full_name, name)
       `)
       .eq('id', appointmentId)
       .single();
 
     if (error || !appointment) throw new Error('Appointment not found');
+    
+    console.log('📅 Generating calendar event for appointment:', appointmentId);
+    console.log('Practice data:', appointment.practice);
 
     // Generate ICS format
     const startDate = new Date(appointment.start_time);
@@ -37,9 +40,22 @@ Deno.serve(async (req) => {
       return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
 
+    const practiceName = appointment.practice?.full_name || appointment.practice?.name || 'Healthcare Practice';
+    const providerName = appointment.provider?.full_name || appointment.provider?.name || 'Provider';
+    
+    // Build address safely with fallback
+    const addressParts = [
+      appointment.practice?.address_street,
+      appointment.practice?.address_city,
+      appointment.practice?.address_state,
+      appointment.practice?.address_zip
+    ].filter(Boolean);
+    
     const location = appointment.visit_type === 'virtual' 
       ? 'Virtual Appointment' 
-      : `${appointment.practice.address_street || ''}, ${appointment.practice.address_city || ''}, ${appointment.practice.address_state || ''} ${appointment.practice.address_zip || ''}`.trim();
+      : addressParts.length > 0 
+        ? addressParts.join(', ') 
+        : 'Address TBD - Please contact practice for location details';
 
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -51,8 +67,8 @@ UID:${appointmentId}@healthcareapp.com
 DTSTAMP:${formatDate(new Date())}
 DTSTART:${formatDate(startDate)}
 DTEND:${formatDate(endDate)}
-SUMMARY:Appointment with ${appointment.practice.name}
-DESCRIPTION:${appointment.reason_for_visit || 'Healthcare appointment'}${appointment.provider ? ` with ${appointment.provider.name}` : ''}
+SUMMARY:Appointment with ${practiceName}
+DESCRIPTION:${appointment.reason_for_visit || 'Healthcare appointment'} with ${providerName}
 LOCATION:${location}
 STATUS:CONFIRMED
 SEQUENCE:0
