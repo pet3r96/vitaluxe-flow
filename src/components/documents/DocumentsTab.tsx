@@ -41,7 +41,16 @@ export function DocumentsTab() {
         throw error;
       }
 
-      return data || [];
+      // Parse JSONB response
+      const documents = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
+      
+      if (import.meta.env.DEV && documents?.length > 0) {
+        console.log('[DocumentsTab] Sample document:', documents[0]);
+        console.log('[DocumentsTab] has provider_document_patients?', !!documents[0]?.provider_document_patients);
+        console.log('[DocumentsTab] has uploader_profile?', !!documents[0]?.uploader_profile);
+      }
+      
+      return documents;
     },
     enabled: !!effectivePracticeId && (effectiveRole === 'admin' || effectiveRole === 'doctor' || effectiveRole === 'staff'),
     staleTime: 0,
