@@ -62,10 +62,28 @@ Deno.serve(async (req) => {
     }
 
     // Validation 3: Check if time is within business hours
+    // Normalize time formats for comparison (HH:MM vs HH:MM:SS)
+    const normalizeTime = (time: string) => {
+      const parts = time.split(':');
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    };
+    
     const startTimeStr = practiceHours.start_time.toString();
     const endTimeStr = practiceHours.end_time.toString();
-    if (appointmentTime < startTimeStr || appointmentTime >= endTimeStr) {
-      throw new Error(`Practice hours are ${startTimeStr} - ${endTimeStr}`);
+    const appointmentTimeNorm = normalizeTime(appointmentTime);
+    const startTimeNorm = normalizeTime(startTimeStr);
+    const endTimeNorm = normalizeTime(endTimeStr);
+    
+    if (appointmentTimeNorm < startTimeNorm || appointmentTimeNorm >= endTimeNorm) {
+      // Format for user-friendly display
+      const formatTime = (time: string) => {
+        const [h, m] = time.split(':');
+        const hour = parseInt(h);
+        const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        return `${displayHour}:${m} ${ampm}`;
+      };
+      throw new Error(`Practice hours are ${formatTime(startTimeStr)} - ${formatTime(endTimeStr)}`);
     }
 
     // Validation 4: Check if time is blocked
