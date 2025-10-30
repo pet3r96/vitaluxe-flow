@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 interface PatientConversationListProps {
   filter: 'active' | 'urgent' | 'resolved';
@@ -48,31 +49,28 @@ export function PatientConversationList({
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Patient Messages</h2>
-          <Button size="icon" variant="outline" onClick={onNewMessage}>
+          <Button size="icon" onClick={onNewMessage}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
+        </p>
 
         {/* Tabs */}
         <Tabs value={filter} onValueChange={setFilter} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="active" className="relative">
+          <TabsList className="w-full justify-between">
+            <TabsTrigger value="active" className="text-xs flex-1">
               Active
-              {activeCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs">
-                  {activeCount}
-                </span>
-              )}
+              {activeCount > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">{activeCount}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="urgent" className="relative">
+            <TabsTrigger value="urgent" className="text-xs flex-1">
               Urgent
-              {urgentCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs">
-                  {urgentCount}
-                </span>
-              )}
+              {urgentCount > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">{urgentCount}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="resolved">Resolved</TabsTrigger>
+            <TabsTrigger value="resolved" className="text-xs flex-1">
+              Resolved
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -88,6 +86,19 @@ export function PatientConversationList({
             className="pl-9"
           />
         </div>
+        <Select value={selectedPatient || 'all'} onValueChange={(v) => setSelectedPatient(v === 'all' ? '' : v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filter by patient" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Patients</SelectItem>
+            {patients.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Message List */}
