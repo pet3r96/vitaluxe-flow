@@ -393,7 +393,7 @@ const InternalChat = () => {
         </TabsList>
 
         <TabsContent value="internal" className="space-y-0">
-          <div className="flex h-[75vh] overflow-hidden bg-background">
+          <div className="flex h-[90vh] overflow-hidden bg-background">
         {/* Mobile: Show list or thread */}
         <div className="flex flex-1 lg:hidden">
           {!selectedMessageId ? (

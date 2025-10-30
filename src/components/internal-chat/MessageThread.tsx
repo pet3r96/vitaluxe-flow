@@ -150,21 +150,21 @@ export function MessageThread({
 
       {/* Reply Input */}
       {!message.completed && (
-        <div className="p-2 border-t bg-background">
+        <div className="p-1 border-t bg-background">
           <div className="flex gap-2">
             <Textarea
               placeholder="Type a reply..."
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="min-h-[60px] max-h-[120px]"
+              className="min-h-[30px] max-h-[60px]"
               disabled={sending}
             />
             <Button
               onClick={handleSendReply}
               disabled={!replyText.trim() || sending}
               size="icon"
-              className="h-[60px] w-[60px]"
+              className="h-[30px] w-[30px]"
             >
               <Send className="h-4 w-4" />
             </Button>

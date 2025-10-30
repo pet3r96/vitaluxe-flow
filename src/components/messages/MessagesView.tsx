@@ -848,6 +848,10 @@ export const MessagesView = () => {
 
             {/* Order Issues Tab */}
             <TabsContent value="order_issues" className="flex-1 flex flex-col space-y-4 mt-4">
+              <Button size="sm" onClick={() => setShowNewThread(true)} className="w-full">
+                New Support Ticket
+              </Button>
+              
               <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
                 <p className="font-medium">Order issue tickets are created by practices/providers</p>
                 <p className="text-xs mt-1">These tickets are conversations between practices and pharmacies regarding specific orders</p>
