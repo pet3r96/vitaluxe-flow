@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function DocumentsTab() {
-  const { effectivePracticeId } = useAuth();
+  const { effectivePracticeId, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -27,9 +27,11 @@ export function DocumentsTab() {
   });
 
   const { data: documents, isLoading } = useQuery({
-    queryKey: ["provider-documents", effectivePracticeId, filters],
+    queryKey: ["provider-documents", effectivePracticeId, effectiveRole, filters],
     queryFn: async () => {
-      if (!effectivePracticeId) return [];
+      // Admins can view all documents; others require a practice context
+      const isAdmin = effectiveRole === 'admin';
+      if (!effectivePracticeId && !isAdmin) return [];
       
       let query = supabase
         .from("provider_documents" as any)
@@ -41,8 +43,11 @@ export function DocumentsTab() {
             patients(name)
           )
         `)
-        .eq("practice_id", effectivePracticeId)
         .order("created_at", { ascending: false });
+
+      if (effectivePracticeId) {
+        query = query.eq("practice_id", effectivePracticeId);
+      }
 
       if (filters.patientId && filters.patientId !== "all") {
         query = query.eq("assigned_patient_id", filters.patientId);
@@ -73,13 +78,13 @@ export function DocumentsTab() {
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!effectivePracticeId,
+    enabled: effectiveRole === 'admin' || !!effectivePracticeId,
     staleTime: 0,
   });
 
   // Real-time subscription for instant document updates
   useEffect(() => {
-    if (!effectivePracticeId) return;
+    if (!effectivePracticeId && effectiveRole !== 'admin') return;
 
     realtimeManager.subscribe('provider_documents');
     realtimeManager.subscribe('provider_document_patients');
