@@ -98,13 +98,23 @@ export function CreateInternalMessageDialog({
 
     setSending(true);
     try {
+      // Validate patient ID - ensure it exists in the loaded patients list
+      const validPatientIds = new Set(patients.map((p: any) => p.id));
+      const validatedPatientId = regardingPatient && validPatientIds.has(regardingPatient) 
+        ? regardingPatient 
+        : null;
+
+      if (regardingPatient && !validatedPatientId) {
+        console.warn('⚠️ Patient ID not found, clearing patient reference:', regardingPatient);
+      }
+
       console.log('📨 Sending internal message:', {
         practice_id: practiceId,
         created_by: effectiveUserId,
         subject,
         message_type: messageType,
         priority,
-        patient_id: regardingPatient,
+        patient_id: validatedPatientId,
         recipient_count: selectedRecipients.length
       });
 
@@ -118,13 +128,57 @@ export function CreateInternalMessageDialog({
           body,
           message_type: messageType,
           priority,
-          patient_id: regardingPatient || null
+          patient_id: validatedPatientId
         } as any)
         .select()
         .single();
 
       if (messageError) {
         console.error('❌ Error inserting internal_messages:', messageError);
+        
+        // Check if it's a FK constraint error on patient_id
+        if (messageError.message?.includes('internal_messages_patient_id_fkey')) {
+          // Retry without patient reference
+          console.log('🔄 Retrying without patient reference...');
+          const { data: retryMessage, error: retryError } = await supabase
+            .from('internal_messages')
+            .insert({
+              practice_id: practiceId,
+              created_by: effectiveUserId,
+              subject,
+              body,
+              message_type: messageType,
+              priority,
+              patient_id: null
+            } as any)
+            .select()
+            .single();
+
+          if (retryError) {
+            throw new Error(`Failed to create message: ${retryError.message}`);
+          }
+
+          toast.warning('Message sent without patient link (patient not found)');
+          
+          // Continue with recipients using the retry message
+          const recipientsData = selectedRecipients.map(recipientId => ({
+            message_id: retryMessage.id,
+            recipient_id: recipientId
+          }));
+
+          const { error: recipientsError } = await supabase
+            .from('internal_message_recipients')
+            .insert(recipientsData);
+
+          if (recipientsError) {
+            throw new Error(`Failed to add recipients: ${recipientsError.message}`);
+          }
+
+          onSuccess();
+          handleClose();
+          return;
+        }
+        
         throw new Error(`Failed to create message: ${messageError.message || JSON.stringify(messageError)}`);
       }
 

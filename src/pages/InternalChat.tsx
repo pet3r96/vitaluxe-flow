@@ -177,21 +177,18 @@ const InternalChat = () => {
     refetchInterval: 30000
   });
 
-  // Fetch patients for filter
+  // Fetch patients for filter (from patients table to match internal_messages FK)
   const { data: patients = [] } = useQuery({
-    queryKey: ['practice-patients', practiceId],
+    queryKey: ['practice-patients-for-filter', practiceId],
     queryFn: async () => {
       if (!practiceId) return [];
       const { data, error } = await supabase
-        .from('patient_accounts')
-        .select('id, first_name, last_name, email')
+        .from('patients')
+        .select('id, name')
         .eq('practice_id', practiceId)
-        .order('first_name');
+        .order('name');
       if (error) throw error;
-      return (data || []).map(p => ({
-        ...p,
-        name: `${p.first_name} ${p.last_name}`.trim()
-      }));
+      return data || [];
     },
     enabled: !!practiceId
   });
