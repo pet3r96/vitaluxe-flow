@@ -20,45 +20,38 @@ export default function PatientAppointments() {
   const { data: appointments, refetch } = useQuery<any[]>({
     queryKey: ["patient-appointments"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
 
-      // Check for impersonation
-      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+        // Check for impersonation
+        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+        const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
 
-      console.log("👤 [PatientAppointments] Effective user ID:", effectiveUserId);
+        console.log("👤 [PatientAppointments] Effective user ID:", effectiveUserId);
 
-      // Use RPC function to get appointments with proper joins
-      const { data, error } = await supabase
-        .rpc('get_patient_appointments_with_details', {
-          p_user_id: effectiveUserId
-        });
-      
-      if (error) {
-        console.error('[PatientAppointments] RPC error:', error);
+        // Use RPC function to get appointments
+        const { data, error } = await supabase
+          .rpc('get_patient_appointments_with_details', {
+            p_user_id: effectiveUserId
+          }) as { data: any; error: any };
+        
+        if (error) {
+          console.error('[PatientAppointments] RPC error:', error);
+          throw error;
+        }
+        
+        console.log('[PatientAppointments] Raw data type:', typeof data, data);
+        
+        // Handle different response formats
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'string') return JSON.parse(data);
+        return [];
+      } catch (error) {
+        console.error('[PatientAppointments] Query error:', error);
         throw error;
       }
-      
-      console.log('[PatientAppointments] Raw data:', data);
-      
-      // Parse JSONB response
-      let parsed: any[] = [];
-      if (typeof data === 'string') {
-        parsed = JSON.parse(data);
-      } else if (Array.isArray(data)) {
-        parsed = data;
-      } else if (data) {
-        // If it's already parsed JSON, it could be the array directly
-        parsed = data;
-      }
-      
-      console.log('[PatientAppointments] Parsed appointments:', parsed.length);
-      return Array.isArray(parsed) ? parsed : [];
-    },
-    onError: (error: any) => {
-      console.error('[PatientAppointments] Query error:', error);
-      toast.error('Failed to load appointments');
     }
   });
 
