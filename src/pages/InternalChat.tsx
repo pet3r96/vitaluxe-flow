@@ -186,7 +186,7 @@ const InternalChat = () => {
 
   // Fetch selected message details
   const { data: selectedMessage, isLoading: messageLoading } = useQuery({
-    queryKey: ['internal-message', selectedMessageId],
+    queryKey: ['internal-message', selectedMessageId, teamMap],
     queryFn: async () => {
       if (!selectedMessageId) return null;
       const { data, error } = await supabase
@@ -198,21 +198,35 @@ const InternalChat = () => {
         .eq('id', selectedMessageId)
         .single();
       if (error) throw error;
-      // Enrich with sender name
+      
+      // Try to get sender name from teamMap first
+      let senderName = teamMap[data.created_by]?.name;
+      
+      // Fallback: query profiles if not in teamMap
+      if (!senderName) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', data.created_by)
+          .single();
+        
+        senderName = profile?.name || 'Unknown User';
+      }
+      
       return {
         ...data,
         sender: {
           id: data.created_by,
-          name: teamMap[data.created_by]?.name || 'Unknown'
+          name: senderName
         }
       };
     },
-    enabled: !!selectedMessageId
+    enabled: !!selectedMessageId && Object.keys(teamMap).length > 0
   });
 
   // Fetch replies
   const { data: replies = [] } = useQuery({
-    queryKey: ['internal-message-replies', selectedMessageId],
+    queryKey: ['internal-message-replies', selectedMessageId, teamMap],
     queryFn: async () => {
       if (!selectedMessageId) return [];
       const { data, error } = await supabase
@@ -221,16 +235,36 @@ const InternalChat = () => {
         .eq('message_id', selectedMessageId)
         .order('created_at');
       if (error) throw error;
+      
       // Enrich with sender names
-      return data.map((reply: any) => ({
-        ...reply,
-        sender: {
-          id: reply.sender_id,
-          name: teamMap[reply.sender_id]?.name || 'Unknown'
-        }
-      }));
+      const enrichedReplies = await Promise.all(
+        data.map(async (reply: any) => {
+          let senderName = teamMap[reply.sender_id]?.name;
+          
+          // Fallback: query profiles if not in teamMap
+          if (!senderName) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', reply.sender_id)
+              .single();
+            
+            senderName = profile?.name || 'Unknown User';
+          }
+          
+          return {
+            ...reply,
+            sender: {
+              id: reply.sender_id,
+              name: senderName
+            }
+          };
+        })
+      );
+      
+      return enrichedReplies;
     },
-    enabled: !!selectedMessageId
+    enabled: !!selectedMessageId && Object.keys(teamMap).length > 0
   });
 
   // Fetch recipients for selected message
