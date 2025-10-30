@@ -14,9 +14,15 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Check for impersonation
-    const { data: impersonationData } = await supabaseClient.functions.invoke('get-active-impersonation');
-    const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+    // Check for active impersonation session
+    const { data: impersonationSession } = await supabaseClient
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    const effectiveUserId = impersonationSession?.impersonated_user_id || user.id;
 
     const { appointmentDate, appointmentTime, duration = 60 } = await req.json();
 
