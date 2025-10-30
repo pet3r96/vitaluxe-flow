@@ -20,37 +20,91 @@ export default function PatientAppointments() {
   const { data: appointments, refetch } = useQuery<any[]>({
     queryKey: ["patient-appointments"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Check for impersonation
+      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+
+      console.log("👤 [PatientAppointments] Effective user ID:", effectiveUserId);
+
+      // 1) Try RPC first
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-
-        // Check for impersonation
-        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-        const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
-
-        console.log("👤 [PatientAppointments] Effective user ID:", effectiveUserId);
-
-        // Use RPC function to get appointments
         const { data, error } = await supabase
-          .rpc('get_patient_appointments_with_details', {
-            p_user_id: effectiveUserId
-          }) as { data: any; error: any };
-        
-        if (error) {
-          console.error('[PatientAppointments] RPC error:', error);
-          throw error;
-        }
-        
-        console.log('[PatientAppointments] Raw data type:', typeof data, data);
-        
-        // Handle different response formats
+          .rpc('get_patient_appointments_with_details', { p_user_id: effectiveUserId });
+        if (error) throw error;
         if (!data) return [];
         if (Array.isArray(data)) return data;
         if (typeof data === 'string') return JSON.parse(data);
         return [];
-      } catch (error) {
-        console.error('[PatientAppointments] Query error:', error);
-        throw error;
+      } catch (rpcError: any) {
+        console.warn('[PatientAppointments] RPC failed, falling back to direct queries:', rpcError);
+        // 2) Fallback: direct queries with RLS-safe selects
+        const { data: patientAccount, error: paErr } = await supabase
+          .from('patient_accounts')
+          .select('id, practice_id')
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+        if (paErr) throw paErr;
+        if (!patientAccount) return [];
+
+        const { data: apptRows, error: apptErr } = await supabase
+          .from('patient_appointments')
+          .select('id,start_time,end_time,status,confirmation_type,visit_type,reason_for_visit,notes,visit_summary_url,practice_id,provider_id')
+          .eq('patient_id', patientAccount.id)
+          .order('start_time', { ascending: false });
+        if (apptErr) throw apptErr;
+        const rows = apptRows || [];
+
+        // Fetch providers and their profiles for display_name
+        const providerIds = Array.from(new Set(rows.map((r: any) => r.provider_id).filter(Boolean)));
+        let providers: any[] = [];
+        let profiles: any[] = [];
+        if (providerIds.length > 0) {
+          const { data: provs } = await supabase
+            .from('providers')
+            .select('id,user_id')
+            .in('id', providerIds);
+          providers = provs || [];
+          const userIds = Array.from(new Set(providers.map(p => p.user_id).filter(Boolean)));
+          if (userIds.length > 0) {
+            const { data: profs } = await supabase
+              .from('profiles')
+              .select('id, full_name, name')
+              .in('id', userIds);
+            profiles = profs || [];
+          }
+        }
+
+        // Fetch practice branding for name
+        const { data: branding } = await supabase
+          .from('practice_branding')
+          .select('practice_id, practice_name')
+          .eq('practice_id', patientAccount.practice_id)
+          .maybeSingle();
+
+        const mapped = rows.map((r: any) => {
+          const prov = providers.find(p => p.id === r.provider_id);
+          const prof = prov ? profiles.find(pr => pr.id === prov.user_id) : null;
+          return {
+            ...r,
+            practice: {
+              id: r.practice_id,
+              name: branding?.practice_name || 'Practice',
+              address_street: null,
+              address_city: null,
+              address_state: null,
+              address_zip: null,
+            },
+            provider: prov ? {
+              id: prov.id,
+              display_name: prof?.full_name || prof?.name || 'Provider'
+            } : null,
+          };
+        });
+
+        return mapped;
       }
     }
   });
