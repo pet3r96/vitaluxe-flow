@@ -28,6 +28,7 @@ interface AppointmentDetailsDialogProps {
 }
 
 const statusOptions = [
+  { value: 'pending', label: 'Pending' },
   { value: 'scheduled', label: 'Scheduled' },
   { value: 'confirmed', label: 'Confirmed' },
   { value: 'checked_in', label: 'Checked In' },
@@ -325,6 +326,15 @@ export function AppointmentDetailsDialog({
                 Delete Appointment
               </Button>
               <div className="flex gap-2 flex-wrap">
+                {status === "pending" && (
+                  <Button
+                    onClick={() => handleStatusChange("confirmed")}
+                    disabled={updateStatusMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {updateStatusMutation.isPending ? "Confirming..." : "Confirm Appointment"}
+                  </Button>
+                )}
                 {(status === "scheduled" || status === "confirmed") && (
                   <Button
                     onClick={() => checkInMutation.mutate()}

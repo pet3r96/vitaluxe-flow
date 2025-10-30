@@ -31,6 +31,7 @@ interface CalendarFiltersProps {
 }
 
 const appointmentStatuses = [
+  { value: 'pending', label: 'Pending', color: 'bg-yellow-500' },
   { value: 'scheduled', label: 'Scheduled', color: 'bg-blue-500' },
   { value: 'confirmed', label: 'Confirmed', color: 'bg-green-500' },
   { value: 'completed', label: 'Completed', color: 'bg-gray-500' },
