@@ -68,15 +68,16 @@ export function MessagesAndChatWidget() {
   const { data: unreadInternalChat } = useQuery({
     queryKey: ["unread-internal-chat", user?.id, effectiveRole, effectivePracticeId],
     queryFn: async () => {
-      if (!user?.id) return { count: 0, senders: [] };
+      if (!user?.id || !effectivePracticeId) return { count: 0, senders: [] };
 
       try {
-        // Query practice-wide incomplete messages
+        // Query incomplete messages not created by current user
         const { data: messages, error } = await supabase
           .from("internal_messages")
           .select("id, subject, created_by, completed")
           .eq("practice_id", effectivePracticeId)
           .eq("completed", false)
+          .neq("created_by", user.id)
           .order("created_at", { ascending: false })
           .limit(3);
 
