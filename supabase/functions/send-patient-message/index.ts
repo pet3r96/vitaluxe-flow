@@ -43,19 +43,30 @@ Deno.serve(async (req) => {
     const isProviderMode = sender_type === 'provider' && patient_id;
     console.log('[send-patient-message] Mode:', isProviderMode ? 'provider' : 'patient');
 
-    // Check for active impersonation session
-    console.log('[send-patient-message] Checking impersonation for user:', user.id);
-    const { data: impersonationSession, error: impersonationError } = await supabaseAdmin
+    // Check for active impersonation session with detailed logging
+    const currentTimestamp = new Date().toISOString();
+    let hasActiveImpersonation = false;
+    let impersonationSession: any = null;
+    console.log('[send-patient-message] Checking impersonation for admin user:', user.id, 'at', currentTimestamp);
+    
+    const { data: sessionData, error: impersonationError } = await supabaseAdmin
       .from('active_impersonation_sessions')
-      .select('impersonated_user_id, impersonated_role, expires_at')
+      .select('impersonated_user_id, impersonated_role, expires_at, created_at')
       .eq('admin_user_id', user.id)
-      .gt('expires_at', new Date().toISOString())
+      .gt('expires_at', currentTimestamp)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
     
-    console.log('[send-patient-message] Impersonation result:', { 
-      found: !!impersonationSession, 
+    impersonationSession = sessionData;
+    hasActiveImpersonation = !!impersonationSession && !impersonationError;
+    
+    console.log('[send-patient-message] Impersonation query result:', { 
+      found: hasActiveImpersonation,
       role: impersonationSession?.impersonated_role,
-      impersonated_id: impersonationSession?.impersonated_user_id,
+      impersonated_user_id: impersonationSession?.impersonated_user_id,
+      expires_at: impersonationSession?.expires_at,
+      current_time: currentTimestamp,
       error: impersonationError
     });
 
@@ -199,20 +210,18 @@ Deno.serve(async (req) => {
     console.log('[send-patient-message] PATIENT MODE - Resolving patient context');
     
     let effectiveUserId = user.id;
+    let isImpersonating = false;
 
-    // If impersonating, try to resolve as patient
-    if (impersonationSession?.impersonated_user_id) {
-      const { data: impersonatedPatient } = await supabaseAdmin
-        .from('patient_accounts')
-        .select('user_id')
-        .eq('user_id', impersonationSession.impersonated_user_id)
-        .maybeSingle();
-      
-      if (impersonatedPatient) {
-        effectiveUserId = impersonationSession.impersonated_user_id as string;
-        console.log('[send-patient-message] Using impersonated patient:', effectiveUserId);
-      }
+    // Check for impersonation and use impersonated user if available
+    if (hasActiveImpersonation && impersonationSession?.impersonated_user_id) {
+      effectiveUserId = impersonationSession.impersonated_user_id as string;
+      isImpersonating = true;
+      console.log('[send-patient-message] Admin', user.id, 'impersonating patient user:', effectiveUserId);
+    } else {
+      console.log('[send-patient-message] No impersonation - using direct user:', effectiveUserId);
     }
+
+    console.log('[send-patient-message] Effective user ID:', effectiveUserId, 'Impersonating:', isImpersonating);
 
     // Get patient account
     const { data: patientAccount, error: patientError } = await supabaseAdmin
