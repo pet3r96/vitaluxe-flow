@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { realtimeManager } from "@/lib/realtimeManager";
 import { differenceInMinutes, format } from "date-fns";
 import { Clock, User, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,24 +65,12 @@ export function WaitingRoomPanel({
 
   // Real-time subscription
   useEffect(() => {
-    const channel = supabase
-      .channel("waiting-room-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "patient_appointments",
-          filter: `practice_id=eq.${practiceId}`,
-        },
-        () => {
-          refetch();
-        }
-      )
-      .subscribe();
+    realtimeManager.subscribe('patient_appointments', () => {
+      refetch();
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      // Manager handles cleanup
     };
   }, [practiceId, refetch]);
 

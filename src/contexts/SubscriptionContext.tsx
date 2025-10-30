@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { useAuth } from "@/contexts/AuthContext";
 import { getSubscriptionStatus, SubscriptionStatus } from "@/lib/subscriptionCheck";
 import { supabase } from "@/integrations/supabase/client";
+import { realtimeManager } from "@/lib/realtimeManager";
 
 interface SubscriptionContextType extends SubscriptionStatus {
   refreshSubscription: () => Promise<void>;
@@ -108,25 +109,13 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const practiceIdToWatch = effectivePracticeId || user?.id;
     if (!practiceIdToWatch) return;
 
-    const channel = supabase
-      .channel('subscription-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'practice_subscriptions',
-          filter: `practice_id=eq.${practiceIdToWatch}`
-        },
-        (payload) => {
-          console.log('[SubscriptionContext] Subscription changed:', payload);
-          refreshSubscription();
-        }
-      )
-      .subscribe();
+    realtimeManager.subscribe('practice_subscriptions', (payload) => {
+      console.log('[SubscriptionContext] Subscription changed:', payload);
+      refreshSubscription();
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      // Manager handles cleanup
     };
   }, [effectivePracticeId, user?.id]);
 

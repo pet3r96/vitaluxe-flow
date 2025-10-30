@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { realtimeManager } from "@/lib/realtimeManager";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -44,24 +45,12 @@ export function RoomsManagerTable({ practiceId }: RoomsManagerTableProps) {
 
   // Set up realtime subscription
   useEffect(() => {
-    const channel = supabase
-      .channel("rooms-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "practice_rooms",
-          filter: `practice_id=eq.${practiceId}`,
-        },
-        () => {
-          refetch();
-        }
-      )
-      .subscribe();
+    realtimeManager.subscribe('practice_rooms', () => {
+      refetch();
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      // Manager handles cleanup
     };
   }, [practiceId, refetch]);
 

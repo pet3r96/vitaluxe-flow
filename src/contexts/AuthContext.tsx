@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { realtimeManager } from "@/lib/realtimeManager";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { generateCSRFToken, clearCSRFToken } from "@/lib/csrf";
@@ -641,57 +642,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('profile-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`
-        },
-        (payload) => {
-          if (payload.new.active === false && payload.old.active === true) {
-            toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
-            setTimeout(() => {
-              void (async () => {
-                // End impersonation session if active
-                try {
-                  const { data: { session: authSession } } = await supabase.auth.getSession();
-                  const token = authSession?.access_token;
-                  if (token) {
-                    const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+    realtimeManager.subscribe('profiles', (payload) => {
+      if (payload.eventType === 'UPDATE' && (payload.new as any).id === user.id) {
+        if ((payload.new as any).active === false && (payload.old as any).active === true) {
+          toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
+          setTimeout(() => {
+            void (async () => {
+              // End impersonation session if active
+              try {
+                const { data: { session: authSession } } = await supabase.auth.getSession();
+                const token = authSession?.access_token;
+                if (token) {
+                  const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  if (sessionData?.session) {
+                    await supabase.functions.invoke('end-impersonation', {
                       headers: { Authorization: `Bearer ${token}` }
                     });
-                    if (sessionData?.session) {
-                      await supabase.functions.invoke('end-impersonation', {
-                        headers: { Authorization: `Bearer ${token}` }
-                      });
-                    }
                   }
-                } catch (e) {
-                  logger.error('Error ending impersonation on deactivation', e);
                 }
-                
-                await supabase.auth.signOut();
-                setUserRole(null);
-                setImpersonatedRole(null);
-                setImpersonatedUserId(null);
-                setImpersonatedUserName(null);
-                setCurrentLogId(null);
-                setIs2FAVerifiedThisSession(false);
-                // Server-side session cleanup handled above
-                navigate("/auth");
-              })();
-            }, 3000);
-          }
+              } catch (e) {
+                logger.error('Error ending impersonation on deactivation', e);
+              }
+              
+              await supabase.auth.signOut();
+              setUserRole(null);
+              setImpersonatedRole(null);
+              setImpersonatedUserId(null);
+              setImpersonatedUserName(null);
+              setCurrentLogId(null);
+              setIs2FAVerifiedThisSession(false);
+              // Server-side session cleanup handled above
+              navigate("/auth");
+            })();
+          }, 3000);
         }
-      )
-      .subscribe();
+      }
+    });
 
     return () => {
-      void supabase.removeChannel(channel);
+      // Manager handles cleanup
     };
   }, [user, navigate]);
 

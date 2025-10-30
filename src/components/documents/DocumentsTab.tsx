@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { realtimeManager } from "@/lib/realtimeManager";
 import { Button } from "@/components/ui/button";
 import { Upload, Filter } from "lucide-react";
 import { DocumentUploadDialog } from "./DocumentUploadDialog";
@@ -80,42 +81,13 @@ export function DocumentsTab() {
   useEffect(() => {
     if (!effectivePracticeId) return;
 
-    const documentsChannel = supabase
-      .channel('documents-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'provider_documents',
-          filter: `practice_id=eq.${effectivePracticeId}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId] });
-        }
-      )
-      .subscribe();
-
-    const assignmentsChannel = supabase
-      .channel('document-assignments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'provider_document_patients',
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["provider-documents", effectivePracticeId] });
-        }
-      )
-      .subscribe();
+    realtimeManager.subscribe('provider_documents');
+    realtimeManager.subscribe('provider_document_patients');
 
     return () => {
-      supabase.removeChannel(documentsChannel);
-      supabase.removeChannel(assignmentsChannel);
+      // Manager handles cleanup
     };
-  }, [effectivePracticeId, queryClient]);
+  }, [effectivePracticeId]);
 
   return (
     <div className="space-y-4">

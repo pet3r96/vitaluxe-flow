@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { realtimeManager } from "@/lib/realtimeManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, Check, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -36,25 +37,12 @@ export function FollowUpRemindersWidget() {
 
   // Real-time subscription for instant updates
   useEffect(() => {
-    const channel = supabase
-      .channel('follow-ups-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'patient_follow_ups',
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["follow-up-reminders"] });
-        }
-      )
-      .subscribe();
+    realtimeManager.subscribe('patient_follow_ups');
 
     return () => {
-      supabase.removeChannel(channel);
+      // Manager handles cleanup
     };
-  }, [queryClient]);
+  }, []);
 
   const markComplete = useMutation({
     mutationFn: async (id: string) => {

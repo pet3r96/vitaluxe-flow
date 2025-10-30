@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { realtimeManager } from "@/lib/realtimeManager";
 import {
   Table,
   TableBody,
@@ -70,24 +71,12 @@ export function BeingTreatedPanel({
   });
 
   useEffect(() => {
-    const channel = supabase
-      .channel("being-treated-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "patient_appointments",
-          filter: `practice_id=eq.${practiceId}`,
-        },
-        () => {
-          refetch();
-        }
-      )
-      .subscribe();
+    realtimeManager.subscribe('patient_appointments', () => {
+      refetch();
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      // Manager handles cleanup
     };
   }, [practiceId, refetch]);
 

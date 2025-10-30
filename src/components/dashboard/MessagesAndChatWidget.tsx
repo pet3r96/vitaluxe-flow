@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
+import { realtimeManager } from "@/lib/realtimeManager";
 
 export function MessagesAndChatWidget() {
   const navigate = useNavigate();
   const { user, effectiveRole, effectivePracticeId } = useAuth();
-  const queryClient = useQueryClient();
 
   // Fetch unread patient messages (support tickets)
   const { data: unreadMessages } = useQuery({
@@ -114,43 +114,13 @@ export function MessagesAndChatWidget() {
   useEffect(() => {
     if (!user?.id) return;
 
-    const messagesChannel = supabase
-      .channel('patient-messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["unread-patient-messages", user.id] });
-        }
-      )
-      .subscribe();
-
-    const internalChannel = supabase
-      .channel('internal-messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'internal_messages',
-          filter: `practice_id=eq.${effectivePracticeId}`,
-        },
-        (payload) => {
-          console.log("Internal messages change detected:", payload);
-          queryClient.invalidateQueries({ queryKey: ["unread-internal-chat", user.id, effectiveRole, effectivePracticeId] });
-        }
-      )
-      .subscribe();
+    realtimeManager.subscribe('messages');
+    realtimeManager.subscribe('internal_messages');
 
     return () => {
-      supabase.removeChannel(messagesChannel);
-      supabase.removeChannel(internalChannel);
+      // Manager handles cleanup
     };
-  }, [user?.id, effectivePracticeId, effectiveRole, queryClient]);
+  }, [user?.id]);
 
   return (
     <Card>
