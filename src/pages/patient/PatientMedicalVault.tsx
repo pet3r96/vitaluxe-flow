@@ -16,10 +16,12 @@ import { EmergencyContactsSection } from "@/components/medical-vault/EmergencyCo
 
 export default function PatientMedicalVault() {
   // Get patient account
-  const { data: patientAccount } = useQuery({
+  const { data: patientAccount, isLoading, error } = useQuery({
     queryKey: ["patient-account"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("🔍 Current authenticated user:", user?.id, user?.email);
+      
       if (!user) throw new Error("Not authenticated");
       
       const { data, error } = await supabase
@@ -27,6 +29,8 @@ export default function PatientMedicalVault() {
         .select("*")
         .eq("user_id", user.id)
         .single();
+      
+      console.log("📋 Patient account query result:", data, error);
       
       if (error) throw error;
       return data;
@@ -127,14 +131,22 @@ export default function PatientMedicalVault() {
               </p>
             </div>
             
-            {/* Patient Name Badge */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-8 py-3 shadow-xl">
-              <p className="text-lg md:text-xl font-semibold text-white">
-                {patientAccount?.first_name && patientAccount?.last_name 
-                  ? `${patientAccount.first_name} ${patientAccount.last_name}`
-                  : 'Patient Name Not Set'}
-              </p>
-            </div>
+      {/* Patient Name Badge */}
+      <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-8 py-3 shadow-xl">
+        <p className="text-lg md:text-xl font-semibold text-white">
+          {isLoading ? (
+            <span className="animate-pulse">Loading...</span>
+          ) : error ? (
+            <span className="text-red-300">Error loading patient data</span>
+          ) : patientAccount?.first_name && patientAccount?.last_name ? (
+            `${patientAccount.first_name} ${patientAccount.last_name}`
+          ) : patientAccount?.first_name || patientAccount?.last_name ? (
+            `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim()
+          ) : (
+            'Patient Name Not Set'
+          )}
+        </p>
+      </div>
             
             {/* Action Buttons - Modern Glass Morphism Style */}
             <div className="flex flex-wrap gap-3 justify-center pt-4">
