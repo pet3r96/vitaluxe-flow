@@ -27,19 +27,19 @@ export function CreatePatientMessageDialog({
 }: CreatePatientMessageDialogProps) {
   const { effectiveUserId } = useAuth();
   
-  const [patientId, setPatientId] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [urgency, setUrgency] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Fetch patients
+  // Fetch patients with portal account link
   const { data: patients = [], isLoading: isLoadingPatients } = useQuery({
     queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patients')
-        .select('id, name, email, phone')
+        .select('id, name, email, phone, patient_account_id')
         .eq('practice_id', practiceId)
         .order('name');
       if (error) throw error;
@@ -55,17 +55,23 @@ export function CreatePatientMessageDialog({
     }
 
     // Validate fields
-    if (!patientId || !subject.trim() || !body.trim()) {
+    if (!selectedPatient || !subject.trim() || !body.trim()) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Check if patient has portal account
+    if (!selectedPatient.patient_account_id) {
+      toast.error('This patient does not have a portal account. Please create one first.');
       return;
     }
 
     setSending(true);
     try {
-      // Use the edge function instead of direct insert for proper role resolution
+      // Use the edge function with patient_account_id
       const { data, error } = await supabase.functions.invoke('send-patient-message', {
         body: {
-          patient_id: patientId,
+          patient_id: selectedPatient.patient_account_id,
           subject: subject,
           message: body,
           sender_type: 'provider',
@@ -87,14 +93,14 @@ export function CreatePatientMessageDialog({
   };
 
   const handleClose = () => {
-    setPatientId('');
+    setSelectedPatient(null);
     setUrgency('medium');
     setSubject('');
     setBody('');
     onOpenChange(false);
   };
 
-  const canSend = patientId && subject.trim() && body.trim();
+  const canSend = selectedPatient && subject.trim() && body.trim();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,7 +117,13 @@ export function CreatePatientMessageDialog({
             {/* Patient Selector */}
             <div className="space-y-2">
               <Label>Patient *</Label>
-              <Select value={patientId} onValueChange={setPatientId}>
+              <Select 
+                value={selectedPatient?.id || ''} 
+                onValueChange={(id) => {
+                  const patient = patients.find((p: any) => p.id === id);
+                  setSelectedPatient(patient || null);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a patient" />
                 </SelectTrigger>
@@ -131,6 +143,9 @@ export function CreatePatientMessageDialog({
                           <span>{patient.name}</span>
                           {patient.email && (
                             <span className="text-xs text-muted-foreground">{patient.email}</span>
+                          )}
+                          {!patient.patient_account_id && (
+                            <span className="text-xs text-orange-500">⚠ No portal account</span>
                           )}
                         </div>
                       </SelectItem>

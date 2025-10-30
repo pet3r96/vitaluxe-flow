@@ -3007,6 +3007,7 @@ export type Database = {
           name: string
           notes: string | null
           notes_encrypted: string | null
+          patient_account_id: string | null
           phone: string | null
           practice_id: string | null
           updated_at: string
@@ -3030,6 +3031,7 @@ export type Database = {
           name: string
           notes?: string | null
           notes_encrypted?: string | null
+          patient_account_id?: string | null
           phone?: string | null
           practice_id?: string | null
           updated_at?: string
@@ -3053,11 +3055,27 @@ export type Database = {
           name?: string
           notes?: string | null
           notes_encrypted?: string | null
+          patient_account_id?: string | null
           phone?: string | null
           practice_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patients_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+        ]
       }
       pending_practices: {
         Row: {
