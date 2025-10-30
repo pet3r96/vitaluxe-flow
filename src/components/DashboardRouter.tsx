@@ -14,7 +14,12 @@ const LoadingFallback = () => (
 const PatientDashboard = lazy(() => import("@/pages/patient/PatientDashboard"));
 
 export default function DashboardRouter() {
-  const { effectiveRole } = useAuth();
+  const { effectiveRole, loading } = useAuth();
+  
+  // Wait for auth to load before determining which dashboard to show
+  if (loading || !effectiveRole) {
+    return <LoadingFallback />;
+  }
   
   return (
     <Suspense fallback={<LoadingFallback />}>
