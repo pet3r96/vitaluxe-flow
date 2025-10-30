@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function TodayAppointmentsWidget() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const queryClient = useQueryClient();
+  const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
 
   const { data: appointments, isLoading } = useQuery({
     queryKey: ["today-appointments"],
@@ -40,30 +42,65 @@ export function TodayAppointmentsWidget() {
   });
 
   const { data: providers = [] } = useQuery<any[]>({
-    queryKey: ["widget-providers"],
+    queryKey: ["widget-providers", effectivePracticeId, effectiveRole, effectiveUserId],
+    enabled: !!effectivePracticeId,
     queryFn: async (): Promise<any[]> => {
-      // @ts-ignore - Type inference issue with Supabase client
-      const result: any = await supabase
+      // Fetch provider records for this practice
+      const { data: providerRecords, error: provErr } = await supabase
         .from("providers")
-        .select("id, first_name, last_name, user_id, is_active")
-        .eq("is_active", true);
-      
-      if (result.error) throw result.error;
-      return result.data || [];
+        .select("id, user_id, active, practice_id")
+        .eq("practice_id", effectivePracticeId)
+        .eq("active", true);
+
+      if (provErr) throw provErr;
+      const records = providerRecords || [];
+
+      // If provider account, restrict to themselves
+      const filtered = effectiveRole === "provider"
+        ? records.filter((p: any) => p.user_id === effectiveUserId)
+        : records;
+
+      if (filtered.length === 0) return [];
+
+      // Fetch profile names for these providers
+      const userIds = filtered.map((p: any) => p.user_id);
+      const { data: profiles, error: profErr } = await supabase
+        .from("profiles")
+        .select("id, full_name, name")
+        .in("id", userIds);
+
+      if (profErr) throw profErr;
+
+      const byId = new Map((profiles || []).map((pr: any) => [pr.id, pr]));
+      return filtered.map((p: any) => {
+        const prof = byId.get(p.user_id);
+        const display = prof?.full_name || prof?.name || "Unknown Provider";
+        const parts = display.trim().split(" ");
+        return {
+          id: p.id,
+          user_id: p.user_id,
+          active: p.active,
+          full_name: display,
+          first_name: parts[0] || "",
+          last_name: parts.slice(1).join(" ") || "",
+        };
+      });
     },
   });
 
   const { data: rooms = [] } = useQuery<any[]>({
-    queryKey: ["widget-rooms"],
+    queryKey: ["widget-rooms", effectivePracticeId],
+    enabled: !!effectivePracticeId,
     queryFn: async (): Promise<any[]> => {
-      // @ts-ignore - Type inference issue with Supabase client
-      const result: any = await supabase
+      const { data, error } = await supabase
         .from("practice_rooms")
-        .select("id, room_name, is_active")
-        .eq("is_active", true);
-      
-      if (result.error) throw result.error;
-      return result.data || [];
+        .select("id, name, active, practice_id")
+        .eq("practice_id", effectivePracticeId)
+        .eq("active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data || [];
     },
   });
 
