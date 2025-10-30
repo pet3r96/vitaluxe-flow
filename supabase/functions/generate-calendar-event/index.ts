@@ -20,9 +20,8 @@ Deno.serve(async (req) => {
     const { data: appointment, error } = await supabaseClient
       .from('patient_appointments')
       .select(`
-        *,
-        practice:profiles!patient_appointments_practice_id_fkey(full_name, name, address_street, address_city, address_state, address_zip),
-        provider:profiles!patient_appointments_provider_id_fkey(full_name, name)
+        id, start_time, end_time, visit_type, reason_for_visit,
+        practice:profiles!patient_appointments_practice_id_fkey(full_name, name, address_street, address_city, address_state, address_zip)
       `)
       .eq('id', appointmentId)
       .single();
@@ -41,7 +40,7 @@ Deno.serve(async (req) => {
     };
 
     const practiceName = appointment.practice?.full_name || appointment.practice?.name || 'Healthcare Practice';
-    const providerName = appointment.provider?.full_name || appointment.provider?.name || 'Provider';
+    const providerName = 'Provider';
     
     // Build address safely with fallback
     const addressParts = [

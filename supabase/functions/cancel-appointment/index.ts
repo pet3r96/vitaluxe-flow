@@ -16,11 +16,22 @@ Deno.serve(async (req) => {
 
     const { appointmentId } = await req.json();
 
+    // Verify patient owns this appointment via patient_accounts linkage
+    const { data: appointment, error: fetchError } = await supabaseClient
+      .from('patient_appointments')
+      .select('id, patient_accounts!inner(user_id)')
+      .eq('id', appointmentId)
+      .eq('patient_accounts.user_id', user.id)
+      .single();
+
+    if (fetchError || !appointment) {
+      throw new Error('Appointment not found or access denied');
+    }
+
     const { error } = await supabaseClient
       .from('patient_appointments')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('id', appointmentId)
-      .eq('patient_id', user.id);
+      .eq('id', appointmentId);
 
     if (error) throw error;
 

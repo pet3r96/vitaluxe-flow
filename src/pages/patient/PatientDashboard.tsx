@@ -23,7 +23,7 @@ export default function PatientDashboard() {
         .from("patient_accounts")
         .select("id, first_name, last_name, practice_id")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;

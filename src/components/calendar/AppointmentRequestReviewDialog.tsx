@@ -260,13 +260,17 @@ export const AppointmentRequestReviewDialog = ({
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" />
                   <span className="font-medium">
-                    {format(new Date(`${editedDate}T${editedTime}`), 'EEEE, MMMM d, yyyy')}
+                    {editedDate && editedTime && !isNaN(new Date(`${editedDate}T${editedTime}`).getTime())
+                      ? format(new Date(`${editedDate}T${editedTime}`), 'EEEE, MMMM d, yyyy')
+                      : 'Date TBD'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" />
                   <span className="font-medium">
-                    {format(new Date(`${editedDate}T${editedTime}`), 'h:mm a')}
+                    {editedDate && editedTime && !isNaN(new Date(`${editedDate}T${editedTime}`).getTime())
+                      ? format(new Date(`${editedDate}T${editedTime}`), 'h:mm a')
+                      : '--:--'}
                   </span>
                 </div>
               </div>

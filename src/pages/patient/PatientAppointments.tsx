@@ -254,10 +254,15 @@ export default function PatientAppointments() {
                       <div className="flex items-start gap-2 text-sm text-muted-foreground">
                         <MapPin className="h-4 w-4 mt-0.5" />
                         <span>
-                          {appt.practice.address_street && appt.practice.address_city && appt.practice.address_state
-                            ? `${appt.practice.address_street}, ${appt.practice.address_city}, ${appt.practice.address_state}`
-                            : "Contact practice for address details"
-                          }
+                          {(() => {
+                            const parts = [
+                              appt.practice.address_street,
+                              appt.practice.address_city,
+                              appt.practice.address_state,
+                              appt.practice.address_zip
+                            ].filter(Boolean);
+                            return parts.length ? parts.join(', ') : 'Contact practice for address details';
+                          })()}
                         </span>
                       </div>
                     )}
