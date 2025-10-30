@@ -650,8 +650,8 @@ export const MessagesView = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Support / Admin</SelectItem>
-                {/* Only show pharmacy option for practices, providers, and admins */}
-                {(effectiveRole === "doctor" || effectiveRole === "provider" || effectiveRole === "admin") && (
+                {/* Only show pharmacy option for practices, providers, staff, and admins */}
+                {(effectiveRole === "doctor" || effectiveRole === "provider" || effectiveRole === "admin" || effectiveRole === "staff") && (
                   <SelectItem value="pharmacy">Pharmacy (Order Issue)</SelectItem>
                 )}
                 </SelectContent>
