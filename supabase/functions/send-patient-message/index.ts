@@ -45,11 +45,9 @@ Deno.serve(async (req) => {
 
     // Check for active impersonation session with detailed logging
     const currentTimestamp = new Date().toISOString();
-    let hasActiveImpersonation = false;
-    let impersonationSession: any = null;
     console.log('[send-patient-message] Checking impersonation for admin user:', user.id, 'at', currentTimestamp);
     
-    const { data: sessionData, error: impersonationError } = await supabaseAdmin
+    const { data: impersonationSession, error: impersonationError } = await supabaseAdmin
       .from('active_impersonation_sessions')
       .select('impersonated_user_id, impersonated_role, expires_at, created_at')
       .eq('admin_user_id', user.id)
@@ -58,8 +56,7 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
     
-    impersonationSession = sessionData;
-    hasActiveImpersonation = !!impersonationSession && !impersonationError;
+    const hasActiveImpersonation = !!impersonationSession && !impersonationError;
     
     console.log('[send-patient-message] Impersonation query result:', { 
       found: hasActiveImpersonation,
