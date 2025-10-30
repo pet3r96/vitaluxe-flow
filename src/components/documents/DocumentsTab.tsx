@@ -35,14 +35,7 @@ export function DocumentsTab() {
       
       let query = supabase
         .from("provider_documents" as any)
-        .select(`
-          *,
-          patients(name),
-          provider_document_patients(
-            patient_id,
-            patients(name)
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (effectivePracticeId) {
