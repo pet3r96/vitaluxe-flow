@@ -1,48 +1,62 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, MailOpen, Reply } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Mail, MailOpen, Reply, Plus, Search, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { PriorityBadge } from "@/components/internal-chat/PriorityBadge";
 
 export default function PatientInbox() {
   const queryClient = useQueryClient();
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
+  const [filterTab, setFilterTab] = useState<'active' | 'urgent' | 'resolved'>('active');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPatientFilter, setSelectedPatientFilter] = useState<string | null>(null);
+  const [showNewMessageDialog, setShowNewMessageDialog] = useState(false);
 
-  const { data: messages } = useQuery({
-    queryKey: ["patient-messages-inbox"],
+  // Get practice ID
+  const { data: practiceId } = useQuery({
+    queryKey: ['user-practice-inbox'],
     queryFn: async () => {
-      // Get current user's practice
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Try to get practice_id from providers table first
       const { data: providerData } = await supabase
         .from("providers")
         .select("practice_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      let practiceId = providerData?.practice_id;
+      if (providerData?.practice_id) return providerData.practice_id;
 
-      // If not a provider, try practice_staff table
-      if (!practiceId) {
-        const { data: staffData } = await supabase
-          .from("practice_staff")
-          .select("practice_id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        
-        practiceId = staffData?.practice_id;
-      }
+      const { data: staffData } = await supabase
+        .from("practice_staff")
+        .select("practice_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      return staffData?.practice_id;
+    },
+  });
 
-      if (!practiceId) throw new Error("Practice not found");
+  // Fetch all messages with filters
+  const { data: messages, isLoading: messagesLoading } = useQuery({
+    queryKey: ["patient-messages-inbox", practiceId, filterTab, searchQuery, selectedPatientFilter],
+    queryFn: async () => {
+      if (!practiceId) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("patient_messages")
         .select(`
           *,
@@ -51,10 +65,63 @@ export default function PatientInbox() {
         .eq("practice_id", practiceId)
         .eq("sender_type", "patient")
         .order("created_at", { ascending: false });
+
+      // Apply tab filters
+      if (filterTab === 'active') {
+        query = query.eq('resolved', false);
+      } else if (filterTab === 'urgent') {
+        query = query.eq('urgency', 'urgent').eq('resolved', false);
+      } else if (filterTab === 'resolved') {
+        query = query.eq('resolved', true);
+      }
+
+      // Apply search
+      if (searchQuery) {
+        query = query.or(`subject.ilike.%${searchQuery}%,message_body.ilike.%${searchQuery}%`);
+      }
+
+      // Apply patient filter
+      if (selectedPatientFilter) {
+        query = query.eq('patient_id', selectedPatientFilter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!practiceId
+  });
+
+  // Fetch unique patients for filter
+  const { data: patients = [] } = useQuery({
+    queryKey: ['inbox-patients', practiceId],
+    queryFn: async () => {
+      if (!practiceId) return [];
+      const { data, error } = await supabase
+        .from('patient_accounts')
+        .select('id, first_name, last_name')
+        .order('first_name');
       if (error) throw error;
       return data;
     },
+    enabled: !!practiceId
   });
+
+  // Calculate counts
+  const unreadCount = useMemo(() => 
+    messages?.filter((m) => !m.read_at).length || 0,
+    [messages]
+  );
+
+  const activeCount = useMemo(() => 
+    messages?.filter((m) => !m.resolved).length || 0,
+    [messages]
+  );
+
+  const urgentCount = useMemo(() => 
+    messages?.filter((m) => m.urgency === 'urgent' && !m.resolved).length || 0,
+    [messages]
+  );
 
   const markReadMutation = useMutation({
     mutationFn: async (messageId: string) => {
@@ -94,64 +161,138 @@ export default function PatientInbox() {
     }
   };
 
-  const unreadCount = messages?.filter((m) => !m.read_at).length || 0;
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Patient Inbox</h1>
-        <p className="text-muted-foreground">
-          {unreadCount} unread message{unreadCount !== 1 ? "s" : ""}
-        </p>
-      </div>
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+      {/* Left Sidebar - Message List */}
+      <div className="w-full lg:w-[340px] border-r flex flex-col h-full bg-background">
+        {/* Header */}
+        <div className="p-4 border-b space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Patient Messages</h2>
+            <Button size="icon" onClick={() => setShowNewMessageDialog(true)}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
+          </p>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Messages</CardTitle>
-            <CardDescription>Click to view full message</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {messages && messages.length > 0 ? (
-              messages.map((msg: any) => (
+        {/* Tabs */}
+        <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as any)} className="px-4 pt-4">
+          <TabsList className="w-full justify-between">
+            <TabsTrigger value="active" className="text-xs flex-1">
+              Active
+              {activeCount > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">{activeCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="urgent" className="text-xs flex-1">
+              Urgent
+              {urgentCount > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">{urgentCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="resolved" className="text-xs flex-1">
+              Resolved
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Filters */}
+        <div className="p-4 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <Select value={selectedPatientFilter || 'all'} onValueChange={(v) => setSelectedPatientFilter(v === 'all' ? null : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by patient" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Patients</SelectItem>
+              {patients.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.first_name} {p.last_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Message List */}
+        <ScrollArea className="flex-1">
+          {messagesLoading ? (
+            <div className="p-4 text-center text-muted-foreground">Loading...</div>
+          ) : messages && messages.length > 0 ? (
+            messages.map((msg: any) => {
+              const initials = `${msg.patient?.first_name?.[0] || ''}${msg.patient?.last_name?.[0] || ''}`.toUpperCase();
+              return (
                 <div
                   key={msg.id}
                   onClick={() => handleSelectMessage(msg)}
-                  className={`p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors ${
-                    selectedMessage?.id === msg.id ? "bg-accent" : ""
-                  } ${!msg.read_at ? "border-primary" : ""}`}
+                  className={cn(
+                    "flex gap-3 p-4 border-b cursor-pointer transition-colors hover:bg-accent",
+                    selectedMessage?.id === msg.id && "bg-accent",
+                    !msg.read_at && "bg-accent/50"
+                  )}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {msg.read_at ? (
-                        <MailOpen className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Mail className="h-4 w-4 text-primary" />
-                      )}
-                      <p className="font-medium text-sm">
-                        {msg.patient?.first_name} {msg.patient?.last_name}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(msg.created_at), "MMM dd")}
-                    </p>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {msg.subject || msg.message_body}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-muted-foreground py-8">No messages</p>
-            )}
-          </CardContent>
-        </Card>
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
 
-        <Card className="md:col-span-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-1">
+                      <h4 className={cn(
+                        "text-sm truncate flex-1",
+                        !msg.read_at ? "font-semibold" : "font-medium"
+                      )}>
+                        {msg.subject || "No Subject"}
+                      </h4>
+                      <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
+                        {format(new Date(msg.created_at), 'MMM dd')}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground truncate mb-2">
+                      {msg.patient?.first_name} {msg.patient?.last_name}: {msg.message_body}
+                    </p>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {msg.urgency && (
+                        <PriorityBadge priority={msg.urgency} />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    {!msg.read_at && (
+                      <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                        1
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-8 text-center text-muted-foreground">
+              <p className="text-sm">No messages found</p>
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+
+      {/* Right Side - Message Details */}
+      <div className="flex-1 flex flex-col"  >
+
+        <Card className="flex-1 m-4 flex flex-col">
           <CardHeader>
             <CardTitle>Message Details</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 overflow-auto">
             {selectedMessage ? (
               <div className="space-y-4">
                 <div className="border-b pb-4">
@@ -164,6 +305,11 @@ export default function PatientInbox() {
                   </p>
                   {selectedMessage.subject && (
                     <p className="font-medium text-sm">Subject: {selectedMessage.subject}</p>
+                  )}
+                  {selectedMessage.urgency && (
+                    <div className="mt-2">
+                      <PriorityBadge priority={selectedMessage.urgency} />
+                    </div>
                   )}
                 </div>
                 <div className="bg-muted p-4 rounded-lg">
