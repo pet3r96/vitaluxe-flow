@@ -35,27 +35,31 @@ export default function PatientAppointments() {
           p_user_id: effectiveUserId
         });
       
-      if (error) throw error;
-      
-      // Normalize RPC response to array
-      const raw: any = data;
-      let parsed: any[] = [];
-      try {
-        if (typeof raw === 'string') {
-          parsed = JSON.parse(raw);
-        } else if (Array.isArray(raw)) {
-          parsed = raw;
-        } else if (raw && typeof raw === 'object' && Array.isArray((raw as any).appointments)) {
-          parsed = (raw as any).appointments;
-        } else if (raw && typeof raw === 'object') {
-          const maybeArray = (raw as any).data;
-          if (Array.isArray(maybeArray)) parsed = maybeArray;
-        }
-      } catch (e) {
-        console.warn('[PatientAppointments] Failed to parse appointments JSON', e);
+      if (error) {
+        console.error('[PatientAppointments] RPC error:', error);
+        throw error;
       }
-      return parsed;
+      
+      console.log('[PatientAppointments] Raw data:', data);
+      
+      // Parse JSONB response
+      let parsed: any[] = [];
+      if (typeof data === 'string') {
+        parsed = JSON.parse(data);
+      } else if (Array.isArray(data)) {
+        parsed = data;
+      } else if (data) {
+        // If it's already parsed JSON, it could be the array directly
+        parsed = data;
+      }
+      
+      console.log('[PatientAppointments] Parsed appointments:', parsed.length);
+      return Array.isArray(parsed) ? parsed : [];
     },
+    onError: (error: any) => {
+      console.error('[PatientAppointments] Query error:', error);
+      toast.error('Failed to load appointments');
+    }
   });
 
   const handleCancelAppointment = async (appointmentId: string) => {
