@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useResponsive } from '@/hooks/use-mobile';
 import { getResponsivePadding } from '@/lib/responsive';
 
 interface ResponsiveLayoutProps {

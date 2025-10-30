@@ -16,7 +16,7 @@ import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpRemindersWidget";
 import { WaitingRoomWidget } from "@/components/dashboard/WaitingRoomWidget";
 import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
-import { useResponsive } from "@/hooks/useResponsive";
+import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardMobile from "./DashboardMobile";
 
 // Dashboard component with real-time stats
@@ -24,7 +24,7 @@ const Dashboard = () => {
   const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount } = useAuth();
   const { isSubscribed, status, trialDaysRemaining } = useSubscription();
   const navigate = useNavigate();
-  const { isMobile } = useResponsive();
+  const isMobile = useIsMobile();
 
   // Mobile users get simplified dashboard
   if (isMobile) {

@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { NavLink, useLocation } from "react-router-dom";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
-import { useResponsive } from "@/hooks/useResponsive";
+import { useResponsive } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/responsive/MobileBottomNav";
 import {
   LayoutDashboard,
