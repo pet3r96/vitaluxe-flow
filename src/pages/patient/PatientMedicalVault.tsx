@@ -106,36 +106,36 @@ export default function PatientMedicalVault() {
       <Card className="border-2">
         <CardHeader className="pb-6">
           {/* Centered Title with Gold Lock */}
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <Lock className="h-6 w-6 text-yellow-600" />
+          <div className="flex flex-col items-center justify-center gap-3 mb-6">
             <CardTitle className="text-2xl font-bold">
               Medical Vault - Secure Health Information
             </CardTitle>
+            <Lock className="h-12 w-12 text-yellow-600" />
           </div>
 
           {/* Three-column layout: Patient Info (left) | Spacer | Actions (right) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Left Column: Patient Info (left-aligned) */}
             <div className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Full Name</p>
-                <p className="font-medium">{patientAccount?.first_name} {patientAccount?.last_name}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Full Name:</span>
+                <span className="font-medium">{patientAccount?.first_name} {patientAccount?.last_name || 'Not set'}</span>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">DOB</p>
-                <p className="font-medium">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">DOB:</span>
+                <span className="font-medium">
                   {patientAccount?.date_of_birth 
                     ? format(new Date(patientAccount.date_of_birth), 'MM/dd/yyyy')
                     : 'Not set'}
-                </p>
+                </span>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Phone Number</p>
-                <p className="font-medium">{patientAccount?.phone || 'Not set'}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Phone Number:</span>
+                <span className="font-medium">{patientAccount?.phone || 'Not set'}</span>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Gender</p>
-                <p className="font-medium">{patientAccount?.gender_at_birth || 'Not set'}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Gender:</span>
+                <span className="font-medium">{patientAccount?.gender_at_birth || 'Not set'}</span>
               </div>
             </div>
 
@@ -146,16 +146,16 @@ export default function PatientMedicalVault() {
             <div className="space-y-4 flex flex-col items-end">
               {/* Action Buttons - Horizontal */}
               <div className="flex gap-2 flex-wrap justify-end">
-                <Button variant="ghost" size="sm" className="uppercase text-xs font-semibold">
+                <Button variant="outline" size="sm" className="uppercase text-xs font-semibold">
                   Secure
                 </Button>
-                <Button variant="ghost" size="sm" className="uppercase text-xs font-semibold">
+                <Button variant="outline" size="sm" className="uppercase text-xs font-semibold">
                   Print
                 </Button>
-                <Button variant="ghost" size="sm" className="uppercase text-xs font-semibold">
+                <Button variant="outline" size="sm" className="uppercase text-xs font-semibold">
                   Download
                 </Button>
-                <Button variant="ghost" size="sm" className="uppercase text-xs font-semibold">
+                <Button variant="outline" size="sm" className="uppercase text-xs font-semibold">
                   Share
                 </Button>
               </div>
@@ -178,72 +178,6 @@ export default function PatientMedicalVault() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm font-medium">Allergies</p>
-                </div>
-                {hasNKA ? (
-                  <Badge variant="outline">NKA (No Known Allergies)</Badge>
-                ) : activeAllergies.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {activeAllergies.slice(0, 3).map((allergy) => (
-                      <Badge key={allergy.id} variant="destructive">
-                        {allergy.allergen_name}
-                      </Badge>
-                    ))}
-                    {activeAllergies.length > 3 && (
-                      <Badge variant="outline">+{activeAllergies.length - 3} more</Badge>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">None recorded</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Pill className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm font-medium">Active Medications</p>
-                </div>
-                {activeMedications.length > 0 ? (
-                  <div className="space-y-1">
-                    {activeMedications.slice(0, 3).map((med) => (
-                      <p key={med.id} className="text-sm">{med.medication_name}</p>
-                    ))}
-                    {activeMedications.length > 3 && (
-                      <p className="text-sm text-muted-foreground">+{activeMedications.length - 3} more</p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">None recorded</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Heart className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm font-medium">Medical Conditions</p>
-                </div>
-                {activeConditions.length > 0 ? (
-                  <div className="space-y-1">
-                    {activeConditions.slice(0, 3).map((condition) => (
-                      <p key={condition.id} className="text-sm">{condition.condition_name}</p>
-                    ))}
-                    {activeConditions.length > 3 && (
-                      <p className="text-sm text-muted-foreground">+{activeConditions.length - 3} more</p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">None recorded</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
       </Card>
 
       {/* 8 Medical Vault Sections */}
