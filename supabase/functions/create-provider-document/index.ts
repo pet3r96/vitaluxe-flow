@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { document_name, document_type, storage_path, file_size, mime_type, tags, notes, patientIds } = await req.json();
+    const { document_name, document_type, storage_path, file_size, mime_type, tags, notes, patientIds, is_internal } = await req.json();
 
     console.log('[create-provider-document] Request:', { document_name, document_type, storage_path, patientIds });
 
@@ -183,6 +183,7 @@ Deno.serve(async (req) => {
         mime_type,
         tags: tags || [],
         notes: notes || null,
+        is_internal: is_internal ?? false,
       })
       .select()
       .single();

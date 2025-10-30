@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, Eye, Download, Edit, UserPlus, Trash2, MoreVertical, FileText } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
@@ -24,11 +26,12 @@ interface DocumentsDataTableProps {
 }
 
 export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableProps) {
-  const { effectivePracticeId } = useAuth();
+  const { effectivePracticeId, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [documentTypeFilter, setDocumentTypeFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "my_uploads" | "practice_shared">("all");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showAssign, setShowAssign] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -125,9 +128,17 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
       const matchesType =
         documentTypeFilter === "all" || doc.document_type === documentTypeFilter;
 
-      return matchesSearch && matchesStatus && matchesType;
+      // Source filter
+      let matchesSource = true;
+      if (sourceFilter === "my_uploads") {
+        matchesSource = doc.uploaded_by === effectiveUserId;
+      } else if (sourceFilter === "practice_shared") {
+        matchesSource = doc.is_internal === false;
+      }
+
+      return matchesSearch && matchesStatus && matchesType && matchesSource;
     });
-  }, [documents, searchQuery, statusFilter, documentTypeFilter]);
+  }, [documents, searchQuery, statusFilter, documentTypeFilter, sourceFilter, effectiveUserId]);
 
   // Status counts for filter dropdown
   const statusCounts = useMemo(() => {
@@ -224,6 +235,29 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Source Filter Row */}
+      <div className="flex items-center gap-4 p-3 border rounded-lg bg-muted/20">
+        <Label className="text-sm font-medium">Source</Label>
+        <RadioGroup 
+          value={sourceFilter} 
+          onValueChange={(value) => setSourceFilter(value as any)}
+          className="flex gap-6"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="all" id="source-all" />
+            <Label htmlFor="source-all" className="font-normal cursor-pointer">All</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="my_uploads" id="source-mine" />
+            <Label htmlFor="source-mine" className="font-normal cursor-pointer">My Uploads</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="practice_shared" id="source-shared" />
+            <Label htmlFor="source-shared" className="font-normal cursor-pointer">Practice Shared</Label>
+          </div>
+        </RadioGroup>
       </div>
 
       {/* Table */}

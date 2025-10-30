@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MultiPatientSelect } from "./MultiPatientSelect";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +27,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
   const [notes, setNotes] = useState("");
   const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
   const [documentName, setDocumentName] = useState("");
+  const [shareWithPractice, setShareWithPractice] = useState(true);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -70,6 +72,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             tags: tags ? tags.split(",").map(t => t.trim()) : [],
             notes: notes || null,
             patientIds: selectedPatientIds.length > 0 ? selectedPatientIds : undefined,
+            is_internal: !shareWithPractice,
           },
         });
 
@@ -116,6 +119,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     setNotes("");
     setSelectedPatientIds([]);
     setDocumentName("");
+    setShareWithPractice(true);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -203,6 +207,25 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
               selectedPatientIds={selectedPatientIds}
               onSelectedChange={setSelectedPatientIds}
             />
+          </div>
+
+          <div className="flex items-start space-x-2 p-3 border rounded-lg">
+            <Checkbox
+              id="share-practice"
+              checked={shareWithPractice}
+              onCheckedChange={(checked) => setShareWithPractice(checked as boolean)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label
+                htmlFor="share-practice"
+                className="text-sm font-medium leading-none cursor-pointer"
+              >
+                Share with Practice (Providers and staff can view this document)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                When unchecked, only you can see this document (private/internal).
+              </p>
+            </div>
           </div>
 
           <div>

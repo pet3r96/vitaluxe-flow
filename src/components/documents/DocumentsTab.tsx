@@ -24,6 +24,7 @@ export function DocumentsTab() {
     uploadedBy: "all",
     isInternal: "all",
     assignedStaffId: "all",
+    source: "all",
   });
 
   const { data: allDocuments = [], isLoading } = useQuery({
@@ -46,22 +47,30 @@ export function DocumentsTab() {
     staleTime: 0,
   });
 
-  // Apply filters client-side
+  // Client-side filters
   const documents = useMemo(() => {
     if (!allDocuments?.length) return [];
 
     return allDocuments.filter((doc: any) => {
-      if (filters.patientId !== 'all' && doc.assigned_patient_id !== filters.patientId) return false;
-      if (filters.documentType !== 'all' && doc.document_type !== filters.documentType) return false;
-      if (filters.status !== 'all' && doc.status !== filters.status) return false;
-      if (filters.dateFrom && new Date(doc.created_at) < new Date(filters.dateFrom)) return false;
-      if (filters.dateTo && new Date(doc.created_at) > new Date(filters.dateTo)) return false;
-      if (filters.uploadedBy !== 'all' && doc.uploaded_by !== filters.uploadedBy) return false;
-      if (filters.isInternal !== 'all' && doc.is_internal !== (filters.isInternal === 'true')) return false;
-      if (filters.assignedStaffId !== 'all' && doc.assigned_staff_id !== filters.assignedStaffId) return false;
+      if (filters.patientId !== "all") {
+        const hasPatient = doc.provider_document_patients?.some(
+          (pdp: any) => pdp.patient_id === filters.patientId
+        );
+        if (!hasPatient) return false;
+      }
+
+      if (filters.documentType !== "all" && doc.document_type !== filters.documentType) return false;
+      if (filters.status !== "all" && doc.status !== filters.status) return false;
+      if (filters.uploadedBy !== "all" && doc.uploaded_by !== filters.uploadedBy) return false;
+      if (filters.isInternal !== "all" && doc.is_internal !== (filters.isInternal === "true")) return false;
+      if (filters.assignedStaffId !== "all" && doc.assigned_staff_id !== filters.assignedStaffId) return false;
+      
+      if (filters.source === 'my_uploads' && doc.uploaded_by !== effectiveUserId) return false;
+      if (filters.source === 'practice_shared' && doc.is_internal !== false) return false;
+
       return true;
     });
-  }, [allDocuments, filters]);
+  }, [allDocuments, filters, effectiveUserId]);
 
   // Real-time subscription for instant document updates
   useEffect(() => {
