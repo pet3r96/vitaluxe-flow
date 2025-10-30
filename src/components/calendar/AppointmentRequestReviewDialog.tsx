@@ -251,27 +251,16 @@ export const AppointmentRequestReviewDialog = ({
           </div>
 
           {/* Requested Time - Editable */}
-          <div className="p-4 border border-border rounded-lg space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm text-muted-foreground">
-                {isReschedule ? 'New Requested Time' : 'Requested Time'}
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsEditing(!isEditing)}
-                className="h-8 text-xs"
-              >
-                <Edit2 className="h-3 w-3 mr-1" />
-                {isEditing ? 'Cancel Edit' : 'Edit Time'}
-              </Button>
-            </div>
+          <div className="p-4 bg-accent/30 rounded-lg space-y-3 border border-border">
+            <h3 className="font-semibold text-foreground">
+              {isReschedule ? 'Requested New Time' : 'Requested Time'}
+            </h3>
             
             {!isEditing ? (
-              <div className="flex items-center gap-4">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" />
-                  <span className="font-medium">
+                  <span className="font-semibold text-foreground text-lg">
                     {editedDate && editedTime && !isNaN(new Date(`${editedDate}T${editedTime}`).getTime())
                       ? format(new Date(`${editedDate}T${editedTime}`), 'EEEE, MMMM d, yyyy')
                       : 'Date TBD'}
@@ -279,7 +268,7 @@ export const AppointmentRequestReviewDialog = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" />
-                  <span className="font-medium">
+                  <span className="font-semibold text-foreground text-lg">
                     {editedDate && editedTime && !isNaN(new Date(`${editedDate}T${editedTime}`).getTime())
                       ? format(new Date(`${editedDate}T${editedTime}`), 'h:mm a')
                       : '--:--'}
@@ -289,7 +278,7 @@ export const AppointmentRequestReviewDialog = ({
             ) : (
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="edit-date" className="text-xs">Date</Label>
+                  <Label htmlFor="edit-date" className="text-sm font-medium">Date</Label>
                   <Input
                     id="edit-date"
                     type="date"
@@ -299,7 +288,7 @@ export const AppointmentRequestReviewDialog = ({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-time" className="text-xs">Time</Label>
+                  <Label htmlFor="edit-time" className="text-sm font-medium">Time</Label>
                   <Input
                     id="edit-time"
                     type="time"
@@ -308,15 +297,14 @@ export const AppointmentRequestReviewDialog = ({
                     className="mt-1"
                   />
                 </div>
-                {(editedDate !== (appointment.requested_date || format(new Date(appointment.start_time), 'yyyy-MM-dd')) ||
-                  editedTime !== (appointment.requested_time || format(new Date(appointment.start_time), 'HH:mm'))) && (
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      You've modified the requested time. The patient will be notified of the approved time.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                <Button
+                  onClick={() => setIsEditing(false)}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  Done Editing
+                </Button>
               </div>
             )}
           </div>
@@ -373,11 +361,20 @@ export const AppointmentRequestReviewDialog = ({
               <>
                 <Button
                   onClick={handleAccept}
-                  disabled={isAccepting}
+                  disabled={isAccepting || isEditing}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {isAccepting ? "Confirming..." : "Accept"}
+                  {isAccepting ? "Approving..." : "Approve Request"}
+                </Button>
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  variant="outline"
+                  disabled={isEditing}
+                  className="flex-1"
+                >
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Choose New Time
                 </Button>
                 <Button
                   onClick={() => setIsDeclining(true)}
