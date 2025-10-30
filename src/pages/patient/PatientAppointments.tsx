@@ -57,7 +57,7 @@ export default function PatientAppointments() {
 
         const { data: apptRows, error: apptErr } = await supabase
           .from('patient_appointments')
-          .select('id,start_time,end_time,status,confirmation_type,visit_type,reason_for_visit,notes,visit_summary_url,practice_id,provider_id')
+          .select('id,start_time,end_time,status,confirmation_type,visit_type,reason_for_visit,notes,visit_summary_url,practice_id,provider_id,street,city,state,zip')
           .eq('patient_id', patientAccount.id)
           .order('start_time', { ascending: false });
         if (apptErr) throw apptErr;
@@ -90,13 +90,6 @@ export default function PatientAppointments() {
           .eq('practice_id', patientAccount.practice_id)
           .maybeSingle();
 
-        // Fetch practice profile for address
-        const { data: practiceProfile } = await supabase
-          .from('profiles')
-          .select('address_formatted, street, city, state, zip')
-          .eq('id', patientAccount.practice_id)
-          .maybeSingle();
-
         const mapped = rows.map((r: any) => {
           const prov = providers.find(p => p.id === r.provider_id);
           const prof = prov ? profiles.find(pr => pr.id === prov.user_id) : null;
@@ -105,11 +98,11 @@ export default function PatientAppointments() {
             practice: {
               id: r.practice_id,
               name: branding?.practice_name || 'Practice',
-              address_formatted: practiceProfile?.address_formatted,
-              address_street: practiceProfile?.street,
-              address_city: practiceProfile?.city,
-              address_state: practiceProfile?.state,
-              address_zip: practiceProfile?.zip,
+              address_formatted: r.street && r.city ? `${r.street}, ${r.city}, ${r.state} ${r.zip}` : null,
+              address_street: r.street,
+              address_city: r.city,
+              address_state: r.state,
+              address_zip: r.zip,
             },
             provider: prov ? {
               id: prov.id,

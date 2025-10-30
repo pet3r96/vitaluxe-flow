@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,7 @@ import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
 import { PrintDayDialog } from "@/components/calendar/PrintDayDialog";
 
 export default function PracticeCalendar() {
+  const navigate = useNavigate();
   const { user, effectivePracticeId, isProviderAccount, effectiveRole, effectiveUserId } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('week');
@@ -302,7 +304,7 @@ export default function PracticeCalendar() {
                 size="sm" 
                 variant="outline" 
                 className="border-amber-300 dark:border-amber-700"
-                onClick={() => window.location.href = '/practice-dashboard'}
+                onClick={() => navigate('/dashboard')}
               >
                 Review Now
               </Button>

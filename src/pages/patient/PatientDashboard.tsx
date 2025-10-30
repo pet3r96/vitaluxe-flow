@@ -51,15 +51,15 @@ export default function PatientDashboard() {
   });
 
   // Fetch next upcoming appointment
-  const { data: nextAppointment, isLoading: loadingAppt } = useQuery({
+  const { data: nextAppointment, isLoading: loadingAppt, error: nextAppointmentError } = useQuery({
     queryKey: ["next-appointment", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) {
-        console.log('[PatientDashboard] No patient account ID');
+        console.log('[PatientDashboard] ⚠️ No patient account ID');
         return null;
       }
       
-      console.log('[PatientDashboard] Fetching next appointment for patient_id:', patientAccount.id);
+      console.log('[PatientDashboard] 🔍 Fetching next appointment for patient_id:', patientAccount.id);
       
       // Simplified query without FK traversals
       const { data: appt, error } = await supabase
@@ -73,13 +73,13 @@ export default function PatientDashboard() {
         .maybeSingle();
       
       if (error) {
-        console.error('[PatientDashboard] Error fetching next appointment:', error);
+        console.error('[PatientDashboard] ❌ Error fetching next appointment:', error);
         if (error.code !== 'PGRST116') throw error;
         return null;
       }
       
       if (!appt) {
-        console.log('[PatientDashboard] No next appointment found');
+        console.log('[PatientDashboard] ℹ️ No next appointment found');
         return null;
       }
 
@@ -90,7 +90,7 @@ export default function PatientDashboard() {
         .eq('practice_id', appt.practice_id)
         .maybeSingle();
 
-      console.log('[PatientDashboard] Next appointment data:', appt);
+      console.log('[PatientDashboard] ✅ Next appointment data:', appt, '| Practice:', branding?.practice_name);
       return {
         ...appt,
         practice: { name: branding?.practice_name || 'Practice' }
@@ -152,15 +152,15 @@ export default function PatientDashboard() {
   });
 
   // Fetch recent appointments (past 3)
-  const { data: recentAppointments = [] } = useQuery({
+  const { data: recentAppointments = [], error: recentAppointmentsError } = useQuery({
     queryKey: ["recent-appointments", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) {
-        console.log('[PatientDashboard] No patient account for recent appointments');
+        console.log('[PatientDashboard] ⚠️ No patient account for recent appointments');
         return [];
       }
       
-      console.log('[PatientDashboard] Fetching recent appointments for patient_id:', patientAccount.id);
+      console.log('[PatientDashboard] 🔍 Fetching recent appointments for patient_id:', patientAccount.id);
       
       // Simplified query - include more statuses for past appointments
       const { data: appts, error } = await supabase
@@ -173,12 +173,12 @@ export default function PatientDashboard() {
         .limit(3);
       
       if (error) {
-        console.error('[PatientDashboard] Error fetching recent appointments:', error);
+        console.error('[PatientDashboard] ❌ Error fetching recent appointments:', error);
         throw error;
       }
 
       if (!appts || appts.length === 0) {
-        console.log('[PatientDashboard] No recent appointments');
+        console.log('[PatientDashboard] ℹ️ No recent appointments');
         return [];
       }
 
@@ -196,7 +196,7 @@ export default function PatientDashboard() {
         }
       }));
       
-      console.log('[PatientDashboard] Recent appointments:', mapped);
+      console.log('[PatientDashboard] ✅ Recent appointments:', mapped.length, 'appointments');
       return mapped;
     },
     enabled: !!patientAccount?.id,

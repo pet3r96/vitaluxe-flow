@@ -15,6 +15,7 @@ Deno.serve(async (req) => {
     if (!user) throw new Error('Not authenticated');
 
     const { appointmentId } = await req.json();
+    console.log('🔍 Cancelling appointment:', appointmentId, 'for user:', user.id);
 
     // First get patient_account for this user
     const { data: patientAccount, error: paError } = await supabaseClient
@@ -23,30 +24,54 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (paError || !patientAccount) {
-      console.error('Patient account not found:', paError);
+    console.log('👤 Patient account lookup:', { patientAccount, paError });
+
+    if (paError) {
+      console.error('❌ Patient account error:', paError);
+      throw new Error('Patient account lookup failed: ' + paError.message);
+    }
+
+    if (!patientAccount) {
+      console.error('❌ No patient account found for user:', user.id);
       throw new Error('Patient account not found');
     }
 
     // Then verify appointment belongs to this patient
     const { data: appointment, error: fetchError } = await supabaseClient
       .from('patient_appointments')
-      .select('id, patient_id')
+      .select('id, patient_id, status')
       .eq('id', appointmentId)
       .eq('patient_id', patientAccount.id)
       .single();
 
-    if (fetchError || !appointment) {
-      console.error('Appointment verification failed:', fetchError);
+    console.log('📅 Appointment verification:', { appointment, fetchError });
+
+    if (fetchError) {
+      console.error('❌ Appointment fetch error:', fetchError);
+      throw new Error('Appointment fetch failed: ' + fetchError.message);
+    }
+
+    if (!appointment) {
+      console.error('❌ Appointment not found or access denied');
       throw new Error('Appointment not found or access denied');
     }
 
+    console.log('✅ Updating appointment status to cancelled');
     const { error } = await supabaseClient
       .from('patient_appointments')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString(), cancelled_at: new Date().toISOString() })
+      .update({ 
+        status: 'cancelled', 
+        updated_at: new Date().toISOString(), 
+        cancelled_at: new Date().toISOString() 
+      })
       .eq('id', appointmentId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Update error:', error);
+      throw error;
+    }
+
+    console.log('✅ Appointment cancelled successfully');
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
