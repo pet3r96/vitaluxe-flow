@@ -190,7 +190,7 @@ export default function PatientDocuments() {
         notes: notes || null,
         share_with_practice: shareWithPractice,
         custom_title: documentType === "other" ? customTitle : null,
-        uploaded_by: user?.id,
+        uploaded_by: effectiveUserId,
       });
 
       if (dbError) throw dbError;
