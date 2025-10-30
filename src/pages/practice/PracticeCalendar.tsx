@@ -346,23 +346,26 @@ export default function PracticeCalendar() {
           </div>
         </div>
 
-      {/* Waiting Room Panel - Below Calendar */}
-      <WaitingRoomPanel
-        practiceId={practiceId}
-        providers={providers}
-        onAppointmentClick={handleAppointmentClick}
-        currentDate={currentDate}
-      />
+      {/* Side-by-Side Panels - Below Calendar */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-6 pb-6">
+        {/* Waiting Room Panel - Left Side */}
+        <WaitingRoomPanel
+          practiceId={practiceId}
+          providers={providers}
+          onAppointmentClick={handleAppointmentClick}
+          currentDate={currentDate}
+        />
 
-      {/* Being Treated Panel - Below Waiting Room */}
-      <BeingTreatedPanel
-        practiceId={practiceId}
-        providers={providers}
-        rooms={rooms}
-        onCompleteAppointment={handleCompleteAppointment}
-        onAppointmentClick={handleAppointmentClick}
-        currentDate={currentDate}
-      />
+        {/* Being Treated Panel - Right Side */}
+        <BeingTreatedPanel
+          practiceId={practiceId}
+          providers={providers}
+          rooms={rooms}
+          onCompleteAppointment={handleCompleteAppointment}
+          onAppointmentClick={handleAppointmentClick}
+          currentDate={currentDate}
+        />
+      </div>
       </div>
 
       {/* Filters Sheet */}

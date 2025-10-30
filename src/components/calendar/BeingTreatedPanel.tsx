@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Activity, ChevronDown, ChevronUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -107,7 +108,7 @@ export function BeingTreatedPanel({
   const patientCount = appointments?.length || 0;
 
   return (
-    <div className="mt-6 rounded-lg border border-purple-200 dark:border-purple-800 bg-card shadow-sm">
+    <Card className="rounded-lg border border-purple-200 dark:border-purple-800 bg-card shadow-sm max-h-[500px] flex flex-col">
       {/* Header */}
       <div
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -135,7 +136,7 @@ export function BeingTreatedPanel({
 
       {/* Content */}
       {!isCollapsed && (
-        <div className="border-t">
+        <div className="border-t overflow-y-auto flex-1">
           {patientCount === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Activity className="h-12 w-12 mx-auto mb-3 opacity-20" />
@@ -215,6 +216,6 @@ export function BeingTreatedPanel({
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

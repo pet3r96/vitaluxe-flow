@@ -5,6 +5,7 @@ import { realtimeManager } from "@/lib/realtimeManager";
 import { differenceInMinutes, format } from "date-fns";
 import { Clock, User, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import {
   Table,
@@ -128,7 +129,7 @@ export function WaitingRoomPanel({
   };
 
   return (
-    <div className="border-t bg-background">
+    <Card className="border-t bg-background max-h-[500px] flex flex-col">
       {/* Header */}
       <div
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50"
@@ -154,8 +155,7 @@ export function WaitingRoomPanel({
 
       {/* Content */}
       {!isCollapsed && (
-        <div className="max-h-64 overflow-auto">
-          {waitingPatients.length === 0 ? (
+        <div className="overflow-y-auto flex-1">{waitingPatients.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <User className="h-12 w-12 mb-2 opacity-20" />
               <p className="text-sm">No patients in waiting room</p>
@@ -230,6 +230,6 @@ export function WaitingRoomPanel({
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
