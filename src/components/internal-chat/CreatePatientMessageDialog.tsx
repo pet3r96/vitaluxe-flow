@@ -68,7 +68,7 @@ export function CreatePatientMessageDialog({
           patient_id: patientId,
           practice_id: practiceId,
           sender_id: effectiveUserId,
-          sender_type: 'practice',
+          sender_type: 'provider',
           subject,
           message_body: body,
           urgency: urgency || 'medium',

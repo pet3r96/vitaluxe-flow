@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PatientConversationListProps {
-  filter: 'active' | 'urgent' | 'patient' | 'resolved';
-  setFilter: (filter: 'active' | 'urgent' | 'patient' | 'resolved') => void;
+  filter: 'active' | 'urgent' | 'resolved';
+  setFilter: (filter: 'active' | 'urgent' | 'resolved') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedPatient: string;
@@ -55,7 +55,7 @@ export function PatientConversationList({
 
         {/* Tabs */}
         <Tabs value={filter} onValueChange={setFilter} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="active" className="relative">
               Active
               {activeCount > 0 && (
@@ -72,7 +72,6 @@ export function PatientConversationList({
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="patient">Patient</TabsTrigger>
             <TabsTrigger value="resolved">Resolved</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -89,22 +88,6 @@ export function PatientConversationList({
             className="pl-9"
           />
         </div>
-
-        {filter === 'patient' && (
-          <Select value={selectedPatient} onValueChange={setSelectedPatient}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by patient" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Patients</SelectItem>
-              {patients.map((patient: any) => (
-                <SelectItem key={patient.id} value={patient.id}>
-                  {patient.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
       </div>
 
       {/* Message List */}

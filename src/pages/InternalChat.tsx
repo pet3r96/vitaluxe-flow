@@ -33,7 +33,7 @@ const InternalChat = () => {
 
   // Patient messages state
   const [selectedPatientMessageId, setSelectedPatientMessageId] = useState<string | null>(null);
-  const [patientFilterTab, setPatientFilterTab] = useState<'active' | 'urgent' | 'patient' | 'resolved'>('active');
+  const [patientFilterTab, setPatientFilterTab] = useState<'active' | 'urgent' | 'resolved'>('active');
   const [patientSearchQuery, setPatientSearchQuery] = useState('');
   const [selectedPatientInFilter, setSelectedPatientInFilter] = useState<string>('all');
   const [createPatientDialogOpen, setCreatePatientDialogOpen] = useState(false);
@@ -361,8 +361,6 @@ const InternalChat = () => {
         query = query.eq('resolved', false);
       } else if (patientFilterTab === 'urgent') {
         query = query.eq('urgency', 'urgent').eq('resolved', false);
-      } else if (patientFilterTab === 'patient' && selectedPatientInFilter && selectedPatientInFilter !== 'all') {
-        query = query.eq('patient_id', selectedPatientInFilter);
       } else if (patientFilterTab === 'resolved') {
         query = query.eq('resolved', true);
       }
