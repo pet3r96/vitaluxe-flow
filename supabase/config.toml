@@ -161,3 +161,9 @@ verify_jwt = true
 
 [functions.get-patient-practice]
 verify_jwt = true
+
+[functions.list-provider-documents]
+verify_jwt = true
+
+[functions.get-provider-document-url]
+verify_jwt = true

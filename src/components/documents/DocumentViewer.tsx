@@ -24,13 +24,14 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
   const loadDocument = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.storage
-        .from("provider-documents")
-        .createSignedUrl(document.storage_path, 3600);
+      const { data, error } = await supabase.functions.invoke('get-provider-document-url', {
+        body: { document_id: document.id }
+      });
 
       if (error) throw error;
       setFileUrl(data.signedUrl);
     } catch (error) {
+      console.error('[DocumentViewer] Failed to load:', error);
       toast.error("Failed to load document");
     } finally {
       setLoading(false);
@@ -39,12 +40,12 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
 
   const downloadDocument = async () => {
     try {
-      const { data, error } = await supabase.storage
-        .from("provider-documents")
-        .createSignedUrl(document.storage_path, 60);
+      const { data, error } = await supabase.functions.invoke('get-provider-document-url', {
+        body: { document_id: document.id }
+      });
 
-      if (error || !data) {
-        console.error("Failed to create signed URL:", error);
+      if (error || !data?.signedUrl) {
+        console.error('[DocumentViewer] Download URL failed:', error);
         toast.error("Failed to generate download link");
         return;
       }
@@ -67,7 +68,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
 
       toast.success("Document downloaded");
     } catch (error) {
-      console.error("Download error:", error);
+      console.error('[DocumentViewer] Download error:', error);
       toast.error("Failed to download document");
     }
   };

@@ -63,12 +63,12 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
   // Download handler
   const downloadDocument = async (doc: any) => {
     try {
-      const { data, error } = await supabase.storage
-        .from("provider-documents")
-        .createSignedUrl(doc.storage_path, 60);
+      const { data, error } = await supabase.functions.invoke('get-provider-document-url', {
+        body: { document_id: doc.id }
+      });
 
-      if (error || !data) {
-        console.error("Failed to create signed URL:", error);
+      if (error || !data?.signedUrl) {
+        console.error('[DocumentsDataTable] Download URL failed:', error);
         toast.error("Failed to generate download link");
         return;
       }
@@ -89,9 +89,9 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
       window.document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast.success("Document downloaded");
+      toast.success(`Downloaded ${doc.document_name}`);
     } catch (error) {
-      console.error("Download error:", error);
+      console.error('[DocumentsDataTable] Download error:', error);
       toast.error("Failed to download document");
     }
   };

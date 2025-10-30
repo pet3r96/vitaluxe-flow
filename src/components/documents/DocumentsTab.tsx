@@ -26,85 +26,37 @@ export function DocumentsTab() {
     assignedStaffId: "all",
   });
 
-  const { data: documents, isLoading } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: ["provider-documents", effectivePracticeId, effectiveRole, effectiveUserId, filters],
     queryFn: async () => {
-      const isAdmin = effectiveRole === 'admin';
-      
-      // Robust practice ID resolution
-      let resolvedPracticeId = effectivePracticeId;
-      
-      if (!resolvedPracticeId && !isAdmin) {
-        // Fallback: resolve practice ID based on role
-        if (effectiveRole === 'doctor') {
-          // Doctor is the practice owner
-          resolvedPracticeId = effectiveUserId;
-        } else if (effectiveRole === 'provider') {
-          // Query providers table
-          const { data: providerData } = await supabase
-            .from("providers")
-            .select("practice_id")
-            .eq("user_id", effectiveUserId)
-            .single();
-          resolvedPracticeId = providerData?.practice_id;
-        } else if (effectiveRole === 'staff') {
-          // Query practice_staff table
-          const { data: staffData } = await supabase
-            .from("practice_staff")
-            .select("practice_id")
-            .eq("user_id", effectiveUserId)
-            .single();
-          resolvedPracticeId = staffData?.practice_id;
+      const { data, error } = await supabase.functions.invoke('list-provider-documents', {
+        body: {
+          filters: {
+            patientId: filters.patientId !== 'all' ? filters.patientId : undefined,
+            documentType: filters.documentType !== 'all' ? filters.documentType : undefined,
+            status: filters.status !== 'all' ? filters.status : undefined,
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
+            uploadedBy: filters.uploadedBy !== 'all' ? filters.uploadedBy : undefined,
+            isInternal: filters.isInternal !== 'all' ? filters.isInternal : undefined,
+            assignedStaffId: filters.assignedStaffId !== 'all' ? filters.assignedStaffId : undefined,
+          },
+          pagination: { limit: 50, offset: 0 }
         }
-      }
-      
-      // If no practice ID resolved and not admin, return empty
-      if (!resolvedPracticeId && !isAdmin) return [];
-      
-      let query = supabase
-        .from("provider_documents" as any)
-        .select("*")
-        .order("created_at", { ascending: false });
+      });
 
-      if (resolvedPracticeId) {
-        query = query.eq("practice_id", resolvedPracticeId);
-      }
-
-      if (filters.patientId && filters.patientId !== "all") {
-        query = query.eq("assigned_patient_id", filters.patientId);
-      }
-      if (filters.documentType && filters.documentType !== "all") {
-        query = query.eq("document_type", filters.documentType);
-      }
-      if (filters.status && filters.status !== "all") {
-        query = query.eq("status", filters.status);
-      }
-      if (filters.dateFrom) {
-        query = query.gte("created_at", filters.dateFrom);
-      }
-      if (filters.dateTo) {
-        query = query.lte("created_at", filters.dateTo);
-      }
-      if (filters.uploadedBy && filters.uploadedBy !== "all") {
-        query = query.eq("uploaded_by", filters.uploadedBy);
-      }
-      if (filters.isInternal && filters.isInternal !== "all") {
-        query = query.eq("is_internal", filters.isInternal === "true");
-      }
-      if (filters.assignedStaffId && filters.assignedStaffId !== "all") {
-        query = query.eq("assigned_staff_id", filters.assignedStaffId);
-      }
-
-      const { data, error } = await query;
       if (error) {
-        console.error("Query error:", error);
+        console.error('[DocumentsTab] Function error:', error);
         throw error;
       }
-      return data as any[];
+
+      return data?.documents || [];
     },
     enabled: effectiveRole === 'admin' || !!effectivePracticeId || !!effectiveUserId,
     staleTime: 0,
   });
+
+  const documents = response || [];
 
   // Real-time subscription for instant document updates
   useEffect(() => {
