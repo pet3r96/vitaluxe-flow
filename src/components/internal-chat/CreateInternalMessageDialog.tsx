@@ -34,7 +34,7 @@ export function CreateInternalMessageDialog({
   
   // Practice team fields
   const [messageType, setMessageType] = useState<'general' | 'announcement'>('general');
-  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [regardingPatient, setRegardingPatient] = useState('');
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   
@@ -175,7 +175,7 @@ export function CreateInternalMessageDialog({
   const handleClose = () => {
     setDestination('practice_team');
     setMessageType('general');
-    setPriority('normal');
+    setPriority('medium');
     setSubject('');
     setBody('');
     setRegardingPatient('');
@@ -199,7 +199,7 @@ export function CreateInternalMessageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
+      <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>New Message</DialogTitle>
           <DialogDescription>
@@ -372,10 +372,10 @@ export function CreateInternalMessageDialog({
                           Low
                         </div>
                       </SelectItem>
-                      <SelectItem value="normal">
+                      <SelectItem value="medium">
                         <div className="flex items-center gap-2">
                           <Info className="h-4 w-4 text-blue-500" />
-                          Normal
+                          Medium
                         </div>
                       </SelectItem>
                       <SelectItem value="high">
