@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +103,32 @@ export default function PatientInbox() {
     },
     enabled: !!practiceId
   });
+
+  // Realtime subscription for patient messages
+  useEffect(() => {
+    if (!practiceId) return;
+
+    const channel = supabase
+      .channel('patient-inbox-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_messages',
+          filter: `practice_id=eq.${practiceId}`
+        },
+        (payload) => {
+          console.log('Patient message change:', payload);
+          queryClient.invalidateQueries({ queryKey: ["patient-messages-inbox", practiceId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [practiceId, queryClient]);
 
   // Fetch unique patients for filter
   const { data: patients = [] } = useQuery({
