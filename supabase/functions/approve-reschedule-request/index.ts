@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         .update({
           start_time: newStartTime,
           end_time: newEndTime,
-          status: 'confirmed',
+          status: 'scheduled',
           confirmation_type: 'confirmed',
           requested_date: null,
           requested_time: null,
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
           service_type_id: appointment.service_type_id,
           service_description: appointment.service_description,
           notes: appointment.notes,
-          status: 'confirmed',
+          status: 'scheduled',
           confirmation_type: 'confirmed',
         })
         .select()

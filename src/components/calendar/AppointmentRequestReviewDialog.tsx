@@ -87,36 +87,23 @@ export const AppointmentRequestReviewDialog = ({
         return;
       }
 
-      // If this is a reschedule, use the edge function
-      if (isReschedule) {
-        const { error } = await supabase.functions.invoke('approve-reschedule-request', {
-          body: {
-            appointmentId: appointment.id,
-            action: 'move',
-            ignoreConflicts: false,
-          }
-        });
+      // Always update the appointment directly with the edited times
+      const { error } = await supabase
+        .from('patient_appointments')
+        .update({
+          start_time: newStartTime.toISOString(),
+          end_time: newEndTime.toISOString(),
+          confirmation_type: 'confirmed',
+          status: 'scheduled',
+          requested_date: null,
+          requested_time: null,
+          reschedule_reason: null,
+          reschedule_requested_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', appointment.id);
 
-        if (error) throw error;
-      } else {
-        // For new appointments, update directly
-        const { error } = await supabase
-          .from('patient_appointments')
-          .update({
-            start_time: newStartTime.toISOString(),
-            end_time: newEndTime.toISOString(),
-            confirmation_type: 'confirmed',
-            status: 'scheduled',
-            requested_date: null,
-            requested_time: null,
-            reschedule_reason: null,
-            reschedule_requested_at: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', appointment.id);
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: "Appointment Confirmed",

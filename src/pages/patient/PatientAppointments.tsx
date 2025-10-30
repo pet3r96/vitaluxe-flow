@@ -84,6 +84,13 @@ export default function PatientAppointments() {
           .eq('practice_id', patientAccount.practice_id)
           .maybeSingle();
 
+        // Fetch practice profile for address
+        const { data: practiceProfile } = await supabase
+          .from('profiles')
+          .select('address_street, address_city, address_state, address_zip')
+          .eq('id', patientAccount.practice_id)
+          .maybeSingle();
+
         const mapped = rows.map((r: any) => {
           const prov = providers.find(p => p.id === r.provider_id);
           const prof = prov ? profiles.find(pr => pr.id === prov.user_id) : null;
@@ -92,10 +99,10 @@ export default function PatientAppointments() {
             practice: {
               id: r.practice_id,
               name: branding?.practice_name || 'Practice',
-              address_street: null,
-              address_city: null,
-              address_state: null,
-              address_zip: null,
+              address_street: practiceProfile?.address_street,
+              address_city: practiceProfile?.address_city,
+              address_state: practiceProfile?.address_state,
+              address_zip: practiceProfile?.address_zip,
             },
             provider: prov ? {
               id: prov.id,

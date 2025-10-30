@@ -68,6 +68,7 @@ export default function PatientDashboard() {
         `)
         .eq("patient_id", patientAccount.id)
         .gte("start_time", new Date().toISOString())
+        .not('status', 'in', '(cancelled,no_show)')
         .order("start_time", { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -77,6 +78,7 @@ export default function PatientDashboard() {
     },
     enabled: !!patientAccount?.id,
     staleTime: 2 * 60 * 1000,
+    refetchInterval: 5000,
   });
 
   // Fetch unread messages count
@@ -148,6 +150,7 @@ export default function PatientDashboard() {
         `)
         .eq("patient_id", patientAccount.id)
         .lt("start_time", new Date().toISOString())
+        .not('status', 'in', '(cancelled)')
         .order("start_time", { ascending: false })
         .limit(3);
       
@@ -156,6 +159,7 @@ export default function PatientDashboard() {
     },
     enabled: !!patientAccount?.id,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 5000,
   });
 
   // Fetch recent messages (3 most recent)
