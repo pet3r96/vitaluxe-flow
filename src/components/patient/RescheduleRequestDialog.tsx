@@ -29,21 +29,44 @@ export function RescheduleRequestDialog({
 
     try {
       const formData = new FormData(e.currentTarget);
+      const newDate = formData.get("new_date") as string;
+      const newTime = formData.get("new_time") as string;
+      const reason = formData.get("reason") as string;
+
+      // Validate inputs
+      if (!newDate || !newTime) {
+        toast.error("Please provide both date and time");
+        setLoading(false);
+        return;
+      }
+
+      // Check if date is not in the past
+      const selectedDateTime = new Date(`${newDate}T${newTime}`);
+      if (selectedDateTime <= new Date()) {
+        toast.error("Please select a future date and time");
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.functions.invoke("reschedule-appointment-request", {
         body: {
           appointmentId: appointment.id,
-          newDate: formData.get("new_date"),
-          newTime: formData.get("new_time"),
-          reason: formData.get("reason"),
+          newDate,
+          newTime,
+          reason: reason || null,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Reschedule error:", error);
+        throw new Error(error.message || "Failed to send reschedule request");
+      }
 
       toast.success("Reschedule request sent to practice");
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
+      console.error("Reschedule request failed:", error);
       toast.error(error.message || "Failed to request reschedule");
     } finally {
       setLoading(false);

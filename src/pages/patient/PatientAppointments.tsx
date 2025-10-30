@@ -117,17 +117,25 @@ export default function PatientAppointments() {
   });
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    const { error } = await supabase.functions.invoke("cancel-appointment", {
-      body: { appointmentId },
-    });
+    const confirmed = window.confirm("Are you sure you want to cancel this appointment? This action cannot be undone.");
+    if (!confirmed) return;
 
-    if (error) {
-      toast.error("Failed to cancel appointment");
-      return;
+    try {
+      const { error } = await supabase.functions.invoke("cancel-appointment", {
+        body: { appointmentId },
+      });
+
+      if (error) {
+        console.error("Cancel error:", error);
+        throw error;
+      }
+
+      toast.success("Appointment cancelled");
+      refetch();
+    } catch (error: any) {
+      console.error("Cancel appointment failed:", error);
+      toast.error(error.message || "Failed to cancel appointment");
     }
-
-    toast.success("Appointment cancelled");
-    refetch();
   };
 
   const handleAddToCalendar = async (appointmentId: string) => {
@@ -246,7 +254,10 @@ export default function PatientAppointments() {
                       <div className="flex items-start gap-2 text-sm text-muted-foreground">
                         <MapPin className="h-4 w-4 mt-0.5" />
                         <span>
-                          {appt.practice.address_street}, {appt.practice.address_city}, {appt.practice.address_state}
+                          {appt.practice.address_street && appt.practice.address_city && appt.practice.address_state
+                            ? `${appt.practice.address_street}, ${appt.practice.address_city}, ${appt.practice.address_state}`
+                            : "Contact practice for address details"
+                          }
                         </span>
                       </div>
                     )}
