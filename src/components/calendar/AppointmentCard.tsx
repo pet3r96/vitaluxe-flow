@@ -11,6 +11,7 @@ interface AppointmentCardProps {
 }
 
 const statusColors: Record<string, string> = {
+  pending: 'bg-red-50 border-red-300 text-red-900 dark:bg-red-950/30 dark:border-red-700 dark:text-red-100',
   scheduled: 'bg-blue-100 border-blue-300 text-blue-900 dark:bg-blue-950 dark:border-blue-700 dark:text-blue-100',
   confirmed: 'bg-green-100 border-green-300 text-green-900 dark:bg-green-950 dark:border-green-700 dark:text-green-100',
   checked_in: 'bg-amber-100 border-amber-400 text-amber-900 dark:bg-amber-950 dark:border-amber-600 dark:text-amber-100',
@@ -23,6 +24,7 @@ const statusColors: Record<string, string> = {
 export function AppointmentCard({ appointment, onClick, isDragging, style }: AppointmentCardProps) {
   const statusColor = statusColors[appointment.status] || statusColors.scheduled;
   const isWalkIn = appointment.appointment_type === 'walk_in' || appointment.status === 'checked_in';
+  const isPending = appointment.status === 'pending' && appointment.confirmation_type === 'pending';
   
   return (
     <div
@@ -35,7 +37,12 @@ export function AppointmentCard({ appointment, onClick, isDragging, style }: App
       )}
     >
       <div className="flex flex-col gap-1">
-        {isWalkIn && (
+        {isPending && (
+          <Badge variant="secondary" className="w-fit text-[10px] py-0 px-1 bg-amber-500 text-white dark:bg-amber-600">
+            🔔 PENDING APPROVAL
+          </Badge>
+        )}
+        {isWalkIn && !isPending && (
           <Badge variant="secondary" className="w-fit text-[10px] py-0 px-1 bg-amber-500 text-white dark:bg-amber-600">
             <Zap className="h-2.5 w-2.5 mr-0.5" />
             WALK-IN

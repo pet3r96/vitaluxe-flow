@@ -136,6 +136,7 @@ Deno.serve(async (req) => {
         patient_id: patientAccount.id,
         practice_id: patientAccount.practice_id,
         provider_id: providerId || null,
+        appointment_type: 'patient_request',
         start_time: fullDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
         reason_for_visit: reasonForVisit,

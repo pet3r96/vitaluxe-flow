@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, Download, Clock, Filter } from "lucide-react";
+import { Plus, Settings, Download, Clock, Filter, AlertCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
@@ -147,6 +147,9 @@ export default function PracticeCalendar() {
 
   const appointments = calendarData?.appointments || [];
   const blockedTime = calendarData?.blockedTime || [];
+  const pendingAppointments = appointments.filter((apt: any) => 
+    apt.status === 'pending' && apt.confirmation_type === 'pending'
+  );
   const settings = calendarData?.settings || {
     slot_duration: 15,
     start_hour: 7,
@@ -272,6 +275,26 @@ export default function PracticeCalendar() {
             onFiltersOpenChange={setFiltersOpen}
             filterCount={selectedProviders.length + selectedRooms.length + selectedStatuses.length}
           />
+
+          {/* Pending Appointments Alert */}
+          {pendingAppointments.length > 0 && (
+            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  You have {pendingAppointments.length} appointment request{pendingAppointments.length > 1 ? 's' : ''} awaiting review
+                </p>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="border-amber-300 dark:border-amber-700"
+                onClick={() => window.location.href = '/practice-dashboard'}
+              >
+                Review Now
+              </Button>
+            </div>
+          )}
 
           <div className="flex-1 mt-4 overflow-hidden">
             {view === 'week' && (

@@ -15,6 +15,7 @@ import { RecentActivityWidget } from "@/components/dashboard/RecentActivityWidge
 import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpRemindersWidget";
 import { WaitingRoomWidget } from "@/components/dashboard/WaitingRoomWidget";
+import { RequestedAppointmentsWidget } from "@/components/dashboard/RequestedAppointmentsWidget";
 import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardMobile from "./DashboardMobile";
@@ -530,9 +531,10 @@ const Dashboard = () => {
             <FollowUpRemindersWidget />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
+            <RequestedAppointmentsWidget />
             <RecentActivityWidget />
-            <QuickActionsPanel />
           </div>
+          <QuickActionsPanel />
         </>
       )}
 
