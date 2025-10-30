@@ -769,7 +769,7 @@ export const MessagesView = () => {
         {/* Admin View: Tabbed Interface */}
         {isAdmin ? (
           <Tabs value={activeTicketTab} onValueChange={(v: any) => setActiveTicketTab(v)} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="support" className="gap-2">
                 <Headset className="h-4 w-4" />
                 Support ({supportTickets.length})
@@ -777,10 +777,6 @@ export const MessagesView = () => {
               <TabsTrigger value="order_issues" className="gap-2">
                 <AlertCircle className="h-4 w-4" />
                 Order Issues ({orderIssueTickets.length})
-              </TabsTrigger>
-              <TabsTrigger value="patient_messages" className="gap-2" disabled={!isSubscribed}>
-                <MessageSquare className="h-4 w-4" />
-                Patient Messages
               </TabsTrigger>
             </TabsList>
 
@@ -933,28 +929,6 @@ export const MessagesView = () => {
               )}
             </TabsContent>
 
-            {/* Patient Messages Tab */}
-            <TabsContent value="patient_messages" className="flex-1 flex flex-col mt-4">
-              {isSubscribed ? (
-                <PatientMessagesTab
-                  practiceId={effectivePracticeId || user?.id || ''}
-                  userId={user?.id || ''}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Card className="p-6 max-w-md text-center">
-                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">Patient Messaging</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Communicate securely with patients through the portal with VitaLuxePro
-                    </p>
-                    <Button onClick={() => window.location.href = '/subscribe-to-vitaluxepro'}>
-                      Upgrade to VitaLuxePro
-                    </Button>
-                  </Card>
-                </div>
-              )}
-            </TabsContent>
           </Tabs>
         ) : (
           /* Non-Admin View: Single list */

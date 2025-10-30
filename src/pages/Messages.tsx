@@ -6,7 +6,7 @@ const Messages = () => {
       <div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Messages</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          Manage your support tickets and order issues
+          Support tickets go to Admin • Order issues go to assigned Pharmacy
         </p>
       </div>
 

@@ -10,7 +10,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-export default function InternalChat() {
+const InternalChat = () => {
   const { effectiveUserId, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -375,7 +375,16 @@ export default function InternalChat() {
 
   return (
     <>
-      <div className="flex h-[85vh] overflow-hidden bg-background">
+      <div className="space-y-6 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Team Communication</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+            Communicate with your practice team or send messages to patients
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex h-[75vh] overflow-hidden bg-background">
         {/* Mobile: Show list or thread */}
         <div className="flex flex-1 lg:hidden">
           {!selectedMessageId ? (
@@ -480,4 +489,6 @@ export default function InternalChat() {
       />
     </>
   );
-}
+};
+
+export default InternalChat;
