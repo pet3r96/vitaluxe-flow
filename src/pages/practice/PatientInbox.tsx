@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PriorityBadge } from "@/components/internal-chat/PriorityBadge";
+import { ThreadView } from "@/components/internal-chat/ThreadView";
 
 export default function PatientInbox() {
   const queryClient = useQueryClient();
@@ -50,7 +51,7 @@ export default function PatientInbox() {
     },
   });
 
-  // Fetch all messages with filters
+  // Fetch conversation threads (grouped by thread_id)
   const { data: messages, isLoading: messagesLoading } = useQuery({
     queryKey: ["patient-messages-inbox", practiceId, filterTab, searchQuery, selectedPatientFilter],
     queryFn: async () => {
@@ -63,7 +64,6 @@ export default function PatientInbox() {
           patient:patient_accounts(first_name, last_name, email)
         `)
         .eq("practice_id", practiceId)
-        .eq("sender_type", "patient")
         .order("created_at", { ascending: false });
 
       // Apply tab filters
@@ -87,7 +87,19 @@ export default function PatientInbox() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // Group by thread_id and keep only the most recent message from each thread
+      const threadsMap = new Map();
+      (data || []).forEach((msg: any) => {
+        const threadId = msg.thread_id || msg.id;
+        if (!threadsMap.has(threadId) || new Date(msg.created_at) > new Date(threadsMap.get(threadId).created_at)) {
+          threadsMap.set(threadId, msg);
+        }
+      });
+      
+      return Array.from(threadsMap.values()).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     },
     enabled: !!practiceId
   });
@@ -137,17 +149,24 @@ export default function PatientInbox() {
   });
 
   const sendReplyMutation = useMutation({
-    mutationFn: async ({ patientId, body }: { patientId: string; body: string }) => {
+    mutationFn: async ({ patientId, body, threadId, subject }: { patientId: string; body: string; threadId: string; subject?: string }) => {
       const { error } = await supabase.functions.invoke("send-patient-message", {
-        body: { patient_id: patientId, message_body: body, sender_type: "provider" },
+        body: { 
+          patient_id: patientId, 
+          message_body: body, 
+          sender_type: "provider",
+          thread_id: threadId,
+          parent_message_id: threadId,
+          subject: subject
+        },
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient-messages-inbox"] });
+      queryClient.invalidateQueries({ queryKey: ["thread-messages"] });
       toast.success("Reply sent");
       setReplyText("");
-      setSelectedMessage(null);
     },
     onError: (error: any) => {
       toast.error(error.message);
@@ -257,7 +276,7 @@ export default function PatientInbox() {
                     </div>
 
                     <p className="text-sm text-muted-foreground truncate mb-2">
-                      {msg.patient?.first_name} {msg.patient?.last_name}: {msg.message_body}
+                      {msg.sender_type === 'patient' ? `${msg.patient?.first_name} ${msg.patient?.last_name}` : 'You'}: {msg.message_body}
                     </p>
 
                     <div className="flex items-center gap-2 flex-wrap">
@@ -294,48 +313,12 @@ export default function PatientInbox() {
           </CardHeader>
           <CardContent className="flex-1 overflow-auto">
             {selectedMessage ? (
-              <div className="space-y-4">
-                <div className="border-b pb-4">
-                  <p className="font-medium mb-1">
-                    From: {selectedMessage.patient?.first_name}{" "}
-                    {selectedMessage.patient?.last_name}
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {format(new Date(selectedMessage.created_at), "MMMM dd, yyyy 'at' h:mm a")}
-                  </p>
-                  {selectedMessage.subject && (
-                    <p className="font-medium text-sm">Subject: {selectedMessage.subject}</p>
-                  )}
-                  {selectedMessage.urgency && (
-                    <div className="mt-2">
-                      <PriorityBadge priority={selectedMessage.urgency} />
-                    </div>
-                  )}
-                </div>
-                <div className="bg-muted p-4 rounded-lg">
-                  <p className="whitespace-pre-wrap">{selectedMessage.message_body}</p>
-                </div>
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Type your reply..."
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    rows={4}
-                  />
-                  <Button
-                    onClick={() =>
-                      sendReplyMutation.mutate({
-                        patientId: selectedMessage.patient_id,
-                        body: replyText,
-                      })
-                    }
-                    disabled={!replyText.trim() || sendReplyMutation.isPending}
-                  >
-                    <Reply className="mr-2 h-4 w-4" />
-                    Send Reply
-                  </Button>
-                </div>
-              </div>
+              <ThreadView 
+                selectedMessage={selectedMessage} 
+                replyText={replyText}
+                setReplyText={setReplyText}
+                sendReplyMutation={sendReplyMutation}
+              />
             ) : (
               <p className="text-center text-muted-foreground py-8">
                 Select a message to view details
