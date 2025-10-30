@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, parse } from "date-fns";
 import { useState, useEffect } from "react";
 import { AppointmentRequestReviewDialog } from "@/components/calendar/AppointmentRequestReviewDialog";
 import { cn } from "@/lib/utils";
@@ -152,7 +152,11 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          <span>{appointment.requested_time || format(new Date(appointment.start_time), 'h:mm a')}</span>
+                          <span>
+                            {appointment.requested_time 
+                              ? format(parse(appointment.requested_time, 'HH:mm:ss', new Date()), 'h:mm a')
+                              : format(new Date(appointment.start_time), 'h:mm a')}
+                          </span>
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground truncate">{appointment.reason_for_visit}</p>
