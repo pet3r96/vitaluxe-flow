@@ -97,7 +97,7 @@ export function PatientDocumentFilters({
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="patient_upload" id="source-patient" />
-              <Label htmlFor="source-patient" className="font-normal cursor-pointer">My Uploads</Label>
+              <Label htmlFor="source-patient" className="font-normal cursor-pointer">Private</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="provider_assigned" id="source-provider" />
