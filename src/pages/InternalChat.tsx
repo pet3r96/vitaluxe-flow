@@ -142,6 +142,41 @@ const InternalChat = () => {
     enabled: !!practiceId
   });
 
+  // Fetch unread counts for badges (always from active messages)
+  const { data: badgeCounts } = useQuery({
+    queryKey: ['internal-message-badge-counts', practiceId, effectiveUserId],
+    queryFn: async () => {
+      if (!practiceId || !effectiveUserId) return { unreadCount: 0, activeCount: 0 };
+
+      const { data, error } = await supabase
+        .from('internal_messages')
+        .select(`
+          id,
+          completed,
+          recipients:internal_message_recipients!inner(
+            recipient_id,
+            read_at
+          )
+        `)
+        .eq('practice_id', practiceId)
+        .eq('recipients.recipient_id', effectiveUserId)
+        .eq('completed', false);
+
+      if (error) throw error;
+
+      const unreadCount = data?.filter(msg => 
+        msg.recipients?.some((r: any) => !r.read_at)
+      ).length || 0;
+
+      return {
+        unreadCount,
+        activeCount: data?.length || 0
+      };
+    },
+    enabled: !!practiceId && !!effectiveUserId,
+    refetchInterval: 30000
+  });
+
   // Fetch patients for filter
   const { data: patients = [] } = useQuery({
     queryKey: ['practice-patients', practiceId],
@@ -573,6 +608,7 @@ const InternalChat = () => {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['internal-messages'] });
+          queryClient.invalidateQueries({ queryKey: ['internal-message-badge-counts', practiceId, effectiveUserId] });
         }
       )
       .on(
@@ -594,7 +630,7 @@ const InternalChat = () => {
     };
   }, [practiceId, queryClient]);
 
-  const unreadCount = messagesData.filter(m => m.unread_count > 0).length;
+  const unreadCount = badgeCounts?.unreadCount || 0;
   const activeCount = messagesData.filter(m => !m.completed).length;
   const urgentCount = messagesData.filter(m => m.priority === 'urgent' && !m.completed).length;
 
