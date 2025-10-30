@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { realtimeManager } from "@/lib/realtimeManager";
@@ -26,37 +26,42 @@ export function DocumentsTab() {
     assignedStaffId: "all",
   });
 
-  const { data: response, isLoading } = useQuery({
-    queryKey: ["provider-documents", effectivePracticeId, effectiveRole, effectiveUserId, filters],
+  const { data: allDocuments = [], isLoading } = useQuery({
+    queryKey: ["provider-documents", effectivePracticeId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('list-provider-documents', {
-        body: {
-          filters: {
-            patientId: filters.patientId !== 'all' ? filters.patientId : undefined,
-            documentType: filters.documentType !== 'all' ? filters.documentType : undefined,
-            status: filters.status !== 'all' ? filters.status : undefined,
-            dateFrom: filters.dateFrom || undefined,
-            dateTo: filters.dateTo || undefined,
-            uploadedBy: filters.uploadedBy !== 'all' ? filters.uploadedBy : undefined,
-            isInternal: filters.isInternal !== 'all' ? filters.isInternal : undefined,
-            assignedStaffId: filters.assignedStaffId !== 'all' ? filters.assignedStaffId : undefined,
-          },
-          pagination: { limit: 50, offset: 0 }
-        }
+      if (!effectivePracticeId) return [];
+
+      const { data, error } = await supabase.rpc('get_provider_documents', {
+        p_practice_id: effectivePracticeId
       });
 
       if (error) {
-        console.error('[DocumentsTab] Function error:', error);
+        console.error('[DocumentsTab] RPC error:', error);
         throw error;
       }
 
-      return data?.documents || [];
+      return data || [];
     },
-    enabled: effectiveRole === 'admin' || !!effectivePracticeId || !!effectiveUserId,
+    enabled: !!effectivePracticeId && (effectiveRole === 'admin' || effectiveRole === 'doctor' || effectiveRole === 'staff'),
     staleTime: 0,
   });
 
-  const documents = response || [];
+  // Apply filters client-side
+  const documents = useMemo(() => {
+    if (!allDocuments?.length) return [];
+
+    return allDocuments.filter((doc: any) => {
+      if (filters.patientId !== 'all' && doc.assigned_patient_id !== filters.patientId) return false;
+      if (filters.documentType !== 'all' && doc.document_type !== filters.documentType) return false;
+      if (filters.status !== 'all' && doc.status !== filters.status) return false;
+      if (filters.dateFrom && new Date(doc.created_at) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && new Date(doc.created_at) > new Date(filters.dateTo)) return false;
+      if (filters.uploadedBy !== 'all' && doc.uploaded_by !== filters.uploadedBy) return false;
+      if (filters.isInternal !== 'all' && doc.is_internal !== (filters.isInternal === 'true')) return false;
+      if (filters.assignedStaffId !== 'all' && doc.assigned_staff_id !== filters.assignedStaffId) return false;
+      return true;
+    });
+  }, [allDocuments, filters]);
 
   // Real-time subscription for instant document updates
   useEffect(() => {
@@ -77,7 +82,8 @@ export function DocumentsTab() {
         <div className="text-xs text-muted-foreground font-mono p-2 bg-muted rounded">
           <div>Role: {effectiveRole}</div>
           <div>Practice ID: {effectivePracticeId || 'None'}</div>
-          <div>Documents loaded: {documents?.length || 0}</div>
+          <div>All Documents: {allDocuments?.length || 0}</div>
+          <div>Filtered Documents: {documents?.length || 0}</div>
         </div>
       )}
       

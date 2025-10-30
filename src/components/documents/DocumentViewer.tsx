@@ -22,15 +22,17 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
   }, [open, document]);
 
   const loadDocument = async () => {
+    if (!document?.storage_path) return;
+    
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-provider-document-url', {
-        body: { document_id: document.id }
-      });
+      const { data, error } = await supabase.storage
+        .from('provider-documents')
+        .createSignedUrl(document.storage_path, 60);
 
       if (error) throw error;
       setFileUrl(data.signedUrl);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[DocumentViewer] Failed to load:', error);
       toast.error("Failed to load document");
     } finally {
@@ -39,16 +41,14 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
   };
 
   const downloadDocument = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-provider-document-url', {
-        body: { document_id: document.id }
-      });
+    if (!document?.storage_path) return;
 
-      if (error || !data?.signedUrl) {
-        console.error('[DocumentViewer] Download URL failed:', error);
-        toast.error("Failed to generate download link");
-        return;
-      }
+    try {
+      const { data, error } = await supabase.storage
+        .from('provider-documents')
+        .createSignedUrl(document.storage_path, 60);
+
+      if (error) throw error;
 
       // Fetch as blob and download (HIPAA compliant - no new tabs)
       const response = await fetch(data.signedUrl);
@@ -67,7 +67,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
       window.URL.revokeObjectURL(url);
 
       toast.success("Document downloaded");
-    } catch (error) {
+    } catch (error: any) {
       console.error('[DocumentViewer] Download error:', error);
       toast.error("Failed to download document");
     }

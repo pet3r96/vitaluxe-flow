@@ -7373,6 +7373,26 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_provider_documents: {
+        Args: { p_practice_id: string }
+        Returns: {
+          assigned_patient_id: string
+          assigned_staff_id: string
+          created_at: string
+          document_name: string
+          document_type: string
+          file_size: number
+          id: string
+          is_internal: boolean
+          mime_type: string
+          notes: string
+          practice_id: string
+          status: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string
+        }[]
+      }
       get_rep_earnings: {
         Args: { _rep_id: string }
         Returns: {
