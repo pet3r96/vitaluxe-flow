@@ -28,11 +28,11 @@ export function CreateInternalMessageDialog({
   onSuccess
 }: CreateInternalMessageDialogProps) {
   const { effectiveUserId } = useAuth();
-  const [messageType, setMessageType] = useState<'general' | 'announcement' | 'patient_specific'>('general');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [messageType, setMessageType] = useState<'general' | 'announcement'>('general');
+  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState('');
+  const [regardingPatient, setRegardingPatient] = useState('');
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
 
@@ -49,7 +49,7 @@ export function CreateInternalMessageDialog({
     enabled: open
   });
 
-  // Fetch patients for the practice
+  // Fetch patients for the practice (for optional categorization)
   const { data: patients = [] } = useQuery({
     queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
@@ -61,7 +61,7 @@ export function CreateInternalMessageDialog({
       if (error) throw error;
       return data;
     },
-    enabled: open && messageType === 'patient_specific'
+    enabled: open
   });
 
   const handleSelectAll = () => {
@@ -90,11 +90,6 @@ export function CreateInternalMessageDialog({
       return;
     }
 
-    if (messageType === 'patient_specific' && !selectedPatient) {
-      toast.error('Please select a patient');
-      return;
-    }
-
     setSending(true);
     try {
       // Create the message
@@ -107,7 +102,7 @@ export function CreateInternalMessageDialog({
           body,
           message_type: messageType,
           priority,
-          patient_id: messageType === 'patient_specific' ? selectedPatient : null
+          patient_id: regardingPatient || null
         } as any)
         .select()
         .single();
@@ -139,10 +134,10 @@ export function CreateInternalMessageDialog({
 
   const handleClose = () => {
     setMessageType('general');
-    setPriority('medium');
+    setPriority('normal');
     setSubject('');
     setBody('');
-    setSelectedPatient('');
+    setRegardingPatient('');
     setSelectedRecipients([]);
     onOpenChange(false);
   };
@@ -156,8 +151,7 @@ export function CreateInternalMessageDialog({
     return acc;
   }, {});
 
-  const canSend = subject.trim() && body.trim() && selectedRecipients.length > 0 &&
-    (messageType !== 'patient_specific' || selectedPatient);
+  const canSend = subject.trim() && body.trim() && selectedRecipients.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -165,7 +159,7 @@ export function CreateInternalMessageDialog({
         <DialogHeader>
           <DialogTitle>New Internal Message</DialogTitle>
           <DialogDescription>
-            Send a secure message to your practice team
+            Internal team communication only. For patient communication, use the Patient Messages feature.
           </DialogDescription>
         </DialogHeader>
 
@@ -183,29 +177,26 @@ export function CreateInternalMessageDialog({
                   <RadioGroupItem value="announcement" id="announcement" />
                   <Label htmlFor="announcement" className="cursor-pointer">Announcement</Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="patient_specific" id="patient" />
-                  <Label htmlFor="patient" className="cursor-pointer">Patient-Specific</Label>
-                </div>
               </RadioGroup>
             </div>
 
-            {/* Conditional Patient Selector */}
-            {messageType === 'patient_specific' && (
-              <div className="space-y-2">
-                <Label>Patient *</Label>
-                <Select value={selectedPatient} onValueChange={setSelectedPatient}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a patient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patients.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Optional Patient Reference */}
+            <div className="space-y-2">
+              <Label>Regarding Patient (Optional)</Label>
+              <Select value={regardingPatient} onValueChange={setRegardingPatient}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a patient (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This categorizes the message by patient but does not send it to the patient
+              </p>
+            </div>
 
             {/* Priority */}
             <div className="space-y-2">
@@ -221,10 +212,10 @@ export function CreateInternalMessageDialog({
                       Low
                     </div>
                   </SelectItem>
-                  <SelectItem value="medium">
+                  <SelectItem value="normal">
                     <div className="flex items-center gap-2">
                       <Info className="h-4 w-4 text-blue-500" />
-                      Medium
+                      Normal
                     </div>
                   </SelectItem>
                   <SelectItem value="high">
