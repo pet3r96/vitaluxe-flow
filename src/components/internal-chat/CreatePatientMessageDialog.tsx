@@ -62,18 +62,16 @@ export function CreatePatientMessageDialog({
 
     setSending(true);
     try {
-      const { error } = await supabase
-        .from('patient_messages')
-        .insert({
+      // Use the edge function instead of direct insert for proper role resolution
+      const { data, error } = await supabase.functions.invoke('send-patient-message', {
+        body: {
           patient_id: patientId,
-          practice_id: practiceId,
-          sender_id: effectiveUserId,
+          subject: subject,
+          message: body,
           sender_type: 'provider',
-          subject,
-          message_body: body,
-          urgency: urgency || 'medium',
-          resolved: false
-        });
+          urgency: urgency || 'medium'
+        }
+      });
 
       if (error) throw error;
 
