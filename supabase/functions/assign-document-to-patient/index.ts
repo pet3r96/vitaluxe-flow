@@ -38,18 +38,87 @@ serve(async (req) => {
       );
     }
 
-    // Resolve effectivePracticeId (same pattern as generate-branding-preview-pdf)
-    let effectivePracticeId = user.id;
+    // Resolve effectivePracticeId robustly with impersonation and role checks
+    let effectivePracticeId: string | null = null;
 
-    const { data: impersonation } = await supabaseAdmin
+    // Check active impersonation
+    const { data: impersonationSession, error: impErr } = await supabaseAdmin
       .from('active_impersonation_sessions')
-      .select('impersonated_user_id')
+      .select('impersonated_user_id, impersonated_role, expires_at')
       .eq('admin_user_id', user.id)
+      .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    if (impersonation?.impersonated_user_id) {
-      effectivePracticeId = impersonation.impersonated_user_id;
-      console.log(`Using impersonated practice: ${effectivePracticeId}`);
+    if (impErr) {
+      console.error('Impersonation lookup error:', impErr);
+    }
+
+    if (impersonationSession?.impersonated_user_id) {
+      const role = (impersonationSession as any).impersonated_role;
+      const impersonatedId = impersonationSession.impersonated_user_id as string;
+      console.log('Impersonation active:', { role, impersonatedId });
+
+      if (role === 'patient') {
+        const { data: patientAccount, error: paErr } = await supabaseAdmin
+          .from('patient_accounts')
+          .select('practice_id')
+          .eq('user_id', impersonatedId)
+          .maybeSingle();
+        if (paErr) console.error('Patient account lookup error:', paErr);
+        effectivePracticeId = patientAccount?.practice_id ?? null;
+        console.log('Resolved practice from patient impersonation:', effectivePracticeId);
+      } else {
+        // Treat impersonated user as the practice account (doctor/practice)
+        effectivePracticeId = impersonatedId;
+        console.log('Using impersonated practice:', effectivePracticeId);
+      }
+    }
+
+    // If no impersonation-derived practice, resolve from current user context
+    if (!effectivePracticeId) {
+      // Is the user a practice/doctor?
+      const { data: doctorRole } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'doctor')
+        .maybeSingle();
+
+      if (doctorRole) {
+        effectivePracticeId = user.id;
+        console.log('Resolved practice as doctor account:', effectivePracticeId);
+      } else {
+        // Provider linkage
+        const { data: providerRow } = await supabaseAdmin
+          .from('providers')
+          .select('practice_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (providerRow?.practice_id) {
+          effectivePracticeId = providerRow.practice_id as string;
+          console.log('Resolved practice via providers table:', effectivePracticeId);
+        } else {
+          // Practice staff linkage (if exists)
+          const { data: staffRow } = await supabaseAdmin
+            .from('practice_staff')
+            .select('practice_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (staffRow?.practice_id) {
+            effectivePracticeId = staffRow.practice_id as string;
+            console.log('Resolved practice via practice_staff table:', effectivePracticeId);
+          }
+        }
+      }
+    }
+
+    if (!effectivePracticeId) {
+      console.error('No practice context could be resolved for user', user.id);
+      return new Response(
+        JSON.stringify({ error: 'No practice context', code: 'no_practice_context' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { documentId, patientIds, message } = await req.json();
@@ -74,7 +143,7 @@ serve(async (req) => {
     if (!docCheck || docCheck.practice_id !== effectivePracticeId) {
       console.error('Document access denied:', { docCheck, effectivePracticeId });
       return new Response(
-        JSON.stringify({ error: 'Document not found or access denied' }),
+        JSON.stringify({ error: 'Document not found or access denied', code: 'document_access_denied' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
