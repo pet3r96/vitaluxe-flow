@@ -18,6 +18,7 @@ import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { UpgradePromptDialog } from "@/components/subscription/UpgradePromptDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
 import { SessionTimer } from "./components/auth/SessionTimer";
+import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";
 
 // Helper function to retry dynamic imports on failure
@@ -122,14 +123,18 @@ const PageLoader = () => (
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 10 * 60 * 1000, // 10 minutes - increased for better caching
-      gcTime: 15 * 60 * 1000, // 15 minutes (formerly cacheTime)
-      refetchOnWindowFocus: false,
-      retry: 1,
-      refetchOnMount: false, // Don't refetch on component mount if data is fresh
+      staleTime: 5 * 60 * 1000, // 5min - realtime keeps data fresh
+      gcTime: 10 * 60 * 1000, // 10min garbage collection
+      refetchOnMount: false, // Trust realtime updates
+      refetchOnWindowFocus: true, // Sync on tab return
+      retry: 1, // Fast failure
+      retryDelay: 1000,
     },
   },
 });
+
+// Initialize realtime manager with React Query client for automatic cache invalidation
+realtimeManager.setQueryClient(queryClient);
 
 // SessionTimerWrapper component to access auth context and location
 const SessionTimerWrapper = () => {

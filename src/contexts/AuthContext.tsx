@@ -203,11 +203,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       
-      // If retry fails, force clear and let ProtectedRoute handle redirect
-      logger.error('Auth bootstrap failed after retry');
+      // If retry fails, try using cached data as fallback
+      logger.warn('Auth bootstrap timeout - attempting cache fallback');
+      try {
+        const cached = sessionStorage.getItem('vitaluxe_auth_cache');
+        if (cached) {
+          const { role, practiceId, canImpersonate, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 2 * 60 * 1000) { // 2min cache validity - aggressive for speed
+            logger.info('Using cached auth data from failsafe');
+            setUserRole(role);
+            if (practiceId) setPracticeParentId(practiceId);
+            if (typeof canImpersonate === 'boolean') setCanImpersonateDb(canImpersonate);
+            setPasswordStatusChecked(true);
+            setTwoFAStatusChecked(true);
+            setInitializing(false);
+            return;
+          }
+        }
+      } catch (e) {
+        logger.error('Cache fallback failed', e);
+      }
+      
+      // Final fallback - clear state
+      logger.error('Auth bootstrap failed after retry and cache fallback');
       setInitializing(false);
       setUserRole(null);
-    }, 8000);
+    }, 2000); // Reduced from 8000ms to 2000ms
 
     // Event handlers for tab visibility and focus
     const handleVisibilityChange = () => {
@@ -850,8 +871,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // ALWAYS set this to true, even if checks fail
       setPasswordStatusChecked(true);
 
-      // Process 2FA status using dedicated check function
-      await check2FAStatus(userId);
+      // Defer 2FA status check to avoid blocking initial render
+      setTimeout(() => {
+        void check2FAStatus(userId);
+      }, 100);
 
       // Cache auth data in sessionStorage
       sessionStorage.setItem('vitaluxe_auth_cache', JSON.stringify({
