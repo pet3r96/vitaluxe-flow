@@ -10,21 +10,17 @@ import { MessageCard } from "./MessageCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ConversationListProps {
-  filterTab: 'active' | 'urgent' | 'patient' | 'completed';
-  onFilterTabChange: (tab: 'active' | 'urgent' | 'patient' | 'completed') => void;
+  filterTab: 'active' | 'completed';
+  onFilterTabChange: (tab: 'active' | 'completed') => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  patientFilter: string | null;
-  onPatientFilterChange: (patientId: string | null) => void;
   selectedMessageId: string | null;
   onSelectMessage: (messageId: string) => void;
   onNewMessage: () => void;
   messages: any[];
-  patients: any[];
   loading: boolean;
   unreadCount: number;
   activeCount: number;
-  urgentCount: number;
 }
 
 export function ConversationList({
@@ -32,17 +28,13 @@ export function ConversationList({
   onFilterTabChange,
   searchQuery,
   onSearchChange,
-  patientFilter,
-  onPatientFilterChange,
   selectedMessageId,
   onSelectMessage,
   onNewMessage,
   messages,
-  patients,
   loading,
   unreadCount,
-  activeCount,
-  urgentCount
+  activeCount
 }: ConversationListProps) {
   return (
     <div className="w-full lg:w-[340px] border-r flex flex-col h-full bg-background">
@@ -61,26 +53,19 @@ export function ConversationList({
 
       {/* Tabs */}
       <Tabs value={filterTab} onValueChange={(v) => onFilterTabChange(v as any)} className="px-4 pt-4">
-        <TabsList className="w-full justify-between">
-          <TabsTrigger value="active" className="text-xs flex-1">
+        <TabsList className="w-full">
+          <TabsTrigger value="active" className="flex-1">
             Active
-            {activeCount > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">{activeCount}</Badge>}
+            {activeCount > 0 && <Badge variant="secondary" className="ml-2">{activeCount}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="urgent" className="text-xs flex-1">
-            Urgent
-            {urgentCount > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">{urgentCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="patient" className="text-xs flex-1">
-            Patient
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs flex-1">
-            Done
+          <TabsTrigger value="completed" className="flex-1">
+            Completed
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {/* Filters */}
-      <div className="p-4 space-y-2">
+      {/* Search */}
+      <div className="p-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -90,18 +75,6 @@ export function ConversationList({
             className="pl-9"
           />
         </div>
-
-        <Select value={patientFilter || 'all'} onValueChange={(v) => onPatientFilterChange(v === 'all' ? null : v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Filter by patient" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Patients</SelectItem>
-            {patients.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Message List */}

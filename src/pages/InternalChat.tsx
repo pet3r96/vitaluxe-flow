@@ -27,9 +27,8 @@ const InternalChat = () => {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     searchParams.get('message')
   );
-  const [filterTab, setFilterTab] = useState<'active' | 'urgent' | 'patient' | 'completed'>('active');
+  const [filterTab, setFilterTab] = useState<'active' | 'completed'>('active');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPatientFilter, setSelectedPatientFilter] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [showDetailsMobile, setShowDetailsMobile] = useState(false);
 
@@ -89,7 +88,7 @@ const InternalChat = () => {
 
   // Fetch messages with filters
   const { data: messagesData = [], isLoading: messagesLoading } = useQuery({
-    queryKey: ['internal-messages', practiceId, filterTab, searchQuery, selectedPatientFilter],
+    queryKey: ['internal-messages', practiceId, filterTab, searchQuery],
     queryFn: async () => {
       if (!practiceId) return [];
 
@@ -111,16 +110,8 @@ const InternalChat = () => {
       // Apply filters
       if (filterTab === 'active') {
         query = query.eq('completed', false);
-      } else if (filterTab === 'urgent') {
-        query = query.eq('priority', 'urgent').eq('completed', false);
-      } else if (filterTab === 'patient') {
-        query = query.eq('message_type', 'patient_specific');
       } else if (filterTab === 'completed') {
         query = query.eq('completed', true);
-      }
-
-      if (selectedPatientFilter) {
-        query = query.eq('patient_id', selectedPatientFilter);
       }
 
       if (searchQuery) {
@@ -177,7 +168,7 @@ const InternalChat = () => {
     refetchInterval: 30000
   });
 
-  // Fetch patients for filter (from patients table to match internal_messages FK)
+  // Fetch patients for patient messages filter
   const { data: patients = [] } = useQuery({
     queryKey: ['practice-patients-for-filter', practiceId],
     queryFn: async () => {
@@ -772,17 +763,13 @@ const InternalChat = () => {
               onFilterTabChange={setFilterTab}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
-              patientFilter={selectedPatientFilter}
-              onPatientFilterChange={setSelectedPatientFilter}
               selectedMessageId={selectedMessageId}
               onSelectMessage={setSelectedMessageId}
               onNewMessage={() => setCreateDialogOpen(true)}
               messages={messagesData}
-              patients={patients}
               loading={messagesLoading}
               unreadCount={unreadCount}
               activeCount={activeCount}
-              urgentCount={urgentCount}
             />
           ) : (
             <MessageThread
@@ -806,17 +793,13 @@ const InternalChat = () => {
             onFilterTabChange={setFilterTab}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            patientFilter={selectedPatientFilter}
-            onPatientFilterChange={setSelectedPatientFilter}
             selectedMessageId={selectedMessageId}
             onSelectMessage={setSelectedMessageId}
             onNewMessage={() => setCreateDialogOpen(true)}
             messages={messagesData}
-            patients={patients}
             loading={messagesLoading}
             unreadCount={unreadCount}
             activeCount={activeCount}
-            urgentCount={urgentCount}
           />
 
           <MessageThread
