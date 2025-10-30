@@ -172,7 +172,7 @@ export default function PatientDocuments() {
 
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `${patientAccount.id}/${fileName}`;
+      const filePath = `${effectiveUserId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("patient-documents")
