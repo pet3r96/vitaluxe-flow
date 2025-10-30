@@ -671,6 +671,11 @@ const InternalChat = () => {
   const activeCount = messagesData.filter(m => !m.completed).length;
   const urgentCount = messagesData.filter(m => m.priority === 'urgent' && !m.completed).length;
 
+  // Combined totals (internal + patient)
+  const combinedUnreadCount = unreadCount + patientUnreadCount;
+  const combinedActiveCount = activeCount + patientActiveCount;
+  const combinedUrgentCount = urgentCount + patientUrgentCount;
+
   if (!practiceId) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -687,6 +692,19 @@ const InternalChat = () => {
           <p className="text-sm sm:text-base text-muted-foreground mt-2">
             Internal team communication and patient messaging in one place
           </p>
+          
+          {/* Combined Totals */}
+          <div className="flex items-center gap-3 mt-4">
+            <Badge variant="outline" className="text-sm">
+              Total Unread: {combinedUnreadCount}
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              Total Active: {combinedActiveCount}
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              Total Urgent: {combinedUrgentCount}
+            </Badge>
+          </div>
         </div>
       </div>
 

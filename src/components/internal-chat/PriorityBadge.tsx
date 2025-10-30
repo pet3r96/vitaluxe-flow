@@ -3,7 +3,7 @@ import { AlertTriangle, AlertCircle, Info, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PriorityBadgeProps {
-  priority: 'urgent' | 'high' | 'medium' | 'low';
+  priority?: 'urgent' | 'high' | 'medium' | 'low';
   className?: string;
 }
 
@@ -27,13 +27,14 @@ export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
     }
   };
 
-  const variant = variants[priority];
+  const normalizedPriority = (priority && variants[priority]) ? priority : 'medium';
+  const variant = variants[normalizedPriority];
   const Icon = variant.icon;
 
   return (
     <Badge className={cn(variant.color, className)} variant="outline">
       <Icon className="w-3 h-3 mr-1" />
-      {priority.toUpperCase()}
+      {normalizedPriority.toUpperCase()}
     </Badge>
   );
 }

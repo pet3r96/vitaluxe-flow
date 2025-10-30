@@ -93,7 +93,7 @@ export function MessageThread({
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold truncate">{message.subject}</h3>
             <div className="flex items-center gap-2 flex-wrap mt-1">
-              <PriorityBadge priority={message.priority} />
+              <PriorityBadge priority={message.priority || 'medium'} />
               {message.patient && (
                 <Badge variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => navigate(`/patients/${message.patient_id}`)}>
                   <User className="w-3 h-3 mr-1" />

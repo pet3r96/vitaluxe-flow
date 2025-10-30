@@ -62,7 +62,7 @@ export function MessageDetails({
             <div>
               <label className="text-xs text-muted-foreground">Priority</label>
               <div className="mt-1">
-                <PriorityBadge priority={message.priority} />
+                <PriorityBadge priority={message.priority || 'medium'} />
               </div>
             </div>
             
