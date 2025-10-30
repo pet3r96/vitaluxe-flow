@@ -96,8 +96,7 @@ Deno.serve(async (req) => {
           id,
           user:profiles(name)
         ),
-        room:practice_rooms(name),
-        service_type_info:appointment_service_types(name)
+        room:practice_rooms(name)
       `)
       .eq('practice_id', practiceId)
       .gte('start_time', startOfDay)
@@ -118,14 +117,20 @@ Deno.serve(async (req) => {
 
     console.log(`[Print Day] Found ${appointments?.length || 0} appointments`);
 
-    // Get practice name
+    // Get practice name and address
     const { data: practice } = await supabaseClient
       .from('profiles')
-      .select('name, company')
+      .select('name, company, address_street, address_city, address_state, address_zip')
       .eq('id', practiceId)
       .single();
 
     const practiceName = practice?.company || practice?.name || 'Practice';
+    const practiceAddress = [
+      practice?.address_street,
+      practice?.address_city,
+      practice?.address_state,
+      practice?.address_zip
+    ].filter(Boolean).join(', ');
 
     // Get provider name if filtering by provider
     let providerName = 'All Providers';
@@ -142,117 +147,217 @@ Deno.serve(async (req) => {
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text(practiceName, 105, 20, { align: 'center' });
+    
+    if (practiceAddress) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(practiceAddress, 105, 27, { align: 'center' });
+    }
+    
     doc.setFontSize(14);
-    doc.text('Daily Schedule', 105, 28, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('Daily Schedule', 105, 35, { align: 'center' });
 
     // Date and Provider info
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const dateObj = new Date(date + 'T12:00:00Z'); // Noon to avoid timezone issues
+    const dateObj = new Date(date + 'T12:00:00Z');
     const dateStr = dateObj.toLocaleDateString('en-US', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
       day: 'numeric' 
     });
-    doc.text(`Date: ${dateStr}`, 20, 40);
-    doc.text(`Provider: ${providerName}`, 20, 47);
+    doc.text(`Date: ${dateStr}`, 20, 47);
+    doc.text(`Provider: ${providerName}`, 20, 54);
 
     // Separator line
     doc.setLineWidth(0.5);
-    doc.line(20, 52, 190, 52);
+    doc.line(20, 59, 190, 59);
 
-    let yPosition = 60;
+    let yPosition = 70;
 
-    if (!appointments || appointments.length === 0) {
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'italic');
-      doc.text('No appointments scheduled for this day.', 105, yPosition, { align: 'center' });
-    } else {
-      // Loop through appointments
+    // Generate hour-by-hour time slots from 8 AM to 6 PM
+    const generateTimeSlots = () => {
+      const slots = [];
+      for (let hour = 8; hour <= 18; hour++) {
+        slots.push({ hour, minute: 0 });
+        if (hour < 18) {
+          slots.push({ hour, minute: 30 });
+        }
+      }
+      return slots;
+    };
+
+    const timeSlots = generateTimeSlots();
+    
+    // Map appointments to time slots
+    const appointmentsBySlot = new Map();
+    if (appointments && appointments.length > 0) {
       for (const appt of appointments) {
         const typedAppt = appt as any;
-        
-        // Check if we need a new page
-        if (yPosition > 260) {
-          doc.addPage();
-          yPosition = 20;
-        }
-
-        // Time
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
         const startTime = new Date(typedAppt.start_time);
-        const endTime = new Date(typedAppt.end_time);
-        const timeStr = `${startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} - ${endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-        doc.text(timeStr, 20, yPosition);
-
-        // Patient Name
-        yPosition += 7;
-        doc.setFontSize(11);
-        const patientName = `${typedAppt.patient?.first_name || ''} ${typedAppt.patient?.last_name || ''}`.trim() || 'Unknown Patient';
-        doc.text(`Patient: ${patientName}`, 25, yPosition);
-
-        // Service Type
-        if (typedAppt.service_type) {
-          yPosition += 6;
-          doc.setFont('helvetica', 'normal');
-          const serviceName = typedAppt.service_type_info?.name || typedAppt.service_type;
-          doc.text(`Service: ${serviceName}`, 25, yPosition);
+        const slotKey = `${startTime.getHours()}-${startTime.getMinutes()}`;
+        if (!appointmentsBySlot.has(slotKey)) {
+          appointmentsBySlot.set(slotKey, []);
         }
-
-        // Service Description
-        if (typedAppt.service_description && typedAppt.service_description.trim() !== '') {
-          yPosition += 6;
-          const descLines = doc.splitTextToSize(`Description: ${typedAppt.service_description}`, 160);
-          doc.text(descLines, 25, yPosition);
-          yPosition += (descLines.length - 1) * 6;
-        }
-
-        // Appointment Type & Room
-        yPosition += 6;
-        let detailsLine = `Type: ${typedAppt.appointment_type || 'N/A'}`;
-        if (typedAppt.room?.name) {
-          detailsLine += ` | Room: ${typedAppt.room.name}`;
-        }
-        doc.text(detailsLine, 25, yPosition);
-
-        // Status
-        yPosition += 6;
-        const statusMap: Record<string, string> = {
-          'scheduled': 'Scheduled',
-          'confirmed': 'Confirmed',
-          'checked_in': 'Checked In',
-          'in_progress': 'In Progress',
-          'completed': 'Completed',
-          'cancelled': 'Cancelled',
-          'no_show': 'No Show',
-          'rescheduled': 'Rescheduled'
-        };
-        const statusText = statusMap[typedAppt.status] || typedAppt.status;
-        doc.text(`Status: ${statusText}`, 25, yPosition);
-
-        // Notes
-        if (typedAppt.notes && typedAppt.notes.trim() !== '') {
-          yPosition += 6;
-          const notesLines = doc.splitTextToSize(`Notes: ${typedAppt.notes}`, 160);
-          doc.text(notesLines, 25, yPosition);
-          yPosition += (notesLines.length - 1) * 6;
-        }
-
-        // Separator
-        yPosition += 8;
-        doc.setLineWidth(0.3);
-        doc.line(20, yPosition, 190, yPosition);
-        yPosition += 8;
+        appointmentsBySlot.get(slotKey).push(typedAppt);
       }
     }
 
-    // Footer
+    // Table header
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'italic');
-    doc.text(`Total Appointments: ${appointments?.length || 0}`, 20, yPosition);
+    doc.setFont('helvetica', 'bold');
+    const showProviderColumn = !providerId;
+    const colWidths = showProviderColumn 
+      ? { time: 25, patient: 45, service: 40, room: 25, provider: 35 }
+      : { time: 30, patient: 60, service: 50, room: 30 };
+    
+    let xPos = 20;
+    doc.text('Time', xPos, yPosition);
+    xPos += colWidths.time;
+    doc.text('Patient', xPos, yPosition);
+    xPos += colWidths.patient;
+    doc.text('Service', xPos, yPosition);
+    xPos += colWidths.service;
+    doc.text('Room', xPos, yPosition);
+    if (showProviderColumn) {
+      xPos += colWidths.room;
+      doc.text('Provider', xPos, yPosition);
+    }
+    
+    yPosition += 4;
+    doc.setLineWidth(0.3);
+    doc.line(20, yPosition, 190, yPosition);
     yPosition += 6;
+
+    // Table rows
+    doc.setFont('helvetica', 'normal');
+    let totalShown = 0;
+    
+    for (const slot of timeSlots) {
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+        
+        // Repeat header on new page
+        doc.setFont('helvetica', 'bold');
+        xPos = 20;
+        doc.text('Time', xPos, yPosition);
+        xPos += colWidths.time;
+        doc.text('Patient', xPos, yPosition);
+        xPos += colWidths.patient;
+        doc.text('Service', xPos, yPosition);
+        xPos += colWidths.service;
+        doc.text('Room', xPos, yPosition);
+        if (showProviderColumn) {
+          xPos += colWidths.room;
+          doc.text('Provider', xPos, yPosition);
+        }
+        yPosition += 4;
+        doc.line(20, yPosition, 190, yPosition);
+        yPosition += 6;
+        doc.setFont('helvetica', 'normal');
+      }
+
+      const slotKey = `${slot.hour}-${slot.minute}`;
+      const slotAppointments = appointmentsBySlot.get(slotKey) || [];
+      
+      // Format time
+      const timeStr = `${slot.hour > 12 ? slot.hour - 12 : slot.hour === 0 ? 12 : slot.hour}:${slot.minute.toString().padStart(2, '0')} ${slot.hour >= 12 ? 'PM' : 'AM'}`;
+      
+      if (slotAppointments.length === 0) {
+        // Empty slot
+        doc.setTextColor(180, 180, 180);
+        xPos = 20;
+        doc.text(timeStr, xPos, yPosition);
+        xPos += colWidths.time;
+        doc.text('-', xPos, yPosition);
+        doc.setTextColor(0, 0, 0);
+        yPosition += 6;
+      } else {
+        // Show appointments for this slot
+        for (let i = 0; i < slotAppointments.length; i++) {
+          const appt = slotAppointments[i];
+          totalShown++;
+          
+          // Set color based on status
+          if (appt.status === 'completed') {
+            doc.setTextColor(120, 120, 120);
+          } else if (appt.status === 'checked_in') {
+            doc.setTextColor(0, 120, 0);
+          } else if (appt.status === 'cancelled') {
+            doc.setTextColor(200, 0, 0);
+          } else {
+            doc.setTextColor(0, 0, 0);
+          }
+          
+          xPos = 20;
+          
+          // Time (only show for first appointment in slot)
+          if (i === 0) {
+            doc.text(timeStr, xPos, yPosition);
+          }
+          xPos += colWidths.time;
+          
+          // Patient
+          const patientName = `${appt.patient?.first_name || ''} ${appt.patient?.last_name || ''}`.trim() || 'Unknown';
+          const truncatedPatient = patientName.length > 20 ? patientName.substring(0, 17) + '...' : patientName;
+          doc.text(truncatedPatient, xPos, yPosition);
+          xPos += colWidths.patient;
+          
+          // Service
+          const serviceName = appt.service_type || 'N/A';
+          const truncatedService = serviceName.length > 18 ? serviceName.substring(0, 15) + '...' : serviceName;
+          doc.text(truncatedService, xPos, yPosition);
+          xPos += colWidths.service;
+          
+          // Room
+          const roomName = appt.room?.name || '-';
+          doc.text(roomName, xPos, yPosition);
+          
+          // Provider (if showing all providers)
+          if (showProviderColumn) {
+            xPos += colWidths.room;
+            const provName = appt.provider?.user?.name || '-';
+            const truncatedProv = provName.length > 15 ? provName.substring(0, 12) + '...' : provName;
+            doc.text(truncatedProv, xPos, yPosition);
+          }
+          
+          yPosition += 6;
+        }
+      }
+    }
+    
+    doc.setTextColor(0, 0, 0);
+
+    // Footer with summary
+    yPosition += 5;
+    doc.setLineWidth(0.5);
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 8;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Appointments: ${appointments?.length || 0}`, 20, yPosition);
+    
+    // Status breakdown
+    if (appointments && appointments.length > 0) {
+      const statusCounts = (appointments as any[]).reduce((acc, appt) => {
+        acc[appt.status] = (acc[appt.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      yPosition += 6;
+      doc.setFont('helvetica', 'normal');
+      const statusStr = Object.entries(statusCounts)
+        .map(([status, count]) => `${status}: ${count}`)
+        .join(' | ');
+      doc.text(statusStr, 20, yPosition);
+    }
+    
+    yPosition += 6;
+    doc.setFont('helvetica', 'italic');
     const generatedTime = new Date().toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
