@@ -102,9 +102,33 @@ Deno.serve(async (req) => {
           effectivePracticeId = patientAccount?.practice_id ?? null;
           console.log('[send-patient-message] Resolved practice from patient impersonation:', effectivePracticeId);
         } else {
-          // Treat impersonated user as practice
-          effectivePracticeId = impersonatedId;
-          console.log('[send-patient-message] Using impersonated practice:', effectivePracticeId);
+          // Check if impersonated user is a staff member
+          const { data: staffRecord } = await supabaseAdmin
+            .from('practice_staff')
+            .select('practice_id')
+            .eq('user_id', impersonatedId)
+            .maybeSingle();
+          
+          if (staffRecord?.practice_id) {
+            effectivePracticeId = staffRecord.practice_id;
+            console.log('[send-patient-message] Resolved practice from staff impersonation:', effectivePracticeId);
+          } else {
+            // Check if impersonated user is a provider
+            const { data: providerRecord } = await supabaseAdmin
+              .from('providers')
+              .select('practice_id')
+              .eq('user_id', impersonatedId)
+              .maybeSingle();
+            
+            if (providerRecord?.practice_id) {
+              effectivePracticeId = providerRecord.practice_id;
+              console.log('[send-patient-message] Resolved practice from provider impersonation:', effectivePracticeId);
+            } else {
+              // Treat impersonated user as practice owner
+              effectivePracticeId = impersonatedId;
+              console.log('[send-patient-message] Using impersonated user as practice owner:', effectivePracticeId);
+            }
+          }
         }
       }
 

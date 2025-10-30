@@ -46,7 +46,7 @@ export function CreateInternalMessageDialog({
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Fetch practice team members
+  // Fetch practice team members (always fetch when dialog is open)
   const { data: teamMembers = [] } = useQuery({
     queryKey: ['practice-team-members', practiceId],
     queryFn: async () => {
@@ -54,9 +54,9 @@ export function CreateInternalMessageDialog({
         p_practice_id: practiceId
       });
       if (error) throw error;
-      return data;
+      return data || [];
     },
-    enabled: open && destination === 'practice_team'
+    enabled: open && !!practiceId
   });
 
   // Fetch patients for the practice
