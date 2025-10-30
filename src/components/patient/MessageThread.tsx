@@ -4,16 +4,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Send } from "lucide-react";
+import { Send, CheckCircle2, RotateCcw } from "lucide-react";
+import { MarkCompleteDialog } from "./MarkCompleteDialog";
 
 interface MessageThreadProps {
   threadId: string;
+  onThreadUpdate?: () => void;
 }
 
-export function MessageThread({ threadId }: MessageThreadProps) {
+export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) {
   const [message, setMessage] = useState("");
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   const { data: messages, refetch } = useQuery({
     queryKey: ["message-thread", threadId],
@@ -52,19 +56,104 @@ export function MessageThread({ threadId }: MessageThreadProps) {
     },
   });
 
+  const markCompleteMutation = useMutation({
+    mutationFn: async (notes?: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("patient_messages")
+        .update({
+          resolved: true,
+          resolved_at: new Date().toISOString(),
+          resolved_by: user.id,
+          resolution_notes: notes,
+        })
+        .eq("id", threadId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Conversation marked as complete");
+      refetch();
+      onThreadUpdate?.();
+      setShowCompleteDialog(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+    },
+  });
+
+  const reopenMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("patient_messages")
+        .update({
+          resolved: false,
+          resolved_at: null,
+          resolved_by: null,
+          resolution_notes: null,
+        })
+        .eq("id", threadId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Conversation reopened");
+      refetch();
+      onThreadUpdate?.();
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+    },
+  });
+
   const handleSend = () => {
     if (!message.trim()) return;
     sendMutation.mutate(message);
   };
 
   const firstMsg = messages?.[0];
+  const isResolved = firstMsg?.resolved;
 
   return (
     <>
       <CardHeader>
-        <CardTitle className="text-base">
-          {firstMsg?.practice_id ? "Practice" : "Provider"} Conversation
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">
+              {firstMsg?.practice_id ? "Practice" : "Provider"} Conversation
+            </CardTitle>
+            {firstMsg?.urgency === 'urgent' && (
+              <Badge variant="destructive" className="text-xs">Urgent</Badge>
+            )}
+            {isResolved && (
+              <Badge variant="secondary" className="text-xs">Resolved</Badge>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {isResolved ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => reopenMutation.mutate()}
+                disabled={reopenMutation.isPending}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reopen
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCompleteDialog(true)}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Mark Complete
+              </Button>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3 max-h-[400px] overflow-y-auto">
@@ -83,30 +172,46 @@ export function MessageThread({ threadId }: MessageThreadProps) {
               </p>
             </div>
           ))}
+          
+          {isResolved && firstMsg?.resolution_notes && (
+            <div className="p-3 rounded-lg bg-secondary/50 border-l-4 border-secondary">
+              <p className="text-xs font-semibold mb-1">Resolution Notes:</p>
+              <p className="text-sm">{firstMsg.resolution_notes}</p>
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-2">
-          <Textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type your message..."
-            rows={2}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-          />
-          <Button
-            size="icon"
-            onClick={handleSend}
-            disabled={!message.trim() || sendMutation.isPending}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+        {!isResolved && (
+          <div className="flex gap-2">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type your message..."
+              rows={2}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+            />
+            <Button
+              size="icon"
+              onClick={handleSend}
+              disabled={!message.trim() || sendMutation.isPending}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </CardContent>
+
+      <MarkCompleteDialog
+        open={showCompleteDialog}
+        onOpenChange={setShowCompleteDialog}
+        onConfirm={(notes) => markCompleteMutation.mutate(notes)}
+        isLoading={markCompleteMutation.isPending}
+      />
     </>
   );
 }
