@@ -12,6 +12,8 @@ import { PatientMessageDetails } from "@/components/internal-chat/PatientMessage
 import { CreatePatientMessageDialog } from "@/components/internal-chat/CreatePatientMessageDialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -617,8 +619,38 @@ const InternalChat = () => {
 
       <Tabs defaultValue="internal" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="internal">Internal</TabsTrigger>
-          <TabsTrigger value="patients">Patients</TabsTrigger>
+          <TabsTrigger value="internal" className="relative">
+            <div className="flex items-center gap-2">
+              <span>Internal</span>
+              {unreadCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <Badge 
+                    variant="destructive" 
+                    className="h-5 min-w-[20px] px-1.5 text-xs"
+                  >
+                    {unreadCount}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="patients" className="relative">
+            <div className="flex items-center gap-2">
+              <span>Patients</span>
+              {patientUnreadCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <Badge 
+                    variant="destructive" 
+                    className="h-5 min-w-[20px] px-1.5 text-xs"
+                  >
+                    {patientUnreadCount}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="internal" className="space-y-0">
