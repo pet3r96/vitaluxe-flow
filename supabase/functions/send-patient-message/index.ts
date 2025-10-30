@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create service role client for auth and impersonation queries
+    // Create service role client for auth and all operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -36,16 +36,23 @@ Deno.serve(async (req) => {
 
     console.log('[send-patient-message] User authenticated:', user.id);
 
-    // Check for active impersonation session using service role
-    console.log('[send-patient-message] Checking impersonation for admin:', user.id);
+    // Parse request body
+    const { subject, message, sender_type, patient_id } = await req.json();
+
+    // Detect mode: provider reply or patient message
+    const isProviderMode = sender_type === 'provider' && patient_id;
+    console.log('[send-patient-message] Mode:', isProviderMode ? 'provider' : 'patient');
+
+    // Check for active impersonation session
+    console.log('[send-patient-message] Checking impersonation for user:', user.id);
     const { data: impersonationSession, error: impersonationError } = await supabaseAdmin
       .from('active_impersonation_sessions')
-      .select('impersonated_user_id, impersonated_role')
+      .select('impersonated_user_id, impersonated_role, expires_at')
       .eq('admin_user_id', user.id)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
     
-    console.log('[send-patient-message] Impersonation query result:', { 
+    console.log('[send-patient-message] Impersonation result:', { 
       found: !!impersonationSession, 
       role: impersonationSession?.impersonated_role,
       impersonated_id: impersonationSession?.impersonated_user_id,
@@ -56,16 +63,6 @@ Deno.serve(async (req) => {
       console.error('[send-patient-message] Impersonation check error:', impersonationError);
     }
 
-    // Use impersonated user ID if impersonating as patient, otherwise use actual user ID
-    const isImpersonatingPatient = impersonationSession?.impersonated_role === 'patient';
-    const effectiveUserId = isImpersonatingPatient 
-      ? impersonationSession.impersonated_user_id 
-      : user.id;
-
-    console.log('[send-patient-message] Effective user ID:', effectiveUserId, 'Impersonating:', isImpersonatingPatient);
-
-    const { subject, message } = await req.json();
-
     if (!message?.trim()) {
       console.error('[send-patient-message] Message body is required');
       return new Response(JSON.stringify({ error: 'Message body is required' }), {
@@ -74,7 +71,150 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get patient account using service role to bypass RLS during impersonation
+    // === PROVIDER MODE: Provider replying to patient ===
+    if (isProviderMode) {
+      console.log('[send-patient-message] PROVIDER MODE - Resolving practice context');
+      
+      let effectivePracticeId: string | null = null;
+
+      // Resolve practice from impersonation first
+      if (impersonationSession?.impersonated_user_id) {
+        const role = impersonationSession.impersonated_role;
+        const impersonatedId = impersonationSession.impersonated_user_id as string;
+        console.log('[send-patient-message] Impersonation active:', { role, impersonatedId });
+
+        if (role === 'patient') {
+          // Resolve practice via patient account
+          const { data: patientAccount, error: paErr } = await supabaseAdmin
+            .from('patient_accounts')
+            .select('practice_id')
+            .eq('user_id', impersonatedId)
+            .maybeSingle();
+          if (paErr) console.error('[send-patient-message] Patient account lookup error:', paErr);
+          effectivePracticeId = patientAccount?.practice_id ?? null;
+          console.log('[send-patient-message] Resolved practice from patient impersonation:', effectivePracticeId);
+        } else {
+          // Treat impersonated user as practice
+          effectivePracticeId = impersonatedId;
+          console.log('[send-patient-message] Using impersonated practice:', effectivePracticeId);
+        }
+      }
+
+      // If no impersonation, resolve from current user
+      if (!effectivePracticeId) {
+        // Check if user is doctor (practice owner)
+        const { data: doctorRole } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'doctor')
+          .maybeSingle();
+
+        if (doctorRole) {
+          effectivePracticeId = user.id;
+          console.log('[send-patient-message] Resolved practice as doctor:', effectivePracticeId);
+        } else {
+          // Check provider linkage
+          const { data: providerRow } = await supabaseAdmin
+            .from('providers')
+            .select('practice_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (providerRow?.practice_id) {
+            effectivePracticeId = providerRow.practice_id as string;
+            console.log('[send-patient-message] Resolved practice via providers:', effectivePracticeId);
+          } else {
+            // Check practice staff linkage
+            const { data: staffRow } = await supabaseAdmin
+              .from('practice_staff')
+              .select('practice_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            if (staffRow?.practice_id) {
+              effectivePracticeId = staffRow.practice_id as string;
+              console.log('[send-patient-message] Resolved practice via staff:', effectivePracticeId);
+            }
+          }
+        }
+      }
+
+      if (!effectivePracticeId) {
+        console.error('[send-patient-message] No practice context for provider mode');
+        return new Response(
+          JSON.stringify({ error: 'No practice context', code: 'no_practice_context' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Validate patient belongs to this practice
+      const { data: patientValidation, error: pvErr } = await supabaseAdmin
+        .from('patient_accounts')
+        .select('id, practice_id')
+        .eq('id', patient_id)
+        .maybeSingle();
+
+      console.log('[send-patient-message] Patient validation:', { patientValidation, error: pvErr });
+
+      if (pvErr || !patientValidation || patientValidation.practice_id !== effectivePracticeId) {
+        console.error('[send-patient-message] Patient access denied');
+        return new Response(
+          JSON.stringify({ error: 'Patient not found or access denied', code: 'patient_access_denied' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Insert provider message
+      const providerPayload = {
+        patient_id: patient_id,
+        practice_id: effectivePracticeId,
+        sender_id: user.id,
+        sender_type: 'provider',
+        message_body: message,
+        subject: subject || 'Provider Message',
+        read_at: null
+      };
+
+      console.log('[send-patient-message] Inserting provider message:', providerPayload);
+
+      const { error: insertError } = await supabaseAdmin
+        .from('patient_messages')
+        .insert(providerPayload);
+
+      if (insertError) {
+        console.error('[send-patient-message] Insert error:', insertError);
+        return new Response(
+          JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('[send-patient-message] Provider message sent successfully');
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // === PATIENT MODE: Patient sending message ===
+    console.log('[send-patient-message] PATIENT MODE - Resolving patient context');
+    
+    let effectiveUserId = user.id;
+
+    // If impersonating, try to resolve as patient
+    if (impersonationSession?.impersonated_user_id) {
+      const { data: impersonatedPatient } = await supabaseAdmin
+        .from('patient_accounts')
+        .select('user_id')
+        .eq('user_id', impersonationSession.impersonated_user_id)
+        .maybeSingle();
+      
+      if (impersonatedPatient) {
+        effectiveUserId = impersonationSession.impersonated_user_id as string;
+        console.log('[send-patient-message] Using impersonated patient:', effectiveUserId);
+      }
+    }
+
+    // Get patient account
     const { data: patientAccount, error: patientError } = await supabaseAdmin
       .from('patient_accounts')
       .select('id, practice_id')
@@ -99,7 +239,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const insertPayload = {
+    // Insert patient message
+    const patientPayload = {
       patient_id: patientAccount.id,
       practice_id: patientAccount.practice_id,
       sender_id: effectiveUserId,
@@ -109,29 +250,21 @@ Deno.serve(async (req) => {
       read_at: null
     };
 
-    console.log('[send-patient-message] Attempting to insert message:', insertPayload);
+    console.log('[send-patient-message] Inserting patient message:', patientPayload);
 
-    // Use service role for insert when impersonating, anon client otherwise
-    const insertClient = isImpersonatingPatient ? supabaseAdmin : createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-
-    const { error } = await insertClient
+    const { error: insertError } = await supabaseAdmin
       .from('patient_messages')
-      .insert(insertPayload);
+      .insert(patientPayload);
 
-    if (error) {
-      console.error('[send-patient-message] Database insert error:', error);
-      return new Response(JSON.stringify({ error: `Failed to send message: ${error.message}` }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (insertError) {
+      console.error('[send-patient-message] Insert error:', insertError);
+      return new Response(
+        JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log('[send-patient-message] Message sent successfully');
-
+    console.log('[send-patient-message] Patient message sent successfully');
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

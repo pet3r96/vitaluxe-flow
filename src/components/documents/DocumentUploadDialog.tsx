@@ -47,11 +47,9 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
         if (uploadError) throw uploadError;
 
-        // Create document record
-        const { data: document, error: insertError } = await supabase
-          .from("provider_documents" as any)
-          .insert({
-            practice_id: effectivePracticeId,
+        // Create document record via edge function (bypasses RLS)
+        const { data: result, error: createError } = await supabase.functions.invoke("create-provider-document", {
+          body: {
             document_name: file.name,
             document_type: documentType,
             storage_path: filePath,
@@ -59,44 +57,13 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             mime_type: file.type,
             tags: tags ? tags.split(",").map(t => t.trim()) : [],
             notes: notes || null,
-          })
-          .select()
-          .single();
+            patientIds: selectedPatientIds.length > 0 ? selectedPatientIds : undefined,
+          },
+        });
 
-        if (insertError) throw insertError;
+        if (createError) throw createError;
 
-        // Assign to selected patients if any
-        if (selectedPatientIds.length > 0 && document) {
-          const documentId = (document as any).id;
-
-          // For single patient, also set legacy assigned_patient_id field for backward compatibility
-          if (selectedPatientIds.length === 1) {
-            const { error: updateError } = await supabase
-              .from("provider_documents" as any)
-              .update({ assigned_patient_id: selectedPatientIds[0] })
-              .eq("id", documentId);
-
-            if (updateError) {
-              console.error("Error setting assigned_patient_id:", updateError);
-            }
-          }
-
-          // Use backend function to create assignments (same as manual assign dialog)
-          const { error: assignError } = await supabase.functions.invoke("assign-document-to-patient", {
-            body: { 
-              documentId, 
-              patientIds: selectedPatientIds, 
-              message: notes || undefined 
-            },
-          });
-
-          if (assignError) {
-            console.error("Error assigning via function:", assignError);
-            toast.error("Document uploaded, but patient assignment failed. You can assign it from the card menu.");
-          }
-        }
-
-        uploadedDocs.push(document);
+        uploadedDocs.push(result.document);
       }
 
       return uploadedDocs;
