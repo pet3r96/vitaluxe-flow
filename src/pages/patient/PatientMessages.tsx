@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageThread } from "@/components/patient/MessageThread";
 import { NewMessageDialog } from "@/components/patient/NewMessageDialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageSquare, Plus, Search } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,8 @@ export default function PatientMessages() {
         .select(`
           *,
           practice:profiles!patient_messages_practice_id_fkey(name)
-        `);
+        `)
+        .is('parent_message_id', null);  // Only fetch root messages
 
       // Apply status filter
       if (filterTab === 'active') {
@@ -38,25 +39,16 @@ export default function PatientMessages() {
       const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
 
-      // Group by thread_id if exists, otherwise individual messages
-      const grouped = data.reduce((acc: any, msg: any) => {
-        const key = msg.thread_id || msg.id;
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(msg);
-        return acc;
-      }, {});
-
-      let result = Object.values(grouped);
+      let result = data || [];
 
       // Apply search filter
       if (searchQuery.trim()) {
-        result = result.filter((thread: any) => {
-          const firstMsg = thread[0];
+        result = result.filter((msg: any) => {
           const searchLower = searchQuery.toLowerCase();
           return (
-            firstMsg.subject?.toLowerCase().includes(searchLower) ||
-            firstMsg.message_body?.toLowerCase().includes(searchLower) ||
-            firstMsg.practice?.name?.toLowerCase().includes(searchLower)
+            msg.subject?.toLowerCase().includes(searchLower) ||
+            msg.message_body?.toLowerCase().includes(searchLower) ||
+            msg.practice?.name?.toLowerCase().includes(searchLower)
           );
         });
       }
@@ -65,8 +57,31 @@ export default function PatientMessages() {
     },
   });
 
-  const activeCount = threads?.filter((t: any) => !t[0].resolved).length || 0;
-  const resolvedCount = threads?.filter((t: any) => t[0].resolved).length || 0;
+  // Real-time subscription for instant updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('patient-messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_messages'
+        },
+        (payload) => {
+          console.log('Real-time message update:', payload);
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  const activeCount = threads?.filter((t: any) => !t.resolved).length || 0;
+  const resolvedCount = threads?.filter((t: any) => t.resolved).length || 0;
 
   return (
     <>
@@ -119,40 +134,39 @@ export default function PatientMessages() {
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
               {threads && threads.length > 0 ? (
-                threads.map((thread: any) => {
-                  const firstMsg = thread[0];
+                threads.map((msg: any) => {
                   return (
                     <div
-                      key={firstMsg.id}
+                      key={msg.id}
                       className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedThread === firstMsg.id
+                        selectedThread === msg.id
                           ? "bg-accent"
                           : "hover:bg-accent/50"
                       }`}
-                      onClick={() => setSelectedThread(firstMsg.id)}
+                      onClick={() => setSelectedThread(msg.id)}
                     >
                       <div className="flex items-start gap-3">
                         <MessageSquare className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <p className="font-medium text-sm truncate">
-                              {firstMsg.practice?.name || 'Your Practice'}
+                              {msg.practice?.name || 'Your Practice'}
                             </p>
-                            {!firstMsg.read_at && firstMsg.sender_type !== 'patient' && (
+                            {!msg.read_at && msg.sender_type !== 'patient' && (
                               <Badge variant="default" className="text-xs h-5">New</Badge>
                             )}
-                            {firstMsg.urgency === 'urgent' && (
+                            {msg.urgency === 'urgent' && (
                               <Badge variant="destructive" className="text-xs h-5">Urgent</Badge>
                             )}
                           </div>
                           <p className="text-xs font-medium text-foreground truncate">
-                            {firstMsg.subject || 'No subject'}
+                            {msg.subject || 'No subject'}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
-                            {firstMsg.message_body?.substring(0, 50)}...
+                            {msg.message_body?.substring(0, 50)}...
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(firstMsg.created_at), "MMM dd, h:mm a")}
+                            {format(new Date(msg.created_at), "MMM dd, h:mm a")}
                           </p>
                         </div>
                       </div>

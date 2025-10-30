@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,30 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
     },
   });
 
+  // Real-time subscription for instant thread updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('message-thread-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_messages',
+          filter: `thread_id=eq.${threadId}`
+        },
+        (payload) => {
+          console.log('Thread real-time update:', payload);
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [threadId, refetch]);
+
   const sendMutation = useMutation({
     mutationFn: async (messageText: string) => {
       const firstMsg = messages?.[0];
@@ -64,6 +88,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Update all messages in this thread
       const { error } = await supabase
         .from("patient_messages")
         .update({
@@ -72,7 +97,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
           resolved_by: user.id,
           resolution_notes: notes,
         })
-        .eq("id", threadId);
+        .or(`id.eq.${threadId},thread_id.eq.${threadId}`);
 
       if (error) throw error;
     },
@@ -89,6 +114,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
 
   const reopenMutation = useMutation({
     mutationFn: async () => {
+      // Update all messages in this thread
       const { error } = await supabase
         .from("patient_messages")
         .update({
@@ -97,7 +123,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
           resolved_by: null,
           resolution_notes: null,
         })
-        .eq("id", threadId);
+        .or(`id.eq.${threadId},thread_id.eq.${threadId}`);
 
       if (error) throw error;
     },

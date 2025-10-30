@@ -196,20 +196,34 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Insert provider message with threading support
-      const isReply = !!thread_id;
+    // Determine thread_id for provider message
+    let effectiveThreadId = thread_id;
+    
+    // If parent_message_id provided but no thread_id, fetch parent's thread_id
+    if (!effectiveThreadId && parent_message_id) {
+      const { data: parentMsg } = await supabaseAdmin
+        .from('patient_messages')
+        .select('thread_id, id')
+        .eq('id', parent_message_id)
+        .maybeSingle();
       
-      const providerPayload = {
-        patient_id: patient_id,
-        practice_id: effectivePracticeId,
-        sender_id: user.id,
-        sender_type: 'provider',
-        message_body: message,
-        subject: subject || 'Provider Message',
-        read_at: null,
-        ...(isReply && { thread_id: thread_id }),
-        ...(isReply && parent_message_id && { parent_message_id: parent_message_id })
-      };
+      effectiveThreadId = parentMsg?.thread_id || parentMsg?.id;
+      console.log('[send-patient-message] Resolved thread_id from parent:', effectiveThreadId);
+    }
+    
+    const isReply = !!parent_message_id;
+    
+    const providerPayload = {
+      patient_id: patient_id,
+      practice_id: effectivePracticeId,
+      sender_id: user.id,
+      sender_type: 'provider',
+      message_body: message,
+      subject: subject || 'Provider Message',
+      read_at: null,
+      ...(effectiveThreadId && { thread_id: effectiveThreadId }),
+      ...(parent_message_id && { parent_message_id: parent_message_id })
+    };
 
       console.log('[send-patient-message] Inserting provider message:', providerPayload);
 
@@ -287,8 +301,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Insert patient message with threading support
-    const isReply = !!thread_id;
+    // Determine thread_id for patient message
+    let effectiveThreadId = thread_id;
+    
+    // If parent_message_id provided but no thread_id, fetch parent's thread_id
+    if (!effectiveThreadId && parent_message_id) {
+      const { data: parentMsg } = await supabaseAdmin
+        .from('patient_messages')
+        .select('thread_id, id')
+        .eq('id', parent_message_id)
+        .maybeSingle();
+      
+      effectiveThreadId = parentMsg?.thread_id || parentMsg?.id;
+      console.log('[send-patient-message] Resolved thread_id from parent:', effectiveThreadId);
+    }
+    
+    const isReply = !!parent_message_id;
     
     const patientPayload = {
       patient_id: patientAccount.id,
@@ -298,8 +326,8 @@ Deno.serve(async (req) => {
       message_body: message,
       subject: subject || 'Patient Message',
       read_at: null,
-      ...(isReply && { thread_id: thread_id }),
-      ...(isReply && parent_message_id && { parent_message_id: parent_message_id })
+      ...(effectiveThreadId && { thread_id: effectiveThreadId }),
+      ...(parent_message_id && { parent_message_id: parent_message_id })
     };
 
     console.log('[send-patient-message] Inserting patient message:', patientPayload);
