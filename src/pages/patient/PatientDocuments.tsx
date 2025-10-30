@@ -611,6 +611,8 @@ export default function PatientDocuments() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setEditDoc(doc)}
+                            disabled={doc.source === 'provider_assigned'}
+                            title={doc.source === 'provider_assigned' ? 'Provider documents cannot be edited' : 'Edit document'}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>

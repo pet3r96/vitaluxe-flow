@@ -21,6 +21,7 @@ interface PatientDocumentEditDialogProps {
     share_with_practice?: boolean;
     custom_title?: string | null;
     is_provider_document: boolean;
+    source: string;
   };
   onSuccess: () => void;
 }
@@ -68,7 +69,7 @@ export function PatientDocumentEditDialog({
     }
   };
 
-  if (document.is_provider_document) {
+  if (document.source === 'provider_assigned') {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
