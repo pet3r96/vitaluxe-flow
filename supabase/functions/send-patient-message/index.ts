@@ -37,11 +37,20 @@ Deno.serve(async (req) => {
     console.log('[send-patient-message] User authenticated:', user.id);
 
     // Check for active impersonation session using service role
+    console.log('[send-patient-message] Checking impersonation for admin:', user.id);
     const { data: impersonationSession, error: impersonationError } = await supabaseAdmin
       .from('active_impersonation_sessions')
       .select('impersonated_user_id, impersonated_role')
       .eq('admin_user_id', user.id)
+      .gt('expires_at', new Date().toISOString())
       .maybeSingle();
+    
+    console.log('[send-patient-message] Impersonation query result:', { 
+      found: !!impersonationSession, 
+      role: impersonationSession?.impersonated_role,
+      impersonated_id: impersonationSession?.impersonated_user_id,
+      error: impersonationError
+    });
 
     if (impersonationError) {
       console.error('[send-patient-message] Impersonation check error:', impersonationError);
