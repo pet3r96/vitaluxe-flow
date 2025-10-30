@@ -75,7 +75,7 @@ const Profile = () => {
             : effectiveRole === "staff"
               ? "Your Contact Information & Account Settings"
               : effectiveRole === "pharmacy"
-                ? "Your Pharmacy Information & Account Settings"
+                ? "Manage your pharmacy information, licensed states, and account security"
                 : isProvider 
                   ? "Your Professional Credentials & Contact Information" 
                   : "Manage your personal information and account settings"}

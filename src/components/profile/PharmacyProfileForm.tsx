@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -22,6 +25,14 @@ import { useToast } from "@/hooks/use-toast";
 import { phoneSchema } from "@/lib/validators";
 import { Loader2 } from "lucide-react";
 
+const US_STATES = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+];
+
 const pharmacyFormSchema = z.object({
   name: z.string().min(1, "Pharmacy name is required"),
   contact_email: z.string().email("Invalid email"),
@@ -33,6 +44,7 @@ const pharmacyFormSchema = z.object({
     zip: z.string().optional(),
     formatted: z.string().optional(),
   }),
+  states_serviced: z.array(z.string()).min(1, "Select at least one state where you are licensed"),
 });
 
 type PharmacyFormValues = z.infer<typeof pharmacyFormSchema>;
@@ -55,6 +67,7 @@ export function PharmacyProfileForm() {
         zip: "",
         formatted: "",
       },
+      states_serviced: [],
     },
   });
 
@@ -88,6 +101,7 @@ export function PharmacyProfileForm() {
           zip: pharmacy.address_zip || "",
           formatted: pharmacy.address_formatted || "",
         },
+        states_serviced: pharmacy.states_serviced || [],
       });
     }
   }, [pharmacy, form]);
@@ -105,6 +119,7 @@ export function PharmacyProfileForm() {
           address_state: values.address.state,
           address_zip: values.address.zip,
           address_formatted: values.address.formatted,
+          states_serviced: values.states_serviced,
         })
         .eq("user_id", effectiveUserId);
 
@@ -128,6 +143,18 @@ export function PharmacyProfileForm() {
 
   const onSubmit = (values: PharmacyFormValues) => {
     updateMutation.mutate(values);
+  };
+
+  const handleStateToggle = (state: string) => {
+    const currentStates = form.getValues("states_serviced");
+    if (currentStates.includes(state)) {
+      form.setValue(
+        "states_serviced",
+        currentStates.filter((s) => s !== state)
+      );
+    } else {
+      form.setValue("states_serviced", [...currentStates, state]);
+    }
   };
 
   const handlePasswordReset = async () => {
@@ -163,6 +190,45 @@ export function PharmacyProfileForm() {
 
   return (
     <div className="space-y-6">
+      {pharmacy && (
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {pharmacy.name?.charAt(0)?.toUpperCase() || 'P'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-foreground mb-1">
+                  {pharmacy.name}
+                </h2>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {pharmacy.contact_email}
+                </p>
+                {pharmacy.states_serviced && pharmacy.states_serviced.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="text-xs text-muted-foreground mr-2">Licensed in:</span>
+                    {pharmacy.states_serviced.slice(0, 10).map((state: string) => (
+                      <Badge key={state} variant="outline" className="text-xs">
+                        {state}
+                      </Badge>
+                    ))}
+                    {pharmacy.states_serviced.length > 10 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{pharmacy.states_serviced.length - 10} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Pharmacy Information</CardTitle>
@@ -278,19 +344,115 @@ export function PharmacyProfileForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Account Security</CardTitle>
+          <CardTitle>Licensed States</CardTitle>
           <CardDescription>
-            Manage your password and account security settings
+            Select all states where your pharmacy is licensed to operate
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Form {...form}>
+            <FormField
+              control={form.control}
+              name="states_serviced"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="space-y-4">
+                    {/* Selected States Display */}
+                    {field.value && field.value.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Currently Licensed In:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {field.value.map((state) => (
+                            <Badge key={state} variant="secondary" className="text-sm">
+                              {state}
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {field.value.length} state{field.value.length !== 1 ? 's' : ''} selected
+                        </p>
+                      </div>
+                    )}
+
+                    {/* State Selection Grid */}
+                    <div className="space-y-2">
+                      <Label>Select States:</Label>
+                      <div className="grid grid-cols-5 gap-2 p-4 border border-border rounded-md max-h-64 overflow-y-auto">
+                        {US_STATES.map((state) => (
+                          <div key={state} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`state-${state}`}
+                              checked={field.value?.includes(state) || false}
+                              onCheckedChange={() => handleStateToggle(state)}
+                            />
+                            <Label 
+                              htmlFor={`state-${state}`} 
+                              className="text-sm cursor-pointer font-normal"
+                            >
+                              {state}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </Form>
+          
           <Button 
-            onClick={handlePasswordReset}
-            variant="outline"
-            className="w-full sm:w-auto"
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={updateMutation.isPending}
+            className="w-full sm:w-auto mt-4"
           >
-            Reset Password
+            {updateMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Update Licensed States"
+            )}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Security</CardTitle>
+          <CardDescription>
+            Manage your password and keep your pharmacy account secure
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+            <div>
+              <p className="font-medium">Password</p>
+              <p className="text-sm text-muted-foreground">
+                Reset your password to maintain account security
+              </p>
+            </div>
+            <Button 
+              onClick={handlePasswordReset}
+              variant="outline"
+            >
+              Reset Password
+            </Button>
+          </div>
+          
+          {pharmacy && (
+            <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium">Account Email</p>
+                <p className="text-sm text-muted-foreground">
+                  {pharmacy.contact_email}
+                </p>
+              </div>
+              <Badge variant="secondary">Active</Badge>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
