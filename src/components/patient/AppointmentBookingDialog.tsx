@@ -114,8 +114,18 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
     setValidationMessage(null);
     
     try {
+      // Compute client timezone info
+      const clientDateTime = new Date(`${date}T${time}`);
+      const clientDateTimeIso = clientDateTime.toISOString();
+      const timezoneOffsetMinutes = clientDateTime.getTimezoneOffset();
+      
       const { data, error } = await supabase.functions.invoke('validate-appointment-time', {
-        body: { appointmentDate: date, appointmentTime: time }
+        body: { 
+          appointmentDate: date, 
+          appointmentTime: time,
+          clientDateTimeIso,
+          timezoneOffsetMinutes
+        }
       });
       
       if (error) throw error;
@@ -165,11 +175,19 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
 
     try {
       const formData = new FormData(e.currentTarget);
+      
+      // Compute client timezone info to send to backend
+      const clientDateTime = new Date(`${selectedDate}T${selectedTime}`);
+      const clientDateTimeIso = clientDateTime.toISOString();
+      const timezoneOffsetMinutes = clientDateTime.getTimezoneOffset();
+      
       const { error } = await supabase.functions.invoke("book-appointment", {
         body: {
           providerId: formData.get("provider_id") || null,
           appointmentDate: selectedDate,
           appointmentTime: selectedTime,
+          clientDateTimeIso,
+          timezoneOffsetMinutes,
           reasonForVisit: formData.get("reason"),
           visitType: 'in_person',
           notes: formData.get("notes"),

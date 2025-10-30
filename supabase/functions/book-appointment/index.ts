@@ -24,8 +24,8 @@ Deno.serve(async (req) => {
 
     const effectiveUserId = impersonationSession?.impersonated_user_id || user.id;
 
-    const { providerId, appointmentDate, appointmentTime, reasonForVisit, visitType, notes } = await req.json();
-    console.log('[book-appointment] Request data:', { providerId, appointmentDate, appointmentTime, reasonForVisit, visitType });
+    const { providerId, appointmentDate, appointmentTime, clientDateTimeIso, timezoneOffsetMinutes, reasonForVisit, visitType, notes } = await req.json();
+    console.log('[book-appointment] Request data:', { providerId, appointmentDate, appointmentTime, clientDateTimeIso, reasonForVisit, visitType });
 
     // Get patient's assigned practice from patient_accounts using effective user ID
     const { data: patientAccount, error: patientError } = await supabaseClient
@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
       throw new Error('Patient account not found. Please contact your healthcare provider.');
     }
 
-    const fullDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+    // Use clientDateTimeIso if provided (client-side timezone), otherwise fallback to server-side construction
+    const fullDateTime = clientDateTimeIso ? new Date(clientDateTimeIso) : new Date(`${appointmentDate}T${appointmentTime}`);
     const endDateTime = new Date(fullDateTime.getTime() + 60 * 60 * 1000); // +1 hour default
 
     // Validation 1: Check if date is in the past

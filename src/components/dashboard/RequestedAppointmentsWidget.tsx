@@ -54,8 +54,8 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
           requested_time,
           reschedule_requested_at,
           reschedule_reason,
-          patient_accounts!inner(
-            profiles!inner(
+          patient_accounts(
+            profiles(
               full_name,
               name
             )
@@ -80,6 +80,8 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
 
   // Real-time subscription for instant updates (replaces 30-second polling)
   useEffect(() => {
+    if (!effectivePracticeId) return;
+    
     const channel = supabase
       .channel('requested-appointments-realtime')
       .on(
@@ -87,7 +89,8 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
         { 
           event: '*', 
           schema: 'public', 
-          table: 'patient_appointments'
+          table: 'patient_appointments',
+          filter: `practice_id=eq.${effectivePracticeId}`
         },
         (payload) => {
           console.log('📋 Appointment request changed:', payload.eventType);
@@ -99,7 +102,7 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [refetch, effectivePracticeId]);
 
   return (
     <>

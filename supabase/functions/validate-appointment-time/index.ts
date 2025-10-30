@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
     const effectiveUserId = impersonationSession?.impersonated_user_id || user.id;
 
-    const { appointmentDate, appointmentTime, duration = 60 } = await req.json();
+    const { appointmentDate, appointmentTime, clientDateTimeIso, timezoneOffsetMinutes, duration = 60 } = await req.json();
 
     if (!appointmentDate || !appointmentTime) {
       throw new Error('Date and time are required');
@@ -42,7 +42,8 @@ Deno.serve(async (req) => {
     }
 
     const practiceId = patientAccount.practice_id;
-    const requestedDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+    // Use clientDateTimeIso if provided (client-side timezone), otherwise fallback to server-side construction
+    const requestedDateTime = clientDateTimeIso ? new Date(clientDateTimeIso) : new Date(`${appointmentDate}T${appointmentTime}`);
     const endDateTime = new Date(requestedDateTime.getTime() + duration * 60 * 1000);
     const appointmentEndTime = `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`;
 

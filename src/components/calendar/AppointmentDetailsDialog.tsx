@@ -147,7 +147,10 @@ export function AppointmentDetailsDialog({
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate all calendar-data queries (all variants/params)
       queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['requested-appointments'] });
       toast.success("Appointment deleted");
       onOpenChange(false);
     },

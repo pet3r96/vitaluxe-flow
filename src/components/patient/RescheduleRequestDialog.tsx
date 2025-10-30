@@ -48,11 +48,18 @@ export function RescheduleRequestDialog({
         return;
       }
 
+      // Compute client timezone info for future-proofing
+      const clientDateTime = new Date(`${newDate}T${newTime}`);
+      const clientDateTimeIso = clientDateTime.toISOString();
+      const timezoneOffsetMinutes = clientDateTime.getTimezoneOffset();
+      
       const { error } = await supabase.functions.invoke("reschedule-appointment-request", {
         body: {
           appointmentId: appointment.id,
           newDate,
           newTime,
+          clientDateTimeIso,
+          timezoneOffsetMinutes,
           reason: reason || null,
         },
       });
