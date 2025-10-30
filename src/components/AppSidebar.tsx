@@ -103,6 +103,7 @@ const menuItems = {
     { title: "Orders", url: "/orders", icon: ShoppingCart },
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "My Profile", url: "/profile", icon: UserCircle },
   ],
   topline: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
