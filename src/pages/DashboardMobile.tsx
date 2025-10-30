@@ -20,42 +20,46 @@ export default function DashboardMobile() {
   const { isSubscribed, trialDaysRemaining } = useSubscription();
   const navigate = useNavigate();
 
-  // Quick stats queries (simplified for mobile to avoid type issues)
+  // Quick stats - cast supabase to bypass TypeScript deep type inference
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["dashboard-mobile-stats", effectiveRole, effectiveUserId],
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
     queryFn: async () => {
       const results: Record<string, number> = {};
       
-      // Only fetch essential stats based on role
-      if (effectiveRole === "doctor" || effectiveRole === "provider") {
-        // Just get orders count
-        if (effectiveUserId) {
-          const { count } = await supabase
+      try {
+        if (effectiveRole === "doctor" && effectiveUserId) {
+          const response = await (supabase as any)
             .from("orders")
             .select("*", { count: "exact", head: true })
-            .eq(effectiveRole === "doctor" ? "doctor_id" : "provider_id", effectiveUserId);
-          results.orders = count || 0;
+            .eq("doctor_id", effectiveUserId);
+          results.orders = response.count || 0;
+        } else if (effectiveRole === "provider" && effectiveUserId) {
+          const response = await (supabase as any)
+            .from("orders")
+            .select("*", { count: "exact", head: true })
+            .eq("provider_id", effectiveUserId);
+          results.orders = response.count || 0;
         }
-      }
-      
-      if (effectiveRole === "patient" && effectiveUserId) {
-        // Get appointments count
-        const today = new Date().toISOString();
-        const { count: apptCount } = await supabase
-          .from("patient_appointments")
-          .select("*", { count: "exact", head: true })
-          .eq("patient_id", effectiveUserId)
-          .gte("appointment_date", today);
-        results.appointments = apptCount || 0;
         
-        // Get messages count  
-        const { count: msgCount } = await supabase
-          .from("patient_messages")
-          .select("*", { count: "exact", head: true })
-          .eq("recipient_id", effectiveUserId)
-          .eq("read", false);
-        results.messages = msgCount || 0;
+        if (effectiveRole === "patient" && effectiveUserId) {
+          const today = new Date().toISOString();
+          const apptResponse = await (supabase as any)
+            .from("patient_appointments")
+            .select("*", { count: "exact", head: true })
+            .eq("patient_id", effectiveUserId)
+            .gte("appointment_date", today);
+          results.appointments = apptResponse.count || 0;
+          
+          const msgResponse = await (supabase as any)
+            .from("patient_messages")
+            .select("*", { count: "exact", head: true })
+            .eq("recipient_id", effectiveUserId)
+            .eq("read", false);
+          results.messages = msgResponse.count || 0;
+        }
+      } catch (error) {
+        console.error("Error fetching mobile dashboard stats:", error);
       }
       
       return results;
