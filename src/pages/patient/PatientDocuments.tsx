@@ -69,33 +69,74 @@ export default function PatientDocuments() {
   const { data: patientAccount, isLoading: isLoadingAccount, error: accountError } = useQuery({
     queryKey: ["patient-account", effectiveUserId],
     queryFn: async () => {
+      console.log('[PatientDocuments] Fetching patient account for user:', effectiveUserId);
+      
       const { data, error } = await supabase
         .from("patient_accounts")
         .select("id")
         .eq("user_id", effectiveUserId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PatientDocuments] Error fetching patient account:', error);
+        throw error;
+      }
+      
+      console.log('[PatientDocuments] Patient account found:', data?.id);
       return data;
     },
     enabled: !!effectiveUserId,
   });
 
+  // Show error toast for account lookup failures
+  useEffect(() => {
+    if (accountError) {
+      console.error('[PatientDocuments] Account error:', accountError);
+      toast({
+        title: "Account Error",
+        description: `Could not load your patient account: ${accountError.message}`,
+        variant: "destructive",
+      });
+    }
+  }, [accountError]);
+
   // Fetch unified documents
-  const { data: allDocuments = [], isLoading } = useQuery({
+  const { data: allDocuments = [], isLoading, error: documentsError } = useQuery({
     queryKey: ["patient-unified-documents", patientAccount?.id],
     queryFn: async () => {
-      if (!patientAccount?.id) return [];
+      if (!patientAccount?.id) {
+        console.log('[PatientDocuments] No patient account ID, skipping document fetch');
+        return [];
+      }
 
+      console.log('[PatientDocuments] Fetching unified documents for patient:', patientAccount.id);
+      
       const { data, error } = await supabase.rpc('get_patient_unified_documents', {
         p_patient_id: patientAccount.id
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PatientDocuments] RPC error:', error);
+        throw error;
+      }
+      
+      console.log('[PatientDocuments] Fetched documents count:', data?.length || 0);
       return (data || []) as UnifiedDocument[];
     },
     enabled: !!patientAccount?.id,
   });
+
+  // Show error toast for document fetch failures
+  useEffect(() => {
+    if (documentsError) {
+      console.error('[PatientDocuments] Documents error:', documentsError);
+      toast({
+        title: "Documents Error",
+        description: `Could not load your documents: ${documentsError.message}`,
+        variant: "destructive",
+      });
+    }
+  }, [documentsError]);
 
   // Apply filters
   const filteredDocuments = allDocuments.filter((doc) => {
@@ -364,12 +405,36 @@ export default function PatientDocuments() {
       <div>
         <h1 className="text-3xl font-bold">My Documents</h1>
         <p className="text-muted-foreground">Upload and manage your medical documents</p>
+        {/* Debug info in dev mode */}
+        {import.meta.env.DEV && (
+          <div className="mt-2 text-xs text-muted-foreground font-mono">
+            <div>User ID: {effectiveUserId}</div>
+            <div>Patient Account: {patientAccount?.id || 'Not found'}</div>
+            <div>Documents: {allDocuments.length}</div>
+          </div>
+        )}
       </div>
+
+      {/* Show warning if no patient account */}
+      {!isLoadingAccount && !patientAccount && effectiveUserId && (
+        <Card className="border-yellow-500 bg-yellow-500/10">
+          <CardContent className="pt-6">
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+              ⚠️ Your patient account could not be found. Please contact support to set up your patient profile.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Upload Section */}
       <Card>
         <CardContent className="pt-6">
           <h2 className="text-xl font-semibold mb-4">Upload New Document</h2>
+          {!patientAccount && (
+            <div className="mb-4 p-3 bg-muted rounded text-sm text-muted-foreground">
+              Document upload is disabled until your patient account is set up.
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="file">Select File</Label>
@@ -444,7 +509,7 @@ export default function PatientDocuments() {
 
           <Button
             onClick={handleUpload}
-            disabled={!file || !documentType || uploading}
+            disabled={!file || !documentType || uploading || !patientAccount}
             className="mt-4"
           >
             <Upload className="h-4 w-4 mr-2" />
