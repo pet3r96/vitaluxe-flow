@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, AlertCircle, Pill, Heart, Syringe, Scissors, Building2, Phone, Lock, Share2, Download, FileText } from "lucide-react";
+import { Activity, AlertCircle, Pill, Heart, Syringe, Scissors, Building2, Phone, ShieldCheck, Share2, Download, FileText, Eye, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { MedicationsSection } from "@/components/medical-vault/MedicationsSection";
@@ -102,79 +102,74 @@ export default function PatientMedicalVault() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Patient Quick View Dashboard */}
-      <Card className="border-2">
-        <CardHeader className="pb-6">
-          {/* Centered Title with Gold Lock */}
-          <div className="flex flex-col items-center justify-center gap-3 mb-6">
-            <CardTitle className="text-2xl font-bold">
-              Medical Vault - Secure Health Information
-            </CardTitle>
-            <Lock className="h-12 w-12 text-yellow-600" />
-          </div>
-
-          {/* Three-column layout: Patient Info (left) | Spacer | Actions (right) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Left Column: Patient Info (left-aligned) */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Full Name:</span>
-                <span className="font-medium">{patientAccount?.first_name} {patientAccount?.last_name || 'Not set'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">DOB:</span>
-                <span className="font-medium">
-                  {patientAccount?.date_of_birth 
-                    ? format(new Date(patientAccount.date_of_birth), 'MM/dd/yyyy')
-                    : 'Not set'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Phone Number:</span>
-                <span className="font-medium">{patientAccount?.phone || 'Not set'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Gender:</span>
-                <span className="font-medium">{patientAccount?.gender_at_birth || 'Not set'}</span>
-              </div>
+      {/* Medical Vault Header - Modern Design */}
+      <Card className="border-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white shadow-2xl overflow-hidden relative">
+        {/* Animated gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-yellow-600/5 to-transparent animate-pulse"></div>
+        
+        <CardHeader className="relative z-10 py-12">
+          {/* Centered Content Container */}
+          <div className="flex flex-col items-center justify-center space-y-6 max-w-4xl mx-auto">
+            
+            {/* Modern Shield Icon with Glow Effect */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-yellow-500/30 blur-3xl rounded-full animate-pulse"></div>
+              <ShieldCheck className="h-24 w-24 text-yellow-500 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
             </div>
-
-            {/* Middle Column: Spacer */}
-            <div></div>
-
-            {/* Right Column: Actions & Metadata (right-aligned) */}
-            <div className="space-y-4 flex flex-col items-end">
-              {/* Action Buttons - Horizontal */}
-              <div className="flex gap-2 flex-wrap justify-end">
-                <Button variant="outline" size="sm" className="uppercase text-xs font-semibold">
-                  Secure
-                </Button>
-                <Button variant="outline" size="sm" className="uppercase text-xs font-semibold">
-                  Print
-                </Button>
-                <Button variant="outline" size="sm" className="uppercase text-xs font-semibold">
-                  Download
-                </Button>
-                <Button variant="outline" size="sm" className="uppercase text-xs font-semibold">
-                  Share
-                </Button>
-              </div>
-
-              {/* Last Login */}
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Last Login</p>
-                <p className="font-medium text-sm">
-                  {patientAccount?.updated_at 
-                    ? format(new Date(patientAccount.updated_at), 'MMM dd, yyyy hh:mm a')
-                    : 'Not available'}
-                </p>
-              </div>
-
-              {/* Practice */}
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Practice:</p>
-                <p className="font-medium text-sm">Not assigned</p>
-              </div>
+            
+            {/* Title */}
+            <div className="text-center space-y-2">
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+                Medical Vault
+              </h1>
+              <p className="text-gray-300 text-sm md:text-base font-light tracking-wide">
+                Secure Health Information
+              </p>
+            </div>
+            
+            {/* Patient Name Badge */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-8 py-3 shadow-xl">
+              <p className="text-lg md:text-xl font-semibold text-white">
+                {patientAccount?.first_name && patientAccount?.last_name 
+                  ? `${patientAccount.first_name} ${patientAccount.last_name}`
+                  : 'Patient Name Not Set'}
+              </p>
+            </div>
+            
+            {/* Action Buttons - Modern Glass Morphism Style */}
+            <div className="flex flex-wrap gap-3 justify-center pt-4">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
+              >
+                <Eye className="h-4 w-4" />
+                View
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
             </div>
           </div>
         </CardHeader>
