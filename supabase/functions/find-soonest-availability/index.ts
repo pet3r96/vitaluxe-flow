@@ -82,6 +82,13 @@ Deno.serve(async (req) => {
       for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
         const slotHour = Math.floor(minutes / 60);
         const slotMin = minutes % 60;
+        
+        // Calculate end time for this slot
+        const slotEndMinutes = minutes + duration;
+        
+        // Skip if appointment would extend past practice closing time
+        if (slotEndMinutes > endMinutes) continue;
+        
         const timeSlot = `${String(slotHour).padStart(2, '0')}:${String(slotMin).padStart(2, '0')}`;
         
         const slotDateTime = new Date(checkDate);

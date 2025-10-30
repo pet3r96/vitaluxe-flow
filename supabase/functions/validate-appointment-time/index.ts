@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
     const practiceId = patientAccount.practice_id;
     const requestedDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
     const endDateTime = new Date(requestedDateTime.getTime() + duration * 60 * 1000);
+    const appointmentEndTime = `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`;
 
     // 1. Check if date is in the past
     if (requestedDateTime <= new Date()) {
@@ -86,20 +87,32 @@ Deno.serve(async (req) => {
     // 3. Check if time is within business hours
     const startTimeStr = practiceHours.start_time.toString();
     const endTimeStr = practiceHours.end_time.toString();
-    if (appointmentTime < startTimeStr || appointmentTime >= endTimeStr) {
-      // Format times for display
-      const formatTime = (time: string) => {
-        const [h, m] = time.split(':');
-        const hour = parseInt(h);
-        const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        return `${displayHour}:${m} ${ampm}`;
-      };
-
+    
+    // Format times for display
+    const formatTime = (time: string) => {
+      const [h, m] = time.split(':');
+      const hour = parseInt(h);
+      const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      return `${displayHour}:${m} ${ampm}`;
+    };
+    
+    if (appointmentTime < startTimeStr) {
       return new Response(
         JSON.stringify({
           valid: false,
-          error: `Practice hours are ${formatTime(startTimeStr)} - ${formatTime(endTimeStr)}`,
+          error: `Practice hours start at ${formatTime(startTimeStr)}`,
+          alternatives: []
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (appointmentEndTime > endTimeStr) {
+      return new Response(
+        JSON.stringify({
+          valid: false,
+          error: `Appointment would end after practice closes at ${formatTime(endTimeStr)}`,
           alternatives: []
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

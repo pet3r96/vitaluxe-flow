@@ -44,6 +44,9 @@ Deno.serve(async (req) => {
     if (fullDateTime <= new Date()) {
       throw new Error('Cannot book appointments in the past');
     }
+    
+    // Validation 1b: Check if appointment end time exceeds practice hours
+    const appointmentEndTime = `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`;
 
     // Validation 2: Check if practice is open on this day (using RPC with defaults)
     const dayOfWeek = fullDateTime.getDay();
@@ -71,10 +74,11 @@ Deno.serve(async (req) => {
     const startTimeStr = practiceHours.start_time.toString();
     const endTimeStr = practiceHours.end_time.toString();
     const appointmentTimeNorm = normalizeTime(appointmentTime);
+    const appointmentEndTimeNorm = normalizeTime(appointmentEndTime);
     const startTimeNorm = normalizeTime(startTimeStr);
     const endTimeNorm = normalizeTime(endTimeStr);
     
-    if (appointmentTimeNorm < startTimeNorm || appointmentTimeNorm >= endTimeNorm) {
+    if (appointmentTimeNorm < startTimeNorm) {
       // Format for user-friendly display
       const formatTime = (time: string) => {
         const [h, m] = time.split(':');
@@ -83,7 +87,18 @@ Deno.serve(async (req) => {
         const ampm = hour >= 12 ? 'PM' : 'AM';
         return `${displayHour}:${m} ${ampm}`;
       };
-      throw new Error(`Practice hours are ${formatTime(startTimeStr)} - ${formatTime(endTimeStr)}`);
+      throw new Error(`Practice hours start at ${formatTime(startTimeStr)}`);
+    }
+    
+    if (appointmentEndTimeNorm > endTimeNorm) {
+      const formatTime = (time: string) => {
+        const [h, m] = time.split(':');
+        const hour = parseInt(h);
+        const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        return `${displayHour}:${m} ${ampm}`;
+      };
+      throw new Error(`Appointment would end after practice closes at ${formatTime(endTimeStr)}`);
     }
 
     // Validation 4: Check if time is blocked
