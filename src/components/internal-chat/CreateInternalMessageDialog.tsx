@@ -59,17 +59,20 @@ export function CreateInternalMessageDialog({
     enabled: open && !!practiceId
   });
 
-  // Fetch patients for the practice
+  // Fetch patient accounts for the practice (patients with portal access)
   const { data: patients = [] } = useQuery({
-    queryKey: ['practice-patients', practiceId],
+    queryKey: ['practice-patient-accounts', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('patients')
-        .select('id, name')
+        .from('patient_accounts')
+        .select('id, first_name, last_name')
         .eq('practice_id', practiceId)
-        .order('name');
+        .order('last_name, first_name');
       if (error) throw error;
-      return data;
+      return data?.map(p => ({
+        id: p.id,
+        name: `${p.first_name} ${p.last_name}`.trim()
+      })) || [];
     },
     enabled: open
   });
