@@ -69,9 +69,28 @@ export const MessagesView = () => {
 
   // Fetch user's orders (for providers/practices to link to tickets)
   const { data: userOrders } = useQuery({
-    queryKey: ["user-orders-for-tickets", effectiveUserId],
+    queryKey: ["user-orders-for-tickets", effectiveUserId, effectiveRole],
     staleTime: 10000, // 10 seconds - messages need frequent updates
     queryFn: async () => {
+      let doctorId = effectiveUserId;
+      
+      // For staff members, get their practice_id first
+      if (effectiveRole === "staff") {
+        const { data: staffData } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", effectiveUserId)
+          .eq("active", true)
+          .maybeSingle();
+        
+        if (!staffData || !staffData.practice_id) {
+          return []; // Staff record not found or inactive
+        }
+        
+        doctorId = staffData.practice_id;
+      }
+      
+      // Now query orders using the correct doctor_id (practice_id for staff)
       const { data, error } = await supabase
         .from("orders")
         .select(`
@@ -92,7 +111,7 @@ export const MessagesView = () => {
             )
           )
         `)
-        .eq("doctor_id", effectiveUserId)
+        .eq("doctor_id", doctorId)
         .order("created_at", { ascending: false })
         .limit(50);
       
