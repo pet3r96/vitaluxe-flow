@@ -65,9 +65,44 @@ Deno.serve(async (req) => {
         if (paErr) console.error('[create-provider-document] Patient account lookup error:', paErr);
         effectivePracticeId = patientAccount?.practice_id ?? null;
         console.log('[create-provider-document] Resolved practice from patient impersonation:', effectivePracticeId);
+      } else if (role === 'staff') {
+        // Look up practice_id for impersonated staff
+        const { data: staffRecord, error: staffErr } = await supabaseAdmin
+          .from('practice_staff')
+          .select('practice_id')
+          .eq('user_id', impersonatedId)
+          .maybeSingle();
+        
+        if (staffErr) console.error('[create-provider-document] Staff lookup error:', staffErr);
+        
+        if (staffRecord?.practice_id) {
+          effectivePracticeId = staffRecord.practice_id;
+          console.log('[create-provider-document] Resolved practice from staff impersonation:', effectivePracticeId);
+        } else {
+          console.log('[create-provider-document] No practice_staff record, treating as practice owner');
+          effectivePracticeId = impersonatedId;
+        }
+      } else if (role === 'provider') {
+        // Look up practice_id for impersonated provider
+        const { data: providerRecord, error: provErr } = await supabaseAdmin
+          .from('providers')
+          .select('practice_id')
+          .eq('user_id', impersonatedId)
+          .maybeSingle();
+        
+        if (provErr) console.error('[create-provider-document] Provider lookup error:', provErr);
+        
+        if (providerRecord?.practice_id) {
+          effectivePracticeId = providerRecord.practice_id;
+          console.log('[create-provider-document] Resolved practice from provider impersonation:', effectivePracticeId);
+        } else {
+          console.log('[create-provider-document] No provider record, treating as practice owner');
+          effectivePracticeId = impersonatedId;
+        }
       } else {
+        // For doctor/practice owner impersonation, use their ID directly
         effectivePracticeId = impersonatedId;
-        console.log('[create-provider-document] Using impersonated practice:', effectivePracticeId);
+        console.log('[create-provider-document] Using impersonated practice owner:', effectivePracticeId);
       }
     }
 
