@@ -23,8 +23,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const refreshSubscription = async () => {
-    // Patients always have access (grandfathered in once created)
-    if (effectiveRole === 'patient') {
+    // Patients and Pharmacies always have access (operational accounts, not subscription customers)
+    if (effectiveRole === 'patient' || effectiveRole === 'pharmacy') {
       setSubscriptionStatus({
         isSubscribed: true,
         status: 'active',

@@ -15,7 +15,7 @@ import { Loader2, Check, Sparkles, CreditCard, ArrowLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 export default function SubscribeToVitaLuxePro() {
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
   const { isSubscribed, loading: subscriptionLoading, status, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -24,6 +24,17 @@ export default function SubscribeToVitaLuxePro() {
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsContent, setTermsContent] = useState<string>("");
   const [loadingTerms, setLoadingTerms] = useState(false);
+
+  // Redirect pharmacy users immediately - subscriptions are only for practices
+  useEffect(() => {
+    if (effectiveRole === 'pharmacy') {
+      toast({
+        title: "Not Applicable",
+        description: "Pharmacy accounts don't require VitaLuxePro subscriptions. This is for medical practices only.",
+      });
+      navigate('/dashboard');
+    }
+  }, [effectiveRole, navigate, toast]);
 
   // Redirect if already subscribed
   useEffect(() => {
@@ -183,7 +194,7 @@ export default function SubscribeToVitaLuxePro() {
             <h1 className="text-4xl font-bold">VitaLuxePro</h1>
           </div>
           <p className="text-xl text-muted-foreground">
-            Transform Your Practice with Complete Virtual Front Desk + EMR System
+            Transform Your Medical Practice with Complete Virtual Front Desk + EMR System
           </p>
         </div>
 

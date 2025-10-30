@@ -17,6 +17,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { UpgradePromptDialog } from "@/components/subscription/UpgradePromptDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
+import { PracticeOnlyRoute } from "./components/subscription/PracticeOnlyRoute";
 import { SessionTimer } from "./components/auth/SessionTimer";
 import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";
@@ -187,7 +188,7 @@ const App = () => (
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
-                  <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><SubscribeToVitaLuxePro /></ProtectedRoute>} />
+                  <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
                   <Route
                     path="/*"
                     element={
