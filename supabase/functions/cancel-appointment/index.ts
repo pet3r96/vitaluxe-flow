@@ -15,24 +15,50 @@ Deno.serve(async (req) => {
     if (!user) throw new Error('Not authenticated');
 
     const { appointmentId } = await req.json();
-    console.log('🔍 Cancelling appointment:', appointmentId, 'for user:', user.id);
+    console.log('🔍 [cancel-appointment] Starting cancellation:', { appointmentId, authUserId: user.id });
 
-    // First get patient_account for this user
+    // Check for active impersonation session
+    let effectiveUserId = user.id;
+    const { data: impersonationSession, error: impersonationError } = await supabaseClient
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .eq('revoked', false)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (impersonationError) {
+      console.warn('⚠️ [cancel-appointment] Impersonation check failed (continuing as normal user):', impersonationError.message);
+    } else if (impersonationSession?.impersonated_user_id) {
+      effectiveUserId = impersonationSession.impersonated_user_id;
+      console.log('👥 [cancel-appointment] Impersonation detected:', { 
+        adminUserId: user.id, 
+        effectiveUserId 
+      });
+    }
+
+    console.log('✅ [cancel-appointment] Using effective user ID:', effectiveUserId);
+
+    // First get patient_account for the effective user
     const { data: patientAccount, error: paError } = await supabaseClient
       .from('patient_accounts')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .maybeSingle();
 
-    console.log('👤 Patient account lookup:', { patientAccount, paError });
+    console.log('👤 [cancel-appointment] Patient account lookup:', { 
+      effectiveUserId, 
+      patientAccountId: patientAccount?.id,
+      hasError: !!paError 
+    });
 
     if (paError) {
-      console.error('❌ Patient account error:', paError);
+      console.error('❌ [cancel-appointment] Patient account error:', paError);
       throw new Error('Patient account lookup failed: ' + paError.message);
     }
 
     if (!patientAccount) {
-      console.error('❌ No patient account found for user:', user.id);
+      console.error('❌ [cancel-appointment] No patient account found for user:', effectiveUserId);
       throw new Error('Patient account not found');
     }
 
@@ -42,21 +68,47 @@ Deno.serve(async (req) => {
       .select('id, patient_id, status')
       .eq('id', appointmentId)
       .eq('patient_id', patientAccount.id)
-      .single();
+      .maybeSingle();
 
-    console.log('📅 Appointment verification:', { appointment, fetchError });
+    console.log('📅 [cancel-appointment] Appointment verification:', { 
+      appointmentId,
+      found: !!appointment,
+      currentStatus: appointment?.status,
+      belongsToPatient: appointment?.patient_id === patientAccount.id,
+      fetchError: fetchError?.message 
+    });
 
+    // Handle idempotent cases
     if (fetchError) {
-      console.error('❌ Appointment fetch error:', fetchError);
+      console.error('❌ [cancel-appointment] Appointment fetch error:', fetchError);
       throw new Error('Appointment fetch failed: ' + fetchError.message);
     }
 
     if (!appointment) {
-      console.error('❌ Appointment not found or access denied');
-      throw new Error('Appointment not found or access denied');
+      console.log('ℹ️ [cancel-appointment] Appointment not found (may already be cancelled or deleted)');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Appointment already cancelled or not found',
+        idempotent: true 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    console.log('✅ Updating appointment status to cancelled');
+    // If already cancelled, return success (idempotent)
+    if (appointment.status === 'cancelled') {
+      console.log('ℹ️ [cancel-appointment] Appointment already cancelled');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Appointment already cancelled',
+        idempotent: true 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Perform the cancellation
+    console.log('✅ [cancel-appointment] Updating appointment status to cancelled');
     const { error } = await supabaseClient
       .from('patient_appointments')
       .update({ 
@@ -67,11 +119,11 @@ Deno.serve(async (req) => {
       .eq('id', appointmentId);
 
     if (error) {
-      console.error('❌ Update error:', error);
+      console.error('❌ [cancel-appointment] Update error:', error);
       throw error;
     }
 
-    console.log('✅ Appointment cancelled successfully');
+    console.log('✅ [cancel-appointment] Appointment cancelled successfully');
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

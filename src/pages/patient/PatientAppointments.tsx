@@ -125,7 +125,7 @@ export default function PatientAppointments() {
     if (!cancelId) return;
     try {
       setIsCancelling(true);
-      const { error } = await supabase.functions.invoke("cancel-appointment", {
+      const { data, error } = await supabase.functions.invoke("cancel-appointment", {
         body: { appointmentId: cancelId },
       });
       if (error) throw error;
@@ -135,6 +135,10 @@ export default function PatientAppointments() {
         if (!old) return old;
         return old.filter((a) => a.id !== cancelId);
       });
+
+      // Invalidate calendar-related queries to ensure calendar updates
+      queryClient.invalidateQueries({ queryKey: ["calendar-data"] });
+      queryClient.invalidateQueries({ queryKey: ["patient_appointments"] });
 
       toast.success("Appointment cancelled");
       setCancelOpen(false);
