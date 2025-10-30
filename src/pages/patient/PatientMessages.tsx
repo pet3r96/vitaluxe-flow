@@ -74,16 +74,15 @@ export default function PatientMessages() {
         {/* Left Sidebar - Conversations */}
         <Card className="w-80 flex flex-col">
           <div className="p-4 border-b space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Messages</h2>
-              <Button
-                size="icon"
-                className="h-8 w-8 bg-yellow-500 hover:bg-yellow-600 text-white"
-                onClick={() => setShowNewMessage(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Messages</h2>
+            <Button
+              size="icon"
+              onClick={() => setShowNewMessage(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
 
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
