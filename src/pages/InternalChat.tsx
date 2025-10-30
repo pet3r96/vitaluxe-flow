@@ -165,7 +165,6 @@ const InternalChat = () => {
       };
     },
     enabled: !!practiceId && !!effectiveUserId,
-    refetchInterval: 30000
   });
 
   // Fetch patients for patient messages filter
@@ -186,7 +185,7 @@ const InternalChat = () => {
 
   // Fetch selected message details
   const { data: selectedMessage, isLoading: messageLoading } = useQuery({
-    queryKey: ['internal-message', selectedMessageId, teamMap],
+    queryKey: ['internal-message', selectedMessageId],
     queryFn: async () => {
       if (!selectedMessageId) return null;
       const { data, error } = await supabase
@@ -226,7 +225,7 @@ const InternalChat = () => {
 
   // Fetch replies
   const { data: replies = [] } = useQuery({
-    queryKey: ['internal-message-replies', selectedMessageId, teamMap],
+    queryKey: ['internal-message-replies', selectedMessageId],
     queryFn: async () => {
       if (!selectedMessageId) return [];
       const { data, error } = await supabase
@@ -236,33 +235,30 @@ const InternalChat = () => {
         .order('created_at');
       if (error) throw error;
       
-      // Enrich with sender names
-      const enrichedReplies = await Promise.all(
-        data.map(async (reply: any) => {
-          let senderName = teamMap[reply.sender_id]?.name;
-          
-          // Fallback: query profiles if not in teamMap
-          if (!senderName) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('name')
-              .eq('id', reply.sender_id)
-              .single();
-            
-            senderName = profile?.name || 'Unknown User';
-          }
-          
-          return {
-            ...reply,
-            sender: {
-              id: reply.sender_id,
-              name: senderName
-            }
-          };
-        })
+      // Get all unique sender IDs not in teamMap
+      const senderIds = data.map(r => r.sender_id).filter(id => !teamMap[id]);
+      const uniqueSenderIds = [...new Set(senderIds)];
+
+      // Single batch query for all missing profiles
+      const { data: profiles } = uniqueSenderIds.length > 0 
+        ? await supabase
+            .from('profiles')
+            .select('id, name')
+            .in('id', uniqueSenderIds)
+        : { data: [] };
+
+      const profileMap = Object.fromEntries(
+        (profiles || []).map(p => [p.id, p.name])
       );
-      
-      return enrichedReplies;
+
+      // Enrich with sender names using cached data
+      return data.map((reply: any) => ({
+        ...reply,
+        sender: {
+          id: reply.sender_id,
+          name: teamMap[reply.sender_id]?.name || profileMap[reply.sender_id] || 'Unknown User'
+        }
+      }));
     },
     enabled: !!selectedMessageId && Object.keys(teamMap).length > 0
   });
@@ -308,10 +304,80 @@ const InternalChat = () => {
         .eq('recipient_id', effectiveUserId)
         .is('read_at', null)
         .then(() => {
-          queryClient.invalidateQueries({ queryKey: ['internal-messages'] });
+          queryClient.invalidateQueries({ queryKey: ['internal-message-badge-counts'] });
         });
     }
   }, [selectedMessageId, effectiveUserId, queryClient]);
+
+  // Real-time subscriptions for instant updates
+  useEffect(() => {
+    if (!selectedMessageId) return;
+
+    const channel = supabase
+      .channel('internal-chat-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'internal_message_replies',
+          filter: `message_id=eq.${selectedMessageId}`
+        },
+        (payload) => {
+          // Optimistically add reply to cache
+          queryClient.setQueryData(
+            ['internal-message-replies', selectedMessageId],
+            (old: any) => {
+              const newReply = {
+                ...payload.new,
+                sender: {
+                  id: payload.new.sender_id,
+                  name: teamMap[payload.new.sender_id]?.name || 'Unknown User'
+                }
+              };
+              return [...(old || []), newReply];
+            }
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'internal_messages',
+          filter: `id=eq.${selectedMessageId}`
+        },
+        (payload) => {
+          // Update message in cache
+          queryClient.setQueryData(
+            ['internal-message', selectedMessageId],
+            (old: any) => ({
+              ...old,
+              ...payload.new
+            })
+          );
+          queryClient.invalidateQueries({ queryKey: ['internal-messages'], refetchType: 'active' });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'internal_message_recipients'
+        },
+        () => {
+          // Only invalidate badge counts
+          queryClient.invalidateQueries({ queryKey: ['internal-message-badge-counts'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedMessageId, teamMap, queryClient]);
 
   // Send reply mutation
   const sendReplyMutation = useMutation({
@@ -326,8 +392,7 @@ const InternalChat = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['internal-message-replies', selectedMessageId] });
-      queryClient.invalidateQueries({ queryKey: ['internal-messages'] });
+      // Real-time will handle the update
       toast.success('Reply sent');
     },
     onError: () => {
@@ -349,8 +414,8 @@ const InternalChat = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['internal-messages'] });
-      queryClient.invalidateQueries({ queryKey: ['internal-message', selectedMessageId] });
+      // Real-time will handle the update
+      queryClient.invalidateQueries({ queryKey: ['internal-messages'], refetchType: 'active' });
       toast.success('Message marked as complete');
     },
     onError: () => {

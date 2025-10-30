@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,10 @@ interface MessageThreadProps {
 export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) {
   const [message, setMessage] = useState("");
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { data: messages, refetch } = useQuery({
-    queryKey: ["message-thread", threadId],
+  const { data: messages } = useQuery({
+    queryKey: ["thread-messages", threadId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_messages")
@@ -39,14 +40,34 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'patient_messages',
           filter: `thread_id=eq.${threadId}`
         },
         (payload) => {
-          console.log('Thread real-time update:', payload);
-          refetch();
+          // Optimistically add new message to cache
+          queryClient.setQueryData(['thread-messages', threadId], (old: any) => [
+            ...(old || []),
+            payload.new
+          ]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'patient_messages',
+          filter: `thread_id=eq.${threadId}`
+        },
+        (payload) => {
+          // Update message in cache
+          queryClient.setQueryData(['thread-messages', threadId], (old: any) =>
+            (old || []).map((msg: any) => 
+              msg.id === payload.new.id ? payload.new : msg
+            )
+          );
         }
       )
       .subscribe();
@@ -54,7 +75,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [threadId, refetch]);
+  }, [threadId, queryClient]);
 
   const sendMutation = useMutation({
     mutationFn: async (messageText: string) => {
@@ -75,7 +96,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
     onSuccess: () => {
       toast.success("Message sent");
       setMessage("");
-      refetch();
+      // Real-time will handle the update
       onThreadUpdate?.();
     },
     onError: (error: any) => {
@@ -103,7 +124,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
     },
     onSuccess: () => {
       toast.success("Conversation marked as complete");
-      refetch();
+      // Real-time will handle the update
       onThreadUpdate?.();
       setShowCompleteDialog(false);
     },
@@ -129,7 +150,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
     },
     onSuccess: () => {
       toast.success("Conversation reopened");
-      refetch();
+      // Real-time will handle the update
       onThreadUpdate?.();
     },
     onError: (error: any) => {

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageThread } from "@/components/patient/MessageThread";
@@ -17,8 +17,9 @@ export default function PatientMessages() {
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [filterTab, setFilterTab] = useState<'active' | 'resolved'>('active');
   const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
 
-  const { data: threads, refetch } = useQuery({
+  const { data: threads } = useQuery({
     queryKey: ["patient-message-threads", filterTab, searchQuery],
     queryFn: async () => {
       let query = supabase
@@ -66,11 +67,15 @@ export default function PatientMessages() {
         {
           event: '*',
           schema: 'public',
-          table: 'patient_messages'
+          table: 'patient_messages',
+          filter: 'parent_message_id=is.null'
         },
-        (payload) => {
-          console.log('Real-time message update:', payload);
-          refetch();
+        () => {
+          // Only invalidate active queries
+          queryClient.invalidateQueries({ 
+            queryKey: ['patient-message-threads'],
+            refetchType: 'active'
+          });
         }
       )
       .subscribe();
@@ -78,7 +83,7 @@ export default function PatientMessages() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [queryClient]);
 
   const activeCount = threads?.filter((t: any) => !t.resolved).length || 0;
   const resolvedCount = threads?.filter((t: any) => t.resolved).length || 0;
@@ -185,7 +190,15 @@ export default function PatientMessages() {
         {/* Right Side - Message Thread */}
         <Card className="flex-1 flex flex-col">
           {selectedThread ? (
-            <MessageThread threadId={selectedThread} onThreadUpdate={refetch} />
+            <MessageThread 
+              threadId={selectedThread} 
+              onThreadUpdate={() => {
+                queryClient.invalidateQueries({ 
+                  queryKey: ['patient-message-threads'],
+                  refetchType: 'active'
+                });
+              }} 
+            />
           ) : (
             <CardContent className="flex-1 flex items-center justify-center text-muted-foreground">
               Select a conversation to view messages
@@ -199,7 +212,10 @@ export default function PatientMessages() {
         onOpenChange={setShowNewMessage}
         onSuccess={() => {
           setShowNewMessage(false);
-          refetch();
+          queryClient.invalidateQueries({ 
+            queryKey: ['patient-message-threads'],
+            refetchType: 'active'
+          });
         }}
       />
     </>
