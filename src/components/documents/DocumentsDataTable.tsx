@@ -61,23 +61,35 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
   });
 
   // Download handler
-  const downloadDocument = async (document: any) => {
+  const downloadDocument = async (doc: any) => {
     try {
       const { data, error } = await supabase.storage
         .from("provider-documents")
-        .createSignedUrl(document.storage_path, 60);
+        .createSignedUrl(doc.storage_path, 60);
 
-      if (error) throw error;
-      if (!data?.signedUrl) throw new Error("No download URL generated");
+      if (error || !data) {
+        console.error("Failed to create signed URL:", error);
+        toast.error("Failed to generate download link");
+        return;
+      }
 
-      const link = document.createElement("a");
-      link.href = data.signedUrl;
-      link.download = document.document_name;
-      document.body.appendChild(link);
+      // Fetch as blob and download (HIPAA compliant - no new tabs)
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = doc.document_name;
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
-      toast.success("Download started");
+      toast.success("Document downloaded");
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Failed to download document");
