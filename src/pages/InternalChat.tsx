@@ -528,7 +528,7 @@ const InternalChat = () => {
           patient_id: selectedPatientMessage.patient_id,
           practice_id: practiceId!,
           sender_id: effectiveUserId!,
-          sender_type: 'practice',
+          sender_type: 'provider',
           subject: `Re: ${selectedPatientMessage.subject}`,
           message_body: body,
           urgency: selectedPatientMessage.urgency
