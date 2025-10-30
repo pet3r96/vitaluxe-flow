@@ -191,13 +191,19 @@ Deno.serve(async (req) => {
 
     const timeSlots = generateTimeSlots();
     
-    // Map appointments to time slots
+    // Map appointments to time slots (round down to nearest 30-minute slot)
     const appointmentsBySlot = new Map();
     if (appointments && appointments.length > 0) {
       for (const appt of appointments) {
         const typedAppt = appt as any;
         const startTime = new Date(typedAppt.start_time);
-        const slotKey = `${startTime.getHours()}-${startTime.getMinutes()}`;
+        const hour = startTime.getHours();
+        const minute = startTime.getMinutes();
+        
+        // Round down to nearest 30-minute slot
+        const slotMinute = minute < 30 ? 0 : 30;
+        const slotKey = `${hour}-${slotMinute}`;
+        
         if (!appointmentsBySlot.has(slotKey)) {
           appointmentsBySlot.set(slotKey, []);
         }
@@ -294,10 +300,13 @@ Deno.serve(async (req) => {
           
           xPos = 20;
           
-          // Time (only show for first appointment in slot)
-          if (i === 0) {
-            doc.text(timeStr, xPos, yPosition);
-          }
+          // Time - show actual appointment start time
+          const apptStartTime = new Date(appt.start_time);
+          const apptHour = apptStartTime.getHours();
+          const apptMinute = apptStartTime.getMinutes();
+          const displayHour = apptHour > 12 ? apptHour - 12 : apptHour === 0 ? 12 : apptHour;
+          const displayTimeStr = `${displayHour}:${apptMinute.toString().padStart(2, '0')} ${apptHour >= 12 ? 'PM' : 'AM'}`;
+          doc.text(displayTimeStr, xPos, yPosition);
           xPos += colWidths.time;
           
           // Patient
