@@ -61,19 +61,19 @@ export function ConversationList({
 
       {/* Tabs */}
       <Tabs value={filterTab} onValueChange={(v) => onFilterTabChange(v as any)} className="px-4 pt-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="active" className="text-xs">
+        <TabsList className="w-full justify-between">
+          <TabsTrigger value="active" className="text-xs flex-1">
             Active
             {activeCount > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">{activeCount}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="urgent" className="text-xs">
+          <TabsTrigger value="urgent" className="text-xs flex-1">
             Urgent
             {urgentCount > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">{urgentCount}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="patient" className="text-xs">
+          <TabsTrigger value="patient" className="text-xs flex-1">
             Patient
           </TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs">
+          <TabsTrigger value="completed" className="text-xs flex-1">
             Done
           </TabsTrigger>
         </TabsList>

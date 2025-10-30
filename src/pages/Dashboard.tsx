@@ -418,7 +418,7 @@ const Dashboard = () => {
       icon: DollarSign,
       description: effectiveRole === "doctor" ? "Practice collected revenue" : (effectiveRole as any) === "provider" ? "Your collected revenue" : "Paid orders revenue",
       isLoading: collectedRevenueLoading,
-      hidden: effectiveRole === "pharmacy" || effectiveRole === "provider" || effectiveRole === "doctor",
+      hidden: effectiveRole === "pharmacy" || effectiveRole === "provider" || effectiveRole === "doctor" || effectiveRole === "staff",
     },
   ].filter(stat => !stat.hidden);
 
@@ -439,7 +439,7 @@ const Dashboard = () => {
             </div>
           )}
         </div>
-        {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider') && (
+        {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
           <div className="w-64">
             <PatientQuickSearch />
           </div>
@@ -510,8 +510,8 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* V2 Widgets - Only for subscribed doctor/provider */}
-      {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider') && (
+      {/* V2 Widgets - Only for subscribed doctor/provider/staff */}
+      {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
         <>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <TodayAppointmentsWidget />

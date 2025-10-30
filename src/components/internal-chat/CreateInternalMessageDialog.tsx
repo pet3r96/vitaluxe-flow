@@ -47,7 +47,7 @@ export function CreateInternalMessageDialog({
   const [sending, setSending] = useState(false);
 
   // Fetch practice team members (always fetch when dialog is open)
-  const { data: teamMembers = [] } = useQuery({
+  const { data: teamMembers = [], isLoading: isLoadingTeamMembers, refetch: refetchTeamMembers } = useQuery({
     queryKey: ['practice-team-members', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_practice_team_members', {
@@ -356,44 +356,85 @@ export function CreateInternalMessageDialog({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Recipients * ({selectedRecipients.length} selected)</Label>
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    onClick={handleSelectAll}
-                  >
-                    {selectedRecipients.length === teamMembers.length ? 'Deselect All' : 'Select All'}
-                  </Button>
+                  {teamMembers.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      onClick={handleSelectAll}
+                    >
+                      {selectedRecipients.length === teamMembers.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  )}
                 </div>
 
                 <div className="border rounded-lg p-3 space-y-3 max-h-[200px] overflow-y-auto">
-                  {Object.entries(groupedRecipients).map(([roleType, members]: [string, any]) => (
-                    <div key={roleType}>
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-2">
-                        {roleType === 'admin' ? 'Practice Owner' : roleType === 'provider' ? 'Providers' : 'Staff'}
-                      </h4>
-                      <div className="space-y-2">
-                        {members.map((member: any) => (
-                          <div key={member.user_id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={member.user_id}
-                              checked={selectedRecipients.includes(member.user_id)}
-                              onCheckedChange={() => toggleRecipient(member.user_id)}
-                            />
-                            <Label
-                              htmlFor={member.user_id}
-                              className="text-sm font-normal cursor-pointer flex-1"
-                            >
-                              {member.name}
-                              <span className="text-xs text-muted-foreground ml-2">
-                                ({member.role_display})
-                              </span>
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
+                  {isLoadingTeamMembers ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      Loading team members...
                     </div>
-                  ))}
+                  ) : teamMembers.length === 0 ? (
+                    <div className="text-center py-4 space-y-2">
+                      <p className="text-sm text-muted-foreground">No team members found</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => refetchTeamMembers()}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  ) : Object.keys(groupedRecipients).length === 0 ? (
+                    <div className="space-y-2">
+                      {teamMembers.map((member: any) => (
+                        <div key={member.user_id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={member.user_id}
+                            checked={selectedRecipients.includes(member.user_id)}
+                            onCheckedChange={() => toggleRecipient(member.user_id)}
+                          />
+                          <Label
+                            htmlFor={member.user_id}
+                            className="text-sm font-normal cursor-pointer flex-1"
+                          >
+                            {member.name}
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({member.role_display})
+                            </span>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    Object.entries(groupedRecipients).map(([roleType, members]: [string, any]) => (
+                      <div key={roleType}>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-2">
+                          {roleType === 'admin' ? 'Practice Owner' : roleType === 'provider' ? 'Providers' : 'Staff'}
+                        </h4>
+                        <div className="space-y-2">
+                          {members.map((member: any) => (
+                            <div key={member.user_id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={member.user_id}
+                                checked={selectedRecipients.includes(member.user_id)}
+                                onCheckedChange={() => toggleRecipient(member.user_id)}
+                              />
+                              <Label
+                                htmlFor={member.user_id}
+                                className="text-sm font-normal cursor-pointer flex-1"
+                              >
+                                {member.name}
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  ({member.role_display})
+                                </span>
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
