@@ -36,10 +36,30 @@ export function DayView({
   
   const scrollRef = useRef<HTMLDivElement>(null);
   
+  // Add "Unassigned" pseudo-provider for appointments without providers
+  const providersWithUnassigned = useMemo(() => {
+    const hasUnassignedAppointments = appointments.some(
+      appt => !appt.provider_id && isSameDay(new Date(appt.start_time), currentDate)
+    );
+    
+    if (hasUnassignedAppointments) {
+      return [
+        ...providers,
+        { 
+          id: 'unassigned', 
+          first_name: 'Unassigned', 
+          last_name: '',
+          specialty: 'No Provider'
+        }
+      ];
+    }
+    return providers;
+  }, [providers, appointments, currentDate]);
+
   const filteredProviders = useMemo(() => {
-    if (selectedProviders.length === 0) return providers;
-    return providers.filter(p => selectedProviders.includes(p.id));
-  }, [providers, selectedProviders]);
+    if (selectedProviders.length === 0) return providersWithUnassigned;
+    return providersWithUnassigned.filter(p => selectedProviders.includes(p.id));
+  }, [providersWithUnassigned, selectedProviders]);
 
   const timeSlots = useMemo(() => {
     const slots = [];
@@ -98,9 +118,13 @@ export function DayView({
   };
 
   const getAppointmentsForProvider = (providerId: string) => {
-    const dayProviderAppointments = appointments.filter(appt =>
-      appt.provider_id === providerId && isSameDay(new Date(appt.start_time), currentDate)
-    );
+    const dayProviderAppointments = appointments.filter(appt => {
+      const matchesDay = isSameDay(new Date(appt.start_time), currentDate);
+      if (providerId === 'unassigned') {
+        return !appt.provider_id && matchesDay;
+      }
+      return appt.provider_id === providerId && matchesDay;
+    });
     return detectOverlaps(dayProviderAppointments);
   };
 

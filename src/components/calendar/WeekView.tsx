@@ -38,10 +38,28 @@ export function WeekView({
   const weekStart = startOfWeek(currentDate);
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   
+  // Add "Unassigned" pseudo-provider for appointments without providers
+  const providersWithUnassigned = useMemo(() => {
+    const hasUnassignedAppointments = appointments.some(appt => !appt.provider_id);
+    
+    if (hasUnassignedAppointments) {
+      return [
+        ...providers,
+        { 
+          id: 'unassigned', 
+          first_name: 'Unassigned', 
+          last_name: '',
+          specialty: 'No Provider'
+        }
+      ];
+    }
+    return providers;
+  }, [providers, appointments]);
+
   const filteredProviders = useMemo(() => {
-    if (selectedProviders.length === 0) return providers;
-    return providers.filter(p => selectedProviders.includes(p.id));
-  }, [providers, selectedProviders]);
+    if (selectedProviders.length === 0) return providersWithUnassigned;
+    return providersWithUnassigned.filter(p => selectedProviders.includes(p.id));
+  }, [providersWithUnassigned, selectedProviders]);
 
   // Generate time slots using safe operational hours
   const timeSlots = useMemo(() => {
@@ -103,11 +121,13 @@ export function WeekView({
   };
 
   const getAppointmentsForDayAndProvider = (day: Date, providerId: string) => {
-    const dayProviderAppointments = appointments.filter(
-      (appt) =>
-        isSameDay(new Date(appt.start_time), day) &&
-        appt.provider_id === providerId
-    );
+    const dayProviderAppointments = appointments.filter((appt) => {
+      const matchesDay = isSameDay(new Date(appt.start_time), day);
+      if (providerId === 'unassigned') {
+        return !appt.provider_id && matchesDay;
+      }
+      return matchesDay && appt.provider_id === providerId;
+    });
     return detectOverlaps(dayProviderAppointments);
   };
 
