@@ -9,11 +9,13 @@ import { format } from "date-fns";
 import { Calendar, Clock, MapPin, Download, Video, Building } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function PatientAppointments() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const isMobile = useIsMobile();
 
   const { data: appointments, refetch } = useQuery({
     queryKey: ["patient-appointments"],
@@ -96,12 +98,12 @@ export default function PatientAppointments() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Appointments</h1>
+      <div className={`flex items-center ${isMobile ? 'flex-col gap-4' : 'justify-between'}`}>
+        <div className={isMobile ? 'text-center' : ''}>
+          <h1 className={`font-bold tracking-tight ${isMobile ? 'text-2xl' : 'text-3xl'}`}>My Appointments</h1>
           <p className="text-muted-foreground">Manage your scheduled visits</p>
         </div>
-        <Button onClick={() => setBookingOpen(true)}>
+        <Button onClick={() => setBookingOpen(true)} className={isMobile ? 'w-full' : ''}>
           <Calendar className="mr-2 h-4 w-4" />
           Book Appointment
         </Button>
@@ -121,15 +123,17 @@ export default function PatientAppointments() {
               {upcoming.map((appt: any) => (
                 <Card key={appt.id}>
                   <CardHeader>
-                    <div className="flex justify-between items-start">
+                    <div className={isMobile ? 'space-y-3' : 'flex justify-between items-start'}>
                       <div className="flex-1">
-                        <CardTitle>{appt.practice?.name}</CardTitle>
+                        <CardTitle className={isMobile ? 'text-lg' : ''}>{appt.practice?.name}</CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-1">
                           <Clock className="h-3 w-3" />
-                          {format(new Date(appt.start_time), "EEEE, MMMM dd, yyyy 'at' h:mm a")}
+                          <span className={isMobile ? 'text-xs' : ''}>
+                            {format(new Date(appt.start_time), "EEEE, MMMM dd, yyyy 'at' h:mm a")}
+                          </span>
                         </CardDescription>
                       </div>
-                      <div className="flex flex-col gap-2 items-end">
+                      <div className={`flex gap-2 ${isMobile ? 'flex-row' : 'flex-col items-end'}`}>
                         {getConfirmationBadge(appt.confirmation_type)}
                         {appt.visit_type && getVisitTypeBadge(appt.visit_type)}
                       </div>
@@ -156,7 +160,7 @@ export default function PatientAppointments() {
                     {appt.notes && (
                       <p className="text-sm text-muted-foreground">Notes: {appt.notes}</p>
                     )}
-                    <div className="flex flex-wrap gap-2">
+                    <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-wrap'}`}>
                       <Button
                         variant="outline"
                         size="sm"
@@ -164,6 +168,7 @@ export default function PatientAppointments() {
                           setSelectedAppointment(appt);
                           setRescheduleOpen(true);
                         }}
+                        className={isMobile ? 'w-full justify-center' : ''}
                       >
                         Request Reschedule
                       </Button>
@@ -171,6 +176,7 @@ export default function PatientAppointments() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleAddToCalendar(appt.id)}
+                        className={isMobile ? 'w-full justify-center' : ''}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Add to Calendar
@@ -179,6 +185,7 @@ export default function PatientAppointments() {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleCancelAppointment(appt.id)}
+                        className={isMobile ? 'w-full justify-center' : ''}
                       >
                         Cancel
                       </Button>
@@ -203,18 +210,20 @@ export default function PatientAppointments() {
               {past.map((appt: any) => (
                 <Card key={appt.id} className="opacity-75">
                   <CardHeader>
-                    <div className="flex justify-between items-start">
+                    <div className={isMobile ? 'space-y-3' : 'flex justify-between items-start'}>
                       <div className="flex-1">
                         <CardTitle className="text-base">{appt.practice?.name}</CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-1">
                           <Clock className="h-3 w-3" />
-                          {format(new Date(appt.start_time), "EEEE, MMMM dd, yyyy 'at' h:mm a")}
+                          <span className={isMobile ? 'text-xs' : ''}>
+                            {format(new Date(appt.start_time), "EEEE, MMMM dd, yyyy 'at' h:mm a")}
+                          </span>
                         </CardDescription>
                         {appt.reason_for_visit && (
                           <p className="text-sm text-muted-foreground mt-1">{appt.reason_for_visit}</p>
                         )}
                       </div>
-                      <div className="flex flex-col gap-2 items-end">
+                      <div className={`flex gap-2 ${isMobile ? 'flex-row' : 'flex-col items-end'}`}>
                         <Badge variant="outline">{appt.status}</Badge>
                         {appt.visit_type && getVisitTypeBadge(appt.visit_type)}
                       </div>

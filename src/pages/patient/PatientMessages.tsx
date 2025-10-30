@@ -4,13 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MessageThread } from "@/components/patient/MessageThread";
 import { NewMessageDialog } from "@/components/patient/NewMessageDialog";
 import { useState, useEffect } from "react";
-import { MessageSquare, Plus, Search } from "lucide-react";
+import { MessageSquare, Plus, Search, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function PatientMessages() {
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
@@ -18,6 +19,8 @@ export default function PatientMessages() {
   const [filterTab, setFilterTab] = useState<'active' | 'resolved'>('active');
   const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
+  const [showThreadList, setShowThreadList] = useState(true);
 
   const { data: threads } = useQuery({
     queryKey: ["patient-message-threads", filterTab, searchQuery],
@@ -88,11 +91,24 @@ export default function PatientMessages() {
   const activeCount = threads?.filter((t: any) => !t.resolved).length || 0;
   const resolvedCount = threads?.filter((t: any) => t.resolved).length || 0;
 
+  const handleSelectThread = (threadId: string) => {
+    setSelectedThread(threadId);
+    if (isMobile) {
+      setShowThreadList(false);
+    }
+  };
+
+  const handleBackToThreads = () => {
+    setShowThreadList(true);
+    setSelectedThread(null);
+  };
+
   return (
     <>
-      <div className="flex h-[calc(100vh-8rem)] gap-4">
+      <div className={`flex gap-4 ${isMobile ? 'flex-col h-auto' : 'h-[calc(100vh-8rem)]'}`}>
         {/* Left Sidebar - Conversations */}
-        <Card className="w-80 flex flex-col">
+        {(!isMobile || showThreadList) && (
+        <Card className={`flex flex-col ${isMobile ? 'w-full' : 'w-80'}`}>
           <div className="p-4 border-b space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Messages</h2>
@@ -148,7 +164,7 @@ export default function PatientMessages() {
                           ? "bg-accent"
                           : "hover:bg-accent/50"
                       }`}
-                      onClick={() => setSelectedThread(msg.id)}
+                      onClick={() => handleSelectThread(msg.id)}
                     >
                       <div className="flex items-start gap-3">
                         <MessageSquare className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
@@ -186,25 +202,43 @@ export default function PatientMessages() {
             </div>
           </ScrollArea>
         </Card>
+        )}
 
         {/* Right Side - Message Thread */}
-        <Card className="flex-1 flex flex-col">
+        {(!isMobile || !showThreadList) && (
+        <Card className={`flex flex-col ${isMobile ? 'w-full min-h-[calc(100vh-8rem)]' : 'flex-1'}`}>
           {selectedThread ? (
-            <MessageThread 
-              threadId={selectedThread} 
-              onThreadUpdate={() => {
-                queryClient.invalidateQueries({ 
-                  queryKey: ['patient-message-threads'],
-                  refetchType: 'active'
-                });
-              }} 
-            />
+            <>
+              {isMobile && (
+                <div className="p-4 border-b">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBackToThreads}
+                    className="gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Messages
+                  </Button>
+                </div>
+              )}
+              <MessageThread 
+                threadId={selectedThread} 
+                onThreadUpdate={() => {
+                  queryClient.invalidateQueries({ 
+                    queryKey: ['patient-message-threads'],
+                    refetchType: 'active'
+                  });
+                }} 
+              />
+            </>
           ) : (
             <CardContent className="flex-1 flex items-center justify-center text-muted-foreground">
               Select a conversation to view messages
             </CardContent>
           )}
         </Card>
+        )}
       </div>
 
       <NewMessageDialog 

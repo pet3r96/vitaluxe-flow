@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Monitor, LogOut } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import {
   AlertDialog,
@@ -63,6 +64,7 @@ export function ActivityLogSection() {
   const [displayLimit, setDisplayLimit] = useState(5);
   const [showAll, setShowAll] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchSessions();
@@ -172,7 +174,7 @@ export function ActivityLogSection() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className={isMobile ? "space-y-3" : "flex items-center justify-between"}>
           <div>
             <CardTitle className="flex items-center gap-2">
               <Monitor className="h-5 w-5" />
@@ -183,7 +185,12 @@ export function ActivityLogSection() {
           {sessions.length > 1 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={signingOut}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={signingOut}
+                  className={isMobile ? "w-full" : ""}
+                >
                   {signingOut ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -224,10 +231,10 @@ export function ActivityLogSection() {
               {sessions.map((session, index) => (
                 <div
                   key={session.id}
-                  className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0"
+                  className={`border-b pb-4 last:border-0 last:pb-0 ${isMobile ? 'space-y-2' : 'flex items-start justify-between'}`}
                 >
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Monitor className="h-4 w-4 text-muted-foreground" />
                       <p className="text-sm font-medium">
                         {parseUserAgent(session.user_agent)}
@@ -256,7 +263,7 @@ export function ActivityLogSection() {
               </p>
               
               {sessions.length < totalCount && (
-                <div className="flex gap-2 justify-center">
+                <div className={`flex gap-2 justify-center ${isMobile ? 'flex-col' : ''}`}>
                   <Button
                     variant="outline"
                     size="sm"
