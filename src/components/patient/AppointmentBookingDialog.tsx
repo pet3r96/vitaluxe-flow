@@ -33,11 +33,19 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
       
+      // Check for active impersonation session
+      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+      
+      console.log("👤 [AppointmentBooking] Effective user ID:", effectiveUserId);
+      
       const { data, error } = await supabase
         .from("patient_accounts")
         .select("id, practice_id, profiles!patient_accounts_practice_id_fkey(name, address_city, address_state)")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", effectiveUserId)
+        .maybeSingle();
+      
+      console.log("📋 [AppointmentBooking] Patient account:", data);
       
       if (error) throw error;
       return data;
