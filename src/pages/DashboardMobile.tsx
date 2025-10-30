@@ -44,19 +44,38 @@ export default function DashboardMobile() {
         
         if (effectiveRole === "patient" && effectiveUserId) {
           const today = new Date().toISOString();
-          const apptResponse = await (supabase as any)
-            .from("patient_appointments")
-            .select("*", { count: "exact", head: true })
-            .eq("patient_id", effectiveUserId)
-            .gte("appointment_date", today);
-          results.appointments = apptResponse.count || 0;
           
-          const msgResponse = await (supabase as any)
-            .from("patient_messages")
-            .select("*", { count: "exact", head: true })
-            .eq("recipient_id", effectiveUserId)
-            .eq("read", false);
-          results.messages = msgResponse.count || 0;
+          const { data: patientAccount } = await supabase
+            .from("patient_accounts")
+            .select("id")
+            .eq("user_id", effectiveUserId)
+            .single();
+          
+          if (patientAccount) {
+            const apptResponse = await supabase
+              .from("patient_appointments")
+              .select("*", { count: "exact", head: true })
+              .eq("patient_id", patientAccount.id)
+              .gte("start_time", today)
+              .in('status', ['scheduled', 'pending']);
+            results.appointments = apptResponse.count || 0;
+            
+            // Use message_threads system
+            const { data: threads } = await supabase
+              .from("thread_participants")
+              .select("thread_id")
+              .eq("user_id", effectiveUserId);
+            
+            const threadIds = threads?.map(t => t.thread_id) || [];
+            if (threadIds.length > 0) {
+              const { data: messages } = await supabase
+                .from("messages")
+                .select("id, sender_id")
+                .in("thread_id", threadIds)
+                .neq("sender_id", effectiveUserId);
+              results.messages = messages?.length || 0;
+            }
+          }
         }
       } catch (error) {
         console.error("Error fetching mobile dashboard stats:", error);

@@ -43,9 +43,32 @@ export const AppointmentRequestReviewDialog = ({
   // Initialize edit fields with requested or current values
   useEffect(() => {
     if (appointment) {
-      const requestedDate = appointment.requested_date || format(new Date(appointment.start_time), 'yyyy-MM-dd');
-      const requestedTime = appointment.requested_time || format(new Date(appointment.start_time), 'HH:mm');
-      setEditedDate(requestedDate);
+      // Safe handling of requested_date
+      let requestedDate = appointment.requested_date;
+      if (!requestedDate && appointment.start_time) {
+        try {
+          requestedDate = format(new Date(appointment.start_time), 'yyyy-MM-dd');
+        } catch {
+          requestedDate = format(new Date(), 'yyyy-MM-dd');
+        }
+      }
+      
+      // Safe handling of requested_time (stored as TIME in DB, e.g. '09:00:00')
+      let requestedTime = appointment.requested_time;
+      if (requestedTime) {
+        // Trim seconds if present: '09:00:00' -> '09:00'
+        requestedTime = requestedTime.substring(0, 5);
+      } else if (appointment.start_time) {
+        try {
+          requestedTime = format(new Date(appointment.start_time), 'HH:mm');
+        } catch {
+          requestedTime = '09:00';
+        }
+      } else {
+        requestedTime = '09:00';
+      }
+      
+      setEditedDate(requestedDate || format(new Date(), 'yyyy-MM-dd'));
       setEditedTime(requestedTime);
     }
   }, [appointment]);
@@ -65,15 +88,47 @@ export const AppointmentRequestReviewDialog = ({
   };
 
   const handleAccept = async () => {
-    setIsAccepting(true);
-    try {
-      // Calculate new start/end times from edited date/time
-      const originalStart = new Date(appointment.start_time);
-      const originalEnd = new Date(appointment.end_time);
-      const duration = originalEnd.getTime() - originalStart.getTime();
+    if (!appointment) return;
 
-      const newStartTime = new Date(`${editedDate}T${editedTime}`);
-      const newEndTime = new Date(newStartTime.getTime() + duration);
+    try {
+      setIsAccepting(true);
+
+      // Validate inputs
+      if (!editedDate || !editedTime) {
+        toast({
+          title: "Invalid Input",
+          description: "Please provide a valid date and time.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Calculate new start and end times with validation
+      const timeMatch = editedTime.match(/^(\d{1,2}):(\d{2})$/);
+      if (!timeMatch) {
+        toast({
+          title: "Invalid Time Format",
+          description: "Please use HH:MM format (e.g., 09:00).",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const [hours, minutes] = timeMatch.slice(1).map(Number);
+      const newStartTime = new Date(editedDate);
+      newStartTime.setHours(hours, minutes, 0, 0);
+      
+      if (isNaN(newStartTime.getTime())) {
+        toast({
+          title: "Invalid Date",
+          description: "Please provide a valid date.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const newEndTime = new Date(newStartTime);
+      newEndTime.setMinutes(newEndTime.getMinutes() + 30);
 
       // Check for conflicts with the new time
       const hasConflicts = await checkConflicts(newStartTime, newEndTime);

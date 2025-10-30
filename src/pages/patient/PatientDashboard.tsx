@@ -54,7 +54,12 @@ export default function PatientDashboard() {
   const { data: nextAppointment, isLoading: loadingAppt } = useQuery({
     queryKey: ["next-appointment", patientAccount?.id],
     queryFn: async () => {
-      if (!patientAccount?.id) return null;
+      if (!patientAccount?.id) {
+        console.log('[PatientDashboard] No patient account ID');
+        return null;
+      }
+      
+      console.log('[PatientDashboard] Fetching next appointment for patient_id:', patientAccount.id);
       
       const { data, error } = await supabase
         .from("patient_appointments")
@@ -68,12 +73,17 @@ export default function PatientDashboard() {
         `)
         .eq("patient_id", patientAccount.id)
         .gte("start_time", new Date().toISOString())
-        .not('status', 'in', '(cancelled,no_show)')
+        .in('status', ['scheduled', 'pending'])
         .order("start_time", { ascending: true })
         .limit(1)
         .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) {
+        console.error('[PatientDashboard] Error fetching next appointment:', error);
+        if (error.code !== 'PGRST116') throw error;
+      }
+      
+      console.log('[PatientDashboard] Next appointment data:', data);
       return data;
     },
     enabled: !!patientAccount?.id,
@@ -136,7 +146,12 @@ export default function PatientDashboard() {
   const { data: recentAppointments = [] } = useQuery({
     queryKey: ["recent-appointments", patientAccount?.id],
     queryFn: async () => {
-      if (!patientAccount?.id) return [];
+      if (!patientAccount?.id) {
+        console.log('[PatientDashboard] No patient account for recent appointments');
+        return [];
+      }
+      
+      console.log('[PatientDashboard] Fetching recent appointments for patient_id:', patientAccount.id);
       
       const { data, error } = await supabase
         .from("patient_appointments")
@@ -150,11 +165,16 @@ export default function PatientDashboard() {
         `)
         .eq("patient_id", patientAccount.id)
         .lt("start_time", new Date().toISOString())
-        .not('status', 'in', '(cancelled)')
+        .in('status', ['scheduled', 'completed'])
         .order("start_time", { ascending: false })
         .limit(3);
       
-      if (error) throw error;
+      if (error) {
+        console.error('[PatientDashboard] Error fetching recent appointments:', error);
+        throw error;
+      }
+      
+      console.log('[PatientDashboard] Recent appointments:', data);
       return data || [];
     },
     enabled: !!patientAccount?.id,
