@@ -7510,6 +7510,7 @@ export type Database = {
         | "provider"
         | "subscription"
         | "staff"
+        | "patient"
       notification_type:
         | "message"
         | "order_status"
@@ -7681,6 +7682,7 @@ export const Constants = {
         "provider",
         "subscription",
         "staff",
+        "patient",
       ],
       notification_type: [
         "message",

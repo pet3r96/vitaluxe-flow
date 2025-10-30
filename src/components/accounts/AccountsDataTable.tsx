@@ -54,14 +54,15 @@ export const AccountsDataTable = () => {
     enabled: !!effectiveRole,
     staleTime: 300000, // 5 minutes - user accounts change infrequently
     queryFn: async () => {
-      // First, get all profiles with their roles
+      // First, get all profiles with their roles and patient accounts
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select(`
           *,
           user_roles(role),
           parent:profiles!parent_id(id, name, email),
-          linked_topline:profiles!linked_topline_id(id, name, email)
+          linked_topline:profiles!linked_topline_id(id, name, email),
+          patient_accounts(first_name, last_name, email)
         `)
         .order("created_at", { ascending: false });
 
@@ -157,7 +158,23 @@ export const AccountsDataTable = () => {
       return account.isProvider ? 'provider' : 'practice';
     }
     
+    // Fallback: Check if user has patient_accounts entry
+    if (!baseRole && account.patient_accounts && account.patient_accounts.length > 0) {
+      return 'patient';
+    }
+    
     return baseRole || 'No role';
+  };
+
+  const getDisplayName = (account: any): string => {
+    // If name is 'New User' and patient_accounts exists, use patient name
+    if ((account.name === 'New User' || !account.name) && 
+        account.patient_accounts && 
+        account.patient_accounts.length > 0) {
+      const patientAccount = account.patient_accounts[0];
+      return `${patientAccount.first_name} ${patientAccount.last_name}`.trim();
+    }
+    return account.name || 'Unknown';
   };
 
   const cleanupMutation = useMutation({
@@ -325,7 +342,7 @@ export const AccountsDataTable = () => {
             ) : (
               paginatedAccounts?.map((account) => (
                 <TableRow key={account.id}>
-                  <TableCell className="font-medium">{account.name}</TableCell>
+                  <TableCell className="font-medium">{getDisplayName(account)}</TableCell>
                   <TableCell>{account.email}</TableCell>
                   <TableCell>
                     <Badge className={getRoleBadgeColor(getDisplayRole(account))}>

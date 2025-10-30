@@ -306,11 +306,15 @@ Deno.serve(async (req) => {
       }
     } else {
       console.log('[create-patient-portal-account] Creating new auth user for:', normalizedEmail);
-      // Create new auth user with normalized email
+      // Create new auth user with normalized email and patient metadata
       const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
         email: normalizedEmail,
         password: temporaryPassword,
         email_confirm: true,
+        user_metadata: {
+          name: patient.name,
+          role: 'patient'
+        }
       });
 
       if (createAuthError) {
@@ -370,8 +374,8 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create patient account: ${accountError.message}`);
     }
 
-    // Assign patient role
-    await supabaseAdmin
+    // Assign patient role with error handling
+    const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: authUserId,
@@ -379,6 +383,11 @@ Deno.serve(async (req) => {
       })
       .select()
       .maybeSingle();
+    
+    if (roleError) {
+      console.error('Failed to create patient role (will be created by trigger):', roleError);
+      // Don't fail - trigger will handle this
+    }
 
     // Create temp password token for token-based password reset
     const token = crypto.randomUUID();
