@@ -25,6 +25,7 @@ Deno.serve(async (req) => {
     const effectiveUserId = impersonationSession?.impersonated_user_id || user.id;
 
     const { providerId, appointmentDate, appointmentTime, reasonForVisit, visitType, notes } = await req.json();
+    console.log('[book-appointment] Request data:', { providerId, appointmentDate, appointmentTime, reasonForVisit, visitType });
 
     // Get patient's assigned practice from patient_accounts using effective user ID
     const { data: patientAccount, error: patientError } = await supabaseClient
@@ -154,6 +155,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
+    console.error('[book-appointment] Error:', error);
+    console.error('[book-appointment] Error stack:', error.stack);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -7332,18 +7332,8 @@ export type Database = {
       }
       get_my_topline_rep_id: { Args: never; Returns: string }
       get_patient_appointments_with_details: {
-        Args: { p_patient_id: string }
-        Returns: {
-          end_time: string
-          id: string
-          notes: string
-          practice_name: string
-          provider_name: string
-          reason_for_visit: string
-          start_time: string
-          status: string
-          visit_type: string
-        }[]
+        Args: { p_user_id: string }
+        Returns: Json
       }
       get_patient_unified_documents: {
         Args: { p_patient_id: string }

@@ -37,8 +37,8 @@ export default function PatientAppointments() {
       
       if (error) throw error;
       
-      // RPC returns JSONB array
-      return (data as any[]) || [];
+      // RPC now returns JSONB directly, parse it
+      return data || [];
     },
   });
 
