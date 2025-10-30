@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ interface NewMessageDialogProps {
 }
 
 export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDialogProps) {
+  const { session } = useAuth();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
@@ -40,25 +42,40 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
   }>({
     queryKey: ["patient-practice-info", open],
     queryFn: async () => {
-      console.log("🔄 [QUERY START] Invoking get-patient-practice edge function...");
-      console.log("📋 Current auth session:", await supabase.auth.getSession());
+      const reqId = crypto.randomUUID();
+      console.log(`🔄 [${reqId}] Invoking get-patient-practice edge function...`);
+      
+      const token = session?.access_token;
+      if (!token) {
+        console.error(`❌ [${reqId}] No access token available`);
+        throw new Error("Authentication required");
+      }
       
       try {
-        const { data, error } = await supabase.functions.invoke("get-patient-practice");
+        const { data, error } = await supabase.functions.invoke("get-patient-practice", {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         
-        console.log("📦 Edge function raw response:", { data, error });
+        console.log(`📦 [${reqId}] Edge function raw response:`, { data, error });
         
         if (error) {
-          console.error("❌ Edge function error object:", JSON.stringify(error, null, 2));
-          throw new Error(`Edge function error: ${error.message || JSON.stringify(error)}`);
+          console.error(`❌ [${reqId}] Edge function error:`, error);
+          
+          // Detect error type for better user feedback
+          const errorName = (error as any)?.name || "UnknownError";
+          const errorMessage = error.message || "Unknown error occurred";
+          
+          throw new Error(`${errorName}: ${errorMessage}`);
         }
         
         if (!data) {
-          console.error("❌ No data returned from edge function");
+          console.error(`❌ [${reqId}] No data returned from edge function`);
           throw new Error("No data returned from practice lookup");
         }
         
-        console.log("✅ Practice data retrieved successfully:", JSON.stringify(data, null, 2));
+        console.log(`✅ [${reqId}] Practice data retrieved successfully:`, data);
         
         return data as {
           patientAccountId: string;
@@ -70,11 +87,11 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
           } | null;
         };
       } catch (err) {
-        console.error("💥 Exception in queryFn:", err);
+        console.error(`💥 [${reqId}] Exception in queryFn:`, err);
         throw err;
       }
     },
-    enabled: open,
+    enabled: open && !!session?.access_token,
     retry: 1,
     retryDelay: 500,
     staleTime: 0,
@@ -157,9 +174,18 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Failed to load practice information. Please try again.
-              <br />
-              <span className="text-xs mt-1 block">Error: {practiceError.message}</span>
+              <div className="space-y-2">
+                <p>Failed to load practice information.</p>
+                <p className="text-xs">Error: {practiceError.message}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => refetch()}
+                  className="mt-2"
+                >
+                  Try Again
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         ) : hasPractice ? (
@@ -174,14 +200,14 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
               )}
             </div>
           </div>
-        ) : (
+        ) : practiceData && !practiceData.practiceId ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               No practice is assigned to this patient. Messages cannot be sent until a practice is assigned.
             </AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
