@@ -14,13 +14,17 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Check for impersonation
+    const { data: impersonationData } = await supabaseClient.functions.invoke('get-active-impersonation');
+    const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+
     const { providerId, appointmentDate, appointmentTime, reasonForVisit, visitType, notes } = await req.json();
 
-    // Get patient's assigned practice from patient_accounts
+    // Get patient's assigned practice from patient_accounts using effective user ID
     const { data: patientAccount, error: patientError } = await supabaseClient
       .from('patient_accounts')
       .select('practice_id, id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .single();
 
     if (patientError || !patientAccount) {
@@ -35,25 +39,27 @@ Deno.serve(async (req) => {
       throw new Error('Cannot book appointments in the past');
     }
 
-    // Validation 2: Check if practice is open on this day
+    // Validation 2: Check if practice is open on this day (using RPC with defaults)
     const dayOfWeek = fullDateTime.getDay();
     const { data: hours, error: hoursError } = await supabaseClient
-      .from('practice_calendar_hours')
-      .select('start_time, end_time, is_closed')
-      .eq('practice_id', patientAccount.practice_id)
-      .eq('day_of_week', dayOfWeek)
-      .maybeSingle();
+      .rpc('get_practice_hours_with_defaults', {
+        p_practice_id: patientAccount.practice_id,
+        p_day_of_week: dayOfWeek
+      });
 
     if (hoursError) throw hoursError;
 
-    if (!hours || hours.is_closed) {
+    const practiceHours = hours?.[0];
+    if (!practiceHours || practiceHours.is_closed) {
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       throw new Error(`Practice is closed on ${dayNames[dayOfWeek]}s`);
     }
 
     // Validation 3: Check if time is within business hours
-    if (appointmentTime < hours.start_time || appointmentTime >= hours.end_time) {
-      throw new Error(`Practice hours are ${hours.start_time} - ${hours.end_time}`);
+    const startTimeStr = practiceHours.start_time.toString();
+    const endTimeStr = practiceHours.end_time.toString();
+    if (appointmentTime < startTimeStr || appointmentTime >= endTimeStr) {
+      throw new Error(`Practice hours are ${startTimeStr} - ${endTimeStr}`);
     }
 
     // Validation 4: Check if time is blocked

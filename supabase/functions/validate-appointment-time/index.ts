@@ -14,17 +14,21 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Check for impersonation
+    const { data: impersonationData } = await supabaseClient.functions.invoke('get-active-impersonation');
+    const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+
     const { appointmentDate, appointmentTime, duration = 60 } = await req.json();
 
     if (!appointmentDate || !appointmentTime) {
       throw new Error('Date and time are required');
     }
 
-    // Get patient's practice
+    // Get patient's practice using effective user ID
     const { data: patientAccount, error: patientError } = await supabaseClient
       .from('patient_accounts')
       .select('practice_id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .single();
 
     if (patientError || !patientAccount) {
@@ -49,20 +53,20 @@ Deno.serve(async (req) => {
 
     const dayOfWeek = requestedDateTime.getDay();
 
-    // 2. Check if practice is open on this day
+    // 2. Check if practice is open on this day (using RPC with defaults)
     const { data: hours, error: hoursError } = await supabaseClient
-      .from('practice_calendar_hours')
-      .select('start_time, end_time, is_closed')
-      .eq('practice_id', practiceId)
-      .eq('day_of_week', dayOfWeek)
-      .maybeSingle();
+      .rpc('get_practice_hours_with_defaults', {
+        p_practice_id: practiceId,
+        p_day_of_week: dayOfWeek
+      });
 
     if (hoursError) throw hoursError;
 
+    const practiceHours = hours?.[0];
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = dayNames[dayOfWeek];
 
-    if (!hours || hours.is_closed) {
+    if (!practiceHours || practiceHours.is_closed) {
       return new Response(
         JSON.stringify({
           valid: false,
@@ -74,7 +78,9 @@ Deno.serve(async (req) => {
     }
 
     // 3. Check if time is within business hours
-    if (appointmentTime < hours.start_time || appointmentTime >= hours.end_time) {
+    const startTimeStr = practiceHours.start_time.toString();
+    const endTimeStr = practiceHours.end_time.toString();
+    if (appointmentTime < startTimeStr || appointmentTime >= endTimeStr) {
       // Format times for display
       const formatTime = (time: string) => {
         const [h, m] = time.split(':');
@@ -87,7 +93,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           valid: false,
-          error: `Practice hours are ${formatTime(hours.start_time)} - ${formatTime(hours.end_time)}`,
+          error: `Practice hours are ${formatTime(startTimeStr)} - ${formatTime(endTimeStr)}`,
           alternatives: []
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

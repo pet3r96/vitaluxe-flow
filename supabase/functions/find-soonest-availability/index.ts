@@ -14,13 +14,17 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Check for impersonation
+    const { data: impersonationData } = await supabaseClient.functions.invoke('get-active-impersonation');
+    const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+
     const { duration = 60 } = await req.json();
 
-    // Get patient's practice
+    // Get patient's practice using effective user ID
     const { data: patientAccount, error: patientError } = await supabaseClient
       .from('patient_accounts')
       .select('practice_id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .single();
 
     if (patientError || !patientAccount) {
@@ -43,27 +47,29 @@ Deno.serve(async (req) => {
       checkDate.setDate(checkDate.getDate() + dayOffset);
       const dayOfWeek = checkDate.getDay(); // 0 = Sunday, 6 = Saturday
       
-      // Get practice hours for this day
+      // Get practice hours for this day (using RPC with defaults)
       const { data: hours, error: hoursError } = await supabaseClient
-        .from('practice_calendar_hours')
-        .select('start_time, end_time, is_closed')
-        .eq('practice_id', practiceId)
-        .eq('day_of_week', dayOfWeek)
-        .maybeSingle();
+        .rpc('get_practice_hours_with_defaults', {
+          p_practice_id: practiceId,
+          p_day_of_week: dayOfWeek
+        });
 
       if (hoursError) {
         console.error('Error fetching hours:', hoursError);
         continue;
       }
 
+      const practiceHours = hours?.[0];
       // Skip if closed or no hours defined
-      if (!hours || hours.is_closed) continue;
+      if (!practiceHours || practiceHours.is_closed) continue;
 
       // Generate 30-minute time slots
-      const startHour = parseInt(hours.start_time.split(':')[0]);
-      const startMin = parseInt(hours.start_time.split(':')[1]);
-      const endHour = parseInt(hours.end_time.split(':')[0]);
-      const endMin = parseInt(hours.end_time.split(':')[1]);
+      const startTimeStr = practiceHours.start_time.toString();
+      const endTimeStr = practiceHours.end_time.toString();
+      const startHour = parseInt(startTimeStr.split(':')[0]);
+      const startMin = parseInt(startTimeStr.split(':')[1]);
+      const endHour = parseInt(endTimeStr.split(':')[0]);
+      const endMin = parseInt(endTimeStr.split(':')[1]);
       
       const startMinutes = startHour * 60 + startMin;
       const endMinutes = endHour * 60 + endMin;

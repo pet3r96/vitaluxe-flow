@@ -23,19 +23,22 @@ export default function PatientAppointments() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Check for impersonation
+      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+
+      console.log("👤 [PatientAppointments] Effective user ID:", effectiveUserId);
+
+      // Use RPC function to get appointments with proper joins
       const { data, error } = await supabase
-        .from("patient_appointments")
-        .select(`
-          *,
-          practice:profiles!patient_appointments_practice_id_fkey(name, address_street, address_city, address_state),
-          provider:profiles!patient_appointments_provider_id_fkey(name),
-          patient_account:patient_accounts!patient_appointments_patient_id_fkey(user_id)
-        `)
-        .eq('patient_accounts.user_id', user.id)
-        .order("start_time", { ascending: true });
+        .rpc('get_patient_appointments_with_details', {
+          p_user_id: effectiveUserId
+        });
       
       if (error) throw error;
-      return data;
+      
+      // RPC returns JSONB array
+      return data || [];
     },
   });
 

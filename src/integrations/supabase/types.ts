@@ -7331,6 +7331,10 @@ export type Database = {
         }[]
       }
       get_my_topline_rep_id: { Args: never; Returns: string }
+      get_patient_appointments_with_details: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_patient_unified_documents: {
         Args: { p_patient_id: string }
         Returns: {
@@ -7362,6 +7366,14 @@ export type Database = {
           role: string
           role_display: string
           staff_role_type: string
+        }[]
+      }
+      get_practice_hours_with_defaults: {
+        Args: { p_day_of_week: number; p_practice_id: string }
+        Returns: {
+          end_time: string
+          is_closed: boolean
+          start_time: string
         }[]
       }
       get_practice_team_members: {
