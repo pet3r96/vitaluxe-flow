@@ -218,6 +218,24 @@ export const OrdersDataTable = () => {
         }
       }
 
+      // Filter by staff practice if role is staff
+      if (effectiveRole === "staff") {
+        // Get staff's practice_id from practice_staff table
+        const { data: staffData } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", effectiveUserId)
+          .eq("active", true)
+          .maybeSingle();
+        
+        if (!staffData || !staffData.practice_id) {
+          return []; // Staff record not found or inactive
+        }
+        
+        // Filter orders by the staff member's practice
+        query = query.eq("doctor_id", staffData.practice_id);
+      }
+
       // Filter by downline rep if role is downline
       if (effectiveRole === "downline") {
         // Get the downline's rep record first
