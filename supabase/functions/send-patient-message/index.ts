@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     console.log('[send-patient-message] User authenticated:', user.id);
 
     // Parse request body
-    const { subject, message, sender_type, patient_id } = await req.json();
+    const { subject, message, sender_type, patient_id, thread_id, parent_message_id } = await req.json();
 
     // Detect mode: provider reply or patient message
     const isProviderMode = sender_type === 'provider' && patient_id;
@@ -196,7 +196,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Insert provider message
+      // Insert provider message with threading support
+      const isReply = !!thread_id;
+      
       const providerPayload = {
         patient_id: patient_id,
         practice_id: effectivePracticeId,
@@ -204,14 +206,18 @@ Deno.serve(async (req) => {
         sender_type: 'provider',
         message_body: message,
         subject: subject || 'Provider Message',
-        read_at: null
+        read_at: null,
+        ...(isReply && { thread_id: thread_id }),
+        ...(isReply && parent_message_id && { parent_message_id: parent_message_id })
       };
 
       console.log('[send-patient-message] Inserting provider message:', providerPayload);
 
-      const { error: insertError } = await supabaseAdmin
+      const { data: insertedMessage, error: insertError } = await supabaseAdmin
         .from('patient_messages')
-        .insert(providerPayload);
+        .insert(providerPayload)
+        .select()
+        .single();
 
       if (insertError) {
         console.error('[send-patient-message] Insert error:', insertError);
@@ -219,6 +225,18 @@ Deno.serve(async (req) => {
           JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // If new thread (not a reply), set thread_id = id
+      if (!isReply && insertedMessage) {
+        const { error: updateError } = await supabaseAdmin
+          .from('patient_messages')
+          .update({ thread_id: insertedMessage.id })
+          .eq('id', insertedMessage.id);
+          
+        if (updateError) {
+          console.error('[send-patient-message] Failed to set thread_id:', updateError);
+        }
       }
 
       console.log('[send-patient-message] Provider message sent successfully');
@@ -269,7 +287,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Insert patient message
+    // Insert patient message with threading support
+    const isReply = !!thread_id;
+    
     const patientPayload = {
       patient_id: patientAccount.id,
       practice_id: patientAccount.practice_id,
@@ -277,14 +297,18 @@ Deno.serve(async (req) => {
       sender_type: 'patient',
       message_body: message,
       subject: subject || 'Patient Message',
-      read_at: null
+      read_at: null,
+      ...(isReply && { thread_id: thread_id }),
+      ...(isReply && parent_message_id && { parent_message_id: parent_message_id })
     };
 
     console.log('[send-patient-message] Inserting patient message:', patientPayload);
 
-    const { error: insertError } = await supabaseAdmin
+    const { data: insertedMessage, error: insertError } = await supabaseAdmin
       .from('patient_messages')
-      .insert(patientPayload);
+      .insert(patientPayload)
+      .select()
+      .single();
 
     if (insertError) {
       console.error('[send-patient-message] Insert error:', insertError);
@@ -292,6 +316,18 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // If new thread (not a reply), set thread_id = id
+    if (!isReply && insertedMessage) {
+      const { error: updateError } = await supabaseAdmin
+        .from('patient_messages')
+        .update({ thread_id: insertedMessage.id })
+        .eq('id', insertedMessage.id);
+        
+      if (updateError) {
+        console.error('[send-patient-message] Failed to set thread_id:', updateError);
+      }
     }
 
     console.log('[send-patient-message] Patient message sent successfully');

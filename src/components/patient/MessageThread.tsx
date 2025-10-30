@@ -39,9 +39,10 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
 
       const { error } = await supabase.functions.invoke("send-patient-message", {
         body: {
-          practice_id: firstMsg.practice_id,
-          message_body: messageText,
+          message: messageText,
+          subject: firstMsg.subject,
           thread_id: threadId,
+          parent_message_id: firstMsg.id,
         },
       });
 
@@ -51,9 +52,10 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
       toast.success("Message sent");
       setMessage("");
       refetch();
+      onThreadUpdate?.();
     },
     onError: (error: any) => {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to send message");
     },
   });
 
