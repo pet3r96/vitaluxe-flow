@@ -64,13 +64,15 @@ export function PatientMessageDetails({
               <div className="flex items-center gap-2 mt-1">
                 <Avatar className="h-6 w-6">
                   <AvatarFallback className="text-xs">
-                    {message.sender_type === 'practice' 
+                    {['provider', 'staff', 'practice'].includes(message.sender_type)
                       ? (message.sender?.name || 'P').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
                       : 'PT'}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm">
-                  {message.sender_type === 'practice' ? message.sender?.name || 'Practice' : 'Patient'}
+                  {['provider', 'staff', 'practice'].includes(message.sender_type)
+                    ? (message.sender?.name || 'Practice')
+                    : 'Patient'}
                 </span>
               </div>
             </div>

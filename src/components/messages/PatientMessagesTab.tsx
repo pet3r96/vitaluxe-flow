@@ -116,13 +116,18 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
   // Send reply mutation
   const sendReplyMutation = useMutation({
     mutationFn: async ({ patientId, message }: { patientId: string; message: string }) => {
+      // Get the thread_id from the first message
+      const threadId = threadMessages[0]?.thread_id || threadMessages[0]?.id;
+      
       const { error } = await supabase
         .from('patient_messages')
         .insert({
           patient_id: patientId,
           practice_id: practiceId,
           sender_id: userId,
-          sender_type: 'practice',
+          sender_type: 'provider',
+          thread_id: threadId,
+          parent_message_id: threadMessages[0]?.id,
           subject: 'Reply from Practice',
           message_body: message,
           urgency: selectedMessage?.urgency || 'normal',

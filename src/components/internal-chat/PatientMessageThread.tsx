@@ -140,7 +140,9 @@ export function PatientMessageThread({
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="font-medium">
-                {message.sender_type === 'practice' ? message.sender?.name || 'Practice' : message.patient?.name || 'Patient'}
+                {(message.sender_type === 'provider' || message.sender_type === 'staff' || message.sender_type === 'practice')
+                  ? (message.sender?.name || 'Practice')
+                  : (message.patient?.name || 'Patient')}
               </span>
               <span>•</span>
               <span>{format(new Date(message.created_at), 'PPp')}</span>

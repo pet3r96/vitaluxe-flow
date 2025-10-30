@@ -394,6 +394,7 @@ const InternalChat = () => {
           sender:profiles!patient_messages_practice_id_fkey(id, name)
         `)
         .eq('practice_id', practiceId)
+        .is('parent_message_id', null)
         .order('created_at', { ascending: false });
 
       // Apply filters
@@ -435,7 +436,7 @@ const InternalChat = () => {
 
   // Fetch selected patient message details
   const { data: selectedPatientMessage } = useQuery({
-    queryKey: ['patient-message', selectedPatientMessageId],
+    queryKey: ['patient-message', selectedPatientMessageId, teamMap],
     queryFn: async () => {
       if (!selectedPatientMessageId) return null;
       
@@ -454,20 +455,28 @@ const InternalChat = () => {
         throw error;
       }
       
+      // Enrich with correct sender information using teamMap
+      const isFromPractice = data.sender_type === 'provider' || 
+                            data.sender_type === 'staff' || 
+                            data.sender_type === 'practice';
+      
       return {
         ...data,
         patient: {
           ...data.patient,
           name: `${data.patient?.first_name || ''} ${data.patient?.last_name || ''}`.trim()
-        }
+        },
+        sender: isFromPractice
+          ? { id: data.sender_id, name: teamMap[data.sender_id]?.name || 'Practice' }
+          : { id: data.patient_id, name: `${data.patient?.first_name || ''} ${data.patient?.last_name || ''}`.trim() || 'Patient' }
       };
     },
-    enabled: !!selectedPatientMessageId
+    enabled: !!selectedPatientMessageId && Object.keys(teamMap).length > 0
   });
 
   // Fetch patient message replies (thread)
   const { data: patientReplies = [] } = useQuery({
-    queryKey: ['patient-message-replies', selectedPatientMessageId],
+    queryKey: ['patient-message-replies', selectedPatientMessageId, teamMap],
     queryFn: async () => {
       if (!selectedPatientMessageId) return [];
 
@@ -475,8 +484,7 @@ const InternalChat = () => {
         .from('patient_messages')
         .select(`
           *,
-          patient:patient_accounts!patient_messages_patient_id_fkey(id, first_name, last_name),
-          sender:profiles!patient_messages_practice_id_fkey(id, name)
+          patient:patient_accounts!patient_messages_patient_id_fkey(id, first_name, last_name)
         `)
         .eq('parent_message_id', selectedPatientMessageId)
         .order('created_at', { ascending: true });
@@ -486,18 +494,27 @@ const InternalChat = () => {
         throw error;
       }
 
-      return (data || []).map((reply: any) => ({
-        id: reply.id,
-        body: reply.message_body,
-        created_at: reply.created_at,
-        sender_id: reply.sender_id,
-        sender: {
-          id: reply.sender_id,
-          name: reply.sender_type === 'provider' || reply.sender_type === 'staff' || reply.sender_type === 'practice'
-            ? reply.sender?.name || 'Practice'
-            : `${reply.patient?.first_name || ''} ${reply.patient?.last_name || ''}`.trim() || 'Patient'
-        }
-      }));
+      return (data || []).map((reply: any) => {
+        // Determine sender name based on sender_type
+        const isFromPractice = reply.sender_type === 'provider' || 
+                              reply.sender_type === 'staff' || 
+                              reply.sender_type === 'practice';
+        
+        const senderName = isFromPractice
+          ? (teamMap[reply.sender_id]?.name || 'Practice')
+          : `${reply.patient?.first_name || ''} ${reply.patient?.last_name || ''}`.trim() || 'Patient';
+        
+        return {
+          id: reply.id,
+          body: reply.message_body,
+          created_at: reply.created_at,
+          sender_id: reply.sender_id,
+          sender: {
+            id: reply.sender_id,
+            name: senderName
+          }
+        };
+      });
     },
     enabled: !!selectedPatientMessageId
   });
@@ -521,10 +538,14 @@ const InternalChat = () => {
     mutationFn: async (body: string) => {
       if (!selectedPatientMessage) throw new Error('No message selected');
       
+      // Determine the root thread_id
+      const rootThreadId = selectedPatientMessage.thread_id || selectedPatientMessage.id;
+      
       const { error } = await supabase
         .from('patient_messages')
         .insert({
           parent_message_id: selectedPatientMessageId!,
+          thread_id: rootThreadId,
           patient_id: selectedPatientMessage.patient_id,
           practice_id: practiceId!,
           sender_id: effectiveUserId!,
