@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Calendar } from "lucide-react";
 
@@ -21,6 +22,7 @@ export function RescheduleRequestDialog({
   appointment,
   onSuccess 
 }: RescheduleRequestDialogProps) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -70,6 +72,13 @@ export function RescheduleRequestDialog({
       }
 
       toast.success("Reschedule request sent to practice");
+      
+      // Immediately invalidate all appointment-related queries for instant UI update
+      queryClient.invalidateQueries({ queryKey: ['patient_appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['requested-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-next-appointment'] });
+      
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {

@@ -8,6 +8,7 @@ import { CheckCircle, XCircle, Calendar, Clock, User, AlertTriangle, Edit2 } fro
 import { format, parse } from "date-fns";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -24,6 +25,7 @@ export const AppointmentRequestReviewDialog = ({
   onOpenChange,
   onSuccess,
 }: AppointmentRequestReviewDialogProps) => {
+  const queryClient = useQueryClient();
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
@@ -165,6 +167,11 @@ export const AppointmentRequestReviewDialog = ({
         description: `${patientName}'s appointment has been confirmed for ${format(newStartTime, 'MMMM d, yyyy at h:mm a')}.`,
       });
 
+      // Immediately invalidate all appointment-related queries for instant UI update
+      queryClient.invalidateQueries({ queryKey: ['requested-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      queryClient.invalidateQueries({ queryKey: ['patient_appointments'] });
+
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -205,6 +212,11 @@ export const AppointmentRequestReviewDialog = ({
         title: "Appointment Declined",
         description: "The patient will be notified.",
       });
+
+      // Immediately invalidate all appointment-related queries for instant UI update
+      queryClient.invalidateQueries({ queryKey: ['requested-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      queryClient.invalidateQueries({ queryKey: ['patient_appointments'] });
 
       onSuccess();
     } catch (error: any) {

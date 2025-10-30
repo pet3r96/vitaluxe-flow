@@ -39,6 +39,7 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
   const { data: requestedAppointments = [], refetch } = useQuery({
     queryKey: ["requested-appointments", effectivePracticeId],
     enabled: !!effectivePracticeId,
+    staleTime: 30 * 1000, // 30 seconds instead of default 5 minutes for faster updates
     queryFn: async () => {
       if (!effectivePracticeId) return [] as RequestedAppointment[];
       const { data: { user } } = await supabase.auth.getUser();

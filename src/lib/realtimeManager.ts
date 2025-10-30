@@ -13,7 +13,7 @@ class RealtimeManager {
   private channels = new Map<string, any>();
   private queryClient: QueryClient | null = null;
   private pendingInvalidations = new Map<string, NodeJS.Timeout>();
-  private readonly DEBOUNCE_MS = 100;
+  private readonly DEBOUNCE_MS = 50; // Reduced from 100ms for faster updates
 
   /**
    * Initialize with React Query client for automatic cache invalidation

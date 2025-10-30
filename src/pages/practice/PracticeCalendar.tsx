@@ -120,7 +120,7 @@ export default function PracticeCalendar() {
       debounceTimeout = setTimeout(() => {
         console.log('🔄 Refetching calendar data...');
         refetch();
-      }, 300); // 300ms debounce
+      }, 100); // Reduced from 300ms for faster updates
     };
 
     const appointmentsChannel = supabase

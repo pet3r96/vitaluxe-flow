@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Calendar, Building, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 
@@ -19,6 +19,7 @@ interface AppointmentBookingDialogProps {
 }
 
 export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: AppointmentBookingDialogProps) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [loadingSoonest, setLoadingSoonest] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
@@ -197,6 +198,13 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       if (error) throw error;
 
       toast.success("Appointment request sent to your practice");
+      
+      // Immediately invalidate all appointment-related queries for instant UI update
+      queryClient.invalidateQueries({ queryKey: ['patient_appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['requested-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-next-appointment'] });
+      
       onSuccess();
       onOpenChange(false);
       
