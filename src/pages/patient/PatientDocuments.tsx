@@ -46,6 +46,7 @@ export default function PatientDocuments() {
 
   // Upload form state
   const [file, setFile] = useState<File | null>(null);
+  const [documentName, setDocumentName] = useState("");
   const [documentType, setDocumentType] = useState<string>("");
   const [customTitle, setCustomTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -223,7 +224,7 @@ export default function PatientDocuments() {
 
       const { error: dbError } = await supabase.from("patient_documents").insert({
         patient_id: patientAccount.id,
-        document_name: file.name,
+        document_name: documentName?.trim() || file.name,
         document_type: documentType,
         storage_path: filePath,
         file_size: file.size,
@@ -242,6 +243,7 @@ export default function PatientDocuments() {
         description: "Your document has been uploaded successfully.",
       });
       setFile(null);
+      setDocumentName("");
       setDocumentType("");
       setCustomTitle("");
       setNotes("");
@@ -441,8 +443,23 @@ export default function PatientDocuments() {
               <Input
                 id="file"
                 type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setFile(f);
+                  setDocumentName(f ? f.name : "");
+                }}
                 disabled={uploading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="document-name">Document Name</Label>
+              <Input
+                id="document-name"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                placeholder="e.g., Driver License - Front"
+                disabled={uploading || !file}
               />
             </div>
 
