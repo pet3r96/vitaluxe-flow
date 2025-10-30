@@ -39,6 +39,34 @@ export function TodayAppointmentsWidget() {
     staleTime: 0,
   });
 
+  const { data: providers = [] } = useQuery<any[]>({
+    queryKey: ["widget-providers"],
+    queryFn: async (): Promise<any[]> => {
+      // @ts-ignore - Type inference issue with Supabase client
+      const result: any = await supabase
+        .from("providers")
+        .select("id, first_name, last_name, user_id, is_active")
+        .eq("is_active", true);
+      
+      if (result.error) throw result.error;
+      return result.data || [];
+    },
+  });
+
+  const { data: rooms = [] } = useQuery<any[]>({
+    queryKey: ["widget-rooms"],
+    queryFn: async (): Promise<any[]> => {
+      // @ts-ignore - Type inference issue with Supabase client
+      const result: any = await supabase
+        .from("practice_rooms")
+        .select("id, room_name, is_active")
+        .eq("is_active", true);
+      
+      if (result.error) throw result.error;
+      return result.data || [];
+    },
+  });
+
   // Real-time subscription for instant updates using centralized manager
   useEffect(() => {
     realtimeManager.subscribe('patient_appointments', () => {
@@ -114,8 +142,8 @@ export function TodayAppointmentsWidget() {
           appointment={selectedAppointment}
           open={!!selectedAppointment}
           onOpenChange={(open) => !open && setSelectedAppointment(null)}
-          providers={[]}
-          rooms={[]}
+          providers={providers}
+          rooms={rooms}
         />
       )}
     </>
