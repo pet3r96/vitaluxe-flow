@@ -56,18 +56,13 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
   const { data: providers } = useQuery({
     queryKey: ["practice-providers", patientAccount?.practice_id],
     queryFn: async () => {
-      if (!patientAccount?.practice_id) return [];
-      
-      // Use existing get_practice_team_members RPC
+      if (!patientAccount?.practice_id) return [] as any[];
       const { data, error } = await supabase
-        .rpc('get_practice_team_members', {
-          p_practice_id: patientAccount.practice_id
-        });
-      
+        .from("providers")
+        .select("id, user_id, profiles!providers_user_id_fkey(name)")
+        .eq("practice_id", patientAccount.practice_id);
       if (error) throw error;
-      
-      // Filter to only providers
-      return (data || []).filter((member: any) => member.role_type === 'provider');
+      return data || [];
     },
     enabled: !!patientAccount?.practice_id,
   });
@@ -241,8 +236,8 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
                 </SelectTrigger>
                 <SelectContent>
                   {providers.map((provider: any) => (
-                    <SelectItem key={provider.user_id} value={provider.user_id}>
-                      {provider.name}
+                    <SelectItem key={provider.id} value={provider.id}>
+                      {provider.profiles?.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

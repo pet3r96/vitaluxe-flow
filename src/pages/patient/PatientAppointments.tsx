@@ -17,7 +17,7 @@ export default function PatientAppointments() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const isMobile = useIsMobile();
 
-  const { data: appointments, refetch } = useQuery({
+  const { data: appointments, refetch } = useQuery<any[]>({
     queryKey: ["patient-appointments"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -38,7 +38,7 @@ export default function PatientAppointments() {
       if (error) throw error;
       
       // RPC returns JSONB array
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 
