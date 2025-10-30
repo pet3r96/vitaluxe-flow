@@ -131,9 +131,9 @@ export default function PatientMedicalVault() {
               </p>
             </div>
             
-            {/* Patient Name Badge - 30% smaller */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-2 shadow-xl">
-              <p className="text-base md:text-lg font-semibold text-white">
+            {/* Patient Name Badge - Reduced size */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 shadow-xl">
+              <p className="text-sm md:text-base font-semibold text-white">
                 {isLoading ? (
                   <span className="animate-pulse">Loading...</span>
                 ) : error ? (
@@ -148,38 +148,38 @@ export default function PatientMedicalVault() {
               </p>
             </div>
             
-            {/* Action Buttons - 30% smaller */}
-            <div className="flex flex-wrap gap-2 justify-center pt-2">
+            {/* Action Buttons - Reduced size */}
+            <div className="flex flex-wrap gap-1.5 justify-center pt-2">
               <Button 
                 variant="outline" 
-                size="default"
+                size="sm"
                 className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
               >
-                <Eye className="h-3.5 w-3.5" />
+                <Eye className="h-3 w-3" />
                 View
               </Button>
               <Button 
                 variant="outline" 
-                size="default"
+                size="sm"
                 className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
               >
-                <Printer className="h-3.5 w-3.5" />
+                <Printer className="h-3 w-3" />
                 Print
               </Button>
               <Button 
                 variant="outline" 
-                size="default"
+                size="sm"
                 className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
               >
-                <Download className="h-3.5 w-3.5" />
+                <Download className="h-3 w-3" />
                 Download
               </Button>
               <Button 
                 variant="outline" 
-                size="default"
+                size="sm"
                 className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
               >
-                <Share2 className="h-3.5 w-3.5" />
+                <Share2 className="h-3 w-3" />
                 Share
               </Button>
             </div>
