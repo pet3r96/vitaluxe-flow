@@ -179,7 +179,7 @@ export default function PatientInbox() {
       const { error } = await supabase.functions.invoke("send-patient-message", {
         body: { 
           patient_id: patientId, 
-          message_body: body, 
+          message: body, 
           sender_type: "provider",
           thread_id: threadId,
           parent_message_id: threadId,

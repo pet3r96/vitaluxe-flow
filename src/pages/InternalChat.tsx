@@ -183,12 +183,15 @@ const InternalChat = () => {
     queryFn: async () => {
       if (!practiceId) return [];
       const { data, error } = await supabase
-        .from('patients')
-        .select('id, name')
+        .from('patient_accounts')
+        .select('id, first_name, last_name, email')
         .eq('practice_id', practiceId)
-        .order('name');
+        .order('first_name');
       if (error) throw error;
-      return data;
+      return (data || []).map(p => ({
+        ...p,
+        name: `${p.first_name} ${p.last_name}`.trim()
+      }));
     },
     enabled: !!practiceId
   });
@@ -387,7 +390,7 @@ const InternalChat = () => {
         .from('patient_messages')
         .select(`
           *,
-          patient:patients!patient_messages_patient_id_fkey(id, name, email, phone, dob),
+          patient:patient_accounts!patient_messages_patient_id_fkey(id, first_name, last_name, email, phone),
           sender:profiles!patient_messages_practice_id_fkey(id, name)
         `)
         .eq('practice_id', practiceId)
@@ -408,12 +411,19 @@ const InternalChat = () => {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching patient messages:', error);
+        throw error;
+      }
 
-      // Transform data to include reply count
+      // Transform data to include reply count and patient name
       return (data || []).map((msg: any) => ({
         ...msg,
-        reply_count: 0, // We'll need to fetch this separately or use a join
+        patient: {
+          ...msg.patient,
+          name: `${msg.patient?.first_name || ''} ${msg.patient?.last_name || ''}`.trim()
+        },
+        reply_count: 0,
         unread_count: msg.read_at ? 0 : 1,
         has_attachments: false,
         body: msg.message_body,
@@ -433,14 +443,24 @@ const InternalChat = () => {
         .from('patient_messages')
         .select(`
           *,
-          patient:patients!patient_messages_patient_id_fkey(id, name, email, phone, dob),
+          patient:patient_accounts!patient_messages_patient_id_fkey(id, first_name, last_name, email, phone),
           sender:profiles!patient_messages_practice_id_fkey(id, name)
         `)
         .eq('id', selectedPatientMessageId)
         .single();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching patient message:', error);
+        throw error;
+      }
+      
+      return {
+        ...data,
+        patient: {
+          ...data.patient,
+          name: `${data.patient?.first_name || ''} ${data.patient?.last_name || ''}`.trim()
+        }
+      };
     },
     enabled: !!selectedPatientMessageId
   });
@@ -455,13 +475,16 @@ const InternalChat = () => {
         .from('patient_messages')
         .select(`
           *,
-          patient:patients!patient_messages_patient_id_fkey(id, name),
+          patient:patient_accounts!patient_messages_patient_id_fkey(id, first_name, last_name),
           sender:profiles!patient_messages_practice_id_fkey(id, name)
         `)
         .eq('parent_message_id', selectedPatientMessageId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching patient replies:', error);
+        throw error;
+      }
 
       return (data || []).map((reply: any) => ({
         id: reply.id,
@@ -472,7 +495,7 @@ const InternalChat = () => {
           id: reply.sender_id,
           name: reply.sender_type === 'practice' 
             ? reply.sender?.name || 'Practice'
-            : reply.patient?.name || 'Patient'
+            : `${reply.patient?.first_name || ''} ${reply.patient?.last_name || ''}`.trim() || 'Patient'
         }
       }));
     },
@@ -623,12 +646,26 @@ const InternalChat = () => {
           queryClient.invalidateQueries({ queryKey: ['internal-messages'] });
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_messages',
+          filter: `practice_id=eq.${practiceId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['patient-messages'] });
+          queryClient.invalidateQueries({ queryKey: ['patient-message-replies'] });
+          queryClient.invalidateQueries({ queryKey: ['patient-message'] });
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [practiceId, queryClient]);
+  }, [practiceId, queryClient, effectiveUserId]);
 
   const unreadCount = badgeCounts?.unreadCount || 0;
   const activeCount = messagesData.filter(m => !m.completed).length;
