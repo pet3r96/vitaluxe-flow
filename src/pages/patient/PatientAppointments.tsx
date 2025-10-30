@@ -64,11 +64,26 @@ export default function PatientAppointments() {
 
       if (error) throw error;
 
-      const blob = new Blob([data as string], { type: 'text/calendar' });
+      // Handle different response formats
+      let icsContent: string;
+      let filename: string;
+      
+      if (typeof data === 'string') {
+        icsContent = data;
+        filename = `appointment-${appointmentId}.ics`;
+      } else if (data?.ics) {
+        icsContent = data.ics;
+        filename = data.filename || `appointment-${appointmentId}.ics`;
+      } else {
+        throw new Error('Invalid response format');
+      }
+
+      // Create blob and download
+      const blob = new Blob([icsContent], { type: 'text/calendar' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `appointment-${appointmentId}.ics`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -76,7 +91,8 @@ export default function PatientAppointments() {
 
       toast.success("Calendar event downloaded");
     } catch (error: any) {
-      toast.error("Failed to generate calendar event");
+      console.error("Error generating calendar event:", error);
+      toast.error(error.message || "Failed to generate calendar event");
     }
   };
 
@@ -150,7 +166,7 @@ export default function PatientAppointments() {
                       </div>
                     )}
                     {appt.provider && (
-                      <p className="text-sm">Provider: {appt.provider.name}</p>
+                      <p className="text-sm">Provider: {appt.provider.display_name}</p>
                     )}
                     {appt.practice && appt.visit_type === 'in_person' && (
                       <div className="flex items-start gap-2 text-sm text-muted-foreground">

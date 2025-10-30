@@ -161,8 +161,12 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     console.error('Error validating appointment time:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        valid: false,
+        error: error.message || 'Unable to validate appointment time. Please try again.',
+        alternatives: []
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

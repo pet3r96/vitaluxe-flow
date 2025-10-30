@@ -38,12 +38,11 @@ Deno.serve(async (req) => {
     }
 
     const practiceId = patientAccount.practice_id;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
     
-    // Start searching from tomorrow
-    const searchStart = new Date(today);
-    searchStart.setDate(searchStart.getDate() + 1);
+    // Start searching from today
+    const searchStart = new Date(now);
+    searchStart.setHours(0, 0, 0, 0);
     
     // Search up to 30 days ahead
     const maxDays = 30;
@@ -87,6 +86,9 @@ Deno.serve(async (req) => {
         
         const slotDateTime = new Date(checkDate);
         slotDateTime.setHours(slotHour, slotMin, 0, 0);
+        
+        // Skip slots in the past for today
+        if (slotDateTime <= now) continue;
         
         const endSlotDateTime = new Date(slotDateTime);
         endSlotDateTime.setMinutes(endSlotDateTime.getMinutes() + duration);
@@ -158,8 +160,11 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     console.error('Error finding availability:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        available: false,
+        message: error.message || 'Unable to find availability. Please try again.'
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

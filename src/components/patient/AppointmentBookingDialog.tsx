@@ -41,7 +41,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       
       const { data, error } = await supabase
         .from("patient_accounts")
-        .select("id, practice_id, profiles!patient_accounts_practice_id_fkey(name, address_city, address_state)")
+        .select("id, practice_id, practice:profiles!patient_accounts_practice_id_fkey(name, address_city, address_state)")
         .eq("user_id", effectiveUserId)
         .maybeSingle();
       
@@ -87,22 +87,21 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       
       if (error) throw error;
       
-      if (data.available) {
+      if (data?.available) {
         setSelectedDate(data.suggestedDate);
         setSelectedTime(data.suggestedTime);
         toast.success(data.message);
         setValidationMessage({ type: 'success', text: data.message });
       } else {
-        toast.error('No availability found in the next 30 days');
-        setValidationMessage({ 
-          type: 'error', 
-          text: 'No availability found. Please contact the practice directly.' 
-        });
+        const message = data?.message || 'No availability found in the next 30 days';
+        toast.error(message);
+        setValidationMessage({ type: 'error', text: message });
       }
     } catch (error: any) {
       console.error('Error finding availability:', error);
-      toast.error(error.message || 'Failed to find availability');
-      setValidationMessage({ type: 'error', text: error.message || 'Failed to find availability' });
+      const message = error.message || 'Failed to find availability';
+      toast.error(message);
+      setValidationMessage({ type: 'error', text: message });
     } finally {
       setLoadingSoonest(false);
     }
@@ -121,10 +120,10 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       
       if (error) throw error;
       
-      if (data.valid) {
+      if (data?.valid) {
         setValidationMessage({ type: 'success', text: 'This time slot is available!' });
       } else {
-        setValidationMessage({ type: 'error', text: data.error });
+        setValidationMessage({ type: 'error', text: data?.error || 'Time slot is not available' });
       }
     } catch (error: any) {
       console.error('Validation error:', error);
@@ -204,7 +203,11 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
             Book Appointment
           </DialogTitle>
           <DialogDescription>
-            Request an appointment with your healthcare provider
+            {patientAccount?.practice ? (
+              <>Request an appointment with {Array.isArray(patientAccount.practice) ? patientAccount.practice[0]?.name : patientAccount.practice?.name}</>
+            ) : (
+              <>Request an appointment with your healthcare provider</>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -214,9 +217,17 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm text-muted-foreground">Your Practice</Label>
-                  <p className="font-medium text-lg">{patientAccount.profiles?.name}</p>
+                  <p className="font-medium text-lg">
+                    {Array.isArray(patientAccount.practice) 
+                      ? patientAccount.practice[0]?.name 
+                      : patientAccount.practice?.name || 'Your Practice'}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    {patientAccount.profiles?.address_city}, {patientAccount.profiles?.address_state}
+                    {Array.isArray(patientAccount.practice) 
+                      ? `${patientAccount.practice[0]?.address_city}, ${patientAccount.practice[0]?.address_state}` 
+                      : patientAccount.practice 
+                        ? `${patientAccount.practice.address_city}, ${patientAccount.practice.address_state}`
+                        : ''}
                   </p>
                 </div>
                 <Badge variant="outline" className="flex items-center gap-1">
