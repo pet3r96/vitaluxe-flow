@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Heart, Plus, Edit, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useState } from "react";
+import { ConditionDialog } from "./dialogs/ConditionDialog";
 
 interface Condition {
   id: string;
@@ -20,10 +22,18 @@ interface ConditionsSectionProps {
 
 export function ConditionsSection({ patientAccountId, conditions }: ConditionsSectionProps) {
   const activeConditions = conditions.filter(c => c.is_active);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCondition, setSelectedCondition] = useState<any>(null);
+  const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
+
+  const openDialog = (mode: "add" | "edit" | "view", condition?: any) => {
+    setDialogMode(mode);
+    setSelectedCondition(condition || null);
+    setDialogOpen(true);
+  };
   
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-red-500/10 to-pink-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
-      {/* Animated border glow effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
       <CardHeader className="relative z-10">
@@ -39,8 +49,9 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
           <Button 
             size="sm" 
             className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            onClick={() => openDialog("add")}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 mr-1" />
             Add
           </Button>
         </div>
@@ -77,10 +88,10 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" onClick={() => openDialog("view", condition)}>
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" onClick={() => openDialog("edit", condition)}>
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -93,6 +104,14 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
           </p>
         )}
       </CardContent>
+
+      <ConditionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        patientAccountId={patientAccountId || ""}
+        condition={selectedCondition}
+        mode={dialogMode}
+      />
     </Card>
   );
 }

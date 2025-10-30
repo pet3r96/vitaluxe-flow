@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Pill, Plus, Edit, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useState } from "react";
+import { MedicationDialog } from "./dialogs/MedicationDialog";
 
 interface Medication {
   id: string;
@@ -22,6 +24,15 @@ interface MedicationsSectionProps {
 
 export function MedicationsSection({ patientAccountId, medications }: MedicationsSectionProps) {
   const activeMedications = medications.filter(m => m.is_active);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedMedication, setSelectedMedication] = useState<any>(null);
+  const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
+
+  const openDialog = (mode: "add" | "edit" | "view", medication?: any) => {
+    setDialogMode(mode);
+    setSelectedMedication(medication || null);
+    setDialogOpen(true);
+  };
   
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -41,8 +52,9 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
           <Button 
             size="sm" 
             className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            onClick={() => openDialog("add")}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 mr-1" />
             Add
           </Button>
         </div>
@@ -69,10 +81,10 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" onClick={() => openDialog("view", med)}>
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" onClick={() => openDialog("edit", med)}>
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -85,6 +97,14 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
           </p>
         )}
       </CardContent>
+
+      <MedicationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        patientAccountId={patientAccountId || ""}
+        medication={selectedMedication}
+        mode={dialogMode}
+      />
     </Card>
   );
 }
