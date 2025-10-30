@@ -6,7 +6,10 @@ import { ConversationList } from "@/components/internal-chat/ConversationList";
 import { MessageThread } from "@/components/internal-chat/MessageThread";
 import { MessageDetails } from "@/components/internal-chat/MessageDetails";
 import { CreateInternalMessageDialog } from "@/components/internal-chat/CreateInternalMessageDialog";
-import { PatientMessagesTab } from "@/components/messages/PatientMessagesTab";
+import { PatientConversationList } from "@/components/internal-chat/PatientConversationList";
+import { PatientMessageThread } from "@/components/internal-chat/PatientMessageThread";
+import { PatientMessageDetails } from "@/components/internal-chat/PatientMessageDetails";
+import { CreatePatientMessageDialog } from "@/components/internal-chat/CreatePatientMessageDialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -18,6 +21,7 @@ const InternalChat = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
+  // Internal messages state
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     searchParams.get('message')
   );
@@ -26,6 +30,14 @@ const InternalChat = () => {
   const [selectedPatientFilter, setSelectedPatientFilter] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [showDetailsMobile, setShowDetailsMobile] = useState(false);
+
+  // Patient messages state
+  const [selectedPatientMessageId, setSelectedPatientMessageId] = useState<string | null>(null);
+  const [patientFilterTab, setPatientFilterTab] = useState<'active' | 'urgent' | 'patient' | 'resolved'>('active');
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
+  const [selectedPatientInFilter, setSelectedPatientInFilter] = useState<string>('all');
+  const [createPatientDialogOpen, setCreatePatientDialogOpen] = useState(false);
+  const [showPatientDetailsMobile, setShowPatientDetailsMobile] = useState(false);
 
   // Get practice ID based on user role
   const { data: practiceId } = useQuery({
@@ -326,6 +338,225 @@ const InternalChat = () => {
     }
   });
 
+  // ===== PATIENT MESSAGES QUERIES AND MUTATIONS =====
+
+  // Fetch patient messages with filters
+  const { data: patientMessagesData = [], isLoading: patientMessagesLoading } = useQuery({
+    queryKey: ['patient-messages', practiceId, patientFilterTab, patientSearchQuery, selectedPatientInFilter],
+    queryFn: async () => {
+      if (!practiceId) return [];
+
+      let query = supabase
+        .from('patient_messages')
+        .select(`
+          *,
+          patient:patients!patient_messages_patient_id_fkey(id, name, email, phone, dob),
+          sender:profiles!patient_messages_practice_id_fkey(id, name)
+        `)
+        .eq('practice_id', practiceId)
+        .order('created_at', { ascending: false });
+
+      // Apply filters
+      if (patientFilterTab === 'active') {
+        query = query.eq('resolved', false);
+      } else if (patientFilterTab === 'urgent') {
+        query = query.eq('urgency', 'urgent').eq('resolved', false);
+      } else if (patientFilterTab === 'patient' && selectedPatientInFilter && selectedPatientInFilter !== 'all') {
+        query = query.eq('patient_id', selectedPatientInFilter);
+      } else if (patientFilterTab === 'resolved') {
+        query = query.eq('resolved', true);
+      }
+
+      // Apply search
+      if (patientSearchQuery) {
+        query = query.or(`subject.ilike.%${patientSearchQuery}%,message_body.ilike.%${patientSearchQuery}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Transform data to include reply count
+      return (data || []).map((msg: any) => ({
+        ...msg,
+        reply_count: 0, // We'll need to fetch this separately or use a join
+        unread_count: msg.read_at ? 0 : 1,
+        has_attachments: false,
+        body: msg.message_body,
+        priority: msg.urgency || 'medium'
+      }));
+    },
+    enabled: !!practiceId
+  });
+
+  // Fetch selected patient message details
+  const { data: selectedPatientMessage } = useQuery({
+    queryKey: ['patient-message', selectedPatientMessageId],
+    queryFn: async () => {
+      if (!selectedPatientMessageId) return null;
+      
+      const { data, error } = await supabase
+        .from('patient_messages')
+        .select(`
+          *,
+          patient:patients!patient_messages_patient_id_fkey(id, name, email, phone, dob),
+          sender:profiles!patient_messages_practice_id_fkey(id, name)
+        `)
+        .eq('id', selectedPatientMessageId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedPatientMessageId
+  });
+
+  // Fetch patient message replies (thread)
+  const { data: patientReplies = [] } = useQuery({
+    queryKey: ['patient-message-replies', selectedPatientMessageId],
+    queryFn: async () => {
+      if (!selectedPatientMessageId) return [];
+
+      const { data, error } = await supabase
+        .from('patient_messages')
+        .select(`
+          *,
+          patient:patients!patient_messages_patient_id_fkey(id, name),
+          sender:profiles!patient_messages_practice_id_fkey(id, name)
+        `)
+        .eq('parent_message_id', selectedPatientMessageId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map((reply: any) => ({
+        id: reply.id,
+        body: reply.message_body,
+        created_at: reply.created_at,
+        sender_id: reply.sender_id,
+        sender: {
+          id: reply.sender_id,
+          name: reply.sender_type === 'practice' 
+            ? reply.sender?.name || 'Practice'
+            : reply.patient?.name || 'Patient'
+        }
+      }));
+    },
+    enabled: !!selectedPatientMessageId
+  });
+
+  // Mark patient message as read when selected
+  useEffect(() => {
+    if (selectedPatientMessageId && effectiveUserId) {
+      supabase
+        .from('patient_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', selectedPatientMessageId)
+        .is('read_at', null)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['patient-messages'] });
+        });
+    }
+  }, [selectedPatientMessageId, effectiveUserId, queryClient]);
+
+  // Send patient reply mutation
+  const sendPatientReplyMutation = useMutation({
+    mutationFn: async (body: string) => {
+      if (!selectedPatientMessage) throw new Error('No message selected');
+      
+      const { error } = await supabase
+        .from('patient_messages')
+        .insert({
+          parent_message_id: selectedPatientMessageId!,
+          patient_id: selectedPatientMessage.patient_id,
+          practice_id: practiceId!,
+          sender_id: effectiveUserId!,
+          sender_type: 'practice',
+          subject: `Re: ${selectedPatientMessage.subject}`,
+          message_body: body,
+          urgency: selectedPatientMessage.urgency
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-message-replies', selectedPatientMessageId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-messages'] });
+      toast.success('Reply sent');
+    },
+    onError: (error: any) => {
+      console.error('Error sending patient reply:', error);
+      toast.error('Failed to send reply');
+    }
+  });
+
+  // Mark patient message resolved mutation
+  const markPatientResolvedMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('patient_messages')
+        .update({
+          resolved: true,
+          resolved_at: new Date().toISOString(),
+          resolved_by: effectiveUserId
+        })
+        .eq('id', selectedPatientMessageId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-message', selectedPatientMessageId] });
+      toast.success('Message marked as resolved');
+    },
+    onError: () => {
+      toast.error('Failed to mark message as resolved');
+    }
+  });
+
+  // Reopen patient message mutation
+  const reopenPatientMessageMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('patient_messages')
+        .update({
+          resolved: false,
+          resolved_at: null,
+          resolved_by: null
+        })
+        .eq('id', selectedPatientMessageId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-message', selectedPatientMessageId] });
+      toast.success('Message reopened');
+    },
+    onError: () => {
+      toast.error('Failed to reopen message');
+    }
+  });
+
+  // Delete patient message mutation
+  const deletePatientMessageMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('patient_messages')
+        .delete()
+        .eq('id', selectedPatientMessageId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-messages'] });
+      setSelectedPatientMessageId(null);
+      toast.success('Message deleted');
+    },
+    onError: () => {
+      toast.error('Failed to delete message');
+    }
+  });
+
+  const patientUnreadCount = patientMessagesData.filter(m => !m.read_at).length;
+  const patientActiveCount = patientMessagesData.filter(m => !m.resolved).length;
+  const patientUrgentCount = patientMessagesData.filter(m => m.urgency === 'urgent' && !m.resolved).length;
+
   // Real-time subscriptions
   useEffect(() => {
     if (!practiceId) return;
@@ -475,10 +706,84 @@ const InternalChat = () => {
         </TabsContent>
 
         <TabsContent value="patients" className="space-y-0">
-          <PatientMessagesTab 
-            practiceId={practiceId} 
-            userId={effectiveUserId!} 
-          />
+          <div className="flex h-[90vh] overflow-hidden bg-background">
+            {/* Mobile: Show list or thread */}
+            <div className="flex flex-1 lg:hidden">
+              {!selectedPatientMessageId ? (
+                <PatientConversationList
+                  filter={patientFilterTab}
+                  setFilter={setPatientFilterTab}
+                  searchQuery={patientSearchQuery}
+                  setSearchQuery={setPatientSearchQuery}
+                  selectedPatient={selectedPatientInFilter}
+                  setSelectedPatient={setSelectedPatientInFilter}
+                  messages={patientMessagesData}
+                  patients={patients}
+                  isLoading={patientMessagesLoading}
+                  selectedMessageId={selectedPatientMessageId}
+                  onSelectMessage={setSelectedPatientMessageId}
+                  onNewMessage={() => setCreatePatientDialogOpen(true)}
+                  unreadCount={patientUnreadCount}
+                  activeCount={patientActiveCount}
+                  urgentCount={patientUrgentCount}
+                />
+              ) : (
+                <PatientMessageThread
+                  message={selectedPatientMessage}
+                  replies={patientReplies}
+                  userId={effectiveUserId!}
+                  isLoading={false}
+                  onClose={() => setSelectedPatientMessageId(null)}
+                  onSendReply={(text) => sendPatientReplyMutation.mutateAsync(text)}
+                  onMarkResolved={() => markPatientResolvedMutation.mutateAsync()}
+                  onReopen={() => reopenPatientMessageMutation.mutateAsync()}
+                  onShowDetails={() => setShowPatientDetailsMobile(true)}
+                />
+              )}
+            </div>
+
+            {/* Desktop: Three-column layout */}
+            <div className="hidden lg:flex lg:flex-1">
+              <PatientConversationList
+                filter={patientFilterTab}
+                setFilter={setPatientFilterTab}
+                searchQuery={patientSearchQuery}
+                setSearchQuery={setPatientSearchQuery}
+                selectedPatient={selectedPatientInFilter}
+                setSelectedPatient={setSelectedPatientInFilter}
+                messages={patientMessagesData}
+                patients={patients}
+                isLoading={patientMessagesLoading}
+                selectedMessageId={selectedPatientMessageId}
+                onSelectMessage={setSelectedPatientMessageId}
+                onNewMessage={() => setCreatePatientDialogOpen(true)}
+                unreadCount={patientUnreadCount}
+                activeCount={patientActiveCount}
+                urgentCount={patientUrgentCount}
+              />
+
+              <PatientMessageThread
+                message={selectedPatientMessage}
+                replies={patientReplies}
+                userId={effectiveUserId!}
+                isLoading={false}
+                onClose={() => setSelectedPatientMessageId(null)}
+                onSendReply={(text) => sendPatientReplyMutation.mutateAsync(text)}
+                onMarkResolved={() => markPatientResolvedMutation.mutateAsync()}
+                onReopen={() => reopenPatientMessageMutation.mutateAsync()}
+                onShowDetails={() => {}}
+              />
+
+              {selectedPatientMessage && (
+                <PatientMessageDetails
+                  message={selectedPatientMessage}
+                  onMarkResolved={() => markPatientResolvedMutation.mutateAsync()}
+                  onReopen={() => reopenPatientMessageMutation.mutateAsync()}
+                  onDelete={() => deletePatientMessageMutation.mutateAsync()}
+                />
+              )}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -503,6 +808,15 @@ const InternalChat = () => {
         practiceId={practiceId}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['internal-messages'] });
+        }}
+      />
+
+      <CreatePatientMessageDialog
+        open={createPatientDialogOpen}
+        onOpenChange={setCreatePatientDialogOpen}
+        practiceId={practiceId}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['patient-messages'] });
         }}
       />
     </>
