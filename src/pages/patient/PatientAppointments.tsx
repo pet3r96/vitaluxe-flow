@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,18 @@ import { Calendar, Clock, MapPin, Download, Video, Building } from "lucide-react
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function PatientAppointments() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const isMobile = useIsMobile();
+ 
+  const queryClient = useQueryClient();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const { data: appointments, refetch } = useQuery<any[]>({
     queryKey: ["patient-appointments"],
@@ -87,7 +93,7 @@ export default function PatientAppointments() {
         // Fetch practice profile for address
         const { data: practiceProfile } = await supabase
           .from('profiles')
-          .select('address_street, address_city, address_state, address_zip')
+          .select('address_formatted, address_street, address_city, address_state, address_zip')
           .eq('id', patientAccount.practice_id)
           .maybeSingle();
 
@@ -99,6 +105,7 @@ export default function PatientAppointments() {
             practice: {
               id: r.practice_id,
               name: branding?.practice_name || 'Practice',
+              address_formatted: practiceProfile?.address_formatted,
               address_street: practiceProfile?.address_street,
               address_city: practiceProfile?.address_city,
               address_state: practiceProfile?.address_state,
@@ -116,25 +123,36 @@ export default function PatientAppointments() {
     }
   });
 
-  const handleCancelAppointment = async (appointmentId: string) => {
-    const confirmed = window.confirm("Are you sure you want to cancel this appointment? This action cannot be undone.");
-    if (!confirmed) return;
+  const handleCancelAppointment = (appointmentId: string) => {
+    setCancelId(appointmentId);
+    setCancelOpen(true);
+  };
 
+  const confirmCancel = async () => {
+    if (!cancelId) return;
     try {
+      setIsCancelling(true);
       const { error } = await supabase.functions.invoke("cancel-appointment", {
-        body: { appointmentId },
+        body: { appointmentId: cancelId },
+      });
+      if (error) throw error;
+
+      // Optimistically remove from cache so it disappears immediately
+      queryClient.setQueryData(["patient-appointments"], (old: any[] | undefined) => {
+        if (!old) return old;
+        return old.filter((a) => a.id !== cancelId);
       });
 
-      if (error) {
-        console.error("Cancel error:", error);
-        throw error;
-      }
-
       toast.success("Appointment cancelled");
+      setCancelOpen(false);
+      setCancelId(null);
+      // Ensure server state sync
       refetch();
     } catch (error: any) {
       console.error("Cancel appointment failed:", error);
       toast.error(error.message || "Failed to cancel appointment");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -194,7 +212,7 @@ export default function PatientAppointments() {
       : <Badge variant="outline" className="gap-1"><Building className="h-3 w-3" />In-Person</Badge>;
   };
 
-  const upcoming = appointments?.filter((a: any) => new Date(a.start_time) >= new Date()) || [];
+  const upcoming = appointments?.filter((a: any) => new Date(a.start_time) >= new Date() && a.status !== 'cancelled') || [];
   const past = appointments?.filter((a: any) => new Date(a.start_time) < new Date()) || [];
 
   return (
@@ -255,6 +273,8 @@ export default function PatientAppointments() {
                         <MapPin className="h-4 w-4 mt-0.5" />
                         <span>
                           {(() => {
+                            const formatted = appt.practice.address_formatted;
+                            if (formatted) return formatted;
                             const parts = [
                               appt.practice.address_street,
                               appt.practice.address_city,

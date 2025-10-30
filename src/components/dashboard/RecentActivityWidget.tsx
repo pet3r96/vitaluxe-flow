@@ -3,29 +3,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, FileText, Calendar, Package, CheckCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function RecentActivityWidget({ className }: { className?: string }) {
+  const { effectivePracticeId } = useAuth();
   const { data: activities, isLoading } = useQuery({
-    queryKey: ["recent-activity"],
+    queryKey: ["recent-activity", effectivePracticeId],
+    enabled: !!effectivePracticeId,
     queryFn: async () => {
+      if (!effectivePracticeId) return [] as any[];
       // Get recent orders
       const { data: orders } = await supabase
         .from("orders")
         .select("id, status, updated_at")
         .order("updated_at", { ascending: false })
-        .limit(5);
-
+        .limit(5) as any;
+      
       // Get recent appointments
       const { data: appointments } = await supabase
         .from("patient_appointments")
-        .select("id, status, updated_at, patient_accounts(full_name)")
+        .select("id, status, updated_at, practice_id, patient_accounts(full_name)")
+        .eq("practice_id", effectivePracticeId)
         .order("updated_at", { ascending: false })
         .limit(5) as any;
-
+      
       // Get recent documents (if accessible)
       const { data: documents } = await supabase
         .from("provider_documents" as any)
-        .select("id, document_name, status, updated_at")
+        .select("id, document_name, status, updated_at, practice_id")
+        .eq("practice_id", effectivePracticeId)
         .order("updated_at", { ascending: false })
         .limit(5) as any;
 

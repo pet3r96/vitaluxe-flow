@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     const { error } = await supabaseClient
       .from('patient_appointments')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .update({ status: 'cancelled', updated_at: new Date().toISOString(), cancelled_at: new Date().toISOString() })
       .eq('id', appointmentId);
 
     if (error) throw error;

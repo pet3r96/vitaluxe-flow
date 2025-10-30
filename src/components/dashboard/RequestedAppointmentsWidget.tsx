@@ -8,6 +8,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { useState, useEffect } from "react";
 import { AppointmentRequestReviewDialog } from "@/components/calendar/AppointmentRequestReviewDialog";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RequestedAppointment {
   id: string;
@@ -33,25 +34,15 @@ interface RequestedAppointment {
 
 export const RequestedAppointmentsWidget = ({ className }: { className?: string }) => {
   const [selectedAppointment, setSelectedAppointment] = useState<RequestedAppointment | null>(null);
+  const { effectivePracticeId } = useAuth();
 
   const { data: requestedAppointments = [], refetch } = useQuery({
-    queryKey: ["requested-appointments"],
+    queryKey: ["requested-appointments", effectivePracticeId],
+    enabled: !!effectivePracticeId,
     queryFn: async () => {
+      if (!effectivePracticeId) return [] as RequestedAppointment[];
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
-      // Check for impersonation
-      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
-
-      // Get practice ID from profiles
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', effectiveUserId)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
 
       const { data, error } = await supabase
         .from('patient_appointments')
@@ -76,7 +67,7 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
             )
           )
         `)
-        .eq('practice_id', profile.id)
+        .eq('practice_id', effectivePracticeId as string)
         .eq('confirmation_type', 'pending')
         .eq('status', 'pending')
         .order('start_time', { ascending: true })

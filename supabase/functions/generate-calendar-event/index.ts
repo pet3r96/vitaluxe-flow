@@ -33,8 +33,10 @@ Deno.serve(async (req) => {
 
     // Generate ICS format
     const startDate = new Date(appointment.start_time);
-    const endDate = new Date(appointment.end_time);
-    
+    let endDate = new Date(appointment.end_time);
+    if (isNaN(endDate.getTime())) {
+      endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+    }
     const formatDate = (date: Date) => {
       return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };

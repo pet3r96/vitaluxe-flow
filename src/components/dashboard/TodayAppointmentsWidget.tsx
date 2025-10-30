@@ -16,8 +16,10 @@ export function TodayAppointmentsWidget() {
   const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
 
   const { data: appointments, isLoading } = useQuery({
-    queryKey: ["today-appointments"],
+    queryKey: ["today-appointments", effectivePracticeId],
+    enabled: !!effectivePracticeId,
     queryFn: async () => {
+      if (!effectivePracticeId) return [] as any[];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -29,6 +31,7 @@ export function TodayAppointmentsWidget() {
           *,
           patient_account:patient_accounts(id, first_name, last_name)
         `)
+        .eq("practice_id", effectivePracticeId)
         .gte("start_time", today.toISOString())
         .lt("start_time", tomorrow.toISOString())
         .neq("status", "cancelled")
@@ -107,11 +110,11 @@ export function TodayAppointmentsWidget() {
   // Real-time subscription for instant updates using centralized manager
   useEffect(() => {
     realtimeManager.subscribe('patient_appointments', () => {
-      queryClient.invalidateQueries({ queryKey: ["today-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["today-appointments", effectivePracticeId] });
     });
     
     // Cleanup handled by realtimeManager
-  }, [queryClient]);
+  }, [queryClient, effectivePracticeId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
