@@ -459,7 +459,7 @@ export default function PatientDocuments() {
                 value={documentName}
                 onChange={(e) => setDocumentName(e.target.value)}
                 placeholder="e.g., Driver License - Front"
-                disabled={uploading || !file}
+                disabled={uploading}
               />
             </div>
 
