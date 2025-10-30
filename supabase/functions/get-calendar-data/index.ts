@@ -65,13 +65,13 @@ Deno.serve(async (req) => {
       console.log('Provider scope (admin impersonation):', isProviderScoped, 'Effective Provider ID:', providerRecord?.id);
     }
 
-    // Build query
+    // Build query - use left join for providers so pending appointments without providers show up
     let query = supabaseClient
       .from('patient_appointments')
       .select(`
         *,
         patient_accounts!inner(id, first_name, last_name, phone, email),
-        providers!inner(id, user_id, profiles!inner(name)),
+        providers(id, user_id, profiles(name)),
         practice_rooms(id, name, color),
         checked_in_at,
         treatment_started_at
