@@ -104,61 +104,82 @@ export default function PatientMedicalVault() {
     <div className="space-y-6 p-6">
       {/* Patient Quick View Dashboard */}
       <Card className="border-2">
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-3xl font-bold">
-                {patientAccount?.first_name} {patientAccount?.last_name}
-              </CardTitle>
-              <CardDescription className="text-lg mt-2">
-                Medical Vault - Secure Health Information
-              </CardDescription>
+        <CardHeader className="pb-6">
+          {/* Centered Title with Gold Lock */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <Lock className="h-6 w-6 text-yellow-600" />
+            <CardTitle className="text-2xl font-bold">
+              Medical Vault - Secure Health Information
+            </CardTitle>
+          </div>
+
+          {/* Three-column layout: Patient Info (left) | Spacer | Actions (right) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Left Column: Patient Info (left-aligned) */}
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Full Name</p>
+                <p className="font-medium">{patientAccount?.first_name} {patientAccount?.last_name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">DOB</p>
+                <p className="font-medium">
+                  {patientAccount?.date_of_birth 
+                    ? format(new Date(patientAccount.date_of_birth), 'MM/dd/yyyy')
+                    : 'Not set'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Phone Number</p>
+                <p className="font-medium">{patientAccount?.phone || 'Not set'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Gender</p>
+                <p className="font-medium">{patientAccount?.gender_at_birth || 'Not set'}</p>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Lock className="h-4 w-4 mr-2" />
-                Secure
-              </Button>
-              <Button variant="outline" size="sm">
-                <FileText className="h-4 w-4 mr-2" />
-                Print
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
+
+            {/* Middle Column: Spacer */}
+            <div></div>
+
+            {/* Right Column: Actions & Metadata (right-aligned) */}
+            <div className="space-y-4 flex flex-col items-end">
+              {/* Action Buttons - Horizontal */}
+              <div className="flex gap-2 flex-wrap justify-end">
+                <Button variant="ghost" size="sm" className="uppercase text-xs font-semibold">
+                  Secure
+                </Button>
+                <Button variant="ghost" size="sm" className="uppercase text-xs font-semibold">
+                  Print
+                </Button>
+                <Button variant="ghost" size="sm" className="uppercase text-xs font-semibold">
+                  Download
+                </Button>
+                <Button variant="ghost" size="sm" className="uppercase text-xs font-semibold">
+                  Share
+                </Button>
+              </div>
+
+              {/* Last Login */}
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Last Login</p>
+                <p className="font-medium text-sm">
+                  {patientAccount?.updated_at 
+                    ? format(new Date(patientAccount.updated_at), 'MMM dd, yyyy hh:mm a')
+                    : 'Not available'}
+                </p>
+              </div>
+
+              {/* Practice */}
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Practice:</p>
+                <p className="font-medium text-sm">Not assigned</p>
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Date of Birth</p>
-              <p className="font-medium">
-                {patientAccount?.date_of_birth 
-                  ? format(new Date(patientAccount.date_of_birth), 'MMM dd, yyyy')
-                  : 'Not set'}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Gender at Birth</p>
-              <p className="font-medium">{patientAccount?.gender_at_birth || 'Not set'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Contact</p>
-              <p className="font-medium">{patientAccount?.phone || patientAccount?.email || 'Not set'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Primary Provider</p>
-              <p className="font-medium">Not assigned</p>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t">
+          <div>
             <div className="grid md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
