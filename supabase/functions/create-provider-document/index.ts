@@ -201,21 +201,21 @@ Deno.serve(async (req) => {
     if (patientIds && patientIds.length > 0) {
       console.log('[create-provider-document] Assigning to patients:', patientIds);
 
-      // Validate all patients belong to this practice
-      const { data: patientValidation, error: pvErr } = await supabaseAdmin
-        .from('patient_accounts')
-        .select('id, practice_id')
-        .in('id', patientIds);
+    // Validate that all patients belong to the determined practice
+    const { data: validPatients, error: validationError } = await supabaseAdmin
+      .from('patients')
+      .select('id, practice_id')
+      .in('id', patientIds);
 
-      if (pvErr) {
-        console.error('[create-provider-document] Patient validation error:', pvErr);
+      if (validationError) {
+        console.error('[create-provider-document] Patient validation error:', validationError);
         return new Response(
           JSON.stringify({ error: 'Patient validation failed' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const invalidPatients = patientValidation.filter(p => p.practice_id !== effectivePracticeId);
+      const invalidPatients = validPatients.filter(p => p.practice_id !== effectivePracticeId);
       if (invalidPatients.length > 0) {
         console.error('[create-provider-document] Invalid patients:', invalidPatients);
         return new Response(

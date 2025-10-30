@@ -52,7 +52,7 @@ export const PatientSelectionDialog = ({
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<'details' | 'prescription'>('details');
-  const [shipTo, setShipTo] = useState<'patient' | 'practice'>('patient');
+  const [shipTo, setShipTo] = useState<'patient' | 'practice'>(effectiveRole === 'staff' ? 'practice' : 'patient');
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);

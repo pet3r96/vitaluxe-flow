@@ -46,14 +46,14 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
   }, [document]);
 
   const { data: patients } = useQuery({
-    queryKey: ["patient-accounts-select"],
+    queryKey: ["patients-for-edit"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_accounts")
-        .select("id, first_name, last_name")
-        .order("first_name");
+        .from("patients")
+        .select("id, name")
+        .order("name");
       if (error) throw error;
-      return data?.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}`.trim() })) || [];
+      return data || [];
     },
   });
 

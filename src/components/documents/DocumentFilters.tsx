@@ -27,16 +27,16 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
   const { effectivePracticeId } = useAuth();
 
   const { data: patients } = useQuery({
-    queryKey: ["patient-accounts-select", effectivePracticeId],
+    queryKey: ["patients-filter", effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       const { data, error } = await supabase
-        .from("patient_accounts")
-        .select("id, first_name, last_name")
+        .from("patients")
+        .select("id, name")
         .eq("practice_id", effectivePracticeId)
-        .order("first_name");
+        .order("name");
       if (error) throw error;
-      return data?.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}`.trim() })) || [];
+      return data || [];
     },
     enabled: !!effectivePracticeId,
   });

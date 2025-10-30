@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsGrid = () => {
-  const { effectiveRole, effectiveUserId, isImpersonating } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId, isImpersonating } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
@@ -58,7 +58,7 @@ export const ProductsGrid = () => {
   // Only real non-impersonating admins bypass visibility filtering
   const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
 
-  const { canOrder } = useStaffOrderingPrivileges();
+  const { canOrder, isStaffAccount } = useStaffOrderingPrivileges();
   const { data: cartCount } = useCartCount(effectiveUserId);
 
   const { data: products, isLoading, refetch } = useQuery({
@@ -408,7 +408,8 @@ export const ProductsGrid = () => {
       }
 
       // ORDER CONTEXT: For providers, resolve practice_id for shipping/routing/profits
-      // (but cart stays linked to provider's user_id above)
+      // For staff, use effectivePracticeId directly for practice context
+      // (but cart stays linked to provider's/staff's user_id above)
       let resolvedDoctorId = effectiveUserId;
       const { data: userRoleData } = await supabase
         .from("user_roles")
@@ -426,6 +427,13 @@ export const ProductsGrid = () => {
         console.debug('[ProductsGrid] Provider detected - using practice context for orders', { 
           provider_user_id: effectiveUserId, 
           practice_id: practiceId 
+        });
+      } else if (userRoleData?.role === 'staff' && effectivePracticeId) {
+        // For staff, use the effectivePracticeId from context
+        resolvedDoctorId = effectivePracticeId;
+        console.debug('[ProductsGrid] Staff detected - using practice context for orders', { 
+          staff_user_id: effectiveUserId, 
+          practice_id: effectivePracticeId 
         });
       }
 
@@ -662,7 +670,7 @@ export const ProductsGrid = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          {isProvider && (
+          {(isProvider || (isStaffAccount && canOrder)) && (
             <Button
               variant="outline"
               size="lg"
