@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
+import { realtimeManager } from "@/lib/realtimeManager";
 
 export function TodayAppointmentsWidget() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -38,26 +39,13 @@ export function TodayAppointmentsWidget() {
     staleTime: 0,
   });
 
-  // Real-time subscription for instant updates
+  // Real-time subscription for instant updates using centralized manager
   useEffect(() => {
-    const channel = supabase
-      .channel('today-appointments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'patient_appointments',
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["today-appointments"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    realtimeManager.subscribe('patient_appointments', () => {
+      queryClient.invalidateQueries({ queryKey: ["today-appointments"] });
+    });
+    
+    // Cleanup handled by realtimeManager
   }, [queryClient]);
 
   const getStatusColor = (status: string) => {

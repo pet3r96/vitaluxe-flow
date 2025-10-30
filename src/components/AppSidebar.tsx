@@ -3,6 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { NavLink, useLocation } from "react-router-dom";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
+import { useResponsive } from "@/hooks/useResponsive";
+import { MobileBottomNav } from "@/components/responsive/MobileBottomNav";
 import {
   LayoutDashboard,
   Users,
@@ -151,6 +153,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const { isMobile, isTablet } = useResponsive();
 
   let items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
   
@@ -174,6 +177,25 @@ export function AppSidebar() {
     isActive
       ? "bg-sidebar-accent text-primary font-medium glow-gold"
       : "hover:bg-sidebar-accent/50";
+
+  // Mobile view - use bottom navigation
+  if (isMobile) {
+    return (
+      <MobileBottomNav 
+        items={items
+          .filter(item => item.url && item.title !== 'PRO_SEPARATOR')
+          .map(item => ({
+            title: item.title,
+            url: item.url,
+            icon: item.icon,
+            isPro: (item as any).isPro || false
+          }))}
+        maxVisibleItems={4}
+      />
+    );
+  }
+
+  // Desktop/Tablet view - use sidebar
 
   return (
     <Sidebar collapsible="icon">

@@ -16,12 +16,22 @@ import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpRemindersWidget";
 import { WaitingRoomWidget } from "@/components/dashboard/WaitingRoomWidget";
 import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
+import { useResponsive } from "@/hooks/useResponsive";
+import DashboardMobile from "./DashboardMobile";
 
 // Dashboard component with real-time stats
 const Dashboard = () => {
   const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount } = useAuth();
   const { isSubscribed, status, trialDaysRemaining } = useSubscription();
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
+
+  // Mobile users get simplified dashboard
+  if (isMobile) {
+    return <DashboardMobile />;
+  }
+
+  // Desktop dashboard continues below...
 
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],

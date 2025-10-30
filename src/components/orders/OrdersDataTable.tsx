@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { realtimeManager } from "@/lib/realtimeManager";
 import {
   Table,
   TableBody,
@@ -362,44 +363,24 @@ export const OrdersDataTable = () => {
     },
   });
 
-  // Set up real-time subscription for order updates
+  // Set up real-time subscription for order updates using centralized manager
   useEffect(() => {
     // Don't set up subscription if no effective user
     if (!effectiveUserId) return;
     
-    const channel = supabase
-      .channel('order-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          filter: effectiveRole === 'doctor' ? `doctor_id=eq.${effectiveUserId}` : undefined
-        },
-        () => {
-          logger.info('Order update detected, refetching');
-          refetch();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'order_lines'
-        },
-        () => {
-          logger.info('Order line update detected, refetching');
-          refetch();
-        }
-      )
-      .subscribe();
+    // Subscribe to both orders and order_lines tables
+    realtimeManager.subscribe('orders', () => {
+      logger.info('Order update detected, refetching');
+      refetch();
+    });
+    
+    realtimeManager.subscribe('order_lines', () => {
+      logger.info('Order line update detected, refetching');
+      refetch();
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [effectiveUserId, effectiveRole, refetch]);
+    // Cleanup handled by realtimeManager
+  }, [effectiveUserId, refetch]);
 
   // Calculate counts for each status (including search filter)
   const statusCounts = useMemo(() => {

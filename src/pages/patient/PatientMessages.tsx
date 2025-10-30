@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { realtimeManager } from "@/lib/realtimeManager";
 
 export default function PatientMessages() {
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
@@ -61,31 +62,17 @@ export default function PatientMessages() {
     },
   });
 
-  // Real-time subscription for instant updates
+  // Real-time subscription for instant updates using centralized manager
   useEffect(() => {
-    const channel = supabase
-      .channel('patient-messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'patient_messages',
-          filter: 'parent_message_id=is.null'
-        },
-        () => {
-          // Only invalidate active queries
-          queryClient.invalidateQueries({ 
-            queryKey: ['patient-message-threads'],
-            refetchType: 'active'
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    realtimeManager.subscribe('patient_messages', () => {
+      // Only invalidate active queries
+      queryClient.invalidateQueries({ 
+        queryKey: ['patient-message-threads'],
+        refetchType: 'active'
+      });
+    });
+    
+    // Cleanup handled by realtimeManager
   }, [queryClient]);
 
   const activeCount = threads?.filter((t: any) => !t.resolved).length || 0;
