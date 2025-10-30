@@ -6,7 +6,9 @@ import { ConversationList } from "@/components/internal-chat/ConversationList";
 import { MessageThread } from "@/components/internal-chat/MessageThread";
 import { MessageDetails } from "@/components/internal-chat/MessageDetails";
 import { CreateInternalMessageDialog } from "@/components/internal-chat/CreateInternalMessageDialog";
+import { PatientMessagesTab } from "@/components/messages/PatientMessagesTab";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -377,14 +379,21 @@ const InternalChat = () => {
     <>
       <div className="space-y-6 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Team Communication</h1>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Chat System</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-2">
-            Communicate with your practice team or send messages to patients
+            Internal team communication and patient messaging in one place
           </p>
         </div>
       </div>
-      
-      <div className="flex h-[75vh] overflow-hidden bg-background">
+
+      <Tabs defaultValue="internal" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="internal">Internal</TabsTrigger>
+          <TabsTrigger value="patients">Patients</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="internal" className="space-y-0">
+          <div className="flex h-[75vh] overflow-hidden bg-background">
         {/* Mobile: Show list or thread */}
         <div className="flex flex-1 lg:hidden">
           {!selectedMessageId ? (
@@ -462,7 +471,16 @@ const InternalChat = () => {
             />
           )}
         </div>
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="patients" className="space-y-0">
+          <PatientMessagesTab 
+            practiceId={practiceId} 
+            userId={effectiveUserId!} 
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Mobile details sheet */}
       <Sheet open={showDetailsMobile} onOpenChange={setShowDetailsMobile}>

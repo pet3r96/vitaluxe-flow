@@ -16,7 +16,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { logger } from "@/lib/logger";
 import { useMessageAlerts } from "@/hooks/useMessageAlerts";
-import { PatientMessagesTab } from "./PatientMessagesTab";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
@@ -34,7 +33,7 @@ export const MessagesView = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [dispositionType, setDispositionType] = useState<string>("");
   const [dispositionNotes, setDispositionNotes] = useState<string>("");
-  const [activeTicketTab, setActiveTicketTab] = useState<"support" | "order_issues" | "patient_messages">("support");
+  const [activeTicketTab, setActiveTicketTab] = useState<"support" | "order_issues">("support");
   
   // Pagination state
   const [supportPage, setSupportPage] = useState(1);

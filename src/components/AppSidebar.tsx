@@ -78,7 +78,7 @@ const menuItems = {
     { title: "Document Center", url: "/document-center", icon: FileText, isPro: true },
     { title: "My Subscription", url: "/my-subscription", icon: CreditCard, isPro: true },
     { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
-    { title: "Internal Chat", url: "/internal-chat", icon: Inbox, isPro: true },
+    { title: "Chat System", url: "/internal-chat", icon: Inbox, isPro: true },
   ],
   provider: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -140,7 +140,7 @@ const menuItems = {
     { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
     { title: "Document Center", url: "/document-center", icon: FileText, isPro: true },
     { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
-    { title: "Internal Chat", url: "/internal-chat", icon: Inbox, isPro: true },
+    { title: "Chat System", url: "/internal-chat", icon: Inbox, isPro: true },
   ],
 };
 

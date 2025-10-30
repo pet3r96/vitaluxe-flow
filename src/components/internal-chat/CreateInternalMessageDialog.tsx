@@ -29,17 +29,11 @@ export function CreateInternalMessageDialog({
 }: CreateInternalMessageDialogProps) {
   const { effectiveUserId } = useAuth();
   
-  // Primary destination selection
-  const [destination, setDestination] = useState<'practice_team' | 'patient'>('practice_team');
-  
-  // Practice team fields
+  // Practice team fields only
   const [messageType, setMessageType] = useState<'general' | 'announcement'>('general');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [regardingPatient, setRegardingPatient] = useState('');
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  
-  // Patient communication fields
-  const [selectedPatientId, setSelectedPatientId] = useState('');
   
   // Common fields
   const [subject, setSubject] = useState('');
@@ -59,22 +53,19 @@ export function CreateInternalMessageDialog({
     enabled: open && !!practiceId
   });
 
-  // Fetch patient accounts for the practice (patients with portal access)
+  // Fetch patients for the "Regarding Patient" optional field
   const { data: patients = [] } = useQuery({
-    queryKey: ['practice-patient-accounts', practiceId],
+    queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('patient_accounts')
-        .select('id, first_name, last_name')
+        .from('patients')
+        .select('id, name')
         .eq('practice_id', practiceId)
-        .order('last_name, first_name');
+        .order('name');
       if (error) throw error;
-      return data?.map(p => ({
-        id: p.id,
-        name: `${p.first_name} ${p.last_name}`.trim()
-      })) || [];
+      return data || [];
     },
-    enabled: open
+    enabled: open && !!practiceId
   });
 
   const handleSelectAll = () => {
@@ -99,69 +90,44 @@ export function CreateInternalMessageDialog({
       return;
     }
 
-    // Validate based on destination
-    if (destination === 'practice_team') {
-      if (!subject.trim() || !body.trim() || selectedRecipients.length === 0) {
-        toast.error('Please fill in all required fields and select at least one recipient');
-        return;
-      }
-    } else {
-      if (!subject.trim() || !body.trim() || !selectedPatientId) {
-        toast.error('Please fill in all required fields and select a patient');
-        return;
-      }
+    // Validate fields
+    if (!subject.trim() || !body.trim() || selectedRecipients.length === 0) {
+      toast.error('Please fill in all required fields and select at least one recipient');
+      return;
     }
 
     setSending(true);
     try {
-      if (destination === 'practice_team') {
-        // Send to practice team via internal_messages
-        const { data: message, error: messageError } = await supabase
-          .from('internal_messages')
-          .insert({
-            practice_id: practiceId,
-            created_by: effectiveUserId,
-            subject,
-            body,
-            message_type: messageType,
-            priority,
-            patient_id: regardingPatient || null
-          } as any)
-          .select()
-          .single();
+      // Send to practice team via internal_messages
+      const { data: message, error: messageError } = await supabase
+        .from('internal_messages')
+        .insert({
+          practice_id: practiceId,
+          created_by: effectiveUserId,
+          subject,
+          body,
+          message_type: messageType,
+          priority,
+          patient_id: regardingPatient || null
+        } as any)
+        .select()
+        .single();
 
-        if (messageError) throw messageError;
+      if (messageError) throw messageError;
 
-        // Add recipients
-        const { error: recipientsError } = await supabase
-          .from('internal_message_recipients')
-          .insert(
-            selectedRecipients.map(recipientId => ({
-              message_id: message.id,
-              recipient_id: recipientId
-            }))
-          );
+      // Add recipients
+      const { error: recipientsError } = await supabase
+        .from('internal_message_recipients')
+        .insert(
+          selectedRecipients.map(recipientId => ({
+            message_id: message.id,
+            recipient_id: recipientId
+          }))
+        );
 
-        if (recipientsError) throw recipientsError;
+      if (recipientsError) throw recipientsError;
 
-        toast.success('Message sent to practice team');
-      } else {
-        // Send to patient via edge function
-        const { error } = await supabase.functions.invoke('send-patient-message', {
-          body: {
-            patient_id: selectedPatientId,
-            subject,
-            message: body,
-            sender_type: 'provider',
-            practice_id: practiceId
-          }
-        });
-
-        if (error) throw error;
-
-        toast.success('Message sent to patient');
-      }
-
+      toast.success('Message sent to practice team');
       onSuccess();
       handleClose();
     } catch (error) {
@@ -173,14 +139,12 @@ export function CreateInternalMessageDialog({
   };
 
   const handleClose = () => {
-    setDestination('practice_team');
     setMessageType('general');
     setPriority('medium');
     setSubject('');
     setBody('');
     setRegardingPatient('');
     setSelectedRecipients([]);
-    setSelectedPatientId('');
     onOpenChange(false);
   };
 
@@ -193,52 +157,20 @@ export function CreateInternalMessageDialog({
     return acc;
   }, {});
 
-  const canSend = destination === 'practice_team'
-    ? subject.trim() && body.trim() && selectedRecipients.length > 0
-    : subject.trim() && body.trim() && selectedPatientId;
+  const canSend = subject.trim() && body.trim() && selectedRecipients.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>New Message</DialogTitle>
+          <DialogTitle>New Internal Message</DialogTitle>
           <DialogDescription>
-            Send messages to your practice team or communicate with patients
+            Send a message to your practice team members
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh]">
           <form className="space-y-4 p-1">
-            {/* Message Destination */}
-            <div className="space-y-2">
-              <Label>Message Destination</Label>
-              <RadioGroup value={destination} onValueChange={(v: any) => setDestination(v)}>
-                <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-                  <RadioGroupItem value="practice_team" id="practice_team" />
-                  <Label htmlFor="practice_team" className="cursor-pointer flex items-center gap-2 flex-1">
-                    <Users className="h-4 w-4" />
-                    <div>
-                      <div className="font-medium">Practice Team (Internal)</div>
-                      <div className="text-xs text-muted-foreground">Send to team members within your practice</div>
-                    </div>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-                  <RadioGroupItem value="patient" id="patient" />
-                  <Label htmlFor="patient" className="cursor-pointer flex items-center gap-2 flex-1">
-                    <MessageCircle className="h-4 w-4" />
-                    <div>
-                      <div className="font-medium">Patient Communication</div>
-                      <div className="text-xs text-muted-foreground">Send a message to a specific patient</div>
-                    </div>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* Practice Team Fields */}
-            {destination === 'practice_team' && (
-              <>
                 {/* Message Type */}
                 <div className="space-y-2">
                   <Label>Message Type</Label>
@@ -393,28 +325,6 @@ export function CreateInternalMessageDialog({
                     </SelectContent>
                   </Select>
                 </div>
-              </>
-            )}
-
-            {/* Patient Communication Fields */}
-            {destination === 'patient' && (
-              <div className="space-y-2">
-                <Label>Select Patient *</Label>
-                <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a patient..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patients.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  This message will be sent to the patient and visible in their patient portal
-                </p>
-              </div>
-            )}
 
             {/* Subject */}
             <div className="space-y-2">
