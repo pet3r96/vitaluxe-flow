@@ -156,6 +156,32 @@ export function AppointmentDetailsDialog({
     },
   });
 
+  const approveRescheduleMutation = useMutation({
+    mutationFn: async ({ action, cancelOriginal }: { action: 'move' | 'duplicate', cancelOriginal?: boolean }) => {
+      const { error } = await supabase.functions.invoke('approve-reschedule-request', {
+        body: {
+          appointmentId: appointment.id,
+          action,
+          ignoreConflicts: true,
+          cancelOriginal: cancelOriginal || false,
+        },
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+      toast.success(
+        variables.action === 'move' 
+          ? "Appointment moved to requested time" 
+          : "New appointment created at requested time"
+      );
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to approve reschedule");
+    },
+  });
+
   if (!appointment) return null;
 
   const handleStatusChange = (newStatus: string) => {
@@ -205,6 +231,63 @@ export function AppointmentDetailsDialog({
             </div>
 
             <Separator />
+
+            {/* Reschedule Request Section */}
+            {(appointment.requested_date || appointment.requested_time) && (
+              <>
+                <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <CalendarClock className="h-5 w-5" />
+                    Reschedule Request
+                  </h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        <span className="font-medium">Requested Date:</span>{' '}
+                        {appointment.requested_date && format(new Date(appointment.requested_date), 'EEEE, MMMM d, yyyy')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        <span className="font-medium">Requested Time:</span> {appointment.requested_time}
+                      </span>
+                    </div>
+                    {appointment.reschedule_reason && (
+                      <div className="text-sm mt-2">
+                        <span className="font-medium">Reason:</span>
+                        <p className="text-muted-foreground mt-1">{appointment.reschedule_reason}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      onClick={() => approveRescheduleMutation.mutate({ action: 'move' })}
+                      disabled={approveRescheduleMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Approve & Move Appointment
+                    </Button>
+                    <Button
+                      onClick={() => approveRescheduleMutation.mutate({ action: 'duplicate', cancelOriginal: false })}
+                      disabled={approveRescheduleMutation.isPending}
+                      variant="outline"
+                    >
+                      Approve & Create New
+                    </Button>
+                    <Button
+                      onClick={() => approveRescheduleMutation.mutate({ action: 'duplicate', cancelOriginal: true })}
+                      disabled={approveRescheduleMutation.isPending}
+                      variant="outline"
+                    >
+                      Create New & Cancel Original
+                    </Button>
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
 
             {/* Appointment Details */}
             <div>
