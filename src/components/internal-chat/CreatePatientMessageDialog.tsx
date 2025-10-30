@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Circle, Info, AlertCircle, AlertTriangle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Send, Circle, Info, AlertCircle, AlertTriangle, UserPlus } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,19 +33,38 @@ export function CreatePatientMessageDialog({
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Fetch patients with portal account link
-  const { data: patients = [], isLoading: isLoadingPatients } = useQuery({
-    queryKey: ['practice-patients', practiceId],
+  // Fetch patients with portal status using view
+  const { data: patients = [], isLoading: isLoadingPatients, refetch: refetchPatients } = useQuery({
+    queryKey: ['practice-patients-portal', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('patients')
-        .select('id, name, email, phone, patient_account_id')
+        .from('v_patients_with_portal_status')
+        .select('patient_id, name, email, phone, has_portal_access, patient_account_id, practice_id')
         .eq('practice_id', practiceId)
         .order('name');
       if (error) throw error;
       return data || [];
     },
     enabled: open && !!practiceId
+  });
+
+  // Mutation to create portal account
+  const createPortalAccountMutation = useMutation({
+    mutationFn: async (patientId: string) => {
+      const { data, error } = await supabase.functions.invoke('create-patient-portal-account', {
+        body: { patientId }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Portal account created successfully');
+      refetchPatients();
+    },
+    onError: (error: any) => {
+      console.error('Error creating portal account:', error);
+      toast.error(error.message || 'Failed to create portal account');
+    }
   });
 
   const handleSend = async () => {
@@ -118,9 +137,9 @@ export function CreatePatientMessageDialog({
             <div className="space-y-2">
               <Label>Patient *</Label>
               <Select 
-                value={selectedPatient?.id || ''} 
+                value={selectedPatient?.patient_id || ''} 
                 onValueChange={(id) => {
-                  const patient = patients.find((p: any) => p.id === id);
+                  const patient = patients.find((p: any) => p.patient_id === id);
                   setSelectedPatient(patient || null);
                 }}
               >
@@ -138,13 +157,13 @@ export function CreatePatientMessageDialog({
                     </div>
                   ) : (
                     patients.map((patient: any) => (
-                      <SelectItem key={patient.id} value={patient.id}>
+                      <SelectItem key={patient.patient_id} value={patient.patient_id}>
                         <div className="flex flex-col">
                           <span>{patient.name}</span>
                           {patient.email && (
                             <span className="text-xs text-muted-foreground">{patient.email}</span>
                           )}
-                          {!patient.patient_account_id && (
+                          {!patient.has_portal_access && (
                             <span className="text-xs text-orange-500">⚠ No portal account</span>
                           )}
                         </div>
@@ -153,6 +172,21 @@ export function CreatePatientMessageDialog({
                   )}
                 </SelectContent>
               </Select>
+              
+              {/* Create Portal Account Button */}
+              {selectedPatient && !selectedPatient.has_portal_access && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => createPortalAccountMutation.mutate(selectedPatient.patient_id)}
+                  disabled={createPortalAccountMutation.isPending}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {createPortalAccountMutation.isPending ? 'Creating...' : 'Create Portal Account'}
+                </Button>
+              )}
             </div>
 
             {/* Priority/Urgency */}
