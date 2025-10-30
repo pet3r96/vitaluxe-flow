@@ -147,13 +147,13 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-800 border border-yellow-300",
-      reviewed: "bg-blue-100 text-blue-800 border border-blue-300",
-      signed: "bg-green-100 text-green-800 border border-green-300",
-      completed: "bg-emerald-100 text-emerald-800 border border-emerald-300",
-      archived: "bg-gray-100 text-gray-800 border border-gray-300",
+      pending: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
+      reviewed: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
+      signed: "bg-green-500/20 text-green-300 border border-green-500/30",
+      completed: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
+      archived: "bg-gray-500/20 text-gray-300 border border-gray-500/30",
     };
-    return colors[status] || "bg-muted";
+    return colors[status] || "bg-muted text-muted-foreground";
   };
 
   if (isLoading) {
