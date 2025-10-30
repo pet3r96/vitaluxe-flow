@@ -39,8 +39,9 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
 
       const { error } = await supabase.functions.invoke("send-patient-message", {
         body: {
-          subject: firstMsg.subject || 'Re: Patient Message',
-          message: messageText,
+          practice_id: firstMsg.practice_id,
+          message_body: messageText,
+          thread_id: threadId,
         },
       });
 

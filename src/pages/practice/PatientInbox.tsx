@@ -16,12 +16,40 @@ export default function PatientInbox() {
   const { data: messages } = useQuery({
     queryKey: ["patient-messages-inbox"],
     queryFn: async () => {
+      // Get current user's practice
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Try to get practice_id from providers table first
+      const { data: providerData } = await supabase
+        .from("providers")
+        .select("practice_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      let practiceId = providerData?.practice_id;
+
+      // If not a provider, try practice_staff table
+      if (!practiceId) {
+        const { data: staffData } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        practiceId = staffData?.practice_id;
+      }
+
+      if (!practiceId) throw new Error("Practice not found");
+
       const { data, error } = await supabase
         .from("patient_messages")
         .select(`
           *,
           patient:patient_accounts(first_name, last_name, email)
         `)
+        .eq("practice_id", practiceId)
+        .eq("sender_type", "patient")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
