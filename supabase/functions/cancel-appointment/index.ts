@@ -16,15 +16,28 @@ Deno.serve(async (req) => {
 
     const { appointmentId } = await req.json();
 
-    // Verify patient owns this appointment via patient_accounts linkage
+    // First get patient_account for this user
+    const { data: patientAccount, error: paError } = await supabaseClient
+      .from('patient_accounts')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (paError || !patientAccount) {
+      console.error('Patient account not found:', paError);
+      throw new Error('Patient account not found');
+    }
+
+    // Then verify appointment belongs to this patient
     const { data: appointment, error: fetchError } = await supabaseClient
       .from('patient_appointments')
-      .select('id, patient_accounts!inner(user_id)')
+      .select('id, patient_id')
       .eq('id', appointmentId)
-      .eq('patient_accounts.user_id', user.id)
+      .eq('patient_id', patientAccount.id)
       .single();
 
     if (fetchError || !appointment) {
+      console.error('Appointment verification failed:', fetchError);
       throw new Error('Appointment not found or access denied');
     }
 

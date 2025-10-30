@@ -61,16 +61,10 @@ export default function PatientDashboard() {
       
       console.log('[PatientDashboard] Fetching next appointment for patient_id:', patientAccount.id);
       
-      const { data, error } = await supabase
+      // Simplified query without FK traversals
+      const { data: appt, error } = await supabase
         .from("patient_appointments")
-        .select(`
-          *,
-          practice:profiles!patient_appointments_practice_id_fkey(name),
-          provider:providers!patient_appointments_provider_id_fkey(
-            id,
-            user:profiles(name)
-          )
-        `)
+        .select('id, start_time, end_time, visit_type, status, practice_id, provider_id')
         .eq("patient_id", patientAccount.id)
         .gte("start_time", new Date().toISOString())
         .in('status', ['scheduled', 'pending'])
@@ -81,14 +75,29 @@ export default function PatientDashboard() {
       if (error) {
         console.error('[PatientDashboard] Error fetching next appointment:', error);
         if (error.code !== 'PGRST116') throw error;
+        return null;
       }
       
-      console.log('[PatientDashboard] Next appointment data:', data);
-      return data;
+      if (!appt) {
+        console.log('[PatientDashboard] No next appointment found');
+        return null;
+      }
+
+      // Fetch practice name from branding
+      const { data: branding } = await supabase
+        .from('practice_branding')
+        .select('practice_name')
+        .eq('practice_id', appt.practice_id)
+        .maybeSingle();
+
+      console.log('[PatientDashboard] Next appointment data:', appt);
+      return {
+        ...appt,
+        practice: { name: branding?.practice_name || 'Practice' }
+      };
     },
     enabled: !!patientAccount?.id,
     staleTime: 2 * 60 * 1000,
-    refetchInterval: 5000,
   });
 
   // Fetch unread messages count
@@ -153,19 +162,13 @@ export default function PatientDashboard() {
       
       console.log('[PatientDashboard] Fetching recent appointments for patient_id:', patientAccount.id);
       
-      const { data, error } = await supabase
+      // Simplified query - include more statuses for past appointments
+      const { data: appts, error } = await supabase
         .from("patient_appointments")
-        .select(`
-          *,
-          practice:profiles!patient_appointments_practice_id_fkey(name),
-          provider:providers!patient_appointments_provider_id_fkey(
-            id,
-            user:profiles(name)
-          )
-        `)
+        .select('id, start_time, end_time, status, visit_summary_url, practice_id, provider_id')
         .eq("patient_id", patientAccount.id)
         .lt("start_time", new Date().toISOString())
-        .in('status', ['scheduled', 'completed'])
+        .in('status', ['scheduled', 'completed', 'cancelled', 'no_show'])
         .order("start_time", { ascending: false })
         .limit(3);
       
@@ -173,13 +176,31 @@ export default function PatientDashboard() {
         console.error('[PatientDashboard] Error fetching recent appointments:', error);
         throw error;
       }
+
+      if (!appts || appts.length === 0) {
+        console.log('[PatientDashboard] No recent appointments');
+        return [];
+      }
+
+      // Fetch practice names from branding
+      const practiceIds = Array.from(new Set(appts.map(a => a.practice_id)));
+      const { data: brandings } = await supabase
+        .from('practice_branding')
+        .select('practice_id, practice_name')
+        .in('practice_id', practiceIds);
+
+      const mapped = appts.map(appt => ({
+        ...appt,
+        practice: {
+          name: brandings?.find(b => b.practice_id === appt.practice_id)?.practice_name || 'Practice'
+        }
+      }));
       
-      console.log('[PatientDashboard] Recent appointments:', data);
-      return data || [];
+      console.log('[PatientDashboard] Recent appointments:', mapped);
+      return mapped;
     },
     enabled: !!patientAccount?.id,
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5000,
   });
 
   // Fetch recent messages (3 most recent)
