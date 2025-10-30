@@ -20,21 +20,21 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: patients, isLoading, error: queryError } = useQuery({
-    queryKey: ["patients-select", effectivePracticeId],
+    queryKey: ["patient-accounts-select", effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) return [];
-      console.log("Fetching patients for practice:", effectivePracticeId);
+      console.log("Fetching patient accounts for practice:", effectivePracticeId);
       const { data, error } = await supabase
-        .from("patients" as any)
-        .select("id, name")
+        .from("patient_accounts")
+        .select("id, first_name, last_name")
         .eq("practice_id", effectivePracticeId)
-        .order("name");
+        .order("first_name");
       if (error) {
-        console.error("Error fetching patients:", error);
+        console.error("Error fetching patient accounts:", error);
         throw error;
       }
-      console.log("Patients fetched:", data?.length || 0);
-      return data as any[];
+      console.log("Patient accounts fetched:", data?.length || 0);
+      return data?.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}`.trim() })) || [];
     },
     enabled: !!effectivePracticeId,
     staleTime: 0,
@@ -45,17 +45,17 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
     if (!effectivePracticeId) return;
 
     const channel = supabase
-      .channel('patients-changes')
+      .channel('patient-accounts-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'patients',
+          table: 'patient_accounts',
           filter: `practice_id=eq.${effectivePracticeId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["patients-select", effectivePracticeId] });
+          queryClient.invalidateQueries({ queryKey: ["patient-accounts-select", effectivePracticeId] });
         }
       )
       .subscribe();

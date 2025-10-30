@@ -156,7 +156,14 @@ Deno.serve(async (req) => {
     console.log('[create-provider-document] Request:', { document_name, document_type, storage_path, patientIds });
 
     // Validate storage path belongs to this practice
-    if (!storage_path || !storage_path.startsWith(`${effectivePracticeId}/documents/`)) {
+    const expectedPrefix = `${effectivePracticeId}/documents/`;
+    console.log('[create-provider-document] Path validation:', { 
+      expectedPrefix, 
+      storage_path,
+      matches: storage_path?.startsWith(expectedPrefix)
+    });
+    
+    if (!storage_path || !storage_path.startsWith(expectedPrefix)) {
       console.error('[create-provider-document] Invalid storage path');
       return new Response(
         JSON.stringify({ error: 'Invalid storage path', code: 'invalid_storage_path' }),

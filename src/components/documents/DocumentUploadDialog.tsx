@@ -75,7 +75,25 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to upload documents");
+      // Parse edge function error response
+      let errorMessage = "Failed to upload documents";
+      
+      if (error?.message) {
+        try {
+          // Try to parse JSON error from edge function
+          const parsed = JSON.parse(error.message);
+          errorMessage = parsed.error || parsed.message || errorMessage;
+          if (parsed.code) {
+            errorMessage = `${errorMessage} (${parsed.code})`;
+          }
+        } catch {
+          // If not JSON, use message as-is
+          errorMessage = error.message;
+        }
+      }
+      
+      console.error("Document upload error:", error);
+      toast.error(errorMessage);
     },
   });
 
