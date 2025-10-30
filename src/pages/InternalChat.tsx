@@ -493,7 +493,7 @@ const InternalChat = () => {
         sender_id: reply.sender_id,
         sender: {
           id: reply.sender_id,
-          name: reply.sender_type === 'practice' 
+          name: reply.sender_type === 'provider' || reply.sender_type === 'staff' || reply.sender_type === 'practice'
             ? reply.sender?.name || 'Practice'
             : `${reply.patient?.first_name || ''} ${reply.patient?.last_name || ''}`.trim() || 'Patient'
         }
