@@ -41,7 +41,7 @@ interface UnifiedDocument {
 const ITEMS_PER_PAGE = 25;
 
 export default function PatientDocuments() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
 
   // Upload form state
@@ -66,19 +66,19 @@ export default function PatientDocuments() {
   const [editDoc, setEditDoc] = useState<UnifiedDocument | null>(null);
 
   // Get patient account
-  const { data: patientAccount } = useQuery({
-    queryKey: ["patient-account", user?.id],
+  const { data: patientAccount, isLoading: isLoadingAccount, error: accountError } = useQuery({
+    queryKey: ["patient-account", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_accounts")
         .select("id")
-        .eq("user_id", user?.id)
+        .eq("user_id", effectiveUserId)
         .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   // Fetch unified documents
@@ -163,7 +163,11 @@ export default function PatientDocuments() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file || !documentType || !patientAccount?.id) {
-        throw new Error("Missing required fields");
+        const missing = [];
+        if (!file) missing.push("file");
+        if (!documentType) missing.push("document type");
+        if (!patientAccount?.id) missing.push("patient account");
+        throw new Error(`Missing required fields: ${missing.join(", ")}`);
       }
 
       const fileExt = file.name.split(".").pop();
