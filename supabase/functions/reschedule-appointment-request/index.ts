@@ -14,7 +14,9 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const { appointmentId, newDate, newTime, reason } = await req.json();
+    const { appointmentId, newDate, newTime, reason, clientDateTimeIso, timezoneOffsetMinutes } = await req.json();
+    
+    console.log('Reschedule request:', { appointmentId, newDate, newTime, clientDateTimeIso, timezoneOffsetMinutes });
 
     // Verify patient owns this appointment
     const { data: appointment, error: fetchError } = await supabaseClient

@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const { appointmentId, action, ignoreConflicts = true, cancelOriginal = false } = await req.json();
+    const { appointmentId, action, ignoreConflicts = true, cancelOriginal = false, requestedDateTimeIso } = await req.json();
 
     if (!appointmentId || !action) {
       throw new Error('appointmentId and action are required');
@@ -68,13 +68,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Calculate new start and end times
-    const requestedDateTime = `${appointment.requested_date}T${appointment.requested_time}:00`;
-    const newStartTime = new Date(requestedDateTime).toISOString();
+    // Calculate new start and end times using client timezone if available
+    let newStartTime: string;
+    
+    if (requestedDateTimeIso) {
+      // Use the client-provided ISO time (already in correct timezone)
+      newStartTime = requestedDateTimeIso;
+    } else {
+      // Fallback: construct from requested_date and requested_time (may have timezone issues)
+      const requestedDateTime = `${appointment.requested_date}T${appointment.requested_time}:00`;
+      newStartTime = new Date(requestedDateTime).toISOString();
+    }
+    
     const duration = new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime();
-    const newEndTime = new Date(new Date(requestedDateTime).getTime() + duration).toISOString();
+    const newEndTime = new Date(new Date(newStartTime).getTime() + duration).toISOString();
 
-    console.log('Calculated times:', { newStartTime, newEndTime, duration });
+    console.log('Calculated times:', { newStartTime, newEndTime, duration, requestedDateTimeIso });
 
     // Check for conflicts if not ignoring
     if (!ignoreConflicts) {

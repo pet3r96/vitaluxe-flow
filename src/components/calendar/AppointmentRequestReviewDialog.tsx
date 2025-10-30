@@ -362,7 +362,7 @@ export const AppointmentRequestReviewDialog = ({
                 <Button
                   onClick={handleAccept}
                   disabled={isAccepting}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   {isAccepting ? "Confirming..." : "Accept"}
