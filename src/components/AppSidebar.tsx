@@ -93,6 +93,8 @@ const menuItems = {
     { title: "PRO_SEPARATOR", url: "", icon: null, isPro: false },
     { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
     { title: "Document Center", url: "/document-center", icon: FileText, isPro: true },
+    { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
+    { title: "Chat System", url: "/internal-chat", icon: Inbox, isPro: true },
   ],
   pharmacy: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -160,15 +162,6 @@ export function AppSidebar() {
   if (isStaffAccount) {
     // Staff get their own dedicated menu with Pro features
     items = menuItems.staff;
-  } else if (effectiveRole === 'doctor' && isProviderAccount) {
-    // Providers: filter out practice-only items
-    items = items.filter(item => 
-      item.title !== "Providers" && 
-      item.title !== "Reports" &&
-      item.title !== "My Staff" &&
-      item.title !== "My Subscription" &&
-      item.title !== "Practice Reporting"
-    );
   }
   
   const isCollapsed = state === "collapsed";
