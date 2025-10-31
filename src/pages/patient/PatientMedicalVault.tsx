@@ -203,7 +203,7 @@ export default function PatientMedicalVault() {
         emergencyContacts || []
       );
       
-      // Show preview in dialog
+      // In-app preview (dialog) using object/embed for better compatibility
       const pdfUrl = URL.createObjectURL(pdfBlob);
       setPdfPreviewUrl(pdfUrl);
       setPreviewDialogOpen(true);
@@ -236,28 +236,31 @@ export default function PatientMedicalVault() {
         pharmacies || [],
         emergencyContacts || []
       );
+      
+      // Print via hidden iframe (avoids popup blockers and blob tab blocks)
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      
-      // Open in new window and trigger print
-      const printWindow = window.open(pdfUrl, '_blank');
-      
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-          // Clean up URL after printing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = pdfUrl;
+      document.body.appendChild(iframe);
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } finally {
           setTimeout(() => {
+            document.body.removeChild(iframe);
             URL.revokeObjectURL(pdfUrl);
           }, 1000);
-        };
-        toast({ title: "Success", description: "Opening print dialog" });
-      } else {
-        toast({ 
-          title: "Blocked", 
-          description: "Please allow popups to use the print feature", 
-          variant: "destructive" 
-        });
-        URL.revokeObjectURL(pdfUrl);
-      }
+        }
+      };
+
+      toast({ title: "Success", description: "Opening print dialog" });
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
@@ -371,11 +374,17 @@ export default function PatientMedicalVault() {
           </DialogHeader>
           <div className="flex-1 overflow-hidden px-6 pb-6">
             {pdfPreviewUrl && (
-              <iframe
-                src={pdfPreviewUrl}
+              <object
+                data={pdfPreviewUrl}
+                type="application/pdf"
                 className="w-full h-full border rounded-lg"
-                title="PDF Preview"
-              />
+              >
+                <p className="text-sm text-muted-foreground p-4">
+                  PDF preview is not supported by your browser or was blocked. 
+                  <a className="underline" href={pdfPreviewUrl} target="_blank" rel="noreferrer">Open in a new tab</a>
+                  or use the Download button instead.
+                </p>
+              </object>
             )}
           </div>
         </DialogContent>
