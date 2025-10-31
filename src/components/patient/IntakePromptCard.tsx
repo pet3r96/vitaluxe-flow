@@ -13,12 +13,9 @@ export function IntakePromptCard({ onComplete }: IntakePromptCardProps) {
       <div className="flex flex-col gap-4 w-full py-2">
         <div className="flex items-center justify-center gap-2 w-full text-center">
           <AlertCircle className="h-5 w-5 text-warning shrink-0" />
-          <div>
-            <span className="text-lg font-semibold">Complete Your Medical Intake</span>
-            <span className="text-sm text-muted-foreground ml-2">
-              Help your healthcare team provide better care by completing your medical information. This takes about 5-10 minutes.
-            </span>
-          </div>
+          <p className="text-sm text-foreground">
+            Complete Your Medical Intake - Help your healthcare team provide better care by completing your medical information. This takes about 5-10 minutes.
+          </p>
         </div>
         <Button onClick={onComplete} className="touch-target mx-auto">
           Get Started

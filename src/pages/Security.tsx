@@ -15,7 +15,8 @@ import { PaymentMethodAuditLog } from "@/components/security/PaymentMethodAuditL
 import { PrescriptionAccessAudit } from "@/components/security/PrescriptionAccessAudit";
 import { CartSecurityMonitor } from "@/components/security/CartSecurityMonitor";
 import { IPBanlistManager } from "@/components/admin/IPBanlistManager";
-import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard, ShoppingCart, ShieldBan } from "lucide-react";
+import { PatientMedicalVaultActivityLog } from "@/components/security/PatientMedicalVaultActivityLog";
+import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard, ShoppingCart, ShieldBan, History } from "lucide-react";
 
 const Security = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -87,6 +88,10 @@ const Security = () => {
             <ShieldBan className="h-4 w-4" />
             <span className="hidden sm:inline">IP Ban List</span>
           </TabsTrigger>
+          <TabsTrigger value="vault-activity" className="gap-2">
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline">Vault Activity</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -146,6 +151,10 @@ const Security = () => {
 
         <TabsContent value="ip-banlist">
           <IPBanlistManager />
+        </TabsContent>
+
+        <TabsContent value="vault-activity">
+          <PatientMedicalVaultActivityLog />
         </TabsContent>
       </Tabs>
     </div>
