@@ -40,10 +40,10 @@ export default function PatientDetail() {
 
   if (!patient) {
     return (
-      <div className="container py-8">
+      <div className="patient-container">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Patient not found</h2>
-          <Button onClick={() => navigate("/patients")}>
+          <Button onClick={() => navigate("/patients")} className="touch-target">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Patients
           </Button>
@@ -53,31 +53,31 @@ export default function PatientDetail() {
   }
 
   return (
-    <div className="container py-8 space-y-6">
+    <div className="patient-container">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/patients")}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/patients")} className="touch-target-sm">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">
+          <div className="flex-1 sm:flex-none">
+            <h1 className="text-2xl sm:text-3xl font-bold gold-text-gradient">
               {patient.name}
             </h1>
-            <p className="text-muted-foreground">{patient.email}</p>
+            <p className="text-sm text-muted-foreground break-all">{patient.email}</p>
           </div>
         </div>
       </div>
 
       {/* Patient Info Card */}
-      <Card>
+      <Card className="patient-card mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <User className="h-5 w-5" />
             Patient Information
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Phone</p>
             <p className="font-medium">{patient.phone || "Not provided"}</p>

@@ -48,9 +48,9 @@ const Profile = () => {
 
   if (!allowedRoles.includes(effectiveRole)) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
+      <div className="patient-container">
+        <div className="text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">My Profile</h1>
           <p className="text-muted-foreground mt-2">Access Denied</p>
         </div>
       </div>
@@ -66,11 +66,11 @@ const Profile = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="patient-container">
       {effectiveRole !== "patient" && (
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">My Profile</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">My Profile</h1>
+          <p className="text-muted-foreground">
             {isRep 
               ? "Your Contact Information & Account Settings"
               : effectiveRole === "staff"

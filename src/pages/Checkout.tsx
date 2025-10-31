@@ -53,7 +53,7 @@ export default function Checkout() {
   // Staff without ordering privileges cannot access checkout
   if (checkingPrivileges && isStaffAccount) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="patient-container">
         <Skeleton className="h-[600px] w-full" />
       </div>
     );
@@ -61,10 +61,10 @@ export default function Checkout() {
 
   if (isStaffAccount && !canOrder) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        <Card>
+      <div className="patient-container">
+        <Card className="patient-card">
           <CardHeader>
-            <CardTitle>Checkout</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">Checkout</CardTitle>
           </CardHeader>
           <CardContent>
             <Alert>
@@ -75,7 +75,7 @@ export default function Checkout() {
             <Button 
               variant="outline" 
               onClick={() => navigate('/cart')}
-              className="mt-4"
+              className="mt-4 touch-target"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Cart
