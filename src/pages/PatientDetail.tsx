@@ -1,7 +1,7 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, User, FileText, Calendar } from "lucide-react";
+import { ArrowLeft, User, FileText, Calendar, Eye, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,9 @@ import { SharedDocumentsGrid } from "@/components/medical-vault/SharedDocumentsG
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PatientDetail() {
   const { patientId } = useParams();
@@ -22,6 +25,10 @@ export default function PatientDetail() {
   const activeTab = searchParams.get("tab") || "overview";
   const { effectivePracticeId } = useAuth();
   const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const { toast } = useToast();
 
   const practiceId = effectivePracticeId;
 
@@ -79,6 +86,193 @@ export default function PatientDetail() {
     },
     enabled: !!practiceId,
   });
+
+  // Fetch medical data for PDF generation
+  const { data: medications = [] } = useQuery({
+    queryKey: ["patient-medications", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_medications")
+        .select("*")
+        .eq("patient_account_id", patientId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId,
+  });
+
+  const { data: conditions = [] } = useQuery({
+    queryKey: ["patient-conditions", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_conditions")
+        .select("*")
+        .eq("patient_account_id", patientId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId,
+  });
+
+  const { data: allergies = [] } = useQuery({
+    queryKey: ["patient-allergies", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_allergies")
+        .select("*")
+        .eq("patient_account_id", patientId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId,
+  });
+
+  const { data: vitals = [] } = useQuery({
+    queryKey: ["patient-vitals", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_vitals")
+        .select("*")
+        .eq("patient_account_id", patientId)
+        .order("recorded_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId,
+  });
+
+  const { data: immunizations = [] } = useQuery({
+    queryKey: ["patient-immunizations", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_immunizations")
+        .select("*")
+        .eq("patient_account_id", patientId)
+        .order("date_administered", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId,
+  });
+
+  const { data: surgeries = [] } = useQuery({
+    queryKey: ["patient-surgeries", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_surgeries")
+        .select("*")
+        .eq("patient_account_id", patientId)
+        .order("date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId,
+  });
+
+  const { data: pharmacies = [] } = useQuery({
+    queryKey: ["patient-pharmacies", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_pharmacies")
+        .select("*")
+        .eq("patient_account_id", patientId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId,
+  });
+
+  const { data: emergencyContacts = [] } = useQuery({
+    queryKey: ["patient-emergency-contacts", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_emergency_contacts")
+        .select("*")
+        .eq("patient_account_id", patientId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId,
+  });
+
+  const handleViewChart = async () => {
+    if (!patient) return;
+    
+    setIsGeneratingPdf(true);
+    try {
+      const pdfBlob = await generateMedicalVaultPDF(
+        patient,
+        medications,
+        conditions,
+        allergies,
+        vitals,
+        immunizations,
+        surgeries,
+        pharmacies,
+        emergencyContacts
+      );
+      
+      const url = URL.createObjectURL(pdfBlob);
+      setPdfPreviewUrl(url);
+      setPreviewDialogOpen(true);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate medical chart PDF.",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadChart = async () => {
+    if (!patient) return;
+    
+    setIsGeneratingPdf(true);
+    try {
+      const pdfBlob = await generateMedicalVaultPDF(
+        patient,
+        medications,
+        conditions,
+        allergies,
+        vitals,
+        immunizations,
+        surgeries,
+        pharmacies,
+        emergencyContacts
+      );
+      
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${patient.name.replace(/\s+/g, "_")}_Medical_Chart.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Success",
+        description: "Medical chart downloaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to download medical chart.",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -167,14 +361,25 @@ export default function PatientDetail() {
           <TabsTrigger value="follow-ups">Follow-Ups</TabsTrigger>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="forms">Forms</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="flex gap-2 mb-4">
-            <Button variant="outline" onClick={() => navigate(`/practice/patients/${patientId}/medical-vault`)}>
-              <FileText className="h-4 w-4 mr-2" />
-              View Full Medical Vault
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <Button 
+              variant="outline" 
+              onClick={handleViewChart}
+              disabled={isGeneratingPdf}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              {isGeneratingPdf ? "Generating..." : "View Chart"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleDownloadChart}
+              disabled={isGeneratingPdf}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Chart
             </Button>
             <Button variant="outline" onClick={() => setAppointmentDialogOpen(true)}>
               <Calendar className="h-4 w-4 mr-2" />
@@ -190,7 +395,7 @@ export default function PatientDetail() {
             patientAccountId={patientId!}
             mode="practice"
             canEdit={true}
-            showHeader={false}
+            showHeader={true}
             patientName={patient.name}
           />
         </TabsContent>
@@ -210,14 +415,6 @@ export default function PatientDetail() {
         <TabsContent value="documents">
           <SharedDocumentsGrid patientAccountId={patientId!} mode="practice" />
         </TabsContent>
-
-        <TabsContent value="forms">
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              Patient forms will be displayed here
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Appointment Dialog */}
@@ -231,6 +428,19 @@ export default function PatientDetail() {
           defaultPatientId={patientId}
         />
       )}
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl h-[90vh]">
+          {pdfPreviewUrl && (
+            <iframe
+              src={pdfPreviewUrl}
+              className="w-full h-full rounded"
+              title="Medical Chart Preview"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
