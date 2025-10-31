@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { EmergencyContactDialog } from "./dialogs/EmergencyContactDialog";
+import { formatPhoneNumber } from "@/lib/validators";
 
 interface EmergencyContactsSectionProps {
   patientAccountId?: string;
@@ -77,7 +78,7 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
                       {contact.relationship}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{contact.phone}</p>
+                  <p className="text-sm text-muted-foreground">{formatPhoneNumber(contact.phone)}</p>
                   {contact.email && (
                     <p className="text-sm text-muted-foreground">{contact.email}</p>
                   )}

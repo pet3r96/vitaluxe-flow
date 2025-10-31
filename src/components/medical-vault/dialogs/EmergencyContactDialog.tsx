@@ -3,19 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
+import { phoneSchema } from "@/lib/validators";
 
 const emergencyContactSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  relationship: z.string().min(1, "Relationship is required"),
-  phone: z.string().min(10, "Phone number is required"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  address: z.string().optional(),
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  relationship: z.string().trim().min(1, "Relationship is required").max(50, "Relationship must be less than 50 characters"),
+  phone: z.string().trim().length(10, "Phone number must be exactly 10 digits").regex(/^\d{10}$/, "Phone number must contain only numbers"),
+  email: z.string().trim().email("Invalid email address").max(255, "Email must be less than 255 characters").optional().or(z.literal("")),
+  address: z.string().trim().max(500, "Address must be less than 500 characters").optional().or(z.literal("")),
   preferred_contact_method: z.enum(['phone', 'sms', 'email', 'any']).default('any'),
 });
 
@@ -131,12 +133,18 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
 
             <div className="space-y-2">
               <Label htmlFor="phone">Phone *</Label>
-              <Input
-                id="phone"
-                {...register("phone")}
-                placeholder="(555) 123-4567"
-                disabled={isReadOnly}
-                className={errors.phone ? "border-red-500" : ""}
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field }) => (
+                  <PhoneInput
+                    id="phone"
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isReadOnly}
+                    required
+                  />
+                )}
               />
               {errors.phone && (
                 <p className="text-sm text-red-500">{errors.phone.message}</p>
