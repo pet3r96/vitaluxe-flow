@@ -7439,24 +7439,22 @@ export type Database = {
       get_patient_unified_documents: {
         Args: { p_patient_id: string }
         Returns: {
-          assigned_by: string
-          assignment_message: string
-          bucket_name: string
-          created_at: string
-          custom_title: string
           document_name: string
           document_type: string
           file_size: number
-          hidden_by_patient: boolean
           id: string
-          is_provider_document: boolean
-          mime_type: string
+          is_hidden: boolean
           notes: string
           patient_id: string
+          practice_id: string
           share_with_practice: boolean
           source: string
+          status: string
           storage_path: string
-          updated_at: string
+          uploaded_at: string
+          uploader_id: string
+          uploader_name: string
+          uploader_role: string
         }[]
       }
       get_practice_assignable_users: {
