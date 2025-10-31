@@ -39,7 +39,7 @@ export const PatientsDataTable = () => {
       logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
       let patientsQuery = supabase
         .from("patients")
-        .select("id, name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, practice_id, created_at") // Only fields needed for table display
+        .select("id, name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, birth_date, allergies, notes, address_verification_status, address_verification_source, practice_id, created_at")
         .order("created_at", { ascending: false });
 
       // If user is a practice (doctor) or provider, only show their practice's patients

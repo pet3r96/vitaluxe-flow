@@ -67,8 +67,28 @@ export const PatientDialog = ({
         return;
       }
 
+      // Fetch full patient data if any required fields are missing
+      let fullPatient = patient;
+      if (!patient.birth_date || patient.allergies === undefined || patient.notes === undefined) {
+        try {
+          const { data: fetchedPatient, error } = await supabase
+            .from("patients")
+            .select("id, name, email, phone, birth_date, allergies, notes, address_street, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
+            .eq("id", patient.id)
+            .single();
+
+          if (error) throw error;
+          if (fetchedPatient) {
+            fullPatient = fetchedPatient;
+          }
+        } catch (error) {
+          console.error('[PatientDialog] Failed to fetch full patient data:', error);
+          toast.error('Failed to load complete patient information');
+        }
+      }
+
       // Set base fields immediately
-      const birthRaw = patient.birth_date as string | null;
+      const birthRaw = fullPatient.birth_date as string | null;
       let birthFormatted = "";
       if (birthRaw) {
         if (typeof birthRaw === "string") {
@@ -82,32 +102,32 @@ export const PatientDialog = ({
         }
       }
       const baseData = {
-        name: patient.name || "",
-        email: patient.email || "",
-        phone: patient.phone || "",
+        name: fullPatient.name || "",
+        email: fullPatient.email || "",
+        phone: fullPatient.phone || "",
         birth_date: birthFormatted,
-        address_street: patient.address_street || "",
-        address_city: patient.address_city || "",
-        address_state: patient.address_state || "",
-        address_zip: patient.address_zip || "",
-        address_formatted: patient.address_formatted || "",
-        address_verification_status: patient.address_verification_status || "unverified",
-        address_verification_source: patient.address_verification_source || "",
+        address_street: fullPatient.address_street || "",
+        address_city: fullPatient.address_city || "",
+        address_state: fullPatient.address_state || "",
+        address_zip: fullPatient.address_zip || "",
+        address_formatted: fullPatient.address_formatted || "",
+        address_verification_status: fullPatient.address_verification_status || "unverified",
+        address_verification_source: fullPatient.address_verification_source || "",
       };
 
       // Check if allergies or notes are encrypted
-      const hasEncryptedData = patient.allergies === '[ENCRYPTED]' || patient.notes === '[ENCRYPTED]';
+      const hasEncryptedData = fullPatient.allergies === '[ENCRYPTED]' || fullPatient.notes === '[ENCRYPTED]';
       
       if (!hasEncryptedData) {
         // No encryption, use plain text values directly
         setDecryptedPHI({
-          allergies: patient.allergies,
-          notes: patient.notes
+          allergies: fullPatient.allergies,
+          notes: fullPatient.notes
         });
         setFormData({
           ...baseData,
-          allergies: patient.allergies || "",
-          notes: patient.notes || ""
+          allergies: fullPatient.allergies || "",
+          notes: fullPatient.notes || ""
         });
         return;
       }
@@ -115,7 +135,7 @@ export const PatientDialog = ({
       // Encrypted - decrypt first
       try {
         const { data, error } = await supabase.rpc('get_decrypted_patient_phi', {
-          p_patient_id: patient.id
+          p_patient_id: fullPatient.id
         });
 
         if (error) throw error;
