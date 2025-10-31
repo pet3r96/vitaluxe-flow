@@ -30,7 +30,9 @@ export default function PatientDetail() {
       return {
         ...data,
         name: data ? `${data.first_name} ${data.last_name}` : "",
-        address: data?.address || "",
+        address: data?.address && data?.city && data?.state && data?.zip_code
+          ? `${data.address}, ${data.city}, ${data.state} ${data.zip_code}`
+          : data?.address || "Not provided",
       };
     },
     enabled: !!patientId,
