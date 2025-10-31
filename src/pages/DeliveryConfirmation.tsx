@@ -58,26 +58,36 @@ export default function DeliveryConfirmation() {
 
       if (cartError) throw cartError;
 
-      const { data: lines, error: linesError } = await supabase
+      const { data: linesRaw, error: linesError } = await supabase
         .from("cart_lines")
         .select(`
           *,
-          product:products(*),
-          patient:patients(
-            id,
-            name,
-            address_street,
-            address_city,
-            address_state,
-            address_zip,
-            address_formatted
-          )
+          product:products(*)
         `)
         .eq("cart_id", cart.id);
 
       if (linesError) throw linesError;
 
-      return { cart, lines: lines || [] };
+      const lines = (linesRaw || []) as any[];
+
+      // Manually hydrate patient records since there is no FK constraint
+      const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
+      if (patientIds.length > 0) {
+        const { data: patients, error: patientsError } = await supabase
+          .from('patients')
+          .select('id, name, address_street, address_city, address_state, address_zip, address_formatted')
+          .in('id', patientIds);
+        if (!patientsError && patients) {
+          const patientMap = new Map(patients.map((p: any) => [p.id, p]));
+          for (const line of lines) {
+            if (line.patient_id) {
+              line.patient = patientMap.get(line.patient_id) || null;
+            }
+          }
+        }
+      }
+
+      return { cart, lines };
     },
   });
 
@@ -175,44 +185,49 @@ export default function DeliveryConfirmation() {
       }
 
       // Update the patient record if patientId is provided
-      // Try patient_accounts first, then fallback to patients table for backward compatibility
       if (patientId) {
         console.log('[DeliveryConfirmation] Updating patient record with ID:', patientId);
-        
-        // Try updating patient_accounts table first
-        const { data: patientData, error: patientError } = await supabase
-          .from("patient_accounts")
+
+        // Prefer updating patients table (source of truth)
+        const { data: patientsData, error: patientsError } = await supabase
+          .from("patients")
           .update({
-            address: address.street,
-            city: address.city,
-            state: address.state,
-            zip_code: address.zip,
+            address_street: address.street,
+            address_city: address.city,
+            address_state: address.state,
+            address_zip: address.zip,
+            address_formatted: address.formatted,
+            address_verification_status: address.status,
+            address_verification_source: address.source || 'manual',
+            address_verified_at: address.status === 'verified' ? new Date().toISOString() : null,
           })
           .eq("id", patientId)
           .select('id');
 
-        if (patientError || !patientData || patientData.length === 0) {
-          // Fallback: try updating patients table (for legacy cart lines)
-          console.log('[DeliveryConfirmation] Trying patients table fallback');
-          const { data: patientsData, error: patientsError } = await supabase
-            .from("patients")
+        if (patientsError || !patientsData || patientsData.length === 0) {
+          console.warn('[DeliveryConfirmation] Patients update failed or no rows affected, attempting patient_accounts fallback');
+
+          // Fallback: try updating patient_accounts table if patientId actually refers to that table in legacy data
+          const { data: patientData, error: patientError } = await supabase
+            .from("patient_accounts")
             .update({
-              address_street: address.street,
-              address_city: address.city,
-              address_state: address.state,
-              address_zip: address.zip,
+              address: address.formatted || `${address.street}, ${address.city}, ${address.state} ${address.zip}`,
+              city: address.city,
+              state: address.state,
+              zip_code: address.zip,
+              updated_at: new Date().toISOString(),
             })
             .eq("id", patientId)
             .select('id');
 
-          if (patientsError) {
+          if (patientError || !patientData || patientData.length === 0) {
             console.error('[DeliveryConfirmation] Both patient updates failed:', { patientError, patientsError });
             toast.warning("Address saved for this order, but the patient record could not be updated.");
           } else {
-            console.log('[DeliveryConfirmation] Patients table updated successfully:', patientsData);
+            console.log('[DeliveryConfirmation] Patient_accounts table updated successfully:', patientData);
           }
         } else {
-          console.log('[DeliveryConfirmation] Patient_accounts updated successfully:', patientData);
+          console.log('[DeliveryConfirmation] Patients table updated successfully:', patientsData);
         }
       }
       
@@ -592,7 +607,7 @@ export default function DeliveryConfirmation() {
           )}
 
           {/* Patient Orders */}
-          {patientGroups && Object.entries(patientGroups).map(([patientName, lines]) => (
+          {patientGroups && Object.entries(patientGroups as Record<string, any[]>).map(([patientName, lines]) => (
             <div key={patientName} className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -670,7 +685,7 @@ export default function DeliveryConfirmation() {
                           updatePatientAddress.mutate({
                             patientName,
                             lineIds: lines.map(l => l.id),
-                            patientId: lines[0].patient.id,
+                            patientId: lines[0].patient_id,
                             address: {
                               street: lines[0].patient.address_street,
                               city: lines[0].patient.address_city,
