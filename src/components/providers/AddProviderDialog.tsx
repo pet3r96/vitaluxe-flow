@@ -40,6 +40,9 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
     licenseNumber: "",
     phone: "",
   });
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<
+    null | "verifying" | "verified" | "failed"
+  >(null);
 
   const { data: practices } = useQuery({
     queryKey: ["practices"],
@@ -78,6 +81,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
       licenseNumber: "",
       phone: "",
     });
+    setNpiVerificationStatus(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,6 +94,16 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
     
     if (!hasActivePro) {
       toast.error("VitaLuxePro subscription required to add providers. Please upgrade your practice subscription.");
+      return;
+    }
+    
+    // Check NPI verification status BEFORE format validation
+    if (npiVerificationStatus !== "verified") {
+      if (npiVerificationStatus === "verifying") {
+        toast.error("Please wait for NPI verification to complete");
+      } else {
+        toast.error("NPI must be verified before adding provider");
+      }
       return;
     }
     
@@ -264,6 +278,13 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                 // Clear error immediately when user changes the value
                 setValidationErrors(prev => ({ ...prev, npi: "" }));
                 
+                // Reset verification status when NPI changes
+                if (value.length !== 10) {
+                  setNpiVerificationStatus(null);
+                } else {
+                  setNpiVerificationStatus("verifying");
+                }
+                
                 // Real-time NPI verification
                 if (value && value.length === 10) {
                   verifyNPIDebounced(value, (result) => {
@@ -272,6 +293,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                     setFormData(currentFormData => {
                       if (currentFormData.npi === result.npi) {
                         if (result.valid) {
+                          setNpiVerificationStatus("verified");
                           // Show success message for all valid NPIs
                           if (result.providerName) {
                             toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
@@ -283,6 +305,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                             toast.info(result.warning);
                           }
                         } else if (result.error) {
+                          setNpiVerificationStatus("failed");
                           setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
                         }
                       }
@@ -303,7 +326,15 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
             {validationErrors.npi && (
               <p className="text-sm text-destructive">{validationErrors.npi}</p>
             )}
-            <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
+            {npiVerificationStatus === "verifying" && (
+              <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
+            )}
+            {npiVerificationStatus === "verified" && (
+              <p className="text-sm text-green-600">✅ NPI Verified</p>
+            )}
+            {!npiVerificationStatus && formData.npi.length === 0 && (
+              <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -378,7 +409,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || npiVerificationStatus !== "verified"}>
               {loading ? "Adding..." : "Add Provider"}
             </Button>
           </div>
