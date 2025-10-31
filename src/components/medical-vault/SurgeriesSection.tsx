@@ -37,7 +37,7 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
     : (surgeries || []).slice(0, 2);
 
   return (
-    <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-teal-500/10 to-cyan-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+    <Card className="group relative overflow-visible border-0 bg-gradient-to-br from-teal-500/10 to-cyan-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
       {/* Animated border glow effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
