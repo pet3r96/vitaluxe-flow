@@ -29,7 +29,6 @@ const medicationSchema = z.object({
   notes: z.string().optional(),
   instructions: z.string().optional(),
   alert_enabled: z.boolean().optional(),
-  condition_id: z.string().optional(),
   prescribing_provider: z.string().trim().max(120).optional(),
 });
 
@@ -58,7 +57,6 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
       notes: "",
       instructions: "",
       alert_enabled: false,
-      condition_id: "",
       prescribing_provider: "",
     },
   });
@@ -96,7 +94,6 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         notes: medication.notes || "",
         instructions: medication.instructions || "",
         alert_enabled: medication.alert_enabled || false,
-        condition_id: medication.associated_condition_id || "",
         prescribing_provider: medication.prescribing_provider || "",
       });
     } else if (!medication && open) {
@@ -110,29 +107,10 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         notes: "",
         instructions: "",
         alert_enabled: false,
-        condition_id: "",
         prescribing_provider: "",
       });
     }
   }, [medication, open, reset]);
-
-  // Fetch patient's conditions for dropdown
-  const { data: conditions } = useQuery({
-    queryKey: ["patient-conditions", patientAccountId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_conditions")
-        .select("id, condition_name")
-        .eq("patient_account_id", patientAccountId)
-        .eq("is_active", true)
-        .order("condition_name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!patientAccountId,
-  });
-
-  // Prescribing provider is free-text; no provider lookup needed
 
 
   const mutation = useOptimisticMutation(
@@ -149,7 +127,6 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         notes: data.notes || null,
         instructions: data.instructions || null,
         alert_enabled: data.alert_enabled || false,
-        associated_condition_id: data.condition_id || null,
         prescribing_provider: data.prescribing_provider || null,
       };
 
@@ -311,27 +288,6 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
                   </Label>
                 </div>
               </RadioGroup>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="condition_id">Associated Medical Condition</Label>
-              <Select
-                value={watch("condition_id") || ""}
-                onValueChange={(value) => setValue("condition_id", value === "__none__" ? "" : value)}
-                disabled={isReadOnly}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a condition (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {conditions?.map((condition) => (
-                    <SelectItem key={condition.id} value={condition.id}>
-                      {condition.condition_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
