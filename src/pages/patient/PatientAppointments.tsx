@@ -90,19 +90,36 @@ export default function PatientAppointments() {
           .eq('practice_id', patientAccount.practice_id)
           .maybeSingle();
 
+        // Fetch practice address from profiles
+        const { data: practiceProfile } = await supabase
+          .from('profiles')
+          .select('address_street, address_city, address_state, address_zip')
+          .eq('id', patientAccount.practice_id)
+          .maybeSingle();
+
         const mapped = rows.map((r: any) => {
           const prov = providers.find(p => p.id === r.provider_id);
           const prof = prov ? profiles.find(pr => pr.id === prov.user_id) : null;
+          
+          // Use appointment address if available, otherwise fallback to practice profile address
+          const addrStreet = r.street || practiceProfile?.address_street || null;
+          const addrCity = r.city || practiceProfile?.address_city || null;
+          const addrState = r.state || practiceProfile?.address_state || null;
+          const addrZip = r.zip || practiceProfile?.address_zip || null;
+          const formatted = (addrStreet && addrCity) 
+            ? `${addrStreet}, ${addrCity}, ${addrState || ''} ${addrZip || ''}`.trim() 
+            : null;
+
           return {
             ...r,
             practice: {
               id: r.practice_id,
               name: branding?.practice_name || 'Practice',
-              address_formatted: r.street && r.city ? `${r.street}, ${r.city}, ${r.state} ${r.zip}` : null,
-              address_street: r.street,
-              address_city: r.city,
-              address_state: r.state,
-              address_zip: r.zip,
+              address_formatted: formatted,
+              address_street: addrStreet,
+              address_city: addrCity,
+              address_state: addrState,
+              address_zip: addrZip,
             },
             provider: prov ? {
               id: prov.id,

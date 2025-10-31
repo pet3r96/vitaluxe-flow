@@ -38,6 +38,15 @@ Deno.serve(async (req) => {
       throw new Error('Patient account not found. Please contact your healthcare provider.');
     }
 
+    // Fetch practice address from profiles
+    const { data: practiceProfile, error: profileErr } = await supabaseClient
+      .from('profiles')
+      .select('address_street, address_city, address_state, address_zip')
+      .eq('id', patientAccount.practice_id)
+      .maybeSingle();
+    
+    if (profileErr) throw profileErr;
+
     // Use clientDateTimeIso if provided (client-side timezone), otherwise fallback to server-side construction
     const fullDateTime = clientDateTimeIso ? new Date(clientDateTimeIso) : new Date(`${appointmentDate}T${appointmentTime}`);
     const endDateTime = new Date(fullDateTime.getTime() + 60 * 60 * 1000); // +1 hour default
@@ -146,7 +155,11 @@ Deno.serve(async (req) => {
         confirmation_type: 'pending',
         requested_date: appointmentDate,
         requested_time: appointmentTime,
-        notes
+        notes,
+        street: practiceProfile?.address_street || null,
+        city: practiceProfile?.address_city || null,
+        state: practiceProfile?.address_state || null,
+        zip: practiceProfile?.address_zip || null,
       })
       .select()
       .single();
