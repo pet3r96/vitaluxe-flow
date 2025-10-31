@@ -19,13 +19,19 @@ export default function PatientDetail() {
     queryKey: ["patient", patientId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patients")
+        .from("patient_accounts")
         .select("*")
         .eq("id", patientId)
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Map patient_accounts fields to match expected format
+      return {
+        ...data,
+        name: data ? `${data.first_name} ${data.last_name}` : "",
+        address: data?.address || "",
+      };
     },
     enabled: !!patientId,
   });
@@ -106,24 +112,39 @@ export default function PatientDetail() {
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Clinical Notes</CardTitle>
+              <CardTitle>Patient Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              {patient.allergies && (
-                <div className="mb-4">
-                  <p className="text-sm font-semibold text-muted-foreground mb-1">Allergies</p>
-                  <Badge variant="destructive">{patient.allergies}</Badge>
-                </div>
-              )}
-              {patient.notes && (
+              <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-1">Notes</p>
-                  <p className="text-sm">{patient.notes}</p>
+                  <p className="text-sm font-semibold text-muted-foreground mb-1">Date of Birth</p>
+                  <p className="text-sm">
+                    {patient.date_of_birth 
+                      ? new Date(patient.date_of_birth).toLocaleDateString() 
+                      : "Not provided"}
+                  </p>
                 </div>
-              )}
-              {!patient.allergies && !patient.notes && (
-                <p className="text-muted-foreground">No clinical notes available</p>
-              )}
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground mb-1">Gender</p>
+                  <p className="text-sm capitalize">
+                    {patient.gender_at_birth || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground mb-1">Emergency Contact</p>
+                  <p className="text-sm">
+                    {patient.emergency_contact_name 
+                      ? `${patient.emergency_contact_name}${patient.emergency_contact_phone ? ` - ${patient.emergency_contact_phone}` : ''}` 
+                      : "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground mb-1">Status</p>
+                  <Badge variant={patient.status === 'active' ? 'default' : 'secondary'}>
+                    {patient.status || 'active'}
+                  </Badge>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
