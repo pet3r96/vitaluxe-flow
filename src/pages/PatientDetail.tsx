@@ -11,12 +11,19 @@ import { FollowUpManager } from "@/components/patients/FollowUpManager";
 import { MedicalVaultView } from "@/components/medical-vault/MedicalVaultView";
 import { MedicalVaultSummaryCard } from "@/components/medical-vault/MedicalVaultSummaryCard";
 import { SharedDocumentsGrid } from "@/components/medical-vault/SharedDocumentsGrid";
+import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "overview";
+  const { effectivePracticeId } = useAuth();
+  const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false);
+
+  const practiceId = effectivePracticeId;
 
   const { data: patient, isLoading } = useQuery({
     queryKey: ["patient", patientId],
@@ -39,6 +46,38 @@ export default function PatientDetail() {
       };
     },
     enabled: !!patientId,
+  });
+
+  // Fetch providers for appointment dialog
+  const { data: providers = [] } = useQuery({
+    queryKey: ["providers", practiceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("providers")
+        .select("*")
+        .eq("practice_id", practiceId)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!practiceId,
+  });
+
+  // Fetch rooms for appointment dialog
+  const { data: rooms = [] } = useQuery({
+    queryKey: ["rooms", practiceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_rooms")
+        .select("*")
+        .eq("practice_id", practiceId)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!practiceId,
   });
 
   if (isLoading) {
@@ -137,7 +176,7 @@ export default function PatientDetail() {
               <FileText className="h-4 w-4 mr-2" />
               View Full Medical Vault
             </Button>
-            <Button variant="outline" onClick={() => navigate(`/practice-calendar?patient=${patientId}`)}>
+            <Button variant="outline" onClick={() => setAppointmentDialogOpen(true)}>
               <Calendar className="h-4 w-4 mr-2" />
               Schedule Appointment
             </Button>
@@ -180,6 +219,18 @@ export default function PatientDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Appointment Dialog */}
+      {practiceId && (
+        <CreateAppointmentDialog
+          open={appointmentDialogOpen}
+          onOpenChange={setAppointmentDialogOpen}
+          practiceId={practiceId}
+          providers={providers}
+          rooms={rooms}
+          defaultPatientId={patientId}
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,7 @@ interface CreateAppointmentDialogProps {
   practiceId: string;
   defaultDate?: Date;
   defaultProviderId?: string;
+  defaultPatientId?: string;
   providers: any[];
   rooms: any[];
   isWalkIn?: boolean;
@@ -37,6 +38,7 @@ export function CreateAppointmentDialog({
   practiceId,
   defaultDate,
   defaultProviderId,
+  defaultPatientId,
   providers,
   rooms,
   isWalkIn = false,
@@ -44,8 +46,15 @@ export function CreateAppointmentDialog({
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const { effectiveUserId } = useAuth();
-  const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [selectedPatientId, setSelectedPatientId] = useState(defaultPatientId || "");
   const [createFollowUp, setCreateFollowUp] = useState(false);
+  
+  // Sync selectedPatientId when dialog opens with a defaultPatientId
+  useEffect(() => {
+    if (open && defaultPatientId) {
+      setSelectedPatientId(defaultPatientId);
+    }
+  }, [open, defaultPatientId]);
   
   // For walk-ins, round current time to nearest 5 minutes
   const getCurrentTimeRounded = () => {
