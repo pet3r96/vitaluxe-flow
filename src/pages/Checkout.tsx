@@ -155,7 +155,8 @@ export default function Checkout() {
           *,
           product:products(name, dosage, sig, image_url, base_price, requires_prescription)
         `)
-        .eq("cart_id", cartData.id);
+        .eq("cart_id", cartData.id)
+        .gte("expires_at", new Date().toISOString());
 
       if (linesError) throw linesError;
 
@@ -207,7 +208,8 @@ export default function Checkout() {
         *,
         product:products(name, dosage, sig, image_url, base_price, requires_prescription)
       `)
-      .eq("cart_id", cartData.id);
+      .eq("cart_id", cartData.id)
+      .gte("expires_at", new Date().toISOString());
 
     if (linesError) throw linesError;
     return { id: cartData.id, lines: lines || [] };
