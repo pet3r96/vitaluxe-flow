@@ -114,55 +114,28 @@ export default function PatientDashboard() {
       if (!patientAccount?.id) return 0;
       
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return 0;
+        console.log('[PatientDashboard] 📧 Fetching unread messages for patient_id:', patientAccount.id);
 
-        // Check for impersonation
-        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-        const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
-        
-        console.log('[PatientDashboard] 📧 Fetching messages for user:', effectiveUserId);
+        const { data, error } = await supabase
+          .from("patient_messages")
+          .select("id")
+          .eq("patient_id", patientAccount.id)
+          .eq("sender_type", "provider")
+          .is("read_at", null)
+          .eq("resolved", false);
 
-        // Get thread IDs where user is a participant
-        const { data: participantThreads, error: participantError } = await supabase
-          .from("thread_participants")
-          .select("thread_id")
-          .eq("user_id", effectiveUserId);
+        if (error) throw error;
 
-        if (participantError) throw participantError;
-        
-        const threadIds = participantThreads?.map(pt => pt.thread_id) || [];
-        if (threadIds.length === 0) return 0;
-
-        // Get threads with latest messages
-        const { data: threads, error: threadsError } = await supabase
-          .from("message_threads")
-          .select(`
-            id,
-            messages!inner(created_at, sender_id)
-          `)
-          .in("id", threadIds);
-
-        if (threadsError) throw threadsError;
-
-        // Count threads where latest message is not from current user
-        const unreadThreads = threads?.filter((thread: any) => {
-          const messages = Array.isArray(thread.messages) ? thread.messages : [thread.messages];
-          const latestMessage = messages.sort((a: any, b: any) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          )[0];
-          return latestMessage?.sender_id !== effectiveUserId;
-        }) || [];
-
-        console.log('[PatientDashboard] 📧 Found', unreadThreads.length, 'unread messages');
-        return unreadThreads.length;
+        const count = data?.length || 0;
+        console.log('[PatientDashboard] 📧 Found', count, 'unread messages for patient');
+        return count;
       } catch (error) {
         console.error("Failed to fetch unread count:", error);
         return 0;
       }
     },
     enabled: !!patientAccount?.id,
-    staleTime: 1 * 60 * 1000,
+    staleTime: 60 * 1000,
   });
 
   // Fetch recent appointments (past 3)
@@ -217,69 +190,55 @@ export default function PatientDashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch recent messages (3 most recent)
+  // Fetch recent messages (3 most recent threads)
   const { data: recentMessages = [] } = useQuery({
     queryKey: ["recent-messages", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return [];
+        console.log('[PatientDashboard] 💬 Fetching recent messages for patient_id:', patientAccount.id);
 
-        // Check for impersonation
-        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-        const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
-        
-        console.log('[PatientDashboard] 💬 Fetching recent messages for user:', effectiveUserId);
-
-        // Get thread IDs where user is a participant
-        const { data: participantThreads } = await supabase
-          .from("thread_participants")
-          .select("thread_id")
-          .eq("user_id", effectiveUserId);
-
-        const threadIds = participantThreads?.map(pt => pt.thread_id) || [];
-        if (threadIds.length === 0) return [];
-
-        // Get recent threads with messages
-        const { data, error } = await supabase
-          .from("message_threads")
+        const { data: messages, error } = await supabase
+          .from("patient_messages")
           .select(`
             id,
+            thread_id,
             subject,
+            message_body,
             created_at,
-            messages!inner(
-              id,
-              message_body,
-              created_at,
-              sender_id,
-              sender:profiles!messages_sender_id_fkey(name)
-            )
+            read_at,
+            sender_type
           `)
-          .in("id", threadIds)
-          .order("created_at", { ascending: false })
-          .limit(3);
+          .eq("patient_id", patientAccount.id)
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
-        
-        // Transform to flat structure with latest message info
-        return data?.map((thread: any) => {
-          const messages = Array.isArray(thread.messages) ? thread.messages : [thread.messages];
-          const latestMessage = messages.sort((a: any, b: any) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          )[0];
-          
-          return {
-            id: thread.id,
-            subject: thread.subject,
-            message_body: latestMessage?.message_body,
-            created_at: latestMessage?.created_at || thread.created_at,
-            read_at: latestMessage?.sender_id === effectiveUserId ? new Date().toISOString() : null,
-            sender: latestMessage?.sender
-          };
-        }) || [];
-        console.log('[PatientDashboard] 💬 Found', data?.length || 0, 'recent message threads');
+        if (!messages || messages.length === 0) return [];
+
+        const latestByThread = new Map();
+        (messages || []).forEach((m: any) => {
+          const key = m.thread_id || m.id;
+          const existing = latestByThread.get(key);
+          if (!existing || new Date(m.created_at).getTime() > new Date(existing.created_at).getTime()) {
+            latestByThread.set(key, m);
+          }
+        });
+
+        const threads = Array.from(latestByThread.values())
+          .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 3)
+          .map((m: any) => ({
+            id: m.thread_id || m.id,
+            subject: m.subject,
+            message_body: m.message_body,
+            created_at: m.created_at,
+            read_at: m.read_at,
+            sender: { name: m.sender_type === 'provider' ? 'Provider' : 'You' },
+          }));
+
+        console.log('[PatientDashboard] 💬 Found', threads.length, 'recent message threads');
+        return threads;
       } catch (error) {
         console.error("Failed to fetch recent messages:", error);
         return [];
