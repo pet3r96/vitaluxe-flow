@@ -19,14 +19,18 @@ import { Loader2, Plus, X } from "lucide-react";
 const intakeSchema = z.object({
   date_of_birth: z.string().min(1, "Date of birth is required"),
   gender_at_birth: z.string().min(1, "Gender is required"),
-  phone: z.string().length(10, "Phone must be exactly 10 digits"),
+  phone: z.string()
+    .transform(val => val.replace(/\D/g, ''))
+    .refine(val => val.length === 10, "Phone must be exactly 10 digits"),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
   zip_code: z.string().min(5, "Zip code is required"),
   emergency_contact_name: z.string().min(1, "Emergency contact name is required"),
   emergency_contact_relationship: z.string().min(1, "Relationship is required"),
-  emergency_contact_phone: z.string().length(10, "Phone must be exactly 10 digits"),
+  emergency_contact_phone: z.string()
+    .transform(val => val.replace(/\D/g, ''))
+    .refine(val => val.length === 10, "Phone must be exactly 10 digits"),
   emergency_contact_email: z.string().email().optional().or(z.literal("")),
   height_feet: z.string().optional(),
   height_inches: z.string().optional(),
@@ -37,7 +41,9 @@ const intakeSchema = z.object({
   pharmacy_city: z.string().min(1, "Pharmacy city is required"),
   pharmacy_state: z.string().min(1, "Pharmacy state is required"),
   pharmacy_zip: z.string().min(5, "Pharmacy zip is required"),
-  pharmacy_phone: z.string().length(10, "Phone must be exactly 10 digits"),
+  pharmacy_phone: z.string()
+    .transform(val => val.replace(/\D/g, ''))
+    .refine(val => val.length === 10, "Phone must be exactly 10 digits"),
 });
 
 type IntakeFormData = z.infer<typeof intakeSchema>;
@@ -271,27 +277,65 @@ export default function PatientIntakeForm() {
         await supabase.from('patient_surgeries').insert(surgeryEntries);
       }
 
-      // Insert pharmacy
-      await supabase.from('patient_pharmacies').upsert({
-        patient_account_id: patientAccount.id,
-        pharmacy_name: data.pharmacy_name,
-        address: data.pharmacy_address,
-        city: data.pharmacy_city,
-        state: data.pharmacy_state,
-        zip: data.pharmacy_zip,
-        phone: data.pharmacy_phone,
-        is_preferred: true,
-      });
+      // Insert or update pharmacy
+      const { data: existingPharmacy } = await supabase
+        .from('patient_pharmacies')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id)
+        .eq('is_preferred', true)
+        .maybeSingle();
 
-      // Insert emergency contact
-      await supabase.from('patient_emergency_contacts').upsert({
-        patient_account_id: patientAccount.id,
-        name: data.emergency_contact_name,
-        relationship: data.emergency_contact_relationship,
-        phone: data.emergency_contact_phone,
-        email: data.emergency_contact_email || null,
-        is_primary: true,
-      });
+      if (existingPharmacy) {
+        await supabase
+          .from('patient_pharmacies')
+          .update({
+            pharmacy_name: data.pharmacy_name,
+            address: data.pharmacy_address,
+            city: data.pharmacy_city,
+            state: data.pharmacy_state,
+            zip_code: data.pharmacy_zip,
+            phone: data.pharmacy_phone,
+          })
+          .eq('id', existingPharmacy.id);
+      } else {
+        await supabase.from('patient_pharmacies').insert({
+          patient_account_id: patientAccount.id,
+          pharmacy_name: data.pharmacy_name,
+          address: data.pharmacy_address,
+          city: data.pharmacy_city,
+          state: data.pharmacy_state,
+          zip_code: data.pharmacy_zip,
+          phone: data.pharmacy_phone,
+          is_preferred: true,
+        });
+      }
+
+      // Insert or update emergency contact
+      const { data: existingContact } = await supabase
+        .from('patient_emergency_contacts')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id)
+        .maybeSingle();
+
+      if (existingContact) {
+        await supabase
+          .from('patient_emergency_contacts')
+          .update({
+            name: data.emergency_contact_name,
+            relationship: data.emergency_contact_relationship,
+            phone: data.emergency_contact_phone,
+            email: data.emergency_contact_email || null,
+          })
+          .eq('id', existingContact.id);
+      } else {
+        await supabase.from('patient_emergency_contacts').insert({
+          patient_account_id: patientAccount.id,
+          name: data.emergency_contact_name,
+          relationship: data.emergency_contact_relationship,
+          phone: data.emergency_contact_phone,
+          email: data.emergency_contact_email || null,
+        });
+      }
 
       toast.success("Intake form completed successfully!");
       navigate('/dashboard');

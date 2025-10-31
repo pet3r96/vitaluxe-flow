@@ -15,6 +15,7 @@ import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonation
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
+import { GlobalIntakeDialog } from "./components/patient/GlobalIntakeDialog";
 import { UpgradePromptDialog } from "@/components/subscription/UpgradePromptDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
 import { PracticeOnlyRoute } from "./components/subscription/PracticeOnlyRoute";
@@ -181,6 +182,7 @@ const App = () => (
               <SessionTimerWrapper />
               <GlobalImpersonationBanner>
                 <Global2FADialogs />
+                <GlobalIntakeDialog />
                 <UpgradePromptDialog />
                 <Suspense fallback={<PageLoader />}>
                 <Routes>

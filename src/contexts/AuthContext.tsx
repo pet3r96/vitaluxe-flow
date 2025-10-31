@@ -33,6 +33,8 @@ interface AuthContextType {
   user2FAPhone: string | null;
   twoFAStatusChecked: boolean;
   passwordStatusChecked: boolean;
+  showIntakeDialog: boolean;
+  setShowIntakeDialog: (show: boolean) => void;
   mark2FAVerified: () => void;
   checkPasswordStatus: (roleOverride?: string, userIdOverride?: string) => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
@@ -77,6 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
   const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
   const [twoFAEnforcementEnabled, setTwoFAEnforcementEnabled] = useState<boolean>(true);
+  const [showIntakeDialog, setShowIntakeDialog] = useState(false);
   
   // Hard 30-minute session timeout with activity refresh
   const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -302,20 +305,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             minutesRemaining: 60 
           });
           
-          // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
-          setTimeout(() => {
-            console.log('[AuthContext] Executing deferred backend calls');
-            
-            // Fetch role and CSRF token asynchronously (don't block)
-            Promise.all([
-              fetchUserRole(session.user.id),
-              generateCSRFToken()
-            ]).then(() => {
-              logger.info('SIGNED_IN: user data loaded');
-            }).catch((error) => {
-              logger.error('Error loading user data after sign in', error);
-            });
-          }, 0);
+            // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
+            setTimeout(() => {
+              console.log('[AuthContext] Executing deferred backend calls');
+              
+              // Fetch role and CSRF token asynchronously (don't block)
+              Promise.all([
+                fetchUserRole(session.user.id),
+                generateCSRFToken()
+              ]).then(async () => {
+                logger.info('SIGNED_IN: user data loaded');
+                
+                // Check if user needs to complete intake (patient-only feature)
+                const { data: patientData } = await supabase
+                  .from('patient_accounts')
+                  .select('intake_completed_at')
+                  .eq('user_id', session.user.id)
+                  .maybeSingle();
+                
+                // If patient account exists and intake is incomplete, show dialog
+                if (patientData && !patientData.intake_completed_at) {
+                  console.log('[AuthContext] Patient needs to complete intake, showing dialog');
+                  setShowIntakeDialog(true);
+                } else {
+                  console.log('[AuthContext] No intake required', { 
+                    hasPatientAccount: !!patientData, 
+                    intakeComplete: patientData?.intake_completed_at 
+                  });
+                }
+              }).catch((error) => {
+                logger.error('Error loading user data after sign in', error);
+              });
+            }, 0);
           
         } else if (event === 'USER_UPDATED' && session?.user) {
           // User data updated - refresh role data silently (no loading state)
@@ -367,6 +388,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIs2FAVerifiedThisSession(false);
           setRequires2FASetup(false);
           setRequires2FAVerify(false);
+          setShowIntakeDialog(false);
           
           clearCSRFToken();
           logger.info('SIGNED_OUT: state cleared');
@@ -1429,6 +1451,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       requires2FAVerify,
       user2FAPhone,
       twoFAStatusChecked,
+      showIntakeDialog,
+      setShowIntakeDialog,
       mark2FAVerified,
       checkPasswordStatus,
       setImpersonation,
