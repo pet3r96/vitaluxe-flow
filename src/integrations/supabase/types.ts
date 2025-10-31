@@ -2662,7 +2662,7 @@ export type Database = {
       }
       patient_conditions: {
         Row: {
-          associated_provider_id: string | null
+          associated_provider: string | null
           attachments: Json | null
           condition_name: string
           created_at: string
@@ -2678,7 +2678,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          associated_provider_id?: string | null
+          associated_provider?: string | null
           attachments?: Json | null
           condition_name: string
           created_at?: string
@@ -2694,7 +2694,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          associated_provider_id?: string | null
+          associated_provider?: string | null
           attachments?: Json | null
           condition_name?: string
           created_at?: string

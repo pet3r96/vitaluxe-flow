@@ -90,7 +90,7 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
         date_diagnosed: fullDate,
         severity: data.severity || null,
         treatment_plan: data.treatment_plan || null,
-        associated_provider_id: data.associated_provider || null,
+        associated_provider: data.associated_provider || null,
         notes: data.notes || null,
       };
 
