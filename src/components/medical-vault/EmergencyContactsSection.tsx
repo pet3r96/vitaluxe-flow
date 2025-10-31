@@ -43,7 +43,7 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
             <div className="p-2 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg">
               <Phone className="h-6 w-6 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent font-bold">
+            <span className="bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent font-bold inline-block whitespace-nowrap">
               Emergency Contacts
             </span>
           </CardTitle>

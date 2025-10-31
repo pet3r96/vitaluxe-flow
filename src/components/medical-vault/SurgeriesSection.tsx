@@ -43,7 +43,7 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
             <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg">
               <Scissors className="h-6 w-6 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent font-bold">
+            <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent font-bold inline-block whitespace-nowrap">
               Surgeries
             </span>
           </CardTitle>
