@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Edit, UserPlus, CheckCircle, Lock } from "lucide-react";
+import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PatientDialog } from "./PatientDialog";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +29,7 @@ export const PatientsDataTable = () => {
   const { effectiveRole, effectivePracticeId, user } = useAuth();
   const { isSubscribed } = useSubscription();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -304,6 +306,21 @@ export const PatientsDataTable = () => {
                   <TableCell className="text-right">
                     {!isAdmin && (
                       <div className="flex items-center justify-end gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/patients/${patient.id}`)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View Patient File</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        
                         <Button
                           variant="ghost"
                           size="sm"

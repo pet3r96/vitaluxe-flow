@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, XCircle, Calendar, Clock, User, AlertTriangle, Edit2 } from "lucide-react";
+import { CheckCircle, XCircle, Calendar, Clock, User, AlertTriangle, Edit2, FolderOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format, parse } from "date-fns";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ export const AppointmentRequestReviewDialog = ({
   onSuccess,
 }: AppointmentRequestReviewDialogProps) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
@@ -243,9 +245,24 @@ export const AppointmentRequestReviewDialog = ({
         <div className="space-y-6 py-4">
           {/* Patient Information */}
           <div className="p-4 bg-accent/50 rounded-lg space-y-3">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">Patient</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Patient</span>
+              </div>
+              {appointment.patient_id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    navigate(`/patients/${appointment.patient_id}`);
+                    onOpenChange(false);
+                  }}
+                >
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  View Patient File
+                </Button>
+              )}
             </div>
             <p className="text-lg font-semibold">{patientName}</p>
           </div>

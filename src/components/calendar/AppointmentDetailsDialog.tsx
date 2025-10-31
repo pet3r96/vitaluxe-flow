@@ -13,9 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock, UserPlus } from "lucide-react";
+import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock, UserPlus, FolderOpen } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { RescheduleAppointmentDialog } from "./RescheduleAppointmentDialog";
 import { CreateFollowUpFromAppointmentDialog } from "./CreateFollowUpFromAppointmentDialog";
 
@@ -46,6 +47,7 @@ export function AppointmentDetailsDialog({
   rooms,
 }: AppointmentDetailsDialogProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [status, setStatus] = useState(appointment?.status);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
@@ -209,7 +211,23 @@ export function AppointmentDetailsDialog({
           <div className="space-y-6">
             {/* Patient Info */}
             <div>
-              <h3 className="text-lg font-semibold mb-3">Patient Information</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold">Patient Information</h3>
+                {(appointment.patient_accounts?.id || appointment.patient_id) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const patientId = appointment.patient_accounts?.id || appointment.patient_id;
+                      navigate(`/patients/${patientId}`);
+                      onOpenChange(false);
+                    }}
+                  >
+                    <FolderOpen className="h-4 w-4 mr-2" />
+                    View Patient File
+                  </Button>
+                )}
+              </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />

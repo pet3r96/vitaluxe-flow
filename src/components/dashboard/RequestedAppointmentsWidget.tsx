@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, AlertCircle } from "lucide-react";
+import { Calendar, Clock, AlertCircle, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, formatDistanceToNow, parse } from "date-fns";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppointmentRequestReviewDialog } from "@/components/calendar/AppointmentRequestReviewDialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +19,9 @@ interface RequestedAppointment {
   requested_time: string;
   reschedule_requested_at: string | null;
   reschedule_reason: string | null;
+  patient_id?: string;
   patient_accounts: {
+    id?: string;
     profiles: {
       full_name: string;
       name: string;
@@ -35,6 +38,7 @@ interface RequestedAppointment {
 export const RequestedAppointmentsWidget = ({ className }: { className?: string }) => {
   const [selectedAppointment, setSelectedAppointment] = useState<RequestedAppointment | null>(null);
   const { effectivePracticeId } = useAuth();
+  const navigate = useNavigate();
 
   const { data: requestedAppointments = [], refetch } = useQuery({
     queryKey: ["requested-appointments", effectivePracticeId],
@@ -133,11 +137,13 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
               return (
                 <div
                   key={appointment.id}
-                  className="p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => setSelectedAppointment(appointment)}
+                  className="p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => setSelectedAppointment(appointment)}
+                      className="flex-1 min-w-0 text-left"
+                    >
                       <div className="flex items-center gap-2 mb-1">
                         <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
                         <p className="font-medium text-sm truncate">{patientName}</p>
@@ -163,10 +169,22 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatDistanceToNow(new Date(requestedAt), { addSuffix: true })}
                       </p>
+                    </button>
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/patients/${appointment.patient_accounts?.id}`);
+                        }}
+                      >
+                        <FolderOpen className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setSelectedAppointment(appointment)}>
+                        Review
+                      </Button>
                     </div>
-                    <Button size="sm" variant="outline">
-                      Review
-                    </Button>
                   </div>
                 </div>
               );

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CheckCheck, User, ExternalLink, Trash2, CheckCircle, RotateCcw } from "lucide-react";
+import { CheckCheck, User, ExternalLink, Trash2, CheckCircle, RotateCcw, FolderOpen } from "lucide-react";
 import { PriorityBadge } from "./PriorityBadge";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -98,7 +98,7 @@ export function MessageDetails({
             <CardHeader>
               <CardTitle className="text-lg">Patient</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -107,6 +107,15 @@ export function MessageDetails({
                 <User className="mr-2 h-4 w-4" />
                 {message.patient.name}
                 <ExternalLink className="ml-auto h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={() => navigate(`/patients/${message.patient_id}`)}
+              >
+                <FolderOpen className="mr-2 h-4 w-4" />
+                View Patient File
               </Button>
             </CardContent>
           </Card>
