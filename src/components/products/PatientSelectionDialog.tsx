@@ -163,7 +163,7 @@ export const PatientSelectionDialog = ({
         .from("providers")
         .select(`
           id,
-          profiles!inner(
+          profiles!providers_user_id_fkey!inner(
             id,
             name,
             npi,

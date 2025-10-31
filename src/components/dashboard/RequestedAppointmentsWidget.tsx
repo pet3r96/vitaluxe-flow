@@ -62,7 +62,7 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
             )
           ),
           providers(
-            profiles(
+            profiles!providers_user_id_fkey(
               full_name,
               name
             )

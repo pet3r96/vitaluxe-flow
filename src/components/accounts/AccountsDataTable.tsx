@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -54,11 +54,11 @@ export const AccountsDataTable = () => {
     enabled: !!effectiveRole,
     staleTime: 300000, // 5 minutes - user accounts change infrequently
     queryFn: async () => {
-      // First, get all profiles with their roles and patient accounts
+      // First, get all profiles with their roles and patient accounts - only select needed fields
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select(`
-          *,
+          id, name, email, active, created_at, parent_id, linked_topline_id,
           user_roles(role),
           parent:profiles!parent_id(id, name, email),
           linked_topline:profiles!linked_topline_id(id, name, email),
@@ -209,7 +209,7 @@ export const AccountsDataTable = () => {
     },
   });
 
-  const toggleAccountStatus = async (accountId: string, currentStatus: boolean) => {
+  const toggleAccountStatus = useCallback(async (accountId: string, currentStatus: boolean) => {
     const { error } = await supabase
       .from("profiles")
       .update({ active: !currentStatus })
@@ -218,12 +218,12 @@ export const AccountsDataTable = () => {
     if (!error) {
       refetch();
     }
-  };
+  }, [refetch]);
 
-  const handleDeleteClick = (account: any) => {
+  const handleDeleteClick = useCallback((account: any) => {
     setAccountToDelete(account);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
   const confirmDelete = () => {
     if (accountToDelete?.email) {
@@ -231,7 +231,7 @@ export const AccountsDataTable = () => {
     }
   };
 
-  const filteredAccounts = accounts?.filter((account) => {
+  const filteredAccounts = useMemo(() => accounts?.filter((account) => {
     const matchesSearch = account.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.email?.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -239,7 +239,7 @@ export const AccountsDataTable = () => {
     const matchesRole = roleFilter === "all" || displayRole === roleFilter;
     
     return matchesSearch && matchesRole;
-  });
+  }), [accounts, searchQuery, roleFilter]);
 
   const {
     currentPage,

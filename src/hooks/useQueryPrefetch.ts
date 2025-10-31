@@ -3,15 +3,11 @@ import { useQueryClient } from "@tanstack/react-query";
 /**
  * Hook to prefetch data for likely next navigation
  * Improves perceived performance by loading data before user navigates
- * 
- * Note: Prefetching is done by warming up the cache before navigation
- * The actual queries in components will use their specific query keys
  */
 export const useQueryPrefetch = () => {
   const queryClient = useQueryClient();
 
-  // Prefetch functions warm up the cache by invalidating queries
-  // This triggers a refetch if the data is stale
+  // Prefetch functions invalidate queries to warm cache
   const prefetchOrders = () => {
     queryClient.invalidateQueries({ queryKey: ["orders"] });
   };
@@ -38,7 +34,6 @@ export const useQueryPrefetch = () => {
 
 /**
  * Hook to prefetch data when hovering over navigation links
- * Usage: <Link onMouseEnter={() => prefetchOrders()} />
  */
 export const usePrefetchOnHover = () => {
   const { prefetchOrders, prefetchPatients, prefetchPractices, prefetchProducts } = useQueryPrefetch();

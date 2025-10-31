@@ -5492,6 +5492,20 @@ export type Database = {
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "providers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "providers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       rep_payment_batches: {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,11 +67,13 @@ export const PracticesDataTable = () => {
 
   const { data: providerCounts } = useQuery({
     queryKey: ["provider-counts"],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5min - provider counts rarely change
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: false,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("providers")
-        .select("practice_id");
+        .select("practice_id"); // Only select needed field
 
       if (error) throw error;
 
@@ -87,7 +89,9 @@ export const PracticesDataTable = () => {
 
   const { data: allReps } = useQuery({
     queryKey: ["all-reps-lookup"],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5min - rep data changes infrequently
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: false,
     queryFn: async () => {
       // Fetch topline reps
       const { data: toplineReps, error: toplineError } = await supabase
@@ -132,7 +136,9 @@ export const PracticesDataTable = () => {
   // Fetch rep-practice links
   const { data: repPracticeLinks } = useQuery({
     queryKey: ["rep-practice-links"],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5min - links rarely change
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: false,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rep_practice_links")
@@ -163,11 +169,13 @@ export const PracticesDataTable = () => {
 
   const { data: stats } = useQuery({
     queryKey: ["practice-stats"],
-    staleTime: 0,
+    staleTime: 2 * 60 * 1000, // 2min - stats can be slightly stale
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: false,
     queryFn: async () => {
       const { data: orders, error } = await supabase
         .from("orders")
-        .select("total_amount, doctor_id");
+        .select("total_amount, doctor_id"); // Only select needed fields for stats
 
       if (error) throw error;
 
@@ -202,7 +210,7 @@ export const PracticesDataTable = () => {
     }).join(", ");
   };
 
-  const toggleAccountStatus = async (practiceId: string, currentStatus: boolean) => {
+  const toggleAccountStatus = useCallback(async (practiceId: string, currentStatus: boolean) => {
     if (currentStatus) {
       const confirmed = window.confirm(
         "⚠️ Disable Practice Account?\n\n" +
@@ -231,16 +239,16 @@ export const PracticesDataTable = () => {
     } else {
       toast.error("❌ Failed to update practice status");
     }
-  };
+  }, [refetch]);
 
-  const filteredPractices = practices?.filter((practice) => {
+  const filteredPractices = useMemo(() => practices?.filter((practice) => {
     const matchesSearch = 
       practice.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       practice.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       practice.company?.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesSearch;
-  });
+  }), [practices, searchQuery]);
 
   const {
     currentPage,

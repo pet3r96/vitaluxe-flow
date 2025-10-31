@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,7 +39,7 @@ export const PatientsDataTable = () => {
       logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
       let patientsQuery = supabase
         .from("patients")
-        .select("*")
+        .select("id, name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, practice_id, created_at") // Only fields needed for table display
         .order("created_at", { ascending: false });
 
       // If user is a practice (doctor) or provider, only show their practice's patients
@@ -79,9 +79,9 @@ export const PatientsDataTable = () => {
     enabled: effectiveRole === "admin" || effectiveRole === "doctor" || (effectiveRole === "provider" && !!effectivePracticeId),
   });
 
-  const filteredPatients = patients?.filter(patient =>
+  const filteredPatients = useMemo(() => patients?.filter(patient =>
     patient.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  ) || [], [patients, searchQuery]);
 
   const {
     currentPage,
@@ -98,15 +98,15 @@ export const PatientsDataTable = () => {
 
   const paginatedPatients = filteredPatients?.slice(startIndex, endIndex);
 
-  const handleAddPatient = () => {
+  const handleAddPatient = useCallback(() => {
     setSelectedPatient(null);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleEditPatient = (patient: any) => {
+  const handleEditPatient = useCallback((patient: any) => {
     setSelectedPatient(patient);
     setDialogOpen(true);
-  };
+  }, []);
 
   const isAdmin = effectiveRole === "admin";
 
@@ -226,7 +226,7 @@ export const PatientsDataTable = () => {
     },
   });
 
-  const handleGrantPortalAccess = (patientId: string) => {
+  const handleGrantPortalAccess = useCallback((patientId: string) => {
     if (!isSubscribed) {
       toast({
         title: "VitaLuxePro Required",
@@ -236,7 +236,7 @@ export const PatientsDataTable = () => {
       return;
     }
     invitePatientMutation.mutate(patientId);
-  };
+  }, [isSubscribed, invitePatientMutation, toast]);
 
   return (
     <div className="space-y-4">

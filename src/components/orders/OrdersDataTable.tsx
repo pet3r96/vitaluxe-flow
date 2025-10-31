@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,9 +71,11 @@ export const OrdersDataTable = () => {
 
   const { data: orders, isLoading, refetch, error } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
-    staleTime: 0, // Always consider stale - realtime handles updates
+    staleTime: 2 * 60 * 1000, // 2min - trust realtime for freshness
+    gcTime: 5 * 60 * 1000,
     refetchInterval: false, // Disable polling - use realtime instead
-    refetchOnWindowFocus: true, // Refetch when tab gains focus
+    refetchOnMount: false, // Trust cache on mount
+    refetchOnWindowFocus: false, // Realtime handles updates
     queryFn: async () => {
       try {
         logger.info('OrdersDataTable query', logger.sanitize({ 
