@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BasicDemographicsCard } from "@/components/patient/BasicDemographicsCard";
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function PatientDashboard() {
       
       const { data, error } = await supabase
         .from("patient_accounts")
-        .select("id, first_name, last_name, practice_id")
+        .select("id, first_name, last_name, practice_id, user_id, email, date_of_birth, address, city, state, zip_code, gender_at_birth")
         .eq("user_id", effectiveUserId)
         .maybeSingle();
       
@@ -620,6 +621,23 @@ export default function PatientDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Basic Demographics Section */}
+      {patientAccount && (
+        <BasicDemographicsCard 
+          patientAccount={{
+            ...patientAccount,
+            email: patientAccount?.email,
+            date_of_birth: patientAccount?.date_of_birth,
+            address: patientAccount?.address,
+            city: patientAccount?.city,
+            state: patientAccount?.state,
+            zip_code: patientAccount?.zip_code,
+            gender_at_birth: patientAccount?.gender_at_birth
+          }} 
+          effectiveUserId={patientAccount?.user_id}
+        />
+      )}
     </div>
   );
 }

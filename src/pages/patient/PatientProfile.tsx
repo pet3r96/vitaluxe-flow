@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { validatePhone } from "@/lib/validators";
 
 export default function PatientProfile() {
   const { effectiveUserId } = useAuth();
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
@@ -78,6 +79,8 @@ export default function PatientProfile() {
       toast.success("Profile updated successfully");
       setEditing(false);
       refetch();
+      // Also invalidate dashboard query to sync
+      queryClient.invalidateQueries({ queryKey: ["patient-account-dashboard"] });
     },
     onError: (error: any) => {
       toast.error(error.message);
