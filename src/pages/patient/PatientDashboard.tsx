@@ -38,20 +38,58 @@ export default function PatientDashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch medical vault status
+  // Fetch medical vault status from separate tables
   const { data: medicalVault, isLoading: loadingVault } = useQuery({
     queryKey: ["patient-medical-vault-status", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return null;
       
-      const { data, error } = await supabase
-        .from("patient_medical_vault")
-        .select("id, blood_type, allergies, current_medications, medical_conditions, updated_at")
-        .eq("patient_id", patientAccount.id)
-        .maybeSingle();
+      // Fetch data from all medical vault tables
+      const [medicationsRes, allergiesRes, conditionsRes, surgeriesRes, immunizationsRes, vaultRes] = await Promise.all([
+        supabase
+          .from("patient_medications")
+          .select("id")
+          .eq("patient_account_id", patientAccount.id),
+        supabase
+          .from("patient_allergies")
+          .select("id")
+          .eq("patient_account_id", patientAccount.id),
+        supabase
+          .from("patient_conditions")
+          .select("id")
+          .eq("patient_account_id", patientAccount.id),
+        supabase
+          .from("patient_surgeries")
+          .select("id")
+          .eq("patient_account_id", patientAccount.id),
+        supabase
+          .from("patient_immunizations")
+          .select("id")
+          .eq("patient_account_id", patientAccount.id),
+        supabase
+          .from("patient_medical_vault")
+          .select("id, blood_type, updated_at")
+          .eq("patient_id", patientAccount.id)
+          .maybeSingle()
+      ]);
       
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      const medicationsCount = medicationsRes.data?.length || 0;
+      const allergiesCount = allergiesRes.data?.length || 0;
+      const conditionsCount = conditionsRes.data?.length || 0;
+      const surgeriesCount = surgeriesRes.data?.length || 0;
+      const immunizationsCount = immunizationsRes.data?.length || 0;
+      
+      return {
+        id: vaultRes.data?.id,
+        blood_type: vaultRes.data?.blood_type,
+        updated_at: vaultRes.data?.updated_at,
+        medications_count: medicationsCount,
+        allergies_count: allergiesCount,
+        conditions_count: conditionsCount,
+        surgeries_count: surgeriesCount,
+        immunizations_count: immunizationsCount,
+        has_data: medicationsCount > 0 || allergiesCount > 0 || conditionsCount > 0 || surgeriesCount > 0 || immunizationsCount > 0 || !!vaultRes.data?.blood_type
+      };
     },
     enabled: !!patientAccount?.id,
     staleTime: 5 * 60 * 1000,
@@ -251,16 +289,11 @@ export default function PatientDashboard() {
   // Check if medical vault is complete
   const isMedicalVaultComplete = (vault: any) => {
     if (!vault) return false;
-    const hasAllergies = vault.allergies && Array.isArray(vault.allergies) && vault.allergies.length > 0;
-    const hasMedications = vault.current_medications && Array.isArray(vault.current_medications);
-    return !!(vault.blood_type && hasAllergies && hasMedications);
+    return !!(vault.blood_type && vault.allergies_count > 0 && vault.medications_count > 0);
   };
 
   const vaultComplete = isMedicalVaultComplete(medicalVault);
-  const allergiesArray = Array.isArray(medicalVault?.allergies) ? medicalVault.allergies : [];
-  const medicationsArray = Array.isArray(medicalVault?.current_medications) ? medicalVault.current_medications : [];
-  const conditionsArray = Array.isArray(medicalVault?.medical_conditions) ? medicalVault.medical_conditions : [];
-  const medicationCount = medicationsArray.length;
+  const medicationCount = medicalVault?.medications_count || 0;
 
   if (loadingAccount) {
     return (
@@ -384,15 +417,17 @@ export default function PatientDashboard() {
           <CardContent>
             {loadingVault ? (
               <Skeleton className="h-8 w-20" />
-            ) : medicalVault ? (
+            ) : medicalVault?.has_data ? (
               <>
                 <div className="text-lg font-bold">
                   {vaultComplete ? 'Complete' : 'Incomplete'}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3 inline mr-1" />
-                  {formatDistanceToNow(new Date(medicalVault.updated_at), { addSuffix: true })}
-                </p>
+                {medicalVault.updated_at && (
+                  <p className="text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3 inline mr-1" />
+                    {formatDistanceToNow(new Date(medicalVault.updated_at), { addSuffix: true })}
+                  </p>
+                )}
               </>
             ) : (
               <>
@@ -526,7 +561,7 @@ export default function PatientDashboard() {
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
               </div>
-            ) : medicalVault ? (
+            ) : medicalVault?.has_data ? (
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Blood Type:</span>
@@ -535,19 +570,31 @@ export default function PatientDashboard() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Allergies:</span>
                   <span className="text-sm font-medium">
-                    {allergiesArray.length} recorded
+                    {medicalVault.allergies_count} recorded
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Medications:</span>
                   <span className="text-sm font-medium">
-                    {medicationsArray.length} active
+                    {medicalVault.medications_count} active
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Conditions:</span>
                   <span className="text-sm font-medium">
-                    {conditionsArray.length} listed
+                    {medicalVault.conditions_count} listed
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Surgeries:</span>
+                  <span className="text-sm font-medium">
+                    {medicalVault.surgeries_count} recorded
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Immunizations:</span>
+                  <span className="text-sm font-medium">
+                    {medicalVault.immunizations_count} recorded
                   </span>
                 </div>
                 <Button 
