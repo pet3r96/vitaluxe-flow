@@ -169,12 +169,17 @@ describe('Practice Upload - Assigned Document', () => {
               document_name: 'Lab Results - Blood Work',
               document_type: 'lab_results',
               source: 'provider_assigned',
-              is_provider_document: true,
               storage_path: `${practiceId}/documents/lab-results-2025.pdf`,
-              bucket_name: 'provider-documents',
-              assignment_message: 'Please review and schedule follow-up',
-              assigned_by: 'Test Practice D 1',
-              created_at: new Date().toISOString(),
+              file_size: 245760,
+              notes: null,
+              share_with_practice: true,
+              practice_id: practiceId,
+              uploader_id: practiceId,
+              uploader_name: 'Test Practice D 1',
+              uploader_role: 'practice',
+              status: 'active',
+              is_hidden: false,
+              uploaded_at: new Date().toISOString(),
             },
           ],
           error: null,
@@ -190,7 +195,6 @@ describe('Practice Upload - Assigned Document', () => {
     expect(data).toHaveLength(1);
     expect(data[0].document_name).toBe('Lab Results - Blood Work');
     expect(data[0].source).toBe('provider_assigned');
-    expect(data[0].is_provider_document).toBe(true);
   });
 
   it('should appear in patient document center (impersonation)', async () => {

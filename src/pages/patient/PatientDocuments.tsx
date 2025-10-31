@@ -25,17 +25,16 @@ interface UnifiedDocument {
   document_name: string;
   document_type: string;
   storage_path: string;
-  bucket_name: string;
   file_size: number;
-  mime_type: string;
   notes: string | null;
   share_with_practice: boolean;
-  custom_title: string | null;
-  hidden_by_patient: boolean;
-  is_provider_document: boolean;
-  created_at: string;
-  assigned_by: string | null;
-  assignment_message: string | null;
+  practice_id: string;
+  uploader_id: string;
+  uploader_name: string;
+  uploader_role: string;
+  status: string;
+  is_hidden: boolean;
+  uploaded_at: string;
 }
 
 const ITEMS_PER_PAGE = 25;
@@ -144,14 +143,14 @@ export default function PatientDocuments() {
     if (typeFilter !== "all" && doc.document_type !== typeFilter) return false;
     if (sourceFilter === "patient_upload") {
       // "Private" filter: Show only patient uploads that are NOT shared with practice
-      if (doc.source !== "patient_upload" || doc.share_with_practice === true) return false;
+      if (doc.source !== "patient_uploaded" || doc.share_with_practice === true) return false;
     }
     if (sourceFilter === "provider_assigned") {
-      // "Practice Shared" filter: Show only documents shared with practice
-      if (doc.share_with_practice !== true) return false;
+      // "Practice Shared" filter: Show only documents shared with practice or assigned by practice
+      if (doc.share_with_practice !== true && doc.source !== "provider_assigned") return false;
     }
-    if (dateFrom && new Date(doc.created_at) < new Date(dateFrom)) return false;
-    if (dateTo && new Date(doc.created_at) > new Date(dateTo)) return false;
+    if (dateFrom && new Date(doc.uploaded_at) < new Date(dateFrom)) return false;
+    if (dateTo && new Date(doc.uploaded_at) > new Date(dateTo)) return false;
     return true;
   });
 
@@ -274,12 +273,12 @@ export default function PatientDocuments() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (doc: UnifiedDocument) => {
-      if (doc.is_provider_document) {
+      if (doc.source === "provider_assigned") {
         throw new Error("Cannot delete provider documents");
       }
 
       const { error: storageError } = await supabase.storage
-        .from(doc.bucket_name)
+        .from("patient-documents")
         .remove([doc.storage_path]);
 
       if (storageError) throw storageError;
@@ -357,8 +356,11 @@ export default function PatientDocuments() {
 
   const handleDownload = async (doc: UnifiedDocument) => {
     try {
+      // Determine bucket based on source
+      const bucket = doc.source === "provider_assigned" ? "provider-documents" : "patient-documents";
+      
       const { data, error } = await supabase.storage
-        .from(doc.bucket_name)
+        .from(bucket)
         .createSignedUrl(doc.storage_path, 60);
 
       if (error) throw error;
@@ -387,20 +389,20 @@ export default function PatientDocuments() {
     }
   };
 
-  const getDocumentTypeBadge = (type: string, customTitle: string | null) => {
-    const display = customTitle || type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  const getDocumentTypeBadge = (type: string) => {
+    const display = type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
     return <Badge variant="outline">{display}</Badge>;
   };
 
   const getSourceBadge = (source: string) => {
-    if (source === "patient_upload") {
+    if (source === "patient_uploaded") {
       return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20">My Upload</Badge>;
     }
-    return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Practice Shared</Badge>;
+    return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Practice Document</Badge>;
   };
 
-  const getShareBadge = (shareWithPractice: boolean, isProvider: boolean) => {
-    if (isProvider) return <span className="text-sm text-muted-foreground">N/A</span>;
+  const getShareBadge = (shareWithPractice: boolean, source: string) => {
+    if (source === "provider_assigned") return <span className="text-sm text-muted-foreground">N/A</span>;
     if (shareWithPractice) {
       return <Badge className="bg-green-500/10 text-green-600">✓ Yes</Badge>;
     }
@@ -601,10 +603,10 @@ export default function PatientDocuments() {
                           {doc.document_name}
                         </div>
                       </TableCell>
-                      <TableCell>{getDocumentTypeBadge(doc.document_type, doc.custom_title)}</TableCell>
-                      <TableCell>{format(new Date(doc.created_at), "MMM d, yyyy")}</TableCell>
+                      <TableCell>{getDocumentTypeBadge(doc.document_type)}</TableCell>
+                      <TableCell>{format(new Date(doc.uploaded_at), "MMM d, yyyy")}</TableCell>
                       <TableCell>{getSourceBadge(doc.source)}</TableCell>
-                      <TableCell>{getShareBadge(doc.share_with_practice, doc.is_provider_document)}</TableCell>
+                      <TableCell>{getShareBadge(doc.share_with_practice, doc.source)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
@@ -630,11 +632,12 @@ export default function PatientDocuments() {
                           >
                             <Download className="h-4 w-4" />
                           </Button>
-                          {doc.is_provider_document ? (
+                          {doc.source === "provider_assigned" ? (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => hideMutation.mutate(doc.id)}
+                              title="Hide this document from your view"
                             >
                               <EyeOff className="h-4 w-4" />
                             </Button>
@@ -705,8 +708,8 @@ export default function PatientDocuments() {
           onOpenChange={(open) => !open && setPreviewDoc(null)}
           documentName={previewDoc.document_name}
           storagePath={previewDoc.storage_path}
-          bucketName={previewDoc.bucket_name}
-          mimeType={previewDoc.mime_type}
+          bucketName={previewDoc.source === "provider_assigned" ? "provider-documents" : "patient-documents"}
+          mimeType="application/pdf"
         />
       )}
 

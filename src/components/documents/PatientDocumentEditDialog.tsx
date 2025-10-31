@@ -19,8 +19,6 @@ interface PatientDocumentEditDialogProps {
     document_type: string;
     notes?: string | null;
     share_with_practice?: boolean;
-    custom_title?: string | null;
-    is_provider_document: boolean;
     source: string;
   };
   onSuccess: () => void;
@@ -34,7 +32,6 @@ export function PatientDocumentEditDialog({
 }: PatientDocumentEditDialogProps) {
   const [notes, setNotes] = useState(document.notes || "");
   const [shareWithPractice, setShareWithPractice] = useState(document.share_with_practice ?? true);
-  const [customTitle, setCustomTitle] = useState(document.custom_title || "");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -45,7 +42,6 @@ export function PatientDocumentEditDialog({
         .update({
           notes,
           share_with_practice: shareWithPractice,
-          custom_title: document.document_type === "other" ? customTitle : null,
         } as any)
         .eq("id", document.id);
 
@@ -112,18 +108,6 @@ export function PatientDocumentEditDialog({
               className="bg-muted" 
             />
           </div>
-
-          {document.document_type === "other" && (
-            <div>
-              <Label htmlFor="custom-title">Custom Title</Label>
-              <Input
-                id="custom-title"
-                value={customTitle}
-                onChange={(e) => setCustomTitle(e.target.value)}
-                placeholder="Enter a custom title for this document"
-              />
-            </div>
-          )}
 
           <div>
             <Label htmlFor="notes">Notes</Label>
