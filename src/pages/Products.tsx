@@ -18,7 +18,7 @@ const Products = () => {
     return (
       <div className="patient-container">
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
+          <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
           <p className="text-muted-foreground mt-2">
             Loading...
           </p>
@@ -33,7 +33,7 @@ const Products = () => {
     return (
       <div className="patient-container">
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
+           <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
           <p className="text-muted-foreground mt-2">
             Access restricted
           </p>
@@ -51,7 +51,7 @@ const Products = () => {
     return (
       <div className="patient-container">
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">
+           <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">
             My Products
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -68,7 +68,7 @@ const Products = () => {
     return (
       <div className="patient-container">
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">
+           <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">
             Product Management
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -95,7 +95,7 @@ const Products = () => {
   return (
     <div className="patient-container">
       <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
+        <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
         <p className="text-muted-foreground mt-2">
           Manage products, pricing tiers, and inventory
         </p>
