@@ -108,27 +108,30 @@ export function PDFViewer({ url, onDownload, className = "" }: PDFViewerProps) {
 
       {/* PDF Document */}
       <div className="flex-1 overflow-auto bg-muted/20 flex items-start justify-center p-4">
-        {loading && (
-          <div className="flex flex-col items-center gap-4 mt-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <Skeleton className="w-[600px] h-[800px]" />
-          </div>
-        )}
-        
         <Document
           file={url}
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
-          loading=""
+          loading={
+            <div className="flex flex-col items-center gap-4 mt-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Skeleton className="w-[600px] h-[800px]" />
+            </div>
+          }
           className="flex justify-center"
         >
           <Page
+            key={`page_${pageNumber}`}
             pageNumber={pageNumber}
             scale={scale}
-            loading={<Skeleton className="w-[600px] h-[800px]" />}
-            className="shadow-lg"
-            renderTextLayer={true}
-            renderAnnotationLayer={true}
+            loading={
+              <div className="flex items-center justify-center w-[600px] h-[800px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            }
+            className="shadow-lg bg-white"
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
           />
         </Document>
       </div>
