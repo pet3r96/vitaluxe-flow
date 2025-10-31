@@ -1003,7 +1003,7 @@ export default function Checkout() {
                         <img
                           src={line.product.image_url}
                           alt={line.product.name}
-                          className="h-20 w-20 object-cover rounded-md border border-border"
+                          className="h-20 w-20 flex-shrink-0 object-cover rounded-md border border-border"
                         />
                       )}
                       <div className="flex-1 space-y-1">
@@ -1055,7 +1055,7 @@ export default function Checkout() {
                   <img
                     src={line.product.image_url}
                     alt={line.product.name}
-                    className="h-20 w-20 object-cover rounded-md border border-border"
+                    className="h-20 w-20 flex-shrink-0 object-cover rounded-md border border-border"
                   />
                 )}
                 <div className="flex-1 space-y-1">
