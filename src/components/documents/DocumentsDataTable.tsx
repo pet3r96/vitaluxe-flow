@@ -31,7 +31,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [documentTypeFilter, setDocumentTypeFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState<"all" | "my_uploads" | "practice_shared">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "my_uploads" | "practice_shared" | "patient_shared">("all");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showAssign, setShowAssign] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -133,7 +133,9 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
       if (sourceFilter === "my_uploads") {
         matchesSource = doc.uploaded_by === effectiveUserId;
       } else if (sourceFilter === "practice_shared") {
-        matchesSource = doc.is_internal === false;
+        matchesSource = doc.source_type === 'provider' && doc.is_internal === false;
+      } else if (sourceFilter === "patient_shared") {
+        matchesSource = doc.source_type === 'patient';
       }
 
       return matchesSearch && matchesStatus && matchesType && matchesSource;
@@ -257,6 +259,10 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
             <RadioGroupItem value="practice_shared" id="source-shared" />
             <Label htmlFor="source-shared" className="font-normal cursor-pointer">Practice Shared</Label>
           </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="patient_shared" id="source-patient" />
+            <Label htmlFor="source-patient" className="font-normal cursor-pointer">Patient Shared</Label>
+          </div>
         </RadioGroup>
       </div>
 
@@ -270,6 +276,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
               <TableHead className="min-w-[150px]">Patient Name</TableHead>
               <TableHead className="min-w-[150px]">Document Type</TableHead>
               <TableHead className="min-w-[120px]">Status</TableHead>
+              <TableHead className="min-w-[120px]">Source</TableHead>
               <TableHead className="min-w-[150px]">Tags</TableHead>
               <TableHead className="text-right min-w-[80px]">Actions</TableHead>
             </TableRow>
@@ -277,7 +284,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
           <TableBody>
             {paginatedDocuments?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12">
+                <TableCell colSpan={8} className="text-center py-12">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     {searchQuery || statusFilter !== "all" || documentTypeFilter !== "all"
@@ -334,6 +341,19 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
                     <Badge className={getStatusColor(doc.status)}>
                       {doc.status || "pending"}
                     </Badge>
+                  </TableCell>
+
+                  {/* Source */}
+                  <TableCell>
+                    {doc.source_type === 'patient' ? (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">
+                        Patient Upload
+                      </Badge>
+                    ) : doc.is_internal ? (
+                      <Badge variant="secondary">Internal</Badge>
+                    ) : (
+                      <Badge variant="outline">Practice Shared</Badge>
+                    )}
                   </TableCell>
 
                   {/* Tags */}

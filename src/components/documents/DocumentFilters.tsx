@@ -18,6 +18,7 @@ interface DocumentFiltersProps {
     uploadedBy: string;
     isInternal: string;
     assignedStaffId: string;
+    source: string;
   };
   onFiltersChange: (filters: any) => void;
 }
@@ -88,6 +89,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
       uploadedBy: "all",
       isInternal: "all",
       assignedStaffId: "all",
+      source: "all",
     });
   };
 
@@ -227,6 +229,24 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
                     {s.full_name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Source</Label>
+            <Select
+              value={filters.source}
+              onValueChange={(value) => onFiltersChange({ ...filters, source: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="my_uploads">My Uploads</SelectItem>
+                <SelectItem value="practice_shared">Practice Shared</SelectItem>
+                <SelectItem value="patient_shared">Patient Shared</SelectItem>
               </SelectContent>
             </Select>
           </div>

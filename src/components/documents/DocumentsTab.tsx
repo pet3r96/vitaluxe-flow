@@ -62,10 +62,17 @@ export function DocumentsTab() {
 
     return allDocuments.filter((doc: any) => {
       if (filters.patientId !== "all") {
-        const hasPatient = doc.provider_document_patients?.some(
-          (pdp: any) => pdp.patient_id === filters.patientId
-        );
-        if (!hasPatient) return false;
+        // For provider docs, check junction table
+        if (doc.source_type === 'provider') {
+          const hasPatient = doc.provider_document_patients?.some(
+            (pdp: any) => pdp.patient_id === filters.patientId
+          );
+          if (!hasPatient) return false;
+        }
+        // For patient docs, check patient_uploader_id
+        else if (doc.source_type === 'patient') {
+          if (doc.patient_uploader_id !== filters.patientId) return false;
+        }
       }
 
       if (filters.documentType !== "all" && doc.document_type !== filters.documentType) return false;
@@ -74,8 +81,16 @@ export function DocumentsTab() {
       if (filters.isInternal !== "all" && doc.is_internal !== (filters.isInternal === "true")) return false;
       if (filters.assignedStaffId !== "all" && doc.assigned_staff_id !== filters.assignedStaffId) return false;
       
-      if (filters.source === 'my_uploads' && doc.uploaded_by !== effectiveUserId) return false;
-      if (filters.source === 'practice_shared' && doc.is_internal !== false) return false;
+      // Enhanced source filtering
+      if (filters.source === 'my_uploads') {
+        if (doc.uploaded_by !== effectiveUserId) return false;
+      }
+      if (filters.source === 'practice_shared') {
+        if (doc.source_type !== 'provider' || doc.is_internal !== false) return false;
+      }
+      if (filters.source === 'patient_shared') {
+        if (doc.source_type !== 'patient') return false;
+      }
 
       return true;
     });
