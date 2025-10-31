@@ -11,9 +11,9 @@ export function IntakePromptCard({ onComplete }: IntakePromptCardProps) {
   return (
     <Alert className="border-warning bg-warning/10">
       <div className="flex flex-col items-center justify-center text-center gap-4 w-full py-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2 w-full">
           <AlertCircle className="h-5 w-5 text-warning shrink-0" />
-          <AlertTitle className="text-lg font-semibold m-0">Complete Your Medical Intake</AlertTitle>
+          <AlertTitle className="text-lg font-semibold m-0 whitespace-nowrap">Complete Your Medical Intake</AlertTitle>
         </div>
         <AlertDescription className="max-w-2xl">
           Help your healthcare team provide better care by completing your medical information. This takes about 5-10 minutes.
