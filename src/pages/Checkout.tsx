@@ -50,41 +50,9 @@ export default function Checkout() {
   const { calculateMerchantFee } = useMerchantFee();
   const merchantFeePercentage = location.state?.merchantFeePercentage || 3.75;
 
-  // Staff without ordering privileges cannot access checkout
-  if (checkingPrivileges && isStaffAccount) {
-    return (
-      <div className="patient-container">
-        <Skeleton className="h-[600px] w-full" />
-      </div>
-    );
-  }
-
-  if (isStaffAccount && !canOrder) {
-    return (
-      <div className="patient-container">
-        <Card className="patient-card">
-          <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl">Checkout</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert>
-              <AlertDescription>
-                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
-              </AlertDescription>
-            </Alert>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/cart')}
-              className="mt-4 touch-target"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Cart
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Staff without ordering privileges cannot access checkout - compute flags only (avoid early return before hooks)
+  const showStaffCheckoutLoading = checkingPrivileges && isStaffAccount;
+  const showStaffCheckoutNoAccess = isStaffAccount && !canOrder;
 
   // For staff members with ordering privileges, use practice payment methods
   const practiceIdForPayment = isStaffAccount ? effectivePracticeId : effectiveUserId;
@@ -943,6 +911,41 @@ export default function Checkout() {
   if (isEmpty) {
     navigate("/cart");
     return null;
+  }
+
+  if (showStaffCheckoutLoading) {
+    return (
+      <div className="patient-container">
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
+  }
+
+  if (showStaffCheckoutNoAccess) {
+    return (
+      <div className="patient-container">
+        <Card className="patient-card">
+          <CardHeader>
+            <CardTitle className="text-xl sm:text-2xl">Checkout</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>
+                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
+              </AlertDescription>
+            </Alert>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/cart')}
+              className="mt-4 touch-target"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Cart
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
