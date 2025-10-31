@@ -10,12 +10,15 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 const conditionSchema = z.object({
   condition_name: z.string().min(1, "Condition name is required"),
   description: z.string().optional(),
-  icd10_code: z.string().optional(),
-  date_diagnosed: z.string().min(1, "Date diagnosed is required"),
+  date_diagnosed: z.string().min(1, "Date diagnosed is required").refine(
+    (val) => /^\d{4}-\d{2}$/.test(val),
+    "Date diagnosed must be in YYYY-MM format"
+  ),
   severity: z.enum(["mild", "moderate", "severe"]).optional(),
   treatment_plan: z.string().optional(),
   associated_provider: z.string().optional(),
@@ -35,12 +38,11 @@ interface ConditionDialogProps {
 export function ConditionDialog({ open, onOpenChange, patientAccountId, condition, mode }: ConditionDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<ConditionFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<ConditionFormData>({
     resolver: zodResolver(conditionSchema),
-    defaultValues: condition || {
+    defaultValues: {
       condition_name: "",
       description: "",
-      icd10_code: "",
       date_diagnosed: "",
       severity: undefined,
       treatment_plan: "",
@@ -49,13 +51,43 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
     },
   });
 
+  // Handle edit mode - convert existing date to month format
+  useEffect(() => {
+    if (condition && open) {
+      // Convert date_diagnosed from YYYY-MM-DD to YYYY-MM
+      const monthYear = condition.date_diagnosed ? condition.date_diagnosed.substring(0, 7) : "";
+      
+      reset({
+        condition_name: condition.condition_name || "",
+        description: condition.description || "",
+        date_diagnosed: monthYear,
+        severity: condition.severity || undefined,
+        treatment_plan: condition.treatment_plan || "",
+        associated_provider: condition.associated_provider || "",
+        notes: condition.notes || "",
+      });
+    } else if (!condition && open) {
+      reset({
+        condition_name: "",
+        description: "",
+        date_diagnosed: "",
+        severity: undefined,
+        treatment_plan: "",
+        associated_provider: "",
+        notes: "",
+      });
+    }
+  }, [condition, open, reset]);
+
   const mutation = useOptimisticMutation(
     async (data: ConditionFormData) => {
+      // Convert YYYY-MM to YYYY-MM-01 for database storage
+      const fullDate = data.date_diagnosed + "-01";
+      
       const formattedData = {
         condition_name: data.condition_name,
         description: data.description || null,
-        icd10_code: data.icd10_code || null,
-        date_diagnosed: data.date_diagnosed,
+        date_diagnosed: fullDate,
         severity: data.severity || null,
         treatment_plan: data.treatment_plan || null,
         associated_provider_id: data.associated_provider || null,
@@ -123,20 +155,10 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="icd10_code">ICD-10 Code</Label>
-              <Input
-                id="icd10_code"
-                {...register("icd10_code")}
-                placeholder="e.g., E11.9"
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date_diagnosed">Date Diagnosed *</Label>
+              <Label htmlFor="date_diagnosed">Date Diagnosed (Month & Year) *</Label>
               <Input
                 id="date_diagnosed"
-                type="date"
+                type="month"
                 {...register("date_diagnosed")}
                 disabled={isReadOnly}
                 className={errors.date_diagnosed ? "border-red-500" : ""}
