@@ -19,13 +19,20 @@ export default function PatientDashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
       
+      // Check for impersonation
+      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+      
+      console.log('[PatientDashboard] 👤 Effective user ID:', effectiveUserId, '| Is impersonating:', !!impersonationData?.session);
+      
       const { data, error } = await supabase
         .from("patient_accounts")
         .select("id, first_name, last_name, practice_id")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .maybeSingle();
       
       if (error) throw error;
+      console.log('[PatientDashboard] ✅ Patient account found:', data?.id, '| Name:', data?.first_name, data?.last_name);
       return data;
     },
     staleTime: 5 * 60 * 1000,
@@ -110,11 +117,17 @@ export default function PatientDashboard() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return 0;
 
+        // Check for impersonation
+        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+        const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+        
+        console.log('[PatientDashboard] 📧 Fetching messages for user:', effectiveUserId);
+
         // Get thread IDs where user is a participant
         const { data: participantThreads, error: participantError } = await supabase
           .from("thread_participants")
           .select("thread_id")
-          .eq("user_id", user.id);
+          .eq("user_id", effectiveUserId);
 
         if (participantError) throw participantError;
         
@@ -138,9 +151,10 @@ export default function PatientDashboard() {
           const latestMessage = messages.sort((a: any, b: any) => 
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           )[0];
-          return latestMessage?.sender_id !== user.id;
+          return latestMessage?.sender_id !== effectiveUserId;
         }) || [];
 
+        console.log('[PatientDashboard] 📧 Found', unreadThreads.length, 'unread messages');
         return unreadThreads.length;
       } catch (error) {
         console.error("Failed to fetch unread count:", error);
@@ -213,11 +227,17 @@ export default function PatientDashboard() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
+        // Check for impersonation
+        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+        const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+        
+        console.log('[PatientDashboard] 💬 Fetching recent messages for user:', effectiveUserId);
+
         // Get thread IDs where user is a participant
         const { data: participantThreads } = await supabase
           .from("thread_participants")
           .select("thread_id")
-          .eq("user_id", user.id);
+          .eq("user_id", effectiveUserId);
 
         const threadIds = participantThreads?.map(pt => pt.thread_id) || [];
         if (threadIds.length === 0) return [];
@@ -255,10 +275,11 @@ export default function PatientDashboard() {
             subject: thread.subject,
             message_body: latestMessage?.message_body,
             created_at: latestMessage?.created_at || thread.created_at,
-            read_at: latestMessage?.sender_id === user.id ? new Date().toISOString() : null,
+            read_at: latestMessage?.sender_id === effectiveUserId ? new Date().toISOString() : null,
             sender: latestMessage?.sender
           };
         }) || [];
+        console.log('[PatientDashboard] 💬 Found', data?.length || 0, 'recent message threads');
       } catch (error) {
         console.error("Failed to fetch recent messages:", error);
         return [];
