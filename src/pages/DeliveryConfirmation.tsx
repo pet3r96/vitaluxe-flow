@@ -546,7 +546,7 @@ export default function DeliveryConfirmation() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {!lines[0].patient_address_street && lines[0].patient?.address && (
+                    {!lines[0].patient_address_street && lines[0].patient?.address && lines[0].patient?.city && lines[0].patient?.state && lines[0].patient?.zip_code && (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -570,6 +570,17 @@ export default function DeliveryConfirmation() {
                         <CheckCircle2 className="h-4 w-4 mr-2" />
                         Apply from Patient
                       </Button>
+                    )}
+                    {!lines[0].patient_address_street && lines[0].patient && (!lines[0].patient.address || !lines[0].patient.city || !lines[0].patient.state || !lines[0].patient.zip_code) && (
+                      <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Patient record missing: {[
+                          !lines[0].patient.address && 'street',
+                          !lines[0].patient.city && 'city',
+                          !lines[0].patient.state && 'state',
+                          !lines[0].patient.zip_code && 'zip'
+                        ].filter(Boolean).join(', ')}
+                      </div>
                     )}
                     <Button
                       variant="outline"

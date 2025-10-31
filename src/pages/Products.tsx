@@ -12,9 +12,12 @@ const Products = () => {
   const { canOrder, isLoading, isStaffAccount } = useStaffOrderingPrivileges();
   const isTopline = effectiveRole === "topline";
   const isPharmacy = effectiveRole === "pharmacy";
+  
+  // Only check staff privileges for actual staff role (not doctor/provider)
+  const shouldCheckPrivileges = effectiveRole === 'staff';
 
   // Show loading skeleton while checking staff privileges
-  if (isLoading && isStaffAccount) {
+  if (shouldCheckPrivileges && isLoading && isStaffAccount) {
     return (
       <div className="patient-container">
         <div className="mb-8">
@@ -29,7 +32,7 @@ const Products = () => {
   }
 
   // Staff without ordering privileges cannot access products
-  if (isStaffAccount && !canOrder) {
+  if (shouldCheckPrivileges && isStaffAccount && !canOrder) {
     return (
       <div className="patient-container">
         <div className="mb-8">

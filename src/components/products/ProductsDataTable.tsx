@@ -430,6 +430,14 @@ export const ProductsDataTable = () => {
             ? `${patient.address}, ${patient.city}, ${patient.state} ${patient.zip_code}`
             : patient?.address || null;
 
+        // Validate patient address completeness - all 4 fields required
+        const hasCompleteAddress = !!(
+          patient?.address && 
+          patient?.city && 
+          patient?.state && 
+          patient?.zip_code
+        );
+
         const { error } = await supabase
           .from("cart_lines" as any)
           .insert({
@@ -445,8 +453,8 @@ export const ProductsDataTable = () => {
             patient_address_city: patient?.city || null,
             patient_address_state: patient?.state || null,
             patient_address_zip: patient?.zip_code || null,
-            patient_address_validated: true,
-            patient_address_validation_source: 'patient_record',
+            patient_address_validated: hasCompleteAddress,
+            patient_address_validation_source: hasCompleteAddress ? 'patient_record' : null,
             quantity: quantity,
             price_snapshot: correctPrice,
             destination_state: destinationState,
