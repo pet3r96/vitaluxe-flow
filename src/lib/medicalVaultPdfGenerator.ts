@@ -170,29 +170,29 @@ export const generateMedicalVaultPDF = async (
     const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
     doc.text(`MEDICAL RECORD - ${fullName.toUpperCase()}`, pageWidth / 2, 14, { align: 'center' });
     
-    // Draw lock icon manually (centered under title) - improved design
+    // Draw lock icon manually (centered under title) - compact design
     const lockX = pageWidth / 2;
-    const lockY = 18;
-    const lockSize = 10;
+    const lockY = 20;
+    const lockSize = 5;
     
-    // Lock shackle (U-shape) - draw first, with thicker lines in gold
-    doc.setLineWidth(3);
+    // Lock shackle (U-shape) - draw first, with medium lines in gold
+    doc.setLineWidth(1.5);
     doc.setDrawColor(218, 165, 32);
-    const shackleWidth = lockSize * 0.7;
-    const shackleHeight = lockSize * 0.7;
-    // Draw thicker U-shape for shackle
+    const shackleWidth = lockSize * 0.65;
+    const shackleHeight = lockSize * 0.6;
+    // Draw U-shape for shackle
     doc.line(lockX - shackleWidth/2, lockY, lockX - shackleWidth/2, lockY - shackleHeight);
     doc.line(lockX - shackleWidth/2, lockY - shackleHeight, lockX + shackleWidth/2, lockY - shackleHeight);
     doc.line(lockX + shackleWidth/2, lockY - shackleHeight, lockX + shackleWidth/2, lockY);
     
     // Lock body (rounded rectangle) in gold
     doc.setFillColor(218, 165, 32);
-    doc.roundedRect(lockX - lockSize/2, lockY, lockSize, lockSize, 1.5, 1.5, 'F');
+    doc.roundedRect(lockX - lockSize/2, lockY, lockSize, lockSize, 1, 1, 'F');
     
-    // Keyhole in dark grey - larger and more visible
+    // Keyhole in dark grey - proportional size
     doc.setFillColor(55, 65, 81);
-    doc.circle(lockX, lockY + lockSize/3, lockSize/5, 'F');
-    doc.rect(lockX - lockSize/10, lockY + lockSize/3, lockSize/5, lockSize/2.5, 'F');
+    doc.circle(lockX, lockY + lockSize/3, lockSize/6, 'F');
+    doc.rect(lockX - lockSize/12, lockY + lockSize/3, lockSize/6, lockSize/3, 'F');
     
     // VitaLuxe branding in light grey
     doc.setTextColor(200, 200, 200);
