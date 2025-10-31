@@ -56,7 +56,7 @@ export function FollowUpDialog({
 
       // Get the patient's practice_id
       const { data: patientData, error: patientError } = await supabase
-        .from("patients")
+        .from("patient_accounts")
         .select("practice_id")
         .eq("id", patientId)
         .single();

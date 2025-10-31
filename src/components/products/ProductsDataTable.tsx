@@ -370,13 +370,18 @@ export const ProductsDataTable = () => {
       } else {
         // Patient order - get patient with ALL address fields
         const { data: patient } = await supabase
-          .from("patients")
-          .select("name, email, phone, address, address_formatted, address_street, address_city, address_state, address_zip")
+          .from("patient_accounts")
+          .select("first_name, last_name, email, phone, address, city, state, zip_code")
           .eq("id", patientId!)
           .single();
+        
+        // Construct name from first_name and last_name
+        if (patient) {
+          (patient as any).name = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
+        }
 
         // Use direct state field from Google Address (no parsing needed)
-        const destinationState = patient?.address_state || '';
+        const destinationState = patient?.state || '';
 
         if (!isValidStateCode(destinationState)) {
           toast.error(
@@ -421,10 +426,9 @@ export const ProductsDataTable = () => {
         }
 
         // Build formatted address for display
-        const patientAddress = patient?.address_formatted ||
-          (patient?.address_street && patient?.address_city && patient?.address_state && patient?.address_zip
-            ? `${patient.address_street}, ${patient.address_city}, ${patient.address_state} ${patient.address_zip}`
-            : patient?.address || null);
+        const patientAddress = patient?.address && patient?.city && patient?.state && patient?.zip_code
+            ? `${patient.address}, ${patient.city}, ${patient.state} ${patient.zip_code}`
+            : patient?.address || null;
 
         const { error } = await supabase
           .from("cart_lines" as any)
@@ -433,7 +437,7 @@ export const ProductsDataTable = () => {
             product_id: productForCart.id,
             patient_id: patientId,
             provider_id: actualProviderId,
-            patient_name: patient?.name || "Unknown",
+            patient_name: patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || "Unknown" : "Unknown",
             patient_email: patient?.email,
             patient_phone: patient?.phone,
             patient_address: patientAddress,

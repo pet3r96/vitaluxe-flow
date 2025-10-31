@@ -51,12 +51,11 @@ export default function DeliveryConfirmation() {
         .select(`
           *,
           product:products(*),
-          patient:patients(
-            address_street,
-            address_city,
-            address_state,
-            address_zip,
-            address_formatted
+          patient:patient_accounts(
+            address,
+            city,
+            state,
+            zip_code
           )
         `)
         .eq("cart_id", cart.id);
@@ -166,17 +165,12 @@ export default function DeliveryConfirmation() {
       if (patientId) {
         console.log('[DeliveryConfirmation] Updating patient record with ID:', patientId);
         const { data: patientData, error: patientError } = await supabase
-          .from("patients")
+          .from("patient_accounts")
           .update({
-            address_street: address.street,
-            address_city: address.city,
-            address_state: address.state,
-            address_zip: address.zip,
-            address_formatted: address.formatted,
-            address_verification_status: address.status || 'unverified',
-            address_verification_source: address.source || 'manual',
-            address_verified_at: new Date().toISOString(),
-            address: null, // Clear legacy field
+            address: address.street,
+            city: address.city,
+            state: address.state,
+            zip_code: address.zip,
           })
           .eq("id", patientId)
           .select('id');
