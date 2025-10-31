@@ -99,6 +99,11 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
     },
     onSuccess: () => {
       toast.success("Item removed from cart");
+      // Optimistic update: decrement count immediately
+      queryClient.setQueryData(
+        ["cart-count", effectiveUserId],
+        (old: number | undefined) => Math.max((old || 0) - 1, 0)
+      );
       queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
       queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
     },

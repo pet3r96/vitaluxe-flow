@@ -466,6 +466,12 @@ export const ProductsDataTable = () => {
       }
 
       toast.success("Product added to cart");
+      // Optimistic update: increment count immediately
+      queryClient.setQueryData(
+        ["cart-count", effectiveUserId],
+        (old: number | undefined) => (old || 0) + quantity
+      );
+      // Then refetch to sync with server
       queryClient.refetchQueries({ queryKey: ["cart-count", effectiveUserId], type: 'active' });
       queryClient.refetchQueries({ queryKey: ["cart", effectiveUserId], type: 'active' });
     } catch (error: any) {
