@@ -13,7 +13,15 @@ import { useEffect } from "react";
 
 const vitalsSchema = z.object({
   vital_type: z.string().optional(),
-  height: z.string().optional(),
+  height: z.string().optional().refine((val) => {
+    if (!val) return true;
+    // Allow formats: 5-5, 5'5, 5'5", 6-0, 6'0, 70 (inches), 170 (cm)
+    const formats = [
+      /^\d+[-']\d+["']?$/,  // 5-5, 5'5, 5'5", 6-0, 6'0
+      /^\d+(\.\d+)?$/        // 70, 70.5, 170
+    ];
+    return formats.some(regex => regex.test(val.trim()));
+  }, { message: "Invalid height format. Use: 5-5, 5'5, or 70" }),
   height_unit: z.string().optional(),
   weight: z.string().optional(),
   weight_unit: z.string().optional(),
@@ -44,11 +52,22 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
   const isBasicVitalMode = mode === "add-basic";
   const isTimeSeriesMode = mode === "add-timeseries";
   
+  // Helper to format height for display in input (convert stored inches to feet-inches)
+  const formatHeightForInput = (height: number | undefined, unit: string | undefined): string => {
+    if (!height) return "";
+    if (unit === 'in' && height >= 12) {
+      const feet = Math.floor(height / 12);
+      const inches = Math.round(height % 12);
+      return `${feet}-${inches}`;
+    }
+    return height.toString();
+  };
+  
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<VitalsFormData>({
     resolver: zodResolver(vitalsSchema),
     defaultValues: vitals ? {
       vital_type: vitals.vital_type,
-      height: vitals.height?.toString() || "",
+      height: formatHeightForInput(vitals.height, vitals.height_unit),
       height_unit: vitals.height_unit || "in",
       weight: vitals.weight?.toString() || "",
       weight_unit: vitals.weight_unit || "lbs",
@@ -97,6 +116,31 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullDate = data.date_recorded ? data.date_recorded + "-01" : new Date().toISOString().substring(0, 7) + "-01";
 
+      // Helper function to parse height formats
+      const parseHeight = (heightStr: string, unit: string): number | null => {
+        if (!heightStr) return null;
+        
+        const trimmed = heightStr.trim();
+        
+        // Check if it's in feet-inches format (5-5, 5'5, 5'5")
+        const feetInchesMatch = trimmed.match(/^(\d+)[-'](\d+)["']?$/);
+        if (feetInchesMatch) {
+          const feet = parseInt(feetInchesMatch[1]);
+          const inches = parseInt(feetInchesMatch[2]);
+          const totalInches = (feet * 12) + inches;
+          
+          // If unit is cm, convert inches to cm
+          if (unit === 'cm') {
+            return totalInches * 2.54;
+          }
+          return totalInches;
+        }
+        
+        // Otherwise, parse as decimal number
+        const num = parseFloat(trimmed);
+        return isNaN(num) ? null : num;
+      };
+
       // Build the data object based on vital type
       const formattedData: any = {
         vital_type: vitalType,
@@ -105,7 +149,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
 
       // Add fields based on vital type
       if (vitalType === 'height') {
-        formattedData.height = data.height ? parseFloat(data.height) : null;
+        formattedData.height = parseHeight(data.height || "", data.height_unit || "in");
         formattedData.height_unit = data.height_unit || null;
       } else if (vitalType === 'weight') {
         formattedData.weight = data.weight ? parseFloat(data.weight) : null;
@@ -240,10 +284,8 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                 <Input
                   id="height"
                   {...register("height")}
-                  placeholder="70"
+                  placeholder="5-5, 5'5, or 70"
                   disabled={isReadOnly}
-                  type="number"
-                  step="0.1"
                 />
                 <Select
                   value={watch("height_unit") || "in"}
@@ -259,6 +301,10 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                   </SelectContent>
                 </Select>
               </div>
+              <p className="text-xs text-muted-foreground">Examples: 5-5, 5'5, 6-0, or 70</p>
+              {errors.height && (
+                <p className="text-sm text-red-500">{errors.height.message}</p>
+              )}
             </div>
           )}
 

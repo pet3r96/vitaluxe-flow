@@ -40,6 +40,16 @@ export function VitalsSection({ patientAccountId, vitals = [] }: VitalsSectionPr
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view" | "add-basic" | "add-timeseries">("add");
   const [basicVitalType, setBasicVitalType] = useState<"height" | "weight" | null>(null);
 
+  // Helper function to format height display
+  const formatHeight = (height: number, unit: string): string => {
+    if (unit === 'in') {
+      const feet = Math.floor(height / 12);
+      const inches = Math.round(height % 12);
+      return `${feet}'${inches}" (${height} in)`;
+    }
+    return `${height} ${unit}`;
+  };
+
   // Separate height and weight records
   const heightRecord = vitals.find(v => v.vital_type === 'height');
   const weightRecord = vitals.find(v => v.vital_type === 'weight');
@@ -203,7 +213,12 @@ export function VitalsSection({ patientAccountId, vitals = [] }: VitalsSectionPr
                   </div>
                 </div>
                 {heightRecord ? (
-                  <p className="text-2xl font-bold">{heightRecord.height} {heightRecord.height_unit}</p>
+                  <p className="text-2xl font-bold">
+                    {heightRecord.height_unit === 'in' 
+                      ? formatHeight(heightRecord.height || 0, heightRecord.height_unit)
+                      : `${heightRecord.height} ${heightRecord.height_unit}`
+                    }
+                  </p>
                 ) : (
                   <Button 
                     variant="outline" 
