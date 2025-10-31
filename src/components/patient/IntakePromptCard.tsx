@@ -10,15 +10,15 @@ interface IntakePromptCardProps {
 export function IntakePromptCard({ onComplete }: IntakePromptCardProps) {
   return (
     <Alert className="border-warning bg-warning/10">
-      <AlertCircle className="h-5 w-5 text-warning" />
-      <div className="flex items-center justify-between w-full">
-        <div>
-          <AlertTitle className="text-lg font-semibold">Complete Your Medical Intake</AlertTitle>
-          <AlertDescription className="mt-1">
-            Help your healthcare team provide better care by completing your medical information. This takes about 5-10 minutes.
-          </AlertDescription>
+      <div className="flex flex-col items-center justify-center text-center gap-4 w-full py-2">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-warning shrink-0" />
+          <AlertTitle className="text-lg font-semibold m-0">Complete Your Medical Intake</AlertTitle>
         </div>
-        <Button onClick={onComplete} className="ml-4 shrink-0">
+        <AlertDescription className="max-w-2xl">
+          Help your healthcare team provide better care by completing your medical information. This takes about 5-10 minutes.
+        </AlertDescription>
+        <Button onClick={onComplete} className="touch-target">
           Get Started
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
