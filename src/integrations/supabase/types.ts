@@ -64,6 +64,7 @@ export type Database = {
           impersonated_user_name: string | null
           impersonation_log_id: string | null
           last_activity: string
+          revoked: boolean | null
         }
         Insert: {
           admin_user_id: string
@@ -75,6 +76,7 @@ export type Database = {
           impersonated_user_name?: string | null
           impersonation_log_id?: string | null
           last_activity?: string
+          revoked?: boolean | null
         }
         Update: {
           admin_user_id?: string
@@ -86,6 +88,7 @@ export type Database = {
           impersonated_user_name?: string | null
           impersonation_log_id?: string | null
           last_activity?: string
+          revoked?: boolean | null
         }
         Relationships: [
           {
