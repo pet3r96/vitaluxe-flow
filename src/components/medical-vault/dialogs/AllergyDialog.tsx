@@ -146,7 +146,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-950 dark:bg-gray-950 border-gray-800">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
             {mode === "add" ? "Add Allergy" : mode === "edit" ? "Edit Allergy" : "View Allergy"}
