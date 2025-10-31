@@ -424,6 +424,27 @@ export default function Checkout() {
         
         doctorIdForOrder = provider.practice_id;
       }
+      
+      // Also check if current user is staff and resolve to their practice
+      if (userRole?.role === 'staff') {
+        const { data: staffMember, error: staffError } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", doctorIdForOrder)
+          .eq("active", true)
+          .single();
+        
+        if (staffError || !staffMember?.practice_id) {
+          throw new Error("Staff member not associated with a practice. Please contact support.");
+        }
+        
+        console.debug('[OrderConfirmation] Staff order - linking to practice', {
+          staff_user_id: doctorIdForOrder,
+          practice_id: staffMember.practice_id
+        });
+        
+        doctorIdForOrder = staffMember.practice_id;
+      }
       const createdOrders = [];
       
       // Helper function to create shipping groups
