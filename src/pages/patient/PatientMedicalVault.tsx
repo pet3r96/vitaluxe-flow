@@ -230,68 +230,43 @@ export default function PatientMedicalVault() {
       return;
     }
 
-    setIsGeneratingPdf(true);
-    try {
-      const pdfBlob = await generateMedicalVaultPDF(
-        patientAccount,
-        medications || [],
-        conditions || [],
-        allergies || [],
-        vitals || [],
-        immunizations || [],
-        surgeries || [],
-        pharmacies || [],
-        emergencyContacts || []
-      );
-      
-      // Create blob URL
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      
-      // Create a hidden iframe directly in the DOM (bypasses popup blockers)
-      const printFrame = document.createElement('iframe');
-      printFrame.style.position = 'fixed';
-      printFrame.style.right = '0';
-      printFrame.style.bottom = '0';
-      printFrame.style.width = '0';
-      printFrame.style.height = '0';
-      printFrame.style.border = 'none';
-      printFrame.src = pdfUrl;
-      
-      document.body.appendChild(printFrame);
-      
-      // Wait for PDF to load, then trigger print
-      printFrame.onload = () => {
+    // Simply open preview dialog (same as Preview button)
+    await handleViewPDF();
+  };
+
+  // Print handler for the PDF viewer - creates hidden iframe and prints
+  const handlePrintFromViewer = () => {
+    if (!pdfPreviewUrl) return;
+    
+    // Create a hidden iframe to print the PDF
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = 'none';
+    printFrame.src = pdfPreviewUrl;
+    
+    document.body.appendChild(printFrame);
+    
+    // Wait for PDF to load, then trigger print
+    printFrame.onload = () => {
+      setTimeout(() => {
         try {
-          // Small delay to ensure PDF is fully rendered
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+          
+          // Cleanup after print dialog
           setTimeout(() => {
-            printFrame.contentWindow?.focus();
-            printFrame.contentWindow?.print();
-            
-            // Cleanup after print dialog opens
-            setTimeout(() => {
-              document.body.removeChild(printFrame);
-              URL.revokeObjectURL(pdfUrl);
-            }, 1000);
-          }, 500);
+            document.body.removeChild(printFrame);
+          }, 1000);
         } catch (err) {
           console.error('Print error:', err);
           document.body.removeChild(printFrame);
-          URL.revokeObjectURL(pdfUrl);
-          toast({ 
-            title: "Print Failed", 
-            description: "Unable to print. Try downloading instead.", 
-            variant: "destructive" 
-          });
         }
-      };
-
-      toast({ title: "Success", description: "Opening print dialog..." });
-    } catch (error) {
-      console.error('Failed to generate PDF:', error);
-      toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
-    } finally {
-      setIsGeneratingPdf(false);
-    }
+      }, 500);
+    };
   };
 
   const handleDownloadPDF = async () => {
@@ -440,6 +415,7 @@ export default function PatientMedicalVault() {
               <PDFViewer 
                 url={pdfPreviewUrl} 
                 onDownload={handleDownloadPDF}
+                onPrint={handlePrintFromViewer}
               />
             )}
           </div>

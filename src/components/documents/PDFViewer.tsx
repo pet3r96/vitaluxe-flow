@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Loader2, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Set up PDF.js worker
@@ -10,10 +10,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 interface PDFViewerProps {
   url: string;
   onDownload?: () => void;
+  onPrint?: () => void;
   className?: string;
 }
 
-export function PDFViewer({ url, onDownload, className = "" }: PDFViewerProps) {
+export function PDFViewer({ url, onDownload, onPrint, className = "" }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -97,6 +98,12 @@ export function PDFViewer({ url, onDownload, className = "" }: PDFViewerProps) {
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
+
+          {onPrint && (
+            <Button variant="outline" size="sm" onClick={onPrint}>
+              <Printer className="h-4 w-4" />
+            </Button>
+          )}
 
           {onDownload && (
             <Button variant="outline" size="sm" onClick={onDownload}>
