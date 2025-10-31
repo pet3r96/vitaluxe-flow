@@ -38,11 +38,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
       
       let query = supabase
         .from("patient_follow_ups" as any)
-        .select(`
-          *,
-          assigned_user:assigned_to(name),
-          creator:created_by(name)
-        `)
+        .select("*")
         .eq("patient_id", patientId)
         .order("follow_up_date", { ascending: true });
 

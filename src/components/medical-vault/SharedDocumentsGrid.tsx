@@ -28,7 +28,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
         .from('patient_documents')
         .select('*')
         .eq('patient_id', patientAccountId)
-        .order('uploaded_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       // For practice view, only show shared documents
       if (mode === 'practice') {
@@ -46,14 +46,22 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const { data: providerDocs, isLoading: loadingProviderDocs } = useQuery({
     queryKey: ['shared-provider-documents', patientAccountId],
     queryFn: async () => {
+      // Map to legacy patient_id for the junction table if needed
+      const { data: mapRow } = await supabase
+        .from('v_patients_with_portal_status')
+        .select('patient_id')
+        .eq('patient_account_id', patientAccountId)
+        .maybeSingle();
+      const legacyPatientId = mapRow?.patient_id ?? patientAccountId;
+
       const { data, error } = await supabase
         .from('provider_documents')
         .select(`
           *,
           provider_document_patients!inner(patient_id)
         `)
-        .eq('provider_document_patients.patient_id', patientAccountId)
-        .order('uploaded_at', { ascending: false });
+        .eq('provider_document_patients.patient_id', legacyPatientId)
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data || [];

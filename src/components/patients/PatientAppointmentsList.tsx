@@ -35,9 +35,9 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
   // Realtime subscription for immediate updates
   useEffect(() => {
     realtimeManager.subscribe('patient_appointments', () => {
-      queryClient.invalidateQueries({ queryKey: ['patient-appointments', patientId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-appointments', patientId, practiceId] });
     });
-  }, [patientId, queryClient]);
+  }, [patientId, practiceId, queryClient]);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
