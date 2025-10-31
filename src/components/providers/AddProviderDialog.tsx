@@ -260,27 +260,36 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
               onChange={(e) => {
                 const value = e.target.value.replace(/\D/g, '');
                 setFormData({ ...formData, npi: value });
-                setValidationErrors({ ...validationErrors, npi: "" });
+                
+                // Clear error immediately when user changes the value
+                setValidationErrors(prev => ({ ...prev, npi: "" }));
                 
                 // Real-time NPI verification
                 if (value && value.length === 10) {
                   verifyNPIDebounced(value, (result) => {
-                    if (result.valid) {
-                      if (result.providerName) {
-                        toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                    // Only apply result if it matches the CURRENT form value
+                    // (prevents race conditions from stale debounced calls)
+                    setFormData(currentFormData => {
+                      if (currentFormData.npi === result.npi) {
+                        if (result.valid) {
+                          if (result.providerName) {
+                            toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                          }
+                          if (result.warning) {
+                            toast.info(result.warning);
+                          }
+                        } else if (result.error) {
+                          setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
+                        }
                       }
-                      if (result.warning) {
-                        toast.info(result.warning);
-                      }
-                    } else if (result.error) {
-                      setValidationErrors({ ...validationErrors, npi: result.error });
-                    }
+                      return currentFormData;
+                    });
                   });
                 }
               }}
               onBlur={() => {
                 const result = validateNPI(formData.npi);
-                setValidationErrors({ ...validationErrors, npi: result.error || "" });
+                setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
               }}
               placeholder="1234567890"
               maxLength={10}
