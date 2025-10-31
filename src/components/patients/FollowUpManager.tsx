@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Check, X, Edit2, AlertCircle } from "lucide-react";
+import { Plus, Calendar, Check, X, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { toast } from "sonner";
 import { FollowUpDialog } from "./FollowUpDialog";
+import { realtimeManager } from "@/lib/realtimeManager";
 import {
   Select,
   SelectContent,
@@ -28,6 +29,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
   const [editingFollowUp, setEditingFollowUp] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const queryClient = useQueryClient();
+  const [isOptimisticUpdate, setIsOptimisticUpdate] = useState(false);
 
   const { data: followUps, isLoading, refetch } = useQuery({
     queryKey: ["patient-follow-ups", patientId, statusFilter],
@@ -95,40 +97,10 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
 
   // Set up real-time subscription for follow-ups
   useEffect(() => {
-    console.log("[FollowUpManager] Setting up realtime subscription for patient:", patientId);
-    
-    const channel = supabase
-      .channel('patient-follow-ups-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'patient_follow_ups',
-          filter: `patient_id=eq.${patientId}`,
-        },
-        (payload) => {
-          console.log("[FollowUpManager] Realtime update received:", payload);
-          // Refetch when any change occurs
-          refetch();
-        }
-      )
-      .subscribe((status) => {
-        console.log("[FollowUpManager] Realtime subscription status:", status);
-      });
-
-    return () => {
-      console.log("[FollowUpManager] Cleaning up realtime subscription");
-      supabase.removeChannel(channel);
-    };
-  }, [patientId, refetch]);
-
-  console.log("[FollowUpManager] Current state:", { 
-    followUps, 
-    isLoading, 
-    count: followUps?.length,
-    statusFilter 
-  });
+    realtimeManager.subscribe('patient_follow_ups', () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-follow-ups', patientId] });
+    });
+  }, [patientId, queryClient]);
 
   const markComplete = useMutation({
     mutationFn: async (id: string) => {
@@ -143,12 +115,32 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
 
       if (error) throw error;
     },
+    onMutate: async (id: string) => {
+      setIsOptimisticUpdate(true);
+      await queryClient.cancelQueries({ queryKey: ['patient-follow-ups', patientId] });
+      
+      const previousData = queryClient.getQueryData(['patient-follow-ups', patientId]);
+      
+      queryClient.setQueryData(['patient-follow-ups', patientId], (old: any) => {
+        if (!old) return old;
+        return old.map((item: any) => 
+          item.id === id ? { ...item, status: 'completed' } : item
+        );
+      });
+      
+      return { previousData };
+    },
     onSuccess: () => {
+      setIsOptimisticUpdate(false);
       queryClient.invalidateQueries({ queryKey: ["patient-follow-ups"] });
       queryClient.invalidateQueries({ queryKey: ["follow-up-reminders"] });
       toast.success("Follow-up marked as complete");
     },
-    onError: () => {
+    onError: (error, id, context: any) => {
+      setIsOptimisticUpdate(false);
+      if (context?.previousData) {
+        queryClient.setQueryData(['patient-follow-ups', patientId], context.previousData);
+      }
       toast.error("Failed to update follow-up");
     },
   });
@@ -162,12 +154,32 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
 
       if (error) throw error;
     },
+    onMutate: async (id: string) => {
+      setIsOptimisticUpdate(true);
+      await queryClient.cancelQueries({ queryKey: ['patient-follow-ups', patientId] });
+      
+      const previousData = queryClient.getQueryData(['patient-follow-ups', patientId]);
+      
+      queryClient.setQueryData(['patient-follow-ups', patientId], (old: any) => {
+        if (!old) return old;
+        return old.map((item: any) => 
+          item.id === id ? { ...item, status: 'cancelled' } : item
+        );
+      });
+      
+      return { previousData };
+    },
     onSuccess: () => {
+      setIsOptimisticUpdate(false);
       queryClient.invalidateQueries({ queryKey: ["patient-follow-ups"] });
       queryClient.invalidateQueries({ queryKey: ["follow-up-reminders"] });
       toast.success("Follow-up cancelled");
     },
-    onError: () => {
+    onError: (error, id, context: any) => {
+      setIsOptimisticUpdate(false);
+      if (context?.previousData) {
+        queryClient.setQueryData(['patient-follow-ups', patientId], context.previousData);
+      }
       toast.error("Failed to cancel follow-up");
     },
   });
@@ -203,18 +215,28 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
     return <Badge variant="secondary">Upcoming</Badge>;
   };
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
               Follow-Ups for {patientName}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-full sm:w-[150px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -224,7 +246,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button onClick={() => setDialogOpen(true)} className="touch-target">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Follow-Up
               </Button>
@@ -232,13 +254,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 bg-muted animate-pulse rounded" />
-              ))}
-            </div>
-          ) : followUps && followUps.length > 0 ? (
+          {followUps && followUps.length > 0 ? (
             <div className="space-y-3">
               {followUps.map((followUp) => (
                 <div
@@ -280,7 +296,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
                     </div>
                   </div>
                   {followUp.status === "pending" && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -288,6 +304,8 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
                           setEditingFollowUp(followUp);
                           setDialogOpen(true);
                         }}
+                        className="touch-target"
+                        disabled={isOptimisticUpdate}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -295,7 +313,8 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
                         size="sm"
                         variant="ghost"
                         onClick={() => markComplete.mutate(followUp.id)}
-                        disabled={markComplete.isPending}
+                        disabled={markComplete.isPending || isOptimisticUpdate}
+                        className="touch-target"
                       >
                         <Check className="h-4 w-4" />
                       </Button>
@@ -303,7 +322,8 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
                         size="sm"
                         variant="ghost"
                         onClick={() => cancelFollowUp.mutate(followUp.id)}
-                        disabled={cancelFollowUp.isPending}
+                        disabled={cancelFollowUp.isPending || isOptimisticUpdate}
+                        className="touch-target"
                       >
                         <X className="h-4 w-4" />
                       </Button>

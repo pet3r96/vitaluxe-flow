@@ -2,11 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Lock, Unlock, Download, Eye } from "lucide-react";
+import { FileText, Lock, Unlock, Download, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PatientDocumentPreview } from "@/components/documents/PatientDocumentPreview";
+import { realtimeManager } from "@/lib/realtimeManager";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SharedDocumentsGridProps {
   patientAccountId: string;
@@ -14,6 +16,7 @@ interface SharedDocumentsGridProps {
 }
 
 export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsGridProps) {
+  const queryClient = useQueryClient();
   const [previewDoc, setPreviewDoc] = useState<any>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -36,6 +39,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
       if (error) throw error;
       return data || [];
     },
+    staleTime: 10000,
   });
 
   // Fetch provider documents assigned to this patient
@@ -54,7 +58,21 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
       if (error) throw error;
       return data || [];
     },
+    staleTime: 10000,
   });
+
+  // Realtime subscriptions for immediate updates
+  useEffect(() => {
+    if (!patientAccountId) return;
+
+    realtimeManager.subscribe('patient_documents', () => {
+      queryClient.invalidateQueries({ queryKey: ['shared-patient-documents', patientAccountId] });
+    });
+
+    realtimeManager.subscribe('provider_documents', () => {
+      queryClient.invalidateQueries({ queryKey: ['shared-provider-documents', patientAccountId] });
+    });
+  }, [patientAccountId, queryClient]);
 
   const handlePreview = (doc: any, type: 'patient' | 'provider') => {
     setPreviewDoc({ ...doc, type });
@@ -63,8 +81,8 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
   if (loadingPatientDocs || loadingProviderDocs) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        Loading documents...
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -76,15 +94,18 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
   if (allDocs.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No shared documents available
-      </div>
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">No shared documents available</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {allDocs.map((doc) => {
           const isPatient = doc.docType === 'patient';
           const sharedWithPractice = isPatient && 'share_with_practice' in doc ? doc.share_with_practice : false;
@@ -140,11 +161,11 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="flex-1"
+                    className="flex-1 touch-target"
                     onClick={() => handlePreview(doc, doc.docType)}
                   >
                     <Eye className="h-3 w-3 mr-1" />
-                    View
+                    <span className="hidden sm:inline">View</span>
                   </Button>
                 </div>
               </CardContent>
@@ -159,7 +180,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
           onOpenChange={setPreviewOpen}
           documentName={previewDoc.document_name}
           storagePath={previewDoc.storage_path}
-          bucketName={previewDoc.type === 'patient' ? 'patient-documents' : 'provider-documents'}
+          bucketName={previewDoc.docType === 'patient' ? 'patient-documents' : 'provider-documents'}
           mimeType={previewDoc.mime_type}
         />
       )}

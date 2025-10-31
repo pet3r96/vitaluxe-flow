@@ -1,60 +1,95 @@
-import { useParams, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, User, FileText, Calendar, Eye, Download } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { 
+  ArrowLeft, Calendar, Download, FileText, Mail, MapPin, 
+  Phone, Printer, User, Eye, X, Loader2
+} from "lucide-react";
+import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 import { FollowUpManager } from "@/components/patients/FollowUpManager";
 import { MedicalVaultView } from "@/components/medical-vault/MedicalVaultView";
 import { MedicalVaultSummaryCard } from "@/components/medical-vault/MedicalVaultSummaryCard";
 import { SharedDocumentsGrid } from "@/components/medical-vault/SharedDocumentsGrid";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
-import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { PatientAppointmentsList } from "@/components/patients/PatientAppointmentsList";
+import { PatientPortalStatusBadge } from "@/components/patients/PatientPortalStatusBadge";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 import { PDFViewer } from "@/components/documents/PDFViewer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { realtimeManager } from "@/lib/realtimeManager";
 
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "overview";
   const { effectivePracticeId } = useAuth();
+  const queryClient = useQueryClient();
   const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const { toast } = useToast();
 
   const practiceId = effectivePracticeId;
 
   const { data: patient, isLoading } = useQuery({
-    queryKey: ["patient", patientId],
+    queryKey: ['patient', patientId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_accounts")
-        .select("*")
-        .eq("id", patientId)
+        .from('patient_accounts')
+        .select('*')
+        .eq('id', patientId)
         .single();
 
       if (error) throw error;
-      
-      // Map patient_accounts fields to match expected format
       return {
         ...data,
         name: data ? `${data.first_name} ${data.last_name}` : "",
-        address: data?.address && data?.city && data?.state && data?.zip_code
-          ? `${data.address}, ${data.city}, ${data.state} ${data.zip_code}`
-          : data?.address || "Not provided",
       };
     },
     enabled: !!patientId,
+    staleTime: 30000,
   });
+
+  // Fetch portal status
+  const { data: portalStatus } = useQuery({
+    queryKey: ['patient-portal-status', patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_patients_with_portal_status')
+        .select('*')
+        .eq('patient_id', patientId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Portal status error:', error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!patientId,
+    staleTime: 30000,
+  });
+
+  // Realtime subscriptions for all patient data
+  useEffect(() => {
+    if (!patientId) return;
+
+    // Subscribe to patient account changes
+    realtimeManager.subscribe('patient_accounts', () => {
+      queryClient.invalidateQueries({ queryKey: ['patient', patientId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-portal-status', patientId] });
+    });
+
+    return () => {
+      // Subscriptions are managed globally by realtimeManager
+    };
+  }, [patientId, queryClient]);
 
   // Fetch providers for appointment dialog
   const { data: providers = [] } = useQuery({
@@ -445,12 +480,13 @@ export default function PatientDetail() {
           <FollowUpManager patientId={patientId!} patientName={patient.name} />
         </TabsContent>
 
-        <TabsContent value="appointments">
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              Appointment history will be displayed here
-            </CardContent>
-          </Card>
+        <TabsContent value="appointments" className="space-y-4">
+          {effectivePracticeId && (
+            <PatientAppointmentsList 
+              patientId={patientId!} 
+              practiceId={effectivePracticeId}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="documents">
