@@ -18,7 +18,10 @@ const allergySchema = z.object({
   allergen_name: z.string().optional(),
   reaction_type: z.string().optional(),
   severity: z.enum(["mild", "moderate", "severe"]).optional(),
-  date_recorded: z.string().optional(),
+  date_recorded: z.string().optional().refine(
+    (val) => !val || /^\d{4}-\d{2}$/.test(val),
+    "Date recorded must be in YYYY-MM format"
+  ),
   notes: z.string().optional(),
 }).refine((data) => {
   if (data.nka) return true;
@@ -41,19 +44,45 @@ interface AllergyDialogProps {
 export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, mode }: AllergyDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<AllergyFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<AllergyFormData>({
     resolver: zodResolver(allergySchema),
-    defaultValues: allergy || {
+    defaultValues: {
       nka: false,
       allergen_name: "",
       reaction_type: "",
       severity: undefined,
-      date_recorded: new Date().toISOString().split('T')[0],
+      date_recorded: new Date().toISOString().substring(0, 7),
       notes: "",
     },
   });
 
   const nkaChecked = watch("nka");
+
+  // Handle edit mode - convert existing date to month format
+  useEffect(() => {
+    if (allergy && open) {
+      // Convert date_recorded from YYYY-MM-DD to YYYY-MM
+      const monthYear = allergy.date_recorded ? allergy.date_recorded.substring(0, 7) : "";
+      
+      reset({
+        nka: allergy.nka || false,
+        allergen_name: allergy.allergen_name || "",
+        reaction_type: allergy.reaction_type || "",
+        severity: allergy.severity || undefined,
+        date_recorded: monthYear,
+        notes: allergy.notes || "",
+      });
+    } else if (!allergy && open) {
+      reset({
+        nka: false,
+        allergen_name: "",
+        reaction_type: "",
+        severity: undefined,
+        date_recorded: new Date().toISOString().substring(0, 7),
+        notes: "",
+      });
+    }
+  }, [allergy, open, reset]);
 
   // Clear other fields when NKA is checked
   useEffect(() => {
@@ -66,12 +95,15 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
 
   const mutation = useOptimisticMutation(
     async (data: AllergyFormData) => {
+      // Convert YYYY-MM to YYYY-MM-01 for database storage
+      const fullDate = data.date_recorded ? data.date_recorded + "-01" : new Date().toISOString().substring(0, 7) + "-01";
+      
       const formattedData = {
         nka: data.nka || false,
         allergen_name: data.allergen_name || null,
         reaction_type: data.reaction_type || null,
         severity: data.severity || null,
-        date_recorded: data.date_recorded || new Date().toISOString().split('T')[0],
+        date_recorded: fullDate,
         notes: data.notes || null,
       };
 
@@ -180,10 +212,10 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="date_recorded">Date Recorded</Label>
+                  <Label htmlFor="date_recorded">Date Recorded (Month & Year)</Label>
                   <Input
                     id="date_recorded"
-                    type="date"
+                    type="month"
                     {...register("date_recorded")}
                     disabled={isReadOnly}
                   />
