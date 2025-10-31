@@ -40,7 +40,7 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
     async (data: ImmunizationFormData) => {
       const formattedData = {
         vaccine_name: data.vaccine_name,
-        date_administered: data.date_administered,
+        date_administered: `${data.date_administered}-01`, // Convert YYYY-MM to YYYY-MM-01
         lot_number: null,
         administering_provider: null,
         notes: null,

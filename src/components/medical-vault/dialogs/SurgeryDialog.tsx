@@ -40,7 +40,7 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
     async (data: SurgeryFormData) => {
       const formattedData = {
         surgery_type: data.surgery_type,
-        surgery_date: data.surgery_date,
+        surgery_date: `${data.surgery_date}-01`, // Convert YYYY-MM to YYYY-MM-01
         surgeon_name: null,
         hospital: null,
         notes: null,

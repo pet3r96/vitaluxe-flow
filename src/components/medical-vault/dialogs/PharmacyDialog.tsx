@@ -198,14 +198,15 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
             )}
           </div>
 
-          <div className="flex items-center space-x-2 p-4 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+          <div className="flex items-center space-x-2 p-4 bg-gray-900 rounded-lg border border-gray-700">
             <Checkbox
               id="is_preferred"
               checked={watch("is_preferred") || false}
               onCheckedChange={(checked) => setValue("is_preferred", checked as boolean)}
               disabled={isReadOnly}
+              className="border-gray-600 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
             />
-            <Label htmlFor="is_preferred" className="text-sm font-medium cursor-pointer">
+            <Label htmlFor="is_preferred" className="text-sm font-medium cursor-pointer text-gray-200">
               Mark as Preferred Pharmacy
             </Label>
           </div>

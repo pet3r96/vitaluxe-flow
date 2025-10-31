@@ -41,16 +41,16 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
       {/* Animated border glow effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
-      <CardHeader className="relative z-10">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-3 min-w-0 flex-1">
+      <CardHeader className="relative z-10 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg flex-shrink-0">
               <Scissors className="h-6 w-6 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent font-bold">
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent break-words">
               Surgeries
-            </span>
-          </CardTitle>
+            </CardTitle>
+          </div>
           <Button 
             size="sm" 
             onClick={() => {
