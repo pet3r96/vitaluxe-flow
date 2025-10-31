@@ -2449,15 +2449,6 @@ export type Database = {
       patient_accounts: {
         Row: {
           address: string | null
-          address_city: string | null
-          address_formatted: string | null
-          address_state: string | null
-          address_street: string | null
-          address_verification_source: string | null
-          address_verification_status: string | null
-          address_zip: string | null
-          allergies: string | null
-          birth_date: string | null
           city: string | null
           created_at: string
           date_of_birth: string | null
@@ -2471,12 +2462,9 @@ export type Database = {
           invitation_sent_at: string | null
           last_login_at: string | null
           last_name: string
-          name: string | null
-          notes: string | null
           phone: string | null
           practice_id: string
           primary_provider_id: string | null
-          provider_id: string | null
           state: string | null
           status: string
           updated_at: string
@@ -2485,15 +2473,6 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          address_city?: string | null
-          address_formatted?: string | null
-          address_state?: string | null
-          address_street?: string | null
-          address_verification_source?: string | null
-          address_verification_status?: string | null
-          address_zip?: string | null
-          allergies?: string | null
-          birth_date?: string | null
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -2507,12 +2486,9 @@ export type Database = {
           invitation_sent_at?: string | null
           last_login_at?: string | null
           last_name: string
-          name?: string | null
-          notes?: string | null
           phone?: string | null
           practice_id: string
           primary_provider_id?: string | null
-          provider_id?: string | null
           state?: string | null
           status?: string
           updated_at?: string
@@ -2521,15 +2497,6 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          address_city?: string | null
-          address_formatted?: string | null
-          address_state?: string | null
-          address_street?: string | null
-          address_verification_source?: string | null
-          address_verification_status?: string | null
-          address_zip?: string | null
-          allergies?: string | null
-          birth_date?: string | null
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -2543,12 +2510,9 @@ export type Database = {
           invitation_sent_at?: string | null
           last_login_at?: string | null
           last_name?: string
-          name?: string | null
-          notes?: string | null
           phone?: string | null
           practice_id?: string
           primary_provider_id?: string | null
-          provider_id?: string | null
           state?: string | null
           status?: string
           updated_at?: string
