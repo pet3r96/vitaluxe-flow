@@ -159,12 +159,12 @@ export const generateMedicalVaultPDF = async (
 
   // Professional Header with Colors
   const addHeader = () => {
-    // Gold header background
-    doc.setFillColor(218, 165, 32);
+    // Dark grey header background
+    doc.setFillColor(55, 65, 81);
     doc.rect(0, 0, pageWidth, 40, 'F');
     
-    // Main title in white
-    doc.setTextColor(255, 255, 255);
+    // Main title in gold
+    doc.setTextColor(218, 165, 32);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
@@ -175,13 +175,13 @@ export const generateMedicalVaultPDF = async (
     const lockY = 20;
     const lockSize = 6;
     
-    // Lock body (rectangle)
-    doc.setFillColor(255, 255, 255);
+    // Lock body (rectangle) in gold
+    doc.setFillColor(218, 165, 32);
     doc.roundedRect(lockX - lockSize/2, lockY, lockSize, lockSize, 1, 1, 'F');
     
-    // Lock shackle (arc/semicircle using lines)
+    // Lock shackle (arc/semicircle using lines) in gold
     doc.setLineWidth(1.5);
-    doc.setDrawColor(255, 255, 255);
+    doc.setDrawColor(218, 165, 32);
     const shackleWidth = lockSize * 0.6;
     const shackleHeight = lockSize * 0.5;
     // Draw U-shape for shackle
@@ -189,13 +189,13 @@ export const generateMedicalVaultPDF = async (
     doc.line(lockX - shackleWidth/2, lockY - shackleHeight, lockX + shackleWidth/2, lockY - shackleHeight);
     doc.line(lockX + shackleWidth/2, lockY - shackleHeight, lockX + shackleWidth/2, lockY);
     
-    // Keyhole
-    doc.setFillColor(218, 165, 32);
+    // Keyhole in dark grey
+    doc.setFillColor(55, 65, 81);
     doc.circle(lockX, lockY + lockSize/3, lockSize/6, 'F');
     doc.rect(lockX - lockSize/12, lockY + lockSize/3, lockSize/6, lockSize/3, 'F');
     
-    // VitaLuxe branding
-    doc.setTextColor(255, 255, 255);
+    // VitaLuxe branding in light grey
+    doc.setTextColor(200, 200, 200);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text('VitaLuxe Services', pageWidth / 2, 34, { align: 'center' });
