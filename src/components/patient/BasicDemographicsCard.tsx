@@ -125,7 +125,7 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-semibold flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              Basic Demographics
+              Demographics
             </CardTitle>
             <Button onClick={() => setIsEditDialogOpen(true)} size="sm" variant="outline" className="gap-2">
               <Edit2 className="h-4 w-4" />
@@ -165,15 +165,6 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
               </div>
             </div>
           </div>
-
-          {/* Email - Read Only */}
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-            <Mail className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground font-medium mb-1">Email Address (Read-only)</p>
-              <p className="text-sm font-medium text-foreground truncate">{patientAccount?.email || "Not available"}</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -181,7 +172,7 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Edit Basic Demographics</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Edit Demographics</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6">
