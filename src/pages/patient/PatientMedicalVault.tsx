@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Activity, AlertCircle, Pill, Heart, Syringe, Scissors, Building2, Phone, ShieldCheck, Share2, Download, FileText, Eye, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -20,6 +21,8 @@ import { BasicDemographicsCard } from "@/components/patient/BasicDemographicsCar
 
 export default function PatientMedicalVault() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
   // Get patient account - check for impersonation first
   const { data: patientAccount, isLoading, error } = useQuery({
@@ -200,8 +203,9 @@ export default function PatientMedicalVault() {
         emergencyContacts || []
       );
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      window.open(pdfUrl, '_blank');
-      toast({ title: "Success", description: "PDF opened in new tab" });
+      setPdfPreviewUrl(pdfUrl);
+      setPreviewDialogOpen(true);
+      toast({ title: "Success", description: "PDF preview loaded" });
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
@@ -336,6 +340,30 @@ export default function PatientMedicalVault() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* PDF Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        setPreviewDialogOpen(open);
+        if (!open && pdfPreviewUrl) {
+          URL.revokeObjectURL(pdfPreviewUrl);
+          setPdfPreviewUrl(null);
+        }
+      }}>
+        <DialogContent className="max-w-6xl h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle>Medical Vault Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden px-6 pb-6">
+            {pdfPreviewUrl && (
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full border rounded-lg"
+                title="PDF Preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Medical Vault Header - Compact Modern Design */}
       <Card className="border-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white shadow-2xl overflow-hidden relative">
         {/* Animated gradient overlay */}
