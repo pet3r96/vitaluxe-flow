@@ -40,10 +40,60 @@ export default function PatientAppointments() {
         const { data, error } = await supabase
           .rpc('get_patient_appointments_with_details', { p_user_id: effectiveUserId });
         if (error) throw error;
-        if (!data) return [];
-        if (Array.isArray(data)) return data;
-        if (typeof data === 'string') return JSON.parse(data);
-        return [];
+
+        const rows = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
+        if (!rows || rows.length === 0) return [];
+
+        // Enrich RPC results with practice address/name when missing
+        const practiceIds = Array.from(
+          new Set(
+            rows
+              .map((r: any) => r.practice_id || r.practice?.id)
+              .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+          )
+        );
+        let profilesById: Record<string, any> = {};
+        let brandingByPracticeId: Record<string, any> = {};
+        if (practiceIds.length > 0) {
+          const [{ data: profilesData }, { data: brandingData }] = await Promise.all([
+            supabase
+              .from('profiles')
+              .select('id, address_street, address_city, address_state, address_zip, name')
+              .in('id', practiceIds as string[]),
+            supabase
+              .from('practice_branding')
+              .select('practice_id, practice_name')
+              .in('practice_id', practiceIds as string[])
+          ]);
+          (profilesData || []).forEach((p: any) => { profilesById[p.id] = p; });
+          (brandingData || []).forEach((b: any) => { brandingByPracticeId[b.practice_id] = b; });
+        }
+
+        const enhanced = rows.map((r: any) => {
+          const pid = r.practice_id || r.practice?.id;
+          const profile = pid ? profilesById[pid] : null;
+          const branding = pid ? brandingByPracticeId[pid] : null;
+          const addrStreet = r.street || r.practice?.address_street || profile?.address_street || null;
+          const addrCity = r.city || r.practice?.address_city || profile?.address_city || null;
+          const addrState = r.state || r.practice?.address_state || profile?.address_state || null;
+          const addrZip = r.zip || r.practice?.address_zip || profile?.address_zip || null;
+          const formatted = (addrStreet && addrCity) ? `${addrStreet}, ${addrCity}, ${addrState || ''} ${addrZip || ''}`.trim() : null;
+
+          return {
+            ...r,
+            practice: {
+              id: pid,
+              name: r.practice?.name || branding?.practice_name || profile?.name || 'Practice',
+              address_formatted: formatted,
+              address_street: addrStreet,
+              address_city: addrCity,
+              address_state: addrState,
+              address_zip: addrZip,
+            },
+          };
+        });
+
+        return enhanced;
       } catch (rpcError: any) {
         console.warn('[PatientAppointments] RPC failed, falling back to direct queries:', rpcError);
         // 2) Fallback: direct queries with RLS-safe selects
