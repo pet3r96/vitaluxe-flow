@@ -545,8 +545,8 @@ export const ProductsGrid = () => {
 
         if (!isValidStateCode(destinationState)) {
           // If destination state is invalid/missing, allow adding to cart without routing.
-          // We'll collect address on Delivery Confirmation and route there.
-          console.warn('[ProductsGrid] Missing/invalid patient state. Skipping routing and inserting unassigned line.');
+          // Use placeholder state "XX" to satisfy NOT NULL constraint, will be corrected on Delivery Confirmation
+          console.warn('[ProductsGrid] Missing/invalid patient state. Skipping routing and inserting unassigned line with placeholder state.');
           const actualProviderId = await getProviderIdFromUserId(providerId);
           if (!actualProviderId) {
             toast.error("Unable to find provider record. Please contact support.");
@@ -572,7 +572,7 @@ export const ProductsGrid = () => {
               patient_address_validation_source: null,
               quantity: quantity,
               price_snapshot: correctPrice,
-              destination_state: null,
+              destination_state: 'XX', // Placeholder for missing/invalid state
               assigned_pharmacy_id: null,
               prescription_url: prescriptionUrl,
               custom_sig: customSig,
@@ -584,6 +584,8 @@ export const ProductsGrid = () => {
           if (insertError) throw insertError;
 
           toast.message("Added to cart", { description: "Please complete patient address on Delivery Confirmation." });
+          queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+          queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
           return;
         }
 
