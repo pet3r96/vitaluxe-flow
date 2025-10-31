@@ -35,6 +35,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 import {
   Form,
   FormControl,
@@ -72,6 +73,10 @@ export const PracticeDetailsDialog = ({
   const { effectiveRole, effectiveUserId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [repComboboxOpen, setRepComboboxOpen] = useState(false);
+  const [originalNpi, setOriginalNpi] = useState("");
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<
+    null | "verifying" | "verified" | "failed"
+  >(null);
   
   const form = useForm<PracticeEditFormValues>({
     resolver: zodResolver(practiceEditSchema),
@@ -193,6 +198,10 @@ export const PracticeDetailsDialog = ({
           `${provider.address_street}, ${provider.address_city}, ${provider.address_state} ${provider.address_zip}` 
           : "");
 
+      const npiValue = sanitizeEncrypted(provider.npi) || "";
+      setOriginalNpi(npiValue);
+      setNpiVerificationStatus(null);
+
       form.reset({
         name: provider.name || "",
         phone: sanitizeEncrypted(provider.phone) || "",
@@ -203,7 +212,7 @@ export const PracticeDetailsDialog = ({
           zip: provider.address_zip || "",
           formatted: formattedAddress,
         },
-        npi: sanitizeEncrypted(provider.npi) || "",
+        npi: npiValue,
         license_number: sanitizeEncrypted(provider.license_number) || "",
         dea: sanitizeEncrypted(provider.dea) || "",
         selectedRepId: provider.linked_topline_id || "",
@@ -213,6 +222,17 @@ export const PracticeDetailsDialog = ({
 
   const handleSave = async (values: PracticeEditFormValues) => {
     try {
+      // Check NPI verification only if NPI was changed
+      const npiChanged = values.npi !== originalNpi;
+      if (npiChanged && npiVerificationStatus !== "verified") {
+        if (npiVerificationStatus === "verifying") {
+          toast.error("Please wait for NPI verification to complete");
+        } else {
+          toast.error("NPI must be verified before saving changes");
+        }
+        return;
+      }
+
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -441,8 +461,49 @@ export const PracticeDetailsDialog = ({
                                 {...field} 
                                 placeholder="10 digits"
                                 maxLength={10}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\D/g, '');
+                                  field.onChange(value);
+                                  
+                                  // Reset verification status when NPI changes
+                                  if (value.length !== 10) {
+                                    setNpiVerificationStatus(null);
+                                  } else if (value !== originalNpi) {
+                                    setNpiVerificationStatus("verifying");
+                                    
+                                    // Real-time NPI verification
+                                    verifyNPIDebounced(value, (result) => {
+                                      if (form.getValues('npi') === result.npi) {
+                                        if (result.valid && !result.error) {
+                                          setNpiVerificationStatus("verified");
+                                          if (result.providerName) {
+                                            toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                                          }
+                                          if (result.warning) {
+                                            toast.info(result.warning);
+                                          }
+                                        } else if (result.error) {
+                                          setNpiVerificationStatus("failed");
+                                          toast.error(result.error);
+                                        }
+                                      }
+                                    });
+                                  } else {
+                                    // NPI unchanged - no verification needed
+                                    setNpiVerificationStatus(null);
+                                  }
+                                }}
                               />
                             </FormControl>
+                            {npiVerificationStatus === "verifying" && (
+                              <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
+                            )}
+                            {npiVerificationStatus === "verified" && (
+                              <p className="text-sm text-green-600">✅ NPI Verified</p>
+                            )}
+                            {npiVerificationStatus === "failed" && (
+                              <p className="text-sm text-destructive">❌ Invalid NPI</p>
+                            )}
                             <FormMessage />
                           </>
                         ) : (

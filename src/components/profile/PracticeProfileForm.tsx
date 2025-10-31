@@ -68,6 +68,9 @@ export const PracticeProfileForm = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<
+    null | "verifying" | "verified" | "failed"
+  >(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["practice-profile", effectiveUserId],
@@ -172,6 +175,24 @@ export const PracticeProfileForm = () => {
   });
 
   const onSubmit = (values: ProfileFormValues) => {
+    // Check NPI verification status
+    if (npiVerificationStatus !== "verified") {
+      if (npiVerificationStatus === "verifying") {
+        toast({
+          title: "Please wait",
+          description: "NPI verification is in progress",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Verification Required",
+          description: "NPI must be verified before saving",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     updateMutation.mutate(values);
   };
 
@@ -312,33 +333,55 @@ export const PracticeProfileForm = () => {
                         const value = e.target.value.replace(/\D/g, '');
                         field.onChange(value);
                         
+                        // Reset verification status when NPI changes
+                        if (value.length !== 10) {
+                          setNpiVerificationStatus(null);
+                        } else {
+                          setNpiVerificationStatus("verifying");
+                        }
+                        
                         // Real-time NPI verification
                         if (value && value.length === 10) {
                           verifyNPIDebounced(value, (result) => {
-                            if (result.valid && result.providerName) {
-                              toast({
-                                title: "NPI Verified ✓",
-                                description: `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`,
-                              });
-                            } else if (result.error) {
-                              toast({
-                                title: "Invalid NPI",
-                                description: result.error,
-                                variant: "destructive",
-                              });
-                            }
-                            if (result.warning) {
-                              toast({
-                                title: "Warning",
-                                description: result.warning,
-                                variant: "default",
-                              });
+                            if (field.value === result.npi) {
+                              if (result.valid && !result.error) {
+                                setNpiVerificationStatus("verified");
+                                if (result.providerName) {
+                                  toast({
+                                    title: "NPI Verified ✓",
+                                    description: `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`,
+                                  });
+                                }
+                                if (result.warning) {
+                                  toast({
+                                    title: "Warning",
+                                    description: result.warning,
+                                    variant: "default",
+                                  });
+                                }
+                              } else if (result.error) {
+                                setNpiVerificationStatus("failed");
+                                toast({
+                                  title: "Invalid NPI",
+                                  description: result.error,
+                                  variant: "destructive",
+                                });
+                              }
                             }
                           });
                         }
                       }}
                     />
                   </FormControl>
+                  {npiVerificationStatus === "verifying" && (
+                    <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
+                  )}
+                  {npiVerificationStatus === "verified" && (
+                    <p className="text-sm text-green-600">✅ NPI Verified</p>
+                  )}
+                  {npiVerificationStatus === "failed" && (
+                    <p className="text-sm text-destructive">❌ Invalid NPI</p>
+                  )}
                   <FormDescription>
                     Your practice's National Provider Identifier (verified against NPPES)
                   </FormDescription>
@@ -475,7 +518,7 @@ export const PracticeProfileForm = () => {
 
       <Button
               type="submit" 
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || npiVerificationStatus !== "verified"}
               className="w-full sm:w-auto"
             >
               {updateMutation.isPending ? (

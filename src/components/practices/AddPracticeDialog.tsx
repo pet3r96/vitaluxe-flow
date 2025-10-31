@@ -44,6 +44,9 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
   const [loading, setLoading] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [repComboboxOpen, setRepComboboxOpen] = useState(false);
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<
+    null | "verifying" | "verified" | "failed"
+  >(null);
   const [validationErrors, setValidationErrors] = useState({
     phone: "",
     npi: "",
@@ -121,6 +124,16 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check NPI verification status BEFORE format validation
+    if (npiVerificationStatus !== "verified") {
+      if (npiVerificationStatus === "verifying") {
+        toast.error("Please wait for NPI verification to complete");
+      } else {
+        toast.error("NPI must be verified before creating practice");
+      }
+      return;
+    }
     
     // Validate all fields
     const phoneResult = validatePhone(formData.phone);
@@ -221,6 +234,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
 
   const resetForm = () => {
     setContractFile(null);
+    setNpiVerificationStatus(null);
     setFormData({
       name: "",
       email: "",
@@ -292,19 +306,33 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                   setFormData({ ...formData, npi: value });
                   setValidationErrors({ ...validationErrors, npi: "" });
                   
+                  // Reset verification status when NPI changes
+                  if (value.length !== 10) {
+                    setNpiVerificationStatus(null);
+                  } else {
+                    setNpiVerificationStatus("verifying");
+                  }
+                  
                   // Real-time NPI verification
                   if (value && value.length === 10) {
                     verifyNPIDebounced(value, (result) => {
-                      if (result.valid) {
-                        if (result.providerName) {
-                          toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                      setFormData(currentFormData => {
+                        if (currentFormData.npi === result.npi) {
+                          if (result.valid && !result.error) {
+                            setNpiVerificationStatus("verified");
+                            if (result.providerName) {
+                              toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                            }
+                            if (result.warning) {
+                              toast.info(result.warning);
+                            }
+                          } else if (result.error) {
+                            setNpiVerificationStatus("failed");
+                            setValidationErrors({ ...validationErrors, npi: result.error });
+                          }
                         }
-                        if (result.warning) {
-                          toast.info(result.warning);
-                        }
-                      } else if (result.error) {
-                        setValidationErrors({ ...validationErrors, npi: result.error });
-                      }
+                        return currentFormData;
+                      });
                     });
                   }
                 }}
@@ -317,10 +345,18 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 maxLength={10}
                 className={validationErrors.npi ? "border-destructive" : ""}
               />
-              {validationErrors.npi && (
-                <p className="text-sm text-destructive">{validationErrors.npi}</p>
+              {npiVerificationStatus === "verifying" && (
+                <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
               )}
-              <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
+              {npiVerificationStatus === "verified" && (
+                <p className="text-sm text-green-600">✅ NPI Verified</p>
+              )}
+              {npiVerificationStatus === "failed" && validationErrors.npi && (
+                <p className="text-sm text-destructive">❌ {validationErrors.npi}</p>
+              )}
+              {!npiVerificationStatus && (
+                <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -488,7 +524,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || npiVerificationStatus !== "verified"}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading ? "Creating..." : "Create Practice"}
             </Button>
