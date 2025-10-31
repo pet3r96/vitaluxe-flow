@@ -30,7 +30,7 @@ const medicationSchema = z.object({
   instructions: z.string().optional(),
   alert_enabled: z.boolean().optional(),
   condition_id: z.string().optional(),
-  prescribing_provider: z.string().optional(),
+  prescribing_provider: z.string().trim().max(120).optional(),
 });
 
 type MedicationFormData = z.infer<typeof medicationSchema>;
