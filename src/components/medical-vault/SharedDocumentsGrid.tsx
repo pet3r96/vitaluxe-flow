@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Lock, Unlock, Download, Eye, Loader2 } from "lucide-react";
+import { FileText, Lock, Unlock, Download, Eye, Loader2, Filter, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PatientDocumentPreview } from "@/components/documents/PatientDocumentPreview";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,6 +19,9 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const queryClient = useQueryClient();
   const [previewDoc, setPreviewDoc] = useState<any>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'patient' | 'practice'>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [sharedFilter, setSharedFilter] = useState<'all' | 'shared' | 'private'>('all');
 
   // Fetch patient documents (shared with practice)
   const { data: patientDocs, isLoading: loadingPatientDocs } = useQuery({
@@ -95,10 +98,42 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
     );
   }
 
-  const allDocs = [
+  const allDocs = useMemo(() => [
     ...(patientDocs || []).map(d => ({ ...d, docType: 'patient' as const })),
     ...(providerDocs || []).map(d => ({ ...d, docType: 'provider' as const })),
-  ];
+  ], [patientDocs, providerDocs]);
+
+  // Get unique document types for filter
+  const documentTypes = useMemo(() => {
+    const types = new Set<string>();
+    allDocs.forEach(doc => {
+      if (doc.document_type) {
+        types.add(doc.document_type);
+      }
+    });
+    return Array.from(types).sort();
+  }, [allDocs]);
+
+  // Apply filters
+  const filteredDocs = useMemo(() => {
+    return allDocs.filter(doc => {
+      // Source filter
+      if (sourceFilter === 'patient' && doc.docType !== 'patient') return false;
+      if (sourceFilter === 'practice' && doc.docType !== 'provider') return false;
+
+      // Type filter
+      if (typeFilter !== 'all' && doc.document_type !== typeFilter) return false;
+
+      // Shared status filter (only for patient docs)
+      if (doc.docType === 'patient') {
+        const sharedWithPractice = 'share_with_practice' in doc ? doc.share_with_practice : false;
+        if (sharedFilter === 'shared' && !sharedWithPractice) return false;
+        if (sharedFilter === 'private' && sharedWithPractice) return false;
+      }
+
+      return true;
+    });
+  }, [allDocs, sourceFilter, typeFilter, sharedFilter]);
 
   if (allDocs.length === 0) {
     return (
@@ -113,8 +148,112 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
   return (
     <>
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {allDocs.map((doc) => {
+      {/* Filter Controls */}
+      <div className="space-y-3 mb-6">
+        {/* Source Filter */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Source:</span>
+          <div className="flex gap-2">
+            <Button
+              variant={sourceFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSourceFilter('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={sourceFilter === 'patient' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSourceFilter('patient')}
+            >
+              Patient Documents
+            </Button>
+            <Button
+              variant={sourceFilter === 'practice' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSourceFilter('practice')}
+            >
+              Practice Documents
+            </Button>
+          </div>
+        </div>
+
+        {/* Document Type Filter */}
+        {documentTypes.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">Type:</span>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={typeFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTypeFilter('all')}
+              >
+                All Types
+              </Button>
+              {documentTypes.map(type => (
+                <Button
+                  key={type}
+                  variant={typeFilter === type ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTypeFilter(type)}
+                >
+                  {type}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Shared Status Filter (only for patient docs) */}
+        {sourceFilter !== 'practice' && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <Share2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">Status:</span>
+            <div className="flex gap-2">
+              <Button
+                variant={sharedFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSharedFilter('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={sharedFilter === 'shared' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSharedFilter('shared')}
+              >
+                Shared with Practice
+              </Button>
+              <Button
+                variant={sharedFilter === 'private' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSharedFilter('private')}
+              >
+                Private Only
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Results Count */}
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredDocs.length} of {allDocs.length} document{allDocs.length !== 1 ? 's' : ''}
+        </div>
+      </div>
+
+      {/* Documents Grid */}
+      {filteredDocs.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No documents match the selected filters</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredDocs.map((doc) => {
           const isPatient = doc.docType === 'patient';
           const sharedWithPractice = isPatient && 'share_with_practice' in doc ? doc.share_with_practice : false;
           
@@ -180,7 +319,8 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
             </Card>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {previewDoc && (
         <PatientDocumentPreview
