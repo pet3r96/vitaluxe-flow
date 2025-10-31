@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -247,11 +248,36 @@ export const ProviderProfileForm = () => {
                       onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, '');
                         field.onChange(value);
+                        
+                        // Real-time NPI verification
+                        if (value && value.length === 10) {
+                          verifyNPIDebounced(value, (result) => {
+                            if (result.valid && result.providerName) {
+                              toast({
+                                title: "NPI Verified ✓",
+                                description: `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`,
+                              });
+                            } else if (result.error) {
+                              toast({
+                                title: "Invalid NPI",
+                                description: result.error,
+                                variant: "destructive",
+                              });
+                            }
+                            if (result.warning) {
+                              toast({
+                                title: "Warning",
+                                description: result.warning,
+                                variant: "default",
+                              });
+                            }
+                          });
+                        }
                       }}
                     />
                   </FormControl>
                   <FormDescription>
-                    Your personal National Provider Identifier (10 digits)
+                    Your personal National Provider Identifier (verified against NPPES)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

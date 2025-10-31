@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
 interface AddPracticeRequestDialogProps {
@@ -192,6 +193,22 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                     const value = e.target.value.replace(/\D/g, '');
                     setFormData({ ...formData, npi: value });
                     setValidationErrors({ ...validationErrors, npi: "" });
+                    
+                    // Real-time NPI verification
+                    if (value && value.length === 10) {
+                      verifyNPIDebounced(value, (result) => {
+                        if (result.valid) {
+                          if (result.providerName) {
+                            toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                          }
+                          if (result.warning) {
+                            toast.info(result.warning);
+                          }
+                        } else if (result.error) {
+                          setValidationErrors({ ...validationErrors, npi: result.error });
+                        }
+                      });
+                    }
                   }}
                   onBlur={() => {
                     const result = validateNPI(formData.npi);
@@ -205,6 +222,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 {validationErrors.npi && (
                   <p className="text-sm text-destructive">{validationErrors.npi}</p>
                 )}
+                <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="license_number">License Number *</Label>

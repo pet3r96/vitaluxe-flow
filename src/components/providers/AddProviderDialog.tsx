@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { getCurrentCSRFToken } from "@/lib/csrf";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 
@@ -260,6 +261,22 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                 const value = e.target.value.replace(/\D/g, '');
                 setFormData({ ...formData, npi: value });
                 setValidationErrors({ ...validationErrors, npi: "" });
+                
+                // Real-time NPI verification
+                if (value && value.length === 10) {
+                  verifyNPIDebounced(value, (result) => {
+                    if (result.valid) {
+                      if (result.providerName) {
+                        toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                      }
+                      if (result.warning) {
+                        toast.info(result.warning);
+                      }
+                    } else if (result.error) {
+                      setValidationErrors({ ...validationErrors, npi: result.error });
+                    }
+                  });
+                }
               }}
               onBlur={() => {
                 const result = validateNPI(formData.npi);
@@ -273,6 +290,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
             {validationErrors.npi && (
               <p className="text-sm text-destructive">{validationErrors.npi}</p>
             )}
+            <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
           </div>
 
           <div className="space-y-2">

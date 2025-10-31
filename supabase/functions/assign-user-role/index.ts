@@ -156,6 +156,39 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // Real-time NPI verification against NPPES registry
+      console.log(`[assign-user-role] Verifying NPI ${signupData.roleData.npi} against NPPES...`);
+      try {
+        const nppesResponse = await fetch(
+          `https://npiregistry.cms.hhs.gov/api/?number=${signupData.roleData.npi}&version=2.1`
+        );
+        
+        if (nppesResponse.ok) {
+          const nppesData = await nppesResponse.json();
+          
+          if (nppesData.result_count === 0) {
+            console.error(`[assign-user-role] NPI ${signupData.roleData.npi} not found in NPPES registry`);
+            return new Response(
+              JSON.stringify({ error: 'NPI not found in NPPES registry. Please verify the NPI number.' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          const provider = nppesData.results[0];
+          console.log(`[assign-user-role] ✓ NPI verified: ${provider.basic.name || provider.basic.first_name} ${provider.basic.last_name || ''}`);
+          
+          // Log warning if deactivated
+          if (provider.basic.status?.toLowerCase() === 'deactivated') {
+            console.warn(`[assign-user-role] Warning: NPI ${signupData.roleData.npi} is deactivated`);
+          }
+        } else {
+          console.warn(`[assign-user-role] NPPES API unavailable (${nppesResponse.status}), proceeding with format validation only`);
+        }
+      } catch (error) {
+        console.warn(`[assign-user-role] NPPES verification failed:`, error);
+        console.log('[assign-user-role] Proceeding with format validation only');
+      }
     }
 
     if (signupData.roleData.dea) {

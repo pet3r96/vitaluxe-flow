@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { Loader2, Upload, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { getCurrentCSRFToken } from "@/lib/csrf";
 
 interface AddPracticeDialogProps {
@@ -287,8 +288,25 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                 id="npi"
                 value={formData.npi}
                 onChange={(e) => {
-                  setFormData({ ...formData, npi: e.target.value });
+                  const value = e.target.value.replace(/\D/g, '');
+                  setFormData({ ...formData, npi: value });
                   setValidationErrors({ ...validationErrors, npi: "" });
+                  
+                  // Real-time NPI verification
+                  if (value && value.length === 10) {
+                    verifyNPIDebounced(value, (result) => {
+                      if (result.valid) {
+                        if (result.providerName) {
+                          toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                        }
+                        if (result.warning) {
+                          toast.info(result.warning);
+                        }
+                      } else if (result.error) {
+                        setValidationErrors({ ...validationErrors, npi: result.error });
+                      }
+                    });
+                  }
                 }}
                 onBlur={() => {
                   const result = validateNPI(formData.npi);
@@ -302,6 +320,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
               {validationErrors.npi && (
                 <p className="text-sm text-destructive">{validationErrors.npi}</p>
               )}
+              <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
             </div>
 
             <div className="space-y-2">
