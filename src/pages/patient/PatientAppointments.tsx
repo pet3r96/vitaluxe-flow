@@ -281,12 +281,12 @@ export default function PatientAppointments() {
 
   return (
     <div className="patient-container">
-      <div className={`flex items-center ${isMobile ? 'flex-col gap-4' : 'justify-between'}`}>
-        <div className={isMobile ? 'text-center' : ''}>
-          <h1 className={`patient-section-header ${isMobile ? 'text-2xl' : ''}`}>My Appointments</h1>
+      <div className="flex flex-col items-center gap-4 mb-6">
+        <div className="text-center">
+          <h1 className="patient-section-header">My Appointments</h1>
           <p className="text-muted-foreground text-sm md:text-base">Manage your scheduled visits</p>
         </div>
-        <Button onClick={() => setBookingOpen(true)} className={`touch-target ${isMobile ? 'w-full' : ''}`}>
+        <Button onClick={() => setBookingOpen(true)} className="touch-target">
           <Calendar className="mr-2 h-4 w-4" />
           Book Appointment
         </Button>

@@ -314,7 +314,7 @@ export default function PatientDashboard() {
   return (
     <div className="patient-container">
       {/* Welcome Header */}
-      <div>
+      <div className="text-center">
         <h1 className="patient-section-header">
           Welcome, {patientAccount?.first_name || 'Patient'}
         </h1>

@@ -415,10 +415,10 @@ export default function PatientDocuments() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">My Documents</h1>
-        <p className="text-muted-foreground">Upload and manage your medical documents</p>
+    <div className="patient-container">
+      <div className="text-center">
+        <h1 className="patient-section-header">My Documents</h1>
+        <p className="text-muted-foreground text-sm md:text-base">Upload and manage your medical documents</p>
         {/* Debug info in dev mode */}
         {import.meta.env.DEV && (
           <div className="mt-2 text-xs text-muted-foreground font-mono">

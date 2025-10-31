@@ -357,7 +357,7 @@ export default function PatientIntakeForm() {
 
   return (
     <div className="patient-container max-w-4xl mx-auto">
-      <div>
+      <div className="text-center">
         <h1 className="patient-section-header">Patient Intake Form</h1>
         <p className="text-muted-foreground mt-2 text-sm md:text-base">Complete your medical information to help us provide better care</p>
       </div>
