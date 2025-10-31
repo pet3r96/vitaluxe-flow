@@ -170,29 +170,106 @@ export const generateMedicalVaultPDF = async (
     const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
     doc.text(`MEDICAL RECORD - ${fullName.toUpperCase()}`, pageWidth / 2, 14, { align: 'center' });
     
-    // Draw lock icon manually (centered under title) - compact design
-    const lockX = pageWidth / 2;
-    const lockY = 20;
-    const lockSize = 5;
+    // Draw professional shield/lock icon (centered under title)
+    const iconX = pageWidth / 2;
+    const iconY = 20;
+    const iconScale = 5;
     
-    // Lock shackle (U-shape) - draw first, with medium lines in gold
-    doc.setLineWidth(1.5);
-    doc.setDrawColor(218, 165, 32);
-    const shackleWidth = lockSize * 0.65;
-    const shackleHeight = lockSize * 0.6;
-    // Draw U-shape for shackle
-    doc.line(lockX - shackleWidth/2, lockY, lockX - shackleWidth/2, lockY - shackleHeight);
-    doc.line(lockX - shackleWidth/2, lockY - shackleHeight, lockX + shackleWidth/2, lockY - shackleHeight);
-    doc.line(lockX + shackleWidth/2, lockY - shackleHeight, lockX + shackleWidth/2, lockY);
+    // Shield shape using simple shapes
+    doc.setFillColor(218, 165, 32); // Gold
     
-    // Lock body (rounded rectangle) in gold
-    doc.setFillColor(218, 165, 32);
-    doc.roundedRect(lockX - lockSize/2, lockY, lockSize, lockSize, 1, 1, 'F');
+    // Top triangle of shield
+    const shieldTop = iconY - iconScale * 0.7;
+    const shieldBottom = iconY + iconScale * 0.6;
+    const shieldWidth = iconScale * 0.9;
     
-    // Keyhole in dark grey - proportional size
-    doc.setFillColor(55, 65, 81);
-    doc.circle(lockX, lockY + lockSize/3, lockSize/6, 'F');
-    doc.rect(lockX - lockSize/12, lockY + lockSize/3, lockSize/6, lockSize/3, 'F');
+    // Draw shield body as a rounded rectangle with pointed bottom
+    doc.roundedRect(
+      iconX - shieldWidth/2, 
+      shieldTop, 
+      shieldWidth, 
+      (shieldBottom - shieldTop) * 0.7, 
+      iconScale * 0.15, 
+      iconScale * 0.15, 
+      'F'
+    );
+    
+    // Bottom triangle for pointed shield
+    const triangleTop = shieldTop + (shieldBottom - shieldTop) * 0.6;
+    // Left side of triangle
+    doc.setLineWidth(0);
+    for (let i = 0; i < shieldWidth/2; i += 0.5) {
+      doc.line(
+        iconX - shieldWidth/2 + i, 
+        triangleTop + i * 0.5,
+        iconX - shieldWidth/2 + i + 0.5, 
+        triangleTop + (i + 0.5) * 0.5
+      );
+    }
+    // Right side of triangle
+    for (let i = 0; i < shieldWidth/2; i += 0.5) {
+      doc.line(
+        iconX + i, 
+        triangleTop + (shieldWidth/2 - i) * 0.5,
+        iconX + i + 0.5, 
+        triangleTop + (shieldWidth/2 - i - 0.5) * 0.5
+      );
+    }
+    
+    // Lock symbol inside shield - clean and crisp
+    doc.setFillColor(55, 65, 81); // Dark grey
+    doc.setDrawColor(55, 65, 81);
+    
+    const lockBodyWidth = iconScale * 0.35;
+    const lockBodyHeight = iconScale * 0.3;
+    const lockCenterY = iconY + iconScale * 0.05;
+    
+    // Lock shackle (top arc) using semicircle
+    const shackleRadius = lockBodyWidth * 0.38;
+    const shackleTop = lockCenterY - lockBodyHeight * 0.45;
+    
+    // Draw shackle with thick lines
+    doc.setLineWidth(1.2);
+    // Left side of shackle
+    doc.line(iconX - shackleRadius, lockCenterY - lockBodyHeight * 0.2, iconX - shackleRadius, shackleTop + shackleRadius);
+    // Top arc of shackle (approximate with small segments)
+    const segments = 12;
+    for (let i = 0; i <= segments; i++) {
+      const angle1 = Math.PI + (i * Math.PI / segments);
+      const angle2 = Math.PI + ((i + 1) * Math.PI / segments);
+      doc.line(
+        iconX + Math.cos(angle1) * shackleRadius,
+        shackleTop + shackleRadius + Math.sin(angle1) * shackleRadius,
+        iconX + Math.cos(angle2) * shackleRadius,
+        shackleTop + shackleRadius + Math.sin(angle2) * shackleRadius
+      );
+    }
+    // Right side of shackle
+    doc.line(iconX + shackleRadius, lockCenterY - lockBodyHeight * 0.2, iconX + shackleRadius, shackleTop + shackleRadius);
+    
+    // Lock body - smooth rounded rectangle
+    doc.roundedRect(
+      iconX - lockBodyWidth / 2, 
+      lockCenterY - lockBodyHeight * 0.2, 
+      lockBodyWidth, 
+      lockBodyHeight, 
+      1, 
+      1, 
+      'F'
+    );
+    
+    // Keyhole - clean and prominent
+    doc.setFillColor(218, 165, 32); // Gold keyhole for contrast
+    // Top circle of keyhole
+    doc.circle(iconX, lockCenterY + lockBodyHeight * 0.05, iconScale * 0.055, 'F');
+    // Bottom slot of keyhole
+    doc.rect(
+      iconX - iconScale * 0.03, 
+      lockCenterY + lockBodyHeight * 0.05, 
+      iconScale * 0.06, 
+      lockBodyHeight * 0.3, 
+      'F'
+    );
     
     // VitaLuxe branding in light grey
     doc.setTextColor(200, 200, 200);
