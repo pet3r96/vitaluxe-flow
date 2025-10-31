@@ -370,7 +370,7 @@ const Auth = () => {
 
         {isLogin && !showVerificationMessage && <div className="mb-6 flex items-start gap-2 rounded-lg bg-accent/50 border border-border/50 p-3 backdrop-blur-sm">
             <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-white leading-relaxed">For Security & Compliance, you'll be automatically logged out after 30 minutes. TEST</p>
+            <p className="text-xs text-white leading-relaxed">For Security & Compliance, you'll be automatically logged out after 30 minutes.</p>
           </div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -413,12 +413,7 @@ const Auth = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <PhoneInput
-                      id="phone"
-                      value={phone}
-                      onChange={setPhone}
-                      placeholder="(555) 123-4567"
-                    />
+                    <PhoneInput id="phone" value={phone} onChange={setPhone} placeholder="(555) 123-4567" />
                   </div>
 
                   <GoogleAddressAutocomplete label="Practice Address" value={address} onChange={setAddress} placeholder="Start typing your practice address..." required />
