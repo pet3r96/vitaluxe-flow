@@ -321,7 +321,7 @@ export default function PatientDashboard() {
       </div>
 
       {/* Medical Vault Onboarding Alert */}
-      {!loadingVault && !vaultComplete && (
+      {!loadingVault && !medicalVault?.has_data && (
         <Alert className="border-warning bg-warning/10">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Complete Your Medical Vault</AlertTitle>
@@ -421,9 +421,7 @@ export default function PatientDashboard() {
               <Skeleton className="h-8 w-20" />
             ) : medicalVault?.has_data ? (
               <>
-                <div className="text-lg font-bold">
-                  {vaultComplete ? 'Complete' : 'Incomplete'}
-                </div>
+                <div className="text-lg font-bold">Complete</div>
                 {medicalVault.updated_at && (
                   <p className="text-xs text-muted-foreground">
                     <Clock className="h-3 w-3 inline mr-1" />
