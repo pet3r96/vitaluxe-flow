@@ -203,16 +203,12 @@ export default function PatientMedicalVault() {
         emergencyContacts || []
       );
       
-      // Open PDF in new window instead of dialog to avoid cross-origin issues
+      // Show preview in dialog
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      window.open(pdfUrl, '_blank');
+      setPdfPreviewUrl(pdfUrl);
+      setPreviewDialogOpen(true);
       
-      // Clean up the URL after a delay
-      setTimeout(() => {
-        URL.revokeObjectURL(pdfUrl);
-      }, 1000);
-      
-      toast({ title: "Success", description: "PDF opened in new tab" });
+      toast({ title: "Success", description: "PDF preview loaded" });
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
