@@ -159,20 +159,28 @@ export const generateMedicalVaultPDF = async (
 
   // Professional Header with Colors
   const addHeader = () => {
-    doc.setFillColor(31, 41, 55); // Dark blue
-    doc.rect(0, 0, pageWidth, 30, 'F');
+    // Cleaner header background - lighter blue-grey
+    doc.setFillColor(45, 55, 72);
+    doc.rect(0, 0, pageWidth, 40, 'F');
     
+    // Main title in gold
     doc.setTextColor(218, 165, 32); // Gold
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
-    doc.text(`MEDICAL RECORD - ${fullName.toUpperCase()}`, pageWidth / 2, 12, { align: 'center' });
+    doc.text(`MEDICAL RECORD - ${fullName.toUpperCase()}`, pageWidth / 2, 14, { align: 'center' });
     
-    doc.setFontSize(9);
+    // Lock icon (unicode) in gold - centered under title
+    doc.setFontSize(20);
+    doc.text('🔒', pageWidth / 2, 26, { align: 'center' });
+    
+    // VitaLuxe branding
+    doc.setTextColor(200, 200, 200);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text('VitaLuxe Services', pageWidth / 2, 20, { align: 'center' });
+    doc.text('VitaLuxe Services', pageWidth / 2, 34, { align: 'center' });
     
-    return 35;
+    return 50; // Increased space after header
   };
 
   // Section Title Helper
