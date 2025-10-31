@@ -57,8 +57,8 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
       if (error) throw error;
 
       return {
-        cartId: cart.id,
-        items: cartLines || [],
+        id: cart.id,
+        lines: cartLines || [],
       };
     },
     enabled: !!effectiveUserId && open,
@@ -124,7 +124,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
     navigate("/cart");
   };
 
-  const total = cartData?.items?.reduce(
+  const total = cartData?.lines?.reduce(
     (sum, item) => sum + (item.price_snapshot || 0) * (item.quantity || 1),
     0
   ) || 0;
@@ -135,7 +135,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
         <SheetHeader>
           <SheetTitle>Shopping Cart</SheetTitle>
           <SheetDescription>
-            {cartData?.items?.length || 0} item(s) in your cart
+            {cartData?.lines?.length || 0} item(s) in your cart
           </SheetDescription>
         </SheetHeader>
 
@@ -145,12 +145,12 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
               <div className="text-center text-muted-foreground py-8">
                 Loading cart...
               </div>
-            ) : !cartData?.items?.length ? (
+            ) : !cartData?.lines?.length ? (
               <div className="text-center text-muted-foreground py-8">
                 Your cart is empty
               </div>
             ) : (
-              cartData.items.map((item: any) => {
+              cartData.lines.map((item: any) => {
                 const expiresAt = item.expires_at ? new Date(item.expires_at) : null;
                 const now = new Date();
                 const timeUntilExpiry = expiresAt ? expiresAt.getTime() - now.getTime() : null;
@@ -256,7 +256,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
             className="w-full"
             size="lg"
             onClick={handleCheckout}
-            disabled={!cartData?.items?.length}
+            disabled={!cartData?.lines?.length}
           >
             Check Out
           </Button>
