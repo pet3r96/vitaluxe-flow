@@ -150,14 +150,14 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
               <Label htmlFor="severity">Severity</Label>
               <Select
                 value={watch("severity") || ""}
-                onValueChange={(value: any) => setValue("severity", value)}
+                onValueChange={(value: any) => setValue("severity", value === "__none__" ? undefined : value)}
                 disabled={isReadOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select severity" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Not specified</SelectItem>
+                  <SelectItem value="__none__">Not specified</SelectItem>
                   <SelectItem value="mild">Mild</SelectItem>
                   <SelectItem value="moderate">Moderate</SelectItem>
                   <SelectItem value="severe">Severe</SelectItem>

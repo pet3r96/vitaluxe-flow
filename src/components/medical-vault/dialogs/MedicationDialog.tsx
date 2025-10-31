@@ -213,14 +213,14 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
               <Label htmlFor="condition_id">Associated Medical Condition</Label>
               <Select
                 value={watch("condition_id") || ""}
-                onValueChange={(value) => setValue("condition_id", value)}
+                onValueChange={(value) => setValue("condition_id", value === "__none__" ? "" : value)}
                 disabled={isReadOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a condition (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {conditions?.map((condition) => (
                     <SelectItem key={condition.id} value={condition.id}>
                       {condition.condition_name}
