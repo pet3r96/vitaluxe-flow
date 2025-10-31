@@ -25,19 +25,24 @@ export default function MedicalVaultShare() {
 
   const validateAndLoadPDF = async () => {
     try {
+      console.log('[MedicalVaultShare] Starting validation for token:', token);
       setLoading(true);
       
       // Call edge function to validate token and get data
+      console.log('[MedicalVaultShare] Calling edge function...');
       const { data, error: functionError } = await supabase.functions.invoke('validate-share-link', {
         body: { token }
       });
 
+      console.log('[MedicalVaultShare] Edge function response:', { data, functionError });
+
       // Handle edge function errors (410, 404, etc.)
       if (functionError) {
-        console.error('Edge function error:', functionError);
+        console.error('[MedicalVaultShare] Edge function error:', functionError);
         // Try to extract error type from response body
         const errorBody = functionError.context?.body;
         const errorType = errorBody?.error || 'internal_error';
+        console.log('[MedicalVaultShare] Setting error state:', errorType);
         setError(errorType as ErrorType);
         setLoading(false);
         return;
@@ -45,6 +50,7 @@ export default function MedicalVaultShare() {
 
       // Handle unsuccessful validation responses
       if (!data?.success) {
+        console.log('[MedicalVaultShare] Data validation failed:', data);
         const errorType = data?.error || 'internal_error';
         setError(errorType as ErrorType);
         setLoading(false);
@@ -52,6 +58,7 @@ export default function MedicalVaultShare() {
       }
 
       // Generate PDF from the returned data
+      console.log('[MedicalVaultShare] Generating PDF from data...');
       const pdfBlob = await generateMedicalVaultPDF(
         data.patient,
         data.medications,
@@ -64,12 +71,13 @@ export default function MedicalVaultShare() {
         data.emergencyContacts
       );
 
+      console.log('[MedicalVaultShare] PDF generated successfully');
       const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
       setLoading(false);
 
     } catch (err) {
-      console.error('Error loading shared medical vault:', err);
+      console.error('[MedicalVaultShare] Error loading shared medical vault:', err);
       setError('internal_error');
       setLoading(false);
     }
