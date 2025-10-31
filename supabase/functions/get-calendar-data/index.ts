@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       .select(`
         *,
         patient_accounts!inner(id, first_name, last_name, phone, email),
-        providers(id, user_id, profiles(name)),
+        providers(id, user_id, profiles!providers_user_id_fkey(name)),
         practice_rooms(id, name, color),
         checked_in_at,
         treatment_started_at
