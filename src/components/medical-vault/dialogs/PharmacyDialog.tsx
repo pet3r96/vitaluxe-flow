@@ -10,6 +10,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
+import React from "react";
 
 const pharmacySchema = z.object({
   pharmacy_name: z.string().min(1, "Pharmacy name is required"),
@@ -17,7 +18,10 @@ const pharmacySchema = z.object({
   city: z.string().min(1, "City is required"),
   state: z.string().min(2, "State is required").max(2, "State must be 2 characters"),
   zip_code: z.string().min(5, "ZIP code is required"),
-  phone: z.string().min(10, "Phone number is required"),
+  phone: z.string()
+    .min(10, "Phone number must be 10 digits")
+    .max(10, "Phone number must be 10 digits")
+    .regex(/^\d{10}$/, "Phone number must be exactly 10 digits (e.g., 5618882222)"),
   is_preferred: z.boolean().optional(),
 });
 
@@ -36,7 +40,7 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<PharmacyFormData>({
     resolver: zodResolver(pharmacySchema),
-    defaultValues: pharmacy || {
+    defaultValues: {
       pharmacy_name: "",
       address: "",
       city: "",
@@ -46,6 +50,19 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
       is_preferred: false,
     },
   });
+
+  // Update form values when pharmacy data changes
+  React.useEffect(() => {
+    if (pharmacy) {
+      setValue("pharmacy_name", pharmacy.pharmacy_name || "");
+      setValue("address", pharmacy.address || "");
+      setValue("city", pharmacy.city || "");
+      setValue("state", pharmacy.state || "");
+      setValue("zip_code", pharmacy.zip_code || "");
+      setValue("phone", pharmacy.phone || "");
+      setValue("is_preferred", pharmacy.is_preferred || false);
+    }
+  }, [pharmacy, setValue]);
 
   const mutation = useOptimisticMutation(
     async (data: PharmacyFormData) => {
@@ -156,11 +173,12 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone *</Label>
+            <Label htmlFor="phone">Phone (10 digits) *</Label>
             <Input
               id="phone"
               {...register("phone")}
-              placeholder="(555) 123-4567"
+              placeholder="5618882222"
+              maxLength={10}
               disabled={isReadOnly}
               className={errors.phone ? "border-red-500" : ""}
             />
