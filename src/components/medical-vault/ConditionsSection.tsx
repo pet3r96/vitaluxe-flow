@@ -25,6 +25,9 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
+  const [expanded, setExpanded] = useState(false);
+  
+  const visibleConditions = expanded ? activeConditions : activeConditions.slice(0, 3);
 
   const openDialog = (mode: "add" | "edit" | "view", condition?: any) => {
     setDialogMode(mode);
@@ -60,7 +63,7 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
       <CardContent className="relative z-10">
         {activeConditions.length > 0 ? (
           <div className="space-y-3">
-            {activeConditions.map((condition) => (
+            {visibleConditions.map((condition) => (
               <div key={condition.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -98,6 +101,13 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
                 </div>
               </div>
             ))}
+            {activeConditions.length > 3 && (
+              <div className="flex justify-end pt-2">
+                <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
+                  {expanded ? "Show less" : "Show more"}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-8">

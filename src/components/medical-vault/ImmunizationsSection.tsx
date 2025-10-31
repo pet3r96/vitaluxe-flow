@@ -4,12 +4,15 @@ import { Syringe, Plus, Edit, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useState } from "react";
 
 interface ImmunizationsSectionProps {
   patientAccountId?: string;
 }
 
 export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionProps) {
+  const [expanded, setExpanded] = useState(false);
+  
   const { data: immunizations } = useQuery({
     queryKey: ["patient-immunizations", patientAccountId],
     queryFn: async () => {
@@ -24,6 +27,10 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
     },
     enabled: !!patientAccountId,
   });
+  
+  const visibleImmunizations = expanded 
+    ? (immunizations || []) 
+    : (immunizations || []).slice(0, 3);
 
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-purple-500/10 to-indigo-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -52,7 +59,7 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
       <CardContent className="relative z-10">
         {immunizations && immunizations.length > 0 ? (
           <div className="space-y-3">
-            {immunizations.map((immunization) => (
+            {visibleImmunizations.map((immunization) => (
               <div key={immunization.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <p className="font-medium">{immunization.vaccine_name}</p>
@@ -70,6 +77,13 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
                 </div>
               </div>
             ))}
+            {immunizations.length > 3 && (
+              <div className="flex justify-end pt-2">
+                <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
+                  {expanded ? "Show less" : "Show more"}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-8">

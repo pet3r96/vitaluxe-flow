@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Activity, Plus } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
 
 interface Vitals {
   height?: number;
@@ -26,6 +27,22 @@ interface VitalsSectionProps {
 }
 
 export function VitalsSection({ patientAccountId, latestVitals }: VitalsSectionProps) {
+  const [expanded, setExpanded] = useState(false);
+  
+  const metrics = latestVitals ? [
+    latestVitals.height && { label: "Height", value: `${latestVitals.height} ${latestVitals.height_unit || ""}` },
+    latestVitals.weight && { label: "Weight", value: `${latestVitals.weight} ${latestVitals.weight_unit || ""}` },
+    latestVitals.bmi && { label: "BMI", value: latestVitals.bmi.toFixed(1) },
+    latestVitals.blood_pressure_systolic && latestVitals.blood_pressure_diastolic && { label: "Blood Pressure", value: `${latestVitals.blood_pressure_systolic}/${latestVitals.blood_pressure_diastolic}` },
+    latestVitals.pulse && { label: "Pulse", value: `${latestVitals.pulse} bpm` },
+    latestVitals.temperature && { label: "Temperature", value: `${latestVitals.temperature}°${latestVitals.temperature_unit || ""}` },
+    latestVitals.oxygen_saturation && { label: "O2 Saturation", value: `${latestVitals.oxygen_saturation}%` },
+    latestVitals.cholesterol && { label: "Cholesterol", value: `${latestVitals.cholesterol} mg/dL` },
+    latestVitals.blood_sugar && { label: "Blood Sugar", value: `${latestVitals.blood_sugar} mg/dL` },
+  ].filter(Boolean) as Array<{ label: string; value: string }> : [];
+  
+  const visibleMetrics = expanded ? metrics : metrics.slice(0, 3);
+  
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-green-500/10 to-emerald-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
       {/* Animated border glow effect */}
@@ -51,66 +68,23 @@ export function VitalsSection({ patientAccountId, latestVitals }: VitalsSectionP
         </div>
       </CardHeader>
       <CardContent className="relative z-10">
-        {latestVitals ? (
+        {latestVitals && metrics.length > 0 ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              {latestVitals.height && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Height</p>
-                  <p className="font-medium">{latestVitals.height} {latestVitals.height_unit}</p>
+              {visibleMetrics.map((metric) => (
+                <div key={metric.label} className="space-y-1">
+                  <p className="text-sm text-muted-foreground">{metric.label}</p>
+                  <p className="font-medium">{metric.value}</p>
                 </div>
-              )}
-              {latestVitals.weight && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Weight</p>
-                  <p className="font-medium">{latestVitals.weight} {latestVitals.weight_unit}</p>
-                </div>
-              )}
-              {latestVitals.bmi && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">BMI</p>
-                  <p className="font-medium">{latestVitals.bmi.toFixed(1)}</p>
-                </div>
-              )}
-              {latestVitals.blood_pressure_systolic && latestVitals.blood_pressure_diastolic && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Blood Pressure</p>
-                  <p className="font-medium">
-                    {latestVitals.blood_pressure_systolic}/{latestVitals.blood_pressure_diastolic}
-                  </p>
-                </div>
-              )}
-              {latestVitals.pulse && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Pulse</p>
-                  <p className="font-medium">{latestVitals.pulse} bpm</p>
-                </div>
-              )}
-              {latestVitals.temperature && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Temperature</p>
-                  <p className="font-medium">{latestVitals.temperature}°{latestVitals.temperature_unit}</p>
-                </div>
-              )}
-              {latestVitals.oxygen_saturation && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">O2 Saturation</p>
-                  <p className="font-medium">{latestVitals.oxygen_saturation}%</p>
-                </div>
-              )}
-              {latestVitals.cholesterol && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Cholesterol</p>
-                  <p className="font-medium">{latestVitals.cholesterol} mg/dL</p>
-                </div>
-              )}
-              {latestVitals.blood_sugar && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Blood Sugar</p>
-                  <p className="font-medium">{latestVitals.blood_sugar} mg/dL</p>
-                </div>
-              )}
+              ))}
             </div>
+            {metrics.length > 3 && (
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
+                  {expanded ? "Show less" : "Show more"}
+                </Button>
+              </div>
+            )}
             {latestVitals.date_recorded && (
               <p className="text-xs text-muted-foreground pt-2 border-t">
                 Recorded: {format(new Date(latestVitals.date_recorded), 'MMM dd, yyyy h:mm a')}

@@ -27,6 +27,9 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMedication, setSelectedMedication] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
+  const [expanded, setExpanded] = useState(false);
+  
+  const visibleMedications = expanded ? activeMedications : activeMedications.slice(0, 3);
 
   const openDialog = (mode: "add" | "edit" | "view", medication?: any) => {
     setDialogMode(mode);
@@ -63,7 +66,7 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
       <CardContent className="relative z-10">
         {activeMedications.length > 0 ? (
           <div className="space-y-3">
-            {activeMedications.map((med) => (
+            {visibleMedications.map((med) => (
               <div key={med.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -91,6 +94,13 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
                 </div>
               </div>
             ))}
+            {activeMedications.length > 3 && (
+              <div className="flex justify-end pt-2">
+                <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
+                  {expanded ? "Show less" : "Show more"}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-8">
