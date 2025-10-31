@@ -191,14 +191,14 @@ export function FollowUpDialog({
             <div className="space-y-2">
               <Label htmlFor="assigned_to">Assign To (Optional)</Label>
               <Select
-                value={watch("assigned_to")}
-                onValueChange={(value) => setValue("assigned_to", value)}
+                value={watch("assigned_to") || "unassigned"}
+                onValueChange={(value) => setValue("assigned_to", value === "unassigned" ? "" : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   
                   {(staffMembers as any)?.filter?.((s: any) => s.role === "admin")?.length > 0 && (
                     <>
