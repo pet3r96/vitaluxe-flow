@@ -24,7 +24,7 @@ import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Checkout() {
-  const { effectiveUserId, effectivePracticeId, user, isStaffAccount } = useAuth();
+  const { effectiveUserId, effectivePracticeId, user, isStaffAccount, isProviderAccount } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -33,6 +33,10 @@ export default function Checkout() {
   const [prescriptionFiles, setPrescriptionFiles] = useState<Record<string, File>>({});
   const [prescriptionPreviews, setPrescriptionPreviews] = useState<Record<string, string>>({});
   const { canOrder, isLoading: checkingPrivileges } = useStaffOrderingPrivileges();
+  
+  // Calculate the correct practice ID for shipping address
+  // Providers and staff use effectivePracticeId, practice owners use effectiveUserId
+  const practiceIdForShipping = (isProviderAccount || isStaffAccount) ? effectivePracticeId : effectiveUserId;
   
   // Payment method state
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>("");
@@ -188,18 +192,18 @@ export default function Checkout() {
   );
 
   const { data: providerProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ["provider-shipping", effectiveUserId],
+    queryKey: ["provider-shipping", practiceIdForShipping],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_formatted, name")
-        .eq("id", effectiveUserId)
+        .eq("id", practiceIdForShipping)
         .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!practiceIdForShipping,
   });
 
   // Fetch payment methods (credit cards only) - use practice payment methods for staff
