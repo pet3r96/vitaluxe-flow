@@ -272,8 +272,12 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                     setFormData(currentFormData => {
                       if (currentFormData.npi === result.npi) {
                         if (result.valid) {
+                          // Show success message for all valid NPIs
                           if (result.providerName) {
                             toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                          } else {
+                            // Organization NPIs or NPIs without names
+                            toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
                           }
                           if (result.warning) {
                             toast.info(result.warning);

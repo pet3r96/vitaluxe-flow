@@ -192,21 +192,31 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
                     setFormData({ ...formData, npi: value });
-                    setValidationErrors({ ...validationErrors, npi: "" });
+                    setValidationErrors(prev => ({ ...prev, npi: "" }));
                     
                     // Real-time NPI verification
                     if (value && value.length === 10) {
                       verifyNPIDebounced(value, (result) => {
-                        if (result.valid) {
-                          if (result.providerName) {
-                            toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                        // Only apply result if it matches the CURRENT form value
+                        setFormData(currentFormData => {
+                          if (currentFormData.npi === result.npi) {
+                            if (result.valid) {
+                              // Show success message for all valid NPIs
+                              if (result.providerName) {
+                                toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                              } else {
+                                // Organization NPIs or NPIs without names
+                                toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
+                              }
+                              if (result.warning) {
+                                toast.info(result.warning);
+                              }
+                            } else if (result.error) {
+                              setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
+                            }
                           }
-                          if (result.warning) {
-                            toast.info(result.warning);
-                          }
-                        } else if (result.error) {
-                          setValidationErrors({ ...validationErrors, npi: result.error });
-                        }
+                          return currentFormData;
+                        });
                       });
                     }
                   }}
