@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { searchAllergens } from "@/lib/medical-api-service";
 
 const allergySchema = z.object({
   nka: z.boolean().optional(),
@@ -196,10 +198,12 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="allergen_name">Allergen Name *</Label>
-                  <Input
+                  <AutocompleteInput
                     id="allergen_name"
-                    {...register("allergen_name")}
-                    placeholder="e.g., Penicillin, Peanuts"
+                    value={watch("allergen_name") || ""}
+                    onChange={(value) => setValue("allergen_name", value)}
+                    onSearch={searchAllergens}
+                    placeholder="Start typing allergen name..."
                     disabled={isReadOnly}
                     className={errors.allergen_name ? "border-red-500" : ""}
                   />

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { searchConditions } from "@/lib/medical-api-service";
 
 const conditionSchema = z.object({
   condition_name: z.string().min(1, "Condition name is required"),
@@ -143,9 +145,12 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="condition_name">Condition Name *</Label>
-              <Input
+              <AutocompleteInput
                 id="condition_name"
-                {...register("condition_name")}
+                value={watch("condition_name") || ""}
+                onChange={(value) => setValue("condition_name", value)}
+                onSearch={searchConditions}
+                placeholder="Start typing condition name..."
                 disabled={isReadOnly}
                 className={errors.condition_name ? "border-red-500" : ""}
               />

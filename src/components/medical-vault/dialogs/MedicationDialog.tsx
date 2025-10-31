@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,6 +16,7 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { searchMedications } from "@/lib/medical-api-service";
 
 const medicationSchema = z.object({
   medication_name: z.string().min(1, "Medication name is required"),
@@ -179,9 +181,12 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="medication_name">Medication Name *</Label>
-              <Input
+              <AutocompleteInput
                 id="medication_name"
-                {...register("medication_name")}
+                value={watch("medication_name") || ""}
+                onChange={(value) => setValue("medication_name", value)}
+                onSearch={searchMedications}
+                placeholder="Start typing medication name..."
                 disabled={isReadOnly}
                 className={errors.medication_name ? "border-red-500" : ""}
               />
