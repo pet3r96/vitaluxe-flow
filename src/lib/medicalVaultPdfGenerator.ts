@@ -133,413 +133,404 @@ export async function generateMedicalVaultPDF(
   const pageHeight = doc.internal.pageSize.getHeight();
   let yPosition = 0;
 
-  // Medical color scheme - professional blues and grays
-  const primaryBlue: [number, number, number] = [37, 99, 235]; // blue-600
-  const lightBlue: [number, number, number] = [219, 234, 254]; // blue-100
-  const darkGray: [number, number, number] = [31, 41, 55]; // gray-800
-  const mediumGray: [number, number, number] = [107, 114, 128]; // gray-500
+  // Color scheme matching the UI
+  const headerGold: [number, number, number] = [251, 191, 36]; // yellow-400
+  const darkBg: [number, number, number] = [31, 41, 55]; // gray-800
+  const lightText: [number, number, number] = [255, 255, 255];
+  const mediumGray: [number, number, number] = [107, 114, 128];
+
+  // Section colors matching UI
+  const blueGradient: [number, number, number] = [59, 130, 246]; // medications
+  const redGradient: [number, number, number] = [239, 68, 68]; // conditions
+  const orangeGradient: [number, number, number] = [249, 115, 22]; // allergies
+  const greenGradient: [number, number, number] = [16, 185, 129]; // vitals
+  const purpleGradient: [number, number, number] = [168, 85, 247]; // surgeries/immunizations
+  const tealGradient: [number, number, number] = [20, 184, 166]; // pharmacies
 
   // === HEADER SECTION ===
-  // Professional medical document header
-  doc.setFillColor(...primaryBlue);
-  doc.rect(0, 0, pageWidth, 50, 'F');
+  // Dark header with gold gradient text
+  doc.setFillColor(31, 41, 55);
+  doc.rect(0, 0, pageWidth, 55, 'F');
   
-  // VitaLuxe Services branding
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('VITALUXE SERVICES', 14, 15);
-  
-  // Main title
-  doc.setFontSize(22);
+  // Shield icon area (using circle as substitute)
+  doc.setFillColor(...headerGold);
+  doc.circle(pageWidth / 2, 18, 8, 'F');
+  doc.setTextColor(31, 41, 55);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('MEDICAL RECORD', pageWidth / 2, 30, { align: 'center' });
+  doc.text('✓', pageWidth / 2, 21, { align: 'center' });
   
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Comprehensive Health Information', pageWidth / 2, 42, { align: 'center' });
-
-  // Add spacing after header
-  yPosition = 65;
-
-  // === PATIENT INFORMATION BOX ===
-  const age = calculateAge(patientAccount.date_of_birth);
-  
-  // Patient name box
-  doc.setFillColor(...lightBlue);
-  doc.rect(14, yPosition, pageWidth - 28, 20, 'F');
-  
-  doc.setTextColor(...darkGray);
-  doc.setFontSize(13);
+  // Main title in gold
+  doc.setTextColor(...headerGold);
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${patientAccount.first_name} ${patientAccount.last_name}`, 20, yPosition + 9);
+  doc.text(`${patientAccount.first_name} ${patientAccount.last_name} Secure Medical Vault`, pageWidth / 2, 35, { align: 'center' });
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`DOB: ${format(new Date(patientAccount.date_of_birth), 'MMM dd, yyyy')} | Age: ${age} | Gender: ${patientAccount.gender_at_birth || 'Not specified'}`, 20, yPosition + 16);
+  doc.setTextColor(200, 200, 200);
+  doc.text('powered by VitaLuxe Services', pageWidth / 2, 45, { align: 'center' });
 
-  yPosition += 30;
+  yPosition = 70;
 
   // === DEMOGRAPHICS SECTION ===
-  addSectionHeader(doc, 'PATIENT DEMOGRAPHICS', yPosition);
-  yPosition += 12;
+  // Yellow/gold background box
+  doc.setFillColor(180, 140, 30);
+  doc.roundedRect(14, yPosition, pageWidth - 28, 35, 3, 3, 'F');
   
-  // Demographics in a clean table format
-  const demographicsData = [];
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('👤 Demographics', 20, yPosition + 8);
+  
+  const age = calculateAge(patientAccount.date_of_birth);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  
+  doc.text(`Full Name: ${patientAccount.first_name} ${patientAccount.last_name}`, 20, yPosition + 16);
+  doc.text(`Date of Birth: ${format(new Date(patientAccount.date_of_birth), 'MMM dd, yyyy')} (Age ${age})`, 20, yPosition + 23);
+  
   if (patientAccount.address && patientAccount.city) {
-    demographicsData.push(['Address', `${patientAccount.address}, ${patientAccount.city}, ${patientAccount.state} ${patientAccount.zip_code}`]);
-  }
-  
-  if (demographicsData.length > 0) {
-    autoTable(doc, {
-      startY: yPosition,
-      body: demographicsData,
-      theme: 'plain',
-      styles: { 
-        fontSize: 10,
-        cellPadding: 4,
-        textColor: [31, 41, 55]
-      },
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 40 },
-        1: { cellWidth: 'auto' }
-      },
-      margin: { left: 20, right: 20 }
-    });
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
-  } else {
-    yPosition += 5;
+    doc.text(`Address: ${patientAccount.address}, ${patientAccount.city}, ${patientAccount.state} ${patientAccount.zip_code}`, 20, yPosition + 30);
   }
 
-  // Add generation timestamp
-  doc.setFontSize(8);
-  doc.setTextColor(...mediumGray);
-  doc.text(`Document Generated: ${format(new Date(), 'MMMM dd, yyyy \'at\' h:mm a')}`, 20, yPosition);
-  yPosition += 15;
+  yPosition += 45;
 
-  // === MEDICAL SECTIONS START ===
-  
-  // Filter for active medications
+  // === MEDICATIONS SECTION ===
   const activeMeds = medications.filter(m => m.is_active && m.medication_name);
   
   if (activeMeds.length > 0) {
-    checkPageBreak(doc, yPosition, 40);
+    checkPageBreak(doc, yPosition, 50);
     yPosition = getCurrentY(doc, yPosition);
     
-    addSectionHeader(doc, 'CURRENT MEDICATIONS', yPosition);
+    // Blue gradient header
+    addColorfulSectionHeader(doc, '💊 Medications', yPosition, blueGradient);
     yPosition += 12;
     
-    const medData = activeMeds.map(m => [
-      m.medication_name,
-      m.dosage || '',
-      m.frequency || '',
-      m.start_date ? format(new Date(m.start_date), 'MMM yyyy') : ''
-    ]);
-    
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Medication', 'Dosage', 'Frequency', 'Start Date']],
-      body: medData,
-      theme: 'grid',
-      headStyles: { 
-        fillColor: [37, 99, 235],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10
-      },
-      styles: { 
-        fontSize: 9,
-        cellPadding: 5
-      },
-      margin: { left: 14, right: 14 }
-    });
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
-  }
-
-  // Filter for active conditions
-  const activeConditions = conditions.filter(c => c.is_active && c.condition_name);
-  
-  if (activeConditions.length > 0) {
-    checkPageBreak(doc, yPosition, 40);
-    yPosition = getCurrentY(doc, yPosition);
-    
-    addSectionHeader(doc, 'MEDICAL CONDITIONS', yPosition);
-    yPosition += 12;
-    
-    const condData = activeConditions.map(c => [
-      c.condition_name,
-      c.severity || '',
-      c.date_diagnosed ? format(new Date(c.date_diagnosed), 'MMM yyyy') : '',
-      c.description || ''
-    ]);
-    
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Condition', 'Severity', 'Diagnosed', 'Notes']],
-      body: condData,
-      theme: 'grid',
-      headStyles: { 
-        fillColor: [37, 99, 235],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10
-      },
-      styles: { 
-        fontSize: 9,
-        cellPadding: 5
-      },
-      margin: { left: 14, right: 14 }
-    });
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
-  }
-
-  // Allergies Section
-  if (allergies.length > 0) {
-    checkPageBreak(doc, yPosition, 40);
-    yPosition = getCurrentY(doc, yPosition);
-    
-    addSectionHeader(doc, 'ALLERGIES', yPosition);
-    yPosition += 12;
-    
-    const allergyData = allergies.map(a => [
-      a.allergen_name,
-      a.reaction_type || '',
-      a.severity || '',
-      a.notes || ''
-    ]);
-    
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Allergen', 'Reaction', 'Severity', 'Notes']],
-      body: allergyData,
-      theme: 'grid',
-      headStyles: { 
-        fillColor: [220, 38, 38],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10
-      },
-      styles: { 
-        fontSize: 9,
-        cellPadding: 5
-      },
-      margin: { left: 14, right: 14 }
-    });
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
-  }
-
-  // Vitals Section - only if there's actual data
-  const vitalsWithData = vitals.filter(v => hasVitalData(v));
-  
-  if (vitalsWithData.length > 0) {
-    checkPageBreak(doc, yPosition, 60);
-    yPosition = getCurrentY(doc, yPosition);
-    
-    addSectionHeader(doc, 'VITAL SIGNS & BIOMETRICS', yPosition);
-    yPosition += 12;
-    
-    const latestVital = vitalsWithData[0];
-    const vitalInfo: string[][] = [];
-    
-    if (latestVital.height_inches) {
-      const feet = Math.floor(latestVital.height_inches / 12);
-      const inches = latestVital.height_inches % 12;
-      vitalInfo.push(['Height', `${feet}'${inches}" (${latestVital.height_inches} inches)`]);
-    }
-    
-    if (latestVital.weight_pounds) {
-      vitalInfo.push(['Weight', `${latestVital.weight_pounds} lbs`]);
-    }
-    
-    const bmi = calculateBMI(latestVital.height_inches, latestVital.weight_pounds);
-    if (bmi) {
-      vitalInfo.push(['BMI', `${bmi}`]);
-    }
-    
-    if (latestVital.blood_pressure_systolic && latestVital.blood_pressure_diastolic) {
-      vitalInfo.push(['Blood Pressure', `${latestVital.blood_pressure_systolic}/${latestVital.blood_pressure_diastolic} mmHg`]);
-    }
-    
-    if (latestVital.pulse) {
-      vitalInfo.push(['Heart Rate', `${latestVital.pulse} bpm`]);
-    }
-    
-    if (latestVital.temperature) {
-      vitalInfo.push(['Temperature', `${latestVital.temperature}°F`]);
-    }
-    
-    if (latestVital.oxygen_saturation) {
-      vitalInfo.push(['Oxygen Saturation', `${latestVital.oxygen_saturation}%`]);
-    }
-    
-    if (latestVital.cholesterol) {
-      vitalInfo.push(['Cholesterol', `${latestVital.cholesterol} mg/dL`]);
-    }
-    
-    if (latestVital.blood_sugar) {
-      vitalInfo.push(['Blood Sugar', `${latestVital.blood_sugar} mg/dL`]);
-    }
-    
-    if (vitalInfo.length > 0) {
-      autoTable(doc, {
-        startY: yPosition,
-        body: vitalInfo,
-        theme: 'striped',
-        styles: { 
-          fontSize: 10,
-          cellPadding: 5
-        },
-        columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 50 },
-          1: { cellWidth: 'auto' }
-        },
-        margin: { left: 20, right: 20 }
-      });
-      yPosition = (doc as any).lastAutoTable.finalY + 5;
-      
-      doc.setFontSize(8);
-      doc.setTextColor(...mediumGray);
-      doc.text(`Last recorded: ${format(new Date(latestVital.date_recorded), 'MMM dd, yyyy')}`, 20, yPosition);
-      yPosition += 15;
-    }
-  }
-
-  // Immunizations Section
-  if (immunizations.length > 0) {
-    checkPageBreak(doc, yPosition, 40);
-    yPosition = getCurrentY(doc, yPosition);
-    
-    addSectionHeader(doc, 'IMMUNIZATION HISTORY', yPosition);
-    yPosition += 12;
-    
-    const immunizationData = immunizations.map(i => [
-      i.vaccine_name,
-      i.date_administered ? format(new Date(i.date_administered), 'MMM dd, yyyy') : '',
-      i.provider_name || ''
-    ]);
-    
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Vaccine', 'Date Administered', 'Provider']],
-      body: immunizationData,
-      theme: 'grid',
-      headStyles: { 
-        fillColor: [37, 99, 235],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10
-      },
-      styles: { 
-        fontSize: 9,
-        cellPadding: 5
-      },
-      margin: { left: 14, right: 14 }
-    });
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
-  }
-
-  // Surgeries Section
-  if (surgeries.length > 0) {
-    checkPageBreak(doc, yPosition, 40);
-    yPosition = getCurrentY(doc, yPosition);
-    
-    addSectionHeader(doc, 'SURGICAL HISTORY', yPosition);
-    yPosition += 12;
-    
-    const surgeryData = surgeries.map(s => [
-      s.surgery_type,
-      s.surgery_date ? format(new Date(s.surgery_date), 'MMM dd, yyyy') : '',
-      s.surgeon_name || '',
-      s.hospital_name || ''
-    ]);
-    
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Procedure', 'Date', 'Surgeon', 'Hospital']],
-      body: surgeryData,
-      theme: 'grid',
-      headStyles: { 
-        fillColor: [37, 99, 235],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10
-      },
-      styles: { 
-        fontSize: 9,
-        cellPadding: 5
-      },
-      margin: { left: 14, right: 14 }
-    });
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
-  }
-
-  // Pharmacies Section
-  if (pharmacies.length > 0) {
-    checkPageBreak(doc, yPosition, 40);
-    yPosition = getCurrentY(doc, yPosition);
-    
-    addSectionHeader(doc, 'PHARMACY INFORMATION', yPosition);
-    yPosition += 12;
-    
-    pharmacies.forEach((p, index) => {
+    activeMeds.forEach((med, index) => {
       if (index > 0) yPosition += 8;
       
+      // Light blue background for each med
+      doc.setFillColor(219, 234, 254);
+      doc.roundedRect(20, yPosition, pageWidth - 40, 18, 2, 2, 'F');
+      
+      doc.setTextColor(...darkBg);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...darkGray);
-      const name = p.is_preferred ? `${p.pharmacy_name} (PREFERRED)` : p.pharmacy_name;
-      doc.text(name, 20, yPosition);
-      yPosition += 6;
+      doc.text(med.medication_name, 25, yPosition + 6);
       
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      if (p.address) {
-        doc.text(`${p.address}, ${p.city}, ${p.state} ${p.zip_code}`, 20, yPosition);
-        yPosition += 5;
+      doc.text(`${med.dosage || ''} • ${med.frequency || ''}`, 25, yPosition + 12);
+      
+      if (med.start_date) {
+        doc.setTextColor(...mediumGray);
+        doc.text(`Started: ${format(new Date(med.start_date), 'MMM dd, yyyy')}`, 25, yPosition + 16);
       }
-      if (p.phone) {
-        doc.text(`Phone: ${p.phone}`, 20, yPosition);
-        yPosition += 5;
-      }
+      
+      // Active badge
+      doc.setFillColor(34, 197, 94);
+      doc.roundedRect(pageWidth - 60, yPosition + 4, 35, 8, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text('Active', pageWidth - 55, yPosition + 9);
+      
+      yPosition += 18;
     });
     yPosition += 10;
   }
 
-  // Emergency Contacts Section
-  if (emergencyContacts.length > 0) {
-    checkPageBreak(doc, yPosition, 40);
+  // === MEDICAL CONDITIONS SECTION ===
+  const activeConditions = conditions.filter(c => c.is_active && c.condition_name);
+  
+  if (activeConditions.length > 0) {
+    checkPageBreak(doc, yPosition, 50);
     yPosition = getCurrentY(doc, yPosition);
     
-    addSectionHeader(doc, 'EMERGENCY CONTACTS', yPosition);
+    // Red gradient header
+    addColorfulSectionHeader(doc, '❤️ Medical Conditions', yPosition, redGradient);
     yPosition += 12;
     
-    const contactData = emergencyContacts
-      .sort((a, b) => (a.contact_order || 0) - (b.contact_order || 0))
-      .map(c => [
-        c.name,
-        c.relationship || '',
-        c.phone || '',
-        c.email || ''
-      ]);
-    
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Name', 'Relationship', 'Phone', 'Email']],
-      body: contactData,
-      theme: 'grid',
-      headStyles: { 
-        fillColor: [37, 99, 235],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10
-      },
-      styles: { 
-        fontSize: 9,
-        cellPadding: 5
-      },
-      margin: { left: 14, right: 14 }
+    activeConditions.forEach((cond, index) => {
+      if (index > 0) yPosition += 8;
+      
+      // Light red background
+      doc.setFillColor(254, 226, 226);
+      doc.roundedRect(20, yPosition, pageWidth - 40, 20, 2, 2, 'F');
+      
+      doc.setTextColor(...darkBg);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(cond.condition_name, 25, yPosition + 6);
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      if (cond.description) {
+        doc.text(cond.description.substring(0, 50) + (cond.description.length > 50 ? '...' : ''), 25, yPosition + 12);
+      }
+      
+      if (cond.date_diagnosed) {
+        doc.setTextColor(...mediumGray);
+        doc.text(`Diagnosed: ${format(new Date(cond.date_diagnosed), 'MMM dd, yyyy')}`, 25, yPosition + 17);
+      }
+      
+      // Severity badge
+      if (cond.severity) {
+        const severityColor: [number, number, number] = cond.severity.toLowerCase() === 'severe' ? [220, 38, 38] : 
+                             cond.severity.toLowerCase() === 'moderate' ? [249, 115, 22] : [34, 197, 94];
+        doc.setFillColor(...severityColor);
+        doc.roundedRect(pageWidth - 60, yPosition + 4, 35, 8, 2, 2, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7);
+        doc.text(cond.severity, pageWidth - 55, yPosition + 9);
+      }
+      
+      yPosition += 20;
     });
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition += 10;
+  }
+
+  // === ALLERGIES SECTION ===
+  if (allergies.length > 0) {
+    checkPageBreak(doc, yPosition, 50);
+    yPosition = getCurrentY(doc, yPosition);
+    
+    // Orange gradient header
+    addColorfulSectionHeader(doc, '⚠️ Allergies', yPosition, orangeGradient);
+    yPosition += 12;
+    
+    allergies.forEach((allergy, index) => {
+      if (index > 0) yPosition += 8;
+      
+      // Light orange background
+      doc.setFillColor(255, 237, 213);
+      doc.roundedRect(20, yPosition, pageWidth - 40, 16, 2, 2, 'F');
+      
+      doc.setTextColor(...darkBg);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(allergy.allergen_name, 25, yPosition + 6);
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Reaction: ${allergy.reaction_type || 'Not specified'}`, 25, yPosition + 12);
+      
+      // Severity badge
+      if (allergy.severity) {
+        const severityColor: [number, number, number] = allergy.severity.toLowerCase() === 'severe' ? [220, 38, 38] : 
+                             allergy.severity.toLowerCase() === 'moderate' ? [249, 115, 22] : [34, 197, 94];
+        doc.setFillColor(...severityColor);
+        doc.roundedRect(pageWidth - 60, yPosition + 3, 35, 8, 2, 2, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7);
+        doc.text(allergy.severity, pageWidth - 55, yPosition + 8);
+      }
+      
+      yPosition += 16;
+    });
+    yPosition += 10;
+  }
+
+  // === VITALS SECTION ===
+  const vitalsWithData = vitals.filter(v => hasVitalData(v));
+  
+  if (vitalsWithData.length > 0) {
+    checkPageBreak(doc, yPosition, 70);
+    yPosition = getCurrentY(doc, yPosition);
+    
+    // Green gradient header
+    addColorfulSectionHeader(doc, '📊 Vitals / Biometrics', yPosition, greenGradient);
+    yPosition += 12;
+    
+    const latestVital = vitalsWithData[0];
+    
+    // Quick Look box
+    doc.setFillColor(209, 250, 229);
+    doc.roundedRect(20, yPosition, pageWidth - 40, 50, 2, 2, 'F');
+    
+    doc.setTextColor(...darkBg);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Quick Look', 25, yPosition + 7);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    let vitalY = yPosition + 15;
+    
+    if (latestVital.height_inches) {
+      const feet = Math.floor(latestVital.height_inches / 12);
+      const inches = latestVital.height_inches % 12;
+      doc.text(`Height: ${feet}'${inches}" (${latestVital.height_inches} in)`, 25, vitalY);
+      vitalY += 6;
+    }
+    
+    if (latestVital.weight_pounds) {
+      doc.text(`Weight: ${latestVital.weight_pounds} lbs`, 25, vitalY);
+      vitalY += 6;
+    }
+    
+    const bmi = calculateBMI(latestVital.height_inches, latestVital.weight_pounds);
+    if (bmi) {
+      doc.text(`BMI: ${bmi} (Auto-calculated)`, 25, vitalY);
+      vitalY += 6;
+    }
+    
+    // Right column
+    vitalY = yPosition + 15;
+    const rightX = pageWidth / 2 + 10;
+    
+    if (latestVital.blood_pressure_systolic && latestVital.blood_pressure_diastolic) {
+      doc.text(`Blood Pressure: ${latestVital.blood_pressure_systolic}/${latestVital.blood_pressure_diastolic}`, rightX, vitalY);
+      vitalY += 6;
+    }
+    
+    if (latestVital.pulse) {
+      doc.text(`Pulse: ${latestVital.pulse} bpm`, rightX, vitalY);
+      vitalY += 6;
+    }
+    
+    if (latestVital.oxygen_saturation) {
+      doc.text(`O2 Saturation: ${latestVital.oxygen_saturation}%`, rightX, vitalY);
+    }
+    
+    yPosition += 55;
+  }
+
+  // === IMMUNIZATIONS SECTION ===
+  if (immunizations.length > 0) {
+    checkPageBreak(doc, yPosition, 50);
+    yPosition = getCurrentY(doc, yPosition);
+    
+    addColorfulSectionHeader(doc, '💉 Immunizations', yPosition, purpleGradient);
+    yPosition += 12;
+    
+    immunizations.slice(0, 5).forEach((imm, index) => {
+      if (index > 0) yPosition += 8;
+      
+      doc.setFillColor(243, 232, 255);
+      doc.roundedRect(20, yPosition, pageWidth - 40, 14, 2, 2, 'F');
+      
+      doc.setTextColor(...darkBg);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(imm.vaccine_name, 25, yPosition + 6);
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      if (imm.date_administered) {
+        doc.setTextColor(...mediumGray);
+        doc.text(format(new Date(imm.date_administered), 'MMM dd, yyyy'), 25, yPosition + 11);
+      }
+      
+      yPosition += 14;
+    });
+    yPosition += 10;
+  }
+
+  // === SURGERIES SECTION ===
+  if (surgeries.length > 0) {
+    checkPageBreak(doc, yPosition, 50);
+    yPosition = getCurrentY(doc, yPosition);
+    
+    addColorfulSectionHeader(doc, '✂️ Surgeries', yPosition, purpleGradient);
+    yPosition += 12;
+    
+    surgeries.forEach((surgery, index) => {
+      if (index > 0) yPosition += 8;
+      
+      doc.setFillColor(243, 232, 255);
+      doc.roundedRect(20, yPosition, pageWidth - 40, 18, 2, 2, 'F');
+      
+      doc.setTextColor(...darkBg);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(surgery.surgery_type, 25, yPosition + 6);
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      if (surgery.surgery_date) {
+        doc.text(`Date: ${format(new Date(surgery.surgery_date), 'MMM dd, yyyy')}`, 25, yPosition + 11);
+      }
+      if (surgery.hospital_name) {
+        doc.setTextColor(...mediumGray);
+        doc.text(surgery.hospital_name, 25, yPosition + 15);
+      }
+      
+      yPosition += 18;
+    });
+    yPosition += 10;
+  }
+
+  // === PHARMACIES SECTION ===
+  if (pharmacies.length > 0) {
+    checkPageBreak(doc, yPosition, 50);
+    yPosition = getCurrentY(doc, yPosition);
+    
+    addColorfulSectionHeader(doc, '🏥 Pharmacies', yPosition, tealGradient);
+    yPosition += 12;
+    
+    pharmacies.forEach((pharm, index) => {
+      if (index > 0) yPosition += 8;
+      
+      doc.setFillColor(204, 251, 241);
+      doc.roundedRect(20, yPosition, pageWidth - 40, 20, 2, 2, 'F');
+      
+      doc.setTextColor(...darkBg);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(pharm.pharmacy_name, 25, yPosition + 6);
+      
+      if (pharm.is_preferred) {
+        doc.setFillColor(251, 191, 36);
+        doc.circle(pageWidth - 25, yPosition + 6, 3, 'F');
+        doc.setTextColor(251, 191, 36);
+        doc.setFontSize(7);
+        doc.text('★', pageWidth - 26, yPosition + 7);
+      }
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...darkBg);
+      if (pharm.address) {
+        doc.text(`${pharm.address}, ${pharm.city}, ${pharm.state}`, 25, yPosition + 12);
+      }
+      if (pharm.phone) {
+        doc.setTextColor(...mediumGray);
+        doc.text(`Phone: ${pharm.phone}`, 25, yPosition + 17);
+      }
+      
+      yPosition += 20;
+    });
+    yPosition += 10;
+  }
+
+  // === EMERGENCY CONTACTS SECTION ===
+  if (emergencyContacts.length > 0) {
+    checkPageBreak(doc, yPosition, 50);
+    yPosition = getCurrentY(doc, yPosition);
+    
+    addColorfulSectionHeader(doc, '📞 Emergency Contacts', yPosition, redGradient);
+    yPosition += 12;
+    
+    emergencyContacts
+      .sort((a, b) => (a.contact_order || 0) - (b.contact_order || 0))
+      .forEach((contact, index) => {
+        if (index > 0) yPosition += 8;
+        
+        doc.setFillColor(254, 226, 226);
+        doc.roundedRect(20, yPosition, pageWidth - 40, 16, 2, 2, 'F');
+        
+        doc.setTextColor(...darkBg);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(contact.name, 25, yPosition + 6);
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${contact.relationship || ''} • ${contact.phone || ''}`, 25, yPosition + 12);
+        
+        yPosition += 16;
+      });
   }
 
   // Add footer to all pages
@@ -552,51 +543,46 @@ export async function generateMedicalVaultPDF(
   return doc.output('blob');
 }
 
-function addSectionHeader(doc: jsPDF, title: string, yPosition: number) {
-  doc.setFillColor(37, 99, 235);
-  doc.rect(14, yPosition - 2, doc.internal.pageSize.getWidth() - 28, 10, 'F');
+function addColorfulSectionHeader(doc: jsPDF, title: string, yPosition: number, color: [number, number, number]) {
+  // Gradient effect with two rectangles
+  doc.setFillColor(...color);
+  doc.roundedRect(14, yPosition, doc.internal.pageSize.getWidth() - 28, 10, 2, 2, 'F');
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text(title, 18, yPosition + 5);
+  doc.text(title, 20, yPosition + 7);
 }
 
 function addFooter(doc: jsPDF, pageNumber: number, totalPages: number) {
   const pageHeight = doc.internal.pageSize.getHeight();
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  // Footer line
   doc.setDrawColor(200, 200, 200);
-  doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+  doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
   
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(107, 114, 128);
   doc.setFont('helvetica', 'normal');
   
-  // Left side - VitaLuxe Services
-  doc.text('VitaLuxe Services - Secure Medical Records', 14, pageHeight - 12);
-  
-  // Center - Generated date
+  doc.text('VitaLuxe Services', 14, pageHeight - 8);
   doc.text(
     `Generated: ${format(new Date(), 'MMM dd, yyyy')}`,
     pageWidth / 2,
-    pageHeight - 12,
+    pageHeight - 8,
     { align: 'center' }
   );
-  
-  // Right side - Page number
   doc.text(
     `Page ${pageNumber} of ${totalPages}`,
     pageWidth - 14,
-    pageHeight - 12,
+    pageHeight - 8,
     { align: 'right' }
   );
 }
 
 function checkPageBreak(doc: jsPDF, yPosition: number, requiredSpace: number) {
   const pageHeight = doc.internal.pageSize.getHeight();
-  if (yPosition + requiredSpace > pageHeight - 30) {
+  if (yPosition + requiredSpace > pageHeight - 25) {
     doc.addPage();
     return 20;
   }
@@ -605,7 +591,7 @@ function checkPageBreak(doc: jsPDF, yPosition: number, requiredSpace: number) {
 
 function getCurrentY(doc: jsPDF, yPosition: number): number {
   const pageHeight = doc.internal.pageSize.getHeight();
-  if (yPosition + 40 > pageHeight - 30) {
+  if (yPosition + 50 > pageHeight - 25) {
     return 20;
   }
   return yPosition;
