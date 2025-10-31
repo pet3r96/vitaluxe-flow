@@ -92,7 +92,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
     queryKey: ["encryption-coverage"],
     queryFn: async () => {
       const [patientsRes, orderLinesRes] = await Promise.all([
-        supabase.from("patients").select("id, allergies_encrypted, notes_encrypted"),
+        supabase.from("patient_accounts").select("id, allergies_encrypted, notes_encrypted"),
         supabase.from("order_lines").select("id, prescription_url_encrypted"),
       ]);
 

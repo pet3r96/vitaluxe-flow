@@ -71,8 +71,8 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
       // Fetch patient details for each message
       const patientIds = [...new Set(messagesData?.map(m => m.patient_id))];
       const { data: patientsData } = await supabase
-        .from('patients')
-        .select('id, name, email')
+        .from('patient_accounts')
+        .select('id, name, first_name, last_name, email')
         .in('id', patientIds);
 
       const patientsMap = new Map(patientsData?.map(p => [p.id, p]) || []);

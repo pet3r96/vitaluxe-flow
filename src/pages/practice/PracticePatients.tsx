@@ -63,8 +63,8 @@ export default function PracticePatients() {
 
       // Get patient details
       const { data: patient } = await supabase
-        .from('patients')
-        .select('name, email, practice_id')
+        .from('patient_accounts')
+        .select('name, first_name, last_name, email, practice_id')
         .eq('id', patientId)
         .single();
 

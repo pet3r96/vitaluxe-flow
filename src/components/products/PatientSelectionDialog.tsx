@@ -73,7 +73,7 @@ export const PatientSelectionDialog = ({
       if (!effectivePracticeId) return [];
       
       const { data, error } = await supabase
-        .from("patients" as any)
+        .from("patient_accounts" as any)
         .select("*")
         .eq("practice_id", effectivePracticeId)
         .order("name");

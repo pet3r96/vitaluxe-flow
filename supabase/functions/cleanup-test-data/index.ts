@@ -122,7 +122,7 @@ serve(async (req) => {
           .eq('doctor_id', userId);
 
         const { count: patientCount } = await supabaseAdmin
-          .from('patients')
+          .from('patient_accounts')
           .select('id', { count: 'exact', head: true })
           .eq('practice_id', userId);
 

@@ -368,10 +368,10 @@ export const ProductsDataTable = () => {
 
         if (error) throw error;
       } else {
-        // Patient order - fetch from patients table (patientId is patients.id from dialog)
+        // Patient order - fetch from patient_accounts table (patientId is patient_accounts.id from dialog)
         const { data: patientRecord, error: patientError } = await supabase
-          .from("patients")
-          .select("id, name, email, phone, address_street, address_city, address_state, address_zip, patient_account_id")
+          .from("patient_accounts")
+          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id")
           .eq("id", patientId!)
           .single();
         
@@ -439,7 +439,7 @@ export const ProductsDataTable = () => {
           .insert({
             cart_id: cart.id,
             product_id: productForCart.id,
-            patient_id: patientRecord.id, // Use patients.id for foreign key
+            patient_id: patientRecord.id, // Use patient_accounts.id for foreign key
             provider_id: actualProviderId,
             patient_name: patientRecord.name || "Unknown",
             patient_email: patientRecord.email,

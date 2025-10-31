@@ -72,8 +72,8 @@ export const PatientDialog = ({
       if (!patient.birth_date || patient.allergies === undefined || patient.notes === undefined) {
         try {
           const { data: fetchedPatient, error } = await supabase
-            .from("patients")
-            .select("id, name, email, phone, birth_date, allergies, notes, address_street, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
+            .from("patient_accounts")
+            .select("id, name, first_name, last_name, email, phone, birth_date, date_of_birth, allergies, notes, address_street, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
             .eq("id", patient.id)
             .single();
 
@@ -302,7 +302,7 @@ export const PatientDialog = ({
         });
 
         const { error, count } = await supabase
-          .from("patients")
+          .from("patient_accounts")
           .update(patientData)
           .eq("id", patient.id)
           .select();
@@ -319,7 +319,7 @@ export const PatientDialog = ({
         }
         
         const { error } = await supabase
-          .from("patients")
+          .from("patient_accounts")
           .insert({
             ...patientData,
             practice_id: effectivePracticeId,

@@ -153,9 +153,9 @@ serve(async (req) => {
     const patientIdLog: Array<{incoming: string, resolved: string | null}> = [];
 
     for (const incomingId of patientIds) {
-      // Try direct lookup in patients table
+      // Try direct lookup in patient_accounts table
       const { data: directMatch } = await supabaseAdmin
-        .from('patients')
+        .from('patient_accounts')
         .select('id, practice_id')
         .eq('id', incomingId)
         .maybeSingle();
@@ -172,11 +172,11 @@ serve(async (req) => {
           );
         }
       } else {
-        // Try resolving via patient_accounts.id -> patients.patient_account_id
+        // Try resolving via patient_accounts.id (already unified, this is now just a direct lookup)
         const { data: resolvedMatch } = await supabaseAdmin
-          .from('patients')
-          .select('id, practice_id, patient_account_id')
-          .eq('patient_account_id', incomingId)
+          .from('patient_accounts')
+          .select('id, practice_id, user_id')
+          .eq('id', incomingId)
           .maybeSingle();
 
         if (resolvedMatch && resolvedMatch.practice_id === effectivePracticeId) {
@@ -227,17 +227,20 @@ serve(async (req) => {
     }
 
     // Get patient accounts for notifications using resolved IDs
+    // Since tables are merged, patient_accounts.id is the patient ID
     const { data: patientAccountsLookup } = await supabaseAdmin
-      .from('patients')
-      .select('patient_account_id')
+      .from('patient_accounts')
+      .select('id, user_id')
       .in('id', resolvedPatientIds);
 
-    const accountIds = patientAccountsLookup?.map(p => p.patient_account_id).filter(Boolean) || [];
+    // Extract user_ids for patients who have portal access (for notifications)
+    const accountIds = patientAccountsLookup?.map(p => p.user_id).filter(Boolean) || [];
     
+    // Get full patient account details for notifications
     const { data: patientAccounts } = await supabaseAdmin
       .from('patient_accounts')
-      .select('user_id')
-      .in('id', accountIds);
+      .select('id, user_id, email, first_name, last_name')
+      .in('id', resolvedPatientIds);
 
     // Create notifications for each patient
     if (patientAccounts && patientAccounts.length > 0) {

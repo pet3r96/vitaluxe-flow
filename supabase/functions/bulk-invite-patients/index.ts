@@ -100,8 +100,8 @@ Deno.serve(async (req) => {
 
         // Get patient details for email
         const { data: patient } = await supabaseAdmin
-          .from('patients')
-          .select('name, email, practice_id')
+          .from('patient_accounts')
+          .select('name, first_name, last_name, email, practice_id')
           .eq('id', patientId)
           .single();
 

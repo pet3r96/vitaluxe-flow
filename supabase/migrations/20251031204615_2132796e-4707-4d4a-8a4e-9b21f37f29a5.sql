@@ -1,50 +1,34 @@
--- Fix provider_document_patients schema and backfill data (correct order)
+-- Fix provider_document_patients schema after patient_accounts/patients merge
+-- NOTE: After the merge, provider_document_patients.patient_id should reference patient_accounts.id directly
+-- This migration ensures the foreign key constraint is correct after the merge
 
--- Step 1: Drop incorrect foreign key constraint to patient_accounts
-ALTER TABLE provider_document_patients 
-DROP CONSTRAINT IF EXISTS provider_document_patients_patient_id_fkey;
-
--- Step 2: Backfill existing data BEFORE adding new constraint
+-- Step 1: Ensure foreign key constraint points to patient_accounts (already done in merge migration, but verify)
 DO $$
-DECLARE
-  updated_count INTEGER := 0;
-  unresolvable_count INTEGER := 0;
-  row_record RECORD;
 BEGIN
-  -- Find rows where patient_id does not exist in patients.id (but might exist in patient_accounts.id)
-  FOR row_record IN 
-    SELECT pdp.id, pdp.patient_id
-    FROM provider_document_patients pdp
-    LEFT JOIN patients p ON pdp.patient_id = p.id
-    WHERE p.id IS NULL
-  LOOP
-    -- Try to resolve via patient_accounts.id -> patients.patient_account_id
-    UPDATE provider_document_patients
-    SET patient_id = (
-      SELECT p.id 
-      FROM patients p 
-      WHERE p.patient_account_id = row_record.patient_id
-      LIMIT 1
-    )
-    WHERE id = row_record.id
-    AND EXISTS (
-      SELECT 1 
-      FROM patients p 
-      WHERE p.patient_account_id = row_record.patient_id
-    );
+  -- Check if constraint exists and points to correct table
+  IF NOT EXISTS (
+    SELECT 1 
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+    JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+    WHERE tc.table_name = 'provider_document_patients'
+      AND tc.constraint_type = 'FOREIGN KEY'
+      AND tc.constraint_name = 'provider_document_patients_patient_id_fkey'
+      AND ccu.table_name = 'patient_accounts'
+  ) THEN
+    -- Drop old constraint if it exists and points to wrong table
+    ALTER TABLE provider_document_patients 
+    DROP CONSTRAINT IF EXISTS provider_document_patients_patient_id_fkey;
     
-    IF FOUND THEN
-      updated_count := updated_count + 1;
-    ELSE
-      unresolvable_count := unresolvable_count + 1;
-      RAISE NOTICE 'Could not resolve patient_id % for row %', row_record.patient_id, row_record.id;
-    END IF;
-  END LOOP;
-  
-  RAISE NOTICE 'Backfill complete: % rows updated, % unresolvable', updated_count, unresolvable_count;
+    -- Add correct constraint pointing to patient_accounts
+    ALTER TABLE provider_document_patients 
+    ADD CONSTRAINT provider_document_patients_patient_id_fkey 
+    FOREIGN KEY (patient_id) REFERENCES patient_accounts(id) ON DELETE CASCADE;
+  END IF;
 END $$;
 
--- Step 3: Add correct foreign key constraint to patients table (after data is fixed)
-ALTER TABLE provider_document_patients 
-ADD CONSTRAINT provider_document_patients_patient_id_fkey 
-FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE;
+-- Step 2: Clean up any orphaned records (patient_ids that don't exist in patient_accounts)
+DELETE FROM provider_document_patients pdp
+WHERE NOT EXISTS (
+  SELECT 1 FROM patient_accounts pa WHERE pa.id = pdp.patient_id
+);
