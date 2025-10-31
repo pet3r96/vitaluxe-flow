@@ -259,7 +259,7 @@ const Patients = () => {
                           <div className="flex items-center gap-3">
                             <h3 
                               className="font-semibold text-lg cursor-pointer hover:text-primary transition-colors"
-                              onClick={() => navigate(`/patients/${patient.patient_id}`)}
+                              onClick={() => navigate(`/patients/${patient.patient_account_id || patient.patient_id}`)}
                             >
                               {patient.name}
                             </h3>

@@ -63,7 +63,7 @@ export default function PatientDetail() {
       const { data, error } = await supabase
         .from('v_patients_with_portal_status')
         .select('*')
-        .eq('patient_id', patientId)
+        .eq('patient_account_id', patientId)
         .maybeSingle();
 
       if (error) {
@@ -73,7 +73,7 @@ export default function PatientDetail() {
       return data;
     },
     enabled: !!patientId,
-    staleTime: 30000,
+    staleTime: 10000, // Refresh every 10 seconds for portal status
   });
 
   // Realtime subscriptions for all patient data
@@ -381,9 +381,18 @@ export default function PatientDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1 sm:flex-none">
-            <h1 className="text-2xl sm:text-3xl font-bold gold-text-gradient">
-              {patient.name}
-            </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-bold gold-text-gradient">
+                {patient.name}
+              </h1>
+              {portalStatus && (
+                <PatientPortalStatusBadge 
+                  hasPortalAccount={portalStatus.has_portal_access || false}
+                  status={portalStatus.portal_status as 'active' | 'invited' | null}
+                  lastLoginAt={portalStatus.last_login_at}
+                />
+              )}
+            </div>
             <p className="text-sm text-muted-foreground break-all">{patient.email}</p>
           </div>
         </div>
