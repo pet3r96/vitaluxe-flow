@@ -9,10 +9,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IntakePromptCard } from "@/components/patient/IntakePromptCard";
+import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
+import { useState, useEffect } from "react";
 
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
+  const [practiceSubscription, setPracticeSubscription] = useState<any>(null);
 
   // Fetch patient account info
   const { data: patientAccount, isLoading: loadingAccount } = useQuery({
@@ -298,6 +301,17 @@ export default function PatientDashboard() {
   const vaultComplete = isMedicalVaultComplete(medicalVault);
   const medicationCount = medicalVault?.medications_count || 0;
 
+  // Check practice subscription status
+  useEffect(() => {
+    const checkPracticeSubscription = async () => {
+      if (patientAccount?.id) {
+        const status = await getPatientPracticeSubscription(patientAccount.id);
+        setPracticeSubscription(status);
+      }
+    };
+    checkPracticeSubscription();
+  }, [patientAccount?.id]);
+
   if (loadingAccount) {
     return (
       <div className="patient-container">
@@ -320,6 +334,19 @@ export default function PatientDashboard() {
         </h1>
         <p className="text-muted-foreground text-sm md:text-base">Your personal health dashboard</p>
       </div>
+
+      {/* Practice Subscription Warning */}
+      {practiceSubscription && !practiceSubscription.isSubscribed && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Limited Access</AlertTitle>
+          <AlertDescription>
+            {practiceSubscription.practiceName}'s subscription is currently inactive. 
+            Appointment booking and some features are temporarily unavailable. 
+            Please contact your practice for more information.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Intake Form Prompt */}
       {!patientAccount?.intake_completed_at && (

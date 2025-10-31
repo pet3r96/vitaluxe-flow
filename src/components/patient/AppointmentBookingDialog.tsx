@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Calendar, Building, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 
 interface AppointmentBookingDialogProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
   const [selectedTime, setSelectedTime] = useState('');
   const [validationMessage, setValidationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [validating, setValidating] = useState(false);
+  const [practiceSubscription, setPracticeSubscription] = useState<any>(null);
 
   // Fetch patient's assigned practice
   const { data: patientAccount } = useQuery({
@@ -52,6 +54,17 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       return data;
     },
   });
+
+  // Check practice subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (patientAccount?.id) {
+        const status = await getPatientPracticeSubscription(patientAccount.id);
+        setPracticeSubscription(status);
+      }
+    };
+    checkSubscription();
+  }, [patientAccount?.id]);
 
   // Fetch providers for the patient's assigned practice only
   const { data: providers } = useQuery({
@@ -237,6 +250,16 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
           </DialogDescription>
         </DialogHeader>
 
+        {practiceSubscription && !practiceSubscription.isSubscribed && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Appointment booking is currently unavailable. Your practice's subscription is inactive. 
+              Please contact your practice for more information.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {patientAccount && (
             <div className="space-y-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
@@ -380,7 +403,12 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || validating || (validationMessage?.type === 'error')}
+              disabled={
+                loading || 
+                validating || 
+                (validationMessage?.type === 'error') ||
+                (practiceSubscription && !practiceSubscription.isSubscribed)
+              }
             >
               {loading ? "Booking..." : "Request Appointment"}
             </Button>
