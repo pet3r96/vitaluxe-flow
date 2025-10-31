@@ -141,17 +141,19 @@ export const PatientSelectionDialog = ({
     // For providers: find their own provider record
     if (effectiveRole === "provider" && effectiveUserId) {
       const matchingProvider = providers.find((p: any) => p.user_id === effectiveUserId);
-      if (matchingProvider && matchingProvider.id !== selectedProviderId) {
+      if (matchingProvider) {
         setSelectedProviderId(matchingProvider.id);
       }
     }
-    // For doctors: auto-select if only one provider, otherwise leave null for manual selection
-    else if (effectiveRole === "doctor") {
-      if (providers.length === 1 && !selectedProviderId) {
-        setSelectedProviderId(providers[0].id);
-      }
+    // For doctors and staff: auto-select if only one provider
+    else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length === 1) {
+      setSelectedProviderId(providers[0].id);
     }
-  }, [open, providers, effectiveRole, effectiveUserId, selectedProviderId]);
+    // For doctors/staff with multiple providers: don't auto-select, let them choose
+    else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length > 1 && !selectedProviderId) {
+      setSelectedProviderId(null);
+    }
+  }, [open, providers, effectiveRole, effectiveUserId]);
 
   // Fetch provider details for prescription writer
   const { data: selectedProviderData } = useQuery({
@@ -470,9 +472,12 @@ export const PatientSelectionDialog = ({
                       </div>
                     </div>
                   ) : (
-                    <RadioGroup value={selectedProviderId || ""} onValueChange={setSelectedProviderId}>
+                    <RadioGroup value={selectedProviderId || ""} onValueChange={(value) => {
+                      console.log('[PatientSelectionDialog] Provider selected:', value);
+                      setSelectedProviderId(value);
+                    }}>
                       {providers.map((provider: any) => (
-                        <div key={provider.id} className="flex items-center space-x-2 p-3 border rounded-md hover:bg-accent/50">
+                        <div key={provider.id} className="flex items-center space-x-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer" onClick={() => setSelectedProviderId(provider.id)}>
                           <RadioGroupItem value={provider.id} id={provider.id} />
                           <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
                             <div className="font-medium">{provider.prescriber_name}</div>
