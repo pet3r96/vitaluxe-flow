@@ -159,28 +159,48 @@ export const generateMedicalVaultPDF = async (
 
   // Professional Header with Colors
   const addHeader = () => {
-    // Cleaner header background - lighter blue-grey
-    doc.setFillColor(45, 55, 72);
+    // Gold header background
+    doc.setFillColor(218, 165, 32);
     doc.rect(0, 0, pageWidth, 40, 'F');
     
-    // Main title in gold
-    doc.setTextColor(218, 165, 32); // Gold
+    // Main title in white
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
     doc.text(`MEDICAL RECORD - ${fullName.toUpperCase()}`, pageWidth / 2, 14, { align: 'center' });
     
-    // Lock icon (unicode) in gold - centered under title
-    doc.setFontSize(20);
-    doc.text('🔒', pageWidth / 2, 26, { align: 'center' });
+    // Draw lock icon manually (centered under title)
+    const lockX = pageWidth / 2;
+    const lockY = 20;
+    const lockSize = 6;
+    
+    // Lock body (rectangle)
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(lockX - lockSize/2, lockY, lockSize, lockSize, 1, 1, 'F');
+    
+    // Lock shackle (arc/semicircle using lines)
+    doc.setLineWidth(1.5);
+    doc.setDrawColor(255, 255, 255);
+    const shackleWidth = lockSize * 0.6;
+    const shackleHeight = lockSize * 0.5;
+    // Draw U-shape for shackle
+    doc.line(lockX - shackleWidth/2, lockY, lockX - shackleWidth/2, lockY - shackleHeight);
+    doc.line(lockX - shackleWidth/2, lockY - shackleHeight, lockX + shackleWidth/2, lockY - shackleHeight);
+    doc.line(lockX + shackleWidth/2, lockY - shackleHeight, lockX + shackleWidth/2, lockY);
+    
+    // Keyhole
+    doc.setFillColor(218, 165, 32);
+    doc.circle(lockX, lockY + lockSize/3, lockSize/6, 'F');
+    doc.rect(lockX - lockSize/12, lockY + lockSize/3, lockSize/6, lockSize/3, 'F');
     
     // VitaLuxe branding
-    doc.setTextColor(200, 200, 200);
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text('VitaLuxe Services', pageWidth / 2, 34, { align: 'center' });
     
-    return 50; // Increased space after header
+    return 50; // Space after header
   };
 
   // Section Title Helper
