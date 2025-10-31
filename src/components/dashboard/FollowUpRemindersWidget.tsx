@@ -32,7 +32,7 @@ export function FollowUpRemindersWidget() {
       if (error) throw error;
       return data as any[];
     },
-    staleTime: 0,
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   // Real-time subscription for instant updates

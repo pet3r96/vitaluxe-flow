@@ -89,7 +89,7 @@ export default function Cart() {
       return { id: cartData.id, lines: lines || [] };
     },
     enabled: !!effectiveUserId,
-    staleTime: 0, // Always consider data stale for immediate refetch
+    staleTime: 30000, // 30 seconds - cart changes frequently but 30s is reasonable
     refetchOnMount: true,
     refetchOnWindowFocus: true, // Refetch when tab gains focus
   });

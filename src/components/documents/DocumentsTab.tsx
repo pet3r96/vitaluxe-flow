@@ -53,7 +53,7 @@ export function DocumentsTab() {
       return documents;
     },
     enabled: !!effectivePracticeId && (effectiveRole === 'admin' || effectiveRole === 'doctor' || effectiveRole === 'staff'),
-    staleTime: 0,
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   // Client-side filters

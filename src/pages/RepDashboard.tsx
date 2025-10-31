@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Package, TrendingUp } from "lucide-react";
@@ -10,7 +11,7 @@ const RepDashboard = () => {
   // Get rep ID
   const { data: repData } = useQuery({
     queryKey: ["rep-data", effectiveUserId],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")
@@ -27,7 +28,7 @@ const RepDashboard = () => {
   // Get practice count (only for toplines)
   const { data: practiceCount } = useQuery({
     queryKey: ["rep-practice-count", repData?.id, effectiveUserId, effectiveRole],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!repData?.id || !effectiveUserId) return 0;
       
@@ -77,7 +78,7 @@ const RepDashboard = () => {
   // Get order count (using rep_practice_links for consistency)
   const { data: orderCount } = useQuery({
     queryKey: ["rep-order-count", repData?.id, effectiveUserId, effectiveRole],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!repData?.id || !effectiveUserId) return 0;
       
@@ -148,7 +149,7 @@ const RepDashboard = () => {
   // Get downline count (only for toplines)
   const { data: downlineCount } = useQuery({
     queryKey: ["downline-count", repData?.id],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!repData?.id) return 0;
       
@@ -167,7 +168,7 @@ const RepDashboard = () => {
   // Get profit stats (commissions + practice dev fees for topline)
   const { data: profitStats } = useQuery({
     queryKey: ["rep-profit-stats", repData?.id, effectiveRole],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!repData?.id) return null;
       
@@ -233,7 +234,8 @@ const RepDashboard = () => {
     enabled: !!repData?.id,
   });
 
-  const stats = effectiveRole === 'topline' ? [
+  // Memoize stats array to prevent unnecessary re-renders
+  const stats = useMemo(() => effectiveRole === 'topline' ? [
     {
       title: "My Practices",
       value: practiceCount || 0,
@@ -277,7 +279,7 @@ const RepDashboard = () => {
       icon: Package,
       description: "Orders not yet delivered",
     },
-  ];
+  ], [practiceCount, downlineCount, orderCount, profitStats, effectiveRole]);
 
   return (
     <div className="patient-container">

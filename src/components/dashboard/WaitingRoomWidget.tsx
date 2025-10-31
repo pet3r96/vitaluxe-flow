@@ -35,7 +35,7 @@ export function WaitingRoomWidget() {
       if (error) throw error;
       return (data || []) as any[];
     },
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     enabled: !!effectivePracticeId,
   });
 

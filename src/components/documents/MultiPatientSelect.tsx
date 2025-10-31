@@ -37,7 +37,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
       return data || [];
     },
     enabled: !!effectivePracticeId,
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Real-time subscription for instant patient list updates

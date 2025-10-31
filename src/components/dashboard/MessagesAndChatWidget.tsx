@@ -70,7 +70,7 @@ export function MessagesAndChatWidget() {
         return { count: 0, subjects: [] };
       }
     },
-    staleTime: 0,
+    staleTime: 60000, // 1 minute
     refetchInterval: 30000,
   });
 
@@ -118,7 +118,7 @@ export function MessagesAndChatWidget() {
         return { count: 0, senders: [] };
       }
     },
-    staleTime: 0,
+    staleTime: 60000, // 1 minute
   });
 
   // Real-time subscriptions for instant updates

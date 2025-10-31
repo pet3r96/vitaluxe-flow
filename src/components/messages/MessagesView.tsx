@@ -129,7 +129,7 @@ export const MessagesView = () => {
 
   const { data: threads, refetch: refetchThreads } = useQuery({
     queryKey: ["message-threads", resolvedFilter, effectiveUserId, isAdmin],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     queryFn: async () => {
       // For non-admins: Fetch support tickets (created by user) separately from order issues (participant-based)
       if (!isAdmin) {
@@ -282,7 +282,7 @@ export const MessagesView = () => {
 
   const { data: messages, refetch: refetchMessages } = useQuery({
     queryKey: ["messages", selectedThread],
-    staleTime: 0,
+    staleTime: 30000, // 30 seconds
     queryFn: async () => {
       if (!selectedThread) return [];
       

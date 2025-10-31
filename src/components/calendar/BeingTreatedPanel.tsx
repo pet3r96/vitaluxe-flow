@@ -67,8 +67,7 @@ export function BeingTreatedPanel({
       if (error) throw error;
       return data;
     },
-    refetchInterval: 5000, // Poll every 5 seconds as backup
-    staleTime: 0, // Consider data immediately stale for instant updates
+    staleTime: 0, // Keep staleTime: 0 - realtime handles updates instantly
   });
 
   useEffect(() => {

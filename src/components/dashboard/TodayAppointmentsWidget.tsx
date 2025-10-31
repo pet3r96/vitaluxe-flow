@@ -41,7 +41,7 @@ export function TodayAppointmentsWidget() {
       if (error) throw error;
       return (data || []) as any[];
     },
-    staleTime: 0,
+    staleTime: 60000, // 1 minute
   });
 
   const { data: providers = [] } = useQuery<any[]>({

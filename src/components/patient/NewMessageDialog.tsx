@@ -94,7 +94,7 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
     enabled: open && !!session?.access_token,
     retry: 1,
     retryDelay: 500,
-    staleTime: 0,
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   console.log("📊 Query state:", { 

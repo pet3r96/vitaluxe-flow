@@ -39,7 +39,7 @@ export function RepsManagement() {
 
   const { data: repStats } = useQuery({
     queryKey: ["rep-stats"],
-    staleTime: 0,
+    staleTime: 60000, // 1 minute
     queryFn: async () => {
       const { count: toplineCount } = await supabase
         .from("reps")
