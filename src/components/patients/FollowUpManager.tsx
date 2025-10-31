@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +27,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const queryClient = useQueryClient();
 
-  const { data: followUps, isLoading } = useQuery({
+  const { data: followUps, isLoading, refetch } = useQuery({
     queryKey: ["patient-follow-ups", patientId, statusFilter],
     queryFn: async () => {
       let query = supabase
@@ -81,6 +81,30 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
       return enrichedData;
     },
   });
+
+  // Set up real-time subscription for follow-ups
+  useEffect(() => {
+    const channel = supabase
+      .channel('patient-follow-ups-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_follow_ups',
+          filter: `patient_id=eq.${patientId}`,
+        },
+        () => {
+          // Refetch when any change occurs
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [patientId, refetch]);
 
   const markComplete = useMutation({
     mutationFn: async (id: string) => {
