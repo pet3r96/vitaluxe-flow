@@ -128,9 +128,13 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
               <User className="h-5 w-5 text-primary" />
               Demographics
             </CardTitle>
-            <Button onClick={() => setIsEditDialogOpen(true)} size="sm" variant="outline" className="gap-2">
-              <Edit2 className="h-4 w-4" />
-              Edit Details
+            <Button 
+              onClick={() => setIsEditDialogOpen(true)} 
+              size="sm" 
+              className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            >
+              <Edit2 className="h-4 w-4 mr-1" />
+              Edit
             </Button>
           </div>
         </CardHeader>
