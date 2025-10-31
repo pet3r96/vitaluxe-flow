@@ -26,36 +26,9 @@ export default function Cart() {
   const { feePercentage, calculateMerchantFee } = useMerchantFee();
   const { canOrder, isLoading: checkingPrivileges, isStaffAccount } = useStaffOrderingPrivileges();
 
-  // Staff without ordering privileges cannot access cart
-  if (checkingPrivileges && isStaffAccount) {
-    return (
-      <div className="patient-container">
-        <Skeleton className="h-[400px] w-full" />
-      </div>
-    );
-  }
-
-  if (isStaffAccount && !canOrder) {
-    return (
-      <div className="patient-container">
-        <Card className="patient-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
-              <ShoppingCart className="h-6 w-6" />
-              Cart
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert>
-              <AlertDescription>
-                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Staff without ordering privileges cannot access cart - compute flags only (avoid early return before hooks)
+  const showStaffLoading = checkingPrivileges && isStaffAccount;
+  const showStaffNoAccess = isStaffAccount && !canOrder;
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -225,6 +198,36 @@ export default function Cart() {
   const grandTotal = useMemo(() => {
     return calculateTotal() + shippingPreview + merchantFee;
   }, [calculateTotal, shippingPreview, merchantFee]);
+
+  if (showStaffLoading) {
+    return (
+      <div className="patient-container">
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    );
+  }
+
+  if (showStaffNoAccess) {
+    return (
+      <div className="patient-container">
+        <Card className="patient-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+              <ShoppingCart className="h-6 w-6" />
+              Cart
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>
+                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
