@@ -6,6 +6,7 @@ import { SecurityOverview } from "@/components/security/SecurityOverview";
 import { AuditLogsViewer } from "@/components/security/AuditLogsViewer";
 import { SecurityEventsTable } from "@/components/security/SecurityEventsTable";
 import { AlertRulesManager } from "@/components/security/AlertRulesManager";
+import { AlertsViewer } from "@/components/security/AlertsViewer";
 import { ArchivedLogsViewer } from "@/components/security/ArchivedLogsViewer";
 import { AccountSecurityManager } from "@/components/security/AccountSecurityManager";
 import { PHIAccessMonitor } from "@/components/security/PHIAccessMonitor";
@@ -129,7 +130,10 @@ const Security = () => {
         </TabsContent>
 
         <TabsContent value="alerts">
-          <AlertRulesManager />
+          <div className="space-y-6">
+            <AlertsViewer />
+            <AlertRulesManager />
+          </div>
         </TabsContent>
 
         <TabsContent value="archived">

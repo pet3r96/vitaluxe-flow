@@ -250,8 +250,12 @@ export type Database = {
           event_type: string
           id: string
           message: string
+          notes: string | null
           notification_error: string | null
           notification_sent: boolean | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
           rule_id: string | null
           severity: string
           triggered_at: string
@@ -261,8 +265,12 @@ export type Database = {
           event_type: string
           id?: string
           message: string
+          notes?: string | null
           notification_error?: string | null
           notification_sent?: boolean | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           rule_id?: string | null
           severity: string
           triggered_at?: string
@@ -272,8 +280,12 @@ export type Database = {
           event_type?: string
           id?: string
           message?: string
+          notes?: string | null
           notification_error?: string | null
           notification_sent?: boolean | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           rule_id?: string | null
           severity?: string
           triggered_at?: string
