@@ -67,20 +67,22 @@ const Profile = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">My Profile</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          {isRep 
-            ? "Your Contact Information & Account Settings"
-            : effectiveRole === "staff"
+      {effectiveRole !== "patient" && (
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">My Profile</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+            {isRep 
               ? "Your Contact Information & Account Settings"
-              : effectiveRole === "pharmacy"
-                ? "Manage your pharmacy information, licensed states, and account security"
-                : isProvider 
-                  ? "Your Professional Credentials & Contact Information" 
-                  : "Manage your personal information and account settings"}
-        </p>
-      </div>
+              : effectiveRole === "staff"
+                ? "Your Contact Information & Account Settings"
+                : effectiveRole === "pharmacy"
+                  ? "Manage your pharmacy information, licensed states, and account security"
+                  : isProvider 
+                    ? "Your Professional Credentials & Contact Information" 
+                    : "Manage your personal information and account settings"}
+          </p>
+        </div>
+      )}
 
       <div className="space-y-6">
         {isRep ? (
