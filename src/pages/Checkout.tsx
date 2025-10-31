@@ -58,8 +58,8 @@ export default function Checkout() {
   const showStaffCheckoutLoading = checkingPrivileges && isStaffAccount;
   const showStaffCheckoutNoAccess = isStaffAccount && !canOrder;
 
-  // For staff members with ordering privileges, use practice payment methods
-  const practiceIdForPayment = isStaffAccount ? effectivePracticeId : effectiveUserId;
+  // For staff members and providers with ordering privileges, use practice payment methods
+  const practiceIdForPayment = (isStaffAccount || isProviderAccount) ? effectivePracticeId : effectiveUserId;
 
   // Track component mount state to prevent operations during navigation
   const [isMounted, setIsMounted] = useState(true);

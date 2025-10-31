@@ -38,17 +38,20 @@ export const PaymentRetryDialog = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectivePracticeId, isStaffAccount, isProviderAccount } = useAuth();
   const [retryPaymentMethodId, setRetryPaymentMethodId] = useState<string>("");
+  
+  // Use practice context for payment methods (same logic as Checkout)
+  const practiceIdForPayment = (isStaffAccount || isProviderAccount) ? effectivePracticeId : effectiveUserId;
 
   // Fetch payment methods
   const { data: paymentMethods } = useQuery({
-    queryKey: ["payment-methods", effectiveUserId],
+    queryKey: ["payment-methods", practiceIdForPayment],
     queryFn: async () => {
     const { data, error } = await supabase
       .from("practice_payment_methods")
       .select("*")
-      .eq("practice_id", effectiveUserId)
+      .eq("practice_id", practiceIdForPayment)
       .neq("status", "declined")
       .neq("status", "removed")
       .order("is_default", { ascending: false });
@@ -56,7 +59,7 @@ export const PaymentRetryDialog = ({
       if (error) throw error;
       return data as PaymentMethod[];
     },
-    enabled: !!effectiveUserId && open,
+    enabled: !!practiceIdForPayment && open,
   });
 
   const retryPaymentMutation = useMutation({
