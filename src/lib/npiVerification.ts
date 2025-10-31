@@ -1,6 +1,8 @@
 // Real-time NPI verification using CMS NPPES Registry API
 // Documentation: https://npiregistry.cms.hhs.gov/api-page
 
+import { supabase } from "@/integrations/supabase/client";
+
 interface NPPESResult {
   number: string;
   enumeration_type: "NPI-1" | "NPI-2"; // NPI-1 = Individual, NPI-2 = Organization
@@ -115,81 +117,40 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
   }
 
   try {
-    // Call NPPES API
-    const response = await fetch(
-      `https://npiregistry.cms.hhs.gov/api/?number=${npi}&version=2.1`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
+    // Call edge function for verification (routes to NPPES API server-side)
+    const { data, error } = await supabase.functions.invoke('verify-npi', {
+      body: { npi }
+    });
 
-    if (!response.ok) {
-      // API error - allow submission with warning
+    if (error) {
+      console.error("NPI verification edge function error:", error);
       const result: NPIVerificationResult = {
         valid: true,
         npi,
-        warning: "Could not verify NPI - registry temporarily unavailable. Please verify manually.",
+        warning: "Could not verify NPI - please verify manually.",
       };
       return result;
     }
 
-    const data: NPPESResponse = await response.json();
-
-    // No results found
-    if (data.result_count === 0 || !data.results || data.results.length === 0) {
-      const result: NPIVerificationResult = {
-        valid: false,
-        error: "NPI not found in NPPES registry",
-      };
-      cacheResult(npi, result);
+    // Edge function returns the full NPIVerificationResult
+    if (data && typeof data === 'object') {
+      const result = data as NPIVerificationResult;
+      
+      // Cache successful verifications
+      if (result.valid && !result.error) {
+        cacheResult(npi, result);
+      }
+      
       return result;
     }
 
-    // Parse result
-    const provider = data.results[0];
-    const isIndividual = provider.enumeration_type === "NPI-1";
-    const isOrganization = provider.enumeration_type === "NPI-2";
-
-    let providerName = "";
-    if (isIndividual) {
-      const parts = [
-        provider.basic.first_name,
-        provider.basic.middle_name,
-        provider.basic.last_name,
-        provider.basic.credential,
-      ].filter(Boolean);
-      providerName = parts.join(" ");
-    } else if (isOrganization) {
-      providerName = provider.basic.name || "";
-    }
-
-    // Get primary taxonomy (specialty)
-    const primaryTaxonomy = provider.taxonomies?.find((t) => t.primary);
-    const specialty = primaryTaxonomy?.desc || "";
-
-    const result: NPIVerificationResult = {
+    // Unexpected response format
+    const fallbackResult: NPIVerificationResult = {
       valid: true,
       npi,
-      type: isIndividual ? "individual" : "organization",
-      providerName: providerName.trim(),
-      credential: provider.basic.credential,
-      specialty,
-      status: provider.basic.status,
-      enumerationDate: provider.basic.enumeration_date,
-      lastUpdated: provider.basic.last_updated,
+      warning: "Could not verify NPI - unexpected response.",
     };
-
-    // Add warning if NPI is deactivated
-    if (provider.basic.status?.toLowerCase() === "deactivated") {
-      result.warning = "This NPI has been deactivated in the registry";
-    }
-
-    // Cache the result
-    cacheResult(npi, result);
-    return result;
+    return fallbackResult;
   } catch (error) {
     console.error("NPI verification error:", error);
     
