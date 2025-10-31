@@ -65,7 +65,8 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
     onSuccess: () => {
       toast.success("Demographics updated successfully");
       setIsEditDialogOpen(false);
-      // Invalidate both queries to sync dashboard and profile
+      // Invalidate all patient account queries to sync across pages
+      queryClient.invalidateQueries({ queryKey: ["patient-account"] });
       queryClient.invalidateQueries({ queryKey: ["patient-account-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["patient-profile", effectiveUserId] });
     },
