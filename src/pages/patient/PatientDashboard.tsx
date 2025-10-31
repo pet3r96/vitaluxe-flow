@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IntakePromptCard } from "@/components/patient/IntakePromptCard";
 
 
 export default function PatientDashboard() {
@@ -28,7 +29,7 @@ export default function PatientDashboard() {
       
       const { data, error } = await supabase
         .from("patient_accounts")
-        .select("id, first_name, last_name, practice_id, user_id, email, date_of_birth, address, city, state, zip_code, gender_at_birth")
+        .select("id, first_name, last_name, practice_id, user_id, email, date_of_birth, address, city, state, zip_code, gender_at_birth, intake_completed_at")
         .eq("user_id", effectiveUserId)
         .maybeSingle();
       
@@ -320,8 +321,13 @@ export default function PatientDashboard() {
         <p className="text-muted-foreground">Your personal health dashboard</p>
       </div>
 
-      {/* Medical Vault Onboarding Alert */}
-      {!loadingVault && !medicalVault?.has_data && (
+      {/* Intake Form Prompt */}
+      {!patientAccount?.intake_completed_at && (
+        <IntakePromptCard onComplete={() => navigate('/intake')} />
+      )}
+
+      {/* Medical Vault Onboarding Alert - only show if intake is complete */}
+      {patientAccount?.intake_completed_at && !loadingVault && !medicalVault?.has_data && (
         <Alert className="border-warning bg-warning/10">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Complete Your Medical Vault</AlertTitle>

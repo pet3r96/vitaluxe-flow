@@ -106,6 +106,7 @@ const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVau
 const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
+const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
 const MedicalVaultShare = lazy(() => import("./pages/public/MedicalVaultShare"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
@@ -191,6 +192,7 @@ const App = () => (
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
+                  <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />
                   <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
                   <Route
                     path="/*"
