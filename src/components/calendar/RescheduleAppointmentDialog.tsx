@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { Calendar } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RescheduleAppointmentDialogProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function RescheduleAppointmentDialog({
   onSuccess,
 }: RescheduleAppointmentDialogProps) {
   const queryClient = useQueryClient();
+  const { effectiveUserId } = useAuth();
   const [createFollowUp, setCreateFollowUp] = useState(false);
   
   const appointmentDate = new Date(appointment.start_time);
@@ -109,25 +111,22 @@ export function RescheduleAppointmentDialog({
       if (updateError) throw updateError;
 
       // Create follow-up if requested
-      if (createFollowUp) {
+      if (createFollowUp && effectiveUserId) {
         const startDateTime = new Date(`${values.appointmentDate}T${values.startTime}`);
         const followUpDate = new Date(startDateTime);
         followUpDate.setDate(followUpDate.getDate() + 7); // Default 1 week later
 
-        const user = (await supabase.auth.getUser()).data.user;
-        if (user) {
-          await supabase.from("patient_follow_ups" as any).insert({
-            patient_id: appointment.patient_id,
-            created_by: user.id,
-            assigned_to: values.providerId,
-            follow_up_date: followUpDate.toISOString().split('T')[0],
-            follow_up_time: "09:00",
-            reason: values.serviceType || values.serviceDescription || "Follow-up appointment",
-            notes: `Follow-up for rescheduled appointment`,
-            priority: "medium",
-            status: "pending",
-          });
-        }
+        await supabase.from("patient_follow_ups" as any).insert({
+          patient_id: appointment.patient_id,
+          created_by: effectiveUserId,
+          assigned_to: values.providerId,
+          follow_up_date: followUpDate.toISOString().split('T')[0],
+          follow_up_time: "09:00",
+          reason: values.serviceType || values.serviceDescription || "Follow-up appointment",
+          notes: `Follow-up for rescheduled appointment`,
+          priority: "medium",
+          status: "pending",
+        });
       }
 
       return data;
