@@ -63,11 +63,14 @@ export default function DeliveryConfirmation() {
         .select(`
           *,
           product:products(*),
-          patient:patient_accounts(
-            address,
-            city,
-            state,
-            zip_code
+          patient:patients(
+            id,
+            name,
+            address_street,
+            address_city,
+            address_state,
+            address_zip,
+            address_formatted
           )
         `)
         .eq("cart_id", cart.id);
@@ -629,12 +632,12 @@ export default function DeliveryConfirmation() {
                         <div>{lines[0].patient_address_street}</div>
                         <div>{lines[0].patient_address_city}, {lines[0].patient_address_state} {lines[0].patient_address_zip}</div>
                       </div>
-                    ) : lines[0].patient?.address ? (
+                    ) : lines[0].patient?.address_street ? (
                       <div className="text-sm">
                         <div className="text-muted-foreground">
                           <div>{patientName}</div>
-                          <div>{lines[0].patient.address}</div>
-                          <div>{lines[0].patient.city}, {lines[0].patient.state} {lines[0].patient.zip_code}</div>
+                          <div>{lines[0].patient.address_street}</div>
+                          <div>{lines[0].patient.address_city}, {lines[0].patient.address_state} {lines[0].patient.address_zip}</div>
                         </div>
                         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mt-1 text-xs">
                           <CheckCircle2 className="h-3 w-3" />
@@ -658,7 +661,7 @@ export default function DeliveryConfirmation() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {!lines[0].patient_address_street && lines[0].patient?.address && lines[0].patient?.city && lines[0].patient?.state && lines[0].patient?.zip_code && (
+                    {!lines[0].patient_address_street && lines[0].patient?.address_street && lines[0].patient?.address_city && lines[0].patient?.address_state && lines[0].patient?.address_zip && (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -667,12 +670,13 @@ export default function DeliveryConfirmation() {
                           updatePatientAddress.mutate({
                             patientName,
                             lineIds: lines.map(l => l.id),
+                            patientId: lines[0].patient.id,
                             address: {
-                              street: lines[0].patient.address,
-                              city: lines[0].patient.city,
-                              state: lines[0].patient.state,
-                              zip: lines[0].patient.zip_code,
-                              formatted: `${lines[0].patient.address}, ${lines[0].patient.city}, ${lines[0].patient.state} ${lines[0].patient.zip_code}`,
+                              street: lines[0].patient.address_street,
+                              city: lines[0].patient.address_city,
+                              state: lines[0].patient.address_state,
+                              zip: lines[0].patient.address_zip,
+                              formatted: lines[0].patient.address_formatted || `${lines[0].patient.address_street}, ${lines[0].patient.address_city}, ${lines[0].patient.address_state} ${lines[0].patient.address_zip}`,
                               status: 'verified',
                               source: 'patient_record',
                             }
@@ -683,14 +687,14 @@ export default function DeliveryConfirmation() {
                         Apply from Patient
                       </Button>
                     )}
-                    {!lines[0].patient_address_street && lines[0].patient && (!lines[0].patient.address || !lines[0].patient.city || !lines[0].patient.state || !lines[0].patient.zip_code) && (
+                    {!lines[0].patient_address_street && lines[0].patient && (!lines[0].patient.address_street || !lines[0].patient.address_city || !lines[0].patient.address_state || !lines[0].patient.address_zip) && (
                       <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
                         Patient record missing: {[
-                          !lines[0].patient.address && 'street',
-                          !lines[0].patient.city && 'city',
-                          !lines[0].patient.state && 'state',
-                          !lines[0].patient.zip_code && 'zip'
+                          !lines[0].patient.address_street && 'street',
+                          !lines[0].patient.address_city && 'city',
+                          !lines[0].patient.address_state && 'state',
+                          !lines[0].patient.address_zip && 'zip'
                         ].filter(Boolean).join(', ')}
                       </div>
                     )}
