@@ -2,13 +2,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
+import { searchVaccines } from "@/lib/medical-api-service";
 
 const immunizationSchema = z.object({
   vaccine_name: z.string().min(1, "Vaccine name is required"),
@@ -28,7 +29,7 @@ interface ImmunizationDialogProps {
 export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immunization, mode }: ImmunizationDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<ImmunizationFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<ImmunizationFormData>({
     resolver: zodResolver(immunizationSchema),
     defaultValues: immunization || {
       vaccine_name: "",
@@ -99,10 +100,12 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="vaccine_name">Vaccine Name *</Label>
-              <Input
+              <AutocompleteInput
                 id="vaccine_name"
-                {...register("vaccine_name")}
-                placeholder="e.g., COVID-19 Pfizer, Flu Shot"
+                value={watch("vaccine_name") || ""}
+                onChange={(value) => setValue("vaccine_name", value)}
+                onSearch={searchVaccines}
+                placeholder="Start typing vaccine name..."
                 disabled={isReadOnly}
                 className={errors.vaccine_name ? "border-red-500" : ""}
               />
