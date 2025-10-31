@@ -15,8 +15,9 @@ import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointment
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { PDFViewer } from "@/components/documents/PDFViewer";
 
 export default function PatientDetail() {
   const { patientId } = useParams();
@@ -201,7 +202,17 @@ export default function PatientDetail() {
   });
 
   const handleViewChart = async () => {
-    if (!patient) return;
+    console.log("[PatientDetail] handleViewChart called with patient:", patient);
+    
+    if (!patient) {
+      console.error("[PatientDetail] No patient data available");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Patient data not loaded. Please refresh the page.",
+      });
+      return;
+    }
     
     setIsGeneratingPdf(true);
     try {
