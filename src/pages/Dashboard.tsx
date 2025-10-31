@@ -17,22 +17,12 @@ import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpReminder
 import { WaitingRoomWidget } from "@/components/dashboard/WaitingRoomWidget";
 import { RequestedAppointmentsWidget } from "@/components/dashboard/RequestedAppointmentsWidget";
 import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
-import { useIsMobile } from "@/hooks/use-mobile";
-import DashboardMobile from "./DashboardMobile";
 
-// Dashboard component with real-time stats
+// Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
   const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount } = useAuth();
   const { isSubscribed, status, trialDaysRemaining } = useSubscription();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-
-  // Mobile users get simplified dashboard
-  if (isMobile) {
-    return <DashboardMobile />;
-  }
-
-  // Desktop dashboard continues below...
 
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
