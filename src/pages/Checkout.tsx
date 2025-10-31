@@ -121,7 +121,7 @@ export default function Checkout() {
 
       if (!cartData) return { lines: [] };
 
-      const { data: lines, error: linesError } = await supabase
+      const { data: linesRaw, error: linesError } = await supabase
         .from("cart_lines")
         .select(`
           *,
@@ -131,6 +131,26 @@ export default function Checkout() {
         .gte("expires_at", new Date().toISOString());
 
       if (linesError) throw linesError;
+
+      const lines = (linesRaw || []) as any[];
+
+      // Manually hydrate patient data from patients table
+      const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
+      if (patientIds.length > 0) {
+        const { data: patients, error: patientsError } = await supabase
+          .from('patients')
+          .select('id, name, address_street, address_city, address_state, address_zip, address_formatted')
+          .in('id', patientIds);
+        
+        if (!patientsError && patients) {
+          const patientMap = new Map(patients.map((p: any) => [p.id, p]));
+          for (const line of lines) {
+            if (line.patient_id) {
+              line.patient = patientMap.get(line.patient_id) || null;
+            }
+          }
+        }
+      }
 
       return { id: cartData.id, lines: lines || [] };
     },
@@ -174,7 +194,7 @@ export default function Checkout() {
     if (cartError) throw cartError;
     if (!cartData) return { id: undefined as unknown as string, lines: [] as any[] };
 
-    const { data: lines, error: linesError } = await supabase
+    const { data: linesRaw, error: linesError } = await supabase
       .from("cart_lines")
       .select(`
         *,
@@ -184,6 +204,27 @@ export default function Checkout() {
       .gte("expires_at", new Date().toISOString());
 
     if (linesError) throw linesError;
+    
+    const lines = (linesRaw || []) as any[];
+
+    // Manually hydrate patient data from patients table
+    const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
+    if (patientIds.length > 0) {
+      const { data: patients, error: patientsError } = await supabase
+        .from('patients')
+        .select('id, name, address_street, address_city, address_state, address_zip, address_formatted')
+        .in('id', patientIds);
+      
+      if (!patientsError && patients) {
+        const patientMap = new Map(patients.map((p: any) => [p.id, p]));
+        for (const line of lines) {
+          if (line.patient_id) {
+            line.patient = patientMap.get(line.patient_id) || null;
+          }
+        }
+      }
+    }
+    
     return { id: cartData.id, lines: lines || [] };
   };
 
