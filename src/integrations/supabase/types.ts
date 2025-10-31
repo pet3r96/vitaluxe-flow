@@ -7490,6 +7490,7 @@ export type Database = {
         Args: { p_practice_id: string }
         Returns: {
           assigned_patient_id: string
+          assigned_patient_ids: string[]
           assigned_patient_names: string[]
           document_name: string
           document_type: string

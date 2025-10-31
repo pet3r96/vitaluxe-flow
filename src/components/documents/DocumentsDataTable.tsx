@@ -114,9 +114,8 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
       const matchesSearch =
         !searchQuery ||
         doc.document_name?.toLowerCase().includes(searchLower) ||
-        doc.patients?.name?.toLowerCase().includes(searchLower) ||
-        doc.provider_document_patients?.some((pdp: any) =>
-          pdp.patients?.name?.toLowerCase().includes(searchLower)
+        doc.assigned_patient_names?.some((name: string) => 
+          name?.toLowerCase().includes(searchLower)
         ) ||
         doc.document_type?.toLowerCase().includes(searchLower) ||
         doc.tags?.some((tag: string) => tag.toLowerCase().includes(searchLower));
@@ -311,16 +310,14 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
 
                   {/* Patient Name */}
                   <TableCell>
-                    {doc.assigned_patient_id && doc.patients?.name ? (
-                      <span className="text-sm">{doc.patients.name}</span>
-                    ) : doc.provider_document_patients?.length > 0 ? (
+                    {doc.assigned_patient_names && doc.assigned_patient_names.length > 0 ? (
                       <div className="flex items-center gap-1">
                         <span className="text-sm truncate">
-                          {doc.provider_document_patients[0].patients?.name || "Unknown"}
+                          {doc.assigned_patient_names[0]}
                         </span>
-                        {doc.provider_document_patients.length > 1 && (
+                        {doc.assigned_patient_names.length > 1 && (
                           <Badge variant="outline" className="text-xs flex-shrink-0">
-                            +{doc.provider_document_patients.length - 1}
+                            +{doc.assigned_patient_names.length - 1}
                           </Badge>
                         )}
                       </div>

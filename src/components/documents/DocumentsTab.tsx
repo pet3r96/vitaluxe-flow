@@ -64,17 +64,9 @@ export function DocumentsTab() {
 
     const filtered = allDocuments.filter((doc: any) => {
       if (filters.patientId !== "all") {
-        // For provider docs, check junction table
-        if (doc.source_type === 'provider') {
-          const hasPatient = doc.provider_document_patients?.some(
-            (pdp: any) => pdp.patient_id === filters.patientId
-          );
-          if (!hasPatient) return false;
-        }
-        // For patient docs, check patient_uploader_id
-        else if (doc.source_type === 'patient') {
-          if (doc.patient_uploader_id !== filters.patientId) return false;
-        }
+        // Check if document is assigned to this specific patient
+        const isAssignedToPatient = doc.assigned_patient_ids?.includes(filters.patientId);
+        if (!isAssignedToPatient) return false;
       }
 
       if (filters.documentType !== "all" && doc.document_type !== filters.documentType) return false;
