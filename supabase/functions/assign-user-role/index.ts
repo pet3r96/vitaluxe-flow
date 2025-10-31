@@ -292,6 +292,16 @@ serve(async (req) => {
         );
       }
     } else if (signupData.role === 'provider') {
+      console.log('🔍 Provider role validation', {
+        roleData: signupData.roleData,
+        roleDataKeys: Object.keys(signupData.roleData || {}),
+        practiceId: signupData.roleData?.practiceId,
+        licenseNumber: signupData.roleData?.licenseNumber,
+        npi: signupData.roleData?.npi,
+        fullName: signupData.fullName,
+        prescriberName: signupData.prescriberName
+      });
+
       if (!signupData.roleData.practiceId) {
         return new Response(
           JSON.stringify({ error: 'Providers must be linked to a practice' }),
@@ -299,12 +309,20 @@ serve(async (req) => {
         );
       }
       if (!signupData.roleData.licenseNumber || !signupData.roleData.npi) {
+        console.error('❌ Missing provider credentials:', {
+          hasLicense: !!signupData.roleData.licenseNumber,
+          hasNPI: !!signupData.roleData.npi
+        });
         return new Response(
           JSON.stringify({ error: 'Providers must provide License Number and NPI' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       if (!signupData.fullName || !signupData.prescriberName) {
+        console.error('❌ Missing provider names:', {
+          hasFullName: !!signupData.fullName,
+          hasPrescriberName: !!signupData.prescriberName
+        });
         return new Response(
           JSON.stringify({ error: 'Providers must provide Full Name and Prescriber Name' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

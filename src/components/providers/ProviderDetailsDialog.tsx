@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Edit2, Save, X, Loader2 } from "lucide-react";
 import { sanitizeEncrypted } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { formatPhoneNumber } from "@/lib/validators";
+import { formatPhoneNumber, validateNPI, validateDEA } from "@/lib/validators";
 
 interface ProviderDetailsDialogProps {
   open: boolean;
@@ -52,28 +52,64 @@ export const ProviderDetailsDialog = ({
         return;
       }
 
+      // Validate NPI format (required)
+      if (!formData.npi || !formData.npi.trim()) {
+        toast.error("Provider NPI is required");
+        setLoading(false);
+        return;
+      }
+      
+      const npiResult = validateNPI(formData.npi);
+      if (!npiResult.valid) {
+        toast.error(`Invalid NPI: ${npiResult.error}`);
+        setLoading(false);
+        return;
+      }
+
+      // Validate DEA format if provided
+      if (formData.dea && formData.dea.trim()) {
+        const deaResult = validateDEA(formData.dea);
+        if (!deaResult.valid) {
+          toast.error(`Invalid DEA: ${deaResult.error}`);
+          setLoading(false);
+          return;
+        }
+      }
+
       // Update profiles table (where most provider data lives)
       const profileUpdateData: any = {};
 
       if (isOwnProvider) {
         // Providers can only update their phone
-        profileUpdateData.phone = formData.phone;
+        profileUpdateData.phone = formData.phone || null;
       } else if (isPractice || isAdmin) {
         // Practices and admins can update everything
         profileUpdateData.full_name = formData.fullName;
         profileUpdateData.npi = formData.npi;
-        profileUpdateData.dea = formData.dea;
-        profileUpdateData.license_number = formData.licenseNumber;
-        profileUpdateData.phone = formData.phone;
+        profileUpdateData.dea = formData.dea || null; // Explicit null if empty
+        profileUpdateData.license_number = formData.licenseNumber || null; // Explicit null if empty
+        profileUpdateData.phone = formData.phone || null;
       }
 
       if (Object.keys(profileUpdateData).length > 0) {
-        const { error: profileError } = await supabase
+        console.log('💾 Saving provider credentials to profiles table', {
+          providerId: provider.id,
+          userId: provider.user_id,
+          updateFields: Object.keys(profileUpdateData)
+        });
+
+        const { data: updateData, error: profileError } = await supabase
           .from("profiles")
           .update(profileUpdateData)
-          .eq("id", provider.user_id);
+          .eq("id", provider.user_id)
+          .select();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('❌ Profile update failed:', profileError);
+          throw profileError;
+        }
+
+        console.log('✅ Profile updated successfully', { rowsAffected: updateData?.length });
       }
 
       // Update providers table timestamp
@@ -82,13 +118,17 @@ export const ProviderDetailsDialog = ({
         .update({ updated_at: new Date().toISOString() })
         .eq("id", provider.id);
 
-      if (providerError) throw providerError;
+      if (providerError) {
+        console.error('❌ Provider timestamp update failed:', providerError);
+        throw providerError;
+      }
 
-      toast.success("Provider updated successfully");
+      toast.success("Provider credentials updated successfully!");
       setIsEditing(false);
       onSuccess();
     } catch (error: any) {
-      toast.error(error.message || "Failed to update provider");
+      console.error('❌ Failed to update provider:', error);
+      toast.error(error.message || "Failed to update provider. Please try again.");
     } finally {
       setLoading(false);
     }
