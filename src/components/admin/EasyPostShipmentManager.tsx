@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export const EasyPostShipmentManager = () => {
+export const EasyPostShipmentManager = ({ showHeader = true }: { showHeader?: boolean }) => {
   const [testMode, setTestMode] = useState<'order' | 'manual'>('order');
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [manualTrackingCode, setManualTrackingCode] = useState("");
@@ -123,10 +123,12 @@ export const EasyPostShipmentManager = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">EasyPost Tracking Tester</h2>
-        <p className="text-muted-foreground">Test tracking API with existing orders or manual tracking codes</p>
-      </div>
+      {showHeader && (
+        <div>
+          <h2 className="text-2xl font-bold">EasyPost Tracking Tester</h2>
+          <p className="text-muted-foreground">Test tracking API with existing orders or manual tracking codes</p>
+        </div>
+      )}
 
       {/* Mode Selection Card */}
       <Card>

@@ -178,7 +178,7 @@ const AdminSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <EasyPostShipmentManager />
+              <EasyPostShipmentManager showHeader={false} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -192,7 +192,7 @@ const AdminSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProductTypeManager />
+              <ProductTypeManager showHeader={false} />
             </CardContent>
           </Card>
         </TabsContent>
