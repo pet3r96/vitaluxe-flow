@@ -30,7 +30,7 @@ const medicationSchema = z.object({
   instructions: z.string().optional(),
   alert_enabled: z.boolean().optional(),
   condition_id: z.string().optional(),
-  prescribing_provider_id: z.string().optional(),
+  prescribing_provider: z.string().optional(),
 });
 
 type MedicationFormData = z.infer<typeof medicationSchema>;
@@ -59,7 +59,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
       instructions: "",
       alert_enabled: false,
       condition_id: "",
-      prescribing_provider_id: "",
+      prescribing_provider: "",
     },
   });
 
@@ -97,7 +97,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         instructions: medication.instructions || "",
         alert_enabled: medication.alert_enabled || false,
         condition_id: medication.associated_condition_id || "",
-        prescribing_provider_id: medication.prescribing_provider_id || "",
+        prescribing_provider: medication.prescribing_provider || "",
       });
     } else if (!medication && open) {
       reset({
@@ -111,7 +111,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         instructions: "",
         alert_enabled: false,
         condition_id: "",
-        prescribing_provider_id: "",
+        prescribing_provider: "",
       });
     }
   }, [medication, open, reset]);
@@ -132,30 +132,8 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
     enabled: open && !!patientAccountId,
   });
 
-  const { data: providers } = useQuery({
-    queryKey: ["practice-providers", patientAccountId],
-    queryFn: async () => {
-      const { data: patientData } = await supabase
-        .from("patient_accounts")
-        .select("practice_id")
-        .eq("id", patientAccountId)
-        .single();
-      
-      if (!patientData?.practice_id) return [];
-      
-      // @ts-expect-error - Supabase TypeScript has deep instantiation issues with complex queries
-      const result = await supabase
-        .from("profiles")
-        .select("id, full_name, name")
-        .eq("practice_id", patientData.practice_id)
-        .or("role.eq.doctor,role.eq.provider");
-      
-      if (result.error) throw result.error;
-      const providers = (result.data || []) as Array<{ id: string; full_name: string | null; name: string | null }>;
-      return providers.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
-    },
-    enabled: open && !!patientAccountId,
-  });
+  // Prescribing provider is free-text; no provider lookup needed
+
 
   const mutation = useOptimisticMutation(
     async (data: MedicationFormData) => {
@@ -172,7 +150,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         instructions: data.instructions || null,
         alert_enabled: data.alert_enabled || false,
         associated_condition_id: data.condition_id || null,
-        prescribing_provider_id: data.prescribing_provider_id || null,
+        prescribing_provider: data.prescribing_provider || null,
       };
 
       if (mode === "edit" && medication) {
@@ -264,24 +242,14 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="prescribing_provider_id">Prescribing Provider</Label>
-              <Select
-                value={watch("prescribing_provider_id") || ""}
-                onValueChange={(value) => setValue("prescribing_provider_id", value === "__none__" ? "" : value)}
+              <Label htmlFor="prescribing_provider">Prescribing Provider</Label>
+              <Input
+                id="prescribing_provider"
+                {...register("prescribing_provider")}
+                placeholder="e.g., Dr. Smith"
                 disabled={isReadOnly}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select provider (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {providers?.map((provider) => (
-                    <SelectItem key={provider.id} value={provider.id}>
-                      {provider.full_name || provider.name || "Unnamed Provider"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
+              <p className="text-xs text-muted-foreground">Leave blank for None</p>
             </div>
 
             <div className="space-y-2">

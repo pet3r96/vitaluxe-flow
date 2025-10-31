@@ -3058,6 +3058,7 @@ export type Database = {
           medication_name: string
           notes: string | null
           patient_account_id: string
+          prescribing_provider: string | null
           prescribing_provider_id: string | null
           start_date: string | null
           stop_date: string | null
@@ -3075,6 +3076,7 @@ export type Database = {
           medication_name: string
           notes?: string | null
           patient_account_id: string
+          prescribing_provider?: string | null
           prescribing_provider_id?: string | null
           start_date?: string | null
           stop_date?: string | null
@@ -3092,6 +3094,7 @@ export type Database = {
           medication_name?: string
           notes?: string | null
           patient_account_id?: string
+          prescribing_provider?: string | null
           prescribing_provider_id?: string | null
           start_date?: string | null
           stop_date?: string | null
