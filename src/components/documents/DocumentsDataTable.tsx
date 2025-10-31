@@ -306,7 +306,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
 
                   {/* Date Added */}
                   <TableCell className="text-sm">
-                    {format(new Date(doc.created_at), "MMM d, yyyy")}
+                    {format(new Date(doc.uploaded_at || doc.created_at), "MMM d, yyyy")}
                   </TableCell>
 
                   {/* Patient Name */}

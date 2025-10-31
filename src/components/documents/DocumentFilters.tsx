@@ -32,12 +32,13 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       const { data, error } = await supabase
-        .from("patients")
-        .select("id, name")
+        .from("v_patients_with_portal_status")
+        .select("patient_account_id, name")
         .eq("practice_id", effectivePracticeId)
         .order("name");
       if (error) throw error;
-      return data || [];
+      // Map to expected format with 'id' field
+      return data?.map(p => ({ id: p.patient_account_id, name: p.name })) || [];
     },
     enabled: !!effectivePracticeId,
   });
