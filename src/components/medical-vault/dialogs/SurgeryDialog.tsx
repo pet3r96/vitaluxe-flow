@@ -2,7 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
+import { searchSurgeries } from "@/lib/medical-api-service";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,7 +29,7 @@ interface SurgeryDialogProps {
 export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, mode }: SurgeryDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<SurgeryFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<SurgeryFormData>({
     resolver: zodResolver(surgerySchema),
     defaultValues: surgery || {
       surgery_type: "",
@@ -99,9 +100,11 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="surgery_type">Past Surgery Type *</Label>
-              <Input
+              <AutocompleteInput
                 id="surgery_type"
-                {...register("surgery_type")}
+                value={watch("surgery_type") || ""}
+                onChange={(value) => setValue("surgery_type", value)}
+                onSearch={searchSurgeries}
                 placeholder="e.g., Appendectomy, Knee Replacement"
                 disabled={isReadOnly}
                 className={errors.surgery_type ? "border-red-500" : ""}

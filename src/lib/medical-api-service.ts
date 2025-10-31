@@ -236,3 +236,139 @@ export async function searchVaccines(query: string): Promise<MedicalSuggestion[]
 
   return matches;
 }
+
+/**
+ * Common surgical procedures list with ICD-10-PCS categories
+ * Includes commonly performed surgeries across medical specialties
+ */
+const COMMON_SURGERIES = [
+  // Cardiovascular
+  { name: "Coronary Artery Bypass Graft (CABG)", category: "Cardiovascular" },
+  { name: "Angioplasty", category: "Cardiovascular" },
+  { name: "Heart Valve Replacement", category: "Cardiovascular" },
+  { name: "Pacemaker Insertion", category: "Cardiovascular" },
+  { name: "Cardiac Catheterization", category: "Cardiovascular" },
+  { name: "Carotid Endarterectomy", category: "Cardiovascular" },
+  
+  // Orthopedic
+  { name: "Total Knee Replacement (TKR)", category: "Orthopedic" },
+  { name: "Total Hip Replacement (THR)", category: "Orthopedic" },
+  { name: "Hip Arthroscopy", category: "Orthopedic" },
+  { name: "Knee Arthroscopy", category: "Orthopedic" },
+  { name: "Shoulder Arthroscopy", category: "Orthopedic" },
+  { name: "ACL Reconstruction", category: "Orthopedic" },
+  { name: "Rotator Cuff Repair", category: "Orthopedic" },
+  { name: "Spinal Fusion", category: "Orthopedic" },
+  { name: "Laminectomy", category: "Orthopedic" },
+  { name: "Discectomy", category: "Orthopedic" },
+  { name: "Carpal Tunnel Release", category: "Orthopedic" },
+  { name: "Bunionectomy", category: "Orthopedic" },
+  
+  // Gastrointestinal
+  { name: "Appendectomy", category: "Gastrointestinal" },
+  { name: "Cholecystectomy (Gallbladder Removal)", category: "Gastrointestinal" },
+  { name: "Hernia Repair (Inguinal)", category: "Gastrointestinal" },
+  { name: "Hernia Repair (Umbilical)", category: "Gastrointestinal" },
+  { name: "Hernia Repair (Hiatal)", category: "Gastrointestinal" },
+  { name: "Colonoscopy with Polypectomy", category: "Gastrointestinal" },
+  { name: "Gastric Bypass", category: "Gastrointestinal" },
+  { name: "Sleeve Gastrectomy", category: "Gastrointestinal" },
+  { name: "Colectomy", category: "Gastrointestinal" },
+  { name: "Hemorrhoidectomy", category: "Gastrointestinal" },
+  
+  // Gynecological
+  { name: "Hysterectomy", category: "Gynecological" },
+  { name: "Cesarean Section (C-Section)", category: "Gynecological" },
+  { name: "Tubal Ligation", category: "Gynecological" },
+  { name: "Ovarian Cystectomy", category: "Gynecological" },
+  { name: "Myomectomy (Fibroid Removal)", category: "Gynecological" },
+  { name: "Endometrial Ablation", category: "Gynecological" },
+  { name: "D&C (Dilation and Curettage)", category: "Gynecological" },
+  
+  // Urological
+  { name: "Prostatectomy", category: "Urological" },
+  { name: "Transurethral Resection of Prostate (TURP)", category: "Urological" },
+  { name: "Cystoscopy", category: "Urological" },
+  { name: "Nephrectomy (Kidney Removal)", category: "Urological" },
+  { name: "Kidney Stone Removal", category: "Urological" },
+  { name: "Vasectomy", category: "Urological" },
+  { name: "Circumcision", category: "Urological" },
+  
+  // ENT (Ear, Nose, Throat)
+  { name: "Tonsillectomy", category: "ENT" },
+  { name: "Adenoidectomy", category: "ENT" },
+  { name: "Septoplasty", category: "ENT" },
+  { name: "Sinus Surgery (Endoscopic)", category: "ENT" },
+  { name: "Tympanoplasty (Eardrum Repair)", category: "ENT" },
+  { name: "Thyroidectomy", category: "ENT" },
+  { name: "Parathyroidectomy", category: "ENT" },
+  
+  // Ophthalmological
+  { name: "Cataract Surgery", category: "Ophthalmological" },
+  { name: "LASIK Eye Surgery", category: "Ophthalmological" },
+  { name: "Glaucoma Surgery", category: "Ophthalmological" },
+  { name: "Vitrectomy", category: "Ophthalmological" },
+  { name: "Retinal Detachment Repair", category: "Ophthalmological" },
+  
+  // Dental/Oral
+  { name: "Tooth Extraction", category: "Dental/Oral" },
+  { name: "Wisdom Teeth Removal", category: "Dental/Oral" },
+  { name: "Dental Implant", category: "Dental/Oral" },
+  { name: "Root Canal", category: "Dental/Oral" },
+  
+  // Neurosurgical
+  { name: "Craniotomy", category: "Neurosurgical" },
+  { name: "Brain Tumor Resection", category: "Neurosurgical" },
+  { name: "Ventriculoperitoneal Shunt", category: "Neurosurgical" },
+  
+  // Plastic/Reconstructive
+  { name: "Mastectomy", category: "Plastic/Reconstructive" },
+  { name: "Breast Reconstruction", category: "Plastic/Reconstructive" },
+  { name: "Breast Augmentation", category: "Plastic/Reconstructive" },
+  { name: "Breast Reduction", category: "Plastic/Reconstructive" },
+  { name: "Skin Graft", category: "Plastic/Reconstructive" },
+  { name: "Rhinoplasty", category: "Plastic/Reconstructive" },
+  { name: "Liposuction", category: "Plastic/Reconstructive" },
+  
+  // Vascular
+  { name: "Varicose Vein Removal", category: "Vascular" },
+  { name: "Arteriovenous Fistula Creation", category: "Vascular" },
+  { name: "Aortic Aneurysm Repair", category: "Vascular" },
+  
+  // Thoracic
+  { name: "Lung Biopsy", category: "Thoracic" },
+  { name: "Lobectomy (Lung)", category: "Thoracic" },
+  { name: "Thoracotomy", category: "Thoracic" },
+  
+  // Other Common Procedures
+  { name: "Biopsy (various sites)", category: "General" },
+  { name: "Cyst Removal", category: "General" },
+  { name: "Abscess Drainage", category: "General" },
+  { name: "Laparoscopy (Diagnostic)", category: "General" },
+];
+
+/**
+ * Search surgical procedures from curated list
+ * @param query - Search term (minimum 2 characters)
+ * @returns Array of surgery suggestions with categories
+ */
+export async function searchSurgeries(query: string): Promise<MedicalSuggestion[]> {
+  if (query.length < 2) return [];
+
+  const lowerQuery = query.toLowerCase();
+
+  // Filter common surgeries
+  const matches = COMMON_SURGERIES
+    .filter(surgery => 
+      surgery.name.toLowerCase().includes(lowerQuery) || 
+      surgery.category.toLowerCase().includes(lowerQuery)
+    )
+    .slice(0, 10)
+    .map(surgery => ({
+      value: surgery.name,
+      label: `${surgery.name} (${surgery.category})`,
+      code: surgery.category,
+    }));
+
+  return matches;
+}
