@@ -32,7 +32,19 @@ export default function MedicalVaultShare() {
         body: { token }
       });
 
-      if (functionError || !data.success) {
+      // Handle edge function errors (410, 404, etc.)
+      if (functionError) {
+        console.error('Edge function error:', functionError);
+        // Try to extract error type from response body
+        const errorBody = functionError.context?.body;
+        const errorType = errorBody?.error || 'internal_error';
+        setError(errorType as ErrorType);
+        setLoading(false);
+        return;
+      }
+
+      // Handle unsuccessful validation responses
+      if (!data?.success) {
         const errorType = data?.error || 'internal_error';
         setError(errorType as ErrorType);
         setLoading(false);
