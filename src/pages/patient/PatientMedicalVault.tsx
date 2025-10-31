@@ -97,10 +97,9 @@ export default function PatientMedicalVault() {
         .from("patient_vitals")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
-        .order("date_recorded", { ascending: false })
-        .limit(1);
+        .order("date_recorded", { ascending: false });
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!patientAccount?.id,
   });
@@ -212,7 +211,7 @@ export default function PatientMedicalVault() {
         
         <VitalsSection 
           patientAccountId={patientAccount?.id}
-          latestVitals={vitals?.[0]}
+          vitals={vitals || []}
         />
         
         <ImmunizationsSection 

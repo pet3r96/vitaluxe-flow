@@ -3426,6 +3426,7 @@ export type Database = {
           temperature: number | null
           temperature_unit: string | null
           updated_at: string
+          vital_type: string | null
           weight: number | null
           weight_unit: string | null
         }
@@ -3447,6 +3448,7 @@ export type Database = {
           temperature?: number | null
           temperature_unit?: string | null
           updated_at?: string
+          vital_type?: string | null
           weight?: number | null
           weight_unit?: string | null
         }
@@ -3468,6 +3470,7 @@ export type Database = {
           temperature?: number | null
           temperature_unit?: string | null
           updated_at?: string
+          vital_type?: string | null
           weight?: number | null
           weight_unit?: string | null
         }

@@ -12,11 +12,11 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 
 const vitalsSchema = z.object({
+  vital_type: z.string().optional(),
   height: z.string().optional(),
   height_unit: z.string().optional(),
   weight: z.string().optional(),
   weight_unit: z.string().optional(),
-  bmi: z.string().optional(),
   blood_pressure_systolic: z.string().optional(),
   blood_pressure_diastolic: z.string().optional(),
   pulse: z.string().optional(),
@@ -25,7 +25,7 @@ const vitalsSchema = z.object({
   oxygen_saturation: z.string().optional(),
   cholesterol: z.string().optional(),
   blood_sugar: z.string().optional(),
-  date_recorded: z.string().min(1, "Date recorded is required"),
+  date_recorded: z.string().min(1, "Date is required"),
 });
 
 type VitalsFormData = z.infer<typeof vitalsSchema>;
@@ -35,20 +35,38 @@ interface VitalsDialogProps {
   onOpenChange: (open: boolean) => void;
   patientAccountId: string;
   vitals?: any;
-  mode: "add" | "edit" | "view";
+  mode: "add" | "edit" | "view" | "add-basic" | "add-timeseries";
+  basicVitalType?: "height" | "weight" | null;
 }
 
-export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mode }: VitalsDialogProps) {
+export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mode, basicVitalType }: VitalsDialogProps) {
   const isReadOnly = mode === "view";
+  const isBasicVitalMode = mode === "add-basic";
+  const isTimeSeriesMode = mode === "add-timeseries";
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<VitalsFormData>({
     resolver: zodResolver(vitalsSchema),
-    defaultValues: vitals || {
+    defaultValues: vitals ? {
+      vital_type: vitals.vital_type,
+      height: vitals.height?.toString() || "",
+      height_unit: vitals.height_unit || "in",
+      weight: vitals.weight?.toString() || "",
+      weight_unit: vitals.weight_unit || "lbs",
+      blood_pressure_systolic: vitals.blood_pressure_systolic?.toString() || "",
+      blood_pressure_diastolic: vitals.blood_pressure_diastolic?.toString() || "",
+      pulse: vitals.pulse?.toString() || "",
+      temperature: vitals.temperature?.toString() || "",
+      temperature_unit: vitals.temperature_unit || "F",
+      oxygen_saturation: vitals.oxygen_saturation?.toString() || "",
+      cholesterol: vitals.cholesterol?.toString() || "",
+      blood_sugar: vitals.blood_sugar?.toString() || "",
+      date_recorded: vitals.date_recorded?.substring(0, 7) || new Date().toISOString().substring(0, 7),
+    } : {
+      vital_type: isBasicVitalMode ? basicVitalType || "" : "",
       height: "",
       height_unit: "in",
       weight: "",
       weight_unit: "lbs",
-      bmi: "",
       blood_pressure_systolic: "",
       blood_pressure_diastolic: "",
       pulse: "",
@@ -57,55 +75,56 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       oxygen_saturation: "",
       cholesterol: "",
       blood_sugar: "",
-      date_recorded: new Date().toISOString().split('T')[0],
+      date_recorded: new Date().toISOString().substring(0, 7),
     },
   });
 
+  const selectedVitalType = watch("vital_type");
   const height = watch("height");
   const weight = watch("weight");
-  const heightUnit = watch("height_unit");
-  const weightUnit = watch("weight_unit");
 
-  // Auto-calculate BMI
+  // Set vital type for basic vital mode
   useEffect(() => {
-    if (height && weight) {
-      const heightValue = parseFloat(height);
-      const weightValue = parseFloat(weight);
-      
-      if (!isNaN(heightValue) && !isNaN(weightValue) && heightValue > 0) {
-        let bmi: number;
-        
-        // Convert to standard units (inches and lbs) if needed
-        const heightInches = heightUnit === "cm" ? heightValue / 2.54 : heightValue;
-        const weightLbs = weightUnit === "kg" ? weightValue * 2.20462 : weightValue;
-        
-        // BMI = (weight in lbs / (height in inches)²) × 703
-        bmi = (weightLbs / (heightInches * heightInches)) * 703;
-        
-        setValue("bmi", bmi.toFixed(1));
-      }
+    if (isBasicVitalMode && basicVitalType) {
+      setValue("vital_type", basicVitalType);
     }
-  }, [height, weight, heightUnit, weightUnit, setValue]);
+  }, [isBasicVitalMode, basicVitalType, setValue]);
 
   const mutation = useOptimisticMutation(
     async (data: VitalsFormData) => {
-      // Convert string values to numbers for database
-      const formattedData = {
-        height: data.height ? parseFloat(data.height) : null,
-        height_unit: data.height_unit || null,
-        weight: data.weight ? parseFloat(data.weight) : null,
-        weight_unit: data.weight_unit || null,
-        bmi: data.bmi ? parseFloat(data.bmi) : null,
-        blood_pressure_systolic: data.blood_pressure_systolic ? parseInt(data.blood_pressure_systolic) : null,
-        blood_pressure_diastolic: data.blood_pressure_diastolic ? parseInt(data.blood_pressure_diastolic) : null,
-        pulse: data.pulse ? parseInt(data.pulse) : null,
-        temperature: data.temperature ? parseFloat(data.temperature) : null,
-        temperature_unit: data.temperature_unit || null,
-        oxygen_saturation: data.oxygen_saturation ? parseInt(data.oxygen_saturation) : null,
-        cholesterol: data.cholesterol ? parseInt(data.cholesterol) : null,
-        blood_sugar: data.blood_sugar ? parseInt(data.blood_sugar) : null,
-        date_recorded: data.date_recorded,
+      const vitalType = data.vital_type || vitals?.vital_type;
+      
+      // Convert YYYY-MM to YYYY-MM-01 for database storage
+      const fullDate = data.date_recorded ? data.date_recorded + "-01" : new Date().toISOString().substring(0, 7) + "-01";
+
+      // Build the data object based on vital type
+      const formattedData: any = {
+        vital_type: vitalType,
+        date_recorded: fullDate,
       };
+
+      // Add fields based on vital type
+      if (vitalType === 'height') {
+        formattedData.height = data.height ? parseFloat(data.height) : null;
+        formattedData.height_unit = data.height_unit || null;
+      } else if (vitalType === 'weight') {
+        formattedData.weight = data.weight ? parseFloat(data.weight) : null;
+        formattedData.weight_unit = data.weight_unit || null;
+      } else if (vitalType === 'blood_pressure') {
+        formattedData.blood_pressure_systolic = data.blood_pressure_systolic ? parseInt(data.blood_pressure_systolic) : null;
+        formattedData.blood_pressure_diastolic = data.blood_pressure_diastolic ? parseInt(data.blood_pressure_diastolic) : null;
+      } else if (vitalType === 'pulse') {
+        formattedData.pulse = data.pulse ? parseInt(data.pulse) : null;
+      } else if (vitalType === 'temperature') {
+        formattedData.temperature = data.temperature ? parseFloat(data.temperature) : null;
+        formattedData.temperature_unit = data.temperature_unit || null;
+      } else if (vitalType === 'oxygen_saturation') {
+        formattedData.oxygen_saturation = data.oxygen_saturation ? parseInt(data.oxygen_saturation) : null;
+      } else if (vitalType === 'cholesterol') {
+        formattedData.cholesterol = data.cholesterol ? parseInt(data.cholesterol) : null;
+      } else if (vitalType === 'blood_sugar') {
+        formattedData.blood_sugar = data.blood_sugar ? parseInt(data.blood_sugar) : null;
+      }
 
       if (mode === "edit" && vitals) {
         const { error } = await supabase
@@ -113,7 +132,15 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
           .update({ ...formattedData, updated_at: new Date().toISOString() })
           .eq("id", vitals.id);
         if (error) throw error;
+      } else if (isBasicVitalMode && vitals) {
+        // Update existing height/weight record
+        const { error } = await supabase
+          .from("patient_vitals")
+          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .eq("id", vitals.id);
+        if (error) throw error;
       } else {
+        // Insert new record
         const { error } = await supabase
           .from("patient_vitals")
           .insert({
@@ -126,15 +153,15 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
     {
       queryKey: ["patient-vitals", patientAccountId],
       updateFn: (oldData: any, variables) => {
-        if (mode === "edit") {
+        if (mode === "edit" || (isBasicVitalMode && vitals)) {
           return oldData?.map((item: any) =>
             item.id === vitals.id ? { ...item, ...variables } : item
           );
         }
         return [...(oldData || []), { ...variables, id: crypto.randomUUID() }];
       },
-      successMessage: mode === "edit" ? "Vitals updated successfully" : "Vitals added successfully",
-      errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} vitals`,
+      successMessage: mode === "edit" || (isBasicVitalMode && vitals) ? "Vitals updated successfully" : "Vitals added successfully",
+      errorMessage: `Failed to ${mode === "edit" || (isBasicVitalMode && vitals) ? "update" : "add"} vitals`,
       onSuccess: () => onOpenChange(false),
     }
   );
@@ -143,32 +170,72 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
     mutation.mutate(data);
   };
 
+  const getDialogTitle = () => {
+    if (mode === "view") return "View Vitals";
+    if (isBasicVitalMode) {
+      if (vitals) {
+        return `Edit ${basicVitalType === 'height' ? 'Height' : 'Weight'}`;
+      }
+      return `Add ${basicVitalType === 'height' ? 'Height' : 'Weight'}`;
+    }
+    if (mode === "edit") return "Edit Vitals";
+    return "Add Vitals";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gray-950 dark:bg-gray-950 border-gray-800">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-950 dark:bg-gray-950 border-gray-800">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-            {mode === "add" ? "Add Vitals" : mode === "edit" ? "Edit Vitals" : "View Vitals"}
+            {getDialogTitle()}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="date_recorded">Date / Time Recorded *</Label>
-            <Input
-              id="date_recorded"
-              type="date"
-              {...register("date_recorded")}
-              disabled={isReadOnly}
-              className={errors.date_recorded ? "border-red-500" : ""}
-            />
-            {errors.date_recorded && (
-              <p className="text-sm text-red-500">{errors.date_recorded.message}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Vital Type Selector for add-timeseries mode */}
+          {isTimeSeriesMode && (
             <div className="space-y-2">
-              <Label htmlFor="height">Height</Label>
+              <Label htmlFor="vital_type">Vital Type *</Label>
+              <Select
+                value={selectedVitalType || ""}
+                onValueChange={(value) => setValue("vital_type", value)}
+                disabled={isReadOnly}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vital type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blood_pressure">Blood Pressure</SelectItem>
+                  <SelectItem value="pulse">Pulse</SelectItem>
+                  <SelectItem value="temperature">Temperature</SelectItem>
+                  <SelectItem value="oxygen_saturation">Oxygen Saturation</SelectItem>
+                  <SelectItem value="cholesterol">Cholesterol</SelectItem>
+                  <SelectItem value="blood_sugar">Blood Sugar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Date Input - Month/Year for time-series, hidden for basic vitals */}
+          {!isBasicVitalMode && (
+            <div className="space-y-2">
+              <Label htmlFor="date_recorded">Date Recorded (Month / Year) *</Label>
+              <Input
+                id="date_recorded"
+                type="month"
+                {...register("date_recorded")}
+                disabled={isReadOnly}
+                className={errors.date_recorded ? "border-red-500" : ""}
+              />
+              {errors.date_recorded && (
+                <p className="text-sm text-red-500">{errors.date_recorded.message}</p>
+              )}
+            </div>
+          )}
+
+          {/* Dynamic Fields Based on Vital Type */}
+          {(isBasicVitalMode ? basicVitalType === 'height' : selectedVitalType === 'height' || (!isTimeSeriesMode && vitals?.height)) && (
+            <div className="space-y-2">
+              <Label htmlFor="height">Height *</Label>
               <div className="flex gap-2">
                 <Input
                   id="height"
@@ -183,7 +250,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                   onValueChange={(value) => setValue("height_unit", value)}
                   disabled={isReadOnly}
                 >
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -193,9 +260,11 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                 </Select>
               </div>
             </div>
+          )}
 
+          {(isBasicVitalMode ? basicVitalType === 'weight' : selectedVitalType === 'weight' || (!isTimeSeriesMode && vitals?.weight)) && (
             <div className="space-y-2">
-              <Label htmlFor="weight">Weight</Label>
+              <Label htmlFor="weight">Weight *</Label>
               <div className="flex gap-2">
                 <Input
                   id="weight"
@@ -210,7 +279,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                   onValueChange={(value) => setValue("weight_unit", value)}
                   disabled={isReadOnly}
                 >
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -220,22 +289,11 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                 </Select>
               </div>
             </div>
+          )}
 
+          {(selectedVitalType === 'blood_pressure' || (!isTimeSeriesMode && !isBasicVitalMode && vitals?.blood_pressure_systolic)) && (
             <div className="space-y-2">
-              <Label htmlFor="bmi">BMI (Auto-calculated)</Label>
-              <Input
-                id="bmi"
-                {...register("bmi")}
-                disabled
-                placeholder="--"
-                className="bg-muted"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="blood_pressure_systolic">Blood Pressure</Label>
+              <Label htmlFor="blood_pressure_systolic">Blood Pressure *</Label>
               <div className="flex gap-2 items-center">
                 <Input
                   id="blood_pressure_systolic"
@@ -255,9 +313,11 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
               </div>
               <p className="text-xs text-muted-foreground">mmHg (Systolic/Diastolic)</p>
             </div>
+          )}
 
+          {(selectedVitalType === 'pulse' || (!isTimeSeriesMode && !isBasicVitalMode && vitals?.pulse)) && (
             <div className="space-y-2">
-              <Label htmlFor="pulse">Pulse</Label>
+              <Label htmlFor="pulse">Pulse *</Label>
               <Input
                 id="pulse"
                 {...register("pulse")}
@@ -267,9 +327,11 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
               />
               <p className="text-xs text-muted-foreground">bpm</p>
             </div>
+          )}
 
+          {(selectedVitalType === 'temperature' || (!isTimeSeriesMode && !isBasicVitalMode && vitals?.temperature)) && (
             <div className="space-y-2">
-              <Label htmlFor="temperature">Temperature</Label>
+              <Label htmlFor="temperature">Temperature *</Label>
               <div className="flex gap-2">
                 <Input
                   id="temperature"
@@ -284,7 +346,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                   onValueChange={(value) => setValue("temperature_unit", value)}
                   disabled={isReadOnly}
                 >
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -294,11 +356,11 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                 </Select>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {(selectedVitalType === 'oxygen_saturation' || (!isTimeSeriesMode && !isBasicVitalMode && vitals?.oxygen_saturation)) && (
             <div className="space-y-2">
-              <Label htmlFor="oxygen_saturation">Oxygen Saturation</Label>
+              <Label htmlFor="oxygen_saturation">Oxygen Saturation *</Label>
               <Input
                 id="oxygen_saturation"
                 {...register("oxygen_saturation")}
@@ -308,9 +370,11 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
               />
               <p className="text-xs text-muted-foreground">%</p>
             </div>
+          )}
 
+          {(selectedVitalType === 'cholesterol' || (!isTimeSeriesMode && !isBasicVitalMode && vitals?.cholesterol)) && (
             <div className="space-y-2">
-              <Label htmlFor="cholesterol">Cholesterol</Label>
+              <Label htmlFor="cholesterol">Cholesterol *</Label>
               <Input
                 id="cholesterol"
                 {...register("cholesterol")}
@@ -320,9 +384,11 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
               />
               <p className="text-xs text-muted-foreground">mg/dL</p>
             </div>
+          )}
 
+          {(selectedVitalType === 'blood_sugar' || (!isTimeSeriesMode && !isBasicVitalMode && vitals?.blood_sugar)) && (
             <div className="space-y-2">
-              <Label htmlFor="blood_sugar">Blood Sugar</Label>
+              <Label htmlFor="blood_sugar">Blood Sugar *</Label>
               <Input
                 id="blood_sugar"
                 {...register("blood_sugar")}
@@ -332,7 +398,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
               />
               <p className="text-xs text-muted-foreground">mg/dL</p>
             </div>
-          </div>
+          )}
 
           {!isReadOnly && (
             <div className="flex justify-end gap-3 pt-4 border-t">
@@ -350,7 +416,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
                 className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === "edit" ? "Update" : "Add"} Vitals
+                {mode === "edit" || (isBasicVitalMode && vitals) ? "Update" : "Add"} Vitals
               </Button>
             </div>
           )}
