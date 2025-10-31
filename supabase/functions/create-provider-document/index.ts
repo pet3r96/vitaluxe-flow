@@ -202,9 +202,9 @@ Deno.serve(async (req) => {
     if (patientIds && patientIds.length > 0) {
       console.log('[create-provider-document] Assigning to patients:', patientIds);
 
-    // Validate that all patients belong to the determined practice
+    // Validate that all patients belong to the determined practice using patient_accounts
     const { data: validPatients, error: validationError } = await supabaseAdmin
-      .from('patients')
+      .from('patient_accounts')
       .select('id, practice_id')
       .in('id', patientIds);
 

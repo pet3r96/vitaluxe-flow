@@ -24,8 +24,9 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       console.log("Fetching patients for practice:", effectivePracticeId);
+      // Fetch from patient_accounts using new patient system
       const { data, error } = await supabase
-        .from("patients")
+        .from("patient_accounts")
         .select("id, name")
         .eq("practice_id", effectivePracticeId)
         .order("name");
@@ -51,7 +52,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
         {
           event: '*',
           schema: 'public',
-          table: 'patients',
+          table: 'patient_accounts',
           filter: `practice_id=eq.${effectivePracticeId}`,
         },
         () => {

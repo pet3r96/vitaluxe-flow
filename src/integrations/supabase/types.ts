@@ -5318,7 +5318,7 @@ export type Database = {
             foreignKeyName: "provider_document_patients_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
-            referencedRelation: "patients"
+            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -5326,7 +5326,7 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
-            referencedColumns: ["patient_id"]
+            referencedColumns: ["patient_account_id"]
           },
         ]
       }
@@ -7486,7 +7486,25 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_provider_documents: { Args: { p_practice_id: string }; Returns: Json }
+      get_provider_documents: {
+        Args: { p_practice_id: string }
+        Returns: {
+          assigned_patient_id: string
+          assigned_patient_names: string[]
+          document_name: string
+          document_type: string
+          file_size: number
+          id: string
+          is_internal: boolean
+          mime_type: string
+          notes: string
+          practice_id: string
+          storage_path: string
+          tags: string[]
+          uploaded_at: string
+          uploaded_by: string
+        }[]
+      }
       get_rep_earnings: {
         Args: { _rep_id: string }
         Returns: {
