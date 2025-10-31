@@ -37,6 +37,19 @@ export const ProviderDetailsDialog = ({
     phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
   });
 
+  // Sync form data when provider changes to prevent cross-contamination
+  useEffect(() => {
+    setFormData({
+      fullName: provider.profiles?.full_name || provider.profiles?.name || "",
+      prescriberName: provider.profiles?.full_name || "",
+      npi: sanitizeEncrypted(provider.profiles?.npi),
+      dea: sanitizeEncrypted(provider.profiles?.dea),
+      licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
+      phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
+    });
+    setIsEditing(false); // Reset editing state when provider changes
+  }, [provider]);
+
   const isPractice = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
   const isOwnProvider = effectiveRole === "provider" && effectiveUserId === provider.user_id;
   const isAdmin = effectiveRole === "admin";
