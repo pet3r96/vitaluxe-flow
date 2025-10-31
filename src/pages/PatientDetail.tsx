@@ -136,17 +136,9 @@ export default function PatientDetail() {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-1">Date of Birth</p>
+                  <p className="text-sm font-semibold text-muted-foreground mb-1">Phone</p>
                   <p className="text-sm">
-                    {patient.date_of_birth 
-                      ? new Date(patient.date_of_birth).toLocaleDateString() 
-                      : "Not provided"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-1">Gender</p>
-                  <p className="text-sm capitalize">
-                    {patient.gender_at_birth || "Not provided"}
+                    {patient.phone || "Not provided"}
                   </p>
                 </div>
                 <div>
@@ -156,12 +148,6 @@ export default function PatientDetail() {
                       ? `${patient.emergency_contact_name}${patient.emergency_contact_phone ? ` - ${patient.emergency_contact_phone}` : ''}` 
                       : "Not provided"}
                   </p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-1">Status</p>
-                  <Badge variant={patient.status === 'active' ? 'default' : 'secondary'}>
-                    {patient.status || 'active'}
-                  </Badge>
                 </div>
               </div>
             </CardContent>
