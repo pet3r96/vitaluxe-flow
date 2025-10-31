@@ -53,6 +53,10 @@ export function BeingTreatedPanel({
             last_name,
             email
           ),
+          provider:providers!patient_appointments_provider_id_fkey(
+            id,
+            user:profiles!providers_user_id_fkey(full_name)
+          ),
           practice_rooms (
             id,
             name
@@ -80,9 +84,9 @@ export function BeingTreatedPanel({
     };
   }, [practiceId, refetch]);
 
-  const getProviderName = (providerId: string) => {
-    const provider = providers.find((p) => p.id === providerId);
-    return provider?.user?.profiles?.full_name || "Unknown Provider";
+  const getProviderName = (appointment: any) => {
+    // Use the directly joined provider data from the query
+    return appointment.provider?.user?.full_name || "Unknown Provider";
   };
 
   const getTreatmentDuration = (startedAt: string) => {
@@ -175,7 +179,7 @@ export function BeingTreatedPanel({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{getProviderName(appointment.provider_id)}</TableCell>
+                      <TableCell>{getProviderName(appointment)}</TableCell>
                       <TableCell>
                         {appointment.practice_rooms ? (
                           <Badge variant="secondary">

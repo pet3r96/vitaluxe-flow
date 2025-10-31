@@ -49,7 +49,7 @@ export function WaitingRoomPanel({
           patient:patient_accounts(*),
           provider:providers!patient_appointments_provider_id_fkey(
             id,
-            user:profiles(full_name)
+            user:profiles!providers_user_id_fkey(full_name)
           )
         `)
         .eq("practice_id", practiceId)
