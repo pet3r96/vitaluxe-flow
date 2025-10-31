@@ -146,7 +146,9 @@ export default function Checkout() {
           const patientMap = new Map(patients.map((p: any) => [p.id, p]));
           for (const line of lines) {
             if (line.patient_id) {
-              line.patient = patientMap.get(line.patient_id) || null;
+              const patient = patientMap.get(line.patient_id) || null;
+              line.patient = patient;
+              line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
             }
           }
         }
@@ -219,7 +221,9 @@ export default function Checkout() {
         const patientMap = new Map(patients.map((p: any) => [p.id, p]));
         for (const line of lines) {
           if (line.patient_id) {
-            line.patient = patientMap.get(line.patient_id) || null;
+            const patient = patientMap.get(line.patient_id) || null;
+            line.patient = patient;
+            line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
           }
         }
       }
