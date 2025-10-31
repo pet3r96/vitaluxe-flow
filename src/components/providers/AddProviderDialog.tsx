@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,9 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
   const [npiVerificationStatus, setNpiVerificationStatus] = useState<
     null | "verifying" | "verified" | "failed"
   >(null);
+  
+  // Ref to track current NPI for race condition prevention
+  const currentNpiRef = useRef(formData.npi);
 
   const { data: practices } = useQuery({
     queryKey: ["practices"],
@@ -275,6 +278,9 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                 const value = e.target.value.replace(/\D/g, '');
                 setFormData({ ...formData, npi: value });
                 
+                // Update ref to track current NPI
+                currentNpiRef.current = value;
+                
                 // Clear error immediately when user changes the value
                 setValidationErrors(prev => ({ ...prev, npi: "" }));
                 
@@ -288,29 +294,26 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                 // Real-time NPI verification
                 if (value && value.length === 10) {
                   verifyNPIDebounced(value, (result) => {
-                    // Only apply result if it matches the CURRENT form value
+                    // Only apply result if it matches the CURRENT ref value
                     // (prevents race conditions from stale debounced calls)
-                    setFormData(currentFormData => {
-                      if (currentFormData.npi === result.npi) {
-                        if (result.valid) {
-                          setNpiVerificationStatus("verified");
-                          // Show success message for all valid NPIs
-                          if (result.providerName) {
-                            toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
-                          } else {
-                            // Organization NPIs or NPIs without names
-                            toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
-                          }
-                          if (result.warning) {
-                            toast.info(result.warning);
-                          }
-                        } else if (result.error) {
-                          setNpiVerificationStatus("failed");
-                          setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
+                    if (currentNpiRef.current === result.npi) {
+                      if (result.valid) {
+                        setNpiVerificationStatus("verified");
+                        // Show success message for all valid NPIs
+                        if (result.providerName) {
+                          toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                        } else {
+                          // Organization NPIs or NPIs without names
+                          toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
                         }
+                        if (result.warning) {
+                          toast.info(result.warning);
+                        }
+                      } else if (result.error) {
+                        setNpiVerificationStatus("failed");
+                        setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
                       }
-                      return currentFormData;
-                    });
+                    }
                   });
                 }
               }}
