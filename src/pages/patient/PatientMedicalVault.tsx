@@ -129,28 +129,21 @@ export default function PatientMedicalVault() {
             
             {/* Title - 30% smaller */}
             <div className="text-center space-y-1">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-                Medical Vault
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+                {isLoading ? (
+                  "Loading Secure Medical Vault"
+                ) : error ? (
+                  "Secure Medical Vault"
+                ) : patientAccount?.first_name && patientAccount?.last_name ? (
+                  `${patientAccount.first_name} ${patientAccount.last_name} Secure Medical Vault`
+                ) : patientAccount?.first_name || patientAccount?.last_name ? (
+                  `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim() + " Secure Medical Vault"
+                ) : (
+                  "Patient Secure Medical Vault"
+                )}
               </h1>
               <p className="text-gray-300 text-xs md:text-sm font-light tracking-wide">
-                Secure Health Information
-              </p>
-            </div>
-            
-            {/* Patient Name Badge - Reduced size */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 shadow-xl">
-              <p className="text-sm md:text-base font-semibold text-white">
-                {isLoading ? (
-                  <span className="animate-pulse">Loading...</span>
-                ) : error ? (
-                  <span className="text-red-300">Error loading patient data</span>
-                ) : patientAccount?.first_name && patientAccount?.last_name ? (
-                  `${patientAccount.first_name} ${patientAccount.last_name}`
-                ) : patientAccount?.first_name || patientAccount?.last_name ? (
-                  `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim()
-                ) : (
-                  'Patient Name Not Set'
-                )}
+                powered by VitaLuxe Services
               </p>
             </div>
             
