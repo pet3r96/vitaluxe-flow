@@ -439,7 +439,7 @@ export const ProductsDataTable = () => {
           .insert({
             cart_id: cart.id,
             product_id: productForCart.id,
-            patient_id: patientRecord.patient_account_id, // Use patient_account_id for linking
+            patient_id: patientRecord.id, // Use patients.id for foreign key
             provider_id: actualProviderId,
             patient_name: patientRecord.name || "Unknown",
             patient_email: patientRecord.email,
