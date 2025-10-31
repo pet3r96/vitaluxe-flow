@@ -2,7 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useForm } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +16,7 @@ const emergencyContactSchema = z.object({
   phone: z.string().min(10, "Phone number is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   address: z.string().optional(),
-  contact_order: z.number().optional(),
+  preferred_contact_method: z.enum(['phone', 'sms', 'email', 'any']).default('any'),
 });
 
 type EmergencyContactFormData = z.infer<typeof emergencyContactSchema>;
@@ -31,7 +32,7 @@ interface EmergencyContactDialogProps {
 export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, contact, mode }: EmergencyContactDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<EmergencyContactFormData>({
+  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<EmergencyContactFormData>({
     resolver: zodResolver(emergencyContactSchema),
     defaultValues: contact || {
       name: "",
@@ -39,7 +40,7 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       phone: "",
       email: "",
       address: "",
-      contact_order: 1,
+      preferred_contact_method: "any",
     },
   });
 
@@ -51,7 +52,7 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
         phone: data.phone,
         email: data.email || null,
         address: data.address || null,
-        contact_order: data.contact_order || 1,
+        preferred_contact_method: data.preferred_contact_method,
       };
 
       if (mode === "edit" && contact) {
@@ -129,19 +130,6 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact_order">Contact Order</Label>
-              <Input
-                id="contact_order"
-                type="number"
-                {...register("contact_order", { valueAsNumber: true })}
-                placeholder="1"
-                disabled={isReadOnly}
-                min="1"
-              />
-              <p className="text-xs text-muted-foreground">Priority order (1 = first contact)</p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="phone">Phone *</Label>
               <Input
                 id="phone"
@@ -178,6 +166,31 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
               {...register("address")}
               placeholder="123 Main St, City, State ZIP"
               disabled={isReadOnly}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="preferred_contact_method">Preferred Contact Method</Label>
+            <Controller
+              name="preferred_contact_method"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  disabled={isReadOnly}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select preferred contact method" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="any">Any Method</SelectItem>
+                    <SelectItem value="phone">Phone Call</SelectItem>
+                    <SelectItem value="sms">Text Message (SMS)</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             />
           </div>
 

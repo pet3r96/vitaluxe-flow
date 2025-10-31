@@ -2802,6 +2802,7 @@ export type Database = {
           name: string
           patient_account_id: string
           phone: string
+          preferred_contact_method: string | null
           relationship: string | null
           updated_at: string
         }
@@ -2814,6 +2815,7 @@ export type Database = {
           name: string
           patient_account_id: string
           phone: string
+          preferred_contact_method?: string | null
           relationship?: string | null
           updated_at?: string
         }
@@ -2826,6 +2828,7 @@ export type Database = {
           name?: string
           patient_account_id?: string
           phone?: string
+          preferred_contact_method?: string | null
           relationship?: string | null
           updated_at?: string
         }

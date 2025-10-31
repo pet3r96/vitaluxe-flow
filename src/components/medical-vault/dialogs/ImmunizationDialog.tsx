@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,9 +13,6 @@ import { Loader2 } from "lucide-react";
 const immunizationSchema = z.object({
   vaccine_name: z.string().min(1, "Vaccine name is required"),
   date_administered: z.string().min(1, "Date administered is required"),
-  lot_number: z.string().optional(),
-  administering_provider: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 type ImmunizationFormData = z.infer<typeof immunizationSchema>;
@@ -36,9 +33,6 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
     defaultValues: immunization || {
       vaccine_name: "",
       date_administered: "",
-      lot_number: "",
-      administering_provider: "",
-      notes: "",
     },
   });
 
@@ -47,9 +41,9 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
       const formattedData = {
         vaccine_name: data.vaccine_name,
         date_administered: data.date_administered,
-        lot_number: data.lot_number || null,
-        administering_provider: data.administering_provider || null,
-        notes: data.notes || null,
+        lot_number: null,
+        administering_provider: null,
+        notes: null,
       };
 
       if (mode === "edit" && immunization) {
@@ -97,8 +91,8 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2 md:col-span-2">
+          <div className="space-y-4">
+            <div className="space-y-2">
               <Label htmlFor="vaccine_name">Vaccine Name *</Label>
               <Input
                 id="vaccine_name"
@@ -113,10 +107,10 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date_administered">Date Administered *</Label>
+              <Label htmlFor="date_administered">Date Administered (Month/Year) *</Label>
               <Input
                 id="date_administered"
-                type="date"
+                type="month"
                 {...register("date_administered")}
                 disabled={isReadOnly}
                 className={errors.date_administered ? "border-red-500" : ""}
@@ -125,37 +119,6 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
                 <p className="text-sm text-red-500">{errors.date_administered.message}</p>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lot_number">Lot Number</Label>
-              <Input
-                id="lot_number"
-                {...register("lot_number")}
-                placeholder="e.g., ABC123"
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="administering_provider">Administering Provider</Label>
-              <Input
-                id="administering_provider"
-                {...register("administering_provider")}
-                placeholder="e.g., Dr. Smith, CVS Pharmacy"
-                disabled={isReadOnly}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              {...register("notes")}
-              placeholder="Additional information about this immunization"
-              disabled={isReadOnly}
-              rows={3}
-            />
           </div>
 
           {!isReadOnly && (

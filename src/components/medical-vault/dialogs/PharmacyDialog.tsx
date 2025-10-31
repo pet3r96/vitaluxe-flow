@@ -206,7 +206,7 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
               disabled={isReadOnly}
             />
             <Label htmlFor="is_preferred" className="text-sm font-medium cursor-pointer">
-              Set as Preferred Pharmacy
+              Mark as Preferred Pharmacy
             </Label>
           </div>
 

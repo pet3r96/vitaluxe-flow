@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,9 +13,6 @@ import { Loader2 } from "lucide-react";
 const surgerySchema = z.object({
   surgery_type: z.string().min(1, "Surgery type is required"),
   surgery_date: z.string().min(1, "Surgery date is required"),
-  surgeon_name: z.string().optional(),
-  hospital: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 type SurgeryFormData = z.infer<typeof surgerySchema>;
@@ -36,9 +33,6 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
     defaultValues: surgery || {
       surgery_type: "",
       surgery_date: "",
-      surgeon_name: "",
-      hospital: "",
-      notes: "",
     },
   });
 
@@ -47,9 +41,9 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
       const formattedData = {
         surgery_type: data.surgery_type,
         surgery_date: data.surgery_date,
-        surgeon_name: data.surgeon_name || null,
-        hospital: data.hospital || null,
-        notes: data.notes || null,
+        surgeon_name: null,
+        hospital: null,
+        notes: null,
       };
 
       if (mode === "edit" && surgery) {
@@ -97,9 +91,9 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="surgery_type">Surgery Type *</Label>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="surgery_type">Past Surgery Type *</Label>
               <Input
                 id="surgery_type"
                 {...register("surgery_type")}
@@ -113,10 +107,10 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="surgery_date">Surgery Date *</Label>
+              <Label htmlFor="surgery_date">Surgery Date (Month/Year) *</Label>
               <Input
                 id="surgery_date"
-                type="date"
+                type="month"
                 {...register("surgery_date")}
                 disabled={isReadOnly}
                 className={errors.surgery_date ? "border-red-500" : ""}
@@ -125,37 +119,6 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
                 <p className="text-sm text-red-500">{errors.surgery_date.message}</p>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="surgeon_name">Surgeon Name</Label>
-              <Input
-                id="surgeon_name"
-                {...register("surgeon_name")}
-                placeholder="e.g., Dr. Johnson"
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="hospital">Hospital / Facility</Label>
-              <Input
-                id="hospital"
-                {...register("hospital")}
-                placeholder="e.g., Memorial Hospital"
-                disabled={isReadOnly}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              {...register("notes")}
-              placeholder="Additional details about the surgery"
-              disabled={isReadOnly}
-              rows={4}
-            />
           </div>
 
           {!isReadOnly && (
