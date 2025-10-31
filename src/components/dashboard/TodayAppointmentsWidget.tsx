@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useAuth } from "@/contexts/AuthContext";
+import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
 
 export function TodayAppointmentsWidget() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -156,10 +157,20 @@ export function TodayAppointmentsWidget() {
                   <div className="flex items-start gap-3 w-full">
                     <Clock className="h-4 w-4 mt-1 text-muted-foreground" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">
-                        {appointment.patient_account 
-                          ? `${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`
-                          : "Unknown Patient"}
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium truncate flex-1">
+                          {appointment.patient_account 
+                            ? `${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`
+                            : "Unknown Patient"}
+                        </div>
+                        {appointment.patient_account?.id && (
+                          <PatientQuickAccessButton
+                            patientId={appointment.patient_account.id}
+                            patientName={`${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`}
+                            variant="icon"
+                            size="sm"
+                          />
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {format(new Date(appointment.start_time), "h:mm a")}

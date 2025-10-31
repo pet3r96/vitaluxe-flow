@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
 
 export function PatientQuickSearch() {
   const [open, setOpen] = useState(false);
@@ -76,17 +77,28 @@ export function PatientQuickSearch() {
                 key={patient.id}
                 value={`${patient.first_name} ${patient.last_name}`}
                 onSelect={() => handleSelect(patient.id)}
+                className="flex items-center justify-between"
               >
-                <User className="mr-2 h-4 w-4" />
-                <div className="flex flex-col">
-                  <span>
-                    {patient.first_name} {patient.last_name}
-                  </span>
-                  {patient.date_of_birth && (
-                    <span className="text-xs text-muted-foreground">
-                      DOB: {new Date(patient.date_of_birth).toLocaleDateString()}
+                <div className="flex items-center flex-1">
+                  <User className="mr-2 h-4 w-4" />
+                  <div className="flex flex-col flex-1">
+                    <span>
+                      {patient.first_name} {patient.last_name}
                     </span>
-                  )}
+                    {patient.date_of_birth && (
+                      <span className="text-xs text-muted-foreground">
+                        DOB: {new Date(patient.date_of_birth).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <PatientQuickAccessButton
+                    patientId={patient.id}
+                    patientName={`${patient.first_name} ${patient.last_name}`}
+                    variant="icon"
+                    size="sm"
+                  />
                 </div>
               </CommandItem>
             ))}

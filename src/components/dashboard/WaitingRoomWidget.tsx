@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInMinutes } from "date-fns";
 import { useEffect, useCallback, useMemo } from "react";
+import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
 
 export function WaitingRoomWidget() {
   const navigate = useNavigate();
@@ -104,10 +105,20 @@ export function WaitingRoomWidget() {
                 >
                   <Clock className={`h-4 w-4 mt-1 ${getWaitTimeColor(waitMinutes)}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">
-                      {appointment.patient
-                        ? `${appointment.patient.first_name} ${appointment.patient.last_name}`
-                        : "Unknown Patient"}
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium truncate flex-1">
+                        {appointment.patient
+                          ? `${appointment.patient.first_name} ${appointment.patient.last_name}`
+                          : "Unknown Patient"}
+                      </div>
+                      {appointment.patient?.id && (
+                        <PatientQuickAccessButton
+                          patientId={appointment.patient.id}
+                          patientName={`${appointment.patient.first_name} ${appointment.patient.last_name}`}
+                          variant="icon"
+                          size="sm"
+                        />
+                      )}
                     </div>
                     <div className={`text-sm ${getWaitTimeColor(waitMinutes)}`}>
                       {waitMinutes} min{waitMinutes !== 1 ? 's' : ''} waiting

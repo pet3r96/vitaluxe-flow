@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { format, isPast, isToday } from "date-fns";
 import { toast } from "sonner";
 import { useEffect, useCallback } from "react";
+import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
 
 export function FollowUpRemindersWidget() {
   const queryClient = useQueryClient();
@@ -108,10 +109,22 @@ export function FollowUpRemindersWidget() {
               >
                 <CalendarIcon className="h-4 w-4 mt-1 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">
-                    {followUp.patient 
-                      ? `${followUp.patient.first_name} ${followUp.patient.last_name}`
-                      : "Unknown Patient"}
+                  <div className="flex items-center gap-2">
+                    <div className="font-medium truncate flex-1">
+                      {followUp.patient 
+                        ? `${followUp.patient.first_name} ${followUp.patient.last_name}`
+                        : "Unknown Patient"}
+                    </div>
+                    {followUp.patient?.id && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <PatientQuickAccessButton
+                          patientId={followUp.patient.id}
+                          patientName={`${followUp.patient.first_name} ${followUp.patient.last_name}`}
+                          variant="icon"
+                          size="sm"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="text-sm text-muted-foreground truncate">
                     {followUp.reason}
