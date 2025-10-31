@@ -65,17 +65,17 @@ export default function PatientOnboarding() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 to-secondary/5">
-      <Card className="w-full max-w-2xl">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="patient-card w-full max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome to VitaLuxePro</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl">Welcome to VitaLuxePro</CardTitle>
           <CardDescription>Let's set up your patient portal</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleComplete} className="space-y-6">
             {step === 1 && (
               <div className="space-y-4">
-                <h3 className="font-semibold">Personal Information</h3>
+                <h3 className="font-semibold text-lg">Personal Information</h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="first_name">First Name *</Label>
@@ -100,7 +100,7 @@ export default function PatientOnboarding() {
                     />
                   </div>
                 </div>
-                <Button type="button" onClick={() => setStep(2)} className="w-full">
+                <Button type="button" onClick={() => setStep(2)} className="w-full touch-target">
                   Continue
                 </Button>
               </div>
@@ -108,7 +108,7 @@ export default function PatientOnboarding() {
 
             {step === 2 && (
               <div className="space-y-4">
-                <h3 className="font-semibold">Address</h3>
+                <h3 className="font-semibold text-lg">Address</h3>
                 <div className="space-y-2">
                   <Label htmlFor="address">Street Address</Label>
                   <Input id="address" name="address" />
@@ -128,10 +128,10 @@ export default function PatientOnboarding() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1">
+                  <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1 touch-target">
                     Back
                   </Button>
-                  <Button type="button" onClick={() => setStep(3)} className="flex-1">
+                  <Button type="button" onClick={() => setStep(3)} className="flex-1 touch-target">
                     Continue
                   </Button>
                 </div>
@@ -140,7 +140,7 @@ export default function PatientOnboarding() {
 
             {step === 3 && (
               <div className="space-y-4">
-                <h3 className="font-semibold">Medical History (Optional)</h3>
+                <h3 className="font-semibold text-lg">Medical History (Optional)</h3>
                 <div className="space-y-2">
                   <Label htmlFor="allergies">Allergies (comma-separated)</Label>
                   <Textarea id="allergies" name="allergies" placeholder="e.g., Penicillin, Peanuts" />
@@ -154,10 +154,10 @@ export default function PatientOnboarding() {
                   <Textarea id="conditions" name="conditions" placeholder="e.g., Hypertension, Type 2 Diabetes" />
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setStep(2)} className="flex-1">
+                  <Button type="button" variant="outline" onClick={() => setStep(2)} className="flex-1 touch-target">
                     Back
                   </Button>
-                  <Button type="submit" disabled={loading} className="flex-1">
+                  <Button type="submit" disabled={loading} className="flex-1 touch-target">
                     {loading ? "Setting up..." : "Complete Setup"}
                     <CheckCircle2 className="ml-2 h-4 w-4" />
                   </Button>

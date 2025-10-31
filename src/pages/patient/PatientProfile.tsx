@@ -175,10 +175,10 @@ export default function PatientProfile() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="patient-container">
       {/* Profile Incomplete Warning */}
       {hasIncompleteProfile && (
-        <Card className="border-warning bg-warning/10">
+        <Card className="border-warning bg-warning/10 patient-card">
           <CardContent className="pt-6">
             <p className="text-sm font-medium text-warning-foreground">
               Your profile is incomplete. Please fill in all required information to ensure proper access to services.
@@ -188,10 +188,10 @@ export default function PatientProfile() {
       )}
 
       {/* Email Section (Read-only) */}
-      <Card>
+      <Card className="patient-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <Mail className="h-5 w-5 text-primary" />
             Email Address
           </CardTitle>
           <CardDescription>Your account email address</CardDescription>
@@ -209,15 +209,15 @@ export default function PatientProfile() {
       <form onSubmit={handleSubmit} key={profile?.id}>
         <div className="grid gap-6">
           {/* Personal Information Section */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle>Personal Information</CardTitle>
+                  <CardTitle className="text-lg md:text-xl">Personal Information</CardTitle>
                   <CardDescription>Your basic details</CardDescription>
                 </div>
                 {!editing && (
-                  <Button onClick={() => setEditing(true)} size="sm" type="button">
+                  <Button onClick={() => setEditing(true)} size="sm" type="button" className="touch-target-sm">
                     Edit
                   </Button>
                 )}

@@ -264,4 +264,46 @@ All colors MUST be HSL.
   .service-badge-cosmetic { @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200; }
   .service-badge-wellness { @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200; }
   .service-badge-diagnostic { @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200; }
+
+  /* Patient Portal Modern Cards */
+  .patient-card {
+    @apply bg-card border-border rounded-lg shadow-lg backdrop-blur-sm;
+  }
+
+  .patient-card-hover {
+    @apply transition-all duration-300 hover:border-primary/30 hover:shadow-gold;
+  }
+
+  .patient-container {
+    @apply p-4 md:p-6 space-y-4 md:space-y-6;
+  }
+
+  .patient-stat-card {
+    @apply patient-card patient-card-hover cursor-pointer;
+  }
+
+  .patient-section-header {
+    @apply text-2xl md:text-3xl font-bold tracking-tight;
+  }
+
+  .patient-button-primary {
+    @apply bg-gradient-to-r from-primary to-gold-light hover:from-primary/90 hover:to-gold-light/90 transition-all;
+  }
+
+  /* Modern status badges */
+  .status-badge-scheduled {
+    @apply bg-primary/20 text-primary border border-primary/30;
+  }
+
+  .status-badge-completed {
+    @apply bg-green-500/20 text-green-500 border border-green-500/30;
+  }
+
+  .status-badge-cancelled {
+    @apply bg-red-500/20 text-red-500 border border-red-500/30;
+  }
+
+  .status-badge-pending {
+    @apply bg-yellow-500/20 text-yellow-500 border border-yellow-500/30;
+  }
 }

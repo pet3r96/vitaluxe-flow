@@ -441,9 +441,9 @@ export default function PatientDocuments() {
       )}
 
       {/* Upload Section */}
-      <Card>
+      <Card className="patient-card">
         <CardContent className="pt-6">
-          <h2 className="text-xl font-semibold mb-4">Upload New Document</h2>
+          <h2 className="text-lg md:text-xl font-semibold mb-4">Upload New Document</h2>
           {!patientAccount && (
             <div className="mb-4 p-3 bg-muted rounded text-sm text-muted-foreground">
               Document upload is disabled until your patient account is set up.

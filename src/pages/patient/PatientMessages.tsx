@@ -92,10 +92,10 @@ export default function PatientMessages() {
 
   return (
     <>
-      <div className={`flex gap-4 ${isMobile ? 'flex-col h-auto' : 'h-[calc(100vh-8rem)]'}`}>
+      <div className={`flex gap-4 ${isMobile ? 'flex-col h-auto patient-container' : 'h-[calc(100vh-8rem)] p-4 md:p-6'}`}>
         {/* Left Sidebar - Conversations */}
         {(!isMobile || showThreadList) && (
-        <Card className={`flex flex-col ${isMobile ? 'w-full' : 'w-80'}`}>
+        <Card className={`patient-card flex flex-col ${isMobile ? 'w-full' : 'w-80'}`}>
           <div className="p-4 border-b space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Messages</h2>
@@ -193,7 +193,7 @@ export default function PatientMessages() {
 
         {/* Right Side - Message Thread */}
         {(!isMobile || !showThreadList) && (
-        <Card className={`flex flex-col ${isMobile ? 'w-full min-h-[calc(100vh-8rem)]' : 'flex-1'}`}>
+        <Card className={`patient-card flex flex-col ${isMobile ? 'w-full min-h-[calc(100vh-8rem)]' : 'flex-1'}`}>
           {selectedThread ? (
             <>
               {isMobile && (

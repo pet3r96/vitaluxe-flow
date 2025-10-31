@@ -356,18 +356,18 @@ export default function PatientIntakeForm() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="patient-container max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold">Patient Intake Form</h1>
-        <p className="text-muted-foreground mt-2">Complete your medical information to help us provide better care</p>
+        <h1 className="patient-section-header">Patient Intake Form</h1>
+        <p className="text-muted-foreground mt-2 text-sm md:text-base">Complete your medical information to help us provide better care</p>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 md:space-y-8">
           {/* Personal Demographics */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Personal Information</CardTitle>
               <CardDescription>Basic demographic information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -446,9 +446,9 @@ export default function PatientIntakeForm() {
           </Card>
 
           {/* Address */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Address</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Address</CardTitle>
               <CardDescription>Your residential address</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -511,9 +511,9 @@ export default function PatientIntakeForm() {
           </Card>
 
           {/* Emergency Contact */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Emergency Contact</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Emergency Contact</CardTitle>
               <CardDescription>Someone we can contact in case of emergency</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -592,9 +592,9 @@ export default function PatientIntakeForm() {
           </Card>
 
           {/* Vitals */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Vital Information</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Vital Information</CardTitle>
               <CardDescription>Basic health measurements</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -673,9 +673,9 @@ export default function PatientIntakeForm() {
           </Card>
 
           {/* Medical History - Medications */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Current Medications</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Current Medications</CardTitle>
               <CardDescription>List any medications you're currently taking</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -739,9 +739,9 @@ export default function PatientIntakeForm() {
           </Card>
 
           {/* Allergies */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Allergies</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Allergies</CardTitle>
               <CardDescription>List any known allergies</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -804,9 +804,9 @@ export default function PatientIntakeForm() {
           </Card>
 
           {/* Medical Conditions */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Medical Conditions</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Medical Conditions</CardTitle>
               <CardDescription>List any current or past medical conditions</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -870,9 +870,9 @@ export default function PatientIntakeForm() {
           </Card>
 
           {/* Past Surgeries */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Past Surgeries</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Past Surgeries</CardTitle>
               <CardDescription>List any surgical procedures you've had</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -928,9 +928,9 @@ export default function PatientIntakeForm() {
           </Card>
 
           {/* Pharmacy Information */}
-          <Card>
+          <Card className="patient-card">
             <CardHeader>
-              <CardTitle>Preferred Pharmacy</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Preferred Pharmacy</CardTitle>
               <CardDescription>Where you'd like prescriptions sent</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

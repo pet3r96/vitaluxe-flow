@@ -280,13 +280,13 @@ export default function PatientAppointments() {
   const past = appointments?.filter((a: any) => new Date(a.start_time) < new Date()) || [];
 
   return (
-    <div className="space-y-6">
+    <div className="patient-container">
       <div className={`flex items-center ${isMobile ? 'flex-col gap-4' : 'justify-between'}`}>
         <div className={isMobile ? 'text-center' : ''}>
-          <h1 className={`font-bold tracking-tight ${isMobile ? 'text-2xl' : 'text-3xl'}`}>My Appointments</h1>
-          <p className="text-muted-foreground">Manage your scheduled visits</p>
+          <h1 className={`patient-section-header ${isMobile ? 'text-2xl' : ''}`}>My Appointments</h1>
+          <p className="text-muted-foreground text-sm md:text-base">Manage your scheduled visits</p>
         </div>
-        <Button onClick={() => setBookingOpen(true)} className={isMobile ? 'w-full' : ''}>
+        <Button onClick={() => setBookingOpen(true)} className={`touch-target ${isMobile ? 'w-full' : ''}`}>
           <Calendar className="mr-2 h-4 w-4" />
           Book Appointment
         </Button>
@@ -294,9 +294,9 @@ export default function PatientAppointments() {
 
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-semibold mb-4">Upcoming</h2>
+          <h2 className="text-xl md:text-2xl font-semibold mb-4">Upcoming</h2>
           {upcoming.length === 0 ? (
-            <Card>
+            <Card className="patient-card">
               <CardContent className="py-8 text-center text-muted-foreground">
                 No upcoming appointments
               </CardContent>
@@ -304,7 +304,7 @@ export default function PatientAppointments() {
           ) : (
             <div className="grid gap-4">
               {upcoming.map((appt: any) => (
-                <Card key={appt.id}>
+                <Card key={appt.id} className="patient-card patient-card-hover">
                   <CardHeader>
                     <div className={isMobile ? 'space-y-3' : 'flex justify-between items-start'}>
                       <div className="flex-1">
@@ -391,9 +391,9 @@ export default function PatientAppointments() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold mb-4">Past Appointments</h2>
+          <h2 className="text-xl md:text-2xl font-semibold mb-4">Past Appointments</h2>
           {past.length === 0 ? (
-            <Card>
+            <Card className="patient-card">
               <CardContent className="py-8 text-center text-muted-foreground">
                 No past appointments
               </CardContent>

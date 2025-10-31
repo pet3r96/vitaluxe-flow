@@ -300,9 +300,9 @@ export default function PatientDashboard() {
 
   if (loadingAccount) {
     return (
-      <div className="space-y-6">
+      <div className="patient-container">
         <Skeleton className="h-12 w-64" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-32" />
           ))}
@@ -312,13 +312,13 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="patient-container">
       {/* Welcome Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="patient-section-header">
           Welcome, {patientAccount?.first_name || 'Patient'}
         </h1>
-        <p className="text-muted-foreground">Your personal health dashboard</p>
+        <p className="text-muted-foreground text-sm md:text-base">Your personal health dashboard</p>
       </div>
 
       {/* Intake Form Prompt */}
@@ -346,12 +346,12 @@ export default function PatientDashboard() {
       )}
 
       {/* Quick Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* Next Appointment Card */}
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/appointments")}>
+        <Card className="patient-stat-card" onClick={() => navigate("/appointments")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Next Appointment</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             {loadingAppt ? (
@@ -381,10 +381,10 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Unread Messages Card */}
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/messages")}>
+        <Card className="patient-stat-card" onClick={() => navigate("/messages")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <MessageSquare className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             {loadingMessages ? (
@@ -399,10 +399,10 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Medication Reminders Card */}
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/medical-vault")}>
+        <Card className="patient-stat-card" onClick={() => navigate("/medical-vault")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Medications</CardTitle>
-            <Pill className="h-4 w-4 text-muted-foreground" />
+            <Pill className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             {loadingVault ? (
@@ -417,10 +417,10 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Medical Vault Status Card */}
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/medical-vault")}>
+        <Card className="patient-stat-card" onClick={() => navigate("/medical-vault")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Medical Vault</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             {loadingVault ? (
@@ -446,11 +446,11 @@ export default function PatientDashboard() {
       </div>
 
       {/* Recent Activity Section */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Recent Appointments */}
-        <Card>
+        <Card className="patient-card">
           <CardHeader>
-            <CardTitle>Recent Appointments</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Recent Appointments</CardTitle>
             <CardDescription>Your past visits</CardDescription>
           </CardHeader>
           <CardContent>
@@ -486,9 +486,9 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Recent Messages */}
-        <Card>
+        <Card className="patient-card">
           <CardHeader>
-            <CardTitle>Recent Messages</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Recent Messages</CardTitle>
             <CardDescription>Latest communications</CardDescription>
           </CardHeader>
           <CardContent>
