@@ -191,52 +191,50 @@ export function PharmacyProfileForm() {
   return (
     <div className="space-y-6">
       {pharmacy && (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <div className="h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {pharmacy.name?.charAt(0)?.toUpperCase() || 'P'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-bold text-foreground mb-1">
-                  {pharmacy.name}
-                </h2>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {pharmacy.contact_email}
-                </p>
-                {pharmacy.states_serviced && pharmacy.states_serviced.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <span className="text-xs text-muted-foreground mr-2">Licensed in:</span>
-                    {pharmacy.states_serviced.slice(0, 10).map((state: string) => (
-                      <Badge key={state} variant="outline" className="text-xs">
-                        {state}
-                      </Badge>
-                    ))}
-                    {pharmacy.states_serviced.length > 10 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{pharmacy.states_serviced.length - 10} more
-                      </Badge>
-                    )}
-                  </div>
-                )}
+        <div className="patient-card p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-2xl font-bold gold-text-gradient">
+                  {pharmacy.name?.charAt(0)?.toUpperCase() || 'P'}
+                </span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-bold text-foreground mb-1">
+                {pharmacy.name}
+              </h2>
+              <p className="text-sm text-muted-foreground mb-2">
+                {pharmacy.contact_email}
+              </p>
+              {pharmacy.states_serviced && pharmacy.states_serviced.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <span className="text-xs text-muted-foreground mr-2">Licensed in:</span>
+                  {pharmacy.states_serviced.slice(0, 10).map((state: string) => (
+                    <Badge key={state} variant="outline" className="text-xs">
+                      {state}
+                    </Badge>
+                  ))}
+                  {pharmacy.states_serviced.length > 10 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{pharmacy.states_serviced.length - 10} more
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pharmacy Information</CardTitle>
-          <CardDescription>
+      <div className="patient-card">
+        <div className="p-6 border-b border-border">
+          <h3 className="text-xl font-semibold">Pharmacy Information</h3>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage your pharmacy details and contact information
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </div>
+        <div className="p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -326,7 +324,7 @@ export function PharmacyProfileForm() {
               <Button 
                 type="submit" 
                 disabled={updateMutation.isPending}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto touch-target"
               >
                 {updateMutation.isPending ? (
                   <>
@@ -339,17 +337,17 @@ export function PharmacyProfileForm() {
               </Button>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Licensed States</CardTitle>
-          <CardDescription>
+      <div className="patient-card">
+        <div className="p-6 border-b border-border">
+          <h3 className="text-xl font-semibold">Licensed States</h3>
+          <p className="text-sm text-muted-foreground mt-1">
             Select all states where your pharmacy is licensed to operate
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </div>
+        <div className="p-6">
           <Form {...form}>
             <FormField
               control={form.control}
@@ -377,7 +375,7 @@ export function PharmacyProfileForm() {
                     {/* State Selection Grid */}
                     <div className="space-y-2">
                       <Label>Select States:</Label>
-                      <div className="grid grid-cols-5 gap-2 p-4 border border-border rounded-md max-h-64 overflow-y-auto">
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-4 border border-border rounded-md max-h-64 overflow-y-auto">
                         {US_STATES.map((state) => (
                           <div key={state} className="flex items-center space-x-2">
                             <Checkbox
@@ -405,7 +403,7 @@ export function PharmacyProfileForm() {
           <Button 
             onClick={form.handleSubmit(onSubmit)}
             disabled={updateMutation.isPending}
-            className="w-full sm:w-auto mt-4"
+            className="w-full sm:w-auto mt-4 touch-target"
           >
             {updateMutation.isPending ? (
               <>
@@ -416,18 +414,18 @@ export function PharmacyProfileForm() {
               "Update Licensed States"
             )}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Security</CardTitle>
-          <CardDescription>
+      <div className="patient-card">
+        <div className="p-6 border-b border-border">
+          <h3 className="text-xl font-semibold">Account Security</h3>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage your password and keep your pharmacy account secure
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+          </p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border border-border rounded-lg">
             <div>
               <p className="font-medium">Password</p>
               <p className="text-sm text-muted-foreground">
@@ -437,13 +435,14 @@ export function PharmacyProfileForm() {
             <Button 
               onClick={handlePasswordReset}
               variant="outline"
+              className="touch-target w-full sm:w-auto"
             >
               Reset Password
             </Button>
           </div>
           
           {pharmacy && (
-            <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/50">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border border-border rounded-lg bg-muted/50">
               <div>
                 <p className="font-medium">Account Email</p>
                 <p className="text-sm text-muted-foreground">
@@ -453,8 +452,8 @@ export function PharmacyProfileForm() {
               <Badge variant="secondary">Active</Badge>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
