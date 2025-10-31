@@ -15,6 +15,8 @@ export function DocumentsTab() {
   const queryClient = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 50;
   const [filters, setFilters] = useState({
     patientId: "all",
     documentType: "all",
@@ -56,11 +58,11 @@ export function DocumentsTab() {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  // Client-side filters
-  const documents = useMemo(() => {
-    if (!allDocuments?.length) return [];
+  // Client-side filters with pagination
+  const { documents, totalPages } = useMemo(() => {
+    if (!allDocuments?.length) return { documents: [], totalPages: 0 };
 
-    return allDocuments.filter((doc: any) => {
+    const filtered = allDocuments.filter((doc: any) => {
       if (filters.patientId !== "all") {
         // For provider docs, check junction table
         if (doc.source_type === 'provider') {
@@ -94,7 +96,14 @@ export function DocumentsTab() {
 
       return true;
     });
-  }, [allDocuments, filters, effectiveUserId]);
+
+    // Apply pagination
+    const total = Math.ceil(filtered.length / itemsPerPage);
+    const start = (page - 1) * itemsPerPage;
+    const paginated = filtered.slice(start, start + itemsPerPage);
+
+    return { documents: paginated, totalPages: total };
+  }, [allDocuments, filters, effectiveUserId, page, itemsPerPage]);
 
   // Real-time subscription for instant document updates
   useEffect(() => {
@@ -138,6 +147,28 @@ export function DocumentsTab() {
       )}
 
       <DocumentsDataTable documents={documents || []} isLoading={isLoading} />
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       <DocumentUploadDialog open={showUpload} onOpenChange={setShowUpload} />
     </div>

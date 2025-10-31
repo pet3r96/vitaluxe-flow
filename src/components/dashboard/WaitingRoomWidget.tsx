@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInMinutes } from "date-fns";
-import { useEffect } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 
 export function WaitingRoomWidget() {
   const navigate = useNavigate();
@@ -50,21 +50,30 @@ export function WaitingRoomWidget() {
     };
   }, [effectivePracticeId]);
 
-  const getWaitTimeColor = (minutes: number) => {
+  const getWaitTimeColor = useCallback((minutes: number) => {
     if (minutes < 5) return "text-success";
     if (minutes <= 10) return "text-warning";
     return "text-destructive";
-  };
+  }, []);
 
-  const calculateWaitTime = (checkedInAt: string) => {
+  const calculateWaitTime = useCallback((checkedInAt: string) => {
     const minutes = differenceInMinutes(new Date(), new Date(checkedInAt));
     return minutes;
-  };
+  }, []);
+
+  const handleCardClick = useCallback(() => {
+    navigate("/practice-calendar");
+  }, [navigate]);
+
+  // Memoize top 3 patients to prevent recalculation
+  const displayedPatients = useMemo(() => {
+    return waitingPatients?.slice(0, 3) || [];
+  }, [waitingPatients]);
 
   return (
     <Card 
       className="cursor-pointer hover:bg-accent transition-colors"
-      onClick={() => navigate("/practice-calendar")}
+      onClick={handleCardClick}
     >
       <CardHeader className="relative">
         <CardTitle className="flex items-center gap-2">
@@ -86,7 +95,7 @@ export function WaitingRoomWidget() {
           </div>
         ) : waitingPatients && waitingPatients.length > 0 ? (
           <div className="space-y-3">
-            {waitingPatients.slice(0, 3).map((appointment) => {
+            {displayedPatients.map((appointment) => {
               const waitMinutes = calculateWaitTime(appointment.checked_in_at);
               return (
                 <div

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isPast, isToday } from "date-fns";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
 export function FollowUpRemindersWidget() {
   const queryClient = useQueryClient();
@@ -63,7 +63,7 @@ export function FollowUpRemindersWidget() {
     },
   });
 
-  const getDateBadge = (dateString: string) => {
+  const getDateBadge = useCallback((dateString: string) => {
     const date = new Date(dateString);
     if (isPast(date) && !isToday(date)) {
       return <Badge variant="destructive">Overdue</Badge>;
@@ -72,7 +72,16 @@ export function FollowUpRemindersWidget() {
       return <Badge className="bg-orange-500">Due Today</Badge>;
     }
     return <Badge variant="secondary">Upcoming</Badge>;
-  };
+  }, []);
+
+  const handleFollowUpClick = useCallback((patientId: string) => {
+    window.location.href = `/patients/${patientId}?tab=follow-ups`;
+  }, []);
+
+  const handleMarkComplete = useCallback((e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    markComplete.mutate(id);
+  }, [markComplete]);
 
   return (
     <Card>
@@ -95,7 +104,7 @@ export function FollowUpRemindersWidget() {
               <div
                 key={followUp.id}
                 className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                onClick={() => window.location.href = `/patients/${followUp.patient_id}?tab=follow-ups`}
+                onClick={() => handleFollowUpClick(followUp.patient_id)}
               >
                 <CalendarIcon className="h-4 w-4 mt-1 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
@@ -127,10 +136,7 @@ export function FollowUpRemindersWidget() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    markComplete.mutate(followUp.id);
-                  }}
+                  onClick={(e) => handleMarkComplete(e, followUp.id)}
                   disabled={markComplete.isPending}
                 >
                   <Check className="h-4 w-4" />

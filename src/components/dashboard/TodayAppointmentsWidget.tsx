@@ -5,7 +5,7 @@ import { Calendar, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useAuth } from "@/contexts/AuthContext";
@@ -116,13 +116,17 @@ export function TodayAppointmentsWidget() {
     // Cleanup handled by realtimeManager
   }, [queryClient, effectivePracticeId]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case "completed": return "bg-success text-success-foreground";
       case "no_show": return "bg-destructive text-destructive-foreground";
       default: return "bg-primary text-primary-foreground";
     }
-  };
+  }, []);
+
+  const handleAppointmentClick = useCallback((appointment: any) => {
+    setSelectedAppointment(appointment);
+  }, []);
 
   return (
     <>
@@ -147,7 +151,7 @@ export function TodayAppointmentsWidget() {
                   key={appointment.id}
                   variant="ghost"
                   className="w-full justify-start text-left h-auto p-3 hover:bg-accent"
-                  onClick={() => setSelectedAppointment(appointment)}
+                  onClick={() => handleAppointmentClick(appointment)}
                 >
                   <div className="flex items-start gap-3 w-full">
                     <Clock className="h-4 w-4 mt-1 text-muted-foreground" />
