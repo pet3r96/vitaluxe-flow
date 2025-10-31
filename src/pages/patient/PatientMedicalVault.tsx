@@ -234,12 +234,21 @@ export default function PatientMedicalVault() {
         emergencyContacts || []
       );
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      const printWindow = window.open(pdfUrl, '_blank');
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-        };
-      }
+      
+      // Create hidden iframe for printing
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      
+      iframe.onload = () => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(pdfUrl);
+        }, 100);
+      };
+      
+      iframe.src = pdfUrl;
       toast({ title: "Success", description: "Opening print dialog" });
     } catch (error) {
       console.error('Failed to generate PDF:', error);

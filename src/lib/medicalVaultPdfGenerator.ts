@@ -142,43 +142,43 @@ export async function generateMedicalVaultPDF(
   // === HEADER SECTION ===
   // Professional medical document header
   doc.setFillColor(...primaryBlue);
-  doc.rect(0, 0, pageWidth, 45, 'F');
+  doc.rect(0, 0, pageWidth, 50, 'F');
   
   // VitaLuxe Services branding
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('VITALUXE SERVICES', 14, 12);
+  doc.text('VITALUXE SERVICES', 14, 15);
   
   // Main title
-  doc.setFontSize(24);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('MEDICAL RECORD', pageWidth / 2, 28, { align: 'center' });
+  doc.text('MEDICAL RECORD', pageWidth / 2, 30, { align: 'center' });
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Comprehensive Health Information', pageWidth / 2, 37, { align: 'center' });
+  doc.text('Comprehensive Health Information', pageWidth / 2, 42, { align: 'center' });
 
   // Add spacing after header
-  yPosition = 60;
+  yPosition = 65;
 
   // === PATIENT INFORMATION BOX ===
   const age = calculateAge(patientAccount.date_of_birth);
   
   // Patient name box
   doc.setFillColor(...lightBlue);
-  doc.rect(14, yPosition, pageWidth - 28, 18, 'F');
+  doc.rect(14, yPosition, pageWidth - 28, 20, 'F');
   
   doc.setTextColor(...darkGray);
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${patientAccount.first_name} ${patientAccount.last_name}`, 20, yPosition + 8);
+  doc.text(`${patientAccount.first_name} ${patientAccount.last_name}`, 20, yPosition + 9);
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`DOB: ${format(new Date(patientAccount.date_of_birth), 'MMM dd, yyyy')} | Age: ${age} | Gender: ${patientAccount.gender_at_birth || 'Not specified'}`, 20, yPosition + 14);
+  doc.text(`DOB: ${format(new Date(patientAccount.date_of_birth), 'MMM dd, yyyy')} | Age: ${age} | Gender: ${patientAccount.gender_at_birth || 'Not specified'}`, 20, yPosition + 16);
 
-  yPosition += 28;
+  yPosition += 30;
 
   // === DEMOGRAPHICS SECTION ===
   addSectionHeader(doc, 'PATIENT DEMOGRAPHICS', yPosition);
@@ -554,12 +554,12 @@ export async function generateMedicalVaultPDF(
 
 function addSectionHeader(doc: jsPDF, title: string, yPosition: number) {
   doc.setFillColor(37, 99, 235);
-  doc.rect(14, yPosition - 3, doc.internal.pageSize.getWidth() - 28, 8, 'F');
+  doc.rect(14, yPosition - 2, doc.internal.pageSize.getWidth() - 28, 10, 'F');
   
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text(title, 18, yPosition + 3);
+  doc.text(title, 18, yPosition + 5);
 }
 
 function addFooter(doc: jsPDF, pageNumber: number, totalPages: number) {
