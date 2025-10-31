@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { PharmacyDialog } from "./dialogs/PharmacyDialog";
 
 interface PharmaciesSectionProps {
   patientAccountId?: string;
@@ -12,6 +13,9 @@ interface PharmaciesSectionProps {
 
 export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) {
   const [expanded, setExpanded] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedPharmacy, setSelectedPharmacy] = useState<any>(null);
+  const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   
   const { data: pharmacies } = useQuery({
     queryKey: ["patient-pharmacies", patientAccountId],
@@ -49,6 +53,11 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
           </CardTitle>
           <Button 
             size="sm" 
+            onClick={() => {
+              setSelectedPharmacy(null);
+              setDialogMode("add");
+              setDialogOpen(true);
+            }}
             className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
           >
             <Plus className="h-4 w-4" />
@@ -81,10 +90,26 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedPharmacy(pharmacy);
+                      setDialogMode("view");
+                      setDialogOpen(true);
+                    }}
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedPharmacy(pharmacy);
+                      setDialogMode("edit");
+                      setDialogOpen(true);
+                    }}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -104,6 +129,14 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
           </p>
         )}
       </CardContent>
+
+      <PharmacyDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        patientAccountId={patientAccountId || ""}
+        pharmacy={selectedPharmacy}
+        mode={dialogMode}
+      />
     </Card>
   );
 }

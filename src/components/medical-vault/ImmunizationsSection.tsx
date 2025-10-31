@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState } from "react";
+import { ImmunizationDialog } from "./dialogs/ImmunizationDialog";
 
 interface ImmunizationsSectionProps {
   patientAccountId?: string;
@@ -12,6 +13,9 @@ interface ImmunizationsSectionProps {
 
 export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionProps) {
   const [expanded, setExpanded] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedImmunization, setSelectedImmunization] = useState<any>(null);
+  const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   
   const { data: immunizations } = useQuery({
     queryKey: ["patient-immunizations", patientAccountId],
@@ -49,6 +53,11 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
           </CardTitle>
           <Button 
             size="sm" 
+            onClick={() => {
+              setSelectedImmunization(null);
+              setDialogMode("add");
+              setDialogOpen(true);
+            }}
             className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
           >
             <Plus className="h-4 w-4" />
@@ -68,10 +77,26 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedImmunization(immunization);
+                      setDialogMode("view");
+                      setDialogOpen(true);
+                    }}
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedImmunization(immunization);
+                      setDialogMode("edit");
+                      setDialogOpen(true);
+                    }}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -91,6 +116,14 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
           </p>
         )}
       </CardContent>
+
+      <ImmunizationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        patientAccountId={patientAccountId || ""}
+        immunization={selectedImmunization}
+        mode={dialogMode}
+      />
     </Card>
   );
 }

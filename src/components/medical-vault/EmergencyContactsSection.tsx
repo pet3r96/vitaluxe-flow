@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { EmergencyContactDialog } from "./dialogs/EmergencyContactDialog";
 
 interface EmergencyContactsSectionProps {
   patientAccountId?: string;
@@ -12,6 +13,9 @@ interface EmergencyContactsSectionProps {
 
 export function EmergencyContactsSection({ patientAccountId }: EmergencyContactsSectionProps) {
   const [expanded, setExpanded] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   
   const { data: contacts } = useQuery({
     queryKey: ["patient-emergency-contacts", patientAccountId],
@@ -38,18 +42,23 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
       <div className="absolute inset-0 bg-gradient-to-r from-rose-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
       <CardHeader className="relative z-10">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg flex-shrink-0">
               <Phone className="h-6 w-6 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent font-bold inline-block whitespace-nowrap">
+            <span className="bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent font-bold">
               Emergency Contacts
             </span>
           </CardTitle>
           <Button 
             size="sm" 
-            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            onClick={() => {
+              setSelectedContact(null);
+              setDialogMode("add");
+              setDialogOpen(true);
+            }}
+            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300 flex-shrink-0"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -74,10 +83,26 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedContact(contact);
+                      setDialogMode("view");
+                      setDialogOpen(true);
+                    }}
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedContact(contact);
+                      setDialogMode("edit");
+                      setDialogOpen(true);
+                    }}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -97,6 +122,14 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
           </p>
         )}
       </CardContent>
+
+      <EmergencyContactDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        patientAccountId={patientAccountId || ""}
+        contact={selectedContact}
+        mode={dialogMode}
+      />
     </Card>
   );
 }

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState } from "react";
+import { SurgeryDialog } from "./dialogs/SurgeryDialog";
 
 interface SurgeriesSectionProps {
   patientAccountId?: string;
@@ -12,6 +13,9 @@ interface SurgeriesSectionProps {
 
 export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
   const [expanded, setExpanded] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedSurgery, setSelectedSurgery] = useState<any>(null);
+  const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   
   const { data: surgeries } = useQuery({
     queryKey: ["patient-surgeries", patientAccountId],
@@ -38,18 +42,23 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
       <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
       <CardHeader className="relative z-10">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg flex-shrink-0">
               <Scissors className="h-6 w-6 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent font-bold inline-block whitespace-nowrap">
+            <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent font-bold">
               Surgeries
             </span>
           </CardTitle>
           <Button 
             size="sm" 
-            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            onClick={() => {
+              setSelectedSurgery(null);
+              setDialogMode("add");
+              setDialogOpen(true);
+            }}
+            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300 flex-shrink-0"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -73,10 +82,26 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedSurgery(surgery);
+                      setDialogMode("view");
+                      setDialogOpen(true);
+                    }}
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedSurgery(surgery);
+                      setDialogMode("edit");
+                      setDialogOpen(true);
+                    }}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -96,6 +121,14 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
           </p>
         )}
       </CardContent>
+
+      <SurgeryDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        patientAccountId={patientAccountId || ""}
+        surgery={selectedSurgery}
+        mode={dialogMode}
+      />
     </Card>
   );
 }
