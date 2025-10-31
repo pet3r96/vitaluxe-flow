@@ -178,15 +178,15 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="flex items-center space-x-2 p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+          <div className="flex items-center space-x-2 p-4 bg-gray-900 rounded-lg border border-gray-700">
             <Checkbox
               id="nka"
               checked={nkaChecked || false}
               onCheckedChange={(checked) => setValue("nka", checked as boolean)}
               disabled={isReadOnly}
-              className="border-2 border-gray-700 dark:border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              className="border-gray-600 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
             />
-            <Label htmlFor="nka" className="text-sm font-medium cursor-pointer">
+            <Label htmlFor="nka" className="text-sm font-medium cursor-pointer text-gray-200">
               NKA (No Known Allergies)
             </Label>
           </div>
