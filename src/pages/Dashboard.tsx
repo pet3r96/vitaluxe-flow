@@ -425,24 +425,17 @@ const Dashboard = () => {
 
   return (
     <div className="patient-container">
-      <div className="flex flex-col items-center gap-4 mb-8">
-        <div className="text-center w-full">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">Dashboard</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
-            Welcome back, {user?.email}
-          </p>
-          {status === 'trial' && trialDaysRemaining !== null && (
-            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">
-                Trial: {trialDaysRemaining} days remaining
-              </span>
-            </div>
-          )}
-        </div>
-        {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
-          <div className="w-full sm:w-64 mx-auto sm:mx-0">
-            <PatientQuickSearch />
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">
+          Welcome back, {user?.email}
+        </p>
+        {status === 'trial' && trialDaysRemaining !== null && (
+          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">
+              Trial: {trialDaysRemaining} days remaining
+            </span>
           </div>
         )}
       </div>
@@ -484,31 +477,41 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Stats cards - Always visible for all users */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        {stats.map((stat) => (
-          <div
-            key={stat.title}
-            className="patient-stat-card p-4 sm:p-6"
-          >
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <stat.icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-            </div>
-            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">
-              {stat.title}
-            </h3>
-            {stat.isLoading ? (
-              <Skeleton className="h-8 sm:h-9 w-16 sm:w-20 mt-2" />
-            ) : (
-              <p className="text-2xl sm:text-3xl font-bold text-foreground mt-2">
-                {stat.value}
+      {/* Stats cards and Search - Layout for desktop */}
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+        {/* Stats cards - Left side */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 flex-1">
+          {stats.map((stat) => (
+            <div
+              key={stat.title}
+              className="patient-stat-card p-4 sm:p-6"
+            >
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <stat.icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">
+                {stat.title}
+              </h3>
+              {stat.isLoading ? (
+                <Skeleton className="h-8 sm:h-9 w-16 sm:w-20 mt-2" />
+              ) : (
+                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-2">
+                  {stat.value}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {stat.description}
               </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              {stat.description}
-            </p>
+            </div>
+          ))}
+        </div>
+        
+        {/* Search bar - Right side (above where Follow-Ups will be) */}
+        {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
+          <div className="w-full lg:w-80">
+            <PatientQuickSearch />
           </div>
-        ))}
+        )}
       </div>
 
       {/* V2 Widgets - Only for subscribed doctor/provider/staff */}
