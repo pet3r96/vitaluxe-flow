@@ -176,7 +176,7 @@ export default function PatientProfile() {
 
   return (
     <div className="patient-container">
-      <div className="text-center mb-6">
+      <div className="mb-6">
         <h1 className="patient-section-header">My Profile</h1>
         <p className="text-muted-foreground text-sm md:text-base">Manage your account information</p>
       </div>

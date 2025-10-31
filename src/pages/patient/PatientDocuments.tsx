@@ -416,7 +416,7 @@ export default function PatientDocuments() {
 
   return (
     <div className="patient-container">
-      <div className="text-center">
+      <div className="mb-8">
         <h1 className="patient-section-header">My Documents</h1>
         <p className="text-muted-foreground text-sm md:text-base">Upload and manage your medical documents</p>
         {/* Debug info in dev mode */}
