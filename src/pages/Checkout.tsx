@@ -792,7 +792,8 @@ export default function Checkout() {
           title: "Order Placed Successfully! 🎉",
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
         });
-        queryClient.invalidateQueries({ queryKey: ["cart"] });
+        queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+        queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
         navigate("/orders");
       } else {
         // Some payments failed - show retry dialog
