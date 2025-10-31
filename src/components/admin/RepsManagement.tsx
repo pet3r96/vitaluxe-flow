@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 
-export function RepsManagement() {
+export function RepsManagement({ showHeader = true }: { showHeader?: boolean }) {
   const queryClient = useQueryClient();
 
   const { data: reps, isLoading } = useQuery({
@@ -84,18 +84,20 @@ export function RepsManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Representatives Management</h2>
-          <p className="text-muted-foreground mt-1">
-            Manage topline and downline sales representatives
-          </p>
+      {showHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Representatives Management</h2>
+            <p className="text-muted-foreground mt-1">
+              Manage topline and downline sales representatives
+            </p>
+          </div>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Rep
+          </Button>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Rep
-        </Button>
-      </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

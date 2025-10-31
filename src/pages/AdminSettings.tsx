@@ -122,7 +122,7 @@ const AdminSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RepsManagement />
+              <RepsManagement showHeader={false} />
             </CardContent>
           </Card>
         </TabsContent>
