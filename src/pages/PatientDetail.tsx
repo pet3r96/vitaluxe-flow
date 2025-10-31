@@ -101,6 +101,22 @@ export default function PatientDetail() {
             <p className="text-sm text-muted-foreground">Address</p>
             <p className="font-medium">{patient.address || "Not provided"}</p>
           </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Date of Birth</p>
+            <p className="font-medium">
+              {patient.date_of_birth 
+                ? new Date(patient.date_of_birth).toLocaleDateString() 
+                : "Not provided"}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Emergency Contact</p>
+            <p className="font-medium">
+              {patient.emergency_contact_name 
+                ? `${patient.emergency_contact_name}${patient.emergency_contact_phone ? ` - ${patient.emergency_contact_phone}` : ''}` 
+                : "Not provided"}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -128,30 +144,6 @@ export default function PatientDetail() {
           </div>
           
           <MedicalVaultSummaryCard patientAccountId={patientId!} />
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Patient Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-1">Phone</p>
-                  <p className="text-sm">
-                    {patient.phone || "Not provided"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-1">Emergency Contact</p>
-                  <p className="text-sm">
-                    {patient.emergency_contact_name 
-                      ? `${patient.emergency_contact_name}${patient.emergency_contact_phone ? ` - ${patient.emergency_contact_phone}` : ''}` 
-                      : "Not provided"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="medical-vault">
