@@ -373,9 +373,9 @@ export default function AdminTermsManagement() {
 
   return (
     <div className="patient-container">
-      <div className="text-center mb-8">
+      <div className="mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Terms & Conditions Management</h1>
-        <p className="text-muted-foreground">Manage terms and conditions for each user role</p>
+        <p className="text-muted-foreground mt-2">Manage terms and conditions for each user role</p>
       </div>
 
       <Tabs defaultValue="editor" className="space-y-4">

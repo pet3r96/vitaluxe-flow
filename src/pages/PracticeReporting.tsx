@@ -18,7 +18,7 @@ export default function PracticeReporting() {
       upgradeMessage="Get comprehensive performance analytics and daily reporting with VitaLuxePro"
     >
       <div className="patient-container">
-        <div className="text-center mb-8">
+        <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Practice Reporting</h1>
           <p className="text-muted-foreground mt-2">
             Track performance metrics and generate end-of-day reports

@@ -383,8 +383,8 @@ export default function PatientMedicalVault() {
 
   return (
     <div className="patient-container">
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-3 mb-2">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
           <ShieldCheck className="h-8 w-8 text-primary" />
           <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Medical Vault</h1>
         </div>

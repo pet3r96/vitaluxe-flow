@@ -68,9 +68,9 @@ const Profile = () => {
   return (
     <div className="patient-container">
       {effectiveRole !== "patient" && (
-        <div className="text-center mb-8">
+        <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">My Profile</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-2">
             {isRep 
               ? "Your Contact Information & Account Settings"
               : effectiveRole === "staff"

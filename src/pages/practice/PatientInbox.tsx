@@ -208,8 +208,8 @@ export default function PatientInbox() {
 
   return (
     <div className="patient-container h-[calc(100vh-4rem)]">
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center gap-3">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
           <MessageCircle className="h-8 w-8 text-primary" />
           <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Patient Inbox</h1>
         </div>

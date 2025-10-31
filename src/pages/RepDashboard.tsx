@@ -281,7 +281,7 @@ const RepDashboard = () => {
 
   return (
     <div className="patient-container">
-      <div className="text-center mb-8">
+      <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">
           {effectiveRole === 'topline' ? 'Topline' : 'Downline'} Dashboard
         </h1>

@@ -93,7 +93,7 @@ export default function MySubscription() {
 
   return (
     <div className="patient-container">
-      <div className="text-center mb-8">
+      <div className="mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">My Subscription</h1>
         <p className="text-muted-foreground mt-2">Manage your VitaLuxePro subscription and billing</p>
       </div>
