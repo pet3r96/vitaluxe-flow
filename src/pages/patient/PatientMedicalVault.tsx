@@ -244,32 +244,48 @@ export default function PatientMedicalVault() {
         emergencyContacts || []
       );
       
-      // Open PDF in new tab and trigger print
+      // Create blob URL
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      const printWindow = window.open(pdfUrl, '_blank');
       
-      if (!printWindow) {
-        toast({ 
-          title: "Popup Blocked", 
-          description: "Please allow popups for this site to print", 
-          variant: "destructive" 
-        });
-        URL.revokeObjectURL(pdfUrl);
-        return;
-      }
+      // Create a hidden iframe directly in the DOM (bypasses popup blockers)
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'fixed';
+      printFrame.style.right = '0';
+      printFrame.style.bottom = '0';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = 'none';
+      printFrame.src = pdfUrl;
+      
+      document.body.appendChild(printFrame);
       
       // Wait for PDF to load, then trigger print
-      printWindow.onload = () => {
-        printWindow.focus();
-        printWindow.print();
-        
-        // Cleanup after a delay to allow print dialog to open
-        setTimeout(() => {
+      printFrame.onload = () => {
+        try {
+          // Small delay to ensure PDF is fully rendered
+          setTimeout(() => {
+            printFrame.contentWindow?.focus();
+            printFrame.contentWindow?.print();
+            
+            // Cleanup after print dialog opens
+            setTimeout(() => {
+              document.body.removeChild(printFrame);
+              URL.revokeObjectURL(pdfUrl);
+            }, 1000);
+          }, 500);
+        } catch (err) {
+          console.error('Print error:', err);
+          document.body.removeChild(printFrame);
           URL.revokeObjectURL(pdfUrl);
-        }, 1000);
+          toast({ 
+            title: "Print Failed", 
+            description: "Unable to print. Try downloading instead.", 
+            variant: "destructive" 
+          });
+        }
       };
 
-      toast({ title: "Opening Print Dialog", description: "PDF will open in a new tab" });
+      toast({ title: "Success", description: "Opening print dialog..." });
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
