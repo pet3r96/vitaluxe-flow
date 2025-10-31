@@ -544,9 +544,46 @@ export const ProductsGrid = () => {
             : patient?.address || null;
 
         if (!isValidStateCode(destinationState)) {
-          toast.error(
-            "Patient address is incomplete or invalid. Please update the patient's address with valid state information."
-          );
+          // If destination state is invalid/missing, allow adding to cart without routing.
+          // We'll collect address on Delivery Confirmation and route there.
+          console.warn('[ProductsGrid] Missing/invalid patient state. Skipping routing and inserting unassigned line.');
+          const actualProviderId = await getProviderIdFromUserId(providerId);
+          if (!actualProviderId) {
+            toast.error("Unable to find provider record. Please contact support.");
+            return;
+          }
+
+          const { error: insertError } = await supabase
+            .from("cart_lines" as any)
+            .insert({
+              cart_id: cart.id,
+              product_id: productForCart.id,
+              patient_id: patientId,
+              provider_id: actualProviderId,
+              patient_name: patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || "Unknown" : "Unknown",
+              patient_email: patient?.email,
+              patient_phone: patient?.phone,
+              patient_address: null,
+              patient_address_street: patient?.address || null,
+              patient_address_city: patient?.city || null,
+              patient_address_state: patient?.state || null,
+              patient_address_zip: patient?.zip_code || null,
+              patient_address_validated: false,
+              patient_address_validation_source: null,
+              quantity: quantity,
+              price_snapshot: correctPrice,
+              destination_state: null,
+              assigned_pharmacy_id: null,
+              prescription_url: prescriptionUrl,
+              custom_sig: customSig,
+              custom_dosage: customDosage,
+              order_notes: orderNotes,
+              prescription_method: prescriptionMethod,
+            });
+
+          if (insertError) throw insertError;
+
+          toast.message("Added to cart", { description: "Please complete patient address on Delivery Confirmation." });
           return;
         }
 
