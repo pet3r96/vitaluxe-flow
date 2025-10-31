@@ -24,10 +24,10 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       console.log("Fetching patients for practice:", effectivePracticeId);
-      // Fetch from v_patients_with_portal_status view which has name and patient_account_id
+      // Fetch patient_id (patients.id) from the view instead of patient_account_id
       const { data, error } = await supabase
         .from("v_patients_with_portal_status")
-        .select("patient_account_id, name")
+        .select("patient_id, name")
         .eq("practice_id", effectivePracticeId)
         .order("name");
       if (error) {
@@ -35,8 +35,8 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
         throw error;
       }
       console.log("Patients fetched:", data?.length || 0);
-      // Map to format expected by component (id, name)
-      return (data || []).map(p => ({ id: p.patient_account_id, name: p.name }));
+      // Map to format expected by component - use patient_id (patients.id) not patient_account_id
+      return (data || []).map(p => ({ id: p.patient_id, name: p.name }));
     },
     enabled: !!effectivePracticeId,
     staleTime: 5 * 60 * 1000, // 5 minutes

@@ -148,32 +148,56 @@ serve(async (req) => {
       );
     }
 
-    // Verify all patients belong to this practice
-    const { data: patientsCheck } = await supabaseAdmin
-      .from('patients')
-      .select('id, practice_id')
-      .in('id', patientIds);
+    // Resolve and verify patient IDs - accept either patients.id or patient_accounts.id
+    const resolvedPatientIds: string[] = [];
+    const patientIdLog: Array<{incoming: string, resolved: string | null}> = [];
 
-    if (!patientsCheck || patientsCheck.length !== patientIds.length) {
-      console.error('Patient verification failed:', { 
-        requested: patientIds.length, 
-        found: patientsCheck?.length,
-        patientIds 
-      });
-      return new Response(
-        JSON.stringify({ error: 'One or more patients not found' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    for (const incomingId of patientIds) {
+      // Try direct lookup in patients table
+      const { data: directMatch } = await supabaseAdmin
+        .from('patients')
+        .select('id, practice_id')
+        .eq('id', incomingId)
+        .maybeSingle();
+
+      if (directMatch) {
+        if (directMatch.practice_id === effectivePracticeId) {
+          resolvedPatientIds.push(directMatch.id);
+          patientIdLog.push({ incoming: incomingId, resolved: directMatch.id });
+        } else {
+          console.error('Patient belongs to different practice:', { incomingId, directMatch, effectivePracticeId });
+          return new Response(
+            JSON.stringify({ error: 'Access denied to one or more patients' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        // Try resolving via patient_accounts.id -> patients.patient_account_id
+        const { data: resolvedMatch } = await supabaseAdmin
+          .from('patients')
+          .select('id, practice_id, patient_account_id')
+          .eq('patient_account_id', incomingId)
+          .maybeSingle();
+
+        if (resolvedMatch && resolvedMatch.practice_id === effectivePracticeId) {
+          resolvedPatientIds.push(resolvedMatch.id);
+          patientIdLog.push({ incoming: incomingId, resolved: resolvedMatch.id });
+          console.log('Resolved patient_account_id to patients.id:', { 
+            patient_account_id: incomingId, 
+            patients_id: resolvedMatch.id 
+          });
+        } else {
+          console.error('Could not resolve patient ID:', { incomingId, resolvedMatch });
+          return new Response(
+            JSON.stringify({ error: 'One or more patients not found' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     }
 
-    const invalidPatients = patientsCheck.filter(p => p.practice_id !== effectivePracticeId);
-    if (invalidPatients.length > 0) {
-      console.error('Invalid patients for practice:', { invalidPatients, effectivePracticeId });
-      return new Response(
-        JSON.stringify({ error: 'Access denied to one or more patients' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log('Patient ID resolution:', patientIdLog);
+    console.log('Resolved patient IDs:', resolvedPatientIds);
 
     // Get document info
     const { data: document } = await supabaseAdmin
@@ -182,8 +206,8 @@ serve(async (req) => {
       .eq('id', documentId)
       .single();
 
-    // Insert assignments into junction table
-    const assignments = patientIds.map(patientId => ({
+    // Insert assignments into junction table using resolved patients.id
+    const assignments = resolvedPatientIds.map(patientId => ({
       document_id: documentId,
       patient_id: patientId,
       assigned_by: user.id,
@@ -202,11 +226,18 @@ serve(async (req) => {
       );
     }
 
-    // Get patient accounts for notifications
+    // Get patient accounts for notifications using resolved IDs
+    const { data: patientAccountsLookup } = await supabaseAdmin
+      .from('patients')
+      .select('patient_account_id')
+      .in('id', resolvedPatientIds);
+
+    const accountIds = patientAccountsLookup?.map(p => p.patient_account_id).filter(Boolean) || [];
+    
     const { data: patientAccounts } = await supabaseAdmin
       .from('patient_accounts')
-      .select('user_id, full_name, patient_id')
-      .in('patient_id', patientIds);
+      .select('user_id, name')
+      .in('id', accountIds);
 
     // Create notifications for each patient
     if (patientAccounts && patientAccounts.length > 0) {
@@ -232,19 +263,21 @@ serve(async (req) => {
       entity_id: documentId,
       details: {
         document_name: document?.document_name,
-        patient_ids: patientIds,
-        patient_count: patientIds.length,
+        patient_ids: resolvedPatientIds,
+        patient_count: resolvedPatientIds.length,
+        incoming_ids: patientIds,
+        id_resolution: patientIdLog,
         message,
         effective_practice_id: effectivePracticeId,
       },
     });
 
-    console.log(`Document ${documentId} assigned to ${patientIds.length} patients by practice ${effectivePracticeId}`);
+    console.log(`Document ${documentId} assigned to ${resolvedPatientIds.length} patients by practice ${effectivePracticeId}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Document assigned to ${patientIds.length} patient${patientIds.length === 1 ? '' : 's'} successfully` 
+        message: `Document assigned to ${resolvedPatientIds.length} patient${resolvedPatientIds.length === 1 ? '' : 's'} successfully` 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
