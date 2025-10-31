@@ -20,6 +20,7 @@ import { SurgeriesSection } from "@/components/medical-vault/SurgeriesSection";
 import { PharmaciesSection } from "@/components/medical-vault/PharmaciesSection";
 import { EmergencyContactsSection } from "@/components/medical-vault/EmergencyContactsSection";
 import { BasicDemographicsCard } from "@/components/patient/BasicDemographicsCard";
+import { PDFViewer } from "@/components/documents/PDFViewer";
 
 export default function PatientMedicalVault() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -412,23 +413,16 @@ export default function PatientMedicalVault() {
           setPdfPreviewUrl(null);
         }
       }}>
-        <DialogContent className="max-w-6xl h-[90vh] p-0">
-          <DialogHeader className="p-6 pb-4">
+        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-4 border-b">
             <DialogTitle>Medical Vault Preview</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden px-6 pb-6">
+          <div className="flex-1 overflow-hidden">
             {pdfPreviewUrl && (
-              <object
-                data={pdfPreviewUrl}
-                type="application/pdf"
-                className="w-full h-full border rounded-lg"
-              >
-                <p className="text-sm text-muted-foreground p-4">
-                  PDF preview is not supported by your browser or was blocked. 
-                  <a className="underline" href={pdfPreviewUrl} target="_blank" rel="noreferrer">Open in a new tab</a>
-                  or use the Download button instead.
-                </p>
-              </object>
+              <PDFViewer 
+                url={pdfPreviewUrl} 
+                onDownload={handleDownloadPDF}
+              />
             )}
           </div>
         </DialogContent>

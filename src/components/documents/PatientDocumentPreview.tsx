@@ -4,6 +4,7 @@ import { Download, FileText } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { PDFViewer } from "./PDFViewer";
 
 interface PatientDocumentPreviewProps {
   open: boolean;
@@ -95,58 +96,62 @@ export function PatientDocumentPreview({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             {documentName}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex-1 overflow-hidden flex flex-col">
           {loading && (
-            <div className="flex items-center justify-center h-96">
+            <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
           )}
 
           {!loading && canPreview && previewUrl && (
-            <div className="border rounded-lg overflow-hidden bg-muted">
+            <>
               {isPDF && (
-                <embed
-                  src={previewUrl}
-                  type="application/pdf"
-                  className="w-full h-[600px]"
+                <PDFViewer 
+                  url={previewUrl} 
+                  onDownload={handleDownload}
+                  className="flex-1"
                 />
               )}
               {isImage && (
-                <img
-                  src={previewUrl}
-                  alt={documentName}
-                  className="w-full h-auto max-h-[600px] object-contain"
-                />
+                <div className="flex-1 overflow-auto bg-muted/20 flex items-center justify-center p-4">
+                  <img
+                    src={previewUrl}
+                    alt={documentName}
+                    className="max-w-full max-h-full object-contain shadow-lg"
+                  />
+                </div>
               )}
-            </div>
+            </>
           )}
 
           {!loading && !canPreview && (
-            <div className="flex flex-col items-center justify-center h-96 gap-4 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
               <FileText className="h-16 w-16" />
               <p>Preview not available for this file type</p>
               <p className="text-sm">Click the download button below to view the file</p>
+              <Button onClick={handleDownload} className="mt-4">
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
             </div>
           )}
+        </div>
 
-          <div className="flex justify-end gap-2">
+        {!loading && canPreview && (
+          <div className="flex justify-end gap-2 p-6 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
-            <Button onClick={handleDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
