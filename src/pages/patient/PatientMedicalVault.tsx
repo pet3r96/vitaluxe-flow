@@ -13,6 +13,7 @@ import { ImmunizationsSection } from "@/components/medical-vault/ImmunizationsSe
 import { SurgeriesSection } from "@/components/medical-vault/SurgeriesSection";
 import { PharmaciesSection } from "@/components/medical-vault/PharmaciesSection";
 import { EmergencyContactsSection } from "@/components/medical-vault/EmergencyContactsSection";
+import { BasicDemographicsCard } from "@/components/patient/BasicDemographicsCard";
 
 export default function PatientMedicalVault() {
   // Get patient account - check for impersonation first
@@ -32,14 +33,14 @@ export default function PatientMedicalVault() {
       
       const { data, error } = await supabase
         .from("patient_accounts")
-        .select("id, first_name, last_name, practice_id")
+        .select("id, first_name, last_name, practice_id, date_of_birth, address, city, state, zip_code, gender_at_birth")
         .eq("user_id", effectiveUserId)
         .maybeSingle();
       
       console.log("📋 Patient account query result:", data, error);
       
       if (error) throw error;
-      return data;
+      return { ...data, effectiveUserId };
     },
   });
 
@@ -191,6 +192,12 @@ export default function PatientMedicalVault() {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Basic Demographics Card */}
+      <BasicDemographicsCard 
+        patientAccount={patientAccount}
+        effectiveUserId={patientAccount?.effectiveUserId || ''}
+      />
 
       {/* 8 Medical Vault Sections */}
       <div className="grid md:grid-cols-2 gap-6">
