@@ -280,48 +280,44 @@ const RepDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
+    <div className="patient-container">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">
           {effectiveRole === 'topline' ? 'Topline' : 'Downline'} Dashboard
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">
           Overview of your network and performance
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
+            <div key={stat.title} className="patient-stat-card p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">
+                {stat.title}
+              </h3>
+              <p className="text-2xl sm:text-3xl font-bold text-foreground mt-2">
+                {stat.value}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stat.description}
+              </p>
+            </div>
           );
         })}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            View detailed reports in the Reports section
-          </p>
-        </CardContent>
-      </Card>
+      <div className="patient-card p-6">
+        <h2 className="text-2xl font-semibold mb-4 text-primary text-center">Recent Activity</h2>
+        <p className="text-sm text-muted-foreground text-center">
+          View detailed reports in the Reports section
+        </p>
+      </div>
     </div>
   );
 };

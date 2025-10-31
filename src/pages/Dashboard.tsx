@@ -434,9 +434,9 @@ const Dashboard = () => {
   ].filter(stat => !stat.hidden);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
+    <div className="patient-container">
+      <div className="flex flex-col items-center gap-4 mb-8">
+        <div className="text-center w-full">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">Dashboard</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-2">
             Welcome back, {user?.email}
@@ -451,14 +451,14 @@ const Dashboard = () => {
           )}
         </div>
         {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
-          <div className="w-64">
+          <div className="w-full sm:w-64 mx-auto sm:mx-0">
             <PatientQuickSearch />
           </div>
         )}
       </div>
 
       {!isSubscribed && effectiveRole === 'doctor' && !isProviderAccount && (
-        <Card className="p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
+        <div className="patient-card p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="rounded-full bg-primary/20 p-4 shrink-0">
               <Sparkles className="h-8 w-8 text-primary" />
@@ -491,15 +491,15 @@ const Dashboard = () => {
               Start Free Trial
             </Button>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Stats cards - Always visible for all users */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat) => (
-          <Card
+          <div
             key={stat.title}
-            className="p-4 sm:p-6 bg-card border-border shadow-gold hover:glow-gold transition-all duration-300"
+            className="patient-stat-card p-4 sm:p-6"
           >
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <stat.icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
@@ -517,7 +517,7 @@ const Dashboard = () => {
             <p className="text-xs text-muted-foreground mt-1">
               {stat.description}
             </p>
-          </Card>
+          </div>
         ))}
       </div>
 
@@ -539,14 +539,14 @@ const Dashboard = () => {
       )}
 
       {!isSubscribed && (
-        <Card className="p-6 bg-card border-border shadow-gold">
-        <h2 className="text-2xl font-semibold mb-4 text-primary">
+        <div className="patient-card p-6">
+        <h2 className="text-2xl font-semibold mb-4 text-primary text-center">
           Recent Activity
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-center">
           No recent activity to display.
         </p>
-        </Card>
+        </div>
       )}
     </div>
   );

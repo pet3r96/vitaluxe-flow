@@ -112,15 +112,17 @@ export default function DashboardMobile() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <MobilePageHeader 
-        title="Dashboard" 
-        subtitle={effectiveRole ? effectiveRole.charAt(0).toUpperCase() + effectiveRole.slice(1) : ""}
-      />
+      <div className="text-center py-6 px-4 border-b border-border">
+        <h1 className="text-2xl font-bold gold-text-gradient">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {effectiveRole ? effectiveRole.charAt(0).toUpperCase() + effectiveRole.slice(1) : ""}
+        </p>
+      </div>
 
-      <div className="p-4 space-y-4">
+      <div className="patient-container space-y-4">
         {/* Trial Banner for non-subscribed doctors */}
         {effectiveRole === "doctor" && !isSubscribed && trialDaysRemaining !== null && (
-          <Card className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-200">
+          <div className="patient-card bg-gradient-to-r from-primary/10 to-gold-light/10 border-primary/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-amber-100">
@@ -129,13 +131,13 @@ export default function DashboardMobile() {
                 <Button
                   size="sm"
                   onClick={() => navigate("/my-subscription")}
-                  className="ml-auto"
+                  className="ml-auto touch-target-sm"
                 >
                   Upgrade
                 </Button>
               </div>
             </CardContent>
-          </Card>
+          </div>
         )}
 
         {/* Quick Stats Grid - simplified for mobile */}
@@ -143,17 +145,17 @@ export default function DashboardMobile() {
           {statsLoading ? (
             <>
               {[1, 2].map((i) => (
-                <Card key={i}>
+                <div key={i} className="patient-card">
                   <CardContent className="p-4">
                     <Skeleton className="h-12 w-full" />
                   </CardContent>
-                </Card>
+                </div>
               ))}
             </>
           ) : (
             <>
               {stats?.orders !== undefined && (
-                <Card>
+                <div className="patient-stat-card">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-1">
                       <ShoppingCart className="h-5 w-5 text-muted-foreground" />
@@ -161,11 +163,11 @@ export default function DashboardMobile() {
                       <div className="text-xs text-muted-foreground">Orders</div>
                     </div>
                   </CardContent>
-                </Card>
+                </div>
               )}
               
               {stats?.appointments !== undefined && (
-                <Card>
+                <div className="patient-stat-card">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-1">
                       <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -173,11 +175,11 @@ export default function DashboardMobile() {
                       <div className="text-xs text-muted-foreground">Upcoming</div>
                     </div>
                   </CardContent>
-                </Card>
+                </div>
               )}
               
               {stats?.messages !== undefined && (
-                <Card>
+                <div className="patient-stat-card">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-1">
                       <MessageSquare className="h-5 w-5 text-muted-foreground" />
@@ -185,23 +187,23 @@ export default function DashboardMobile() {
                       <div className="text-xs text-muted-foreground">Unread</div>
                     </div>
                   </CardContent>
-                </Card>
+                </div>
               )}
             </>
           )}
         </div>
 
         {/* Quick Actions */}
-        <Card>
+        <div className="patient-card">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Quick Actions</CardTitle>
+            <CardTitle className="text-base text-center">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-2">
             {quickActions.map((action, idx) => (
               <Button
                 key={idx}
                 variant="outline"
-                className="justify-start h-auto py-3"
+                className="justify-start h-auto py-3 touch-target"
                 onClick={action.onClick}
               >
                 <action.icon className="h-5 w-5 mr-2" />
@@ -209,19 +211,19 @@ export default function DashboardMobile() {
               </Button>
             ))}
           </CardContent>
-        </Card>
+        </div>
 
         {/* Recent Activity placeholder */}
-        <Card>
+        <div className="patient-card">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Recent Activity</CardTitle>
+            <CardTitle className="text-base text-center">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground text-center py-4">
               No recent activity
             </p>
           </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   );
