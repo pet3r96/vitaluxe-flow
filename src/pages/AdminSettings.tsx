@@ -29,7 +29,7 @@ const AdminSettings = () => {
       </div>
 
       <Tabs defaultValue="practices" className="space-y-4">
-        <TabsList className="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <TabsList className="flex flex-wrap h-auto w-full justify-start gap-2 p-2 bg-muted">
           <TabsTrigger value="practices" className="gap-2">
             <Building2 className="h-4 w-4" />
             Practices
