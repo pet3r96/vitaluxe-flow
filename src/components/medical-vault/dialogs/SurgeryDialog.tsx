@@ -28,7 +28,7 @@ interface SurgeryDialogProps {
 export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, mode }: SurgeryDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SurgeryFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<SurgeryFormData>({
     resolver: zodResolver(surgerySchema),
     defaultValues: surgery || {
       surgery_type: "",
@@ -74,7 +74,12 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
       },
       successMessage: mode === "edit" ? "Surgery updated successfully" : "Surgery added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} surgery`,
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        onOpenChange(false);
+        if (mode === "add") {
+          reset();
+        }
+      },
     }
   );
 

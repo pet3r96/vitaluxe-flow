@@ -28,7 +28,7 @@ interface ImmunizationDialogProps {
 export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immunization, mode }: ImmunizationDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ImmunizationFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<ImmunizationFormData>({
     resolver: zodResolver(immunizationSchema),
     defaultValues: immunization || {
       vaccine_name: "",
@@ -74,7 +74,12 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
       },
       successMessage: mode === "edit" ? "Immunization updated successfully" : "Immunization added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} immunization`,
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        onOpenChange(false);
+        if (mode === "add") {
+          reset();
+        }
+      },
     }
   );
 

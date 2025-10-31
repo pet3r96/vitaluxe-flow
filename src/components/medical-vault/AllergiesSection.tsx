@@ -1,9 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Plus, Edit, Eye } from "lucide-react";
+import { AlertCircle, Plus, Edit, Eye, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { AllergyDialog } from "./dialogs/AllergyDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 interface Allergy {
   id: string;
@@ -21,6 +24,7 @@ interface AllergiesSectionProps {
 }
 
 export function AllergiesSection({ patientAccountId, allergies }: AllergiesSectionProps) {
+  const queryClient = useQueryClient();
   const nkaRecord = allergies.find(a => a.is_active && a.nka);
   const activeAllergies = allergies.filter(a => a.is_active && !a.nka);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -34,6 +38,24 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
     setDialogMode(mode);
     setSelectedAllergy(allergy || null);
     setDialogOpen(true);
+  };
+
+  const handleDelete = async (allergy: any) => {
+    if (!confirm(`Are you sure you want to delete ${allergy.nka ? 'NKA record' : allergy.allergen_name}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from("patient_allergies")
+        .delete()
+        .eq("id", allergy.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["patient-allergies", patientAccountId] });
+      toast({ title: "Success", description: "Allergy deleted successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete allergy", variant: "destructive" });
+    }
   };
   
   return (
@@ -80,6 +102,9 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
               <Button size="sm" variant="ghost" onClick={() => openDialog("edit", nkaRecord)}>
                 <Edit className="h-4 w-4" />
               </Button>
+              <Button size="sm" variant="ghost" onClick={() => handleDelete(nkaRecord)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         ) : activeAllergies.length > 0 ? (
@@ -112,6 +137,9 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => openDialog("edit", allergy)}>
                     <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleDelete(allergy)}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

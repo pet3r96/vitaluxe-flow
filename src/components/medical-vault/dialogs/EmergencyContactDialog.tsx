@@ -34,7 +34,7 @@ interface EmergencyContactDialogProps {
 export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, contact, mode }: EmergencyContactDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<EmergencyContactFormData>({
+  const { register, handleSubmit, control, formState: { errors, isSubmitting }, reset } = useForm<EmergencyContactFormData>({
     resolver: zodResolver(emergencyContactSchema),
     defaultValues: contact || {
       name: "",
@@ -85,7 +85,12 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       },
       successMessage: mode === "edit" ? "Emergency contact updated successfully" : "Emergency contact added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} emergency contact`,
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        onOpenChange(false);
+        if (mode === "add") {
+          reset();
+        }
+      },
     }
   );
 

@@ -1,17 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Plus, Edit, Eye, Star } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Building2, Plus, Edit, Eye, Star, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { PharmacyDialog } from "./dialogs/PharmacyDialog";
+import { toast } from "@/hooks/use-toast";
 
 interface PharmaciesSectionProps {
   patientAccountId?: string;
 }
 
 export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPharmacy, setSelectedPharmacy] = useState<any>(null);
@@ -35,6 +37,24 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
   const visiblePharmacies = expanded 
     ? (pharmacies || []) 
     : (pharmacies || []).slice(0, 2);
+
+  const handleDelete = async (pharmacy: any) => {
+    if (!confirm(`Are you sure you want to delete ${pharmacy.pharmacy_name}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from("patient_pharmacies")
+        .delete()
+        .eq("id", pharmacy.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["patient-pharmacies", patientAccountId] });
+      toast({ title: "Success", description: "Pharmacy deleted successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete pharmacy", variant: "destructive" });
+    }
+  };
 
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-indigo-500/10 to-blue-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -111,6 +131,13 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
                     }}
                   >
                     <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => handleDelete(pharmacy)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

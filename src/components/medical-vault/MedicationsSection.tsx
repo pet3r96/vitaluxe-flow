@@ -1,10 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pill, Plus, Edit, Eye } from "lucide-react";
+import { Pill, Plus, Edit, Eye, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useState } from "react";
 import { MedicationDialog } from "./dialogs/MedicationDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 interface Medication {
   id: string;
@@ -23,6 +26,7 @@ interface MedicationsSectionProps {
 }
 
 export function MedicationsSection({ patientAccountId, medications }: MedicationsSectionProps) {
+  const queryClient = useQueryClient();
   const activeMedications = medications.filter(m => m.is_active);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMedication, setSelectedMedication] = useState<any>(null);
@@ -35,6 +39,24 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
     setDialogMode(mode);
     setSelectedMedication(medication || null);
     setDialogOpen(true);
+  };
+
+  const handleDelete = async (medication: any) => {
+    if (!confirm(`Are you sure you want to delete ${medication.medication_name}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from("patient_medications")
+        .delete()
+        .eq("id", medication.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["patient-medications", patientAccountId] });
+      toast({ title: "Success", description: "Medication deleted successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete medication", variant: "destructive" });
+    }
   };
   
   return (
@@ -90,6 +112,9 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => openDialog("edit", med)}>
                     <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleDelete(med)}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

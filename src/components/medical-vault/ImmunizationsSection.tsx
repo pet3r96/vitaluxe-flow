@@ -1,17 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Syringe, Plus, Edit, Eye } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Syringe, Plus, Edit, Eye, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState } from "react";
 import { ImmunizationDialog } from "./dialogs/ImmunizationDialog";
+import { toast } from "@/hooks/use-toast";
 
 interface ImmunizationsSectionProps {
   patientAccountId?: string;
 }
 
 export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionProps) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedImmunization, setSelectedImmunization] = useState<any>(null);
@@ -35,6 +37,24 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
   const visibleImmunizations = expanded 
     ? (immunizations || []) 
     : (immunizations || []).slice(0, 2);
+
+  const handleDelete = async (immunization: any) => {
+    if (!confirm(`Are you sure you want to delete ${immunization.vaccine_name}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from("patient_immunizations")
+        .delete()
+        .eq("id", immunization.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["patient-immunizations", patientAccountId] });
+      toast({ title: "Success", description: "Immunization deleted successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete immunization", variant: "destructive" });
+    }
+  };
 
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-purple-500/10 to-indigo-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -98,6 +118,13 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
                     }}
                   >
                     <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => handleDelete(immunization)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

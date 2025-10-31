@@ -1,18 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, Plus, Edit, Eye } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Phone, Plus, Edit, Eye, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { EmergencyContactDialog } from "./dialogs/EmergencyContactDialog";
 import { formatPhoneNumber } from "@/lib/validators";
+import { toast } from "@/hooks/use-toast";
 
 interface EmergencyContactsSectionProps {
   patientAccountId?: string;
 }
 
 export function EmergencyContactsSection({ patientAccountId }: EmergencyContactsSectionProps) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
@@ -36,6 +38,24 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
   const visibleContacts = expanded 
     ? (contacts || []) 
     : (contacts || []).slice(0, 2);
+
+  const handleDelete = async (contact: any) => {
+    if (!confirm(`Are you sure you want to delete ${contact.name}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from("patient_emergency_contacts")
+        .delete()
+        .eq("id", contact.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["patient-emergency-contacts", patientAccountId] });
+      toast({ title: "Success", description: "Contact deleted successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete contact", variant: "destructive" });
+    }
+  };
 
   return (
     <Card className="group relative overflow-visible border-0 bg-gradient-to-br from-rose-500/10 to-pink-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -105,6 +125,13 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
                     }}
                   >
                     <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => handleDelete(contact)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

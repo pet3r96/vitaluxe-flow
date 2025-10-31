@@ -33,7 +33,7 @@ interface PharmacyDialogProps {
 export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy, mode }: PharmacyDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<PharmacyFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<PharmacyFormData>({
     resolver: zodResolver(pharmacySchema),
     defaultValues: pharmacy || {
       pharmacy_name: "",
@@ -94,7 +94,12 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
       },
       successMessage: mode === "edit" ? "Pharmacy updated successfully" : "Pharmacy added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} pharmacy`,
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        onOpenChange(false);
+        if (mode === "add") {
+          reset();
+        }
+      },
     }
   );
 
