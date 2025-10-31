@@ -22,6 +22,8 @@ interface FollowUpManagerProps {
 }
 
 export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps) {
+  console.log("[FollowUpManager] Mounted with patientId:", patientId, "patientName:", patientName);
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFollowUp, setEditingFollowUp] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -30,6 +32,8 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
   const { data: followUps, isLoading, refetch } = useQuery({
     queryKey: ["patient-follow-ups", patientId, statusFilter],
     queryFn: async () => {
+      console.log("[FollowUpManager] Fetching follow-ups for patient:", patientId, "with status filter:", statusFilter);
+      
       let query = supabase
         .from("patient_follow_ups" as any)
         .select(`
@@ -45,7 +49,13 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      console.log("[FollowUpManager] Query result:", { data, error, count: data?.length });
+      
+      if (error) {
+        console.error("[FollowUpManager] Query error:", error);
+        throw error;
+      }
 
       // Enrich with role information
       const enrichedData = await Promise.all(
@@ -78,6 +88,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
         })
       );
 
+      console.log("[FollowUpManager] Enriched data:", enrichedData);
       return enrichedData;
     },
   });
