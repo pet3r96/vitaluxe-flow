@@ -141,14 +141,19 @@ export default function PatientDocuments() {
   // Apply filters
   const filteredDocuments = allDocuments.filter((doc) => {
     if (typeFilter !== "all" && doc.document_type !== typeFilter) return false;
-    if (sourceFilter === "patient_upload") {
-      // "Private" filter: Show only patient uploads that are NOT shared with practice
-      if (doc.source !== "patient_uploaded" || doc.share_with_practice === true) return false;
+    
+    // Source filters
+    if (sourceFilter === "my_uploads") {
+      // Show only patient's own uploads (regardless of sharing status)
+      if (doc.source !== "patient_uploaded") return false;
+    } else if (sourceFilter === "patient_shared") {
+      // Show only patient uploads that ARE shared with practice
+      if (doc.source !== "patient_uploaded" || doc.share_with_practice !== true) return false;
+    } else if (sourceFilter === "practice_shared") {
+      // Show only documents assigned by practice
+      if (doc.source !== "provider_assigned") return false;
     }
-    if (sourceFilter === "provider_assigned") {
-      // "Practice Shared" filter: Show only documents shared with practice or assigned by practice
-      if (doc.share_with_practice !== true && doc.source !== "provider_assigned") return false;
-    }
+    
     if (dateFrom && new Date(doc.uploaded_at) < new Date(dateFrom)) return false;
     if (dateTo && new Date(doc.uploaded_at) > new Date(dateTo)) return false;
     return true;

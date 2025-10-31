@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export type DocumentTypeFilter = "all" | "insurance" | "drivers_license" | "id" | "prescription" | "lab_result" | "imaging" | "referral" | "other";
-export type SourceFilter = "all" | "patient_upload" | "provider_assigned";
+export type SourceFilter = "all" | "my_uploads" | "patient_shared" | "practice_shared";
 
 interface PatientDocumentFiltersProps {
   documentType: DocumentTypeFilter;
@@ -96,12 +96,16 @@ export function PatientDocumentFilters({
               <Label htmlFor="source-all" className="font-normal cursor-pointer">All</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="patient_upload" id="source-patient" />
-              <Label htmlFor="source-patient" className="font-normal cursor-pointer">Private</Label>
+              <RadioGroupItem value="my_uploads" id="source-my-uploads" />
+              <Label htmlFor="source-my-uploads" className="font-normal cursor-pointer">My Uploads</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="provider_assigned" id="source-provider" />
-              <Label htmlFor="source-provider" className="font-normal cursor-pointer">Practice Shared</Label>
+              <RadioGroupItem value="practice_shared" id="source-practice" />
+              <Label htmlFor="source-practice" className="font-normal cursor-pointer">Practice Shared</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="patient_shared" id="source-patient-shared" />
+              <Label htmlFor="source-patient-shared" className="font-normal cursor-pointer">Patient Shared</Label>
             </div>
           </RadioGroup>
         </div>
