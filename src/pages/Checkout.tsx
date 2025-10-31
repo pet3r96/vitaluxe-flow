@@ -251,15 +251,21 @@ export default function Checkout() {
     enabled: !!practiceIdForShipping,
   });
 
-  // Fetch payment methods (credit cards only) - use practice payment methods for staff
+  // Fetch payment methods (credit cards only) - include both practice and personal cards for staff
   const { data: paymentMethods } = useQuery({
-    queryKey: ["payment-methods", practiceIdForPayment],
+    queryKey: ["payment-methods", practiceIdForPayment, user?.id],
     queryFn: async () => {
+      // For staff/providers, fetch cards from both practice AND their personal account
+      const practiceIds = (isStaffAccount || isProviderAccount) 
+        ? [practiceIdForPayment, user?.id].filter(Boolean)
+        : [practiceIdForPayment];
+
       const { data, error } = await supabase
         .from("practice_payment_methods")
         .select("*")
-        .eq("practice_id", practiceIdForPayment)
+        .in("practice_id", practiceIds)
         .eq("payment_type", "credit_card")
+        .neq("status", "declined")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
 
@@ -273,7 +279,7 @@ export default function Checkout() {
       
       return data || [];
     },
-    enabled: !!practiceIdForPayment,
+    enabled: !!practiceIdForPayment && !!user,
   });
 
   // Fetch checkout attestation

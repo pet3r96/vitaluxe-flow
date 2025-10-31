@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
 
     // Get the current user placing the order
     const currentUserId = user.id;
+    console.log('Authorization check starting:', { currentUserId, order_doctor_id: order.doctor_id, payment_method_practice_id: paymentMethod.practice_id });
 
     // Verify ownership: payment method must belong to the practice or the user must be authorized
     let isAuthorized = false;
@@ -110,22 +111,49 @@ Deno.serve(async (req) => {
       // Case 2: Current user is the practice owner
       console.log('✓ Payment authorized: practice owner');
       isAuthorized = true;
-    } else {
-      // Case 3: Check if current user is a staff member (provider) of this practice
-      const { data: staffLink } = await supabaseAdmin
+    } else if (paymentMethod.practice_id === currentUserId) {
+      // Case 3: Payment method belongs to current user - check if they're authorized for this practice
+      console.log('Checking if user is authorized staff/provider for practice...');
+      
+      // Check if user is a provider for this practice
+      const { data: providerLink } = await supabaseAdmin
         .from('providers')
-        .select('practice_id, user_id')
+        .select('practice_id, user_id, active')
         .eq('user_id', currentUserId)
         .eq('practice_id', order.doctor_id)
         .eq('active', true)
-        .single();
+        .maybeSingle();
+      
+      console.log('Provider link check:', providerLink);
 
-      if (staffLink) {
-        // User is a staff member of this practice
-        // Check if payment method belongs to the practice OR to this staff member
-        if (paymentMethod.practice_id === order.doctor_id || paymentMethod.practice_id === currentUserId) {
-          console.log('✓ Payment authorized: staff member using practice or personal card');
-          isAuthorized = true;
+      if (providerLink) {
+        console.log('✓ Payment authorized: provider using personal card');
+        isAuthorized = true;
+      } else {
+        // Check if user has staff role for this practice via user_roles
+        const { data: staffRole } = await supabaseAdmin
+          .from('user_roles')
+          .select('user_id, role')
+          .eq('user_id', currentUserId)
+          .eq('role', 'staff')
+          .maybeSingle();
+        
+        console.log('Staff role check:', staffRole);
+
+        if (staffRole) {
+          // Verify this staff member belongs to the practice by checking their profile
+          const { data: userProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('practice_id')
+            .eq('id', currentUserId)
+            .maybeSingle();
+          
+          console.log('User profile check:', userProfile);
+
+          if (userProfile && userProfile.practice_id === order.doctor_id) {
+            console.log('✓ Payment authorized: staff member using personal card');
+            isAuthorized = true;
+          }
         }
       }
     }
