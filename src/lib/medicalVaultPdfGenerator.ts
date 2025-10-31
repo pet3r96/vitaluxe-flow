@@ -203,17 +203,38 @@ export const generateMedicalVaultPDF = async (
     return 50; // Space after header
   };
 
-  // Section Title Helper
+  // Helper to check if we need a page break before adding content
+  const checkPageBreak = (currentY: number, minSpaceNeeded: number = 30): number => {
+    if (currentY + minSpaceNeeded > pageHeight - 20) {
+      doc.addPage();
+      addHeader();
+      return 50; // Start after header
+    }
+    return currentY;
+  };
+
+  // Section Title Helper with gold divider line
   const addSectionTitle = (title: string, currentY: number): number => {
+    // Check if we need a page break before adding section
+    currentY = checkPageBreak(currentY, 30);
+    
     doc.setTextColor(218, 165, 32); // Gold
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text(title, pageWidth / 2, currentY, { align: 'center' });
-    return currentY + 8;
+    
+    // Add subtle gold divider line below title
+    const lineWidth = pageWidth * 0.8;
+    const lineX = (pageWidth - lineWidth) / 2;
+    doc.setDrawColor(218, 165, 32);
+    doc.setLineWidth(0.3);
+    doc.line(lineX, currentY + 2, lineX + lineWidth, currentY + 2);
+    
+    return currentY + 10;
   };
 
-  // Footer with Timestamp
-  const addFooter = () => {
+  // Footer with Timestamp and Page Numbers
+  const addFooter = (pageNum: number, totalPages: number) => {
     const currentDate = new Date();
     const timestamp = `Downloaded: ${currentDate.toLocaleString('en-US', { 
       month: 'long', 
@@ -227,7 +248,12 @@ export const generateMedicalVaultPDF = async (
     doc.setTextColor(100, 100, 100);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(timestamp, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    
+    // Page number on left
+    doc.text(`Page ${pageNum} of ${totalPages}`, 15, pageHeight - 10, { align: 'left' });
+    
+    // Timestamp on right
+    doc.text(timestamp, pageWidth - 15, pageHeight - 10, { align: 'right' });
   };
 
   yPos = addHeader();
@@ -258,7 +284,7 @@ export const generateMedicalVaultPDF = async (
       fillColor: [249, 249, 249],
     },
     columnStyles: {
-      0: { cellWidth: 50, fontStyle: 'bold' },
+      0: { cellWidth: 50, fontStyle: 'bold', fillColor: [245, 245, 245] },
       1: { cellWidth: 'auto' },
     },
     styles: {
@@ -288,7 +314,7 @@ export const generateMedicalVaultPDF = async (
       body: medicationsData,
       theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
+        fillColor: [200, 200, 200],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
         fontSize: 8,
@@ -334,7 +360,7 @@ export const generateMedicalVaultPDF = async (
       body: conditionsData,
       theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
+        fillColor: [200, 200, 200],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
         fontSize: 8,
@@ -378,7 +404,7 @@ export const generateMedicalVaultPDF = async (
       body: allergiesData,
       theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
+        fillColor: [200, 200, 200],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
         fontSize: 8,
@@ -444,7 +470,7 @@ export const generateMedicalVaultPDF = async (
         fillColor: [249, 249, 249],
       },
       columnStyles: {
-        0: { cellWidth: 50, fontStyle: 'bold' },
+        0: { cellWidth: 50, fontStyle: 'bold', fillColor: [245, 245, 245] },
         1: { cellWidth: 'auto' },
       },
       styles: {
@@ -474,7 +500,7 @@ export const generateMedicalVaultPDF = async (
       body: immunizationsData,
       theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
+        fillColor: [200, 200, 200],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
         fontSize: 8,
@@ -519,7 +545,7 @@ export const generateMedicalVaultPDF = async (
       body: surgeriesData,
       theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
+        fillColor: [200, 200, 200],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
         fontSize: 8,
@@ -564,7 +590,7 @@ export const generateMedicalVaultPDF = async (
       body: pharmaciesData,
       theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
+        fillColor: [200, 200, 200],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
         fontSize: 8,
@@ -609,7 +635,7 @@ export const generateMedicalVaultPDF = async (
       body: contactsData,
       theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
+        fillColor: [200, 200, 200],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
         fontSize: 8,
@@ -637,11 +663,11 @@ export const generateMedicalVaultPDF = async (
     yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // Add footer with timestamp to all pages
+  // Add footer with page numbers and timestamp to all pages
   const totalPages = doc.internal.pages.length - 1;
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    addFooter();
+    addFooter(i, totalPages);
   }
 
   return doc.output('blob');
