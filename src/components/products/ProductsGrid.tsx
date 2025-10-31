@@ -592,6 +592,36 @@ export const ProductsGrid = () => {
             (old: number | undefined) => (old || 0) + quantity
           );
           queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+          // Optimistically push item into cart cache so CartSheet updates instantly
+          queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
+            const productMeta = {
+              id: productForCart.id,
+              name: productForCart.name,
+              dosage: (productForCart as any).dosage,
+              image_url: (productForCart as any).image_url,
+            };
+            const optimisticItem = {
+              id: `temp_${Date.now()}`,
+              cart_id: cart.id,
+              product_id: productForCart.id,
+              product: productMeta,
+              patient_name: patientRecord.name || 'Unknown',
+              quantity,
+              price_snapshot: correctPrice,
+              destination_state: 'XX',
+              created_at: new Date().toISOString(),
+            };
+            if (!old) {
+              return { cartId: cart.id, items: [optimisticItem] };
+            }
+            if (old.items) {
+              return { ...old, items: [...old.items, optimisticItem] };
+            }
+            if (old.lines) {
+              return { ...old, lines: [...old.lines, optimisticItem] };
+            }
+            return old;
+          });
           queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
           return;
         }
@@ -679,6 +709,37 @@ export const ProductsGrid = () => {
         ["cart-count", effectiveUserId],
         (old: number | undefined) => (old || 0) + quantity
       );
+      // Optimistic update: push item into cart cache for instant UI
+      queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
+        const patientName = 'Practice Order';
+        const productMeta = {
+          id: productForCart.id,
+          name: productForCart.name,
+          dosage: (productForCart as any).dosage,
+          image_url: (productForCart as any).image_url,
+        };
+        const optimisticItem = {
+          id: `temp_${Date.now()}`,
+          cart_id: cart.id,
+          product_id: productForCart.id,
+          product: productMeta,
+          patient_name: patientName,
+          quantity,
+          price_snapshot: correctPrice,
+          destination_state: 'XX',
+          created_at: new Date().toISOString(),
+        };
+        if (!old) {
+          return { cartId: cart.id, items: [optimisticItem] };
+        }
+        if (old.items) {
+          return { ...old, items: [...old.items, optimisticItem] };
+        }
+        if (old.lines) {
+          return { ...old, lines: [...old.lines, optimisticItem] };
+        }
+        return old;
+      });
       // Then refetch to sync with server
       queryClient.refetchQueries({ queryKey: ["cart-count", effectiveUserId], type: 'active' });
       queryClient.refetchQueries({ queryKey: ["cart", effectiveUserId], type: 'active' });
