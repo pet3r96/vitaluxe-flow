@@ -41,7 +41,7 @@ export function VitalsSection({ patientAccountId, latestVitals }: VitalsSectionP
     latestVitals.blood_sugar && { label: "Blood Sugar", value: `${latestVitals.blood_sugar} mg/dL` },
   ].filter(Boolean) as Array<{ label: string; value: string }> : [];
   
-  const visibleMetrics = expanded ? metrics : metrics.slice(0, 3);
+  const visibleMetrics = expanded ? metrics : metrics.slice(0, 2);
   
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-green-500/10 to-emerald-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -78,7 +78,7 @@ export function VitalsSection({ patientAccountId, latestVitals }: VitalsSectionP
                 </div>
               ))}
             </div>
-            {metrics.length > 3 && (
+            {metrics.length > 2 && (
               <div className="flex justify-end">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}

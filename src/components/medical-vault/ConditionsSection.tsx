@@ -27,7 +27,7 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
   
-  const visibleConditions = expanded ? activeConditions : activeConditions.slice(0, 3);
+  const visibleConditions = expanded ? activeConditions : activeConditions.slice(0, 2);
 
   const openDialog = (mode: "add" | "edit" | "view", condition?: any) => {
     setDialogMode(mode);
@@ -101,7 +101,7 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
                 </div>
               </div>
             ))}
-            {activeConditions.length > 3 && (
+            {activeConditions.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}

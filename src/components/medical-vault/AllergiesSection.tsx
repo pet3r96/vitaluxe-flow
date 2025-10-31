@@ -27,7 +27,7 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
   
-  const visibleAllergies = expanded ? activeAllergies : activeAllergies.slice(0, 3);
+  const visibleAllergies = expanded ? activeAllergies : activeAllergies.slice(0, 2);
 
   const openDialog = (mode: "add" | "edit" | "view", allergy?: any) => {
     setDialogMode(mode);
@@ -101,7 +101,7 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
                 </div>
               </div>
             ))}
-            {activeAllergies.length > 3 && (
+            {activeAllergies.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}

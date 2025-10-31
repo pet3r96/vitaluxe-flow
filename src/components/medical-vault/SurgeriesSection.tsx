@@ -30,7 +30,7 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
   
   const visibleSurgeries = expanded 
     ? (surgeries || []) 
-    : (surgeries || []).slice(0, 3);
+    : (surgeries || []).slice(0, 2);
 
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-teal-500/10 to-cyan-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -82,7 +82,7 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
                 </div>
               </div>
             ))}
-            {surgeries.length > 3 && (
+            {surgeries.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}

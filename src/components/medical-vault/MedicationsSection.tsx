@@ -29,7 +29,7 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
   
-  const visibleMedications = expanded ? activeMedications : activeMedications.slice(0, 3);
+  const visibleMedications = expanded ? activeMedications : activeMedications.slice(0, 2);
 
   const openDialog = (mode: "add" | "edit" | "view", medication?: any) => {
     setDialogMode(mode);
@@ -94,7 +94,7 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
                 </div>
               </div>
             ))}
-            {activeMedications.length > 3 && (
+            {activeMedications.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}

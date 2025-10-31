@@ -30,7 +30,7 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
   
   const visibleImmunizations = expanded 
     ? (immunizations || []) 
-    : (immunizations || []).slice(0, 3);
+    : (immunizations || []).slice(0, 2);
 
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-purple-500/10 to-indigo-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -77,7 +77,7 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
                 </div>
               </div>
             ))}
-            {immunizations.length > 3 && (
+            {immunizations.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}
