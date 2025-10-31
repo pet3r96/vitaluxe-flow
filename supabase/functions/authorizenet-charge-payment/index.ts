@@ -111,10 +111,8 @@ Deno.serve(async (req) => {
       // Case 2: Current user is the practice owner
       console.log('✓ Payment authorized: practice owner');
       isAuthorized = true;
-    } else if (paymentMethod.practice_id === currentUserId) {
-      // Case 3: Payment method belongs to current user - check if they're authorized for this practice
-      console.log('Checking if user is authorized staff/provider for practice...');
-      
+    } else {
+      console.log('Checking staff/provider membership for user on practice...');
       // Check if user is a provider for this practice
       const { data: providerLink } = await supabaseAdmin
         .from('providers')
@@ -123,37 +121,23 @@ Deno.serve(async (req) => {
         .eq('practice_id', order.doctor_id)
         .eq('active', true)
         .maybeSingle();
-      
-      console.log('Provider link check:', providerLink);
 
-      if (providerLink) {
-        console.log('✓ Payment authorized: provider using personal card');
-        isAuthorized = true;
-      } else {
-        // Check if user has staff role for this practice via user_roles
-        const { data: staffRole } = await supabaseAdmin
-          .from('user_roles')
-          .select('user_id, role')
-          .eq('user_id', currentUserId)
-          .eq('role', 'staff')
-          .maybeSingle();
-        
-        console.log('Staff role check:', staffRole);
+      // Check if user is a staff member for this practice
+      const { data: staffMembership } = await supabaseAdmin
+        .from('practice_staff')
+        .select('practice_id, user_id, active')
+        .eq('user_id', currentUserId)
+        .eq('practice_id', order.doctor_id)
+        .eq('active', true)
+        .maybeSingle();
 
-        if (staffRole) {
-          // Verify this staff member belongs to the practice by checking their profile
-          const { data: userProfile } = await supabaseAdmin
-            .from('profiles')
-            .select('practice_id')
-            .eq('id', currentUserId)
-            .maybeSingle();
-          
-          console.log('User profile check:', userProfile);
+      console.log('Membership checks:', { hasProviderLink: !!providerLink, hasStaffMembership: !!staffMembership });
 
-          if (userProfile && userProfile.practice_id === order.doctor_id) {
-            console.log('✓ Payment authorized: staff member using personal card');
-            isAuthorized = true;
-          }
+      if (providerLink || staffMembership) {
+        // User is linked to this practice: allow practice card or personal card
+        if (paymentMethod.practice_id === order.doctor_id || paymentMethod.practice_id === currentUserId) {
+          console.log('✓ Payment authorized: linked user using practice or personal card');
+          isAuthorized = true;
         }
       }
     }
