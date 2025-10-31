@@ -184,6 +184,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
               checked={nkaChecked || false}
               onCheckedChange={(checked) => setValue("nka", checked as boolean)}
               disabled={isReadOnly}
+              className="border-2 border-gray-700 dark:border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
             />
             <Label htmlFor="nka" className="text-sm font-medium cursor-pointer">
               NKA (No Known Allergies)
