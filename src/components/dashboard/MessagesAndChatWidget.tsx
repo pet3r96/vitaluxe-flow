@@ -7,61 +7,71 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
-import { realtimeManager } from "@/lib/realtimeManager";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function MessagesAndChatWidget() {
   const navigate = useNavigate();
   const { user, effectiveRole, effectivePracticeId } = useAuth();
+  const queryClient = useQueryClient();
 
   // Fetch unread patient messages (support tickets)
   const { data: unreadMessages } = useQuery({
-    queryKey: ["unread-patient-messages", user?.id],
+    queryKey: ["unread-patient-messages-dashboard", user?.id, effectivePracticeId],
     queryFn: async () => {
-      if (!user?.id) return { count: 0, subjects: [] };
+      if (!user?.id || !effectivePracticeId) return { count: 0, subjects: [] };
       
       try {
-        // First, get thread IDs where user is a participant
-        const { data: participantThreads, error: participantError } = await supabase
-          .from("thread_participants")
-          .select("thread_id")
-          .eq("user_id", user.id);
-
-        if (participantError) throw participantError;
+        console.log('[Dashboard Widget] 📧 Fetching patient messages for practice:', effectivePracticeId);
         
-        const threadIds = participantThreads?.map(pt => pt.thread_id) || [];
-        if (threadIds.length === 0) return { count: 0, subjects: [] };
-
-        // Then get the threads with their latest messages
-        const { data: threads, error: threadsError } = await supabase
-          .from("message_threads")
+        // Get unread patient messages (messages FROM patients that need responses)
+        const { data: messages, error } = await supabase
+          .from("patient_messages")
           .select(`
             id,
+            thread_id,
             subject,
-            messages!inner(created_at, sender_id)
+            message_body,
+            created_at,
+            sender_type,
+            patient:patient_accounts(first_name, last_name)
           `)
-          .in("id", threadIds)
-          .order("created_at", { ascending: false })
-          .limit(3);
+          .eq("practice_id", effectivePracticeId)
+          .eq("sender_type", "patient")
+          .is("read_at", null)
+          .eq("resolved", false)
+          .order("created_at", { ascending: false });
 
-        if (threadsError) throw threadsError;
+        if (error) throw error;
 
-        // Filter to only unread threads (where latest message is not from current user)
-        const unreadThreads = threads?.filter((thread: any) => {
-          const messages = Array.isArray(thread.messages) ? thread.messages : [thread.messages];
-          const latestMessage = messages[0];
-          return latestMessage?.sender_id !== user.id;
-        }) || [];
+        console.log('[Dashboard Widget] ✅ Found', messages?.length || 0, 'unread patient messages');
+
+        // Group by thread_id to show unique conversations
+        const threadsMap = new Map();
+        (messages || []).forEach((msg: any) => {
+          const threadId = msg.thread_id || msg.id;
+          if (!threadsMap.has(threadId)) {
+            threadsMap.set(threadId, msg);
+          }
+        });
+
+        const uniqueThreads = Array.from(threadsMap.values());
 
         return {
-          count: unreadThreads.length,
-          subjects: unreadThreads.map((t: any) => t.subject).slice(0, 3)
+          count: uniqueThreads.length,
+          subjects: uniqueThreads.slice(0, 3).map((msg: any) => {
+            const patientName = msg.patient 
+              ? `${msg.patient.first_name} ${msg.patient.last_name}`
+              : 'Unknown Patient';
+            return `${msg.subject} - ${patientName}`;
+          })
         };
       } catch (error) {
-        console.error("Failed to fetch messages:", error);
+        console.error("[Dashboard Widget] ❌ Failed to fetch patient messages:", error);
         return { count: 0, subjects: [] };
       }
     },
     staleTime: 0,
+    refetchInterval: 30000,
   });
 
   // Fetch unread internal chat messages
@@ -113,15 +123,62 @@ export function MessagesAndChatWidget() {
 
   // Real-time subscriptions for instant updates
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !effectivePracticeId) return;
 
-    realtimeManager.subscribe('messages');
-    realtimeManager.subscribe('internal_messages');
+    // Subscribe to patient messages for dashboard updates
+    const patientMessagesChannel = supabase
+      .channel('dashboard-patient-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'patient_messages',
+          filter: `practice_id=eq.${effectivePracticeId}`,
+        },
+        (payload) => {
+          console.log('[Dashboard Widget] 🔔 New patient message received:', payload);
+          queryClient.invalidateQueries({ queryKey: ['unread-patient-messages-dashboard'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'patient_messages',
+          filter: `practice_id=eq.${effectivePracticeId}`,
+        },
+        (payload) => {
+          console.log('[Dashboard Widget] 📝 Patient message updated:', payload);
+          queryClient.invalidateQueries({ queryKey: ['unread-patient-messages-dashboard'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to internal messages
+    const internalMessagesChannel = supabase
+      .channel('dashboard-internal-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'internal_messages',
+          filter: `practice_id=eq.${effectivePracticeId}`,
+        },
+        (payload) => {
+          console.log('[Dashboard Widget] 📬 Internal message updated:', payload);
+          queryClient.invalidateQueries({ queryKey: ['unread-internal-chat'] });
+        }
+      )
+      .subscribe();
 
     return () => {
-      // Manager handles cleanup
+      patientMessagesChannel.unsubscribe();
+      internalMessagesChannel.unsubscribe();
     };
-  }, [user?.id]);
+  }, [user?.id, effectivePracticeId, queryClient]);
 
   return (
     <Card>
@@ -149,7 +206,7 @@ export function MessagesAndChatWidget() {
                 variant="outline" 
                 size="sm" 
                 className="w-full mt-2"
-                onClick={() => navigate("/messages")}
+                onClick={() => navigate("/practice/patient-inbox")}
               >
                 View All Messages
               </Button>
