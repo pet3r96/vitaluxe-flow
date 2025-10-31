@@ -12,6 +12,7 @@ interface Allergy {
   reaction_type?: string;
   severity?: string;
   is_active: boolean;
+  notes?: string;
 }
 
 interface AllergiesSectionProps {
@@ -20,7 +21,7 @@ interface AllergiesSectionProps {
 }
 
 export function AllergiesSection({ patientAccountId, allergies }: AllergiesSectionProps) {
-  const hasNKA = allergies.some(a => a.nka);
+  const nkaRecord = allergies.find(a => a.is_active && a.nka);
   const activeAllergies = allergies.filter(a => a.is_active && !a.nka);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAllergy, setSelectedAllergy] = useState<any>(null);
@@ -53,7 +54,8 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
             size="sm" 
             className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
             onClick={() => openDialog("add")}
-            disabled={!patientAccountId}
+            disabled={!patientAccountId || !!nkaRecord}
+            title={nkaRecord ? "Remove NKA first to add specific allergies" : ""}
           >
             <Plus className="h-4 w-4 mr-1" />
             Add
@@ -61,11 +63,24 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
         </div>
       </CardHeader>
       <CardContent className="relative z-10">
-        {hasNKA ? (
-          <div className="flex items-center justify-center py-8">
-            <Badge variant="outline" className="text-base px-4 py-2">
-              NKA (No Known Allergies)
-            </Badge>
+        {nkaRecord ? (
+          <div className="flex items-center justify-between p-4 border rounded-lg border-green-500/20 bg-green-500/5">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-base px-4 py-2 border-green-500/50">
+                NKA (No Known Allergies)
+              </Badge>
+              {nkaRecord.notes && (
+                <span className="text-sm text-muted-foreground">• {nkaRecord.notes}</span>
+              )}
+            </div>
+            <div className="flex gap-1">
+              <Button size="sm" variant="ghost" onClick={() => openDialog("view", nkaRecord)}>
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => openDialog("edit", nkaRecord)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         ) : activeAllergies.length > 0 ? (
           <div className="space-y-3">

@@ -95,6 +95,31 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
 
   const mutation = useOptimisticMutation(
     async (data: AllergyFormData) => {
+      // Check for conflicts before submission
+      const { data: existingAllergies } = await supabase
+        .from("patient_allergies")
+        .select("id, nka")
+        .eq("patient_account_id", patientAccountId)
+        .eq("is_active", true);
+
+      // If adding NKA, check for existing specific allergies
+      if (data.nka) {
+        const hasSpecificAllergies = existingAllergies?.some(a => 
+          !a.nka && (mode !== "edit" || a.id !== allergy?.id)
+        );
+        if (hasSpecificAllergies) {
+          throw new Error("Cannot mark as NKA while specific allergies exist. Please remove them first.");
+        }
+      } else {
+        // If adding specific allergy, check for existing NKA
+        const hasNKA = existingAllergies?.some(a => 
+          a.nka && (mode !== "edit" || a.id !== allergy?.id)
+        );
+        if (hasNKA) {
+          throw new Error("Cannot add specific allergies while NKA is marked. Please remove NKA first.");
+        }
+      }
+
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullDate = data.date_recorded ? data.date_recorded + "-01" : new Date().toISOString().substring(0, 7) + "-01";
       
@@ -221,19 +246,19 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
                   />
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  {...register("notes")}
-                  placeholder="Additional information about the allergy"
-                  disabled={isReadOnly}
-                  rows={3}
-                />
-              </div>
             </>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              {...register("notes")}
+              placeholder="Additional information about the allergy"
+              disabled={isReadOnly}
+              rows={3}
+            />
+          </div>
 
           {!isReadOnly && (
             <div className="flex justify-end gap-3 pt-4 border-t">
