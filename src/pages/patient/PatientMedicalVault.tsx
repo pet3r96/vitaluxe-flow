@@ -202,10 +202,17 @@ export default function PatientMedicalVault() {
         pharmacies || [],
         emergencyContacts || []
       );
+      
+      // Open PDF in new window instead of dialog to avoid cross-origin issues
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      setPdfPreviewUrl(pdfUrl);
-      setPreviewDialogOpen(true);
-      toast({ title: "Success", description: "PDF preview loaded" });
+      window.open(pdfUrl, '_blank');
+      
+      // Clean up the URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(pdfUrl);
+      }, 1000);
+      
+      toast({ title: "Success", description: "PDF opened in new tab" });
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
@@ -235,21 +242,26 @@ export default function PatientMedicalVault() {
       );
       const pdfUrl = URL.createObjectURL(pdfBlob);
       
-      // Create hidden iframe for printing
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
+      // Open in new window and trigger print
+      const printWindow = window.open(pdfUrl, '_blank');
       
-      iframe.onload = () => {
-        iframe.contentWindow?.print();
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-          URL.revokeObjectURL(pdfUrl);
-        }, 100);
-      };
-      
-      iframe.src = pdfUrl;
-      toast({ title: "Success", description: "Opening print dialog" });
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+          // Clean up URL after printing
+          setTimeout(() => {
+            URL.revokeObjectURL(pdfUrl);
+          }, 1000);
+        };
+        toast({ title: "Success", description: "Opening print dialog" });
+      } else {
+        toast({ 
+          title: "Blocked", 
+          description: "Please allow popups to use the print feature", 
+          variant: "destructive" 
+        });
+        URL.revokeObjectURL(pdfUrl);
+      }
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
