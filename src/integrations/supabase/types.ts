@@ -7499,6 +7499,8 @@ export type Database = {
           mime_type: string
           notes: string
           practice_id: string
+          source_type: string
+          status: string
           storage_path: string
           tags: string[]
           uploaded_at: string
