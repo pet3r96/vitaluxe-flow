@@ -68,11 +68,24 @@ export const PatientDialog = ({
       }
 
       // Set base fields immediately
+      const birthRaw = patient.birth_date as string | null;
+      let birthFormatted = "";
+      if (birthRaw) {
+        if (typeof birthRaw === "string") {
+          birthFormatted = birthRaw.includes("T")
+            ? birthRaw.split("T")[0]
+            : birthRaw.slice(0, 10);
+        } else {
+          try {
+            birthFormatted = new Date(birthRaw as any).toISOString().split("T")[0];
+          } catch {}
+        }
+      }
       const baseData = {
         name: patient.name || "",
         email: patient.email || "",
         phone: patient.phone || "",
-        birth_date: patient.birth_date || "",
+        birth_date: birthFormatted,
         address_street: patient.address_street || "",
         address_city: patient.address_city || "",
         address_state: patient.address_state || "",
