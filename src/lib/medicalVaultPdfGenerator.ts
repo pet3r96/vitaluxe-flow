@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 // Data Structures
 export interface PatientAccount {
@@ -24,6 +24,7 @@ export interface PatientAccount {
   height_inches?: number | null;
   weight_pounds?: number | null;
   primary_care_physician?: string | null;
+  email?: string | null;
 }
 
 export interface Medication {
@@ -156,466 +157,469 @@ export const generateMedicalVaultPDF = async (
   const pageHeight = doc.internal.pageSize.getHeight();
   let yPos = 10;
 
-  // Compact Color Palette
-  const colors = {
-    dark: [31, 41, 55] as [number, number, number],
-    gold: [218, 165, 32] as [number, number, number],
-    blue: [59, 130, 246] as [number, number, number],
-    lightBlue: [239, 246, 255] as [number, number, number],
-    red: [239, 68, 68] as [number, number, number],
-    lightRed: [254, 242, 242] as [number, number, number],
-    orange: [249, 115, 22] as [number, number, number],
-    lightOrange: [255, 247, 237] as [number, number, number],
-    green: [34, 197, 94] as [number, number, number],
-    lightGreen: [240, 253, 244] as [number, number, number],
-    purple: [168, 85, 247] as [number, number, number],
-    lightPurple: [250, 245, 255] as [number, number, number],
-    teal: [20, 184, 166] as [number, number, number],
-    lightTeal: [240, 253, 250] as [number, number, number],
-    gray: [156, 163, 175] as [number, number, number],
-    lightGray: [249, 250, 251] as [number, number, number],
-  };
-
-  // Compact Header (25px)
-  const addHeader = (y: number) => {
-    doc.setFillColor(...colors.dark);
-    doc.rect(0, y, pageWidth, 25, 'F');
+  // Professional Header with Colors
+  const addHeader = () => {
+    doc.setFillColor(31, 41, 55); // Dark blue
+    doc.rect(0, 0, pageWidth, 30, 'F');
     
-    doc.setTextColor(...colors.gold);
-    doc.setFontSize(12);
+    doc.setTextColor(218, 165, 32); // Gold
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
-    doc.text(`MEDICAL RECORD - ${fullName.toUpperCase()}`, pageWidth / 2, y + 10, { align: 'center' });
+    doc.text(`MEDICAL RECORD - ${fullName.toUpperCase()}`, pageWidth / 2, 12, { align: 'center' });
     
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text('VitaLuxe Services', pageWidth / 2, y + 17, { align: 'center' });
-    
-    return y + 25;
-  };
-
-  yPos = addHeader(yPos);
-  yPos += 6;
-
-  // Compact Demographics (18px tall boxes)
-  const addDemographics = (y: number) => {
-    const boxWidth = (pageWidth - 20) / 3;
-    const boxHeight = 18;
-    const startX = 10;
-
-    // Patient box
-    doc.setFillColor(...colors.lightBlue);
-    doc.rect(startX, y, boxWidth - 2, boxHeight, 'F');
-    doc.setDrawColor(...colors.blue);
-    doc.rect(startX, y, boxWidth - 2, boxHeight, 'S');
-    
-    doc.setTextColor(...colors.blue);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PATIENT', startX + 3, y + 6);
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    const age = patient.date_of_birth ? calculateAge(patient.date_of_birth) : 'N/A';
-    const gender = patient.gender || 'N/A';
-    doc.text(`${age} yrs, ${gender}`, startX + 3, y + 13);
-
-    // DOB box
-    const dobX = startX + boxWidth;
-    doc.setFillColor(...colors.lightGreen);
-    doc.rect(dobX, y, boxWidth - 2, boxHeight, 'F');
-    doc.setDrawColor(...colors.green);
-    doc.rect(dobX, y, boxWidth - 2, boxHeight, 'S');
-    
-    doc.setTextColor(...colors.green);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DATE OF BIRTH', dobX + 3, y + 6);
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    const dob = patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A';
-    doc.text(dob, dobX + 3, y + 13);
-
-    // Location box
-    const locX = dobX + boxWidth;
-    doc.setFillColor(...colors.lightOrange);
-    doc.rect(locX, y, boxWidth - 2, boxHeight, 'F');
-    doc.setDrawColor(...colors.orange);
-    doc.rect(locX, y, boxWidth - 2, boxHeight, 'S');
-    
-    doc.setTextColor(...colors.orange);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.text('LOCATION', locX + 3, y + 6);
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    const location = patient.city && patient.state ? `${patient.city}, ${patient.state}` : 'N/A';
-    doc.text(location, locX + 3, y + 13);
-
-    return y + boxHeight;
-  };
-
-  yPos = addDemographics(yPos);
-  yPos += 8;
-
-  // Compact Section Header (10px)
-  const addSectionHeader = (y: number, title: string, bgColor: [number, number, number]) => {
-    if (y > pageHeight - 30) {
-      doc.addPage();
-      y = addHeader(10);
-      y += 6;
-    }
-
-    doc.setFillColor(...bgColor);
-    doc.rect(10, y, pageWidth - 20, 10, 'F');
-    doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title.toUpperCase(), 12, y + 7);
-
-    return y + 10;
+    doc.setFont('helvetica', 'normal');
+    doc.text('VitaLuxe Services', pageWidth / 2, 20, { align: 'center' });
+    
+    return 35;
   };
 
-  // Check page break
-  const checkPageBreak = (y: number, neededSpace: number = 20) => {
-    if (y > pageHeight - neededSpace) {
-      doc.addPage();
-      y = addHeader(10);
-      return y + 6;
-    }
-    return y;
-  };
+  yPos = addHeader();
 
-  // Add compact badge
-  const addBadge = (x: number, y: number, text: string, bgColor: [number, number, number]) => {
-    const textWidth = doc.getTextWidth(text);
-    doc.setFillColor(...bgColor);
-    doc.roundedRect(x, y - 5, textWidth + 4, 7, 1, 1, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'bold');
-    doc.text(text, x + 2, y);
-  };
+  // Patient Demographics Table
+  const demographicsData = [
+    ['Name', `${patient.first_name || ''} ${patient.middle_name || ''} ${patient.last_name || ''}`.trim()],
+    ['Date of Birth', patient.date_of_birth ? `${new Date(patient.date_of_birth).toLocaleDateString()} (Age: ${calculateAge(patient.date_of_birth)} years)` : 'N/A'],
+    ['Gender', patient.gender || 'N/A'],
+    ['Phone', patient.phone_number || 'N/A'],
+    ['Email', patient.email || 'N/A'],
+    ['Address', [patient.address_line1, patient.address_line2, `${patient.city || ''}, ${patient.state || ''} ${patient.zip_code || ''}`.trim()].filter(Boolean).join(', ') || 'N/A'],
+    ['Blood Type', patient.blood_type || 'N/A'],
+    ['Primary Care Physician', patient.primary_care_physician || 'N/A'],
+  ];
 
-  // MEDICATIONS (14px per item)
+  autoTable(doc, {
+    startY: yPos,
+    head: [['PATIENT DEMOGRAPHICS', '']],
+    body: demographicsData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      fontStyle: 'bold',
+      fontSize: 10,
+      halign: 'left',
+    },
+    bodyStyles: {
+      fontSize: 8,
+      textColor: [0, 0, 0],
+    },
+    alternateRowStyles: {
+      fillColor: [249, 249, 249],
+    },
+    columnStyles: {
+      0: { cellWidth: 50, fontStyle: 'bold' },
+      1: { cellWidth: 'auto' },
+    },
+    styles: {
+      lineColor: [0, 0, 0],
+      lineWidth: 0.1,
+    },
+    margin: { left: 10, right: 10 },
+  });
+
+  yPos = (doc as any).lastAutoTable.finalY + 10;
+
+  // MEDICATIONS Table
   if (medications.length > 0) {
-    yPos = addSectionHeader(yPos, 'MEDICATIONS', colors.blue);
-    yPos += 2;
+    const medicationsData = medications.map(med => [
+      med.medication_name,
+      med.dosage || 'N/A',
+      med.frequency || 'N/A',
+      med.start_date ? new Date(med.start_date).toLocaleDateString() : 'N/A',
+      med.is_active ? 'Active' : 'Inactive',
+    ]);
 
-    medications.forEach((med) => {
-      yPos = checkPageBreak(yPos, 20);
-
-      doc.setFillColor(...colors.lightBlue);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'F');
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'S');
-
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text(med.medication_name.toUpperCase(), 12, yPos + 6);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      const details = `${med.dosage || 'N/A'} • ${med.frequency || 'N/A'}`;
-      doc.text(details, 12, yPos + 11);
-
-      const startDate = med.start_date ? new Date(med.start_date).toLocaleDateString() : 'N/A';
-      doc.setFontSize(6);
-      doc.setTextColor(...colors.gray);
-      doc.text(`Started: ${startDate}`, pageWidth - 60, yPos + 6);
-
-      if (med.is_active) {
-        addBadge(pageWidth - 30, yPos + 6, 'Active', colors.green);
-      }
-
-      yPos += 16;
+    autoTable(doc, {
+      startY: yPos,
+      head: [['MEDICATIONS', '', '', '', '']],
+      body: medicationsData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'left',
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 25 },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
     });
+
+    // Add column headers
+    const startY = yPos;
+    autoTable(doc, {
+      startY: startY,
+      head: [['Medication', 'Dosage', 'Frequency', 'Start Date', 'Status']],
+      body: medicationsData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 25 },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // CONDITIONS (14px per item)
+  // CONDITIONS Table
   if (conditions.length > 0) {
-    yPos = checkPageBreak(yPos, 20);
-    yPos = addSectionHeader(yPos, 'MEDICAL CONDITIONS', colors.red);
-    yPos += 2;
+    const conditionsData = conditions.map(cond => [
+      cond.condition_name,
+      cond.diagnosis_date ? new Date(cond.diagnosis_date).toLocaleDateString() : 'N/A',
+      cond.severity || 'N/A',
+      cond.notes || '',
+    ]);
 
-    conditions.forEach((cond) => {
-      yPos = checkPageBreak(yPos, 20);
-
-      doc.setFillColor(...colors.lightRed);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'F');
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'S');
-
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text(cond.condition_name.toUpperCase(), 12, yPos + 6);
-
-      if (cond.notes) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        const truncatedNotes = cond.notes.length > 60 ? cond.notes.substring(0, 60) + '...' : cond.notes;
-        doc.text(truncatedNotes, 12, yPos + 11);
-      }
-
-      const diagDate = cond.diagnosis_date ? new Date(cond.diagnosis_date).toLocaleDateString() : 'N/A';
-      doc.setFontSize(6);
-      doc.setTextColor(...colors.gray);
-      doc.text(`Diagnosed: ${diagDate}`, pageWidth - 70, yPos + 6);
-
-      if (cond.severity) {
-        const severityColor = cond.severity === 'Severe' ? colors.red : 
-                              cond.severity === 'Moderate' ? colors.orange : colors.green;
-        addBadge(pageWidth - 30, yPos + 6, cond.severity, severityColor);
-      }
-
-      yPos += 16;
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Condition', 'Diagnosis Date', 'Severity', 'Notes']],
+      body: conditionsData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 60 },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
     });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // ALLERGIES (14px per item)
+  // ALLERGIES Table
   if (allergies.length > 0) {
-    yPos = checkPageBreak(yPos, 20);
-    yPos = addSectionHeader(yPos, 'ALLERGIES', colors.orange);
-    yPos += 2;
+    const allergiesData = allergies.map(allergy => [
+      allergy.allergen || allergy.allergen_name || 'Unknown',
+      allergy.reaction || allergy.reaction_type || 'N/A',
+      allergy.severity || 'N/A',
+    ]);
 
-    allergies.forEach((allergy) => {
-      yPos = checkPageBreak(yPos, 20);
-
-      doc.setFillColor(...colors.lightOrange);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'F');
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'S');
-
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      const allergenName = allergy.allergen || allergy.allergen_name || 'Unknown Allergen';
-      doc.text(allergenName.toUpperCase(), 12, yPos + 6);
-
-      const reaction = allergy.reaction || allergy.reaction_type;
-      if (reaction) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.text(`Reaction: ${reaction}`, 12, yPos + 11);
-      }
-
-      if (allergy.severity) {
-        const severityColor = allergy.severity === 'Severe' ? colors.red : 
-                              allergy.severity === 'Moderate' ? colors.orange : colors.green;
-        addBadge(pageWidth - 30, yPos + 6, allergy.severity, severityColor);
-      }
-
-      yPos += 16;
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Allergen', 'Reaction', 'Severity']],
+      body: allergiesData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 60 },
+        1: { cellWidth: 70 },
+        2: { cellWidth: 40 },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
     });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // VITALS (30px compact box)
+  // VITAL SIGNS Table
   const latestVital = vitals.find(v => hasVitalData(v));
   if (latestVital) {
-    yPos = checkPageBreak(yPos, 35);
-    yPos = addSectionHeader(yPos, 'VITAL SIGNS', colors.green);
-    yPos += 2;
-
-    doc.setFillColor(...colors.lightGreen);
-    doc.rect(10, yPos, pageWidth - 20, 30, 'F');
-    doc.setDrawColor(200, 200, 200);
-    doc.rect(10, yPos, pageWidth - 20, 30, 'S');
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-
-    const leftX = 12;
-    const rightX = pageWidth / 2 + 5;
-    let vitalY = yPos + 6;
-
-    if (latestVital.height_inches || latestVital.weight_pounds) {
-      const height = latestVital.height_inches ? `${Math.floor(latestVital.height_inches / 12)}'${latestVital.height_inches % 12}" (${latestVital.height_inches}")` : 'N/A';
-      doc.text(`Height: ${height}`, leftX, vitalY);
-      
-      if (latestVital.blood_pressure_systolic && latestVital.blood_pressure_diastolic) {
-        doc.text(`BP: ${latestVital.blood_pressure_systolic}/${latestVital.blood_pressure_diastolic} mmHg`, rightX, vitalY);
-      }
-      vitalY += 5;
-    }
-
-    if (latestVital.weight_pounds) {
-      doc.text(`Weight: ${latestVital.weight_pounds} lbs`, leftX, vitalY);
-      
-      const heartRate = latestVital.heart_rate || latestVital.pulse;
-      if (heartRate) {
-        doc.text(`Pulse: ${heartRate} bpm`, rightX, vitalY);
-      }
-      vitalY += 5;
-    }
-
+    const height = latestVital.height_inches ? `${Math.floor(latestVital.height_inches / 12)}'${latestVital.height_inches % 12}"` : 'N/A';
+    const weight = latestVital.weight_pounds ? `${latestVital.weight_pounds} lbs` : 'N/A';
     const bmi = calculateBMI(latestVital.height_inches || undefined, latestVital.weight_pounds || undefined);
-    if (bmi) {
-      doc.text(`BMI: ${bmi.toFixed(1)}`, leftX, vitalY);
-      
-      if (latestVital.oxygen_saturation) {
-        doc.text(`O2 Sat: ${latestVital.oxygen_saturation}%`, rightX, vitalY);
-      }
-      vitalY += 5;
-    }
+    const bp = (latestVital.blood_pressure_systolic && latestVital.blood_pressure_diastolic) 
+      ? `${latestVital.blood_pressure_systolic}/${latestVital.blood_pressure_diastolic} mmHg` 
+      : 'N/A';
+    const pulse = (latestVital.heart_rate || latestVital.pulse) ? `${latestVital.heart_rate || latestVital.pulse} bpm` : 'N/A';
+    const temp = latestVital.temperature ? `${latestVital.temperature}°F` : 'N/A';
+    const o2 = latestVital.oxygen_saturation ? `${latestVital.oxygen_saturation}%` : 'N/A';
+    const resp = latestVital.respiratory_rate ? `${latestVital.respiratory_rate} /min` : 'N/A';
 
-    if (latestVital.temperature) {
-      doc.text(`Temp: ${latestVital.temperature}°F`, leftX, vitalY);
-      
-      if (latestVital.respiratory_rate) {
-        doc.text(`Resp Rate: ${latestVital.respiratory_rate} /min`, rightX, vitalY);
-      }
-    }
+    const vitalsData = [
+      ['Height', height],
+      ['Weight', weight],
+      ['BMI', bmi ? bmi.toFixed(1) : 'N/A'],
+      ['Blood Pressure', bp],
+      ['Pulse', pulse],
+      ['Temperature', temp],
+      ['O2 Saturation', o2],
+      ['Respiratory Rate', resp],
+    ];
 
-    yPos += 32;
+    autoTable(doc, {
+      startY: yPos,
+      head: [['VITAL SIGNS', '']],
+      body: vitalsData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 50, fontStyle: 'bold' },
+        1: { cellWidth: 'auto' },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // IMMUNIZATIONS (14px per item)
+  // IMMUNIZATIONS Table
   if (immunizations.length > 0) {
-    yPos = checkPageBreak(yPos, 20);
-    yPos = addSectionHeader(yPos, 'IMMUNIZATIONS', colors.purple);
-    yPos += 2;
+    const immunizationsData = immunizations.map(imm => [
+      imm.vaccine_name,
+      imm.date_administered ? new Date(imm.date_administered).toLocaleDateString() : 'N/A',
+      imm.provider || 'N/A',
+      imm.notes || '',
+    ]);
 
-    immunizations.forEach((imm) => {
-      yPos = checkPageBreak(yPos, 20);
-
-      doc.setFillColor(...colors.lightPurple);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'F');
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'S');
-
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text(imm.vaccine_name, 12, yPos + 6);
-
-      const adminDate = imm.date_administered ? new Date(imm.date_administered).toLocaleDateString() : 'N/A';
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.text(`Administered: ${adminDate}`, 12, yPos + 11);
-
-      if (imm.provider) {
-        doc.setFontSize(6);
-        doc.setTextColor(...colors.gray);
-        doc.text(`Provider: ${imm.provider}`, pageWidth - 80, yPos + 6);
-      }
-
-      yPos += 16;
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Vaccine', 'Date Administered', 'Provider', 'Notes']],
+      body: immunizationsData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 45 },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
     });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // SURGERIES (14px per item)
+  // SURGERIES Table
   if (surgeries.length > 0) {
-    yPos = checkPageBreak(yPos, 20);
-    yPos = addSectionHeader(yPos, 'SURGICAL HISTORY', colors.purple);
-    yPos += 2;
+    const surgeriesData = surgeries.map(surgery => [
+      surgery.procedure_name || surgery.surgery_type || 'Unknown',
+      surgery.surgery_date ? new Date(surgery.surgery_date).toLocaleDateString() : 'N/A',
+      surgery.surgeon || surgery.surgeon_name || 'N/A',
+      surgery.hospital || 'N/A',
+    ]);
 
-    surgeries.forEach((surgery) => {
-      yPos = checkPageBreak(yPos, 20);
-
-      doc.setFillColor(...colors.lightPurple);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'F');
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'S');
-
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      const procedureName = surgery.procedure_name || surgery.surgery_type || 'Unknown Procedure';
-      doc.text(procedureName, 12, yPos + 6);
-
-      const surgDate = surgery.surgery_date ? new Date(surgery.surgery_date).toLocaleDateString() : 'N/A';
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      const surgeonName = surgery.surgeon || surgery.surgeon_name;
-      const surgDetails = surgeonName ? `${surgDate} | Dr. ${surgeonName}` : surgDate;
-      doc.text(surgDetails, 12, yPos + 11);
-
-      if (surgery.hospital) {
-        doc.setFontSize(6);
-        doc.setTextColor(...colors.gray);
-        doc.text(surgery.hospital, pageWidth - 80, yPos + 6);
-      }
-
-      yPos += 16;
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Procedure', 'Date', 'Surgeon', 'Hospital']],
+      body: surgeriesData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 50 },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
     });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // PHARMACIES (14px per item)
+  // PHARMACIES Table
   if (pharmacies.length > 0) {
-    yPos = checkPageBreak(yPos, 20);
-    yPos = addSectionHeader(yPos, 'PHARMACIES', colors.teal);
-    yPos += 2;
+    const pharmaciesData = pharmacies.map(pharm => [
+      pharm.pharmacy_name,
+      pharm.phone_number || 'N/A',
+      pharm.address || 'N/A',
+      pharm.is_preferred ? 'Yes' : 'No',
+    ]);
 
-    pharmacies.forEach((pharm) => {
-      yPos = checkPageBreak(yPos, 20);
-
-      doc.setFillColor(...colors.lightTeal);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'F');
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'S');
-
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text(pharm.pharmacy_name, 12, yPos + 6);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      const pharmDetails = `${pharm.phone_number || 'N/A'} | ${pharm.address || 'N/A'}`;
-      doc.text(pharmDetails, 12, yPos + 11);
-
-      if (pharm.is_preferred) {
-        addBadge(pageWidth - 35, yPos + 6, 'Preferred', colors.teal);
-      }
-
-      yPos += 16;
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Pharmacy Name', 'Phone', 'Address', 'Preferred']],
+      body: pharmaciesData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 60 },
+        3: { cellWidth: 25 },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
     });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // EMERGENCY CONTACTS (14px per item)
+  // EMERGENCY CONTACTS Table
   if (emergencyContacts.length > 0) {
-    yPos = checkPageBreak(yPos, 20);
-    yPos = addSectionHeader(yPos, 'EMERGENCY CONTACTS', colors.red);
-    yPos += 2;
+    const contactsData = emergencyContacts.map(contact => [
+      contact.contact_name || contact.name || 'Unknown',
+      contact.relationship || 'N/A',
+      contact.phone_number || contact.phone || 'N/A',
+      contact.email || 'N/A',
+    ]);
 
-    emergencyContacts.forEach((contact) => {
-      yPos = checkPageBreak(yPos, 20);
-
-      doc.setFillColor(...colors.lightRed);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'F');
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(10, yPos, pageWidth - 20, 14, 'S');
-
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      const contactName = contact.contact_name || contact.name || 'Unknown Contact';
-      doc.text(contactName, 12, yPos + 6);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      const phoneNumber = contact.phone_number || contact.phone;
-      const contactDetails = `${contact.relationship || 'N/A'} | ${phoneNumber || 'N/A'}`;
-      doc.text(contactDetails, 12, yPos + 11);
-
-      yPos += 16;
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Name', 'Relationship', 'Phone', 'Email']],
+      body: contactsData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [0, 0, 0],
+      },
+      alternateRowStyles: {
+        fillColor: [249, 249, 249],
+      },
+      columnStyles: {
+        0: { cellWidth: 45 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 55 },
+      },
+      styles: {
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+      },
+      margin: { left: 10, right: 10 },
     });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
   // Footer on all pages
   const totalPages = doc.internal.pages.length - 1;
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setFontSize(6);
-    doc.setTextColor(...colors.gray);
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
     doc.setFont('helvetica', 'normal');
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 10, pageHeight - 5);
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - 30, pageHeight - 5);
