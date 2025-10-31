@@ -173,8 +173,8 @@ const InternalChat = () => {
     queryFn: async () => {
       if (!practiceId) return [];
       const { data, error } = await supabase
-        .from('patients')
-        .select('id, name')
+        .from('patient_accounts')
+        .select('id, name, first_name, last_name')
         .eq('practice_id', practiceId)
         .order('name');
       if (error) throw error;

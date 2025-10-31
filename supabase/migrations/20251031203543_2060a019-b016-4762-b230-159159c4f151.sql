@@ -51,7 +51,7 @@ BEGIN
 
   UNION ALL
 
-  -- Provider documents assigned to this patient (FIX: proper join through patients table)
+  -- Provider documents assigned to this patient (after merge: patient_accounts is unified)
   SELECT
     'provider_assigned'::TEXT as source,
     pvd.id,
@@ -71,8 +71,7 @@ BEGIN
     false as is_hidden
   FROM public.provider_documents pvd
   JOIN public.provider_document_patients pdp ON pvd.id = pdp.document_id
-  JOIN public.patients p ON pdp.patient_id = p.id
-  JOIN public.patient_accounts pa ON p.patient_account_id = pa.id
+  JOIN public.patient_accounts pa ON pdp.patient_id = pa.id
   LEFT JOIN public.profiles prof ON pvd.uploaded_by = prof.id
   WHERE pa.id = p_patient_id
     AND pvd.is_internal = false

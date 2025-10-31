@@ -40,8 +40,8 @@ export const PatientsDataTable = () => {
     queryFn: async () => {
       logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
       let patientsQuery = supabase
-        .from("patients")
-        .select("id, name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, birth_date, allergies, notes, address_verification_status, address_verification_source, practice_id, created_at")
+        .from("patient_accounts")
+        .select("id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at")
         .order("created_at", { ascending: false });
 
       // If user is a practice (doctor) or provider, only show their practice's patients
@@ -153,8 +153,8 @@ export const PatientsDataTable = () => {
 
       // Fetch patient details for email
       const { data: patient } = await supabase
-        .from('patients')
-        .select('email, name, practice_id')
+        .from('patient_accounts')
+        .select('email, name, first_name, last_name, practice_id')
         .eq('id', patientId)
         .single();
 

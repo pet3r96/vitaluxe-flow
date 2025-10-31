@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
 
     // Fetch patient record and verify it belongs to effective practice
     const { data: patient, error: patientError } = await supabaseAdmin
-      .from('patients')
+      .from('patient_accounts')
       .select('*')
       .eq('id', patientId)
       .eq('practice_id', effectivePracticeId)

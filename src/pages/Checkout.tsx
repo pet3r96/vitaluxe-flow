@@ -134,12 +134,12 @@ export default function Checkout() {
 
       const lines = (linesRaw || []) as any[];
 
-      // Manually hydrate patient data from patients table
+      // Manually hydrate patient data from patient_accounts table
       const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
       if (patientIds.length > 0) {
         const { data: patients, error: patientsError } = await supabase
-          .from('patients')
-          .select('id, name, address_street, address_city, address_state, address_zip, address_formatted')
+          .from('patient_accounts')
+          .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
           .in('id', patientIds);
         
         if (!patientsError && patients) {
@@ -209,12 +209,12 @@ export default function Checkout() {
     
     const lines = (linesRaw || []) as any[];
 
-    // Manually hydrate patient data from patients table
+    // Manually hydrate patient data from patient_accounts table
     const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
     if (patientIds.length > 0) {
       const { data: patients, error: patientsError } = await supabase
-        .from('patients')
-        .select('id, name, address_street, address_city, address_state, address_zip, address_formatted')
+        .from('patient_accounts')
+        .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
         .in('id', patientIds);
       
       if (!patientsError && patients) {

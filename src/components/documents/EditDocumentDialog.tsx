@@ -49,8 +49,8 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
     queryKey: ["patients-for-edit"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patients")
-        .select("id, name")
+        .from("patient_accounts")
+        .select("id, name, first_name, last_name")
         .order("name");
       if (error) throw error;
       return data || [];
