@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -130,64 +131,29 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Address *</Label>
-            <Input
-              id="address"
-              {...register("address")}
-              placeholder="123 Main St"
-              disabled={isReadOnly}
-              className={errors.address ? "border-red-500" : ""}
-            />
-            {errors.address && (
-              <p className="text-sm text-red-500">{errors.address.message}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city">City *</Label>
-              <Input
-                id="city"
-                {...register("city")}
-                placeholder="New York"
-                disabled={isReadOnly}
-                className={errors.city ? "border-red-500" : ""}
-              />
-              {errors.city && (
-                <p className="text-sm text-red-500">{errors.city.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="state">State *</Label>
-              <Input
-                id="state"
-                {...register("state")}
-                placeholder="NY"
-                maxLength={2}
-                disabled={isReadOnly}
-                className={errors.state ? "border-red-500" : ""}
-              />
-              {errors.state && (
-                <p className="text-sm text-red-500">{errors.state.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="zip_code">ZIP Code *</Label>
-              <Input
-                id="zip_code"
-                {...register("zip_code")}
-                placeholder="10001"
-                disabled={isReadOnly}
-                className={errors.zip_code ? "border-red-500" : ""}
-              />
-              {errors.zip_code && (
-                <p className="text-sm text-red-500">{errors.zip_code.message}</p>
-              )}
-            </div>
-          </div>
+          <GoogleAddressAutocomplete
+            label="Address"
+            required
+            value={{
+              street: watch("address"),
+              city: watch("city"),
+              state: watch("state"),
+              zip: watch("zip_code"),
+            }}
+            onChange={(address: AddressValue) => {
+              if (address.street) setValue("address", address.street);
+              if (address.city) setValue("city", address.city);
+              if (address.state) setValue("state", address.state);
+              if (address.zip) setValue("zip_code", address.zip);
+            }}
+            disabled={isReadOnly}
+            placeholder="Start typing pharmacy address..."
+          />
+          {(errors.address || errors.city || errors.state || errors.zip_code) && (
+            <p className="text-sm text-red-500">
+              {errors.address?.message || errors.city?.message || errors.state?.message || errors.zip_code?.message}
+            </p>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="phone">Phone *</Label>
