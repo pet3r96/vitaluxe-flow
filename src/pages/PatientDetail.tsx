@@ -243,6 +243,36 @@ export default function PatientDetail() {
     }
   };
 
+  const handlePrintFromViewer = () => {
+    if (!pdfPreviewUrl) return;
+    
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = 'none';
+    printFrame.src = pdfPreviewUrl;
+    
+    document.body.appendChild(printFrame);
+    
+    printFrame.onload = () => {
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(printFrame);
+          }, 1000);
+        } catch (err) {
+          console.error('Print error:', err);
+          document.body.removeChild(printFrame);
+        }
+      }, 500);
+    };
+  };
+
   const handleDownloadChart = async () => {
     if (!patient) return;
     
@@ -441,15 +471,26 @@ export default function PatientDetail() {
       )}
 
       {/* PDF Preview Dialog */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="max-w-4xl h-[90vh]">
-          {pdfPreviewUrl && (
-            <iframe
-              src={pdfPreviewUrl}
-              className="w-full h-full rounded"
-              title="Medical Chart Preview"
-            />
-          )}
+      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        setPreviewDialogOpen(open);
+        if (!open && pdfPreviewUrl) {
+          URL.revokeObjectURL(pdfPreviewUrl);
+          setPdfPreviewUrl(null);
+        }
+      }}>
+        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-4 border-b">
+            <DialogTitle>Medical Chart Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {pdfPreviewUrl && (
+              <PDFViewer 
+                url={pdfPreviewUrl} 
+                onDownload={handleDownloadChart}
+                onPrint={handlePrintFromViewer}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

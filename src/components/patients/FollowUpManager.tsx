@@ -95,6 +95,8 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
 
   // Set up real-time subscription for follow-ups
   useEffect(() => {
+    console.log("[FollowUpManager] Setting up realtime subscription for patient:", patientId);
+    
     const channel = supabase
       .channel('patient-follow-ups-changes')
       .on(
@@ -105,17 +107,28 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
           table: 'patient_follow_ups',
           filter: `patient_id=eq.${patientId}`,
         },
-        () => {
+        (payload) => {
+          console.log("[FollowUpManager] Realtime update received:", payload);
           // Refetch when any change occurs
           refetch();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[FollowUpManager] Realtime subscription status:", status);
+      });
 
     return () => {
+      console.log("[FollowUpManager] Cleaning up realtime subscription");
       supabase.removeChannel(channel);
     };
   }, [patientId, refetch]);
+
+  console.log("[FollowUpManager] Current state:", { 
+    followUps, 
+    isLoading, 
+    count: followUps?.length,
+    statusFilter 
+  });
 
   const markComplete = useMutation({
     mutationFn: async (id: string) => {
