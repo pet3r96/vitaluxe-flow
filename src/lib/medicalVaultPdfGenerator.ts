@@ -175,9 +175,38 @@ export const generateMedicalVaultPDF = async (
     return 35;
   };
 
+  // Section Title Helper
+  const addSectionTitle = (title: string, currentY: number): number => {
+    doc.setTextColor(218, 165, 32); // Gold
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, pageWidth / 2, currentY, { align: 'center' });
+    return currentY + 8;
+  };
+
+  // Footer with Timestamp
+  const addFooter = () => {
+    const currentDate = new Date();
+    const timestamp = `Downloaded: ${currentDate.toLocaleString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric', 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    })}`;
+    
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(timestamp, pageWidth / 2, pageHeight - 10, { align: 'center' });
+  };
+
   yPos = addHeader();
 
-  // Patient Demographics Table
+  // Patient Demographics Section
+  yPos = addSectionTitle('PATIENT DEMOGRAPHICS', yPos);
+  
   const demographicsData = [
     ['Name', `${patient.first_name || ''} ${patient.middle_name || ''} ${patient.last_name || ''}`.trim()],
     ['Date of Birth', patient.date_of_birth ? `${new Date(patient.date_of_birth).toLocaleDateString()} (Age: ${calculateAge(patient.date_of_birth)} years)` : 'N/A'],
@@ -191,16 +220,8 @@ export const generateMedicalVaultPDF = async (
 
   autoTable(doc, {
     startY: yPos,
-    head: [['PATIENT DEMOGRAPHICS', '']],
     body: demographicsData,
     theme: 'grid',
-    headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-      fontStyle: 'bold',
-      fontSize: 10,
-      halign: 'left',
-    },
     bodyStyles: {
       fontSize: 8,
       textColor: [0, 0, 0],
@@ -219,10 +240,12 @@ export const generateMedicalVaultPDF = async (
     margin: { left: 10, right: 10 },
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + 10;
+  yPos = (doc as any).lastAutoTable.finalY + 15;
 
-  // MEDICATIONS Table
+  // MEDICATIONS Section
   if (medications.length > 0) {
+    yPos = addSectionTitle('MEDICATIONS', yPos);
+    
     const medicationsData = medications.map(med => [
       med.medication_name,
       med.dosage || 'N/A',
@@ -233,41 +256,6 @@ export const generateMedicalVaultPDF = async (
 
     autoTable(doc, {
       startY: yPos,
-      head: [['MEDICATIONS', '', '', '', '']],
-      body: medicationsData,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [255, 255, 255],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        fontSize: 10,
-        halign: 'left',
-      },
-      bodyStyles: {
-        fontSize: 8,
-        textColor: [0, 0, 0],
-      },
-      alternateRowStyles: {
-        fillColor: [249, 249, 249],
-      },
-      columnStyles: {
-        0: { cellWidth: 50 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 35 },
-        3: { cellWidth: 30 },
-        4: { cellWidth: 25 },
-      },
-      styles: {
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1,
-      },
-      margin: { left: 10, right: 10 },
-    });
-
-    // Add column headers
-    const startY = yPos;
-    autoTable(doc, {
-      startY: startY,
       head: [['Medication', 'Dosage', 'Frequency', 'Start Date', 'Status']],
       body: medicationsData,
       theme: 'grid',
@@ -298,11 +286,13 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // CONDITIONS Table
+  // CONDITIONS Section
   if (conditions.length > 0) {
+    yPos = addSectionTitle('MEDICAL CONDITIONS', yPos);
+    
     const conditionsData = conditions.map(cond => [
       cond.condition_name,
       cond.diagnosis_date ? new Date(cond.diagnosis_date).toLocaleDateString() : 'N/A',
@@ -341,11 +331,13 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // ALLERGIES Table
+  // ALLERGIES Section
   if (allergies.length > 0) {
+    yPos = addSectionTitle('ALLERGIES', yPos);
+    
     const allergiesData = allergies.map(allergy => [
       allergy.allergen || allergy.allergen_name || 'Unknown',
       allergy.reaction || allergy.reaction_type || 'N/A',
@@ -382,12 +374,14 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // VITAL SIGNS Table
+  // VITAL SIGNS Section
   const latestVital = vitals.find(v => hasVitalData(v));
   if (latestVital) {
+    yPos = addSectionTitle('VITAL SIGNS', yPos);
+    
     const height = latestVital.height_inches ? `${Math.floor(latestVital.height_inches / 12)}'${latestVital.height_inches % 12}"` : 'N/A';
     const weight = latestVital.weight_pounds ? `${latestVital.weight_pounds} lbs` : 'N/A';
     const bmi = calculateBMI(latestVital.height_inches || undefined, latestVital.weight_pounds || undefined);
@@ -412,15 +406,8 @@ export const generateMedicalVaultPDF = async (
 
     autoTable(doc, {
       startY: yPos,
-      head: [['VITAL SIGNS', '']],
       body: vitalsData,
       theme: 'grid',
-      headStyles: {
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        fontSize: 8,
-      },
       bodyStyles: {
         fontSize: 8,
         textColor: [0, 0, 0],
@@ -439,11 +426,13 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // IMMUNIZATIONS Table
+  // IMMUNIZATIONS Section
   if (immunizations.length > 0) {
+    yPos = addSectionTitle('IMMUNIZATIONS', yPos);
+    
     const immunizationsData = immunizations.map(imm => [
       imm.vaccine_name,
       imm.date_administered ? new Date(imm.date_administered).toLocaleDateString() : 'N/A',
@@ -482,11 +471,13 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // SURGERIES Table
+  // SURGERIES Section
   if (surgeries.length > 0) {
+    yPos = addSectionTitle('SURGICAL HISTORY', yPos);
+    
     const surgeriesData = surgeries.map(surgery => [
       surgery.procedure_name || surgery.surgery_type || 'Unknown',
       surgery.surgery_date ? new Date(surgery.surgery_date).toLocaleDateString() : 'N/A',
@@ -525,11 +516,13 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // PHARMACIES Table
+  // PHARMACIES Section
   if (pharmacies.length > 0) {
+    yPos = addSectionTitle('PREFERRED PHARMACIES', yPos);
+    
     const pharmaciesData = pharmacies.map(pharm => [
       pharm.pharmacy_name,
       pharm.phone_number || 'N/A',
@@ -568,11 +561,13 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // EMERGENCY CONTACTS Table
+  // EMERGENCY CONTACTS Section
   if (emergencyContacts.length > 0) {
+    yPos = addSectionTitle('EMERGENCY CONTACTS', yPos);
+    
     const contactsData = emergencyContacts.map(contact => [
       contact.contact_name || contact.name || 'Unknown',
       contact.relationship || 'N/A',
@@ -611,18 +606,14 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // Footer on all pages
+  // Add footer with timestamp to all pages
   const totalPages = doc.internal.pages.length - 1;
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setFontSize(7);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 10, pageHeight - 5);
-    doc.text(`Page ${i} of ${totalPages}`, pageWidth - 30, pageHeight - 5);
+    addFooter();
   }
 
   return doc.output('blob');
