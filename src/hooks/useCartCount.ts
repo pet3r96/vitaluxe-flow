@@ -11,7 +11,7 @@ export const useCartCount = (userId: string | null) => {
         .from("cart")
         .select("id")
         .eq("doctor_id", userId)
-        .single();
+        .maybeSingle();
 
       if (!cart) return 0;
 
