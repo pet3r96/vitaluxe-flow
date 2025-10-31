@@ -172,8 +172,11 @@ export default function DeliveryConfirmation() {
       }
 
       // Update the patient record if patientId is provided
+      // Try patient_accounts first, then fallback to patients table for backward compatibility
       if (patientId) {
         console.log('[DeliveryConfirmation] Updating patient record with ID:', patientId);
+        
+        // Try updating patient_accounts table first
         const { data: patientData, error: patientError } = await supabase
           .from("patient_accounts")
           .update({
@@ -185,11 +188,28 @@ export default function DeliveryConfirmation() {
           .eq("id", patientId)
           .select('id');
 
-        if (patientError) {
-          console.error('[DeliveryConfirmation] Patient record update failed:', patientError);
-          toast.warning("Address saved for this order, but the patient record could not be updated.");
+        if (patientError || !patientData || patientData.length === 0) {
+          // Fallback: try updating patients table (for legacy cart lines)
+          console.log('[DeliveryConfirmation] Trying patients table fallback');
+          const { data: patientsData, error: patientsError } = await supabase
+            .from("patients")
+            .update({
+              address_street: address.street,
+              address_city: address.city,
+              address_state: address.state,
+              address_zip: address.zip,
+            })
+            .eq("id", patientId)
+            .select('id');
+
+          if (patientsError) {
+            console.error('[DeliveryConfirmation] Both patient updates failed:', { patientError, patientsError });
+            toast.warning("Address saved for this order, but the patient record could not be updated.");
+          } else {
+            console.log('[DeliveryConfirmation] Patients table updated successfully:', patientsData);
+          }
         } else {
-          console.log('[DeliveryConfirmation] Patient record updated successfully:', patientData);
+          console.log('[DeliveryConfirmation] Patient_accounts updated successfully:', patientData);
         }
       }
       

@@ -523,25 +523,27 @@ export const ProductsGrid = () => {
 
         if (error) throw error;
       } else {
-        // Fetch patient with ALL address fields
-        const { data: patient } = await supabase
-          .from("patient_accounts")
-          .select("first_name, last_name, email, phone, address, city, state, zip_code")
+        // PATIENT ORDER - fetch from patients table (patientId is patients.id from dialog)
+        const { data: patientRecord, error: patientError } = await supabase
+          .from("patients")
+          .select("id, name, email, phone, address_street, address_city, address_state, address_zip, patient_account_id")
           .eq("id", patientId!)
           .single();
-        
-        // Construct name from first_name and last_name
-        if (patient) {
-          (patient as any).name = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
+
+        if (patientError || !patientRecord) {
+          console.error("Failed to fetch patient:", patientError);
+          toast.error("Unable to find patient information. Please select a valid patient.");
+          return;
         }
 
-        // Use direct state field from Google Address (no parsing needed)
-        const destinationState = patient?.state || '';
+        // Use state from patients table
+        const destinationState = patientRecord.address_state || '';
 
         // Build formatted address for display
-        const patientAddress = patient?.address && patient?.city && patient?.state && patient?.zip_code
-            ? `${patient.address}, ${patient.city}, ${patient.state} ${patient.zip_code}`
-            : patient?.address || null;
+        const patientAddress = patientRecord.address_street && patientRecord.address_city && patientRecord.address_state && patientRecord.address_zip
+            ? `${patientRecord.address_street}, ${patientRecord.address_city}, ${patientRecord.address_state} ${patientRecord.address_zip}`
+            : patientRecord.address_street || null;
+
 
         if (!isValidStateCode(destinationState)) {
           // If destination state is invalid/missing, allow adding to cart without routing.
@@ -558,16 +560,16 @@ export const ProductsGrid = () => {
             .insert({
               cart_id: cart.id,
               product_id: productForCart.id,
-              patient_id: patientId,
+              patient_id: patientRecord.patient_account_id, // Use patient_account_id for linking
               provider_id: actualProviderId,
-              patient_name: patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || "Unknown" : "Unknown",
-              patient_email: patient?.email,
-              patient_phone: patient?.phone,
+              patient_name: patientRecord.name || "Unknown",
+              patient_email: patientRecord.email,
+              patient_phone: patientRecord.phone,
               patient_address: null,
-              patient_address_street: patient?.address || null,
-              patient_address_city: patient?.city || null,
-              patient_address_state: patient?.state || null,
-              patient_address_zip: patient?.zip_code || null,
+              patient_address_street: patientRecord.address_street || null,
+              patient_address_city: patientRecord.address_city || null,
+              patient_address_state: patientRecord.address_state || null,
+              patient_address_zip: patientRecord.address_zip || null,
               patient_address_validated: false,
               patient_address_validation_source: null,
               quantity: quantity,
@@ -629,10 +631,10 @@ export const ProductsGrid = () => {
 
         // Validate patient address completeness - all 4 fields required
         const hasCompleteAddress = !!(
-          patient?.address && 
-          patient?.city && 
-          patient?.state && 
-          patient?.zip_code
+          patientRecord.address_street && 
+          patientRecord.address_city && 
+          patientRecord.address_state && 
+          patientRecord.address_zip
         );
 
         const { error } = await supabase
@@ -640,16 +642,16 @@ export const ProductsGrid = () => {
           .insert({
             cart_id: cart.id,
             product_id: productForCart.id,
-            patient_id: patientId,
+            patient_id: patientRecord.patient_account_id, // Use patient_account_id for linking
             provider_id: actualProviderId,
-            patient_name: patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || "Unknown" : "Unknown",
-            patient_email: patient?.email,
-            patient_phone: patient?.phone,
+            patient_name: patientRecord.name || "Unknown",
+            patient_email: patientRecord.email,
+            patient_phone: patientRecord.phone,
             patient_address: null, // Clear legacy field
-            patient_address_street: patient?.address || null,
-            patient_address_city: patient?.city || null,
-            patient_address_state: patient?.state || null,
-            patient_address_zip: patient?.zip_code || null,
+            patient_address_street: patientRecord.address_street || null,
+            patient_address_city: patientRecord.address_city || null,
+            patient_address_state: patientRecord.address_state || null,
+            patient_address_zip: patientRecord.address_zip || null,
             patient_address_validated: hasCompleteAddress,
             patient_address_validation_source: hasCompleteAddress ? 'patient_record' : null,
             quantity: quantity,
