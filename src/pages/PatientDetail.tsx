@@ -37,13 +37,46 @@ export default function PatientDetail() {
 
   const practiceId = effectivePracticeId;
 
+  // First, resolve the patient_account_id (handle both old patient_id and new patient_account_id)
+  const { data: resolvedPatientAccountId, isLoading: isResolvingId } = useQuery({
+    queryKey: ['resolve-patient-id', patientId],
+    queryFn: async () => {
+      // Try direct lookup first (assuming it's a patient_account_id)
+      const { data: directData, error: directError } = await supabase
+        .from('patient_accounts')
+        .select('id')
+        .eq('id', patientId)
+        .maybeSingle();
+
+      if (directData) {
+        return patientId; // It's already a patient_account_id
+      }
+
+      // If not found, try to map from old patient_id
+      const { data: mappedData, error: mappedError } = await supabase
+        .from('v_patients_with_portal_status')
+        .select('patient_account_id')
+        .eq('patient_id', patientId)
+        .maybeSingle();
+
+      if (mappedData?.patient_account_id) {
+        return mappedData.patient_account_id;
+      }
+
+      return null; // Not found
+    },
+    enabled: !!patientId,
+  });
+
+  const actualPatientId = resolvedPatientAccountId || patientId;
+
   const { data: patient, isLoading } = useQuery({
-    queryKey: ['patient', patientId],
+    queryKey: ['patient', actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patient_accounts')
         .select('*')
-        .eq('id', patientId)
+        .eq('id', actualPatientId)
         .single();
 
       if (error) throw error;
@@ -52,18 +85,18 @@ export default function PatientDetail() {
         name: data ? `${data.first_name} ${data.last_name}` : "",
       };
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId && !isResolvingId,
     staleTime: 30000,
   });
 
   // Fetch portal status
   const { data: portalStatus } = useQuery({
-    queryKey: ['patient-portal-status', patientId],
+    queryKey: ['patient-portal-status', actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('v_patients_with_portal_status')
         .select('*')
-        .eq('patient_account_id', patientId)
+        .eq('patient_account_id', actualPatientId)
         .maybeSingle();
 
       if (error) {
@@ -72,24 +105,24 @@ export default function PatientDetail() {
       }
       return data;
     },
-    enabled: !!patientId,
-    staleTime: 10000, // Refresh every 10 seconds for portal status
+    enabled: !!actualPatientId && !isResolvingId,
+    staleTime: 10000,
   });
 
   // Realtime subscriptions for all patient data
   useEffect(() => {
-    if (!patientId) return;
+    if (!actualPatientId) return;
 
     // Subscribe to patient account changes
     realtimeManager.subscribe('patient_accounts', () => {
-      queryClient.invalidateQueries({ queryKey: ['patient', patientId] });
-      queryClient.invalidateQueries({ queryKey: ['patient-portal-status', patientId] });
+      queryClient.invalidateQueries({ queryKey: ['patient', actualPatientId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-portal-status', actualPatientId] });
     });
 
     return () => {
       // Subscriptions are managed globally by realtimeManager
     };
-  }, [patientId, queryClient]);
+  }, [actualPatientId, queryClient]);
 
   // Fetch providers for appointment dialog
   const { data: providers = [] } = useQuery({
@@ -125,115 +158,115 @@ export default function PatientDetail() {
 
   // Fetch medical data for PDF generation
   const { data: medications = [] } = useQuery({
-    queryKey: ["patient-medications", patientId],
+    queryKey: ["patient-medications", actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_medications")
         .select("*")
-        .eq("patient_account_id", patientId)
+        .eq("patient_account_id", actualPatientId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId,
   });
 
   const { data: conditions = [] } = useQuery({
-    queryKey: ["patient-conditions", patientId],
+    queryKey: ["patient-conditions", actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_conditions")
         .select("*")
-        .eq("patient_account_id", patientId)
+        .eq("patient_account_id", actualPatientId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId,
   });
 
   const { data: allergies = [] } = useQuery({
-    queryKey: ["patient-allergies", patientId],
+    queryKey: ["patient-allergies", actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_allergies")
         .select("*")
-        .eq("patient_account_id", patientId)
+        .eq("patient_account_id", actualPatientId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId,
   });
 
   const { data: vitals = [] } = useQuery({
-    queryKey: ["patient-vitals", patientId],
+    queryKey: ["patient-vitals", actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_vitals")
         .select("*")
-        .eq("patient_account_id", patientId)
+        .eq("patient_account_id", actualPatientId)
         .order("recorded_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId,
   });
 
   const { data: immunizations = [] } = useQuery({
-    queryKey: ["patient-immunizations", patientId],
+    queryKey: ["patient-immunizations", actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_immunizations")
         .select("*")
-        .eq("patient_account_id", patientId)
+        .eq("patient_account_id", actualPatientId)
         .order("date_administered", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId,
   });
 
   const { data: surgeries = [] } = useQuery({
-    queryKey: ["patient-surgeries", patientId],
+    queryKey: ["patient-surgeries", actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_surgeries")
         .select("*")
-        .eq("patient_account_id", patientId)
+        .eq("patient_account_id", actualPatientId)
         .order("date", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId,
   });
 
   const { data: pharmacies = [] } = useQuery({
-    queryKey: ["patient-pharmacies", patientId],
+    queryKey: ["patient-pharmacies", actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_pharmacies")
         .select("*")
-        .eq("patient_account_id", patientId)
+        .eq("patient_account_id", actualPatientId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId,
   });
 
   const { data: emergencyContacts = [] } = useQuery({
-    queryKey: ["patient-emergency-contacts", patientId],
+    queryKey: ["patient-emergency-contacts", actualPatientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_emergency_contacts")
         .select("*")
-        .eq("patient_account_id", patientId)
+        .eq("patient_account_id", actualPatientId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!actualPatientId,
   });
 
   const handleViewChart = async () => {
@@ -350,7 +383,7 @@ export default function PatientDetail() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isResolvingId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -472,12 +505,12 @@ export default function PatientDetail() {
             </Button>
           </div>
           
-          <MedicalVaultSummaryCard patientAccountId={patientId!} />
+          <MedicalVaultSummaryCard patientAccountId={actualPatientId!} />
         </TabsContent>
 
         <TabsContent value="medical-vault">
           <MedicalVaultView 
-            patientAccountId={patientId!}
+            patientAccountId={actualPatientId!}
             mode="practice"
             canEdit={true}
             showHeader={true}
@@ -486,20 +519,20 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="follow-ups">
-          <FollowUpManager patientId={patientId!} patientName={patient.name} />
+          <FollowUpManager patientId={actualPatientId!} patientName={patient.name} />
         </TabsContent>
 
         <TabsContent value="appointments" className="space-y-4">
           {effectivePracticeId && (
             <PatientAppointmentsList 
-              patientId={patientId!} 
+              patientId={actualPatientId!} 
               practiceId={effectivePracticeId}
             />
           )}
         </TabsContent>
 
         <TabsContent value="documents">
-          <SharedDocumentsGrid patientAccountId={patientId!} mode="practice" />
+          <SharedDocumentsGrid patientAccountId={actualPatientId!} mode="practice" />
         </TabsContent>
       </Tabs>
 
@@ -511,7 +544,7 @@ export default function PatientDetail() {
           practiceId={practiceId}
           providers={providers}
           rooms={rooms}
-          defaultPatientId={patientId}
+          defaultPatientId={actualPatientId}
         />
       )}
 
