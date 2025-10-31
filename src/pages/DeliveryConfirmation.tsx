@@ -7,15 +7,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Package, Truck, MapPin, Edit, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight } from "lucide-react";
 import { DeliveryAddressEditor } from "@/components/orders/DeliveryAddressEditor";
+import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 
 export default function DeliveryConfirmation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
+  const { canOrder, isLoading: checkingPrivileges, isStaffAccount } = useStaffOrderingPrivileges();
+  
+  // Staff without ordering privileges cannot access delivery confirmation - compute flags only (avoid early return before hooks)
+  const showStaffDeliveryLoading = checkingPrivileges && isStaffAccount;
+  const showStaffDeliveryNoAccess = isStaffAccount && !canOrder;
   
   const [editingAddress, setEditingAddress] = useState<{
     type: 'practice' | 'patient';
@@ -315,6 +323,41 @@ export default function DeliveryConfirmation() {
     );
   }
 
+  if (showStaffDeliveryLoading) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
+  }
+
+  if (showStaffDeliveryNoAccess) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl sm:text-2xl">Confirm Delivery Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>
+                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
+              </AlertDescription>
+            </Alert>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/cart')}
+              className="mt-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Cart
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Progress Indicator */}
@@ -474,12 +517,12 @@ export default function DeliveryConfirmation() {
                         <div>{lines[0].patient_address_street}</div>
                         <div>{lines[0].patient_address_city}, {lines[0].patient_address_state} {lines[0].patient_address_zip}</div>
                       </div>
-                    ) : lines[0].patient?.address_street ? (
+                    ) : lines[0].patient?.address ? (
                       <div className="text-sm">
                         <div className="text-muted-foreground">
                           <div>{patientName}</div>
-                          <div>{lines[0].patient.address_street}</div>
-                          <div>{lines[0].patient.address_city}, {lines[0].patient.address_state} {lines[0].patient.address_zip}</div>
+                          <div>{lines[0].patient.address}</div>
+                          <div>{lines[0].patient.city}, {lines[0].patient.state} {lines[0].patient.zip_code}</div>
                         </div>
                         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mt-1 text-xs">
                           <CheckCircle2 className="h-3 w-3" />
@@ -503,7 +546,7 @@ export default function DeliveryConfirmation() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {!lines[0].patient_address_street && lines[0].patient?.address_street && (
+                    {!lines[0].patient_address_street && lines[0].patient?.address && (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -513,12 +556,11 @@ export default function DeliveryConfirmation() {
                             patientName,
                             lineIds: lines.map(l => l.id),
                             address: {
-                              street: lines[0].patient.address_street,
-                              city: lines[0].patient.address_city,
-                              state: lines[0].patient.address_state,
-                              zip: lines[0].patient.address_zip,
-                              formatted: lines[0].patient.address_formatted || 
-                                `${lines[0].patient.address_street}, ${lines[0].patient.address_city}, ${lines[0].patient.address_state} ${lines[0].patient.address_zip}`,
+                              street: lines[0].patient.address,
+                              city: lines[0].patient.city,
+                              state: lines[0].patient.state,
+                              zip: lines[0].patient.zip_code,
+                              formatted: `${lines[0].patient.address}, ${lines[0].patient.city}, ${lines[0].patient.state} ${lines[0].patient.zip_code}`,
                               status: 'verified',
                               source: 'patient_record',
                             }
