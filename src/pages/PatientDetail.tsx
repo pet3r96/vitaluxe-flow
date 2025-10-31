@@ -1,13 +1,16 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, User } from "lucide-react";
+import { ArrowLeft, User, FileText, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { FollowUpManager } from "@/components/patients/FollowUpManager";
+import { MedicalVaultView } from "@/components/medical-vault/MedicalVaultView";
+import { MedicalVaultSummaryCard } from "@/components/medical-vault/MedicalVaultSummaryCard";
+import { SharedDocumentsGrid } from "@/components/medical-vault/SharedDocumentsGrid";
 
 export default function PatientDetail() {
   const { patientId } = useParams();
@@ -105,6 +108,7 @@ export default function PatientDetail() {
       <Tabs value={activeTab} onValueChange={(v) => navigate(`/patients/${patientId}?tab=${v}`)}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="medical-vault">Medical Vault</TabsTrigger>
           <TabsTrigger value="follow-ups">Follow-Ups</TabsTrigger>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -112,6 +116,19 @@ export default function PatientDetail() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <div className="flex gap-2 mb-4">
+            <Button variant="outline" onClick={() => navigate(`/practice/patients/${patientId}/medical-vault`)}>
+              <FileText className="h-4 w-4 mr-2" />
+              View Full Medical Vault
+            </Button>
+            <Button variant="outline" onClick={() => navigate(`/practice-calendar?patient=${patientId}`)}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Schedule Appointment
+            </Button>
+          </div>
+          
+          <MedicalVaultSummaryCard patientAccountId={patientId!} />
+          
           <Card>
             <CardHeader>
               <CardTitle>Patient Overview</CardTitle>
@@ -151,6 +168,16 @@ export default function PatientDetail() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="medical-vault">
+          <MedicalVaultView 
+            patientAccountId={patientId!}
+            mode="practice"
+            canEdit={true}
+            showHeader={false}
+            patientName={patient.name}
+          />
+        </TabsContent>
+
         <TabsContent value="follow-ups">
           <FollowUpManager patientId={patientId!} patientName={patient.name} />
         </TabsContent>
@@ -164,11 +191,7 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="documents">
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              Patient documents will be displayed here
-            </CardContent>
-          </Card>
+          <SharedDocumentsGrid patientAccountId={patientId!} mode="practice" />
         </TabsContent>
 
         <TabsContent value="forms">

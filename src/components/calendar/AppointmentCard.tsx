@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { Clock, User, MapPin, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
 
 interface AppointmentCardProps {
   appointment: any;
@@ -48,9 +49,19 @@ export function AppointmentCard({ appointment, onClick, isDragging, style }: App
             WALK-IN
           </Badge>
         )}
-        <p className="font-semibold text-sm leading-tight line-clamp-2">
-          {appointment.patient_accounts?.first_name} {appointment.patient_accounts?.last_name}
-        </p>
+        <div className="flex items-center gap-1">
+          <p className="font-semibold text-sm leading-tight line-clamp-2 flex-1">
+            {appointment.patient_accounts?.first_name} {appointment.patient_accounts?.last_name}
+          </p>
+          {appointment.patient_id && (
+            <PatientQuickAccessButton
+              patientId={appointment.patient_id}
+              patientName={`${appointment.patient_accounts?.first_name} ${appointment.patient_accounts?.last_name}`}
+              variant="icon"
+              size="sm"
+            />
+          )}
+        </div>
         
         {appointment.providers && (
           <div className="flex items-center gap-1 text-xs opacity-80">
