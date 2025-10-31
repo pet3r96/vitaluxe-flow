@@ -58,12 +58,15 @@ export function CreateInternalMessageDialog({
     queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('patients')
-        .select('id, name')
+        .from('patient_accounts')
+        .select('id, first_name, last_name')
         .eq('practice_id', practiceId)
-        .order('name');
+        .order('last_name');
       if (error) throw error;
-      return data || [];
+      return (data || []).map(p => ({
+        id: p.id,
+        name: `${p.first_name} ${p.last_name}`
+      }));
     },
     enabled: open && !!practiceId
   });
