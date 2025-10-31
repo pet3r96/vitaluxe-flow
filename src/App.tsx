@@ -106,6 +106,7 @@ const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVau
 const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
+const MedicalVaultShare = lazy(() => import("./pages/public/MedicalVaultShare"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
@@ -182,9 +183,11 @@ const App = () => (
                 <UpgradePromptDialog />
                 <Suspense fallback={<PageLoader />}>
                 <Routes>
+                  {/* Public Routes */}
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
+                  <Route path="/share/:token" element={<MedicalVaultShare />} />
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />

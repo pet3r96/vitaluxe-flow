@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
+import { ShareConsentDialog } from "@/components/medical-vault/ShareConsentDialog";
+import { ShareLinkDialog } from "@/components/medical-vault/ShareLinkDialog";
 import { MedicationsSection } from "@/components/medical-vault/MedicationsSection";
 import { ConditionsSection } from "@/components/medical-vault/ConditionsSection";
 import { AllergiesSection } from "@/components/medical-vault/AllergiesSection";
@@ -23,6 +25,10 @@ export default function PatientMedicalVault() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
+  const [showShareLinkDialog, setShowShareLinkDialog] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareExpiresAt, setShareExpiresAt] = useState<Date>(new Date());
 
   // Get patient account - check for impersonation first
   const { data: patientAccount, isLoading, error } = useQuery({
@@ -306,53 +312,76 @@ export default function PatientMedicalVault() {
   };
 
   const handleSharePDF = async () => {
+    // Step 1: Show consent dialog
+    setShowConsentDialog(true);
+  };
+
+  const handleConsentGiven = async () => {
     if (!patientAccount) {
       toast({ title: "Error", description: "Patient account not loaded", variant: "destructive" });
       return;
     }
 
+    setShowConsentDialog(false);
     setIsGeneratingPdf(true);
-    try {
-      const pdfBlob = await generateMedicalVaultPDF(
-        patientAccount,
-        medications || [],
-        conditions || [],
-        allergies || [],
-        vitals || [],
-        immunizations || [],
-        surgeries || [],
-        pharmacies || [],
-        emergencyContacts || []
-      );
-      
-      const file = new File(
-        [pdfBlob], 
-        `Medical_Vault_${patientAccount.first_name}_${patientAccount.last_name}.pdf`,
-        { type: 'application/pdf' }
-      );
 
-      if (navigator.share && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Medical Vault',
-          text: `Medical Vault for ${patientAccount.first_name} ${patientAccount.last_name}`,
-        });
-        toast({ title: "Success", description: "PDF shared successfully" });
-      } else {
-        // Fallback: copy link (though we don't have a shareable link, so we'll just download)
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.download = `Medical_Vault_${patientAccount.first_name}_${patientAccount.last_name}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(pdfUrl);
-        toast({ title: "Info", description: "Sharing not available. PDF downloaded instead." });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Error", description: "Please log in to share your medical vault", variant: "destructive" });
+        return;
       }
+
+      // Generate secure token
+      const token = crypto.randomUUID();
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+
+      // Create share link in database
+      const { error: insertError } = await supabase
+        .from('medical_vault_share_links')
+        .insert({
+          patient_id: patientAccount.id,
+          token,
+          expires_at: expiresAt.toISOString(),
+          consent_agreed_at: now.toISOString(),
+          consent_ip: 'client-side',
+        });
+
+      if (insertError) {
+        console.error('Error creating share link:', insertError);
+        toast({ title: "Error", description: "Failed to create share link", variant: "destructive" });
+        return;
+      }
+
+      // Log consent given
+      await supabase.from('audit_logs').insert({
+        user_id: user.id,
+        user_email: user.email,
+        user_role: 'patient',
+        action_type: 'medical_vault_share_consent_given',
+        entity_type: 'medical_vault_share_links',
+        entity_id: patientAccount.id,
+        details: {
+          patient_id: patientAccount.id,
+          patient_name: `${patientAccount.first_name} ${patientAccount.last_name}`,
+          token,
+          expires_at: expiresAt.toISOString(),
+        },
+      });
+
+      // Generate share URL
+      const baseUrl = window.location.origin;
+      const url = `${baseUrl}/share/${token}`;
+
+      setShareUrl(url);
+      setShareExpiresAt(expiresAt);
+      setShowShareLinkDialog(true);
+
+      toast({ title: "Success", description: "Share link created successfully" });
     } catch (error) {
-      console.error('Failed to share PDF:', error);
-      toast({ title: "Error", description: "Failed to share PDF", variant: "destructive" });
+      console.error('Error creating share link:', error);
+      toast({ title: "Error", description: "Failed to create share link", variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -360,6 +389,21 @@ export default function PatientMedicalVault() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Consent Dialog */}
+      <ShareConsentDialog
+        open={showConsentDialog}
+        onOpenChange={setShowConsentDialog}
+        onConsent={handleConsentGiven}
+      />
+
+      {/* Share Link Dialog */}
+      <ShareLinkDialog
+        open={showShareLinkDialog}
+        onOpenChange={setShowShareLinkDialog}
+        shareUrl={shareUrl}
+        expiresAt={shareExpiresAt}
+      />
+
       {/* PDF Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={(open) => {
         setPreviewDialogOpen(open);

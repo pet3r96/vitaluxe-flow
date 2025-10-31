@@ -48,103 +48,85 @@ verify_jwt = true
 [functions.cancel-order]
 verify_jwt = true
 
-[functions.fix-orphaned-users]
-verify_jwt = true
-
-[functions.generate-prescription-pdf]
-verify_jwt = true
-
-[functions.generate-order-receipt]
-verify_jwt = true
-
-[functions.generate-terms-pdf]
-verify_jwt = true
-
-[functions.manage-provider-status]
-verify_jwt = true
-
-[functions.plaid-create-link-token]
-verify_jwt = true
-
-[functions.plaid-exchange-token]
-verify_jwt = true
-
-[functions.sync-user-data]
-verify_jwt = true
-
-[functions.update-shipping-info]
-verify_jwt = true
-
-[functions.validate-address]
-verify_jwt = true
-
-[functions.route-order-to-pharmacy]
-verify_jwt = true
-
-[functions.send-welcome-email]
+[functions.process-payment]
 verify_jwt = true
 
 [functions.send-verification-email]
 verify_jwt = true
 
-[functions.send-temp-password-email]
+[functions.approve-pending-product]
 verify_jwt = true
 
-[functions.verify-email]
+[functions.admin-get-password-status]
+verify_jwt = true
+
+[functions.admin-reset-user-password]
+verify_jwt = true
+
+[functions.send-temp-password-email]
+verify_jwt = false
+
+[functions.send-password-reset-email]
+verify_jwt = false
+
+[functions.reset-password-with-token]
 verify_jwt = false
 
 [functions.reset-password]
 verify_jwt = false
 
-[functions.reset-admin-password]
+[functions.check-follow-ups]
 verify_jwt = false
 
-[functions.admin-reset-user-password]
-verify_jwt = true
-
-[functions.log-error]
-verify_jwt = true
-
-[functions.check-key-rotation]
+[functions.cleanup-stale-sessions]
 verify_jwt = false
 
 [functions.cleanup-cart-lines]
 verify_jwt = false
 
-[functions.log-credential-access]
+[functions.fix-orphaned-users]
 verify_jwt = true
 
-[functions.manage-product-type]
-verify_jwt = true
-
-[functions.send-notification]
-verify_jwt = true
-
-[functions.upload-to-s3]
-verify_jwt = true
-
-[functions.get-s3-signed-url]
-verify_jwt = true
-
-[functions.clear-storage-files]
+[functions.fix-admin-email]
 verify_jwt = true
 
 [functions.delete-all-orders]
 verify_jwt = true
 
+[functions.sync-user-data]
+verify_jwt = false
+
+[functions.reset-admin-password]
+verify_jwt = true
+
+[functions.clear-storage-files]
+verify_jwt = true
+
 [functions.factory-reset]
 verify_jwt = true
 
-[functions.cleanup-stale-sessions]
-verify_jwt = false
-
-[functions.create-easypost-shipment]
+[functions.google-validate-address]
 verify_jwt = true
 
-[functions.get-easypost-tracking]
+[functions.calculate-shipping]
 verify_jwt = true
 
-[functions.get-active-impersonation]
+[functions.generate-shipping-label]
+verify_jwt = true
+
+[functions.pharmacy-order-action]
+verify_jwt = true
+
+[functions.generate-pharmacy-order-summary]
+verify_jwt = true
+
+[functions.pharmacy-decline-order]
+verify_jwt = true
+
+[functions.send-notification]
+verify_jwt = true
+
+[functions.get-user-context]
 verify_jwt = true
 
 [functions.start-impersonation]
@@ -153,17 +135,182 @@ verify_jwt = true
 [functions.end-impersonation]
 verify_jwt = true
 
-[functions.create-blocked-time]
+[functions.get-active-impersonation]
+verify_jwt = true
+
+[functions.get-easypost-tracking]
+verify_jwt = true
+
+[functions.route-order-to-pharmacy]
+verify_jwt = true
+
+[functions.update-order-status]
+verify_jwt = true
+
+[functions.generate-order-receipt]
+verify_jwt = true
+
+[functions.log-error]
 verify_jwt = true
 
 [functions.send-patient-message]
 verify_jwt = true
 
+[functions.approve-reschedule-request]
+verify_jwt = true
+
+[functions.cancel-appointment]
+verify_jwt = true
+
+[functions.book-appointment]
+verify_jwt = true
+
+[functions.reschedule-appointment-request]
+verify_jwt = true
+
+[functions.export-calendar-ics]
+verify_jwt = true
+
+[functions.calendar-feed]
+verify_jwt = false
+
+[functions.check-appointment-availability]
+verify_jwt = true
+
+[functions.generate-calendar-event]
+verify_jwt = true
+
+[functions.generate-calendar-sync-token]
+verify_jwt = true
+
+[functions.get-calendar-data]
+verify_jwt = true
+
+[functions.find-soonest-availability]
+verify_jwt = true
+
+[functions.update-appointment-time]
+verify_jwt = true
+
+[functions.create-bulk-appointments]
+verify_jwt = true
+
+[functions.update-appointment-settings]
+verify_jwt = true
+
+[functions.manage-practice-room]
+verify_jwt = true
+
+[functions.create-patient-portal-account]
+verify_jwt = true
+
+[functions.bulk-invite-patients]
+verify_jwt = true
+
+[functions.send-patient-welcome-email]
+verify_jwt = true
+
+[functions.create-provider-document]
+verify_jwt = true
+
+[functions.assign-document-to-patient]
+verify_jwt = true
+
 [functions.get-patient-practice]
 verify_jwt = true
 
-[functions.list-provider-documents]
+[functions.generate-prescription-pdf]
 verify_jwt = true
 
-[functions.get-provider-document-url]
+[functions.generate-day-schedule-pdf]
 verify_jwt = true
+
+[functions.manage-product-type]
+verify_jwt = true
+
+[functions.manage-provider-status]
+verify_jwt = true
+
+[functions.manage-staff-status]
+verify_jwt = true
+
+[functions.manage-status-configs]
+verify_jwt = true
+
+[functions.get-s3-signed-url]
+verify_jwt = true
+
+[functions.create-blocked-time]
+verify_jwt = true
+
+[functions.delete-blocked-time]
+verify_jwt = true
+
+[functions.check-key-rotation]
+verify_jwt = false
+
+[functions.subscribe-to-vitaluxepro]
+verify_jwt = true
+
+[functions.get-practice-subscription-status]
+verify_jwt = true
+
+[functions.cancel-subscription]
+verify_jwt = true
+
+[functions.get-subscription-details]
+verify_jwt = true
+
+[functions.check-trial-payment-reminders]
+verify_jwt = false
+
+[functions.handle-subscription-renewal]
+verify_jwt = false
+
+[functions.convert-trial-to-active]
+verify_jwt = false
+
+[functions.process-subscription-payment]
+verify_jwt = false
+
+[functions.calculate-rep-commissions]
+verify_jwt = false
+
+[functions.calculate-daily-metrics]
+verify_jwt = false
+
+[functions.backfill-rep-links]
+verify_jwt = true
+
+[functions.get-dashboard-data]
+verify_jwt = true
+
+[functions.generate-terms-pdf]
+verify_jwt = false
+
+[functions.authorizenet-create-customer-profile]
+verify_jwt = true
+
+[functions.authorizenet-charge-payment]
+verify_jwt = true
+
+[functions.authorizenet-refund-transaction]
+verify_jwt = true
+
+[functions.authorizenet-webhook]
+verify_jwt = false
+
+[functions.generate-branding-preview-pdf]
+verify_jwt = true
+
+[functions.test-ghl-webhook]
+verify_jwt = false
+
+[functions.send-ghl-sms]
+verify_jwt = true
+
+[functions.generate-practice-development-invoice]
+verify_jwt = true
+
+[functions.validate-share-link]
+verify_jwt = false

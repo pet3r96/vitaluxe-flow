@@ -1435,6 +1435,66 @@ export type Database = {
           },
         ]
       }
+      medical_vault_share_links: {
+        Row: {
+          accessed_by_ip: string | null
+          consent_agreed_at: string
+          consent_ip: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          is_revoked: boolean | null
+          patient_id: string
+          revoked_at: string | null
+          revoked_reason: string | null
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          accessed_by_ip?: string | null
+          consent_agreed_at: string
+          consent_ip?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_revoked?: boolean | null
+          patient_id: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          accessed_by_ip?: string | null
+          consent_agreed_at?: string
+          consent_ip?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_revoked?: boolean | null
+          patient_id?: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_vault_share_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_vault_share_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+        ]
+      }
       message_thread_read_status: {
         Row: {
           created_at: string | null
