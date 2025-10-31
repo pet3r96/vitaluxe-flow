@@ -236,7 +236,7 @@ serve(async (req) => {
     
     const { data: patientAccounts } = await supabaseAdmin
       .from('patient_accounts')
-      .select('user_id, name')
+      .select('user_id')
       .in('id', accountIds);
 
     // Create notifications for each patient
