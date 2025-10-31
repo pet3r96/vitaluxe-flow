@@ -118,22 +118,43 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('assign-user-role', {
-        body: {
+      // Debug logging
+      console.log('🔍 AddProviderDialog: Submitting provider creation', {
+        effectiveRole,
+        effectiveUserId,
+        targetPracticeId,
+        formData: {
           email: formData.email,
-          name: formData.email,
           fullName: formData.fullName,
           prescriberName: formData.prescriberName,
-          role: 'provider',
-          csrfToken, // Include in body as fallback
-          roleData: {
-            practiceId: targetPracticeId,
-            npi: formData.npi,
-            dea: formData.dea,
-            licenseNumber: formData.licenseNumber,
-            phone: formData.phone,
-          }
-        },
+          npi: formData.npi,
+          dea: formData.dea || '(not provided)',
+          licenseNumber: formData.licenseNumber,
+          phone: formData.phone || '(not provided)'
+        }
+      });
+
+      const requestBody = {
+        email: formData.email,
+        name: formData.email,
+        fullName: formData.fullName,
+        prescriberName: formData.prescriberName,
+        role: 'provider',
+        csrfToken,
+        roleData: {
+          practiceId: targetPracticeId,
+          npi: formData.npi,
+          dea: formData.dea || null,
+          licenseNumber: formData.licenseNumber,
+          phone: formData.phone || null,
+        }
+      };
+
+      console.log('📤 Request body keys:', Object.keys(requestBody));
+      console.log('📤 RoleData keys:', Object.keys(requestBody.roleData));
+
+      const { data, error } = await supabase.functions.invoke('assign-user-role', {
+        body: requestBody,
         headers: {
           'x-csrf-token': csrfToken
         }

@@ -9,6 +9,9 @@ export function cn(...inputs: ClassValue[]) {
 export const ENCRYPTED_PLACEHOLDER = "[ENCRYPTED]";
 
 export function sanitizeEncrypted(value?: string | null): string {
+  // Treat [ENCRYPTED] placeholder as empty string for display
   if (value === ENCRYPTED_PLACEHOLDER) return "";
-  return value ?? "";
+  // Treat null, undefined, or empty string as empty string
+  if (!value || value.trim() === "") return "";
+  return value;
 }
