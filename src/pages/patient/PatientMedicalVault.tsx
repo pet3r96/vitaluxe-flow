@@ -244,30 +244,32 @@ export default function PatientMedicalVault() {
         emergencyContacts || []
       );
       
-      // Print via hidden iframe (avoids popup blockers and blob tab blocks)
+      // Open PDF in new tab and trigger print
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.src = pdfUrl;
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } finally {
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-            URL.revokeObjectURL(pdfUrl);
-          }, 1000);
-        }
+      const printWindow = window.open(pdfUrl, '_blank');
+      
+      if (!printWindow) {
+        toast({ 
+          title: "Popup Blocked", 
+          description: "Please allow popups for this site to print", 
+          variant: "destructive" 
+        });
+        URL.revokeObjectURL(pdfUrl);
+        return;
+      }
+      
+      // Wait for PDF to load, then trigger print
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+        
+        // Cleanup after a delay to allow print dialog to open
+        setTimeout(() => {
+          URL.revokeObjectURL(pdfUrl);
+        }, 1000);
       };
 
-      toast({ title: "Success", description: "Opening print dialog" });
+      toast({ title: "Opening Print Dialog", description: "PDF will open in a new tab" });
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
