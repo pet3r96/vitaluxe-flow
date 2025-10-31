@@ -50,6 +50,7 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
             size="sm" 
             className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
             onClick={() => openDialog("add")}
+            disabled={!patientAccountId}
           >
             <Plus className="h-4 w-4 mr-1" />
             Add
@@ -105,13 +106,15 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
         )}
       </CardContent>
 
-      <ConditionDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        patientAccountId={patientAccountId || ""}
-        condition={selectedCondition}
-        mode={dialogMode}
-      />
+      {patientAccountId && (
+        <ConditionDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          patientAccountId={patientAccountId}
+          condition={selectedCondition}
+          mode={dialogMode}
+        />
+      )}
     </Card>
   );
 }
