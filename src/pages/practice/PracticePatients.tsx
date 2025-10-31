@@ -106,10 +106,10 @@ export default function PracticePatients() {
   });
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Patients</h1>
+    <div className="patient-container">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="text-center sm:text-left w-full sm:w-auto">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Patients</h1>
           <p className="text-muted-foreground mt-1">
             Manage patient records and portal access
           </p>
@@ -117,7 +117,7 @@ export default function PracticePatients() {
         {patientsWithoutPortal.length > 0 && (
           <Button
             onClick={() => setBulkInviteDialogOpen(true)}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto touch-target"
           >
             <UserPlus className="w-4 h-4" />
             Invite All ({patientsWithoutPortal.length})
@@ -131,7 +131,7 @@ export default function PracticePatients() {
           placeholder="Search patients..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
+          className="pl-10 touch-target"
         />
       </div>
 
@@ -144,11 +144,11 @@ export default function PracticePatients() {
       ) : (
         <div className="grid gap-4">
           {filteredPatients.map(patient => (
-            <Card key={patient.patient_id} className="p-4">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-lg">{patient.name}</h3>
+            <Card key={patient.patient_id} className="patient-card p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex-1 space-y-2 w-full">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h3 className="font-semibold text-base sm:text-lg">{patient.name}</h3>
                     <PatientPortalStatusBadge
                       hasPortalAccount={patient.has_portal_access}
                       status={patient.portal_status as 'active' | 'invited' | null}
@@ -158,17 +158,17 @@ export default function PracticePatients() {
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Mail className="w-4 h-4" />
-                    {patient.email}
+                    <span className="break-all">{patient.email}</span>
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   {!patient.has_portal_access ? (
                     <Button
                       size="sm"
                       onClick={() => invitePatientMutation.mutate(patient.patient_id)}
                       disabled={invitePatientMutation.isPending}
-                      className="gap-2"
+                      className="gap-2 flex-1 sm:flex-none touch-target-sm"
                     >
                       <Send className="w-3 h-3" />
                       Invite to Portal
@@ -179,7 +179,7 @@ export default function PracticePatients() {
                       variant="outline"
                       onClick={() => invitePatientMutation.mutate(patient.patient_id)}
                       disabled={invitePatientMutation.isPending}
-                      className="gap-2"
+                      className="gap-2 flex-1 sm:flex-none touch-target-sm"
                     >
                       <Mail className="w-3 h-3" />
                       Resend Email

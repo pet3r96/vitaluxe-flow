@@ -514,13 +514,13 @@ const Dashboard = () => {
       {/* V2 Widgets - Only for subscribed doctor/provider/staff */}
       {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
         <>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
             <TodayAppointmentsWidget />
             <MessagesAndChatWidget />
             <WaitingRoomWidget />
             <FollowUpRemindersWidget />
           </div>
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
             <RequestedAppointmentsWidget />
             <RecentActivityWidget />
           </div>

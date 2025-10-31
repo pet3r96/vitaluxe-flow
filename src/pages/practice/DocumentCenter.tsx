@@ -3,13 +3,13 @@ import { FileText } from "lucide-react";
 
 export default function DocumentCenter() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <FileText className="h-8 w-8" />
-          Document Center
-        </h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="patient-container">
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <FileText className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Document Center</h1>
+        </div>
+        <p className="text-muted-foreground">
           Upload practice documents and patient files
         </p>
       </div>
