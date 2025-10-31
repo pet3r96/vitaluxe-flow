@@ -73,13 +73,13 @@ export default function Cart() {
       const { data: lines, error: linesError } = await supabase
         .from("cart_lines")
         .select(`
-          *,
-          product:products(name, dosage, image_url),
-          provider:providers(
-            id,
-            user_id,
-            profiles(name, npi, dea)
-          )
+        *,
+        product:products(name, dosage, image_url),
+        provider:providers(
+          id,
+          user_id,
+          profiles!providers_user_id_fkey(name, npi, dea)
+        )
         `)
         .eq("cart_id", cartData.id)
         .gte("expires_at", new Date().toISOString());
