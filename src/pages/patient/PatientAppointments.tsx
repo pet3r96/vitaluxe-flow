@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AppointmentBookingDialog } from "@/components/patient/AppointmentBookingDialog";
 import { RescheduleRequestDialog } from "@/components/patient/RescheduleRequestDialog";
 import { format } from "date-fns";
-import { Calendar, Clock, MapPin, Download, Video, Building } from "lucide-react";
+import { Calendar, Clock, MapPin, Download, Video, Building, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -271,9 +271,13 @@ export default function PatientAppointments() {
   };
 
   const getVisitTypeBadge = (visitType: string) => {
-    return visitType === 'virtual' 
-      ? <Badge variant="outline" className="gap-1"><Video className="h-3 w-3" />Virtual</Badge>
-      : <Badge variant="outline" className="gap-1"><Building className="h-3 w-3" />In-Person</Badge>;
+    if (visitType === 'video') {
+      return <Badge variant="outline" className="gap-1"><Video className="h-3 w-3" />Video Call</Badge>;
+    }
+    if (visitType === 'phone') {
+      return <Badge variant="outline" className="gap-1"><Phone className="h-3 w-3" />Phone Call</Badge>;
+    }
+    return <Badge variant="outline" className="gap-1"><Building className="h-3 w-3" />In-Person</Badge>;
   };
 
   const upcoming = appointments?.filter((a: any) => new Date(a.start_time) >= new Date() && a.status !== 'cancelled') || [];
@@ -332,7 +336,7 @@ export default function PatientAppointments() {
                     {appt.provider && (
                       <p className="text-sm">Provider: {appt.provider.display_name}</p>
                     )}
-                    {appt.practice && appt.visit_type === 'in_person' && (
+                    {appt.practice && appt.visit_type !== 'video' && appt.visit_type !== 'phone' && (
                       <div className="flex items-start gap-2 text-sm text-muted-foreground">
                         <MapPin className="h-4 w-4 mt-0.5" />
                         <span>

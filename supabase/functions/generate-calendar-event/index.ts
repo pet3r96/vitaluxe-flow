@@ -52,8 +52,10 @@ Deno.serve(async (req) => {
       appointment.practice?.address_zip
     ].filter(Boolean);
     
-    const location = appointment.visit_type === 'virtual' 
-      ? 'Virtual Appointment' 
+    const location = appointment.visit_type === 'video' 
+      ? 'Virtual Appointment - Video Call' 
+      : appointment.visit_type === 'phone'
+      ? 'Phone Appointment - Provider will call you'
       : addressParts.length > 0 
         ? addressParts.join(', ') 
         : 'Address TBD - Please contact practice for location details';

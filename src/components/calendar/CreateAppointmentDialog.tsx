@@ -66,6 +66,7 @@ export function CreateAppointmentDialog({
       startTime: format(walkInDate, 'HH:mm'),
       duration: isWalkIn ? "15" : "30",
       appointmentType: isWalkIn ? "walk_in" : "consultation",
+      visitType: "in_person",
       serviceType: "",
       serviceDescription: "",
       notes: "",
@@ -117,6 +118,7 @@ export function CreateAppointmentDialog({
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString(),
           appointment_type: values.appointmentType,
+          visit_type: values.visitType,
           service_type: values.serviceType,
           service_description: values.serviceDescription,
           notes: values.notes,
@@ -320,6 +322,20 @@ export function CreateAppointmentDialog({
                 <SelectItem value="procedure">Procedure</SelectItem>
                 <SelectItem value="initial">Initial Visit</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="visitType">Visit Type *</Label>
+            <Select value={watch("visitType")} onValueChange={(value) => setValue("visitType", value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in_person">In-Person</SelectItem>
+                <SelectItem value="video">Video Call</SelectItem>
+                <SelectItem value="phone">Phone Call</SelectItem>
               </SelectContent>
             </Select>
           </div>
