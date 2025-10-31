@@ -430,8 +430,8 @@ export default function PatientDetail() {
       </Card>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => navigate(`/patients/${patientId}?tab=${v}`)}>
-        <TabsList>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="w-full overflow-x-auto flex-nowrap justify-start">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="medical-vault">Medical Vault</TabsTrigger>
           <TabsTrigger value="follow-ups">Follow-Ups</TabsTrigger>
