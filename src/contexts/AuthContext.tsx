@@ -622,6 +622,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsProviderAccount(false);
             if (error) logger.info('Auth: staff practice lookup', logger.sanitize({ error: error.message }));
           }
+        } else if (effectiveRole === 'patient') {
+          // For patients, fetch practice_id from patient_accounts
+          const { data, error } = await supabase
+            .from('patient_accounts')
+            .select('practice_id')
+            .eq('user_id', effectiveUserId)
+            .maybeSingle();
+
+          if (!error && data?.practice_id) {
+            setEffectivePracticeId(data.practice_id);
+            setIsProviderAccount(false);
+            setIsStaffAccount(false);
+            console.debug('Auth: effectivePracticeId set for patient', data.practice_id);
+          } else {
+            setEffectivePracticeId(null);
+            setIsProviderAccount(false);
+            setIsStaffAccount(false);
+            if (error) logger.info('Auth: patient practice lookup', logger.sanitize({ error: error.message }));
+          }
         } else {
           // Admin or other roles
           setEffectivePracticeId(null);
