@@ -207,21 +207,29 @@ export default function PatientInbox() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Left Sidebar - Message List */}
-      <div className="w-full lg:w-[340px] border-r flex flex-col h-full bg-background">
-        {/* Header */}
-        <div className="p-4 border-b space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Patient Messages</h2>
-            <Button size="icon" onClick={() => setShowNewMessageDialog(true)}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
-          </p>
+    <div className="patient-container h-[calc(100vh-4rem)]">
+      <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-3">
+          <MessageCircle className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Patient Inbox</h1>
         </div>
+        <p className="text-muted-foreground mt-2">
+          {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
+        </p>
+      </div>
+
+      <div className="flex flex-col lg:flex-row h-[calc(100%-8rem)] gap-4">
+        {/* Left Sidebar - Message List */}
+        <div className="w-full lg:w-[340px] patient-card flex flex-col h-full">
+          {/* Header */}
+          <div className="p-4 border-b space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold">Messages</h2>
+              <Button size="icon" onClick={() => setShowNewMessageDialog(true)} className="touch-target-sm">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
         {/* Tabs */}
         <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as any)} className="px-4 pt-4">
@@ -330,14 +338,12 @@ export default function PatientInbox() {
         </ScrollArea>
       </div>
 
-      {/* Right Side - Message Details */}
-      <div className="flex-1 flex flex-col"  >
-
-        <Card className="flex-1 m-4 flex flex-col">
-          <CardHeader>
-            <CardTitle>Message Details</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto">
+        {/* Right Side - Message Details */}
+        <div className="flex-1 flex flex-col patient-card overflow-hidden">
+          <div className="p-4 border-b">
+            <h2 className="text-lg font-bold">Message Details</h2>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
             {selectedMessage ? (
               <ThreadView 
                 selectedMessage={selectedMessage} 
@@ -350,8 +356,8 @@ export default function PatientInbox() {
                 Select a message to view details
               </p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

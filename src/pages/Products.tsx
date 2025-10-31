@@ -16,10 +16,10 @@ const Products = () => {
   // Show loading skeleton while checking staff privileges
   if (isLoading && isStaffAccount) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Product Management</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+      <div className="patient-container">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
+          <p className="text-muted-foreground">
             Loading...
           </p>
         </div>
@@ -31,10 +31,10 @@ const Products = () => {
   // Staff without ordering privileges cannot access products
   if (isStaffAccount && !canOrder) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Product Management</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+      <div className="patient-container">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
+          <p className="text-muted-foreground">
             Access restricted
           </p>
         </div>
@@ -49,12 +49,12 @@ const Products = () => {
 
   if (isPharmacy) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">
+      <div className="patient-container">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">
             My Products
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+          <p className="text-muted-foreground">
             View products assigned to your pharmacy
           </p>
         </div>
@@ -66,12 +66,12 @@ const Products = () => {
 
   if (isTopline) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">
+      <div className="patient-container">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">
             Product Management
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+          <p className="text-muted-foreground">
             Manage products and control visibility for your network
           </p>
         </div>
@@ -93,10 +93,10 @@ const Products = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Product Management</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-2">
+    <div className="patient-container">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
+        <p className="text-muted-foreground">
           Manage products, pricing tiers, and inventory
         </p>
       </div>

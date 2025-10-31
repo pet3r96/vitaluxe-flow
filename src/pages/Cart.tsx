@@ -29,7 +29,7 @@ export default function Cart() {
   // Staff without ordering privileges cannot access cart
   if (checkingPrivileges && isStaffAccount) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="patient-container">
         <Skeleton className="h-[400px] w-full" />
       </div>
     );
@@ -37,10 +37,10 @@ export default function Cart() {
 
   if (isStaffAccount && !canOrder) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        <Card>
+      <div className="patient-container">
+        <Card className="patient-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
               <ShoppingCart className="h-6 w-6" />
               Cart
             </CardTitle>
@@ -235,19 +235,19 @@ export default function Cart() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Cart</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+    <div className="patient-container">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="text-center sm:text-left w-full sm:w-auto">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">My Cart</h1>
+          <p className="text-muted-foreground">
             Review and manage your cart items
           </p>
         </div>
-        <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+        <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 text-primary hidden sm:block" />
       </div>
 
       {isEmpty ? (
-        <Card>
+        <Card className="patient-card">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Your cart is empty</h3>
@@ -257,9 +257,9 @@ export default function Cart() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {patientGroups.map((group: any, groupIndex: number) => (
-            <Card key={`group-${group.patient_id || groupIndex}`} className="overflow-hidden">
+            <Card key={`group-${group.patient_id || groupIndex}`} className="patient-card overflow-hidden">
               <CardHeader className="bg-muted/50 p-4">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Package className="h-5 w-5" />
