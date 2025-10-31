@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,18 +14,23 @@ import { useQuery } from "@tanstack/react-query";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 const medicationSchema = z.object({
   medication_name: z.string().min(1, "Medication name is required"),
   dosage: z.string().min(1, "Dosage is required"),
   frequency: z.string().min(1, "Frequency is required"),
-  start_date: z.string().min(1, "Start date is required"),
+  start_date: z.string().min(1, "Start date is required").refine(
+    (val) => /^\d{4}-\d{2}$/.test(val),
+    "Start date must be in YYYY-MM format"
+  ),
+  stop_date_option: z.enum(["1-10-days", "3-months", "ongoing"]).optional(),
   stop_date: z.string().optional(),
   notes: z.string().optional(),
   instructions: z.string().optional(),
   alert_enabled: z.boolean().optional(),
   condition_id: z.string().optional(),
-  prescribing_provider: z.string().optional(),
+  prescribing_provider_id: z.string().optional(),
 });
 
 type MedicationFormData = z.infer<typeof medicationSchema>;
@@ -40,21 +46,75 @@ interface MedicationDialogProps {
 export function MedicationDialog({ open, onOpenChange, patientAccountId, medication, mode }: MedicationDialogProps) {
   const isReadOnly = mode === "view";
   
-  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<MedicationFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<MedicationFormData>({
     resolver: zodResolver(medicationSchema),
-    defaultValues: medication || {
+    defaultValues: {
       medication_name: "",
       dosage: "",
       frequency: "",
       start_date: "",
+      stop_date_option: "ongoing",
       stop_date: "",
       notes: "",
       instructions: "",
       alert_enabled: false,
       condition_id: "",
-      prescribing_provider: "",
+      prescribing_provider_id: "",
     },
   });
+
+  const startDate = watch("start_date");
+  const stopDateOption = watch("stop_date_option");
+
+  // Handle edit mode - convert existing dates and determine stop_date_option
+  useEffect(() => {
+    if (medication && open) {
+      // Convert start_date from YYYY-MM-DD to YYYY-MM
+      const monthYear = medication.start_date ? medication.start_date.substring(0, 7) : "";
+      
+      // Determine stop_date_option from existing stop_date
+      let calculatedOption: "1-10-days" | "3-months" | "ongoing" = "ongoing";
+      if (medication.stop_date && medication.start_date) {
+        const start = new Date(medication.start_date);
+        const stop = new Date(medication.stop_date);
+        const diffDays = Math.floor((stop.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 10) {
+          calculatedOption = "1-10-days";
+        } else if (diffDays > 10 && diffDays <= 100) {
+          calculatedOption = "3-months";
+        }
+      }
+
+      reset({
+        medication_name: medication.medication_name || "",
+        dosage: medication.dosage || "",
+        frequency: medication.frequency || "",
+        start_date: monthYear,
+        stop_date_option: calculatedOption,
+        stop_date: medication.stop_date || "",
+        notes: medication.notes || "",
+        instructions: medication.instructions || "",
+        alert_enabled: medication.alert_enabled || false,
+        condition_id: medication.associated_condition_id || "",
+        prescribing_provider_id: medication.prescribing_provider_id || "",
+      });
+    } else if (!medication && open) {
+      reset({
+        medication_name: "",
+        dosage: "",
+        frequency: "",
+        start_date: "",
+        stop_date_option: "ongoing",
+        stop_date: "",
+        notes: "",
+        instructions: "",
+        alert_enabled: false,
+        condition_id: "",
+        prescribing_provider_id: "",
+      });
+    }
+  }, [medication, open, reset]);
 
   // Fetch patient's conditions for dropdown
   const { data: conditions } = useQuery({
@@ -74,17 +134,20 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
 
   const mutation = useOptimisticMutation(
     async (data: MedicationFormData) => {
+      // Convert YYYY-MM to YYYY-MM-01 for database storage
+      const fullStartDate = data.start_date + "-01";
+      
       const formattedData = {
         medication_name: data.medication_name,
         dosage: data.dosage,
         frequency: data.frequency,
-        start_date: data.start_date,
+        start_date: fullStartDate,
         stop_date: data.stop_date || null,
         notes: data.notes || null,
         instructions: data.instructions || null,
         alert_enabled: data.alert_enabled || false,
         associated_condition_id: data.condition_id || null,
-        prescribing_provider: data.prescribing_provider || null,
+        prescribing_provider_id: data.prescribing_provider_id || null,
       };
 
       if (mode === "edit" && medication) {
@@ -176,20 +239,20 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="prescribing_provider">Prescribing Provider</Label>
+              <Label htmlFor="prescribing_provider_id">Prescribing Provider</Label>
               <Input
-                id="prescribing_provider"
-                {...register("prescribing_provider")}
+                id="prescribing_provider_id"
+                {...register("prescribing_provider_id")}
                 placeholder="e.g., Dr. Smith"
                 disabled={isReadOnly}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date *</Label>
+              <Label htmlFor="start_date">Start Date (Month & Year) *</Label>
               <Input
                 id="start_date"
-                type="date"
+                type="month"
                 {...register("start_date")}
                 disabled={isReadOnly}
                 className={errors.start_date ? "border-red-500" : ""}
@@ -200,13 +263,50 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="stop_date">Stop Date</Label>
-              <Input
-                id="stop_date"
-                type="date"
-                {...register("stop_date")}
+              <Label>Stop Date</Label>
+              <RadioGroup
+                value={stopDateOption || "ongoing"}
+                onValueChange={(value) => {
+                  setValue("stop_date_option", value as any);
+                  
+                  // Calculate stop_date based on option and start_date
+                  if (startDate && value !== "ongoing") {
+                    const start = new Date(startDate + "-01");
+                    let stopDate: Date;
+                    
+                    if (value === "1-10-days") {
+                      stopDate = new Date(start.getTime() + 10 * 24 * 60 * 60 * 1000);
+                    } else { // 3-months
+                      stopDate = new Date(start);
+                      stopDate.setMonth(stopDate.getMonth() + 3);
+                    }
+                    
+                    setValue("stop_date", stopDate.toISOString().split('T')[0]);
+                  } else {
+                    setValue("stop_date", "");
+                  }
+                }}
                 disabled={isReadOnly}
-              />
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="1-10-days" id="stop-1-10" />
+                  <Label htmlFor="stop-1-10" className="font-normal cursor-pointer">
+                    1-10 days from start
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="3-months" id="stop-3-months" />
+                  <Label htmlFor="stop-3-months" className="font-normal cursor-pointer">
+                    3 months from start
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="ongoing" id="stop-ongoing" />
+                  <Label htmlFor="stop-ongoing" className="font-normal cursor-pointer">
+                    No set date (ongoing)
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
 
             <div className="space-y-2 md:col-span-2">
