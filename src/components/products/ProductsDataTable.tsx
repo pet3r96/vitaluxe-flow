@@ -470,6 +470,8 @@ export const ProductsDataTable = () => {
       }
 
       toast.success("Product added to cart");
+      queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error adding to cart", error);
