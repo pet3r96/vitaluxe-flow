@@ -228,7 +228,7 @@ export default function Checkout() {
       
       return data || [];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!practiceIdForPayment,
   });
 
   // Fetch checkout attestation
