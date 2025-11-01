@@ -377,7 +377,13 @@ export const ProductsDataTable = () => {
         
         if (patientError || !patientRecord) {
           console.error("Failed to fetch patient:", patientError);
-          toast.error("Unable to find patient information");
+          toast.error("Unable to find patient information. Please refresh and try again.");
+          return;
+        }
+
+        // Validate patient has required data
+        if (!patientRecord.email) {
+          toast.error("Patient email is required. Please update the patient record before adding to cart.");
           return;
         }
 

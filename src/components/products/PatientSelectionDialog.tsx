@@ -79,7 +79,15 @@ export const PatientSelectionDialog = ({
         .order("name");
 
       if (error) throw error;
-      return data as any[] || [];
+      
+      // Filter out patients with incomplete data that would cause cart errors
+      const validPatients = (data as any[] || []).filter((patient: any) => {
+        const hasEmail = !!patient.email;
+        const hasId = !!patient.id;
+        return hasEmail && hasId;
+      });
+      
+      return validPatients;
     },
     enabled: open && !!effectivePracticeId,
   });

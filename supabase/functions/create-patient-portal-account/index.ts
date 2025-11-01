@@ -72,8 +72,19 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Get patientId first to resolve practice context for admins
+    const { patientId }: CreatePortalAccountRequest = await req.json();
+
+    if (!patientId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: patientId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Determine effective practice ID for subscription check
     let effectivePracticeId: string | null = null;
+    const isAdminRole = roles.some(r => r.role === 'admin');
 
     // First, check if effective user is a doctor (practice owner)
     const { data: doctorProfile } = await supabaseAdmin
@@ -101,6 +112,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // For admins without practice context, get practice_id from patient record
+    if (!effectivePracticeId && isAdminRole && !isImpersonating) {
+      const { data: patientData } = await supabaseAdmin
+        .from('patient_accounts')
+        .select('practice_id')
+        .eq('id', patientId)
+        .maybeSingle();
+
+      if (patientData?.practice_id) {
+        effectivePracticeId = patientData.practice_id;
+        console.log('[create-patient-portal-account] Admin using patient practice context:', { effectivePracticeId });
+      }
+    }
+
     // If no practice context found, return clear error
     if (!effectivePracticeId) {
       console.error('[create-patient-portal-account] No practice context:', {
@@ -112,7 +137,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           code: 'no_practice_context',
-          error: 'No practice context found for this user. Practices must be linked to a doctor account or provider must be assigned to a practice.' 
+          error: 'No practice context found. Patient must be associated with a practice.' 
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -123,7 +148,7 @@ Deno.serve(async (req) => {
       isImpersonating,
       effectiveUserId,
       effectivePracticeId,
-      resolvedAs: isDoctorRole ? 'doctor' : 'provider'
+      resolvedAs: isDoctorRole ? 'doctor' : isAdminRole ? 'admin' : 'provider'
     });
 
     // Check if practice has active subscription (using effective practice)
@@ -171,15 +196,6 @@ Deno.serve(async (req) => {
       practiceId: effectivePracticeId,
       status: subscription.status
     });
-
-    const { patientId }: CreatePortalAccountRequest = await req.json();
-
-    if (!patientId) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required field: patientId' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Fetch patient record and verify it belongs to effective practice
     const { data: patient, error: patientError } = await supabaseAdmin
