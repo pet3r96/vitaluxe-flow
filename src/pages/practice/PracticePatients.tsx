@@ -227,7 +227,7 @@ export default function PracticePatients() {
                     <h3 className="font-semibold text-base sm:text-lg">{patient.name}</h3>
                     <PatientPortalStatusBadge
                       hasPortalAccount={patient.has_portal_account}
-                      status={patient.status as 'active' | 'invited' | null}
+                      status={patient.portal_status as 'active' | 'invited' | null}
                       lastLoginAt={patient.last_login_at}
                     />
                   </div>
@@ -249,7 +249,7 @@ export default function PracticePatients() {
                       <Send className="w-3 h-3" />
                       Invite to Portal
                     </Button>
-                  ) : patient.status === 'invited' && !patient.last_login_at ? (
+                  ) : patient.portal_status === 'invited' && !patient.last_login_at ? (
                     <Button
                       size="sm"
                       variant="outline"

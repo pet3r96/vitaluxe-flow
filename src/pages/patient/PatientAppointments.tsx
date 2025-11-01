@@ -53,11 +53,9 @@ export default function PatientAppointments() {
           console.warn('[PatientAppointments] ⚠️ RPC error:', error.message);
           shouldUseFallback = true;
         } else {
-          // RPC returns [{ get_patient_appointments_with_details: [...appointments] }]
-          // Extract the actual appointments array from the result
+          // RPC returns appointments array directly
           console.log('[PatientAppointments] 📊 Raw RPC response:', JSON.stringify(data).substring(0, 200));
-          const rpcResult = Array.isArray(data) ? data : [data];
-          const rows = (rpcResult[0] as any)?.get_patient_appointments_with_details || [];
+          const rows = Array.isArray(data) ? data : [];
           console.log('[PatientAppointments] 📊 Extracted appointments count:', rows?.length || 0);
           
           // If RPC returns empty or invalid, use fallback
