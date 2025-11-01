@@ -55,19 +55,19 @@ export function StatCardWithChart({
   const chartColor = getChartColor(metricKey);
 
   return (
-    <div className="patient-stat-card p-4 sm:p-6 group hover:shadow-lg transition-all duration-200">
+    <div className="patient-stat-card p-3 sm:p-4 lg:p-6 group hover:shadow-lg transition-all duration-200 min-w-0">
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-          <div className="flex-1">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+      <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <Icon className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 text-primary flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
               {title}
             </h3>
             {isLoading ? (
-              <Skeleton className="h-8 sm:h-9 w-20" />
+              <Skeleton className="h-6 sm:h-8 lg:h-9 w-16 sm:w-20" />
             ) : (
-              <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white transition-all duration-300">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white transition-all duration-300 truncate">
                 {displayValue}
               </p>
             )}
@@ -76,15 +76,15 @@ export function StatCardWithChart({
       </div>
 
       {/* Time Period Selector */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-gray-600 dark:text-gray-400">{description}</p>
-        <div className="flex gap-1">
+      <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2 flex-wrap">
+        <p className="text-xs text-gray-600 dark:text-gray-400 truncate flex-1 min-w-0">{description}</p>
+        <div className="flex gap-0.5 sm:gap-1 flex-shrink-0">
           {TIME_PERIODS.map((period) => (
             <button
               key={period.value}
               onClick={() => setSelectedPeriod(period.value)}
               className={cn(
-                'px-2 py-1 text-xs font-medium rounded-md transition-all duration-200',
+                'px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-md transition-all duration-200',
                 'hover:bg-accent/50',
                 selectedPeriod === period.value
                   ? 'bg-primary/10 text-primary border border-primary/20'
@@ -101,18 +101,18 @@ export function StatCardWithChart({
 
       {/* Trend Indicator */}
       {!isLoading && (
-        <div className={cn('flex items-center gap-1 text-xs font-medium mb-3', trendColorClass)}>
-          <TrendIcon className="h-3 w-3" />
-          <span>
+        <div className={cn('flex items-center gap-1 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3 flex-wrap', trendColorClass)}>
+          <TrendIcon className="h-3 w-3 flex-shrink-0" />
+          <span className="whitespace-nowrap">
             {trend !== 'neutral' && (trend === 'up' ? '+' : '')}
             {percentChange.toFixed(1)}%
           </span>
-          <span className="text-gray-600 dark:text-gray-400">vs last period</span>
+          <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">vs last period</span>
         </div>
       )}
 
       {/* Mini Sparkline Chart */}
-      <div className="h-12 sm:h-14 mt-2 -mx-2">
+      <div className="h-10 sm:h-12 lg:h-14 mt-2 -mx-2 min-w-0">
         {isLoading ? (
           <Skeleton className="h-full w-full" />
         ) : (

@@ -518,10 +518,10 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Stats cards and Search - Layout for desktop */}
+      {/* Stats cards and Search - Layout for all screens */}
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
         {/* Stats cards - Left side with enhanced charts */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 flex-1 min-w-0">
           {/* Total Orders */}
           <StatCardWithChart
             title="Total Orders"
@@ -587,7 +587,7 @@ const Dashboard = () => {
         
         {/* Search bar - Right side (above where Follow-Ups will be) */}
         {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
-          <div className="w-full lg:w-80">
+          <div className="w-full lg:w-80 flex-shrink-0">
             <PatientQuickSearch />
           </div>
         )}
