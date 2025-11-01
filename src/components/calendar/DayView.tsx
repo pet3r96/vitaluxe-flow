@@ -94,6 +94,7 @@ export function DayView({
     const end = new Date(appointment.end_time);
     const startMinutes = start.getHours() * 60 + start.getMinutes();
     const endMinutes = end.getHours() * 60 + end.getMinutes();
+    const durationMinutes = endMinutes - startMinutes;
     
     // Clamp to operational hours
     const minMinutes = safeStart * 60;
@@ -101,7 +102,7 @@ export function DayView({
     
     // Don't render if completely outside operational hours
     if (endMinutes <= minMinutes || startMinutes >= maxMinutes) {
-      return { display: 'none' };
+      return { display: 'none', duration: durationMinutes };
     }
     
     const clampedStart = Math.max(minMinutes, Math.min(maxMinutes, startMinutes));
@@ -110,10 +111,13 @@ export function DayView({
     const top = ((clampedStart - minMinutes) / 60) * HOUR_HEIGHT;
     const height = ((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT;
     
+    // Let content determine minimum height based on duration
+    const minHeight = durationMinutes < 30 ? 32 : durationMinutes < 60 ? 48 : 64;
+    
     return {
       top: `${top}px`,
-      height: `${Math.max(height, 50)}px`,
-      minHeight: '50px'
+      height: `${Math.max(height, minHeight)}px`,
+      duration: durationMinutes
     };
   };
 
@@ -253,7 +257,8 @@ export function DayView({
               <div className="absolute inset-0 pointer-events-none">
                 <div className="relative h-full">
                   {getAppointmentsForProvider(provider.id).map((appointment) => {
-                    const baseStyle = getAppointmentStyle(appointment);
+                    const styleWithDuration = getAppointmentStyle(appointment);
+                    const { duration, ...baseStyle } = styleWithDuration;
                     return (
                       <div
                         key={appointment.id}
@@ -262,13 +267,13 @@ export function DayView({
                           ...baseStyle,
                           left: `${appointment.columnLeft}%`,
                           width: `${appointment.columnWidth}%`,
-                          minHeight: '64px',
                           zIndex: appointment.columnIndex
                         }}
                       >
                         <AppointmentCard
                           appointment={appointment}
                           onClick={() => onAppointmentClick(appointment)}
+                          duration={duration}
                         />
                       </div>
                     );
