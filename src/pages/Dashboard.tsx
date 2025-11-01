@@ -18,6 +18,7 @@ import { WaitingRoomWidget } from "@/components/dashboard/WaitingRoomWidget";
 import { RequestedAppointmentsWidget } from "@/components/dashboard/RequestedAppointmentsWidget";
 import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
 import { AnalyticsSection } from "@/components/dashboard/AnalyticsSection";
+import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
@@ -517,31 +518,69 @@ const Dashboard = () => {
 
       {/* Stats cards and Search - Layout for desktop */}
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-        {/* Stats cards - Left side */}
+        {/* Stats cards - Left side with enhanced charts */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 flex-1">
-          {stats.map((stat) => (
-            <div
-              key={stat.title}
-              className="patient-stat-card p-4 sm:p-6"
-            >
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <stat.icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-              </div>
-              <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </h3>
-              {stat.isLoading ? (
-                <Skeleton className="h-8 sm:h-9 w-16 sm:w-20 mt-2" />
-              ) : (
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-2">
-                  {stat.value}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">
-                {stat.description}
-              </p>
-            </div>
-          ))}
+          {/* Total Orders */}
+          <StatCardWithChart
+            title="Total Orders"
+            metricKey="orders"
+            icon={ShoppingCart}
+            description={effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders"}
+            currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
+            role={effectiveRole}
+            userId={effectiveUserId}
+          />
+
+          {/* Products */}
+          <StatCardWithChart
+            title="Products"
+            metricKey="products"
+            icon={Package}
+            description="Active products"
+            currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
+            role={effectiveRole}
+            userId={effectiveUserId}
+          />
+
+          {/* Pending Orders - Pharmacy only */}
+          {effectiveRole === "pharmacy" && (
+            <StatCardWithChart
+              title="Pending Orders"
+              metricKey="pending_orders"
+              icon={Clock}
+              description="Orders awaiting fulfillment"
+              currentValue={pendingOrdersLoading ? "..." : pendingOrdersCount?.toString() || "0"}
+              role={effectiveRole}
+              userId={effectiveUserId}
+            />
+          )}
+
+          {/* Users - Admin only */}
+          {effectiveRole === "admin" && (
+            <StatCardWithChart
+              title="Users"
+              metricKey="users"
+              icon={Users}
+              description="Active accounts"
+              currentValue={usersLoading ? "..." : usersCount?.toString() || "0"}
+              role={effectiveRole}
+              userId={effectiveUserId}
+            />
+          )}
+
+          {/* Collected Revenue - Admin only */}
+          {effectiveRole === "admin" && (
+            <StatCardWithChart
+              title="Collected Revenue"
+              metricKey="revenue"
+              icon={DollarSign}
+              description="Paid orders revenue"
+              currentValue={collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`}
+              role={effectiveRole}
+              userId={effectiveUserId}
+              valueFormatter={(v) => `$${v.toFixed(2)}`}
+            />
+          )}
         </div>
         
         {/* Search bar - Right side (above where Follow-Ups will be) */}
