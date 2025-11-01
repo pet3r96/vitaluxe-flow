@@ -92,8 +92,8 @@
   --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
-  --muted: 215 20% 50%;          /* Medium grey for contrast */
-  --muted-foreground: 0 0% 100%; /* White text for visibility */
+  --muted: 210 40% 96%;          /* Subtle muted background for light mode */
+  --muted-foreground: 215 16% 46.9%; /* Readable muted text on light */
   --border: 214 15% 91%;         /* Subtle blue-gray borders */
   --input: 210 20% 96%;          /* Input backgrounds */
   --ring: 46 43% 52%;            /* Focus ring = gold */
@@ -143,8 +143,8 @@
   --card-foreground: 210 20% 98%;
   --popover: 217 33% 17%;
   --popover-foreground: 210 20% 98%;
-  --muted: 215 25% 35%;          /* Darker grey for contrast in dark mode */
-  --muted-foreground: 0 0% 100%; /* Pure white text for visibility */
+  --muted: 217 32% 17.5%;          /* Muted surface for dark mode */
+  --muted-foreground: 215 20.2% 65.1%; /* Subtle text in dark */
   --border: 215 20% 25%;         /* Visible but subtle borders */
   --input: 217 33% 20%;          /* Input backgrounds */
   --ring: 46 43% 52%;            /* Focus ring = gold */
