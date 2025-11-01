@@ -1,6 +1,7 @@
 import { User, Shield, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SessionTimer } from "@/components/auth/SessionTimer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,12 @@ export function UserDropdown() {
           <Shield className="mr-2 h-4 w-4" />
           <span>Security</span>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {user && (
+          <div className="px-2 py-2">
+            <SessionTimer userId={user.id} />
+          </div>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="text-destructive">
           <LogOut className="mr-2 h-4 w-4" />

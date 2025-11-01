@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { SessionTimer } from "@/components/auth/SessionTimer";
 
 export function Topbar() {
   const navigate = useNavigate();
@@ -34,13 +33,6 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-        {/* Session Timer */}
-        {user && (
-          <div className="hidden lg:block">
-            <SessionTimer userId={user.id} />
-          </div>
-        )}
-
         {/* Messages Button */}
         <Button
           variant="ghost"
