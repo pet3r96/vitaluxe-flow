@@ -50,21 +50,13 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const { data: providerDocs, isLoading: loadingProviderDocs } = useQuery({
     queryKey: ['shared-provider-documents', patientAccountId],
     queryFn: async () => {
-      // Map to legacy patient_id for the junction table if needed
-      const { data: mapRow } = await supabase
-        .from('v_patients_with_portal_status')
-        .select('patient_id')
-        .eq('patient_account_id', patientAccountId)
-        .maybeSingle();
-      const legacyPatientId = mapRow?.patient_id ?? patientAccountId;
-
       const { data, error } = await supabase
         .from('provider_documents')
         .select(`
           *,
           provider_document_patients!inner(patient_id)
         `)
-        .eq('provider_document_patients.patient_id', legacyPatientId)
+        .eq('provider_document_patients.patient_id', patientAccountId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -84,6 +76,10 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
     realtimeManager.subscribe('provider_documents', () => {
       queryClient.invalidateQueries({ queryKey: ['shared-provider-documents', patientAccountId] });
     });
+
+    realtimeManager.subscribe('provider_document_patients', () => {
+      queryClient.invalidateQueries({ queryKey: ['shared-provider-documents', patientAccountId] });
+    });
   }, [patientAccountId, queryClient]);
 
   const handlePreview = (doc: any, type: 'patient' | 'provider') => {
@@ -93,14 +89,28 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
   const handleDownload = async (doc: any) => {
     try {
-      const bucketName = doc.docType === 'patient' ? 'patient-documents' : 'provider-documents';
+      const bucketName = doc.docType === 'provider' ? 'provider-documents' : 'patient-documents';
+      console.log('[SharedDocumentsGrid] Download attempt:', { 
+        docType: doc.docType, 
+        bucketName, 
+        storagePath: doc.storage_path,
+        documentName: doc.document_name 
+      });
+
       const { data, error } = await supabase.storage
         .from(bucketName)
         .createSignedUrl(doc.storage_path, 60); // 1 min expiry
 
-      if (error) throw error;
+      if (error) {
+        console.error('[SharedDocumentsGrid] Signed URL error:', error);
+        throw error;
+      }
 
       const response = await fetch(data.signedUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch document: ${response.statusText}`);
+      }
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
