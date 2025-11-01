@@ -174,6 +174,8 @@ export default function PatientDocuments() {
   useEffect(() => {
     if (!patientAccount?.id) return;
 
+    console.log('[PatientDocuments] Setting up realtime subscriptions for patient:', patientAccount.id);
+
     const patientDocsChannel = supabase
       .channel("patient-documents-changes")
       .on(
@@ -184,7 +186,8 @@ export default function PatientDocuments() {
           table: "patient_documents",
           filter: `patient_id=eq.${patientAccount.id}`,
         },
-        () => {
+        (payload) => {
+          console.log('[PatientDocuments] Realtime: patient_documents changed', payload);
           queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
         }
       )
@@ -200,13 +203,15 @@ export default function PatientDocuments() {
           table: "provider_document_patients",
           filter: `patient_id=eq.${patientAccount.id}`,
         },
-        () => {
+        (payload) => {
+          console.log('[PatientDocuments] Realtime: document assigned to patient', payload);
           queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
         }
       )
       .subscribe();
 
     return () => {
+      console.log('[PatientDocuments] Cleaning up realtime subscriptions');
       supabase.removeChannel(patientDocsChannel);
       supabase.removeChannel(providerDocsChannel);
     };

@@ -103,10 +103,18 @@ export function DocumentsTab() {
   useEffect(() => {
     if (!effectivePracticeId && effectiveRole !== 'admin') return;
 
-    realtimeManager.subscribe('provider_documents');
-    realtimeManager.subscribe('provider_document_patients');
+    console.log('[DocumentsTab] Setting up realtime subscriptions for practice:', effectivePracticeId);
+
+    realtimeManager.subscribe('provider_documents', (payload) => {
+      console.log('[DocumentsTab] Realtime: provider_documents changed', payload);
+    });
+    
+    realtimeManager.subscribe('provider_document_patients', (payload) => {
+      console.log('[DocumentsTab] Realtime: provider_document_patients changed', payload);
+    });
 
     return () => {
+      console.log('[DocumentsTab] Cleaning up realtime subscriptions');
       // Manager handles cleanup
     };
   }, [effectivePracticeId]);
