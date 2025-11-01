@@ -63,7 +63,7 @@ export default function PracticePatients() {
   );
 
   // Get patients without portal access
-  const patientsWithoutPortal = filteredPatients.filter((p: any) => !p.has_portal_account);
+  const patientsWithoutPortal = filteredPatients.filter((p: any) => !p.has_portal_access);
 
   // Invite individual patient mutation
   const invitePatientMutation = useMutation({
@@ -103,7 +103,7 @@ export default function PracticePatients() {
       // Get patient details
       const { data: patient } = await supabase
         .from('patient_accounts')
-        .select('first_name, last_name, email, practice_id')
+        .select('first_name, last_name, email, practice_id, user_id')
         .eq('id', patientId)
         .single();
 
@@ -111,12 +111,15 @@ export default function PracticePatients() {
 
       const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.email;
 
+      // Resolve user id for email logging and audit
+      const userIdToUse = accountData.userId || patient.user_id;
+
       // Try to send welcome email (works for both new and re-invited patients)
       const { data: emailData, error: emailError } = await supabase.functions.invoke(
         'send-patient-welcome-email',
         {
           body: {
-            userId: accountData.userId,
+            userId: userIdToUse,
             email: patient.email.toLowerCase(),
             name: patientName,
             token: accountData.token,
@@ -226,7 +229,7 @@ export default function PracticePatients() {
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="font-semibold text-base sm:text-lg">{patient.name}</h3>
                     <PatientPortalStatusBadge
-                      hasPortalAccount={patient.has_portal_account}
+                      hasPortalAccount={patient.has_portal_access}
                       status={patient.portal_status as 'active' | 'invited' | null}
                       lastLoginAt={patient.last_login_at}
                     />
@@ -239,7 +242,7 @@ export default function PracticePatients() {
                 </div>
 
                 <div className="flex gap-2 w-full sm:w-auto">
-                  {!patient.has_portal_account ? (
+                  {!patient.has_portal_access ? (
                     <Button
                       size="sm"
                       onClick={() => invitePatientMutation.mutate(patient.id)}
