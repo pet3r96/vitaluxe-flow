@@ -23,7 +23,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { sanitizeEncrypted } from "@/lib/utils";
 
 export const ProvidersDataTable = () => {
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -33,7 +33,7 @@ export const ProvidersDataTable = () => {
   const canViewCredentials = effectiveRole && ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole);
 
   const { data: providers, isLoading, refetch } = useQuery({
-    queryKey: ["providers", effectiveUserId, effectiveRole],
+    queryKey: ["providers", effectiveUserId, effectiveRole, effectivePracticeId],
     staleTime: 300000, // 5 minutes - providers change occasionally
     queryFn: async () => {
       // Step 1: Fetch all providers for this practice
@@ -42,10 +42,12 @@ export const ProvidersDataTable = () => {
         .select("*")
         .order("created_at", { ascending: false });
       
-      // If doctor role, only show their own providers
-      // If staff role, show practice providers
-      if (effectiveRole === "doctor" || effectiveRole === "staff") {
+      // If doctor role, use their user ID as practice_id
+      // If staff role, use their associated practice ID
+      if (effectiveRole === "doctor") {
         providersQuery = providersQuery.eq("practice_id", effectiveUserId);
+      } else if (effectiveRole === "staff" && effectivePracticeId) {
+        providersQuery = providersQuery.eq("practice_id", effectivePracticeId);
       }
       
       const { data: providersData, error: providersError } = await providersQuery;
@@ -86,7 +88,7 @@ export const ProvidersDataTable = () => {
 
       return enrichedProviders;
     },
-    enabled: !!effectiveUserId
+    enabled: !!(effectiveUserId || effectivePracticeId)
   });
 
   // No longer need decryption - credentials stored in profiles table

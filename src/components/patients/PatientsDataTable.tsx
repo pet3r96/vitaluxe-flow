@@ -152,7 +152,7 @@ export const PatientsDataTable = () => {
 
       return patientsData || [];
     },
-    enabled: effectiveRole === "admin" || effectiveRole === "doctor" || (effectiveRole === "provider" && !!effectivePracticeId),
+    enabled: effectiveRole === "admin" || effectiveRole === "doctor" || effectiveRole === "staff" || (effectiveRole === "provider" && !!effectivePracticeId),
   });
 
   const filteredPatients = useMemo(() => patients?.filter(patient => {
