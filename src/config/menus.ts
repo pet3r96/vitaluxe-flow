@@ -20,6 +20,7 @@ import {
   Inbox,
   UserRoundCog,
   Truck,
+  Settings,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -32,6 +33,8 @@ export interface MenuItem {
 export interface MenuSection {
   title: string;
   items: MenuItem[];
+  isParent?: boolean;
+  icon?: LucideIcon;
 }
 
 export type MenuConfig = {
@@ -48,6 +51,8 @@ export const menus: MenuConfig = {
     },
     {
       title: "User Management",
+      isParent: true,
+      icon: Users,
       items: [
         { label: "Accounts", href: "/accounts", icon: Users },
         { label: "Practices", href: "/practices", icon: Stethoscope },
@@ -58,6 +63,8 @@ export const menus: MenuConfig = {
     },
     {
       title: "Orders & Reporting",
+      isParent: true,
+      icon: BarChart3,
       items: [
         { label: "Orders", href: "/orders", icon: ShoppingCart },
         { label: "Reports", href: "/reports", icon: FileText },
@@ -65,9 +72,13 @@ export const menus: MenuConfig = {
       ],
     },
     {
-      title: "Products",
+      title: "Products & Order Management",
+      isParent: true,
+      icon: Package,
       items: [
         { label: "Product Catalog", href: "/products", icon: Package },
+        { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
+        { label: "Discount Codes", href: "/admin/discount-codes", icon: Tag },
       ],
     },
     {
@@ -77,15 +88,11 @@ export const menus: MenuConfig = {
       ],
     },
     {
-      title: "Order Management",
+      title: "Settings",
+      isParent: true,
+      icon: Settings,
       items: [
-        { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
-        { label: "Discount Codes", href: "/admin/discount-codes", icon: Tag },
-      ],
-    },
-    {
-      title: "Admin Settings",
-      items: [
+        { label: "Admin Settings", href: "/admin/settings", icon: Shield },
         { label: "Security", href: "/security", icon: Shield },
         { label: "Terms Management", href: "/admin/terms", icon: FileText },
       ],

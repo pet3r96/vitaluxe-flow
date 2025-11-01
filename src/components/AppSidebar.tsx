@@ -5,6 +5,7 @@ import { NavLink } from "react-router-dom";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/responsive/MobileBottomNav";
+import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { menus } from "@/config/menus";
 import { Lock, LogOut, Sparkles } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -66,7 +67,12 @@ export function AppSidebar() {
     );
   }
 
-  // Desktop/Tablet view - use sidebar
+  // Use AdminSidebar for admin role
+  if (effectiveRole === "admin") {
+    return <AdminSidebar />;
+  }
+
+  // Desktop/Tablet view - use sidebar for other roles
 
   return (
     <Sidebar collapsible="icon">
