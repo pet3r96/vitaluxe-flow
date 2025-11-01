@@ -157,19 +157,19 @@ export const RepresentativesDataTable = () => {
     <div className="space-y-4">
       {/* Summary Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card variant="glass" className="shadow-hover">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{stats.totalReps}</div>
             <p className="text-xs text-muted-foreground">Total Representatives</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card variant="glass" className="shadow-hover">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{stats.activeTopline}</div>
             <p className="text-xs text-muted-foreground">Active Topline Reps</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card variant="glass" className="shadow-hover">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{stats.activeDownline}</div>
             <p className="text-xs text-muted-foreground">Active Downline Reps</p>
@@ -195,9 +195,10 @@ export const RepresentativesDataTable = () => {
       </div>
 
       {/* Data Table */}
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1200px]">
-          <Table>
+      <Card variant="glass" className="shadow-elevated overflow-hidden">
+        <div className="overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1200px]">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -283,9 +284,10 @@ export const RepresentativesDataTable = () => {
                 ))
               )}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Pagination Component */}
       {filteredReps && filteredReps.length > 0 && (

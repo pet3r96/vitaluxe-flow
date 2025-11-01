@@ -4,10 +4,10 @@ const Representatives = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold gold-text-modern">
           Representatives Management
         </h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-2">
+        <p className="text-sm sm:text-base text-muted mt-2">
           Manage topline and downline sales representatives
         </p>
       </div>
