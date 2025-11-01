@@ -144,11 +144,11 @@ export function EnhancedCommandPalette() {
     <>
       <Button
         variant="outline"
-        className="relative h-8 w-24 sm:h-9 sm:w-32 md:w-48 lg:w-64 xl:w-80 justify-start text-xs sm:text-sm text-muted-foreground px-2 sm:px-3"
+        className="relative h-7 w-7 sm:h-8 sm:w-auto md:w-48 lg:w-64 xl:w-80 justify-start text-xs sm:text-sm text-muted-foreground px-1.5 sm:px-3 shrink-0"
         onClick={() => setOpen(true)}
       >
-        <Search className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-        <span className="truncate">Search...</span>
+        <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 sm:mr-2" />
+        <span className="hidden sm:inline truncate">Search...</span>
         <kbd className="pointer-events-none absolute right-1.5 sm:right-2 hidden h-4 sm:h-5 select-none items-center gap-0.5 sm:gap-1 rounded border border-gold1/30 bg-gold1/10 px-1 sm:px-1.5 font-mono text-[9px] sm:text-[10px] font-medium text-gold1 opacity-100 md:flex">
           <span className="text-[10px] sm:text-xs">⌘</span>K
         </kbd>
