@@ -9,20 +9,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, Send, AlertCircle, Headset, MessageSquare } from "lucide-react";
+import { MessageCircle, Send, AlertCircle, Headset, MessageSquare, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { logger } from "@/lib/logger";
 import { useMessageAlerts } from "@/hooks/useMessageAlerts";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const { isSubscribed } = useSubscription();
   const queryClient = useQueryClient();
   const { markThreadAsRead } = useMessageAlerts();
+  const isMobile = useIsMobile();
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
+  const [showThreadList, setShowThreadList] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [newThreadSubject, setNewThreadSubject] = useState("");
   const [newThreadMessage, setNewThreadMessage] = useState("");
@@ -624,11 +628,35 @@ export const MessagesView = () => {
 
   const paginatedAllTickets = threads?.slice(allTicketsStartIndex, allTicketsEndIndex);
 
+  const handleSelectThread = (threadId: string) => {
+    setSelectedThread(threadId);
+    if (isMobile) {
+      setShowThreadList(false);
+    }
+  };
+
+  const handleBackToThreads = () => {
+    setShowThreadList(true);
+    setSelectedThread(null);
+  };
+
   return (
-    <div className="grid grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
-      <Card className="col-span-1 p-4 flex flex-col">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">
+    <div className={`flex gap-4 ${isMobile ? 'flex-col h-auto' : 'lg:grid lg:grid-cols-[400px_1fr] xl:grid-cols-[450px_1fr] h-[calc(100vh-12rem)]'}`}>
+      {(!isMobile || showThreadList) && (
+      <Card className={cn("p-3 sm:p-4 flex flex-col", isMobile ? "w-full" : "")}>
+        {isMobile && selectedThread && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBackToThreads}
+            className="mb-4 gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Tickets
+          </Button>
+        )}
+        <div className="mb-3 sm:mb-4">
+          <h2 className="text-base sm:text-lg font-semibold">
             {isAdmin ? "All Tickets" : "My Tickets"}
           </h2>
           {isAdmin && (
@@ -638,9 +666,9 @@ export const MessagesView = () => {
           )}
         </div>
 
-        <div className="mb-4">
+        <div className="mb-3 sm:mb-4">
           <Select value={resolvedFilter} onValueChange={(value: any) => setResolvedFilter(value)}>
-            <SelectTrigger>
+            <SelectTrigger className="text-sm sm:text-base">
               <SelectValue placeholder="Filter tickets" />
             </SelectTrigger>
             <SelectContent>
@@ -652,7 +680,7 @@ export const MessagesView = () => {
         </div>
 
         {showNewThread && (
-          <div className="mb-4 p-3 border border-border rounded-md space-y-3">
+          <div className="mb-3 sm:mb-4 p-3 border border-border rounded-md space-y-3">
             {/* Recipient Type Selector */}
             <div>
               <label className="text-sm font-medium mb-2 block">Send to:</label>
@@ -753,17 +781,19 @@ export const MessagesView = () => {
               value={newThreadSubject}
               onChange={(e) => setNewThreadSubject(e.target.value)}
               maxLength={200}
+              className="text-base"
             />
             <Textarea
               placeholder={recipientType === "pharmacy" ? "Describe the order issue in detail..." : "Describe your issue..."}
               value={newThreadMessage}
               onChange={(e) => setNewThreadMessage(e.target.value)}
-              rows={4}
+              rows={isMobile ? 3 : 4}
               maxLength={2000}
+              className="text-base"
             />
 
-            <div className="flex gap-2">
-              <Button size="sm" onClick={createThread}>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button size="sm" onClick={createThread} className="w-full sm:w-auto">
                 {recipientType === "pharmacy" ? "Report Order Issue" : "Create Ticket"}
               </Button>
               <Button
@@ -777,6 +807,7 @@ export const MessagesView = () => {
                   setSelectedOrderId(null);
                   setDispositionType("");
                 }}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -788,23 +819,25 @@ export const MessagesView = () => {
         {isAdmin ? (
           <Tabs value={activeTicketTab} onValueChange={(v: any) => setActiveTicketTab(v)} className="flex-1 flex flex-col">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="support" className="gap-2">
-                <Headset className="h-4 w-4" />
-                Support ({supportTickets.length})
+              <TabsTrigger value="support" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Headset className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Support</span>
+                <span className="sm:hidden">Supp.</span> ({supportTickets.length})
               </TabsTrigger>
-              <TabsTrigger value="order_issues" className="gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Order Issues ({orderIssueTickets.length})
+              <TabsTrigger value="order_issues" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Order Issues</span>
+                <span className="sm:hidden">Orders</span> ({orderIssueTickets.length})
               </TabsTrigger>
             </TabsList>
 
             {/* Support Tickets Tab */}
-            <TabsContent value="support" className="flex-1 flex flex-col space-y-4 mt-4">
-              <Button size="sm" onClick={() => setShowNewThread(true)} className="w-full">
+            <TabsContent value="support" className="flex-1 flex flex-col space-y-3 sm:space-y-4 mt-3 sm:mt-4">
+              <Button size="sm" onClick={() => setShowNewThread(true)} className="w-full text-sm sm:text-base">
                 New Support Ticket
               </Button>
               
-              <div className="flex-1 overflow-y-auto space-y-2">
+              <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-2">
                 {paginatedSupportTickets.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">No support tickets</p>
                 ) : (
@@ -814,21 +847,21 @@ export const MessagesView = () => {
                     return (
                       <button
                         key={thread.id}
-                        onClick={() => setSelectedThread(thread.id)}
-                        className={`w-full p-3 text-left rounded-md transition-colors border-l-4 border-l-blue-500 ${
+                        onClick={() => handleSelectThread(thread.id)}
+                        className={`w-full p-2 sm:p-3 text-left rounded-md transition-colors border-l-4 border-l-blue-500 ${
                           selectedThread === thread.id
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted hover:bg-muted/80"
                         }`}
                       >
                         <div className="flex items-start gap-2">
-                          <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
-                          <div className="flex-1 min-w-0 space-y-1">
+                          <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium truncate flex-1">{thread.subject}</p>
+                              <p className="text-sm sm:text-base font-medium truncate flex-1">{thread.subject}</p>
                               <Badge 
                                 variant={thread.resolved ? "secondary" : "default"}
-                                className="flex-shrink-0"
+                                className="flex-shrink-0 text-xs"
                               >
                                 {thread.resolved ? "Closed" : "Open"}
                               </Badge>
@@ -866,13 +899,13 @@ export const MessagesView = () => {
             </TabsContent>
 
             {/* Order Issues Tab */}
-            <TabsContent value="order_issues" className="flex-1 flex flex-col space-y-4 mt-4">
-              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+            <TabsContent value="order_issues" className="flex-1 flex flex-col space-y-3 sm:space-y-4 mt-3 sm:mt-4">
+              <div className="text-xs sm:text-sm text-muted-foreground bg-muted/50 p-2 sm:p-3 rounded-md">
                 <p className="font-medium">Order issue tickets are created by practices/providers</p>
                 <p className="text-xs mt-1">These tickets are conversations between practices and pharmacies regarding specific orders</p>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-2">
+              <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-2">
                 {paginatedOrderIssueTickets.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">No order issue tickets</p>
                 ) : (
@@ -882,21 +915,21 @@ export const MessagesView = () => {
                     return (
                       <button
                         key={thread.id}
-                        onClick={() => setSelectedThread(thread.id)}
-                        className={`w-full p-3 text-left rounded-md transition-colors border-l-4 border-l-orange-500 ${
+                        onClick={() => handleSelectThread(thread.id)}
+                        className={`w-full p-2 sm:p-3 text-left rounded-md transition-colors border-l-4 border-l-gold1 ${
                           selectedThread === thread.id
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted hover:bg-muted/80"
                         }`}
                       >
                         <div className="flex items-start gap-2">
-                          <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
-                          <div className="flex-1 min-w-0 space-y-1">
+                          <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium truncate flex-1">{thread.subject}</p>
+                              <p className="text-sm sm:text-base font-medium truncate flex-1">{thread.subject}</p>
                               <Badge 
                                 variant={thread.resolved ? "secondary" : "default"}
-                                className="flex-shrink-0"
+                                className="flex-shrink-0 text-xs"
                               >
                                 {thread.resolved ? "Closed" : "Open"}
                               </Badge>
@@ -951,11 +984,11 @@ export const MessagesView = () => {
         ) : (
           /* Non-Admin View: Single list */
           <>
-            <Button size="sm" onClick={() => setShowNewThread(true)} className="w-full mb-4">
+            <Button size="sm" onClick={() => setShowNewThread(true)} className="w-full mb-3 sm:mb-4 text-sm sm:text-base">
               New Ticket
             </Button>
             
-            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+            <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
               {paginatedAllTickets?.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No tickets found</p>
               ) : (
@@ -965,10 +998,10 @@ export const MessagesView = () => {
                   return (
                     <button
                       key={thread.id}
-                      onClick={() => setSelectedThread(thread.id)}
-                      className={`w-full p-3 text-left rounded-md transition-colors border-l-4 ${
+                      onClick={() => handleSelectThread(thread.id)}
+                      className={`w-full p-2 sm:p-3 text-left rounded-md transition-colors border-l-4 ${
                         isOrderIssue 
-                          ? 'border-l-orange-500' 
+                          ? 'border-l-gold1' 
                           : 'border-l-blue-500'
                       } ${
                         selectedThread === thread.id
@@ -977,13 +1010,13 @@ export const MessagesView = () => {
                       }`}
                     >
                       <div className="flex items-start gap-2">
-                        <MessageCircle className="h-4 w-4 mt-1 flex-shrink-0" />
-                        <div className="flex-1 min-w-0 space-y-1">
+                        <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mt-1 flex-shrink-0" />
+                        <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium truncate flex-1">{thread.subject}</p>
+                            <p className="text-sm sm:text-base font-medium truncate flex-1">{thread.subject}</p>
                             <Badge 
                               variant={thread.resolved ? "secondary" : "default"}
-                              className="flex-shrink-0"
+                              className="flex-shrink-0 text-xs"
                             >
                               {thread.resolved ? "Closed" : "Open"}
                             </Badge>
@@ -992,7 +1025,7 @@ export const MessagesView = () => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge 
                               variant="outline" 
-                              className={isOrderIssue ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}
+                              className={isOrderIssue ? "bg-gold1/10 text-gold1 border-gold1/30" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}
                             >
                               {isOrderIssue ? "Order Issue" : "Support"}
                             </Badge>
@@ -1036,21 +1069,36 @@ export const MessagesView = () => {
           </>
         )}
       </Card>
+      )}
 
-      <Card className="col-span-2 p-4 flex flex-col">
+      {(!isMobile || !showThreadList) && (
+      <Card className={cn("p-3 sm:p-4 flex flex-col", isMobile ? "w-full min-h-[calc(100vh-8rem)]" : "flex-1")}>
+        {isMobile && selectedThread && (
+          <div className="pb-3 mb-3 border-b">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBackToThreads}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Tickets
+            </Button>
+          </div>
+        )}
         {selectedThread ? (
           <>
-            <div className="border-b border-border pb-4 mb-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold">{currentThread?.subject}</h3>
+            <div className="border-b border-border pb-3 sm:pb-4 mb-3 sm:mb-4">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                <div className="flex-1 w-full">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-semibold">{currentThread?.subject}</h3>
                     <Badge 
                       variant="outline"
                       className={
                         (currentThread as any)?.thread_type === 'order_issue'
-                          ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
-                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                          ? "bg-gold1/10 text-gold1 border-gold1/30 text-xs"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs"
                       }
                     >
                       {(currentThread as any)?.thread_type === 'order_issue' ? 'Order Issue' : 'Support'}
@@ -1059,7 +1107,7 @@ export const MessagesView = () => {
 
                   {/* Order Issue specific info */}
                   {(currentThread as any)?.thread_type === 'order_issue' && (
-                    <div className="space-y-1 text-sm mb-2">
+                    <div className="space-y-1 text-xs sm:text-sm mb-2">
                       <p className="text-muted-foreground">
                         <strong>Issue Type:</strong> {(currentThread as any).disposition_type?.replace(/_/g, ' ')}
                       </p>
@@ -1079,7 +1127,7 @@ export const MessagesView = () => {
 
                   {/* Resolved info */}
                   {currentThread?.resolved && (
-                    <div className="mt-2 p-2 bg-muted rounded text-sm">
+                    <div className="mt-2 p-2 bg-muted rounded text-xs sm:text-sm">
                       <p className="text-muted-foreground">
                         Closed by {(currentThread as any).resolver?.name || "User"} on{" "}
                         {new Date(currentThread.resolved_at).toLocaleDateString()}
@@ -1094,7 +1142,7 @@ export const MessagesView = () => {
                 </div>
 
                 {/* Action buttons based on thread type and user role */}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   {!currentThread?.resolved ? (
                     <>
             {/* Support tickets: creator or admin can resolve */}
@@ -1117,12 +1165,13 @@ export const MessagesView = () => {
                             value={dispositionNotes}
                             onChange={(e) => setDispositionNotes(e.target.value)}
                             rows={2}
-                            className="w-64"
+                            className="w-full sm:w-64 text-base"
                           />
                           <Button 
                             size="sm" 
                             onClick={() => closeOrderIssueTicket(selectedThread)}
                             disabled={!dispositionNotes.trim()}
+                            className="w-full sm:w-auto"
                           >
                             Close Issue
                           </Button>
@@ -1158,14 +1207,14 @@ export const MessagesView = () => {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+            <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 mb-3 sm:mb-4 px-1">
               {messages?.map((message) => (
                 <div
                   key={message.id}
-                  className={`p-3 rounded-md ${
+                  className={`p-2 sm:p-3 rounded-md text-sm sm:text-base ${
                     message.sender_id === user?.id
-                      ? "bg-primary text-primary-foreground ml-auto max-w-[80%]"
-                      : "bg-muted mr-auto max-w-[80%]"
+                      ? "bg-primary text-primary-foreground ml-auto max-w-[85%] sm:max-w-[80%]"
+                      : "bg-muted mr-auto max-w-[85%] sm:max-w-[80%]"
                   }`}
                 >
                   <p className="text-xs opacity-70 mb-1">
@@ -1189,15 +1238,16 @@ export const MessagesView = () => {
                       sendMessage();
                     }
                   }}
-                  rows={3}
+                  rows={isMobile ? 2 : 3}
+                  className="text-base"
                 />
-                <Button onClick={sendMessage} size="icon">
+                <Button onClick={sendMessage} size="icon" className="flex-shrink-0">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <div className="p-3 bg-muted rounded-md text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="p-2 sm:p-3 bg-muted rounded-md text-center">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   This {(currentThread as any)?.thread_type === 'order_issue' ? 'issue' : 'ticket'} is closed.
                   {(currentThread as any)?.thread_type === 'support' 
                     ? (isAdmin ? " Reopen it" : " Contact an admin") 
@@ -1208,11 +1258,12 @@ export const MessagesView = () => {
             )}
           </>
         ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
+          <div className="flex items-center justify-center h-full text-sm sm:text-base text-muted-foreground">
             Select a ticket to view messages
           </div>
         )}
       </Card>
+      )}
     </div>
   );
 };
