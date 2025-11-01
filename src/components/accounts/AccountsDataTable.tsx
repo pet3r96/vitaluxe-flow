@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useResponsive } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -41,6 +43,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export const AccountsDataTable = () => {
   const { toast } = useToast();
   const { effectiveRole } = useAuth();
+  const { isMobile } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
@@ -314,8 +317,93 @@ export const AccountsDataTable = () => {
       </div>
 
       <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1200px]">
-          <Table>
+        {isMobile ? (
+          // Mobile Card View
+          <div className="divide-y divide-border">
+            {isLoading ? (
+              <div className="p-8 text-center text-muted-foreground">Loading...</div>
+            ) : filteredAccounts?.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">No accounts found</div>
+            ) : (
+              paginatedAccounts?.map((account) => (
+                <Card key={account.id} className="border-0 rounded-none shadow-none">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <div className="font-medium text-base truncate">{getDisplayName(account)}</div>
+                        <div className="text-sm text-muted-foreground truncate">{account.email}</div>
+                      </div>
+                      <Badge className={getRoleBadgeColor(getDisplayRole(account))}>
+                        {getDisplayRole(account)}
+                      </Badge>
+                    </div>
+                    
+                    {((account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') && 
+                      (account.linked_topline_display?.name || account.linked_topline?.name)) ||
+                      account.parent ? (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Parent: </span>
+                        <span className="text-foreground">
+                          {(account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') ? (
+                            account.linked_topline_display?.name || account.linked_topline?.name || "-"
+                          ) : (
+                            account.parent?.name || "-"
+                          )}
+                        </span>
+                      </div>
+                    ) : null}
+                    
+                    <div className="flex items-center justify-between pt-2">
+                      <Badge variant={account.active ? "default" : "secondary"}>
+                        {account.active ? "Active" : "Inactive"}
+                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAccount(account);
+                            setDetailsOpen(true);
+                          }}
+                          className="h-9 w-9 p-0"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleAccountStatus(account.id, account.active)}
+                          className="h-9 w-9 p-0"
+                          title={account.active ? "Disable Account" : "Enable Account"}
+                        >
+                          {account.active ? (
+                            <PowerOff className="h-4 w-4 text-orange-500" />
+                          ) : (
+                            <Power className="h-4 w-4 text-green-500" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(account)}
+                          disabled={cleanupMutation.isPending}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
+                          title="Delete Account"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        ) : (
+          // Desktop/Tablet Table View
+          <div className="min-w-[1200px]">
+            <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -412,6 +500,7 @@ export const AccountsDataTable = () => {
           </TableBody>
         </Table>
         </div>
+        )}
       </div>
 
       {filteredAccounts && filteredAccounts.length > 0 && (
