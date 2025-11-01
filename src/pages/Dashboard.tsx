@@ -621,8 +621,22 @@ const Dashboard = () => {
         </>
       )}
 
-      {/* For non-practice users (admin, pharmacy), keep AnalyticsSection as-is */}
-      {isSubscribed && effectiveRole !== 'doctor' && (effectiveRole as any) !== 'provider' && effectiveRole !== 'staff' && (
+      {/* For pharmacy: show Orders by Status next to stats + Recent Activity */}
+      {isSubscribed && effectiveRole === 'pharmacy' && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+            <div className="lg:col-span-1">
+              <OrdersBreakdown />
+            </div>
+            <div className="lg:col-span-2">
+              <RecentActivityWidget />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* For admin: keep AnalyticsSection as-is */}
+      {isSubscribed && effectiveRole === 'admin' && (
         <AnalyticsSection />
       )}
 

@@ -6,16 +6,78 @@ import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function RecentActivityWidget({ className }: { className?: string }) {
-  const { effectivePracticeId } = useAuth();
+  const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
   const { data: activities, isLoading } = useQuery({
-    queryKey: ["recent-activity", effectivePracticeId],
-    enabled: !!effectivePracticeId,
+    queryKey: ["recent-activity", effectivePracticeId, effectiveRole, effectiveUserId],
+    enabled: !!effectiveUserId,
     queryFn: async () => {
+      if (!effectiveUserId) return [] as any[];
+      
+      // For pharmacies, get orders assigned to them
+      if (effectiveRole === 'pharmacy') {
+        const { data: pharmacyData } = await supabase
+          .from('pharmacies')
+          .select('id')
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+
+        if (!pharmacyData) return [];
+
+        // Get order lines for this pharmacy
+        const { data: orderLines } = await supabase
+          .from('order_lines')
+          .select(`
+            order_id,
+            updated_at,
+            orders!inner(id, status, updated_at)
+          `)
+          .eq('assigned_pharmacy_id', pharmacyData.id)
+          .order('updated_at', { ascending: false })
+          .limit(10);
+
+        const combined: any[] = [];
+        const seenOrders = new Set();
+
+        orderLines?.forEach((line: any) => {
+          if (!seenOrders.has(line.order_id)) {
+            seenOrders.add(line.order_id);
+            combined.push({
+              type: "order",
+              icon: Package,
+              description: `Order #${line.order_id.slice(0, 8)} - ${line.orders.status}`,
+              time: line.orders.updated_at,
+            });
+          }
+        });
+
+        // Get recent messages (support tickets)
+        const { data: messages } = await supabase
+          .from('message_threads')
+          .select('id, subject, updated_at, thread_type')
+          .or(`created_by.eq.${effectiveUserId},thread_participants.user_id.eq.${effectiveUserId}`)
+          .order('updated_at', { ascending: false })
+          .limit(5);
+
+        messages?.forEach((msg: any) => {
+          combined.push({
+            type: "message",
+            icon: FileText,
+            description: `${msg.thread_type === 'support' ? 'Support' : 'Order Issue'}: ${msg.subject}`,
+            time: msg.updated_at,
+          });
+        });
+
+        return combined
+          .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+          .slice(0, 5);
+      }
+
+      // For practices, get their orders
       if (!effectivePracticeId) return [] as any[];
-      // Get recent orders
       const { data: orders } = await supabase
         .from("orders")
         .select("id, status, updated_at")
+        .eq("doctor_id", effectivePracticeId)
         .order("updated_at", { ascending: false })
         .limit(5) as any;
       
