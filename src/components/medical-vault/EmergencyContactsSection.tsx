@@ -8,6 +8,8 @@ import { useState } from "react";
 import { EmergencyContactDialog } from "./dialogs/EmergencyContactDialog";
 import { formatPhoneNumber } from "@/lib/validators";
 import { toast } from "@/hooks/use-toast";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EmergencyContactsSectionProps {
   patientAccountId?: string;
@@ -19,6 +21,7 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { data: contacts } = useQuery({
     queryKey: ["patient-emergency-contacts", patientAccountId],
@@ -52,6 +55,19 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
       
       queryClient.invalidateQueries({ queryKey: ["patient-emergency-contacts", patientAccountId] });
       toast({ title: "Success", description: "Contact deleted successfully" });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'deleted',
+          entityType: 'emergency_contact',
+          entityId: contact.id,
+          entityName: contact.name,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          oldData: contact,
+          changeSummary: `Deleted emergency contact: ${contact.name}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete contact", variant: "destructive" });
     }

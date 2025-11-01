@@ -7,6 +7,8 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { ImmunizationDialog } from "./dialogs/ImmunizationDialog";
 import { toast } from "@/hooks/use-toast";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ImmunizationsSectionProps {
   patientAccountId?: string;
@@ -18,6 +20,7 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedImmunization, setSelectedImmunization] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { data: immunizations } = useQuery({
     queryKey: ["patient-immunizations", patientAccountId],
@@ -51,6 +54,19 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
       
       queryClient.invalidateQueries({ queryKey: ["patient-immunizations", patientAccountId] });
       toast({ title: "Success", description: "Immunization deleted successfully" });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'deleted',
+          entityType: 'immunization',
+          entityId: immunization.id,
+          entityName: immunization.vaccine_name,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          oldData: immunization,
+          changeSummary: `Deleted immunization: ${immunization.vaccine_name}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete immunization", variant: "destructive" });
     }

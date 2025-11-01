@@ -8,6 +8,8 @@ import { MedicationDialog } from "./dialogs/MedicationDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Medication {
   id: string;
@@ -31,6 +33,7 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
   const [selectedMedication, setSelectedMedication] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const visibleMedications = expanded ? medications : medications.slice(0, 2);
 
@@ -53,6 +56,19 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
       
       queryClient.invalidateQueries({ queryKey: ["patient-medications", patientAccountId] });
       toast({ title: "Success", description: "Medication deleted successfully" });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'deleted',
+          entityType: 'medication',
+          entityId: medication.id,
+          entityName: medication.medication_name,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : 'provider',
+          oldData: medication,
+          changeSummary: `Deleted medication: ${medication.medication_name}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete medication", variant: "destructive" });
     }
@@ -75,6 +91,20 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
         title: "Success", 
         description: `Medication ${medication.is_active ? "marked as inactive" : "marked as active"} successfully` 
       });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'updated',
+          entityType: 'medication',
+          entityId: medication.id,
+          entityName: medication.medication_name,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : 'provider',
+          oldData: { is_active: medication.is_active },
+          newData: { is_active: !medication.is_active },
+          changeSummary: `Set medication ${medication.medication_name} to ${medication.is_active ? 'inactive' : 'active'}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to update medication status", variant: "destructive" });
     }

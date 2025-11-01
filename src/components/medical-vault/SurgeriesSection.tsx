@@ -7,6 +7,8 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { SurgeryDialog } from "./dialogs/SurgeryDialog";
 import { toast } from "@/hooks/use-toast";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SurgeriesSectionProps {
   patientAccountId?: string;
@@ -18,6 +20,7 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurgery, setSelectedSurgery] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { data: surgeries } = useQuery({
     queryKey: ["patient-surgeries", patientAccountId],
@@ -51,6 +54,19 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
       
       queryClient.invalidateQueries({ queryKey: ["patient-surgeries", patientAccountId] });
       toast({ title: "Success", description: "Surgery deleted successfully" });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'deleted',
+          entityType: 'surgery',
+          entityId: surgery.id,
+          entityName: surgery.surgery_type,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          oldData: surgery,
+          changeSummary: `Deleted surgery: ${surgery.surgery_type}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete surgery", variant: "destructive" });
     }

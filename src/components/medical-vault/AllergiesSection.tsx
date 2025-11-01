@@ -7,6 +7,8 @@ import { AllergyDialog } from "./dialogs/AllergyDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Allergy {
   id: string;
@@ -31,6 +33,7 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
   const [selectedAllergy, setSelectedAllergy] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const visibleAllergies = expanded ? regularAllergies : regularAllergies.slice(0, 2);
 
@@ -53,6 +56,19 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
       
       queryClient.invalidateQueries({ queryKey: ["patient-allergies", patientAccountId] });
       toast({ title: "Success", description: "Allergy deleted successfully" });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'deleted',
+          entityType: 'allergy',
+          entityId: allergy.id,
+          entityName: allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown Allergen'),
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          oldData: allergy,
+          changeSummary: `Deleted allergy: ${allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown')}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete allergy", variant: "destructive" });
     }
@@ -75,6 +91,20 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
         title: "Success", 
         description: `Allergy ${allergy.is_active ? "marked as inactive" : "marked as active"} successfully` 
       });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'updated',
+          entityType: 'allergy',
+          entityId: allergy.id,
+          entityName: allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown Allergen'),
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          oldData: { is_active: allergy.is_active },
+          newData: { is_active: !allergy.is_active },
+          changeSummary: `Set allergy ${allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown')} to ${allergy.is_active ? 'inactive' : 'active'}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to update allergy status", variant: "destructive" });
     }

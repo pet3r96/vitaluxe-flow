@@ -8,6 +8,8 @@ import { ConditionDialog } from "./dialogs/ConditionDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Condition {
   id: string;
@@ -29,6 +31,7 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
   const [selectedCondition, setSelectedCondition] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const visibleConditions = expanded ? conditions : conditions.slice(0, 2);
 
@@ -51,6 +54,19 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
       
       queryClient.invalidateQueries({ queryKey: ["patient-conditions", patientAccountId] });
       toast({ title: "Success", description: "Condition deleted successfully" });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'deleted',
+          entityType: 'condition',
+          entityId: condition.id,
+          entityName: condition.condition_name,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : 'provider',
+          oldData: condition,
+          changeSummary: `Deleted condition: ${condition.condition_name}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete condition", variant: "destructive" });
     }
@@ -73,6 +89,20 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
         title: "Success", 
         description: `Condition ${condition.is_active ? "marked as inactive" : "marked as active"} successfully` 
       });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'updated',
+          entityType: 'condition',
+          entityId: condition.id,
+          entityName: condition.condition_name,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : 'provider',
+          oldData: { is_active: condition.is_active },
+          newData: { is_active: !condition.is_active },
+          changeSummary: `Set condition ${condition.condition_name} to ${condition.is_active ? 'inactive' : 'active'}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to update condition status", variant: "destructive" });
     }

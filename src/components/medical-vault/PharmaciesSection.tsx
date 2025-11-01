@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { PharmacyDialog } from "./dialogs/PharmacyDialog";
 import { toast } from "@/hooks/use-toast";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PharmaciesSectionProps {
   patientAccountId?: string;
@@ -18,6 +20,7 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPharmacy, setSelectedPharmacy] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { data: pharmacies } = useQuery({
     queryKey: ["patient-pharmacies", patientAccountId],
@@ -51,6 +54,19 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
       
       queryClient.invalidateQueries({ queryKey: ["patient-pharmacies", patientAccountId] });
       toast({ title: "Success", description: "Pharmacy deleted successfully" });
+      if (patientAccountId) {
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: 'deleted',
+          entityType: 'pharmacy',
+          entityId: pharmacy.id,
+          entityName: pharmacy.pharmacy_name || pharmacy.address,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          oldData: pharmacy,
+          changeSummary: `Deleted pharmacy: ${pharmacy.pharmacy_name || pharmacy.address}`,
+        });
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete pharmacy", variant: "destructive" });
     }
