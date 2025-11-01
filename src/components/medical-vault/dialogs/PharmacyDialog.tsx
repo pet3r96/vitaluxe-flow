@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const pharmacySchema = z.object({
   pharmacy_name: z.string().min(1, "Pharmacy name is required"),
@@ -64,6 +65,8 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
     }
   }, [pharmacy, setValue]);
 
+  const queryClient = useQueryClient();
+
   const mutation = useOptimisticMutation(
     async (data: PharmacyFormData) => {
       const formattedData = {
@@ -113,6 +116,7 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
       successMessage: mode === "edit" ? "Pharmacy updated successfully" : "Pharmacy added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} pharmacy`,
       onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
         onOpenChange(false);
         if (mode === "add") {
           reset();

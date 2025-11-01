@@ -76,6 +76,22 @@ serve(async (req) => {
     const userRole = profile?.role;
     console.log('[get-s3-signed-url] User role:', userRole);
 
+    // Compute effective practice ID for authorization
+    let effectivePracticeId: string | null = null;
+    if (userRole === 'doctor') {
+      // Doctor is the practice owner
+      effectivePracticeId = effectiveUserId;
+    } else if (userRole === 'provider' || userRole === 'staff') {
+      // Lookup practice_id from providers table
+      const { data: providerRecord } = await supabase
+        .from('providers')
+        .select('practice_id')
+        .eq('user_id', effectiveUserId)
+        .maybeSingle();
+      effectivePracticeId = providerRecord?.practice_id || null;
+    }
+    console.log('[get-s3-signed-url] Effective practice ID:', effectivePracticeId);
+
     // Authorization checks based on bucket
     if (bucket === 'patient-documents') {
       // For patient documents bucket
@@ -114,8 +130,11 @@ serve(async (req) => {
           console.error('[get-s3-signed-url] Document not shared with practice');
           throw new Error('Access denied: Document not shared');
         }
-        if (patientAccount.practice_id !== profile.id) {
-          console.error('[get-s3-signed-url] Document belongs to different practice');
+        if (!effectivePracticeId || patientAccount.practice_id !== effectivePracticeId) {
+          console.error('[get-s3-signed-url] Document belongs to different practice', {
+            patientPracticeId: patientAccount.practice_id,
+            effectivePracticeId
+          });
           throw new Error('Access denied: Document from different practice');
         }
       } else if (userRole !== 'admin') {
@@ -138,34 +157,38 @@ serve(async (req) => {
       // Check authorization
       if (userRole === 'patient') {
         // Patient can only access provider docs assigned to them
-        const { data: assignment } = await supabase
-          .from('provider_document_patients')
-          .select('id, patient_id, hidden')
-          .eq('document_id', providerDoc.id)
-          .maybeSingle();
-
-        if (!assignment || assignment.hidden) {
-          console.error('[get-s3-signed-url] Provider document not assigned to patient or is hidden');
-          throw new Error('Access denied: Document not available');
-        }
-
-        // Verify the assignment is for this patient
+        // First, get the patient account ID
         const { data: patientAccount } = await supabase
           .from('patient_accounts')
           .select('id')
           .eq('user_id', effectiveUserId)
-          .eq('id', assignment.patient_id)
           .maybeSingle();
 
         if (!patientAccount) {
-          console.error('[get-s3-signed-url] Patient account mismatch');
-          throw new Error('Access denied');
+          console.error('[get-s3-signed-url] Patient account not found for user');
+          throw new Error('Access denied: Patient account not found');
+        }
+
+        // Check for assignment
+        const { data: assignment } = await supabase
+          .from('provider_document_patients')
+          .select('id, patient_id, hidden, is_hidden')
+          .eq('document_id', providerDoc.id)
+          .eq('patient_id', patientAccount.id)
+          .maybeSingle();
+
+        if (!assignment || assignment.hidden || assignment.is_hidden) {
+          console.error('[get-s3-signed-url] Provider document not assigned to patient or is hidden');
+          throw new Error('Access denied: Document not available');
         }
 
       } else if (userRole === 'doctor' || userRole === 'provider' || userRole === 'staff') {
         // Practice users can access documents from their practice
-        if (providerDoc.practice_id !== profile.id) {
-          console.error('[get-s3-signed-url] Provider document from different practice');
+        if (!effectivePracticeId || providerDoc.practice_id !== effectivePracticeId) {
+          console.error('[get-s3-signed-url] Provider document from different practice', {
+            docPracticeId: providerDoc.practice_id,
+            effectivePracticeId
+          });
           throw new Error('Access denied: Document from different practice');
         }
       } else if (userRole !== 'admin') {

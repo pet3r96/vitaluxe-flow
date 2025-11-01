@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { phoneSchema } from "@/lib/validators";
+import { useQueryClient } from "@tanstack/react-query";
 
 const emergencyContactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -45,6 +46,8 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       preferred_contact_method: "any",
     },
   });
+
+  const queryClient = useQueryClient();
 
   const mutation = useOptimisticMutation(
     async (data: EmergencyContactFormData) => {
@@ -86,6 +89,7 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       successMessage: mode === "edit" ? "Emergency contact updated successfully" : "Emergency contact added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} emergency contact`,
       onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
         onOpenChange(false);
         if (mode === "add") {
           reset();

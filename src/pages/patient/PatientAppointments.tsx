@@ -29,25 +29,36 @@ export default function PatientAppointments() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Check for impersonation
-      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+      // Check for impersonation (wrapped in try/catch)
+      let effectiveUserId = user.id;
+      try {
+        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+        if (impersonationData?.session?.impersonated_user_id) {
+          effectiveUserId = impersonationData.session.impersonated_user_id;
+        }
+      } catch (impersonationError) {
+        console.warn('[PatientAppointments] Impersonation check failed, using direct user.id:', impersonationError);
+      }
 
       console.log("👤 [PatientAppointments] Effective user ID:", effectiveUserId);
 
       // 1) Try RPC first
+      let shouldUseFallback = false;
       try {
         const { data, error } = await supabase
           .rpc('get_patient_appointments_with_details', { p_user_id: effectiveUserId });
-        if (error) throw error;
-
-        const rows = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
         
-        // If RPC returns empty, try fallback
-        if (!rows || rows.length === 0) {
-          console.log('[PatientAppointments] RPC returned empty, trying fallback');
-          throw new Error('RPC returned empty, using fallback');
-        }
+        if (error) {
+          console.warn('[PatientAppointments] RPC error:', error);
+          shouldUseFallback = true;
+        } else {
+          const rows = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
+          
+          // If RPC returns empty or invalid, use fallback
+          if (!rows || rows.length === 0) {
+            console.log('[PatientAppointments] RPC returned empty, trying fallback');
+            shouldUseFallback = true;
+          } else {
 
         // Enrich RPC results with practice address/name when missing
         const practiceIds = Array.from(
@@ -98,17 +109,32 @@ export default function PatientAppointments() {
           };
         });
 
-        return enhanced;
+            return enhanced;
+          }
+        }
       } catch (rpcError: any) {
-        console.warn('[PatientAppointments] RPC failed, falling back to direct queries:', rpcError);
-        // 2) Fallback: direct queries with RLS-safe selects
+        console.warn('[PatientAppointments] RPC failed completely:', rpcError);
+        shouldUseFallback = true;
+      }
+
+      // 2) Fallback: direct queries with RLS-safe selects (always run if RPC failed or returned empty)
+      if (shouldUseFallback) {
+        console.log('[PatientAppointments] Using fallback direct query');
         const { data: patientAccount, error: paErr } = await supabase
           .from('patient_accounts')
           .select('id, practice_id')
           .eq('user_id', effectiveUserId)
           .maybeSingle();
-        if (paErr) throw paErr;
-        if (!patientAccount) return [];
+        
+        if (paErr) {
+          console.error('[PatientAppointments] Patient account lookup error:', paErr);
+          throw paErr;
+        }
+        
+        if (!patientAccount) {
+          console.warn('[PatientAppointments] No patient account found for user:', effectiveUserId);
+          return [];
+        }
 
         const { data: apptRows, error: apptErr } = await supabase
           .from('patient_appointments')
@@ -185,6 +211,9 @@ export default function PatientAppointments() {
 
         return mapped;
       }
+      
+      // Should never reach here, but TypeScript needs this
+      return [];
     }
   });
 

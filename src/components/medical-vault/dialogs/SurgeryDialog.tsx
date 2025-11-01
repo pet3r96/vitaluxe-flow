@@ -10,6 +10,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const surgerySchema = z.object({
   surgery_type: z.string().min(1, "Surgery type is required"),
@@ -36,6 +37,8 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
       surgery_date: "",
     },
   });
+
+  const queryClient = useQueryClient();
 
   const mutation = useOptimisticMutation(
     async (data: SurgeryFormData) => {
@@ -76,6 +79,7 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
       successMessage: mode === "edit" ? "Surgery updated successfully" : "Surgery added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} surgery`,
       onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
         onOpenChange(false);
         if (mode === "add") {
           reset();

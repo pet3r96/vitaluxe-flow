@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchMedications } from "@/lib/medical-api-service";
+import { useQueryClient } from "@tanstack/react-query";
 
 const medicationSchema = z.object({
   medication_name: z.string().min(1, "Medication name is required"),
@@ -115,6 +116,8 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
   }, [medication, open, reset]);
 
 
+  const queryClient = useQueryClient();
+
   const mutation = useOptimisticMutation(
     async (data: MedicationFormData) => {
       // Convert YYYY-MM to YYYY-MM-01 for database storage
@@ -161,7 +164,10 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
       },
       successMessage: mode === "edit" ? "Medication updated successfully" : "Medication added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} medication`,
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        onOpenChange(false);
+      },
     }
   );
 

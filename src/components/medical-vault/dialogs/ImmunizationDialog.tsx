@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { searchVaccines } from "@/lib/medical-api-service";
+import { useQueryClient } from "@tanstack/react-query";
 
 const immunizationSchema = z.object({
   vaccine_name: z.string().min(1, "Vaccine name is required"),
@@ -36,6 +37,8 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
       date_administered: "",
     },
   });
+
+  const queryClient = useQueryClient();
 
   const mutation = useOptimisticMutation(
     async (data: ImmunizationFormData) => {
@@ -76,6 +79,7 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
       successMessage: mode === "edit" ? "Immunization updated successfully" : "Immunization added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} immunization`,
       onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
         onOpenChange(false);
         if (mode === "add") {
           reset();

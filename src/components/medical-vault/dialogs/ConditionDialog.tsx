@@ -13,6 +13,7 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchConditions } from "@/lib/medical-api-service";
+import { useQueryClient } from "@tanstack/react-query";
 
 const conditionSchema = z.object({
   condition_name: z.string().min(1, "Condition name is required"),
@@ -81,6 +82,8 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
     }
   }, [condition, open, reset]);
 
+  const queryClient = useQueryClient();
+
   const mutation = useOptimisticMutation(
     async (data: ConditionFormData) => {
       // Convert YYYY-MM to YYYY-MM-01 for database storage
@@ -125,7 +128,10 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
       },
       successMessage: mode === "edit" ? "Condition updated successfully" : "Condition added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} condition`,
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        onOpenChange(false);
+      },
     }
   );
 

@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const vitalsSchema = z.object({
   vital_type: z.string().optional(),
@@ -109,6 +110,8 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
     }
   }, [isBasicVitalMode, basicVitalType, setValue]);
 
+  const queryClient = useQueryClient();
+
   const mutation = useOptimisticMutation(
     async (data: VitalsFormData) => {
       const vitalType = data.vital_type || vitals?.vital_type;
@@ -206,7 +209,10 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       },
       successMessage: mode === "edit" || (isBasicVitalMode && vitals) ? "Vitals updated successfully" : "Vitals added successfully",
       errorMessage: `Failed to ${mode === "edit" || (isBasicVitalMode && vitals) ? "update" : "add"} vitals`,
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        onOpenChange(false);
+      },
     }
   );
 

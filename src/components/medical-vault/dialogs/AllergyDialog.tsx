@@ -14,6 +14,7 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchAllergens } from "@/lib/medical-api-service";
+import { useQueryClient } from "@tanstack/react-query";
 
 const allergySchema = z.object({
   nka: z.boolean().optional(),
@@ -95,6 +96,8 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
     }
   }, [nkaChecked, setValue]);
 
+  const queryClient = useQueryClient();
+
   const mutation = useOptimisticMutation(
     async (data: AllergyFormData) => {
       // Check for conflicts before submission
@@ -163,7 +166,10 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
       },
       successMessage: mode === "edit" ? "Allergy updated successfully" : "Allergy added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} allergy`,
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        onOpenChange(false);
+      },
     }
   );
 

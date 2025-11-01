@@ -11,27 +11,34 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function PracticePatients() {
-  const { user } = useAuth();
+  const { user, effectivePracticeId } = useAuth();
   const [search, setSearch] = useState("");
   const [bulkInviteDialogOpen, setBulkInviteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch patients with portal status
   const { data: rawPatients = [], isLoading } = useQuery({
-    queryKey: ['patients-with-portal-status', user?.id],
+    queryKey: ['patients-with-portal-status', effectivePracticeId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!effectivePracticeId) {
+        console.warn('[PracticePatients] No effectivePracticeId available');
+        return [];
+      }
       
       const { data, error } = await supabase
         .from('v_patients_with_portal_status')
         .select('*')
-        .eq('practice_id', user.id)
+        .eq('practice_id', effectivePracticeId)
         .order('first_name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PracticePatients] Query error:', error);
+        throw error;
+      }
+      console.log('[PracticePatients] Fetched patients:', data?.length || 0);
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!effectivePracticeId,
   });
 
   // Add computed name field for display
