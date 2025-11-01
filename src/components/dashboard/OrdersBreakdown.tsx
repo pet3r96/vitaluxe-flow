@@ -28,13 +28,13 @@ export function OrdersBreakdown() {
           return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
         }
 
-        // Get order lines assigned to this pharmacy, include parent order status
+        // Get order lines assigned to this pharmacy with parent order details
         const { data: orderLines, error: linesError } = await supabase
           .from('order_lines')
           .select(`
             order_id,
             status,
-            orders!inner(status)
+            orders!inner(status, payment_status)
           `)
           .eq('assigned_pharmacy_id', pharmacyData.id);
 
@@ -44,13 +44,17 @@ export function OrdersBreakdown() {
           return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
         }
 
-        // Exclude cancelled parent orders
-        const filtered = orderLines.filter((ol: any) => ol.orders?.status?.toLowerCase() !== 'cancelled');
+        // Exclude cancelled parent orders and payment failures
+        const filtered = orderLines.filter((ol: any) => 
+          ol.orders?.status?.toLowerCase() !== 'cancelled' &&
+          ol.orders?.payment_status !== 'payment_failed'
+        );
+        
         if (filtered.length === 0) {
           return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
         }
 
-        // Group line statuses by order
+        // Group line statuses by unique order_id
         const byOrder = new Map<string, string[]>();
         for (const ol of filtered as any[]) {
           const arr = byOrder.get(ol.order_id) || [];
@@ -58,11 +62,12 @@ export function OrdersBreakdown() {
           byOrder.set(ol.order_id, arr);
         }
 
-        // Precedence: declined(denied) > completed/delivered > shipped > processing > pending/on_hold
+        // Determine final status per order using precedence:
+        // denied > completed/delivered > shipped > processing > on_hold > pending
         const counts = { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 } as any;
-        for (const [, statuses] of byOrder) {
+        for (const [orderId, statuses] of byOrder) {
           const has = (s: string) => statuses.includes(s);
-          if (has('denied') || has('declined')) {
+          if (has('denied')) {
             counts.declined++;
           } else if (has('delivered') || has('completed')) {
             counts.completed++;
@@ -70,14 +75,18 @@ export function OrdersBreakdown() {
             counts.shipped++;
           } else if (has('processing')) {
             counts.processing++;
-          } else if (has('on_hold') || has('pending')) {
-            // Treat both as pending bucket for the donut, but keep on_hold tracked
-            if (has('on_hold')) counts.on_hold++;
-            else counts.pending++;
+          } else if (has('on_hold')) {
+            counts.on_hold++;
           } else {
             counts.pending++;
           }
         }
+
+        console.log('[OrdersBreakdown] Pharmacy counts:', { 
+          uniqueOrders: byOrder.size,
+          counts,
+          totalCalculated: Object.values(counts).reduce((a: any, b: any) => a + b, 0)
+        });
 
         return counts;
       } else if (effectiveRole === 'doctor' || effectiveRole === 'provider' || effectiveRole === 'staff') {

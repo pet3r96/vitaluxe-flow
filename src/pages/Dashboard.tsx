@@ -587,7 +587,7 @@ const Dashboard = () => {
         
         {/* Search bar - Right side (above where Follow-Ups will be) */}
         {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
-          <div className="w-full lg:w-80 flex-shrink-0">
+          <div className="w-full lg:w-80">
             <PatientQuickSearch />
           </div>
         )}
