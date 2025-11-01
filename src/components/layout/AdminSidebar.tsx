@@ -112,7 +112,7 @@ export function AdminSidebar() {
             return (
               <SidebarGroup key={section.title}>
                 {!isCollapsed && (
-                  <SidebarGroupLabel className="text-xs uppercase font-semibold text-muted-foreground tracking-wider px-3">
+                  <SidebarGroupLabel className="text-xs uppercase font-semibold text-gray-700 dark:text-gray-300 tracking-wider px-3">
                     {section.title}
                   </SidebarGroupLabel>
                 )}
@@ -131,7 +131,7 @@ export function AdminSidebar() {
                                   "flex items-center gap-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 min-h-[44px] border-l-4",
                                   isActive
                                 ? "bg-card border-gold1 text-gold1 font-semibold pl-[8px] pr-3"
-                                    : "text-sidebar-foreground hover:text-gold2 hover:bg-muted/10 border-transparent px-3"
+                                    : "text-gray-700 dark:text-gray-300 hover:text-gold2 hover:bg-muted/10 border-transparent px-3"
                                 )
                               }
                             >
@@ -165,7 +165,7 @@ export function AdminSidebar() {
                           "flex items-center justify-center p-3 rounded-md transition-all duration-200 min-h-[44px]",
                           isActive
                             ? "bg-primary/10 text-primary"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                            : "text-gray-700 dark:text-gray-300 hover:bg-sidebar-accent/50"
                         )}
                       >
                         {SectionIcon && <SectionIcon className="h-5 w-5" />}
@@ -195,7 +195,7 @@ export function AdminSidebar() {
                       variant="ghost"
                       className={cn(
                         "w-full justify-start gap-3 px-3 py-2.5 h-auto min-h-[44px] text-xs uppercase font-semibold tracking-wider hover:bg-sidebar-accent/50",
-                        isActive ? "text-primary" : "text-muted-foreground"
+                        isActive ? "text-primary" : "text-gray-700 dark:text-gray-300"
                       )}
                     >
                       {SectionIcon && <SectionIcon className="h-4 w-4" />}
@@ -224,7 +224,7 @@ export function AdminSidebar() {
                                     "flex items-center gap-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 min-h-[44px] border-l-4",
                                     isActive
                                       ? "bg-card border-gold1 text-gold1 font-semibold pl-[8px] pr-3"
-                                      : "text-sidebar-foreground hover:text-gold2 hover:bg-muted/10 border-transparent px-3"
+                                      : "text-gray-700 dark:text-gray-300 hover:text-gold2 hover:bg-muted/10 border-transparent px-3"
                                   )
                                 }
                               >
@@ -251,7 +251,7 @@ export function AdminSidebar() {
               <Button
                 variant="ghost"
                 onClick={handleSignOut}
-                className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent/50 min-h-[44px]"
+                className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-sidebar-accent/50 min-h-[44px]"
               >
                 <LogOut className="h-5 w-5" />
                 {!isCollapsed && <span>Sign Out</span>}

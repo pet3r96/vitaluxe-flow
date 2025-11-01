@@ -113,7 +113,7 @@ export function AppSidebar() {
         {roleMenus.map((section) => (
           <SidebarGroup key={section.title}>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-black dark:text-white font-semibold">
+              <SidebarGroupLabel className="text-gray-900 dark:text-white font-semibold">
                 {section.title}
               </SidebarGroupLabel>
             )}
@@ -129,7 +129,7 @@ export function AppSidebar() {
                       {isLocked ? (
                         <button
                           onClick={() => setShowUpgradeDialog(true)}
-                          className={`flex w-full items-center rounded-lg px-3 py-2 text-sm hover:bg-sidebar-accent/50 text-sidebar-foreground/50 cursor-pointer min-h-[44px]`}
+                          className={`flex w-full items-center rounded-lg px-3 py-2 text-sm hover:bg-sidebar-accent/50 text-gray-500 dark:text-gray-400 cursor-pointer min-h-[44px]`}
                         >
                           <Icon className="h-4 w-4" />
                           {!isCollapsed && <span className="ml-3">{item.label}</span>}

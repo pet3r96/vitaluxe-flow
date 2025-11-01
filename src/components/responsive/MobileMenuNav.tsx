@@ -85,7 +85,7 @@ export const MobileMenuNav = ({
                   {sections.map((section) => (
                     <div key={section.title} className="mb-4">
                       <div className="px-4 mb-2">
-                        <h3 className="text-xs uppercase font-semibold text-black dark:text-white tracking-wider">
+                        <h3 className="text-xs uppercase font-semibold text-gray-900 dark:text-white tracking-wider">
                           {section.title}
                         </h3>
                       </div>
@@ -118,7 +118,7 @@ export const MobileMenuNav = ({
                                   'flex items-center gap-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 border-l-4',
                                   isActive
                                     ? 'bg-card border-gold1 text-gold1 font-semibold pl-[8px] pr-3'
-                                    : 'text-sidebar-foreground hover:text-gold2 hover:bg-muted/10 border-transparent px-3'
+                                    : 'text-gray-700 dark:text-gray-300 hover:text-gold2 hover:bg-muted/10 border-transparent px-3'
                                 )
                               }
                             >
