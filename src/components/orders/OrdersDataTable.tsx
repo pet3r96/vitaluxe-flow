@@ -188,6 +188,12 @@ export const OrdersDataTable = () => {
           profiles:doctor_id(name)
         `);
 
+      // Admin role has access to all orders (no filtering needed)
+      if (effectiveRole === "admin") {
+        // No additional filters - admin sees everything
+        logger.info('Admin fetching all orders');
+      }
+
       // For doctor role, explicitly filter by doctor_id (defense in depth with RLS)
       if (effectiveRole === "doctor") {
         query = query.eq("doctor_id", effectiveUserId);
@@ -339,7 +345,14 @@ export const OrdersDataTable = () => {
         .order("created_at", { ascending: false });
 
       if (error) {
-        logger.error('Orders query error', error, { effectiveRole, effectiveUserId });
+        logger.error('Orders query error', { 
+          error: error.message || error, 
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          effectiveRole, 
+          effectiveUserId 
+        });
         throw error;
       }
       
@@ -353,11 +366,18 @@ export const OrdersDataTable = () => {
       }
       
       return data;
-      } catch (error) {
-        logger.error('Orders fetch failed', error);
+      } catch (error: any) {
+        logger.error('Orders fetch failed', { 
+          error: error.message || String(error), 
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          effectiveRole,
+          effectiveUserId
+        });
         toast({
           title: "Error loading orders",
-          description: "Unable to load orders. Please refresh or contact support.",
+          description: error?.message || "Unable to load orders. Please refresh or contact support.",
           variant: "destructive"
         });
         throw error;
