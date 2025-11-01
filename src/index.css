@@ -101,8 +101,8 @@
   /* Accent Colors */
   --primary: var(--gold-1);
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 15% 96%;
-  --secondary-foreground: 222 47% 11%;
+  --secondary: 220 15% 55%;         /* Medium slate grey for contrast */
+  --secondary-foreground: 0 0% 100%; /* White text for proper contrast */
   --accent: 210 20% 95%;
   --accent-foreground: 222 47% 11%;
 
@@ -152,8 +152,8 @@
   /* Accent Colors (Gold stays identical) */
   --primary: var(--gold-1);
   --primary-foreground: 210 20% 98%;
-  --secondary: 215 25% 27%;
-  --secondary-foreground: 210 20% 98%;
+  --secondary: 215 30% 40%;         /* Lighter slate for better contrast in dark mode */
+  --secondary-foreground: 0 0% 100%; /* Pure white text */
   --accent: 215 25% 22%;
   --accent-foreground: 210 20% 98%;
 
