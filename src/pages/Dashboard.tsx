@@ -596,17 +596,6 @@ const Dashboard = () => {
       {/* Analytics Section - Restructured for practice users */}
       {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
         <>
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bold tracking-tight">Analytics & Insights</h2>
-            {/* Quick Actions & Orders by Status - Side by Side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-stretch">
-              <QuickActionsPanel />
-              <OrdersBreakdown />
-            </div>
-            {/* Revenue Chart - Full Width */}
-            <RevenueChart />
-          </section>
-
           {/* V2 Widgets */}
           <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <TodayAppointmentsWidget />
@@ -618,6 +607,16 @@ const Dashboard = () => {
             <RequestedAppointmentsWidget />
             <RecentActivityWidget />
           </div>
+          
+          {/* Analytics & Insights - Below Requested Appointments & Recent Activity */}
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold tracking-tight">Analytics & Insights</h2>
+            {/* Orders by Status & Quick Actions - Side by Side (switched order) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-stretch">
+              <OrdersBreakdown />
+              <QuickActionsPanel />
+            </div>
+          </section>
         </>
       )}
 
