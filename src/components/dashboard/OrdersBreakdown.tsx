@@ -43,11 +43,13 @@ export function OrdersBreakdown() {
         // Get unique order IDs
         const orderIds = [...new Set(orderLines.map(line => line.order_id))];
 
-        // Fetch order statuses
+        // Fetch order statuses, excluding cancelled and failed payments
         const { data: orders, error: ordersError } = await supabase
           .from('orders')
-          .select('status')
-          .in('id', orderIds);
+          .select('status, payment_status')
+          .in('id', orderIds)
+          .neq('status', 'cancelled')
+          .neq('payment_status', 'payment_failed');
 
         if (ordersError) throw ordersError;
 
@@ -92,8 +94,10 @@ export function OrdersBreakdown() {
 
         const { data: orders, error } = await supabase
           .from('orders')
-          .select('status')
-          .eq('doctor_id', doctorId);
+          .select('status, payment_status')
+          .eq('doctor_id', doctorId)
+          .neq('status', 'cancelled')
+          .neq('payment_status', 'payment_failed');
 
         if (error) throw error;
 

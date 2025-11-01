@@ -72,6 +72,41 @@ export function RecentActivityWidget({ className }: { className?: string }) {
           .slice(0, 5);
       }
 
+      // Reps: show their own support tickets
+      if (effectiveRole === 'topline' || effectiveRole === 'downline') {
+        const { data: threads } = await supabase
+          .from('message_threads')
+          .select('id, subject, updated_at')
+          .eq('thread_type', 'support')
+          .eq('created_by', effectiveUserId)
+          .order('updated_at', { ascending: false })
+          .limit(5);
+
+        return (threads || []).map(t => ({
+          type: 'message',
+          icon: FileText,
+          description: `Support: ${t.subject}`,
+          time: t.updated_at,
+        }));
+      }
+
+      // Admin: show threads the admin created or participates in (not global)
+      if (effectiveRole === 'admin') {
+        const { data: adminThreads } = await supabase
+          .from('message_threads')
+          .select('id, subject, updated_at, thread_type')
+          .or(`created_by.eq.${effectiveUserId},thread_participants.user_id.eq.${effectiveUserId}`)
+          .order('updated_at', { ascending: false })
+          .limit(5);
+
+        return (adminThreads || []).map(t => ({
+          type: 'message',
+          icon: FileText,
+          description: `${t.thread_type === 'support' ? 'Support' : 'Order Issue'}: ${t.subject}`,
+          time: t.updated_at,
+        }));
+      }
+
       // For practices, get their orders
       if (!effectivePracticeId) return [] as any[];
       const { data: orders } = await supabase
