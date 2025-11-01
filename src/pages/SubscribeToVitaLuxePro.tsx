@@ -205,30 +205,30 @@ export default function SubscribeToVitaLuxePro() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container max-w-[1165px] mx-auto py-12 px-4">
+      <div className="container max-w-[1165px] mx-auto py-6 sm:py-8 md:py-12 px-4">
         <Button
           variant="ghost"
           onClick={() => navigate('/dashboard')}
-          className="mb-6"
+          className="mb-4 sm:mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
 
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <div className="flex items-center justify-center mb-4">
             <img 
               src={currentLogo} 
               alt="Vitaluxe Services" 
-              className="h-20"
+              className="h-12 sm:h-16 md:h-20"
             />
           </div>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground px-4">
             Transform Your Medical Practice with Complete Virtual Front Desk + EMR System
           </p>
         </div>
 
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-3 mb-6 sm:mb-8">
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>What's Included</CardTitle>
@@ -255,9 +255,9 @@ export default function SubscribeToVitaLuxePro() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-5xl font-bold text-[#BE9B4B]">$99.99</span>
-                  <span className="text-muted-foreground/70">/month + processing fees</span>
+                <div className="flex flex-col sm:flex-row items-baseline gap-1 sm:gap-2 mb-2">
+                  <span className="text-4xl sm:text-5xl font-bold text-[#BE9B4B]">$99.99</span>
+                  <span className="text-sm sm:text-base text-muted-foreground/70">/month + processing fees</span>
                 </div>
                 <Badge className="bg-[#BE9B4B] hover:bg-[#D8C07A] text-white border-none">
                   7-Day Free Trial
@@ -326,7 +326,7 @@ export default function SubscribeToVitaLuxePro() {
               <Button
                 onClick={handleStartTrial}
                 disabled={!agreedToTerms || isProcessing}
-                className="w-full bg-[#BE9B4B] hover:bg-[#D8C07A] text-white font-semibold h-12"
+                className="w-full bg-[#BE9B4B] hover:bg-[#D8C07A] text-white font-semibold h-11 sm:h-12 text-sm sm:text-base"
               >
                 {isProcessing ? (
                   <>

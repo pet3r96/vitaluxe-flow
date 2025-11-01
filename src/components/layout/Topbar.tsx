@@ -22,22 +22,24 @@ export function Topbar() {
   }, []);
 
   return (
-    <div className={`sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-3 lg:px-6 transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_12px_rgba(190,155,75,0.15)]' : ''}`}>
-      <div className="flex items-center gap-4 flex-1">
-        <SidebarTrigger className="h-9 w-9" />
-        <CommandPalette />
+    <div className={`sticky top-0 z-10 flex items-center justify-between gap-2 sm:gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_12px_rgba(190,155,75,0.15)]' : ''}`}>
+      <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+        <SidebarTrigger className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <CommandPalette />
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
         {/* Messages Button */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate("/messages")}
-          className="h-9 w-9 rounded-lg hover:bg-gold1/10"
+          className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg hover:bg-gold1/10"
           aria-label="Messages"
         >
-          <MessageSquare className="h-5 w-5" />
+          <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
 
         {/* Notifications */}
