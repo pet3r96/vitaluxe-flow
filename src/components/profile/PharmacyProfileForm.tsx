@@ -161,8 +161,8 @@ export function PharmacyProfileForm() {
     if (!pharmacy?.contact_email) return;
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(pharmacy.contact_email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const { error } = await supabase.functions.invoke('send-password-reset-email', {
+        body: { email: pharmacy.contact_email },
       });
 
       if (error) throw error;

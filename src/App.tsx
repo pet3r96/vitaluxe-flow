@@ -65,7 +65,6 @@ const lazyWithRetry = (componentImport: () => Promise<any>) =>
 
 // Lazy load all page components for better code splitting
 const Auth = lazy(() => import("./pages/Auth"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Accounts = lazy(() => import("./pages/Accounts"));
 const Practices = lazy(() => import("./pages/Practices"));
 const Representatives = lazy(() => import("./pages/Representatives"));
@@ -189,7 +188,6 @@ const App = () => (
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/share/:token" element={<MedicalVaultShare />} />
                   <Route path="/change-password" element={<ChangePassword />} />
