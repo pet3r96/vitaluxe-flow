@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MessageSquare, FileText, Activity, AlertCircle, Clock, Pill, Video, Building, Phone } from "lucide-react";
+import { Calendar, MessageSquare, FileText, Activity, AlertCircle, Clock, Pill, Video, Building, Phone, Heart } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -439,17 +439,24 @@ export default function PatientDashboard() {
       {/* Quick Stats Cards */}
       <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* Next Appointment Card */}
-        <Card className="patient-stat-card" onClick={() => navigate("/appointments")}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card 
+          variant="modern"
+          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-primary overflow-hidden relative"
+          onClick={() => navigate("/appointments")}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className="text-sm font-medium">Next Appointment</CardTitle>
-            <Calendar className="h-4 w-4 text-primary" />
+            <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             {loadingAppt ? (
               <Skeleton className="h-8 w-24" />
             ) : nextAppointment ? (
               <>
-                <div className="text-lg font-bold">
+                <div className="text-2xl font-bold mb-1">
                   {format(new Date(nextAppointment.start_time), "MMM dd")}
                 </div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -466,7 +473,7 @@ export default function PatientDashboard() {
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold">None</div>
+                <div className="text-2xl font-bold mb-1">None</div>
                 <p className="text-xs text-muted-foreground">No upcoming visits</p>
               </>
             )}
@@ -474,17 +481,29 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Unread Messages Card */}
-        <Card className="patient-stat-card" onClick={() => navigate("/messages")}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card 
+          variant="modern"
+          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-accent overflow-hidden relative"
+          onClick={() => navigate("/messages")}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
-            <MessageSquare className="h-4 w-4 text-primary" />
+            <div className="p-2 rounded-full bg-accent/10 group-hover:bg-accent/20 transition-colors relative">
+              <MessageSquare className="h-5 w-5 text-accent" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-white flex items-center justify-center font-bold animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             {loadingMessages ? (
               <Skeleton className="h-8 w-16" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{unreadCount}</div>
+                <div className="text-2xl font-bold mb-1">{unreadCount}</div>
                 <p className="text-xs text-muted-foreground">From providers</p>
               </>
             )}
@@ -492,17 +511,24 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Medication Reminders Card */}
-        <Card className="patient-stat-card" onClick={() => navigate("/medical-vault")}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card 
+          variant="modern"
+          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-secondary overflow-hidden relative"
+          onClick={() => navigate("/medical-vault")}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className="text-sm font-medium">Active Medications</CardTitle>
-            <Pill className="h-4 w-4 text-primary" />
+            <div className="p-2 rounded-full bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+              <Pill className="h-5 w-5 text-secondary" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             {loadingVault ? (
               <Skeleton className="h-8 w-12" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{medicationCount}</div>
+                <div className="text-2xl font-bold mb-1">{medicationCount}</div>
                 <p className="text-xs text-muted-foreground">Current prescriptions</p>
               </>
             )}
@@ -510,27 +536,34 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Medical Vault Status Card */}
-        <Card className="patient-stat-card" onClick={() => navigate("/medical-vault")}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card 
+          variant="modern"
+          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-gold1 overflow-hidden relative"
+          onClick={() => navigate("/medical-vault")}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-gold1/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className="text-sm font-medium">Medical Vault</CardTitle>
-            <Activity className="h-4 w-4 text-primary" />
+            <div className="p-2 rounded-full bg-gold1/10 group-hover:bg-gold1/20 transition-colors">
+              <Activity className="h-5 w-5 text-gold1" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             {loadingVault ? (
               <Skeleton className="h-8 w-20" />
             ) : medicalVault?.has_data ? (
               <>
-                <div className="text-lg font-bold">Complete</div>
+                <div className="text-xl font-bold mb-1 text-success">Complete</div>
                 {medicalVault.updated_at && (
-                  <p className="text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 inline mr-1" />
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
                     {formatDistanceToNow(new Date(medicalVault.updated_at), { addSuffix: true })}
                   </p>
                 )}
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold">Empty</div>
+                <div className="text-2xl font-bold mb-1 text-warning">Empty</div>
                 <p className="text-xs text-muted-foreground">Not yet set up</p>
               </>
             )}
@@ -541,70 +574,109 @@ export default function PatientDashboard() {
       {/* Recent Activity Section */}
       <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Recent Appointments */}
-        <Card className="patient-card">
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Recent Appointments</CardTitle>
+        <Card variant="modern" className="overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Recent Appointments
+            </CardTitle>
             <CardDescription>Your past visits</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             {recentAppointments.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentAppointments.map((appt: any) => (
-                  <div key={appt.id} className="flex justify-between items-start p-3 border rounded-lg">
-                    <div className="space-y-1">
-                      <p className="font-medium">{appt.practice?.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(appt.start_time), "MMM dd, yyyy")}
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        {appt.status}
-                      </Badge>
+                  <div 
+                    key={appt.id} 
+                    className="group relative p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/30 transition-all duration-200 cursor-pointer"
+                    onClick={() => navigate("/appointments")}
+                  >
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex justify-between items-start pl-2">
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-2 w-2 rounded-full ${
+                            appt.status === 'completed' ? 'bg-success' :
+                            appt.status === 'cancelled' ? 'bg-destructive' :
+                            appt.status === 'no_show' ? 'bg-warning' :
+                            'bg-muted-foreground'
+                          }`} />
+                          <p className="font-semibold text-foreground">{appt.practice?.name}</p>
+                        </div>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          {format(new Date(appt.start_time), "MMM dd, yyyy 'at' h:mm a")}
+                        </p>
+                        <Badge 
+                          variant={appt.status === 'completed' ? 'default' : 'outline'} 
+                          className="text-xs capitalize"
+                        >
+                          {appt.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                      {appt.visit_summary_url && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(appt.visit_summary_url, '_blank');
+                          }}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    {appt.visit_summary_url && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => window.open(appt.visit_summary_url, '_blank')}
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No recent appointments</p>
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No recent appointments</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {/* Recent Messages */}
-        <Card className="patient-card">
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Recent Messages</CardTitle>
+        <Card variant="modern" className="overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-accent/5 to-transparent">
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-accent" />
+              Recent Messages
+            </CardTitle>
             <CardDescription>Latest communications</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             {recentMessages.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentMessages.map((msg: any) => (
                   <div 
                     key={msg.id} 
-                    className="p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                    className="group relative p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-accent/30 transition-all duration-200 cursor-pointer"
                     onClick={() => navigate("/messages")}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-accent rounded-r opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-start gap-3 pl-2">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold shrink-0">
+                        {(msg.sender?.name || 'P')[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm truncate">{msg.subject}</p>
+                          <p className="font-semibold text-sm truncate">{msg.subject}</p>
                           {!msg.read_at && (
-                            <Badge variant="default" className="text-xs shrink-0">New</Badge>
+                            <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 shrink-0 animate-pulse">
+                              New
+                            </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground">
                           From: {msg.sender?.name || 'Provider'}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
                           {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                         </p>
                       </div>
@@ -613,7 +685,10 @@ export default function PatientDashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No recent messages</p>
+              <div className="text-center py-8">
+                <MessageSquare className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No recent messages</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -622,95 +697,166 @@ export default function PatientDashboard() {
       {/* Quick Actions & Medical Vault Snapshot */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+        <Card variant="modern" className="overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Quick Actions
+            </CardTitle>
             <CardDescription>Common tasks</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Button className="w-full justify-start" variant="outline" onClick={() => navigate("/appointments")}>
-              <Calendar className="mr-2 h-4 w-4" />
-              Book Appointment
-            </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => navigate("/medical-vault")}>
-              <Activity className="mr-2 h-4 w-4" />
-              Update Medical Vault
-            </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => navigate("/messages")}>
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Message Provider
-            </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => navigate("/documents")}>
-              <FileText className="mr-2 h-4 w-4" />
-              View Documents
-            </Button>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 gap-3">
+              <div 
+                className="group flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 cursor-pointer"
+                onClick={() => navigate("/appointments")}
+              >
+                <div className="p-2.5 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Calendar className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Book Appointment</p>
+                  <p className="text-xs text-muted-foreground">Schedule a visit</p>
+                </div>
+              </div>
+              
+              <div 
+                className="group flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-gold1/5 hover:border-gold1/30 transition-all duration-200 cursor-pointer"
+                onClick={() => navigate("/medical-vault")}
+              >
+                <div className="p-2.5 rounded-lg bg-gold1/10 group-hover:bg-gold1/20 transition-colors">
+                  <Activity className="h-5 w-5 text-gold1" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Update Medical Vault</p>
+                  <p className="text-xs text-muted-foreground">Manage health records</p>
+                </div>
+              </div>
+              
+              <div 
+                className="group flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-accent/5 hover:border-accent/30 transition-all duration-200 cursor-pointer"
+                onClick={() => navigate("/messages")}
+              >
+                <div className="p-2.5 rounded-lg bg-accent/10 group-hover:bg-accent/20 transition-colors">
+                  <MessageSquare className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Message Provider</p>
+                  <p className="text-xs text-muted-foreground">Send secure message</p>
+                </div>
+              </div>
+              
+              <div 
+                className="group flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-secondary/5 hover:border-secondary/30 transition-all duration-200 cursor-pointer"
+                onClick={() => navigate("/documents")}
+              >
+                <div className="p-2.5 rounded-lg bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+                  <FileText className="h-5 w-5 text-secondary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">View Documents</p>
+                  <p className="text-xs text-muted-foreground">Access medical files</p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Medical Vault Snapshot */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Medical Vault Snapshot</CardTitle>
+        <Card variant="modern" className="overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-gold1/5 to-transparent">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-gold1" />
+              Medical Vault Snapshot
+            </CardTitle>
             <CardDescription>Key health information</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             {loadingVault ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
               </div>
             ) : medicalVault?.has_data ? (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Blood Type:</span>
-                  <span className="text-sm font-medium">{medicalVault.blood_type || 'Not set'}</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Blood Type</span>
+                  </div>
+                  <span className="text-sm font-bold text-primary">{medicalVault.blood_type || 'Not set'}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Allergies:</span>
-                  <span className="text-sm font-medium">
-                    {medicalVault.allergies_count} recorded
-                  </span>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <span className="text-sm font-medium">Allergies</span>
+                  </div>
+                  <Badge variant="outline" className="font-semibold">
+                    {medicalVault.allergies_count}
+                  </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Medications:</span>
-                  <span className="text-sm font-medium">
-                    {medicalVault.medications_count} active
-                  </span>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Pill className="h-4 w-4 text-secondary" />
+                    <span className="text-sm font-medium">Medications</span>
+                  </div>
+                  <Badge variant="outline" className="font-semibold">
+                    {medicalVault.medications_count}
+                  </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Conditions:</span>
-                  <span className="text-sm font-medium">
-                    {medicalVault.conditions_count} listed
-                  </span>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Conditions</span>
+                  </div>
+                  <Badge variant="outline" className="font-semibold">
+                    {medicalVault.conditions_count}
+                  </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Surgeries:</span>
-                  <span className="text-sm font-medium">
-                    {medicalVault.surgeries_count} recorded
-                  </span>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-gold1" />
+                    <span className="text-sm font-medium">Surgeries</span>
+                  </div>
+                  <Badge variant="outline" className="font-semibold">
+                    {medicalVault.surgeries_count}
+                  </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Immunizations:</span>
-                  <span className="text-sm font-medium">
-                    {medicalVault.immunizations_count} recorded
-                  </span>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium">Immunizations</span>
+                  </div>
+                  <Badge variant="outline" className="font-semibold">
+                    {medicalVault.immunizations_count}
+                  </Badge>
                 </div>
+                
                 <Button 
-                  className="w-full mt-4" 
-                  variant="outline"
+                  className="w-full mt-4 group" 
+                  variant="default"
                   onClick={() => navigate("/medical-vault")}
                 >
                   View Full Vault
+                  <Activity className="ml-2 h-4 w-4 group-hover:rotate-90 transition-transform" />
                 </Button>
               </div>
             ) : (
-              <div className="text-center py-6">
-                <Activity className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-4">
-                  Your medical vault is empty
+              <div className="text-center py-8">
+                <div className="mx-auto mb-4 p-4 rounded-full bg-muted/50 w-fit">
+                  <Activity className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium mb-1">Your medical vault is empty</p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Start building your health profile today
                 </p>
-                <Button onClick={() => navigate("/medical-vault")}>
+                <Button onClick={() => navigate("/medical-vault")} className="mt-2">
                   Set Up Now
                 </Button>
               </div>
