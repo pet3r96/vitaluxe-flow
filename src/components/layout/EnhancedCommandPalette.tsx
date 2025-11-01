@@ -79,59 +79,35 @@ export function EnhancedCommandPalette() {
         });
       });
 
-      // Search patients (for practice, staff, provider roles - filter by practice)
-      if (['doctor', 'staff', 'provider'].includes(effectiveRole || '') && effectivePracticeId) {
-        try {
-          const { data: patients } = await supabase
-            .from('patient_accounts')
-            .select('id, first_name, last_name, date_of_birth, email, practice_id')
-            .eq('practice_id', effectivePracticeId)
-            .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-            .limit(10);
+      // Search patients (unified - restrict to current practice when available)
+      try {
+        let query = supabase
+          .from('patient_accounts')
+          .select('id, first_name, last_name, date_of_birth, email, practice_id');
 
-          patients?.forEach((patient: any) => {
-            searchResults.push({
-              id: `patient-${patient.id}`,
-              title: `${patient.first_name} ${patient.last_name}`,
-              subtitle: patient.email || (patient.date_of_birth ? `DOB: ${new Date(patient.date_of_birth).toLocaleDateString()}` : ''),
-              type: 'patient',
-              icon: User,
-              action: () => {
-                navigate(`/patients/${patient.id}`);
-                setOpen(false);
-              }
-            });
-          });
-        } catch (err) {
-          console.error('Patients search error:', err);
+        if (effectivePracticeId) {
+          query = query.eq('practice_id', effectivePracticeId);
         }
-      }
 
-      // Search patients (for admin, pharmacy, topline - all patients)
-      if (['admin', 'pharmacy', 'topline'].includes(effectiveRole || '')) {
-        try {
-          const { data: patients } = await supabase
-            .from('patient_accounts')
-            .select('id, first_name, last_name, date_of_birth, email')
-            .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-            .limit(10);
+        const { data: patients } = await query
+          .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+          .limit(10);
 
-          patients?.forEach((patient: any) => {
-            searchResults.push({
-              id: `patient-${patient.id}`,
-              title: `${patient.first_name} ${patient.last_name}`,
-              subtitle: patient.email || (patient.date_of_birth ? `DOB: ${new Date(patient.date_of_birth).toLocaleDateString()}` : ''),
-              type: 'patient',
-              icon: User,
-              action: () => {
-                navigate(`/patients/${patient.id}`);
-                setOpen(false);
-              }
-            });
+        patients?.forEach((patient: any) => {
+          searchResults.push({
+            id: `patient-${patient.id}`,
+            title: `${patient.first_name} ${patient.last_name}`,
+            subtitle: patient.email || (patient.date_of_birth ? `DOB: ${new Date(patient.date_of_birth).toLocaleDateString()}` : ''),
+            type: 'patient',
+            icon: User,
+            action: () => {
+              navigate(`/patients/${patient.id}`);
+              setOpen(false);
+            }
           });
-        } catch (err) {
-          console.error('Patients search error:', err);
-        }
+        });
+      } catch (err) {
+        console.error('Patients search error:', err);
       }
 
       // Search representatives (for admin, topline, pharmacy)
@@ -338,6 +314,7 @@ export function EnhancedCommandPalette() {
                 return (
                   <CommandItem
                     key={result.id}
+                    value={`${result.title} ${result.subtitle ?? ''}`}
                     onSelect={result.action}
                   >
                     <Icon className="mr-2 h-4 w-4" />
