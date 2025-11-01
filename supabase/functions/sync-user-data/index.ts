@@ -251,27 +251,33 @@ serve(async (req) => {
             }
           }
           
-          // Ensure patient role exists
-          const { data: existingRole } = await supabaseAdmin
-            .from('user_roles')
-            .select('id')
-            .eq('user_id', patientAccount.user_id)
-            .eq('role', 'patient')
-            .maybeSingle();
-          
-          if (!existingRole) {
-            const { error: roleError } = await supabaseAdmin
+          // Ensure patient role exists only if the patient has an auth user
+          if (patientAccount.user_id) {
+            const { data: existingRole } = await supabaseAdmin
               .from('user_roles')
-              .insert({
-                user_id: patientAccount.user_id,
-                role: 'patient'
-              });
+              .select('id')
+              .eq('user_id', patientAccount.user_id)
+              .eq('role', 'patient')
+              .maybeSingle();
             
-            if (!roleError) {
-              addedPatientRoles++;
-            } else {
-              errors.push(`Failed to add patient role for ${fullName}: ${roleError.message}`);
+            if (!existingRole) {
+              const { error: roleError } = await supabaseAdmin
+                .from('user_roles')
+                .insert({
+                  user_id: patientAccount.user_id,
+                  role: 'patient'
+                });
+              
+              if (!roleError) {
+                addedPatientRoles++;
+              } else {
+                errors.push(`Failed to add patient role for ${fullName}: ${roleError.message}`);
+              }
             }
+          } else {
+            // No auth account yet; skip role creation by design
+            // Optionally record for visibility
+            errors.push(`Skipped adding patient role for ${fullName}: no user account (user_id is NULL)`);
           }
         } catch (error: any) {
           errors.push(`Error syncing patient account ${patientAccount.first_name}: ${error.message}`);
