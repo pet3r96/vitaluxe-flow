@@ -2455,6 +2455,7 @@ export type Database = {
           address_street: string | null
           address_verification_source: string | null
           address_verification_status: string | null
+          address_verified_at: string | null
           address_zip: string | null
           allergies: string | null
           birth_date: string | null
@@ -2491,6 +2492,7 @@ export type Database = {
           address_street?: string | null
           address_verification_source?: string | null
           address_verification_status?: string | null
+          address_verified_at?: string | null
           address_zip?: string | null
           allergies?: string | null
           birth_date?: string | null
@@ -2527,6 +2529,7 @@ export type Database = {
           address_street?: string | null
           address_verification_source?: string | null
           address_verification_status?: string | null
+          address_verified_at?: string | null
           address_zip?: string | null
           allergies?: string | null
           birth_date?: string | null

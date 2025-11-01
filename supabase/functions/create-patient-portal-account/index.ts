@@ -343,35 +343,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create patient_accounts record with normalized email
-    // Status defaults to 'active' - invitation state tracked by last_login_at being null
+    // Update existing patient record with user_id to link portal account
+    // Do NOT create a new patient record - update the existing one
     const { data: patientAccount, error: accountError } = await supabaseAdmin
       .from('patient_accounts')
-      .insert({
+      .update({
         user_id: authUserId,
-        practice_id: patient.practice_id,
-        first_name: patient.name.split(' ')[0] || patient.name,
-        last_name: patient.name.split(' ').slice(1).join(' ') || '',
         email: normalizedEmail,
-        phone: patient.phone,
-        date_of_birth: patient.birth_date,
-        address: patient.address,
-        city: patient.address_city,
-        state: patient.address_state,
-        zip_code: patient.address_zip,
         invitation_sent_at: new Date().toISOString(),
-        // Omit status field - defaults to 'active'
+        status: 'active'
       })
+      .eq('id', patientId)
       .select()
       .single();
 
     if (accountError) {
-      console.error('Failed to create patient account:', accountError);
+      console.error('Failed to update patient account with user_id:', accountError);
       // Rollback: delete auth user if we just created them
       if (!foundUser) {
         await supabaseAdmin.auth.admin.deleteUser(authUserId);
       }
-      throw new Error(`Failed to create patient account: ${accountError.message}`);
+      throw new Error(`Failed to update patient account: ${accountError.message}`);
     }
 
     // Assign patient role with error handling

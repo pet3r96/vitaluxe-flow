@@ -346,7 +346,8 @@ export const PatientsDataTable = () => {
                     {patient.address_formatted || 
                      (patient.address_street ? 
                        `${patient.address_street}${patient.address_city ? ', ' + patient.address_city : ''}${patient.address_state ? ', ' + patient.address_state : ''} ${patient.address_zip || ''}`.trim() 
-                       : patient.address || "-")}
+                       : patient.address || 
+                       <span className="text-muted-foreground italic">No address on file</span>)}
                   </TableCell>
                   {isAdmin && (
                     <TableCell>
