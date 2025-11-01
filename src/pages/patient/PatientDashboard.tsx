@@ -49,8 +49,8 @@ export default function PatientDashboard() {
     queryFn: async () => {
       if (!patientAccount?.id) return null;
       
-      // Fetch data from all medical vault tables
-      const [medicationsRes, allergiesRes, conditionsRes, surgeriesRes, immunizationsRes, vaultRes] = await Promise.all([
+      // Fetch data from all 8 medical vault sections
+      const [medicationsRes, allergiesRes, conditionsRes, surgeriesRes, immunizationsRes, vitalsRes, pharmaciesRes, emergencyContactsRes, vaultRes] = await Promise.all([
         supabase
           .from("patient_medications")
           .select("id")
@@ -73,6 +73,18 @@ export default function PatientDashboard() {
           .select("id")
           .eq("patient_account_id", patientAccount.id),
         supabase
+          .from("patient_vitals")
+          .select("id")
+          .eq("patient_account_id", patientAccount.id),
+        supabase
+          .from("patient_pharmacies")
+          .select("id")
+          .eq("patient_account_id", patientAccount.id),
+        supabase
+          .from("patient_emergency_contacts")
+          .select("id")
+          .eq("patient_account_id", patientAccount.id),
+        supabase
           .from("patient_medical_vault")
           .select("id, blood_type, updated_at")
           .eq("patient_id", patientAccount.id)
@@ -84,6 +96,9 @@ export default function PatientDashboard() {
       const conditionsCount = conditionsRes.data?.length || 0;
       const surgeriesCount = surgeriesRes.data?.length || 0;
       const immunizationsCount = immunizationsRes.data?.length || 0;
+      const vitalsCount = vitalsRes.data?.length || 0;
+      const pharmaciesCount = pharmaciesRes.data?.length || 0;
+      const emergencyContactsCount = emergencyContactsRes.data?.length || 0;
       
       return {
         id: vaultRes.data?.id,
@@ -94,7 +109,10 @@ export default function PatientDashboard() {
         conditions_count: conditionsCount,
         surgeries_count: surgeriesCount,
         immunizations_count: immunizationsCount,
-        has_data: medicationsCount > 0 || allergiesCount > 0 || conditionsCount > 0 || surgeriesCount > 0 || immunizationsCount > 0 || !!vaultRes.data?.blood_type
+        vitals_count: vitalsCount,
+        pharmacies_count: pharmaciesCount,
+        emergency_contacts_count: emergencyContactsCount,
+        has_data: medicationsCount > 0 || allergiesCount > 0 || conditionsCount > 0 || surgeriesCount > 0 || immunizationsCount > 0 || vitalsCount > 0 || pharmaciesCount > 0 || emergencyContactsCount > 0 || !!vaultRes.data?.blood_type
       };
     },
     enabled: !!patientAccount?.id,
