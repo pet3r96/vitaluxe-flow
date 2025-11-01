@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -49,6 +49,20 @@ export function AdminSidebar() {
       prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
     );
   };
+
+  // Initialize open sections for those with active children (only once on mount)
+  useEffect(() => {
+    // Only initialize if no sections are manually opened yet
+    if (openSections.length === 0) {
+      const initialOpen = adminMenus
+        .filter((section) => section.isParent && hasActiveChild(section.items))
+        .map((section) => section.title);
+      if (initialOpen.length > 0) {
+        setOpenSections(initialOpen);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const handleSignOut = async () => {
     try {
@@ -173,7 +187,7 @@ export function AdminSidebar() {
           return (
             <SidebarGroup key={section.title}>
               <Collapsible
-                open={isSectionOpen || isActive}
+                open={isSectionOpen}
                 onOpenChange={() => toggleSection(section.title)}
               >
                 <SidebarGroupLabel className="p-0">
@@ -187,7 +201,7 @@ export function AdminSidebar() {
                     >
                       {SectionIcon && <SectionIcon className="h-4 w-4" />}
                       <span className="flex-1 text-left">{section.title}</span>
-                      {isSectionOpen || isActive ? (
+                      {isSectionOpen ? (
                         <ChevronDown className="h-4 w-4" />
                       ) : (
                         <ChevronRight className="h-4 w-4" />
