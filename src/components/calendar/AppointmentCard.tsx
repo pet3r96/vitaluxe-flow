@@ -39,12 +39,12 @@ export function AppointmentCard({ appointment, onClick, isDragging, style }: App
     >
       <div className="flex flex-col gap-1">
         {isPending && (
-          <Badge variant="secondary" className="w-fit text-[10px] py-0 px-1 bg-amber-500 text-white dark:bg-amber-600">
+          <Badge variant="warning" size="xs">
             🔔 PENDING APPROVAL
           </Badge>
         )}
         {isWalkIn && !isPending && (
-          <Badge variant="secondary" className="w-fit text-[10px] py-0 px-1 bg-amber-500 text-white dark:bg-amber-600">
+          <Badge variant="warning" size="xs">
             <Zap className="h-2.5 w-2.5 mr-0.5" />
             WALK-IN
           </Badge>

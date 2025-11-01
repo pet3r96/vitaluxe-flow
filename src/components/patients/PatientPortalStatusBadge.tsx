@@ -14,7 +14,7 @@ export const PatientPortalStatusBadge = ({
 }: PatientPortalStatusBadgeProps) => {
   if (!hasPortalAccount) {
     return (
-      <Badge variant="outline" className="border-muted-foreground/30">
+      <Badge variant="outline" size="sm">
         <Lock className="w-3 h-3 mr-1" />
         No Portal Access
       </Badge>
@@ -23,7 +23,7 @@ export const PatientPortalStatusBadge = ({
 
   if (status === 'invited' && !lastLoginAt) {
     return (
-      <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/30">
+      <Badge variant="warning" size="sm">
         <Mail className="w-3 h-3 mr-1" />
         Invited
       </Badge>
@@ -31,7 +31,7 @@ export const PatientPortalStatusBadge = ({
   }
 
   return (
-    <Badge variant="default" className="bg-green-500/10 text-green-500 border-green-500/30">
+    <Badge variant="success" size="sm">
       <CheckCircle2 className="w-3 h-3 mr-1" />
       Active Portal
     </Badge>

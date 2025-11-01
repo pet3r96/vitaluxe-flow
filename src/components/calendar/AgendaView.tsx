@@ -147,7 +147,7 @@ export function AgendaView({ currentDate, appointments, onAppointmentClick }: Ag
 
                         <div className="flex flex-col items-end gap-2">
                           {isWalkIn && (
-                            <Badge className="bg-amber-500 text-white hover:bg-amber-600">
+                            <Badge variant="warning" size="sm">
                               <Zap className="h-3 w-3 mr-1" />
                               Walk-in
                             </Badge>

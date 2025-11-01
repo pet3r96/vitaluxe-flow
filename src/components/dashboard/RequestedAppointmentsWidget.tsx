@@ -118,7 +118,7 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
             <h2 className="text-xl font-semibold text-foreground">Requested Appointments</h2>
           </div>
           {requestedAppointments.length > 0 && (
-            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600">
+            <Badge variant="warning" size="sm">
               {requestedAppointments.length}
             </Badge>
           )}

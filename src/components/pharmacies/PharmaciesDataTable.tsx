@@ -212,7 +212,7 @@ export const PharmaciesDataTable = () => {
                         No Account
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <Badge variant="success" size="sm" className="gap-1">
                         Active
                       </Badge>
                     )}

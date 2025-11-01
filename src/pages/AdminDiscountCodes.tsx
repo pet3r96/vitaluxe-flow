@@ -124,15 +124,15 @@ const AdminDiscountCodes = () => {
     const isMaxedOut = code.max_uses && code.current_uses >= code.max_uses;
 
     if (!code.active) {
-      return <Badge variant="secondary">Inactive</Badge>;
+      return <Badge variant="secondary" size="sm">Inactive</Badge>;
     }
     if (isExpired) {
-      return <Badge variant="destructive">Expired</Badge>;
+      return <Badge variant="destructive" size="sm">Expired</Badge>;
     }
     if (isMaxedOut) {
-      return <Badge variant="destructive">Max Uses Reached</Badge>;
+      return <Badge variant="destructive" size="sm">Max Uses Reached</Badge>;
     }
-    return <Badge variant="default" className="bg-green-600">Active</Badge>;
+    return <Badge variant="success" size="sm">Active</Badge>;
   };
 
   return (

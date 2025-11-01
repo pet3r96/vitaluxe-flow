@@ -147,25 +147,25 @@ export function DocumentCard({ document }: DocumentCardProps) {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Scope Badge - Practice vs Patient */}
             {document.assigned_patient_id || (document.provider_document_patients && document.provider_document_patients.length > 0) ? (
-              <Badge className="bg-green-500 text-white">
+              <Badge variant="info" size="sm">
                 Patient Document
               </Badge>
             ) : (
-              <Badge className="bg-blue-500 text-white">
+              <Badge variant="info" size="sm" className="bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30">
                 Practice Document
               </Badge>
             )}
             
             {/* Patient name badge - shown inline for direct assignment */}
             {document.assigned_patient_id && document.patients?.name && (
-              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+              <Badge variant="success" size="sm">
                 {document.patients.name}
               </Badge>
             )}
             
             {/* Patient name badge - shown inline for multi-assignment (first patient + count) */}
             {document.provider_document_patients && document.provider_document_patients.length > 0 && (
-              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+              <Badge variant="success" size="sm">
                 {document.provider_document_patients[0]?.patients?.name}
                 {document.provider_document_patients.length > 1 && ` +${document.provider_document_patients.length - 1}`}
               </Badge>

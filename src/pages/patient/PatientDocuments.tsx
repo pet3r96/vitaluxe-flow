@@ -410,17 +410,17 @@ export default function PatientDocuments() {
 
   const getSourceBadge = (source: string) => {
     if (source === "patient_uploaded") {
-      return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20">My Upload</Badge>;
+      return <Badge variant="info" size="sm" className="bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30">My Upload</Badge>;
     }
-    return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Practice Document</Badge>;
+    return <Badge variant="success" size="sm">Practice Document</Badge>;
   };
 
   const getShareBadge = (shareWithPractice: boolean, source: string) => {
     if (source === "provider_assigned") return <span className="text-sm text-muted-foreground">N/A</span>;
     if (shareWithPractice) {
-      return <Badge className="bg-green-500/10 text-green-600">✓ Yes</Badge>;
+      return <Badge variant="success" size="sm">✓ Yes</Badge>;
     }
-    return <Badge variant="secondary">Private</Badge>;
+    return <Badge variant="secondary" size="sm">Private</Badge>;
   };
 
   const clearFilters = () => {

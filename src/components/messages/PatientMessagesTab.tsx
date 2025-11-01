@@ -308,7 +308,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
                         <div className="flex items-center gap-2 mt-2">
                           {getUrgencyBadge(latestMsg.urgency)}
                           {latestMsg.resolved && (
-                            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
+                            <Badge variant="success" size="sm">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
                               Resolved
                             </Badge>

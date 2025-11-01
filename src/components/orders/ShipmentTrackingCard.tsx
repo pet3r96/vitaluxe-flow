@@ -215,20 +215,20 @@ export const ShipmentTrackingCard = ({
 
   const getStatusBadge = (status: string) => {
     if (!status) {
-      return <Badge variant="outline" className="bg-amber-100 text-amber-800"><Package className="h-3 w-3 mr-1" />Awaiting Updates</Badge>;
+      return <Badge variant="warning" size="sm"><Package className="h-3 w-3 mr-1" />Awaiting Updates</Badge>;
     }
     
     switch (status.toLowerCase()) {
       case "delivered":
-        return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle2 className="h-3 w-3 mr-1" />Delivered</Badge>;
+        return <Badge variant="success" size="sm"><CheckCircle2 className="h-3 w-3 mr-1" />Delivered</Badge>;
       case "in_transit":
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Truck className="h-3 w-3 mr-1" />In Transit</Badge>;
+        return <Badge variant="info" size="sm" className="bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30"><Truck className="h-3 w-3 mr-1" />In Transit</Badge>;
       case "pre_transit":
-        return <Badge variant="outline" className="bg-amber-100 text-amber-800"><Package className="h-3 w-3 mr-1" />Awaiting Carrier Updates</Badge>;
+        return <Badge variant="warning" size="sm"><Package className="h-3 w-3 mr-1" />Awaiting Carrier Updates</Badge>;
       case "unknown":
-        return <Badge variant="outline" className="bg-amber-100 text-amber-800"><Package className="h-3 w-3 mr-1" />Awaiting Carrier Updates</Badge>;
+        return <Badge variant="warning" size="sm"><Package className="h-3 w-3 mr-1" />Awaiting Carrier Updates</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" size="sm">{status}</Badge>;
     }
   };
 

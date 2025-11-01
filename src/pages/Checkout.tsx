@@ -1182,7 +1182,7 @@ export default function Checkout() {
                   {line.product?.requires_prescription && (
                     <div className="mt-2 space-y-2">
                       {line.prescription_url ? (
-                        <Badge variant="default" className="bg-green-600">
+                        <Badge variant="success" size="sm">
                           <FileCheck className="h-3 w-3 mr-1" />
                           Prescription Uploaded
                         </Badge>
