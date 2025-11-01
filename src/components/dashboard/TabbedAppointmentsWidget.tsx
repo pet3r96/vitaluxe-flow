@@ -273,7 +273,7 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : appointments && appointments.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2 min-h-[400px] max-h-[400px] overflow-y-auto">
                   {appointments.map((appointment) => (
                     <Button
                       key={appointment.id}
@@ -328,7 +328,7 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : upcomingAppointments && upcomingAppointments.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2 min-h-[400px] max-h-[400px] overflow-y-auto">
                   {upcomingAppointments.map((appointment) => (
                     <Button
                       key={appointment.id}
@@ -386,7 +386,7 @@ export function TabbedAppointmentsWidget() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2 min-h-[400px] max-h-[400px] overflow-y-auto">
                   {requestedAppointments.map((appointment: any) => {
                     const patientProfile = appointment?.patient_accounts?.profiles;
                     const patientName = patientProfile?.full_name || patientProfile?.name || 'Unknown Patient';
