@@ -84,10 +84,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Hard 30-minute session timeout with activity refresh
   const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
   const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // Refresh if < 5 minutes remaining
+  const MAX_SESSION_MS = 120 * 60 * 1000; // 2 hours maximum
   const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
+  const getSessionStartKey = (userId: string) => `vitaluxe_session_start_${userId}`;
   const hardTimerRef = useRef<number | null>(null);
   const checkIntervalRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const activityListenersAttached = useRef(false);
   
   const navigate = useNavigate();
   
@@ -234,6 +237,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserRole(null);
     }, 2000); // Reduced from 8000ms to 2000ms
 
+    // Activity tracking for session extension
+    const handleActivity = () => {
+      if (!user?.id) return;
+      
+      const now = Date.now();
+      lastActivityRef.current = now;
+      
+      // Check if we should extend the session
+      const sessionExpStr = localStorage.getItem(getSessionExpKey(user.id));
+      const sessionStartStr = localStorage.getItem(getSessionStartKey(user.id));
+      
+      if (!sessionExpStr || !sessionStartStr) return;
+      
+      const sessionExp = parseInt(sessionExpStr);
+      const sessionStart = parseInt(sessionStartStr);
+      const timeRemaining = sessionExp - now;
+      const totalSessionTime = now - sessionStart;
+      
+      // Only extend if:
+      // 1. Less than 5 minutes remaining
+      // 2. Haven't exceeded 2 hour max session
+      if (timeRemaining < REFRESH_THRESHOLD_MS && totalSessionTime < MAX_SESSION_MS) {
+        const newExpireAt = now + HARD_SESSION_TIMEOUT_MS;
+        const cappedExpireAt = Math.min(newExpireAt, sessionStart + MAX_SESSION_MS);
+        
+        localStorage.setItem(getSessionExpKey(user.id), String(cappedExpireAt));
+        
+        // Clear and reset timeout
+        if (hardTimerRef.current) {
+          clearTimeout(hardTimerRef.current);
+        }
+        
+        const timeUntilExpiry = cappedExpireAt - now;
+        hardTimerRef.current = window.setTimeout(() => {
+          logger.info('Extended session timer triggered logout');
+          void doHardSignOut();
+        }, timeUntilExpiry);
+        
+        logger.info('Session extended due to activity', {
+          newExpiresAt: new Date(cappedExpireAt).toISOString(),
+          minutesAdded: Math.round((cappedExpireAt - sessionExp) / 60000)
+        });
+      }
+    };
+
+    // Attach activity listeners once
+    if (user?.id && !activityListenersAttached.current) {
+      const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+      events.forEach(event => {
+        document.addEventListener(event, handleActivity, { passive: true });
+      });
+      activityListenersAttached.current = true;
+      
+      logger.info('Activity listeners attached');
+    }
+
     // Event handlers for tab visibility and focus
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -284,9 +343,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             checkIntervalRef.current = null;
           }
           
-          // Set hard session expiration (60 minutes from now)
+          // Set hard session expiration (30 minutes from now)
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
+          const sessionStart = Date.now();
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
+          localStorage.setItem(getSessionStartKey(session.user.id), String(sessionStart));
           lastActivityRef.current = Date.now();
           
           // Schedule primary hard timeout
@@ -302,7 +363,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           logger.info('Session timer started', { 
             expiresAt: new Date(expireAt).toISOString(),
-            minutesRemaining: 60 
+            minutesRemaining: 30
           });
           
             // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
@@ -411,6 +472,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Clear session storage using captured ID
           if (userIdToClean) {
             localStorage.removeItem(getSessionExpKey(userIdToClean));
+            localStorage.removeItem(getSessionStartKey(userIdToClean));
           }
           
           // Clear 2FA verification using captured ID

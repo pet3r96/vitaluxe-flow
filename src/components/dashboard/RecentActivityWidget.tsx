@@ -90,16 +90,59 @@ export function RecentActivityWidget({ className }: { className?: string }) {
         }));
       }
 
-      // Admin: show threads the admin created or participates in (not global)
+      // Admin: show threads the admin created or participates in
       if (effectiveRole === 'admin') {
-        const { data: adminThreads } = await supabase
-          .from('message_threads')
-          .select('id, subject, updated_at, thread_type')
-          .or(`created_by.eq.${effectiveUserId},thread_participants.user_id.eq.${effectiveUserId}`)
-          .order('updated_at', { ascending: false })
-          .limit(5);
+        // Use two separate queries to avoid nested relation issues with or()
+        const [createdThreadsResult, participantThreadsResult] = await Promise.all([
+          // Threads created by admin
+          supabase
+            .from('message_threads')
+            .select('id, subject, updated_at, thread_type')
+            .eq('created_by', effectiveUserId)
+            .order('updated_at', { ascending: false })
+            .limit(10),
+          
+          // Threads where admin is participant
+          supabase
+            .from('thread_participants')
+            .select(`
+              thread_id,
+              message_threads!inner(
+                id,
+                subject,
+                updated_at,
+                thread_type
+              )
+            `)
+            .eq('user_id', effectiveUserId)
+            .order('message_threads.updated_at', { ascending: false })
+            .limit(10)
+        ]);
 
-        return (adminThreads || []).map(t => ({
+        // Combine and deduplicate threads
+        const threadMap = new Map();
+        
+        // Add created threads
+        createdThreadsResult.data?.forEach((thread: any) => {
+          threadMap.set(thread.id, thread);
+        });
+        
+        // Add participant threads
+        participantThreadsResult.data?.forEach((pt: any) => {
+          const thread = pt.message_threads;
+          if (thread && !threadMap.has(thread.id)) {
+            threadMap.set(thread.id, thread);
+          }
+        });
+
+        // Sort by updated_at and take top 5
+        const allThreads = Array.from(threadMap.values())
+          .sort((a: any, b: any) => 
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          )
+          .slice(0, 5);
+
+        return allThreads.map((t: any) => ({
           type: 'message',
           icon: FileText,
           description: `${t.thread_type === 'support' ? 'Support' : 'Order Issue'}: ${t.subject}`,

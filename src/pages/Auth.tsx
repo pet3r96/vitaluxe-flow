@@ -20,6 +20,8 @@ import { Info, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 import { cn } from "@/lib/utils";
+import { useErrorDialog } from "@/hooks/use-error-dialog";
+import { ErrorAlertDialog } from "@/components/ui/error-alert-dialog";
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -49,10 +51,9 @@ const Auth = () => {
     user2FAPhone,
     twoFAStatusChecked
   } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const { theme } = useTheme();
+  const { errorDialog, showError, closeError } = useErrorDialog();
   const currentLogo = theme === "light" ? logoLight : logoDark;
 
   // Doctor-specific fields
@@ -109,11 +110,10 @@ const Auth = () => {
     if (!isLogin) {
       const passwordValidation = validatePasswordStrength(password, email);
       if (!passwordValidation.valid) {
-        toast({
-          title: "Weak Password",
-          description: passwordValidation.feedback || "Password does not meet security requirements",
-          variant: "destructive"
-        });
+        showError(
+          "Weak Password",
+          passwordValidation.feedback || "Password does not meet security requirements"
+        );
         setLoading(false);
         return;
       }
@@ -181,11 +181,10 @@ const Auth = () => {
               logger.error("Failed to track login attempt", trackError);
             });
           }
-          toast({
-            title: "Error",
-            description: error.message || "Failed to sign in",
-            variant: "destructive"
-          });
+          showError(
+            "Login Failed",
+            error.message || "Invalid email or password. Please check your credentials and try again."
+          );
         }
       } else {
         const roleData = role === "doctor" ? {
@@ -217,15 +216,12 @@ const Auth = () => {
           address_verified_at: pharmacyAddress.verified_at,
           statesServiced
         };
-        const {
-          error
-        } = await signUp(email, password, name, role, roleData, providerFullName, prescriberName);
+        const { error } = await signUp(email, password, name, role, roleData, providerFullName, prescriberName);
         if (error) {
-          toast({
-            title: "Error",
-            description: error.message || "Failed to sign up",
-            variant: "destructive"
-          });
+          showError(
+            "Sign Up Failed",
+            error.message || "Failed to create your account. Please try again."
+          );
         } else {
           setShowVerificationMessage(true);
         }
@@ -526,6 +522,13 @@ const Auth = () => {
       </Card>
 
       <ForgotPasswordDialog open={showForgotPassword} onOpenChange={setShowForgotPassword} />
+      
+      <ErrorAlertDialog
+        open={errorDialog.open}
+        onOpenChange={closeError}
+        title={errorDialog.title}
+        description={errorDialog.description}
+      />
 
     </div>;
 };
