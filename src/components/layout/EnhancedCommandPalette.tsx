@@ -144,7 +144,7 @@ export function EnhancedCommandPalette() {
     <>
       <Button
         variant="outline"
-        className="relative h-9 w-full justify-start text-sm text-muted-foreground sm:w-64 lg:w-80"
+        className="relative h-9 w-32 justify-start text-sm text-muted-foreground sm:w-48 md:w-56 lg:w-72 xl:w-80"
         onClick={() => setOpen(true)}
       >
         <Search className="mr-2 h-4 w-4" />
