@@ -29,7 +29,7 @@ const AdminSettings = () => {
       </div>
 
       <Tabs defaultValue="practices" className="space-y-4">
-        <TabsList className="flex flex-wrap h-auto w-full justify-start gap-2 p-2 bg-muted">
+        <TabsList className="flex flex-wrap h-auto w-full justify-start gap-2 p-2 bg-accent/30 border-border/50">
           <TabsTrigger value="practices" className="gap-2">
             <Building2 className="h-4 w-4" />
             Practices
