@@ -25,7 +25,7 @@ export function GlobalImpersonationBanner({ children }: GlobalImpersonationBanne
     <>
       <ImpersonationBanner />
       {/* Add responsive top padding when impersonating to prevent content overlap */}
-      <div className={isImpersonating ? "pt-[60px] sm:pt-[52px]" : ""}>
+      <div className={isImpersonating ? "pt-[48px] sm:pt-[44px]" : ""}>
         {children}
       </div>
     </>

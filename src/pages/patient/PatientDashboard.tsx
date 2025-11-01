@@ -446,7 +446,7 @@ export default function PatientDashboard() {
         >
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-3 sm:p-4 md:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">Next Appointment</CardTitle>
+            <CardTitle className="text-[11px] sm:text-xs font-medium">Next Appointment</CardTitle>
             <div className="p-1.5 sm:p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
               <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
@@ -488,7 +488,7 @@ export default function PatientDashboard() {
         >
           <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-3 sm:p-4 md:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">Unread Messages</CardTitle>
+            <CardTitle className="text-[11px] sm:text-xs font-medium">Unread Messages</CardTitle>
             <div className="p-1.5 sm:p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
               <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               {unreadCount > 0 && (
@@ -518,7 +518,7 @@ export default function PatientDashboard() {
         >
           <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-3 sm:p-4 md:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">Active Medications</CardTitle>
+            <CardTitle className="text-[11px] sm:text-xs font-medium">Active Medications</CardTitle>
             <div className="p-1.5 sm:p-2 rounded-full bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
               <Pill className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
             </div>
@@ -543,7 +543,7 @@ export default function PatientDashboard() {
         >
           <div className="absolute inset-0 bg-gradient-to-br from-gold1/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-3 sm:p-4 md:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">Medical Vault</CardTitle>
+            <CardTitle className="text-[11px] sm:text-xs font-medium">Medical Vault</CardTitle>
             <div className="p-1.5 sm:p-2 rounded-full bg-gold1/10 group-hover:bg-gold1/20 transition-colors">
               <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gold1" />
             </div>
@@ -641,13 +641,13 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Recent Messages */}
-        <Card variant="modern" className="overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-accent/5 to-transparent">
-            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-accent" />
+        <Card variant="modern" className="overflow-hidden w-full">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-base sm:text-lg md:text-xl flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Recent Messages
             </CardTitle>
-            <CardDescription>Latest communications</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Latest communications</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
             {recentMessages.length > 0 ? (
