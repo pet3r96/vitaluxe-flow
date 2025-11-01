@@ -262,10 +262,10 @@ export const AccountsDataTable = () => {
       practice: "bg-primary text-primary-foreground",
       provider: "bg-primary/80 text-primary-foreground",
       pharmacy: "bg-secondary text-secondary-foreground",
-      topline: "bg-muted text-muted-foreground",
-      downline: "bg-card text-card-foreground",
+      topline: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
+      downline: "bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
     };
-    return colors[role] || "bg-muted";
+    return colors[role] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200";
   };
 
   // Don't run queries until auth is ready
