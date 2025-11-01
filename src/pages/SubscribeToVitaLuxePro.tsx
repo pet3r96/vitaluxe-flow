@@ -13,12 +13,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, Sparkles, CreditCard, ArrowLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { useTheme } from "next-themes";
+import logoLight from "@/assets/vitaluxe-logo-light.png";
+import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
 
 export default function SubscribeToVitaLuxePro() {
   const { user, effectiveRole } = useAuth();
   const { isSubscribed, loading: subscriptionLoading, status, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { theme } = useTheme();
+  const currentLogo = theme === "light" ? logoLight : logoDark;
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
@@ -211,9 +216,12 @@ export default function SubscribeToVitaLuxePro() {
         </Button>
 
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="h-8 w-8 text-amber-500" />
-            <h1 className="text-4xl font-bold">VitaLuxePro</h1>
+          <div className="flex items-center justify-center mb-4">
+            <img 
+              src={currentLogo} 
+              alt="Vitaluxe Services" 
+              className="h-20"
+            />
           </div>
           <p className="text-xl text-muted-foreground">
             Transform Your Medical Practice with Complete Virtual Front Desk + EMR System
@@ -248,10 +256,10 @@ export default function SubscribeToVitaLuxePro() {
             <CardContent className="space-y-4">
               <div>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$99.99</span>
+                  <span className="text-5xl font-bold text-[#BE9B4B]">$99.99</span>
                   <span className="text-muted-foreground/70">/month + processing fees</span>
                 </div>
-                <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+                <Badge className="bg-[#BE9B4B] hover:bg-[#D8C07A] text-white border-none">
                   7-Day Free Trial
                 </Badge>
               </div>
@@ -318,7 +326,7 @@ export default function SubscribeToVitaLuxePro() {
               <Button
                 onClick={handleStartTrial}
                 disabled={!agreedToTerms || isProcessing}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold h-12"
+                className="w-full bg-[#BE9B4B] hover:bg-[#D8C07A] text-white font-semibold h-12"
               >
                 {isProcessing ? (
                   <>

@@ -129,11 +129,11 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-            <p className="text-amber-900 dark:text-amber-100 font-medium mb-2">
+          <div className="bg-[#BE9B4B]/10 border border-[#BE9B4B]/30 rounded-lg p-4">
+            <p className="text-foreground font-medium mb-2">
               No Payment Methods Found
             </p>
-            <p className="text-sm text-amber-800 dark:text-amber-200">
+            <p className="text-sm text-muted-foreground">
               Your payment method will be charged $99.99/month plus processing fees after your 7-day free trial ends.
               Please add a credit card or bank account to your profile to continue.
             </p>

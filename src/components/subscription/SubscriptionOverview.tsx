@@ -47,7 +47,7 @@ export function SubscriptionOverview({ subscription }: SubscriptionOverviewProps
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-amber-500" />
+              <Sparkles className="h-5 w-5 text-[#BE9B4B]" />
               VitaLuxePro
             </CardTitle>
             <CardDescription className="mt-1">Complete virtual front desk + EMR system</CardDescription>
@@ -79,8 +79,8 @@ export function SubscriptionOverview({ subscription }: SubscriptionOverviewProps
         </div>
 
         {subscription.status === 'trial' && (
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <p className="text-sm text-amber-900 dark:text-amber-100">
+          <div className="p-3 bg-[#BE9B4B]/10 border border-[#BE9B4B]/30 rounded-lg">
+            <p className="text-sm text-foreground">
               Your free trial is active. Add a payment method before it ends to continue accessing all features.
             </p>
           </div>

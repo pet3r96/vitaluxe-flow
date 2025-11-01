@@ -64,7 +64,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
       <DialogContent className="max-w-[872px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-6 w-6 text-amber-500" />
+            <Sparkles className="h-6 w-6 text-[#BE9B4B]" />
             <DialogTitle className="text-2xl">Transform Your Practice with VitaLuxePro</DialogTitle>
           </div>
           <DialogDescription className="text-base">
@@ -75,10 +75,10 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
         <div className="space-y-6 my-6">
           <div className="bg-accent/50 p-6 rounded-lg border border-border">
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">$99.99</span>
+              <span className="text-5xl font-bold text-[#BE9B4B]">$99.99</span>
               <span className="text-white">/month + processing fees</span>
             </div>
-            <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+            <Badge className="bg-[#BE9B4B] hover:bg-[#D8C07A] text-white border-none">
               7-Day Free Trial
             </Badge>
           </div>
@@ -105,7 +105,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
           <div className="space-y-3 pt-4">
             <Button
               onClick={handleStartTrial}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold h-12 text-base"
+              className="w-full bg-[#BE9B4B] hover:bg-[#D8C07A] text-white font-semibold h-12 text-base"
             >
               Start 7-Day Free Trial
             </Button>
