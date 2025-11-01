@@ -94,10 +94,9 @@ export function AdminSidebar() {
             className={cn(
               "object-contain transition-all duration-200",
               isCollapsed
-                ? "max-w-[56px] max-h-[56px] w-auto h-auto"
+                ? "w-12 h-12"
                 : "max-w-full w-auto h-16"
             )}
-            style={isCollapsed ? { maxWidth: '56px', maxHeight: '56px' } : undefined}
           />
         </div>
       </SidebarHeader>
