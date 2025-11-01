@@ -2,13 +2,13 @@ import { RepresentativesDataTable } from "@/components/admin/RepresentativesData
 
 const Representatives = () => {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold gold-text-modern">
-          Representatives Management
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl sm:text-5xl font-heading font-bold gold-text-modern tracking-tight">
+          Representatives
         </h1>
-        <p className="text-sm sm:text-base text-muted mt-2">
-          Manage topline and downline sales representatives
+        <p className="text-base text-muted-foreground">
+          Manage your topline and downline sales representatives
         </p>
       </div>
 
