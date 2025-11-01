@@ -9,25 +9,25 @@ export function QuickActionsPanel() {
   const actions = [
     {
       icon: Calendar,
-      label: "View My Schedule (See your appointments)",
+      label: "View My Schedule",
       onClick: () => navigate("/practice-calendar"),
       color: "text-primary",
     },
     {
       icon: Users,
-      label: "Review Patient Vault (Access patient records)",
+      label: "Review Patient Vault",
       onClick: () => navigate("/patients"),
       color: "text-blue-600",
     },
     {
       icon: FileText,
-      label: "Document Center (Manage practice and patient files)",
+      label: "Document Center",
       onClick: () => navigate("/document-center"),
       color: "text-green-600",
     },
     {
       icon: AlertCircle,
-      label: "Patient Follow-Ups (View reminders)",
+      label: "Patient Follow-Ups",
       onClick: () => navigate("/patients"),
       color: "text-orange-600",
     },

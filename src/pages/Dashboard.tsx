@@ -593,24 +593,46 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
           {/* Main Content Area - 3/4 width */}
           <div className="lg:col-span-3 space-y-4 lg:space-y-6">
-            {/* Top Row - Orders & Recent Activity */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-              <OrdersBreakdown />
-              <RecentActivityWidget />
-            </div>
-
-            {/* Middle Row - Appointments & Waiting Room */}
+            {/* Top Row - Appointments & Waiting Room */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <TabbedAppointmentsWidget />
               <WaitingRoomWidget />
             </div>
 
-            {/* Bottom Row - Communications */}
-            <TabbedCommunicationsWidget />
+            {/* Middle Row - Communications & Orders */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+              <TabbedCommunicationsWidget />
+              <OrdersBreakdown />
+            </div>
+
+            {/* Bottom Row - Recent Activity */}
+            <RecentActivityWidget />
           </div>
 
-          {/* Right Sidebar - 1/4 width - Search & Quick Actions */}
+          {/* Right Sidebar - 1/4 width - Stats, Search & Quick Actions */}
           <div className="lg:col-span-1 space-y-4 lg:space-y-6">
+            {/* Total Orders */}
+            <StatCardWithChart
+              title="Total Orders"
+              metricKey="orders"
+              icon={ShoppingCart}
+              description={effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders"}
+              currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
+              role={effectiveRole}
+              userId={effectiveUserId}
+            />
+
+            {/* Products */}
+            <StatCardWithChart
+              title="Products"
+              metricKey="products"
+              icon={Package}
+              description="Active products"
+              currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
+              role={effectiveRole}
+              userId={effectiveUserId}
+            />
+
             <div className="w-full">
               <PatientQuickSearch />
             </div>
