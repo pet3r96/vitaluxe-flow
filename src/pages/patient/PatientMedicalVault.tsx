@@ -432,7 +432,7 @@ export default function PatientMedicalVault() {
       </Dialog>
 
       {/* Medical Vault Header - Compact Modern Design */}
-      <Card className="border-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white shadow-2xl overflow-hidden relative">
+      <Card className="border-0 bg-gold-gradient dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black text-white shadow-2xl overflow-hidden relative">
         {/* Animated gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-yellow-600/5 to-transparent animate-pulse"></div>
         
@@ -443,12 +443,12 @@ export default function PatientMedicalVault() {
             {/* Modern Shield Icon with Glow Effect - 30% smaller */}
             <div className="relative">
               <div className="absolute inset-0 bg-gold1/30 blur-2xl rounded-full animate-pulse"></div>
-              <ShieldCheck className="h-16 w-16 text-gold1 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
+              <ShieldCheck className="h-16 w-16 text-white dark:text-gold1 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
             </div>
             
             {/* Title - 30% smaller */}
             <div className="text-center space-y-1">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white dark:bg-gradient-to-r dark:from-yellow-400 dark:via-yellow-500 dark:to-yellow-600 dark:bg-clip-text dark:text-transparent">
                 {isLoading ? (
                   "Loading Secure Medical Vault"
                 ) : error ? (
@@ -461,7 +461,7 @@ export default function PatientMedicalVault() {
                   "Patient Secure Medical Vault"
                 )}
               </h1>
-              <p className="text-gray-300 text-xs md:text-sm font-light tracking-wide">
+              <p className="text-white dark:text-gray-300 text-xs md:text-sm font-light tracking-wide">
                 powered by VitaLuxe Services
               </p>
             </div>
