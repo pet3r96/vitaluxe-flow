@@ -61,13 +61,13 @@ export function StatCardWithChart({
         <div className="flex items-center gap-3">
           <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
           <div className="flex-1">
-            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
               {title}
             </h3>
             {isLoading ? (
               <Skeleton className="h-8 sm:h-9 w-20" />
             ) : (
-              <p className="text-2xl sm:text-3xl font-bold text-foreground transition-all duration-300">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white transition-all duration-300">
                 {displayValue}
               </p>
             )}
@@ -77,7 +77,7 @@ export function StatCardWithChart({
 
       {/* Time Period Selector */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-xs text-gray-600 dark:text-gray-400">{description}</p>
         <div className="flex gap-1">
           {TIME_PERIODS.map((period) => (
             <button
@@ -107,7 +107,7 @@ export function StatCardWithChart({
             {trend !== 'neutral' && (trend === 'up' ? '+' : '')}
             {percentChange.toFixed(1)}%
           </span>
-          <span className="text-muted-foreground">vs last period</span>
+          <span className="text-gray-600 dark:text-gray-400">vs last period</span>
         </div>
       )}
 
