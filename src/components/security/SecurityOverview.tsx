@@ -151,7 +151,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
               <span className="text-sm">{encryptionCoverage?.toFixed(0) || 0}%</span>
             </div>
             <Progress value={encryptionCoverage || 0} className="h-2" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm pt-2">
               <div>
                 <p className="text-muted-foreground">RLS Policies</p>
                 <p className="font-medium flex items-center gap-1">
@@ -178,7 +178,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">PHI Accesses</CardTitle>
