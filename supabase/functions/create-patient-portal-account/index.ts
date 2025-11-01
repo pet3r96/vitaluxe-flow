@@ -82,47 +82,94 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log('[create-patient-portal-account] Processing request:', {
+      authenticatedUser: user.id,
+      isImpersonating,
+      effectiveUserId,
+      roles: roles.map(r => r.role),
+      patientId
+    });
+
     // Determine effective practice ID for subscription check
     let effectivePracticeId: string | null = null;
     const isAdminRole = roles.some(r => r.role === 'admin');
-
-    // First, check if effective user is a doctor (practice owner)
-    const { data: doctorProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('id', effectiveUserId)
-      .maybeSingle();
-
-    // Check if this profile has doctor role
     const isDoctorRole = roles.some(r => r.role === 'doctor');
+    const isProviderRole = roles.some(r => r.role === 'provider');
 
-    if (doctorProfile && isDoctorRole) {
-      // Doctor/practice owner - practice_id is their own user_id
-      effectivePracticeId = doctorProfile.id;
-    } else {
-      // Check if they're a provider
-      const { data: providerProfile } = await supabaseAdmin
-        .from('providers')
-        .select('practice_id')
-        .eq('user_id', effectiveUserId)
+    // CRITICAL: For admins not impersonating, immediately fetch patient's practice
+    if (isAdminRole && !isImpersonating) {
+      console.log('[create-patient-portal-account] Admin (not impersonating) - fetching patient practice context');
+      
+      const { data: patientData, error: patientError } = await supabaseAdmin
+        .from('patient_accounts')
+        .select('practice_id, name, email')
+        .eq('id', patientId)
         .maybeSingle();
       
-      if (providerProfile && providerProfile.practice_id) {
-        effectivePracticeId = providerProfile.practice_id;
+      console.log('[create-patient-portal-account] Patient lookup result:', { 
+        found: !!patientData,
+        practiceId: patientData?.practice_id,
+        patientName: patientData?.name,
+        error: patientError?.message 
+      });
+      
+      if (patientError) {
+        console.error('[create-patient-portal-account] Patient lookup failed:', patientError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Patient not found',
+            details: patientError.message 
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!patientData) {
+        console.error('[create-patient-portal-account] Patient not found in database');
+        return new Response(
+          JSON.stringify({ error: 'Patient not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (patientData.practice_id) {
+        effectivePracticeId = patientData.practice_id;
+        console.log('[create-patient-portal-account] Admin using patient practice context:', { 
+          effectivePracticeId,
+          patientName: patientData.name
+        });
+      } else {
+        console.error('[create-patient-portal-account] Patient has no practice_id');
+        return new Response(
+          JSON.stringify({ error: 'Patient is not associated with a practice' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
-    // For admins without practice context, get practice_id from patient record
-    if (!effectivePracticeId && isAdminRole && !isImpersonating) {
-      const { data: patientData } = await supabaseAdmin
-        .from('patient_accounts')
-        .select('practice_id')
-        .eq('id', patientId)
+    // If admin already got practice context above, skip doctor/provider checks
+    if (!effectivePracticeId) {
+      // First, check if effective user is a doctor (practice owner)
+      const { data: doctorProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('id', effectiveUserId)
         .maybeSingle();
 
-      if (patientData?.practice_id) {
-        effectivePracticeId = patientData.practice_id;
-        console.log('[create-patient-portal-account] Admin using patient practice context:', { effectivePracticeId });
+      if (doctorProfile && isDoctorRole) {
+        // Doctor/practice owner - practice_id is their own user_id
+        effectivePracticeId = doctorProfile.id;
+      } else {
+        // Check if they're a provider
+        const { data: providerProfile } = await supabaseAdmin
+          .from('providers')
+          .select('practice_id')
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+        
+        if (providerProfile && providerProfile.practice_id) {
+          effectivePracticeId = providerProfile.practice_id;
+        }
       }
     }
 

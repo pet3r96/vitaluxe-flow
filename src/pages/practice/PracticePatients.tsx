@@ -45,15 +45,24 @@ export default function PracticePatients() {
   // Invite individual patient mutation
   const invitePatientMutation = useMutation({
     mutationFn: async (patientId: string) => {
+      console.log('[PracticePatients] Inviting patient:', { patientId });
+      
       // Create portal account
       const { data: accountData, error: accountError } = await supabase.functions.invoke(
         'create-patient-portal-account',
         { body: { patientId } }
       );
 
+      console.log('[PracticePatients] Account creation response:', { 
+        success: !accountError, 
+        error: accountError,
+        data: accountData 
+      });
+
       if (accountError) {
         console.error('[Patient Portal] Edge function invocation error:', accountError);
-        throw accountError;
+        const errorMessage = accountError.message || 'Failed to create portal account';
+        throw new Error(errorMessage);
       }
 
       if (!accountData?.success) {
@@ -98,9 +107,26 @@ export default function PracticePatients() {
       toast.success(message);
       queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
     },
-    onError: (error: any) => {
-      toast.error('Failed to invite patient', {
-        description: error.message,
+    onError: (error: Error) => {
+      console.error('[PracticePatients] Failed to invite patient:', error);
+      
+      // Provide specific error guidance
+      let errorMessage = 'Failed to invite patient to portal';
+      let errorDescription = error.message;
+      
+      if (error.message.includes('No practice context') || error.message.includes('no_practice_context')) {
+        errorMessage = 'Unable to determine practice context';
+        errorDescription = 'Please try refreshing the page. If impersonating, please exit and re-enter impersonation mode.';
+      } else if (error.message.includes('not found')) {
+        errorMessage = 'Patient not found';
+        errorDescription = 'The patient may have been deleted. Please refresh the page.';
+      } else if (error.message.includes('not associated with a practice')) {
+        errorMessage = 'Patient has no practice association';
+        errorDescription = 'This patient needs to be associated with a practice first.';
+      }
+      
+      toast.error(errorMessage, {
+        description: errorDescription
       });
     },
   });

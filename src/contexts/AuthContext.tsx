@@ -1319,6 +1319,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clearImpersonation = async () => {
+    console.log('[AuthContext] Clearing impersonation');
+    
     // Update the log before clearing
     if (currentLogId) {
       try {
@@ -1331,11 +1333,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     
-    setImpersonatedRole(null);
-    setImpersonatedUserId(null);
-    setImpersonatedUserName(null);
-    setCurrentLogId(null);
-    // End server-side session
+    // End server-side session first
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const token = authSession?.access_token;
@@ -1350,9 +1348,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         logger.error('Error ending impersonation session', error);
       }
+      
+      // Verify session is actually cleared
+      try {
+        const { data: sessionCheck } = await supabase.functions.invoke('get-active-impersonation');
+        if (sessionCheck?.hasSession) {
+          logger.warn('[AuthContext] Impersonation session still active after end attempt');
+        } else {
+          logger.info('[AuthContext] Impersonation session successfully cleared');
+        }
+      } catch (verifyError) {
+        logger.error('[AuthContext] Error verifying impersonation session ended', verifyError);
+      }
     } catch (err) {
       logger.error('Error calling end-impersonation in clearImpersonation', err);
     }
+    
+    // Clear local state
+    setImpersonatedRole(null);
+    setImpersonatedUserId(null);
+    setImpersonatedUserName(null);
+    setCurrentLogId(null);
+    
     toast.success("Returned to your Admin account");
   };
 
