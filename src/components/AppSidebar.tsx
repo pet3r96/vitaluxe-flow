@@ -7,6 +7,7 @@ import { useResponsive } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/responsive/MobileBottomNav";
 import { menus } from "@/config/menus";
 import { Lock, LogOut, Sparkles } from "lucide-react";
+import { useTheme } from "next-themes";
 import {
   Sidebar,
   SidebarContent,
@@ -20,14 +21,19 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/vitaluxe-logo-dark-bg.png";
+import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
+import logoLight from "@/assets/vitaluxe-logo-light.png";
 
 export function AppSidebar() {
   const { state } = useSidebar();
+  const { theme } = useTheme();
   const { effectiveRole, isProviderAccount, isStaffAccount, signOut } = useAuth();
   const { isSubscribed } = useSubscription();
   const { isMobile } = useResponsive();
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+
+  // Determine which logo to use based on theme (default to dark)
+  const currentLogo = theme === "light" ? logoLight : logoDark;
 
   const roleMenus = effectiveRole 
     ? (isStaffAccount ? menus.staff : menus[effectiveRole]) || []
@@ -67,7 +73,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center justify-center p-4 lg:p-6">
           <img 
-            src={logo} 
+            src={currentLogo} 
             alt="Vitaluxe Services" 
             className={`transition-all duration-200 ${
               isCollapsed ? "h-8 sm:h-10" : "h-10 sm:h-12 md:h-14"
