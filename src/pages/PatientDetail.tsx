@@ -422,8 +422,7 @@ export default function PatientDetail() {
               </h1>
               {portalStatus && (
                 <PatientPortalStatusBadge 
-                  hasPortalAccount={portalStatus.has_portal_access || false}
-                  status={portalStatus.portal_status as 'active' | 'invited' | null}
+                  userId={portalStatus.user_id}
                   lastLoginAt={portalStatus.last_login_at}
                 />
               )}

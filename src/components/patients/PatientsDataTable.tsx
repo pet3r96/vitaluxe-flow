@@ -232,7 +232,7 @@ export const PatientsDataTable = () => {
       // Fetch patient details for email
       const { data: patient } = await supabase
         .from('patient_accounts')
-        .select('email, name, first_name, last_name, practice_id')
+        .select('id, email, name, first_name, last_name, practice_id')
         .eq('id', patientId)
         .single();
 
@@ -267,7 +267,7 @@ export const PatientsDataTable = () => {
 
       return { portalData, patient };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.emailError) {
         // Account created but email failed
         toast({
@@ -284,6 +284,29 @@ export const PatientsDataTable = () => {
           description: message,
         });
       }
+
+      // Log the portal access grant in audit logs
+      if (data.patient && effectivePracticeId) {
+        try {
+          await supabase.from('audit_logs').insert({
+            action_type: 'portal_access_granted',
+            entity_type: 'patient_portal_account',
+            entity_id: data.portalData.userId,
+            user_id: user?.id,
+            practice_id: effectivePracticeId,
+            metadata: {
+              patient_id: data.patient.id,
+              patient_email: data.patient.email,
+              patient_name: data.patient.name,
+              re_invited: data.portalData.alreadyHadAccount || false
+            }
+          });
+        } catch (auditError) {
+          console.error('[Patient Portal] Audit log failed:', auditError);
+          // Don't fail the operation if audit logging fails
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['patient-portal-status'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
@@ -442,7 +465,14 @@ export const PatientsDataTable = () => {
                                     <UserPlus className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Grant Portal Access</TooltipContent>
+                                <TooltipContent>
+                                  <div className="text-xs max-w-xs">
+                                    <p className="font-medium">Grant Portal Access</p>
+                                    <p className="text-muted-foreground mt-1">
+                                      Creates a portal account and sends invitation email to the patient
+                                    </p>
+                                  </div>
+                                </TooltipContent>
                               </Tooltip>
                             ) : portalStatusMap?.get(patient.id)?.has_portal_access ? (
                               <Tooltip>

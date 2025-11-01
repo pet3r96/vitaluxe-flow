@@ -229,8 +229,7 @@ export default function PracticePatients() {
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="font-semibold text-base sm:text-lg">{patient.name}</h3>
                     <PatientPortalStatusBadge
-                      hasPortalAccount={patient.has_portal_access}
-                      status={patient.portal_status as 'active' | 'invited' | null}
+                      userId={patient.user_id}
                       lastLoginAt={patient.last_login_at}
                     />
                   </div>

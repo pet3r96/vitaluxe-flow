@@ -12,8 +12,12 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Lock } from "lucide-react";
 
 export default function PatientAppointments() {
+  const { isSubscribed: practiceHasSubscription, practiceName, loading: subscriptionLoading } = usePatientPracticeSubscription();
   const [bookingOpen, setBookingOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -326,7 +330,24 @@ export default function PatientAppointments() {
           <h1 className="patient-section-header">My Appointments</h1>
           <p className="text-muted-foreground text-sm md:text-base">Manage your scheduled visits</p>
         </div>
-        <Button onClick={() => setBookingOpen(true)} className="touch-target">
+        
+        {!subscriptionLoading && !practiceHasSubscription && (
+          <Alert className="max-w-2xl">
+            <Lock className="h-4 w-4" />
+            <AlertTitle>Feature Temporarily Unavailable</AlertTitle>
+            <AlertDescription>
+              {practiceName ? `${practiceName}'s` : 'Your practice'} subscription has expired. 
+              You can view your existing appointments, but booking new appointments is currently unavailable. 
+              Please contact your practice for assistance.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Button 
+          onClick={() => setBookingOpen(true)} 
+          className="touch-target"
+          disabled={!practiceHasSubscription}
+        >
           <Calendar className="mr-2 h-4 w-4" />
           Book Appointment
         </Button>

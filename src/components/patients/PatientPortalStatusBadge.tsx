@@ -2,17 +2,16 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Mail, Lock } from "lucide-react";
 
 interface PatientPortalStatusBadgeProps {
-  hasPortalAccount: boolean;
-  status: 'active' | 'invited' | null;
+  userId?: string | null; // The auth.users.id - if null, no account created
   lastLoginAt?: string | null;
 }
 
 export const PatientPortalStatusBadge = ({
-  hasPortalAccount,
-  status,
+  userId,
   lastLoginAt,
 }: PatientPortalStatusBadgeProps) => {
-  if (!hasPortalAccount) {
+  // No portal account created yet
+  if (!userId) {
     return (
       <Badge variant="outline" size="sm">
         <Lock className="w-3 h-3 mr-1" />
@@ -21,15 +20,17 @@ export const PatientPortalStatusBadge = ({
     );
   }
 
-  if (status === 'invited' && !lastLoginAt) {
+  // Account created but never logged in (invitation sent but not activated)
+  if (!lastLoginAt) {
     return (
       <Badge variant="warning" size="sm">
         <Mail className="w-3 h-3 mr-1" />
-        Invited
+        Invitation Sent
       </Badge>
     );
   }
 
+  // Account created and has logged in at least once
   return (
     <Badge variant="success" size="sm">
       <CheckCircle2 className="w-3 h-3 mr-1" />

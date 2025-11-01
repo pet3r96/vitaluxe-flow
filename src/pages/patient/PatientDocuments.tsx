@@ -17,6 +17,9 @@ import { format } from "date-fns";
 import { PatientDocumentPreview } from "@/components/documents/PatientDocumentPreview";
 import { PatientDocumentEditDialog } from "@/components/documents/PatientDocumentEditDialog";
 import { PatientDocumentFilters, DocumentTypeFilter, SourceFilter } from "@/components/documents/PatientDocumentFilters";
+import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Lock } from "lucide-react";
 
 interface UnifiedDocument {
   id: string;
@@ -42,6 +45,7 @@ const ITEMS_PER_PAGE = 25;
 export default function PatientDocuments() {
   const { user, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
+  const { isSubscribed: practiceHasSubscription, practiceName, loading: subscriptionLoading } = usePatientPracticeSubscription();
 
   // Upload form state
   const [file, setFile] = useState<File | null>(null);
@@ -456,6 +460,19 @@ export default function PatientDocuments() {
         </Card>
       )}
 
+      {/* Practice subscription warning */}
+      {!subscriptionLoading && !practiceHasSubscription && (
+        <Alert className="mb-6">
+          <Lock className="h-4 w-4" />
+          <AlertTitle>Document Sharing Unavailable</AlertTitle>
+          <AlertDescription>
+            {practiceName ? `${practiceName}'s` : 'Your practice'} subscription has expired. 
+            You can view and download your existing documents, but uploading new documents to share with your practice is temporarily unavailable. 
+            Please contact your practice for assistance.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Upload Section */}
       <Card className="patient-card">
         <CardContent className="pt-6">
@@ -463,6 +480,11 @@ export default function PatientDocuments() {
           {!patientAccount && (
             <div className="mb-4 p-3 bg-muted rounded text-sm text-muted-foreground">
               Document upload is disabled until your patient account is set up.
+            </div>
+          )}
+          {!practiceHasSubscription && patientAccount && (
+            <div className="mb-4 p-3 bg-muted rounded text-sm text-muted-foreground">
+              Document upload is temporarily disabled due to practice subscription status.
             </div>
           )}
           <div className="grid gap-4 md:grid-cols-2">
@@ -553,7 +575,7 @@ export default function PatientDocuments() {
 
           <Button
             onClick={handleUpload}
-            disabled={!file || !documentType || uploading || !patientAccount}
+            disabled={!file || !documentType || uploading || !patientAccount || !practiceHasSubscription}
             className="mt-4"
           >
             <Upload className="h-4 w-4 mr-2" />
