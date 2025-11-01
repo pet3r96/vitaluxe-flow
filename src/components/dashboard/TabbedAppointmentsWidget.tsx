@@ -267,21 +267,21 @@ export function TabbedAppointmentsWidget() {
 
             <TabsContent value="today" className="mt-0">
               {appointmentsLoading ? (
-                <div className="space-y-3">
+                <div className="h-[400px] space-y-3 overflow-hidden">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : appointments && appointments.length > 0 ? (
-                <div className="space-y-2 min-h-[400px] max-h-[400px] overflow-y-auto">
+                <div className="h-[400px] overflow-y-auto space-y-2 pr-1">
                   {appointments.map((appointment) => (
                     <Button
                       key={appointment.id}
                       variant="ghost"
-                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg transition-all duration-200 hover:scale-[1.01]"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg overflow-hidden transition-all duration-200"
                       onClick={() => setSelectedAppointment(appointment)}
                     >
-                      <div className="flex items-start gap-3 w-full">
+                      <div className="flex items-start justify-between gap-3 w-full">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <div className="font-semibold truncate flex-1 text-base">
@@ -303,7 +303,7 @@ export function TabbedAppointmentsWidget() {
                             {format(new Date(appointment.start_time), "h:mm a")}
                           </div>
                         </div>
-                        <Badge className={`${getStatusColor(appointment.status)} font-medium`}>
+                        <Badge className={`${getStatusColor(appointment.status)} font-medium shrink-0`}>
                           {appointment.status}
                         </Badge>
                       </div>
@@ -311,7 +311,7 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No appointments today</p>
@@ -322,21 +322,21 @@ export function TabbedAppointmentsWidget() {
 
             <TabsContent value="upcoming" className="mt-0">
               {upcomingLoading ? (
-                <div className="space-y-3">
+                <div className="h-[400px] space-y-3 overflow-hidden">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : upcomingAppointments && upcomingAppointments.length > 0 ? (
-                <div className="space-y-2 min-h-[400px] max-h-[400px] overflow-y-auto">
+                <div className="h-[400px] overflow-y-auto space-y-2 pr-1">
                   {upcomingAppointments.map((appointment) => (
                     <Button
                       key={appointment.id}
                       variant="ghost"
-                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg transition-all duration-200 hover:scale-[1.01]"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg overflow-hidden transition-all duration-200"
                       onClick={() => setSelectedAppointment(appointment)}
                     >
-                      <div className="flex items-start gap-3 w-full">
+                      <div className="flex items-start justify-between gap-3 w-full">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <div className="font-semibold truncate flex-1 text-base">
@@ -360,7 +360,7 @@ export function TabbedAppointmentsWidget() {
                             {format(new Date(appointment.start_time), "h:mm a")}
                           </div>
                         </div>
-                        <Badge className={`${getStatusColor(appointment.status)} font-medium`}>
+                        <Badge className={`${getStatusColor(appointment.status)} font-medium shrink-0`}>
                           {appointment.status}
                         </Badge>
                       </div>
@@ -368,7 +368,7 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No upcoming appointments</p>
@@ -379,14 +379,14 @@ export function TabbedAppointmentsWidget() {
 
             <TabsContent value="requested" className="mt-0">
               {requestedAppointments.length === 0 ? (
-                <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <AlertCircle className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No pending appointment requests</p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2 min-h-[400px] max-h-[400px] overflow-y-auto">
+                <div className="h-[400px] overflow-y-auto space-y-2 pr-1">
                   {requestedAppointments.map((appointment: any) => {
                     const patientProfile = appointment?.patient_accounts?.profiles;
                     const patientName = patientProfile?.full_name || patientProfile?.name || 'Unknown Patient';
@@ -396,7 +396,7 @@ export function TabbedAppointmentsWidget() {
                     return (
                       <div
                         key={appointment.id}
-                        className="p-4 rounded-lg bg-gradient-to-br from-orange-50/50 to-orange-100/30 dark:from-orange-950/20 dark:to-orange-900/10 hover:scale-[1.01] transition-all duration-200"
+                        className="p-4 rounded-lg bg-gradient-to-br from-orange-50/50 to-orange-100/30 dark:from-orange-950/20 dark:to-orange-900/10 overflow-hidden transition-all duration-200"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <button
