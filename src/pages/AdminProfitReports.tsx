@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { Tag, RefreshCw, AlertCircle } from "lucide-react";
+import { Tag, RefreshCw, AlertCircle, Copy } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -295,7 +296,29 @@ const AdminProfitReports = () => {
                     <TableCell>{profit.orders?.profiles?.name || "-"}</TableCell>
                     <TableCell>{profit.order_lines?.products?.name || "-"}</TableCell>
                     <TableCell className="font-mono text-sm">
-                      {profit.order_id?.slice(0, 8)}...
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(profit.order_id);
+                                toast({
+                                  title: "Copied!",
+                                  description: "Order ID copied to clipboard",
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {profit.order_id?.slice(0, 8)}...
+                              <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="font-mono">{profit.order_id}</p>
+                            <p className="text-xs text-muted-foreground mt-1">Click to copy</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                     <TableCell>
                       {profit.downline_id ? (
