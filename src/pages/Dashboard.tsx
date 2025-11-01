@@ -17,6 +17,7 @@ import { FollowUpRemindersWidget } from "@/components/dashboard/FollowUpReminder
 import { WaitingRoomWidget } from "@/components/dashboard/WaitingRoomWidget";
 import { RequestedAppointmentsWidget } from "@/components/dashboard/RequestedAppointmentsWidget";
 import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
+import { AnalyticsSection } from "@/components/dashboard/AnalyticsSection";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
@@ -550,6 +551,11 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Analytics Section - Show for all subscribed users */}
+      {isSubscribed && (
+        <AnalyticsSection />
+      )}
 
       {/* V2 Widgets - Only for subscribed doctor/provider/staff */}
       {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (

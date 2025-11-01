@@ -4,6 +4,7 @@
 
 /* Responsive utilities */
 @layer utilities {
+  /* Responsive utilities */
   .responsive-container {
     @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
   }
@@ -59,110 +60,129 @@
   .responsive-flex-col-row {
     @apply flex flex-col sm:flex-row gap-3 sm:gap-4;
   }
+
+  /* Modern Utilities */
+  .modern-table {
+    @apply rounded-lg overflow-hidden border border-border/50 shadow-sm;
+  }
+
+  .modern-table-header {
+    @apply bg-muted/30 backdrop-blur-xl border-b border-border/50 font-semibold text-xs sm:text-sm tracking-wide uppercase;
+  }
+
+  .modern-card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:scale-[1.01] hover:border-primary/20;
+  }
+
+  .modern-input-focus {
+    @apply focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
+  }
 }
 
 :root {
   /* Brand Gold Gradient - Core Identity */
   --gold-1: 46 43% 52%;  /* #BE9B4B */
   --gold-2: 46 51% 65%;  /* #D8C07A */
-  --gold-gradient: linear-gradient(90deg, hsl(var(--gold-1)) 0%, hsl(var(--gold-2)) 100%);
+  --gold-gradient: linear-gradient(135deg, hsl(var(--gold-1)) 0%, hsl(var(--gold-2)) 100%);
 
-  /* Base Surfaces (Light Mode) */
-  --background: 45 33% 98%;     /* Warm near-white */
-  --foreground: 240 10% 10%;    /* Deep text */
-  --card: 0 0% 100%;            /* Pure white cards */
-  --card-foreground: 240 10% 10%;
+  /* Base Surfaces (Light Mode) - Modern Cool Palette */
+  --background: 210 20% 98%;     /* Soft cool white */
+  --foreground: 222 47% 11%;     /* Deep text */
+  --card: 0 0% 100%;             /* Pure white cards */
+  --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 10%;
-  --muted: 240 4% 50%;          /* Muted text */
-  --muted-foreground: 240 5% 40%;
-  --border: 240 12% 90%;        /* Subtle borders */
-  --input: 240 12% 95%;         /* Input backgrounds */
-  --ring: 46 43% 52%;           /* Focus ring = gold */
+  --popover-foreground: 222 47% 11%;
+  --muted: 215 16% 47%;          /* Modern muted text */
+  --muted-foreground: 215 16% 40%;
+  --border: 214 15% 91%;         /* Subtle blue-gray borders */
+  --input: 210 20% 96%;          /* Input backgrounds */
+  --ring: 46 43% 52%;            /* Focus ring = gold */
 
   /* Accent Colors */
   --primary: var(--gold-1);
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 10% 97%;
-  --secondary-foreground: 240 10% 10%;
-  --accent: 240 10% 95%;
-  --accent-foreground: 240 10% 10%;
+  --secondary: 210 15% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --accent: 210 20% 95%;
+  --accent-foreground: 222 47% 11%;
 
-  /* Status Colors */
-  --destructive: 0 68% 55%;
+  /* Status Colors - Vibrant & Modern */
+  --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --success: 142 60% 35%;
-  --info: 210 80% 45%;
+  --success: 142 76% 36%;
+  --info: 199 89% 48%;
+  --warning: 48 96% 53%;
 
   /* Sidebar (Light Mode) */
   --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 240 10% 10%;
+  --sidebar-foreground: 222 47% 11%;
   --sidebar-primary: var(--gold-1);
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 10% 95%;
-  --sidebar-accent-foreground: 240 10% 10%;
-  --sidebar-border: 240 12% 90%;
+  --sidebar-accent: 210 20% 96%;
+  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-border: 214 15% 91%;
   --sidebar-ring: var(--gold-1);
 
   /* Layout */
-  --main-content-bg: 45 33% 98%;
-  --radius: 0.5rem;
+  --main-content-bg: 210 20% 98%;
+  --radius: 0.75rem;
 
-  /* Chart colors */
+  /* Chart colors - Modern Vibrant */
   --chart-1: 46 43% 52%;
-  --chart-2: 210 80% 45%;
-  --chart-3: 142 60% 35%;
-  --chart-4: 0 68% 55%;
-  --chart-5: 280 60% 50%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 142 76% 36%;
+  --chart-4: 0 72% 51%;
+  --chart-5: 271 81% 56%;
 }
 
 .dark {
-  /* Base Surfaces (Dark Mode) */
-  --background: 240 10% 6%;     /* Deep black-blue */
-  --foreground: 45 15% 95%;     /* Warm off-white */
-  --card: 240 8% 10%;           /* Slightly lighter cards */
-  --card-foreground: 45 15% 95%;
-  --popover: 240 8% 10%;
-  --popover-foreground: 45 15% 95%;
-  --muted: 240 8% 70%;          /* Muted text */
-  --muted-foreground: 240 8% 60%;
-  --border: 240 8% 20%;         /* Subtle dark borders */
-  --input: 240 10% 14%;         /* Input backgrounds */
-  --ring: 46 43% 52%;           /* Focus ring = gold */
+  /* Base Surfaces (Dark Mode) - Deep Navy, NOT Pure Black */
+  --background: 222 47% 11%;     /* Deep navy-blue (like Taskly) */
+  --foreground: 210 20% 98%;     /* Soft off-white */
+  --card: 217 33% 17%;           /* Elevated card color */
+  --card-foreground: 210 20% 98%;
+  --popover: 217 33% 17%;
+  --popover-foreground: 210 20% 98%;
+  --muted: 215 20% 65%;          /* Readable muted text */
+  --muted-foreground: 215 20% 70%;
+  --border: 215 20% 25%;         /* Visible but subtle borders */
+  --input: 217 33% 20%;          /* Input backgrounds */
+  --ring: 46 43% 52%;            /* Focus ring = gold */
 
   /* Accent Colors (Gold stays identical) */
   --primary: var(--gold-1);
-  --primary-foreground: 45 20% 94%;
-  --secondary: 240 8% 12%;
-  --secondary-foreground: 240 8% 90%;
-  --accent: 240 8% 12%;
-  --accent-foreground: 240 8% 90%;
+  --primary-foreground: 210 20% 98%;
+  --secondary: 215 25% 27%;
+  --secondary-foreground: 210 20% 98%;
+  --accent: 215 25% 22%;
+  --accent-foreground: 210 20% 98%;
 
-  /* Status Colors */
-  --destructive: 0 68% 55%;
+  /* Status Colors - Vibrant for Dark Mode */
+  --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --success: 142 60% 35%;
-  --info: 210 80% 45%;
+  --success: 142 76% 36%;
+  --info: 199 89% 48%;
+  --warning: 48 96% 53%;
 
   /* Sidebar (Dark Mode) */
-  --sidebar-background: 240 10% 8%;
-  --sidebar-foreground: 45 15% 95%;
+  --sidebar-background: 222 47% 13%;
+  --sidebar-foreground: 210 20% 98%;
   --sidebar-primary: var(--gold-1);
-  --sidebar-primary-foreground: 45 20% 94%;
-  --sidebar-accent: 240 8% 12%;
-  --sidebar-accent-foreground: 240 8% 90%;
-  --sidebar-border: 240 8% 18%;
+  --sidebar-primary-foreground: 210 20% 98%;
+  --sidebar-accent: 215 25% 22%;
+  --sidebar-accent-foreground: 210 20% 98%;
+  --sidebar-border: 215 20% 25%;
   --sidebar-ring: var(--gold-1);
 
   /* Layout */
-  --main-content-bg: 240 10% 6%;
+  --main-content-bg: 222 47% 11%;
 
-  /* Chart colors */
+  /* Chart colors - Brighter for Dark Mode */
   --chart-1: 46 51% 65%;
-  --chart-2: 210 80% 60%;
-  --chart-3: 142 60% 45%;
-  --chart-4: 0 68% 65%;
-  --chart-5: 280 60% 60%;
+  --chart-2: 199 89% 60%;
+  --chart-3: 142 76% 45%;
+  --chart-4: 0 72% 60%;
+  --chart-5: 271 81% 65%;
 }
 
 @layer base {
@@ -223,19 +243,19 @@
     background: 
       radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.08), transparent),
       linear-gradient(135deg, 
-        hsl(45 33% 98%) 0%, 
-        hsl(46 43% 95%) 50%, 
-        hsl(45 33% 98%) 100%
+        hsl(210 20% 98%) 0%, 
+        hsl(210 20% 99%) 50%, 
+        hsl(210 20% 98%) 100%
       );
   }
 
   .dark .vitaluxe-base-bg {
     background: 
-      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.12), transparent),
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.15), transparent),
       linear-gradient(135deg, 
-        hsl(240 10% 6%) 0%, 
-        hsl(240 10% 8%) 50%, 
-        hsl(240 10% 6%) 100%
+        hsl(222 47% 11%) 0%, 
+        hsl(222 47% 13%) 50%, 
+        hsl(222 47% 11%) 100%
       );
   }
 
