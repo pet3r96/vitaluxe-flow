@@ -16,7 +16,6 @@ import { Topbar } from "./components/layout/Topbar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { GlobalIntakeDialog } from "./components/patient/GlobalIntakeDialog";
-import { UpgradePromptDialog } from "@/components/subscription/UpgradePromptDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
 import { PracticeOnlyRoute } from "./components/subscription/PracticeOnlyRoute";
 import { SessionTimer } from "./components/auth/SessionTimer";
@@ -147,17 +146,8 @@ const SessionTimerWrapper = () => {
   return null;
 };
 
-// Wrapper to protect SubscribeToVitaLuxePro route - only practice owners (doctors who are NOT provider accounts)
-const SubscribeToVitaLuxeProWrapper = () => {
-  const { effectiveRole, isProviderAccount } = useAuth();
-  const location = useLocation();
-  
-  if (effectiveRole !== 'doctor' || isProviderAccount) {
-    return <NotFound />;
-  }
-  
-  return <SubscribeToVitaLuxePro />;
-};
+// Wrapper removed - subscriptions are now automatic on first login
+// Users are auto-enrolled in 14-day trial when they create a practice account
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -173,7 +163,6 @@ const App = () => (
               <GlobalImpersonationBanner>
                 <Global2FADialogs />
                 <GlobalIntakeDialog />
-                <UpgradePromptDialog />
                 <Suspense fallback={<PageLoader />}>
                 <Routes>
                   {/* Public Routes */}

@@ -23,8 +23,8 @@ serve(async (req) => {
 
     console.log('Checking for trial payment reminders...');
 
-    // Get trials ending in 2 days (day 5 reminder)
-    const { data: day5Trials } = await supabaseClient
+    // Get trials ending in 2 days (day 12 reminder for 14-day trial)
+    const { data: day12Trials } = await supabaseClient
       .from("practice_subscriptions")
       .select(`
         id,
@@ -41,10 +41,10 @@ serve(async (req) => {
       .gte("trial_ends_at", now.toISOString())
       .lte("trial_ends_at", twoDaysFromNow.toISOString());
 
-    console.log(`Found ${day5Trials?.length || 0} trials ending in ~2 days`);
+    console.log(`Found ${day12Trials?.length || 0} trials ending in ~2 days`);
 
-    // Get trials ending in 1 day (day 6 reminder)
-    const { data: day6Trials } = await supabaseClient
+    // Get trials ending in 1 day (day 13 reminder for 14-day trial)
+    const { data: day13Trials } = await supabaseClient
       .from("practice_subscriptions")
       .select(`
         id,
@@ -61,12 +61,12 @@ serve(async (req) => {
       .gte("trial_ends_at", now.toISOString())
       .lte("trial_ends_at", oneDayFromNow.toISOString());
 
-    console.log(`Found ${day6Trials?.length || 0} trials ending in ~1 day`);
+    console.log(`Found ${day13Trials?.length || 0} trials ending in ~1 day`);
 
     const results = [];
 
-    // Process day 5 reminders
-    for (const trial of day5Trials || []) {
+    // Process day 12 reminders (2 days before end of 14-day trial)
+    for (const trial of day12Trials || []) {
       const profile = trial.profiles as any;
       
       // Check if reminder already sent
@@ -74,11 +74,11 @@ serve(async (req) => {
         .from("trial_payment_reminders")
         .select("id")
         .eq("subscription_id", trial.id)
-        .eq("reminder_type", "day_5")
+        .eq("reminder_type", "day_12")
         .single();
 
       if (existingReminder) {
-        console.log(`Day 5 reminder already sent for subscription ${trial.id}`);
+        console.log(`Day 12 reminder already sent for subscription ${trial.id}`);
         continue;
       }
 
@@ -86,7 +86,7 @@ serve(async (req) => {
       const hasPaymentMethod = profile.authorizenet_customer_profile_id != null;
 
       if (!hasPaymentMethod) {
-        console.log(`Sending day 5 reminder to practice ${profile.name}`);
+        console.log(`Sending day 12 reminder to practice ${profile.name}`);
 
         // Create notification
         const { error: notifError } = await supabaseClient
@@ -101,7 +101,7 @@ serve(async (req) => {
             metadata: {
               subscription_id: trial.id,
               trial_ends_at: trial.trial_ends_at,
-              reminder_day: 5
+              reminder_day: 12
             }
           });
 
@@ -115,18 +115,18 @@ serve(async (req) => {
           .insert({
             practice_id: trial.practice_id,
             subscription_id: trial.id,
-            reminder_type: "day_5"
+            reminder_type: "day_12"
           });
 
-        results.push({ subscription_id: trial.id, reminder_type: "day_5", sent: true });
+        results.push({ subscription_id: trial.id, reminder_type: "day_12", sent: true });
       } else {
         console.log(`Practice ${profile.name} already has payment method`);
-        results.push({ subscription_id: trial.id, reminder_type: "day_5", sent: false, reason: "has_payment_method" });
+        results.push({ subscription_id: trial.id, reminder_type: "day_12", sent: false, reason: "has_payment_method" });
       }
     }
 
-    // Process day 6 reminders (more urgent)
-    for (const trial of day6Trials || []) {
+    // Process day 13 reminders (more urgent - 1 day before end of 14-day trial)
+    for (const trial of day13Trials || []) {
       const profile = trial.profiles as any;
       
       // Check if reminder already sent
@@ -134,11 +134,11 @@ serve(async (req) => {
         .from("trial_payment_reminders")
         .select("id")
         .eq("subscription_id", trial.id)
-        .eq("reminder_type", "day_6")
+        .eq("reminder_type", "day_13")
         .single();
 
       if (existingReminder) {
-        console.log(`Day 6 reminder already sent for subscription ${trial.id}`);
+        console.log(`Day 13 reminder already sent for subscription ${trial.id}`);
         continue;
       }
 
@@ -146,7 +146,7 @@ serve(async (req) => {
       const hasPaymentMethod = profile.authorizenet_customer_profile_id != null;
 
       if (!hasPaymentMethod) {
-        console.log(`Sending day 6 (URGENT) reminder to practice ${profile.name}`);
+        console.log(`Sending day 13 (URGENT) reminder to practice ${profile.name}`);
 
         // Create urgent notification
         const { error: notifError } = await supabaseClient
@@ -161,7 +161,7 @@ serve(async (req) => {
             metadata: {
               subscription_id: trial.id,
               trial_ends_at: trial.trial_ends_at,
-              reminder_day: 6,
+              reminder_day: 13,
               urgent: true
             }
           });
@@ -176,13 +176,13 @@ serve(async (req) => {
           .insert({
             practice_id: trial.practice_id,
             subscription_id: trial.id,
-            reminder_type: "day_6"
+            reminder_type: "day_13"
           });
 
-        results.push({ subscription_id: trial.id, reminder_type: "day_6", sent: true });
+        results.push({ subscription_id: trial.id, reminder_type: "day_13", sent: true });
       } else {
         console.log(`Practice ${profile.name} already has payment method`);
-        results.push({ subscription_id: trial.id, reminder_type: "day_6", sent: false, reason: "has_payment_method" });
+        results.push({ subscription_id: trial.id, reminder_type: "day_13", sent: false, reason: "has_payment_method" });
       }
     }
 

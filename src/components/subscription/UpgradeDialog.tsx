@@ -75,11 +75,11 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
         <div className="space-y-6 my-6">
           <div className="bg-accent/50 p-4 sm:p-6 rounded-lg border border-border">
             <div className="flex flex-col sm:flex-row items-baseline gap-1 sm:gap-2 mb-2">
-              <span className="text-4xl sm:text-5xl font-bold text-gold1">$99.99</span>
+              <span className="text-4xl sm:text-5xl font-bold text-gold1">$149.99</span>
               <span className="text-sm sm:text-base text-muted-foreground">/month + processing fees</span>
             </div>
             <Badge variant="gold">
-              7-Day Free Trial
+              14-Day Free Trial
             </Badge>
           </div>
 
@@ -108,7 +108,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
               variant="gold"
               className="w-full font-semibold h-11 sm:h-12 text-sm sm:text-base"
             >
-              Start 7-Day Free Trial
+              Start 14-Day Free Trial
             </Button>
             <Button
               onClick={() => onOpenChange(false)}

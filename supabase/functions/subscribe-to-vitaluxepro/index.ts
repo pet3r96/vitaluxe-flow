@@ -182,7 +182,7 @@ serve(async (req) => {
         console.log('[subscribe-to-vitaluxepro] Reactivating subscription', existingSub.id);
 
         const trialEndsAt = new Date();
-        trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+        trialEndsAt.setDate(trialEndsAt.getDate() + 14);
 
         const { data: updated, error: updateError } = await supabaseAdmin
           .from('practice_subscriptions')
@@ -282,7 +282,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         subscription_id: subscription,
-        message: "7-day free trial started successfully!",
+        message: "14-day free trial started successfully!",
       }),
       {
         status: 200,

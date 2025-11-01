@@ -134,7 +134,7 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
               No Payment Methods Found
             </p>
             <p className="text-sm text-muted-foreground">
-              Your payment method will be charged $99.99/month plus processing fees after your 7-day free trial ends.
+              Your payment method will be charged $149.99/month plus processing fees after your 14-day free trial ends.
               Please add a credit card or bank account to your profile to continue.
             </p>
           </div>

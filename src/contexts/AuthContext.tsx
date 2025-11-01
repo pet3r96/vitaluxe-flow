@@ -313,7 +313,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               Promise.all([
                 fetchUserRole(session.user.id),
                 generateCSRFToken()
-              ]).then(async () => {
+              ]).then(async ([roleResult]) => {
                 logger.info('SIGNED_IN: user data loaded');
                 
                 // Check if user needs to complete intake (patient-only feature)
@@ -333,6 +333,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     intakeComplete: patientData?.intake_completed_at 
                   });
                 }
+                
+                // Auto-enroll practice owners (doctors) in 14-day trial
+                // Wait a bit for userRole state to be set by fetchUserRole
+                setTimeout(async () => {
+                  // Query for user's role from user_roles table
+                  const { data: userRoles } = await supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('user_id', session.user.id)
+                    .maybeSingle();
+
+                  if (userRoles?.role === 'doctor') {
+                    // Check if subscription exists
+                    const { data: existingSub } = await supabase
+                      .from('practice_subscriptions')
+                      .select('id')
+                      .eq('practice_id', session.user.id)
+                      .maybeSingle();
+                    
+                    if (!existingSub) {
+                      // Auto-create trial subscription
+                      console.log('[AuthContext] Auto-enrolling new practice in 14-day trial');
+                      
+                      try {
+                        const { error: subError } = await supabase.functions.invoke(
+                          'subscribe-to-vitaluxepro',
+                          { body: { autoEnroll: true } }
+                        );
+                        
+                        if (subError) {
+                          console.error('[AuthContext] Auto-enrollment failed:', subError);
+                        } else {
+                          // Show welcome notification
+                          toast.success(
+                            "Welcome to VitaLuxePro! 🎉",
+                            {
+                              description: "You've been automatically enrolled in a 14-day free trial with full access to all features. Add a payment method before day 14 to continue.",
+                              duration: 10000,
+                            }
+                          );
+                        }
+                      } catch (error) {
+                        console.error('[AuthContext] Auto-enrollment error:', error);
+                      }
+                    }
+                  }
+                }, 500);
               }).catch((error) => {
                 logger.error('Error loading user data after sign in', error);
               });

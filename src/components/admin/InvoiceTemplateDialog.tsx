@@ -77,8 +77,8 @@ export function InvoiceTemplateDialog({
           id: crypto.randomUUID(),
           description: "Reporting & Account Management Activities",
           quantity: 1,
-          rate: 99.99,
-          amount: 99.99
+          rate: 149.99,
+          amount: 149.99
         }
       ];
       setLineItems(defaultItems);

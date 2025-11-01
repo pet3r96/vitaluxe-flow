@@ -16,7 +16,7 @@ export const SubscriptionProtectedRoute = ({ children }: SubscriptionProtectedRo
   useEffect(() => {
     if (!loading && !isSubscribed) {
       toast.error("This feature requires VitaLuxePro subscription", {
-        description: "Start your 7-day free trial to access all premium features"
+        description: "Start your 14-day free trial to access all premium features"
       });
       navigate("/subscribe-to-vitaluxepro", { 
         state: { returnUrl: location.pathname } 

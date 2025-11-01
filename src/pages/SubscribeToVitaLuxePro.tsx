@@ -157,7 +157,7 @@ export default function SubscribeToVitaLuxePro() {
           // New subscription created
           toast({
             title: 'Welcome to VitaLuxePro! 🎉',
-            description: 'Your 7-day free trial has started. Add a payment method in your Profile before the trial ends.'
+            description: 'Your 14-day free trial has started. Add a payment method in your Profile before the trial ends.'
           });
         }
 
@@ -256,11 +256,11 @@ export default function SubscribeToVitaLuxePro() {
             <CardContent className="space-y-4">
               <div>
                 <div className="flex flex-col sm:flex-row items-baseline gap-1 sm:gap-2 mb-2">
-                  <span className="text-4xl sm:text-5xl font-bold text-gold1">$99.99</span>
+                  <span className="text-4xl sm:text-5xl font-bold text-gold1">$149.99</span>
                   <span className="text-sm sm:text-base text-muted-foreground/70">/month + processing fees</span>
                 </div>
                 <Badge variant="gold">
-                  7-Day Free Trial
+                  14-Day Free Trial
                 </Badge>
               </div>
               <Separator />
@@ -335,7 +335,7 @@ export default function SubscribeToVitaLuxePro() {
                     Starting Trial...
                   </>
                 ) : (
-                  'Start 7-Day Free Trial'
+                  'Start 14-Day Free Trial'
                 )}
               </Button>
 
