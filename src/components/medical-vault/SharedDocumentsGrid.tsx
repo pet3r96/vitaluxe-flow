@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo } from "react";
 import { PatientDocumentPreview } from "@/components/documents/PatientDocumentPreview";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 interface SharedDocumentsGridProps {
   patientAccountId: string;
@@ -88,6 +89,40 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const handlePreview = (doc: any, type: 'patient' | 'provider') => {
     setPreviewDoc({ ...doc, type });
     setPreviewOpen(true);
+  };
+
+  const handleDownload = async (doc: any) => {
+    try {
+      const bucketName = doc.docType === 'patient' ? 'patient-documents' : 'provider-documents';
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .createSignedUrl(doc.storage_path, 60); // 1 min expiry
+
+      if (error) throw error;
+
+      const response = await fetch(data.signedUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = doc.document_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({ 
+        title: "Download Started", 
+        description: "Document is downloading" 
+      });
+    } catch (error: any) {
+      console.error('[SharedDocumentsGrid] Download error:', error);
+      toast({ 
+        title: "Download Failed", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
   };
 
   // All hooks MUST be called before any conditional returns
@@ -314,7 +349,19 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
                     onClick={() => handlePreview(doc, doc.docType)}
                   >
                     <Eye className="h-3 w-3 mr-1" />
-                    <span className="hidden sm:inline">View</span>
+                    View
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 touch-target"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(doc);
+                    }}
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    Download
                   </Button>
                 </div>
               </CardContent>

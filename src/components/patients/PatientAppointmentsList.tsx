@@ -21,6 +21,8 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  console.log('[PatientAppointmentsList] Rendered with props:', { patientId, practiceId });
+
   const { data: appointments, isLoading } = useQuery({
     queryKey: ['patient-appointments', patientId, practiceId],
     queryFn: async () => {
@@ -36,7 +38,11 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
         .eq('practice_id', practiceId)
         .order('start_time', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PatientAppointmentsList] Query error:', error);
+        throw error;
+      }
+      console.log('[PatientAppointmentsList] Fetched appointments:', data?.length || 0);
       return data;
     },
     staleTime: 10000, // 10 seconds

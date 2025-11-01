@@ -35,6 +35,8 @@ export default function PatientDetail() {
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  console.log('[PatientDetail] effectivePracticeId:', effectivePracticeId);
+
   const practiceId = effectivePracticeId;
 
   // First, resolve the patient_account_id (handle both old patient_id and new patient_account_id)
@@ -523,11 +525,18 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="appointments" className="space-y-4">
-          {effectivePracticeId && (
+          {(effectivePracticeId || patient?.practice_id) ? (
             <PatientAppointmentsList 
               patientId={actualPatientId!} 
-              practiceId={effectivePracticeId}
+              practiceId={effectivePracticeId || patient.practice_id}
             />
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Unable to load appointments - practice ID not found</p>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
