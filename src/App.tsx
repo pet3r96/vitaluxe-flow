@@ -142,19 +142,8 @@ realtimeManager.setQueryClient(queryClient);
 
 // SessionTimerWrapper component to access auth context and location
 const SessionTimerWrapper = () => {
-  const { user } = useAuth();
-  const location = useLocation();
-  
-  // Only show timer when user is authenticated and not on auth page
-  if (!user || location.pathname === '/auth') {
-    return null;
-  }
-  
-    return (
-      <div className="fixed bottom-6 right-6 z-50">
-        <SessionTimer userId={user.id} />
-      </div>
-    );
+  // Timer is now in Topbar - no longer needed here
+  return null;
 };
 
 // Wrapper to protect SubscribeToVitaLuxePro route - only practice owners (doctors who are NOT provider accounts)

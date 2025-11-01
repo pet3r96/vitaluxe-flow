@@ -1,5 +1,5 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { CommandPalette } from "./CommandPalette";
+import { EnhancedCommandPalette } from "./EnhancedCommandPalette";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { UserDropdown } from "./UserDropdown";
 import { RoleImpersonationDropdown } from "./RoleImpersonationDropdown";
@@ -8,10 +8,13 @@ import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { SessionTimer } from "@/components/auth/SessionTimer";
 
 export function Topbar() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,11 +29,18 @@ export function Topbar() {
       <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
         <SidebarTrigger className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <CommandPalette />
+          <EnhancedCommandPalette />
         </div>
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        {/* Session Timer */}
+        {user && (
+          <div className="hidden lg:block">
+            <SessionTimer userId={user.id} />
+          </div>
+        )}
+
         {/* Messages Button */}
         <Button
           variant="ghost"

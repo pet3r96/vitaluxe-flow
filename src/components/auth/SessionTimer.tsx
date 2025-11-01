@@ -41,10 +41,10 @@ export const SessionTimer = ({ userId }: SessionTimerProps) => {
   const isCritical = minutes < 1;
 
   return (
-    <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md border border-border/50 shadow-lg">
-      <Clock className="h-4 w-4 text-muted-foreground" />
+    <div className="flex items-center gap-1.5 sm:gap-2 bg-background/80 backdrop-blur-sm px-2 sm:px-4 py-1.5 sm:py-2 rounded-md border border-border/50 shadow-sm">
+      <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
       <span className={cn(
-        "font-mono text-sm font-medium",
+        "font-mono text-xs sm:text-sm font-medium",
         isCritical && "text-red-600 dark:text-red-400 font-bold animate-pulse",
         isWarning && !isCritical && "text-orange-600 dark:text-orange-400 font-semibold"
       )}>
