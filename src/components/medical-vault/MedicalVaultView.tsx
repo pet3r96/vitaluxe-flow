@@ -418,8 +418,8 @@ export function MedicalVaultView({
       </Dialog>
 
       {showHeader && (
-        <Card className="border-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white shadow-2xl overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-gold1/10 via-gold2/5 to-transparent animate-pulse"></div>
+        <Card className="border-0 bg-gradient-to-br from-gold1/10 via-gold2/5 to-white dark:from-gray-900 dark:via-gray-800 dark:to-black text-foreground dark:text-white shadow-2xl overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-gold1/20 via-gold2/10 to-transparent dark:from-gold1/10 dark:via-gold2/5 dark:to-transparent animate-pulse"></div>
           
           <CardHeader className="relative z-10 py-8">
             <div className="flex flex-col items-center justify-center space-y-4 max-w-4xl mx-auto">
@@ -432,7 +432,7 @@ export function MedicalVaultView({
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-gold1 via-gold1 to-gold2 bg-clip-text text-transparent">
                   {mode === 'patient' ? 'My Medical Vault' : `${displayName} - Medical Vault`}
                 </h1>
-                <p className="text-gray-300 text-xs md:text-sm font-light tracking-wide">
+                <p className="text-muted-foreground dark:text-gray-300 text-xs md:text-sm font-light tracking-wide">
                   powered by VitaLuxe Services
                 </p>
               </div>
@@ -443,7 +443,7 @@ export function MedicalVaultView({
                   size="sm"
                   onClick={handleViewPDF}
                   disabled={isGeneratingPdf}
-                  className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50 disabled:opacity-50"
+                  className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/30 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-foreground dark:text-white hover:text-foreground dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50 disabled:opacity-50"
                 >
                   <Eye className="h-3 w-3" />
                   {isGeneratingPdf ? 'Generating...' : 'View'}
@@ -453,7 +453,7 @@ export function MedicalVaultView({
                   size="sm"
                   onClick={handleViewPDF}
                   disabled={isGeneratingPdf}
-                  className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50 disabled:opacity-50"
+                  className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/30 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-foreground dark:text-white hover:text-foreground dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50 disabled:opacity-50"
                 >
                   <Printer className="h-3 w-3" />
                   Print
@@ -463,7 +463,7 @@ export function MedicalVaultView({
                   size="sm"
                   onClick={handleDownloadPDF}
                   disabled={isGeneratingPdf}
-                  className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50 disabled:opacity-50"
+                  className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/30 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-foreground dark:text-white hover:text-foreground dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50 disabled:opacity-50"
                 >
                   <Download className="h-3 w-3" />
                   Download
@@ -472,7 +472,7 @@ export function MedicalVaultView({
                   variant="outline" 
                   size="sm"
                   onClick={() => setAuditDialogOpen(true)}
-                  className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
+                  className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/30 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-foreground dark:text-white hover:text-foreground dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50"
                 >
                   <ClipboardList className="h-3 w-3" />
                   Audit
@@ -483,7 +483,7 @@ export function MedicalVaultView({
                     size="sm"
                     onClick={handleSharePDF}
                     disabled={isGeneratingPdf}
-                    className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50 disabled:opacity-50"
+                    className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/30 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-foreground dark:text-white hover:text-foreground dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50 disabled:opacity-50"
                   >
                     <Share2 className="h-3 w-3" />
                     Share
