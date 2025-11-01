@@ -8,58 +8,113 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Vitaluxe Gold-on-Black Theme */
-    --background: 0 0% 4.3%;
-    --foreground: 45 52% 88%;
+    /* Vitaluxe Light Mode - Ivory & Gold */
+    --background: 249 248 244; /* #F9F8F4 - Light ivory */
+    --foreground: 43 43 43; /* #2B2B2B - Dark text */
     
-    /* Lighter background for main content area */
-    --main-content-bg: 0 0% 18%;
+    --main-content-bg: 255 255 255;
 
-    --card: 0 0% 16%;
-    --card-foreground: 45 52% 88%;
+    --card: 255 255 255;
+    --card-foreground: 43 43 43;
 
-    --popover: 0 0% 6%;
-    --popover-foreground: 45 52% 88%;
+    --popover: 255 255 255;
+    --popover-foreground: 43 43 43;
 
-    /* Gold gradient colors */
-    --gold-dark: 42 66% 34%;     /* #8E6E1E */
-    --gold-mid: 42 50% 55%;      /* #C8A64B */
-    --gold-light: 45 64% 72%;    /* #E2C977 */
+    /* Gold colors */
+    --gold-dark: 42 66% 34%;
+    --gold-mid: 42 50% 55%;
+    --gold-light: 45 64% 72%;
 
     --primary: 42 50% 55%;
-    --primary-foreground: 0 0% 4.3%;
+    --primary-foreground: 255 255 255;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 45 52% 88%;
+    --secondary: 234 232 227;
+    --secondary-foreground: 43 43 43;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 45 20% 65%;
+    --muted: 234 232 227;
+    --muted-foreground: 115 115 115;
 
-    --accent: 42 66% 34%;
-    --accent-foreground: 45 52% 88%;
+    --accent: 42 50% 55%;
+    --accent-foreground: 255 255 255;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 45 52% 88%;
+    --destructive-foreground: 255 255 255;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 12%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: 42 50% 55%;
 
     --radius: 0.5rem;
 
-    /* Sidebar colors */
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 45 52% 88%;
+    /* Sidebar colors - Light */
+    --sidebar-background: 255 255 255;
+    --sidebar-foreground: 43 43 43;
     --sidebar-primary: 42 50% 55%;
-    --sidebar-primary-foreground: 0 0% 4.3%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 45 52% 88%;
-    --sidebar-border: 0 0% 12%;
+    --sidebar-primary-foreground: 255 255 255;
+    --sidebar-accent: 249 248 244;
+    --sidebar-accent-foreground: 43 43 43;
+    --sidebar-border: 220 13% 91%;
     --sidebar-ring: 42 50% 55%;
 
     /* Custom gradients */
     --gradient-gold: linear-gradient(135deg, hsl(42 66% 34%), hsl(42 50% 55%), hsl(45 64% 72%));
-    --gradient-gold-subtle: linear-gradient(180deg, hsl(0 0% 6%), hsl(0 0% 4.3%));
+    --gradient-gold-subtle: linear-gradient(180deg, rgba(190,155,75,0.1) 0%, rgba(216,192,122,0.05) 100%);
+
+    /* Shadows */
+    --shadow-gold: 0 10px 40px -10px hsl(42 50% 55% / 0.3);
+    --shadow-gold-glow: 0 0 30px hsl(42 50% 55% / 0.2);
+  }
+
+  .dark {
+    /* Vitaluxe Dark Mode - Black & Gold */
+    --background: 14 14 14; /* #0E0E0E - Deep black */
+    --foreground: 234 232 227; /* #EAE8E3 - Light text */
+    
+    --main-content-bg: 27 27 27;
+
+    --card: 27 27 27; /* #1B1B1B */
+    --card-foreground: 234 232 227;
+
+    --popover: 27 27 27;
+    --popover-foreground: 234 232 227;
+
+    /* Gold colors (same) */
+    --gold-dark: 42 66% 34%;
+    --gold-mid: 42 50% 55%;
+    --gold-light: 45 64% 72%;
+
+    --primary: 42 50% 55%;
+    --primary-foreground: 14 14 14;
+
+    --secondary: 27 27 27;
+    --secondary-foreground: 234 232 227;
+
+    --muted: 27 27 27;
+    --muted-foreground: 163 163 163;
+
+    --accent: 42 50% 55%;
+    --accent-foreground: 234 232 227;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 234 232 227;
+
+    --border: 27 27 27;
+    --input: 27 27 27;
+    --ring: 42 50% 55%;
+
+    /* Sidebar colors - Dark */
+    --sidebar-background: 14 14 14;
+    --sidebar-foreground: 234 232 227;
+    --sidebar-primary: 42 50% 55%;
+    --sidebar-primary-foreground: 14 14 14;
+    --sidebar-accent: 27 27 27;
+    --sidebar-accent-foreground: 234 232 227;
+    --sidebar-border: 27 27 27;
+    --sidebar-ring: 42 50% 55%;
+
+    /* Custom gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(42 66% 34%), hsl(42 50% 55%), hsl(45 64% 72%));
+    --gradient-gold-subtle: linear-gradient(180deg, hsl(14 14 14), hsl(27 27 27));
 
     /* Shadows */
     --shadow-gold: 0 10px 40px -10px hsl(42 50% 55% / 0.3);
@@ -77,7 +132,7 @@ All colors MUST be HSL.
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold;
+    @apply font-heading font-bold;
   }
 
   /* Hide browser autofill suggestions for address fields */
@@ -305,5 +360,22 @@ All colors MUST be HSL.
 
   .status-badge-pending {
     @apply bg-yellow-500/20 text-yellow-500 border border-yellow-500/30;
+  }
+
+  /* Luxury UI Components */
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-gold;
+  }
+
+  .active-indicator {
+    @apply border-l-2 border-primary bg-accent/10;
+  }
+
+  .glass-effect {
+    @apply bg-background/95 backdrop-blur-sm;
+  }
+
+  .transition-smooth {
+    @apply transition-all duration-300 ease-in-out;
   }
 }

@@ -11,8 +11,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GlobalImpersonationBanner } from "@/components/layout/GlobalImpersonationBanner";
-import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonationDropdown";
-import { NotificationBell } from "./components/notifications/NotificationBell";
+import { Topbar } from "./components/layout/Topbar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { GlobalIntakeDialog } from "./components/patient/GlobalIntakeDialog";
@@ -200,17 +199,11 @@ const App = () => (
                     element={
                       <ProtectedRoute>
                         <SidebarProvider>
-                          <div className="flex min-h-screen w-full bg-background overflow-hidden">
+                          <div className="flex min-h-screen w-full bg-background">
                             <AppSidebar />
-                            <main className="flex-1 flex flex-col overflow-y-auto bg-[hsl(var(--main-content-bg))]">
-                              <div className="sticky top-0 z-10 flex items-center justify-between p-4 lg:p-6 border-b border-border bg-[hsl(var(--main-content-bg))]">
-                                <SidebarTrigger className="lg:hidden" />
-              <div className="ml-auto flex items-center gap-2">
-                <NotificationBell />
-                <RoleImpersonationDropdown />
-              </div>
-                              </div>
-                              <div className="flex-1 p-4 sm:p-6 lg:p-8">
+                            <main className="flex-1 flex flex-col overflow-hidden">
+                              <Topbar />
+                              <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                                 <Suspense fallback={<PageLoader />}>
                                   <Routes>
                                     <Route path="/" element={<DashboardRouter />} />
