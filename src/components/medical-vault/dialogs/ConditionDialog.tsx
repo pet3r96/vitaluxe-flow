@@ -216,7 +216,7 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
               {...register("description")}
               placeholder="Detailed information about the condition"
               disabled={isReadOnly}
-              rows={3}
+              rows={5}
             />
           </div>
 
@@ -227,7 +227,7 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
               {...register("treatment_plan")}
               placeholder="Current treatment plan and management"
               disabled={isReadOnly}
-              rows={3}
+              rows={5}
             />
           </div>
 
@@ -238,7 +238,7 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
               {...register("notes")}
               placeholder="Additional notes, labs, imaging, reports"
               disabled={isReadOnly}
-              rows={3}
+              rows={5}
             />
           </div>
 

@@ -267,7 +267,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
               {...register("notes")}
               placeholder="Additional information about the allergy"
               disabled={isReadOnly}
-              rows={3}
+              rows={5}
             />
           </div>
 

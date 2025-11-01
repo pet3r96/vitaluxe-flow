@@ -14,7 +14,7 @@ import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 const pharmacySchema = z.object({
-  pharmacy_name: z.string().min(1, "Pharmacy name is required"),
+  pharmacy_name: z.string().optional(),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(2, "State is required").max(2, "State must be 2 characters"),
@@ -70,7 +70,7 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
   const mutation = useOptimisticMutation(
     async (data: PharmacyFormData) => {
       const formattedData = {
-        pharmacy_name: data.pharmacy_name,
+        pharmacy_name: data.pharmacy_name || null,
         address: data.address,
         city: data.city,
         state: data.state,
@@ -139,7 +139,7 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="pharmacy_name">Pharmacy Name *</Label>
+            <Label htmlFor="pharmacy_name">Pharmacy Name</Label>
             <Input
               id="pharmacy_name"
               {...register("pharmacy_name")}

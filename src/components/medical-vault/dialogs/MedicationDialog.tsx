@@ -309,7 +309,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
               {...register("instructions")}
               placeholder="Special instructions for taking this medication"
               disabled={isReadOnly}
-              rows={3}
+              rows={5}
             />
           </div>
 
@@ -320,7 +320,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
               {...register("notes")}
               placeholder="Additional notes"
               disabled={isReadOnly}
-              rows={3}
+              rows={5}
             />
           </div>
 
