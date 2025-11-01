@@ -43,10 +43,10 @@ export function FlyoutMenu({ items, isVisible, onItemClick }: FlyoutMenuProps) {
                   onClick={onItemClick}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 min-h-[44px]",
+                      "flex items-center gap-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 min-h-[44px]",
                       isActive
-                        ? "bg-card border-l-4 border-[#BE9B4B] text-[#BE9B4B] font-semibold pl-[8px]"
-                        : "text-sidebar-foreground hover:text-[#D8C07A] hover:bg-muted/10"
+                        ? "bg-card border-l-4 border-[#BE9B4B] text-[#BE9B4B] font-semibold pl-[8px] pr-3"
+                        : "text-sidebar-foreground hover:text-[#D8C07A] hover:bg-muted/10 px-3"
                     )
                   }
                 >
