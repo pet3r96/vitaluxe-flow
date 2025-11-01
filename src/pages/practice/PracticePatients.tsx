@@ -21,9 +21,11 @@ export default function PracticePatients() {
     queryKey: ['patients-with-portal-status', effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) {
-        console.warn('[PracticePatients] No effectivePracticeId available');
+        console.warn('[PracticePatients] ❌ No effectivePracticeId available');
         return [];
       }
+      
+      console.log('[PracticePatients] 🔍 Querying patients for practice:', effectivePracticeId);
       
       const { data, error } = await supabase
         .from('v_patients_with_portal_status')
@@ -32,10 +34,17 @@ export default function PracticePatients() {
         .order('first_name', { ascending: true });
 
       if (error) {
-        console.error('[PracticePatients] Query error:', error);
+        console.error('[PracticePatients] ❌ Query error:', error);
+        console.error('[PracticePatients] ❌ Error details:', {
+          message: error.message,
+          code: error.code,
+          hint: error.hint,
+          details: error.details
+        });
         throw error;
       }
-      console.log('[PracticePatients] Fetched patients:', data?.length || 0);
+      
+      console.log('[PracticePatients] ✅ Fetched patients:', data?.length || 0, 'for practice:', effectivePracticeId);
       return data || [];
     },
     enabled: !!effectivePracticeId,

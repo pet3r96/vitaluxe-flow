@@ -47,7 +47,13 @@ export default function PatientDashboard() {
   const { data: medicalVault, isLoading: loadingVault } = useQuery({
     queryKey: ["patient-medical-vault-status", patientAccount?.id],
     queryFn: async () => {
-      if (!patientAccount?.id) return null;
+      if (!patientAccount?.id) {
+        console.warn('[PatientDashboard] ⚠️ No patient account ID for vault status');
+        return null;
+      }
+      
+      console.log('[PatientDashboard] 🏥 Fetching vault status for patient_account_id:', patientAccount.id);
+      console.log('[PatientDashboard] 🏥 Patient name:', patientAccount.first_name, patientAccount.last_name);
       
       // Fetch data from all 8 medical vault sections
       const [medicationsRes, allergiesRes, conditionsRes, surgeriesRes, immunizationsRes, vitalsRes, pharmaciesRes, emergencyContactsRes, vaultRes] = await Promise.all([
@@ -104,7 +110,11 @@ export default function PatientDashboard() {
                        surgeriesCount > 0 || immunizationsCount > 0 || vitalsCount > 0 || 
                        pharmaciesCount > 0 || emergencyContactsCount > 0 || !!vaultRes.data?.blood_type;
       
-      console.log('[PatientDashboard] 🏥 Medical vault status:', {
+      const totalEntries = medicationsCount + allergiesCount + conditionsCount + surgeriesCount + 
+                          immunizationsCount + vitalsCount + pharmaciesCount + emergencyContactsCount;
+      
+      console.log('[PatientDashboard] 🏥 Medical vault raw counts:', {
+        patient_account_id: patientAccount.id,
         medications: medicationsCount,
         allergies: allergiesCount,
         conditions: conditionsCount,
@@ -114,8 +124,13 @@ export default function PatientDashboard() {
         pharmacies: pharmaciesCount,
         emergency_contacts: emergencyContactsCount,
         blood_type: !!vaultRes.data?.blood_type,
+        total_entries: totalEntries,
         has_data
       });
+      
+      if (!has_data && totalEntries > 0) {
+        console.warn('[PatientDashboard] ⚠️ has_data is FALSE but total_entries is', totalEntries, '- logic error!');
+      }
       
       return {
         id: vaultRes.data?.id,
@@ -390,7 +405,20 @@ export default function PatientDashboard() {
       )}
 
       {/* Medical Vault Onboarding Alert - only show if intake is complete */}
-      {patientAccount?.intake_completed_at && !loadingVault && !medicalVault?.has_data && (
+      {patientAccount?.intake_completed_at && !loadingVault && (() => {
+        const shouldShowBanner = !medicalVault?.has_data;
+        console.log('[PatientDashboard] 🎗️ Banner decision:', {
+          intake_completed: !!patientAccount?.intake_completed_at,
+          loading_vault: loadingVault,
+          has_data: medicalVault?.has_data,
+          should_show: shouldShowBanner,
+          vault_medications: medicalVault?.medications_count || 0,
+          vault_allergies: medicalVault?.allergies_count || 0,
+          vault_total: (medicalVault?.medications_count || 0) + (medicalVault?.allergies_count || 0) + 
+                       (medicalVault?.conditions_count || 0) + (medicalVault?.surgeries_count || 0)
+        });
+        return shouldShowBanner;
+      })() && (
         <Alert className="border-warning bg-warning/10">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Complete Your Medical Vault</AlertTitle>
