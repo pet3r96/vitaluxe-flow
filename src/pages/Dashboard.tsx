@@ -650,7 +650,7 @@ const Dashboard = () => {
       )}
 
       {/* For admin: AnalyticsSection and Recent Activity */}
-      {isSubscribed && effectiveRole === 'admin' && (
+      {effectiveRole === 'admin' && (
         <>
           <AnalyticsSection />
           <RecentActivityWidget className="mt-4 lg:mt-6" />
@@ -659,8 +659,8 @@ const Dashboard = () => {
 
       {!isSubscribed && effectiveRole !== 'pharmacy' && effectiveRole !== 'admin' && (effectiveRole as any) !== 'provider' && (
         <>
-          {/* Stats cards with charts for non-subscribed doctors/staff */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-6">
+          {/* Stats cards with charts for non-subscribed doctors/staff - Full width */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-6">
             <StatCardWithChart
               title="Total Orders"
               metricKey="orders"
@@ -681,14 +681,8 @@ const Dashboard = () => {
             />
           </div>
           
-          <div className="patient-card p-6">
-            <h2 className="text-2xl font-semibold mb-4 text-primary text-center">
-              Recent Activity
-            </h2>
-            <p className="text-muted-foreground text-center">
-              No recent activity to display.
-            </p>
-          </div>
+          {/* Recent Activity Widget - Full width */}
+          <RecentActivityWidget />
         </>
       )}
     </div>
