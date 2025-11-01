@@ -135,6 +135,36 @@ export function OrdersBreakdown() {
         });
 
         return counts;
+      } else if (effectiveRole === 'admin') {
+        // For admin: get ALL orders in the system (excluding cancelled)
+        const { data: orders, error } = await supabase
+          .from('orders')
+          .select('status, payment_status')
+          .neq('status', 'cancelled');
+
+        if (error) throw error;
+
+        const counts = {
+          pending: 0,
+          on_hold: 0,
+          processing: 0,
+          shipped: 0,
+          completed: 0,
+          declined: 0,
+        };
+
+        orders?.forEach(order => {
+          const status = order.status?.toLowerCase();
+          if (status === 'pending') counts.pending++;
+          else if (status === 'on_hold') counts.on_hold++;
+          else if (status === 'processing') counts.processing++;
+          else if (status === 'shipped') counts.shipped++;
+          else if (status === 'delivered' || status === 'completed') counts.completed++;
+          else if (status === 'declined') counts.declined++;
+        });
+
+        console.log('[OrdersBreakdown] Admin counts:', counts);
+        return counts;
       }
 
       return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
