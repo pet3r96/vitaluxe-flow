@@ -14,9 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'Poppins', 'sans-serif'],
-        heading: ['Playfair Display', 'serif'],
-        playfair: ['Playfair Display', 'serif'],
+        sans: ['Poppins', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -62,21 +60,6 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        
-        /* Enhanced Vitaluxe Colors */
-        bg: "hsl(var(--bg))",
-        cardSurface: "hsl(var(--card-surface))",
-        fg: "hsl(var(--fg))",
-        mutedText: "hsl(var(--muted-text))",
-        borderColor: "hsl(var(--border-color))",
-        gold1: "hsl(var(--gold-1))",
-        gold2: "hsl(var(--gold-2))",
-      },
-      boxShadow: {
-        card: "0 8px 24px rgba(0,0,0,0.06)",
-        'card-dark': "0 8px 24px rgba(0,0,0,0.3)",
-        insetSoft: "inset 0 1px 0 rgba(255,255,255,0.6)",
-        'insetSoft-dark': "inset 0 1px 0 rgba(255,255,255,0.1)",
       },
       borderRadius: {
         lg: "var(--radius)",
