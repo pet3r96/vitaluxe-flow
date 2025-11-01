@@ -593,35 +593,13 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
           {/* Main Content Area - 3/4 width */}
           <div className="lg:col-span-3 space-y-4 lg:space-y-6">
-            {/* Top Row - Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-              <StatCardWithChart
-                title="Total Orders"
-                metricKey="orders"
-                icon={ShoppingCart}
-                description={effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders"}
-                currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
-                role={effectiveRole}
-                userId={effectiveUserId}
-              />
-              <StatCardWithChart
-                title="Products"
-                metricKey="products"
-                icon={Package}
-                description="Active products"
-                currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
-                role={effectiveRole}
-                userId={effectiveUserId}
-              />
-            </div>
-
-            {/* Second Row - Appointments & Waiting Room */}
+            {/* Top Row - Appointments & Waiting Room */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <TabbedAppointmentsWidget />
               <WaitingRoomWidget />
             </div>
 
-            {/* Third Row - Communications & Recent Activity */}
+            {/* Bottom Row - Communications & Recent Activity */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <TabbedCommunicationsWidget />
               <RecentActivityWidget />
