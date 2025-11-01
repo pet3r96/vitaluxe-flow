@@ -4,8 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 const Providers = () => {
   const { effectiveRole, isProviderAccount, isStaffAccount } = useAuth();
 
-  // Only practices (not provider accounts) can access this page
-  if (effectiveRole !== 'doctor' || isProviderAccount) {
+  // Only practices and staff (not provider accounts) can access this page
+  if ((effectiveRole !== 'doctor' && effectiveRole !== 'staff') || isProviderAccount) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">You do not have access to this page.</p>
