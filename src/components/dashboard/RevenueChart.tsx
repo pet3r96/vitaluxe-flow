@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Sample data - replace with real data from your backend
 const data = [
@@ -13,9 +14,14 @@ const data = [
   { name: "Jul", revenue: 7000 },
 ];
 
-export function RevenueChart() {
+interface RevenueChartProps {
+  className?: string;
+}
+
+export function RevenueChart({ className }: RevenueChartProps) {
+  const cardClass = className ?? "col-span-2"; // Default spans 2 columns (non-admin layouts)
   return (
-    <Card variant="modern" className="col-span-2">
+    <Card variant="modern" className={cn(cardClass)}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold">Revenue Overview</CardTitle>
