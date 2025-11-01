@@ -273,8 +273,15 @@ export const PatientDialog = ({
     setLoading(true);
 
     try {
+      // Parse name into first and last name
+      const nameParts = formData.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       const patientData = {
         name: formData.name,
+        first_name: firstName,
+        last_name: lastName,
         email: formData.email || null,
         phone: formData.phone || null,
         birth_date: formData.birth_date || null,
@@ -320,10 +327,10 @@ export const PatientDialog = ({
         
         const { error } = await supabase
           .from("patient_accounts")
-          .insert({
+          .insert([{
             ...patientData,
             practice_id: effectivePracticeId,
-          });
+          }]);
 
         if (error) throw error;
         toast.success("✅ Patient added successfully");

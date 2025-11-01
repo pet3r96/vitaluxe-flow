@@ -92,7 +92,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
     queryKey: ["encryption-coverage"],
     queryFn: async () => {
       const [patientsRes, orderLinesRes] = await Promise.all([
-        supabase.from("patient_accounts").select("id, allergies_encrypted, notes_encrypted"),
+        supabase.from("patient_accounts").select("id, allergies, notes"),
         supabase.from("order_lines").select("id, prescription_url_encrypted"),
       ]);
 
@@ -101,7 +101,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
       const totalRecords = patients.length + orderLines.length;
       if (totalRecords === 0) return 100;
 
-      const encryptedPatients = patients.filter(p => p.allergies_encrypted || p.notes_encrypted).length;
+      const encryptedPatients = patients.filter(p => p.allergies || p.notes).length;
       const encryptedOrders = orderLines.filter(o => o.prescription_url_encrypted).length;
       
       return ((encryptedPatients + encryptedOrders) / totalRecords) * 100;
