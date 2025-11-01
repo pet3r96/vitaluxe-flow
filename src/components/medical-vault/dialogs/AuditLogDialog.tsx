@@ -7,18 +7,33 @@ import { FileText, User, Calendar, Activity, Download } from "lucide-react";
 import type { AuditLog } from "@/hooks/useAuditLogs";
 import { generateAuditReportPDF } from "@/lib/auditReportPdfGenerator";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuditLogDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   auditLogs: AuditLog[];
   patientName?: string;
+  patientAccountId?: string;
+  isLoading?: boolean;
 }
 
-export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName }: AuditLogDialogProps) {
+export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName, patientAccountId, isLoading }: AuditLogDialogProps) {
   const handleDownload = async () => {
     try {
-      const pdfBlob = await generateAuditReportPDF(patientName || 'Patient', auditLogs);
+      // For now, use the provided auditLogs, but in future we might want to re-fetch
+      const logsToExport = auditLogs || [];
+      
+      if (logsToExport.length === 0) {
+        toast({ 
+          title: "No Data", 
+          description: "No audit logs found to export", 
+          variant: "destructive" 
+        });
+        return;
+      }
+      
+      const pdfBlob = await generateAuditReportPDF(patientName || 'Patient', logsToExport);
       const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -27,6 +42,7 @@ export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName }: A
       URL.revokeObjectURL(url);
       toast({ title: "Success", description: "Audit report downloaded" });
     } catch (error) {
+      console.error('Download error:', error);
       toast({ title: "Error", description: "Failed to download audit report", variant: "destructive" });
     }
   };
@@ -85,10 +101,18 @@ export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName }: A
         </DialogHeader>
         
         <ScrollArea className="h-[60vh] pr-4">
-          {auditLogs.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Activity className="h-12 w-12 mx-auto mb-4 opacity-50 animate-spin" />
+              <p>Loading audit logs...</p>
+            </div>
+          ) : auditLogs.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No audit log entries found</p>
+              <p className="text-xs mt-2">
+                Actions performed in this session will appear here after being logged.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">

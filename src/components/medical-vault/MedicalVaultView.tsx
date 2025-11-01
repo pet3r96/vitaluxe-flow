@@ -51,7 +51,7 @@ export function MedicalVaultView({
   const queryClient = useQueryClient();
 
   // Fetch audit logs
-  const { data: auditLogs = [] } = useAuditLogs(patientAccountId);
+  const { data: auditLogs = [], isLoading: isLoadingAuditLogs } = useAuditLogs(patientAccountId);
 
   // Real-time subscriptions for automatic updates
   useEffect(() => {
@@ -390,6 +390,8 @@ export function MedicalVaultView({
         onOpenChange={setAuditDialogOpen}
         auditLogs={auditLogs}
         patientName={displayName}
+        patientAccountId={patientAccountId}
+        isLoading={isLoadingAuditLogs}
       />
 
       <Dialog open={previewDialogOpen} onOpenChange={(open) => {
