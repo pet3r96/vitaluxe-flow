@@ -181,31 +181,35 @@ export function MessagesAndChatWidget() {
   }, [user?.id, effectivePracticeId, queryClient]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card variant="modern">
+      <CardHeader className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20">
+        <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
           <MessageSquare className="h-5 w-5" />
-          Messages & Internal Chat
+          Communications
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Patient Messages (Support Tickets) */}
-        <div className="space-y-2">
+      <CardContent className="pt-6 space-y-5">
+        {/* Patient Messages Section */}
+        <div className="space-y-3 p-4 rounded-xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/20 dark:to-blue-900/10">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Messages</h3>
-            <Badge variant="secondary">{unreadMessages?.count || 0}</Badge>
+            <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-300">Patient Messages</h3>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {unreadMessages?.count || 0}
+              </span>
+            </div>
           </div>
           {unreadMessages && unreadMessages.count > 0 ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {unreadMessages.subjects.map((subject: string, idx: number) => (
-                <div key={idx} className="text-sm text-muted-foreground truncate">
-                  • {subject}
+                <div key={idx} className="text-sm text-muted-foreground bg-background/50 p-2 rounded-lg truncate">
+                  {subject}
                 </div>
               ))}
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full mt-2"
+                className="w-full mt-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                 onClick={() => navigate("/practice/patient-inbox")}
               >
                 View All Messages
@@ -216,26 +220,30 @@ export function MessagesAndChatWidget() {
           )}
         </div>
 
-        {/* Internal Chat */}
-        <div className="space-y-2 pt-2 border-t">
+        {/* Internal Chat Section */}
+        <div className="space-y-3 p-4 rounded-xl bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-950/20 dark:to-green-900/10">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-green-700 dark:text-green-300 flex items-center gap-1.5">
               <Inbox className="h-4 w-4" />
               Internal Chat
             </h3>
-            <Badge variant="secondary">{unreadInternalChat?.count || 0}</Badge>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {unreadInternalChat?.count || 0}
+              </span>
+            </div>
           </div>
           {unreadInternalChat && unreadInternalChat.count > 0 ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {unreadInternalChat.senders.map((sender: string, idx: number) => (
-                <div key={idx} className="text-sm text-muted-foreground truncate">
-                  • From {sender}
+                <div key={idx} className="text-sm text-muted-foreground bg-background/50 p-2 rounded-lg truncate">
+                  From {sender}
                 </div>
               ))}
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full mt-2"
+                className="w-full mt-2 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
                 onClick={() => navigate("/internal-chat")}
               >
                 View Internal Chat

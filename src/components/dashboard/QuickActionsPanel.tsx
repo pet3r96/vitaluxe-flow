@@ -34,11 +34,11 @@ export function QuickActionsPanel() {
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
+    <Card variant="modern">
+      <CardHeader className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-950/30 dark:to-indigo-900/20">
+        <CardTitle className="text-indigo-700 dark:text-indigo-300">Quick Actions</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="grid grid-cols-1 gap-3">
           {actions.map((action) => {
             const Icon = action.icon;
@@ -46,11 +46,13 @@ export function QuickActionsPanel() {
               <Button
                 key={action.label}
                 variant="outline"
-                className="w-full justify-start items-center p-4 hover:bg-accent gap-3"
+                className="w-full justify-start items-center p-5 hover:bg-accent/50 hover:scale-[1.02] transition-all duration-200 gap-4 h-auto"
                 onClick={action.onClick}
               >
-                <Icon className={`h-6 w-6 flex-shrink-0 ${action.color}`} />
-                <div className="font-medium text-sm text-left">{action.label}</div>
+                <div className={`p-2 rounded-lg bg-gradient-to-br from-accent/50 to-accent/30`}>
+                  <Icon className={`h-5 w-5 ${action.color}`} />
+                </div>
+                <div className="font-semibold text-sm text-left flex-1">{action.label}</div>
               </Button>
             );
           })}

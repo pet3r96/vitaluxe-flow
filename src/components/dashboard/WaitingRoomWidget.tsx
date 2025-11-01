@@ -73,40 +73,42 @@ export function WaitingRoomWidget() {
 
   return (
     <Card 
-      className="cursor-pointer hover:bg-accent transition-colors"
+      variant="modern"
+      className="cursor-pointer hover:shadow-lg transition-all duration-200"
       onClick={handleCardClick}
     >
-      <CardHeader className="relative">
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Waiting Room
-        </CardTitle>
-        {!isLoading && waitingPatients && waitingPatients.length > 0 && (
-          <Badge className="absolute top-4 right-4 bg-gold1 hover:bg-gold1/90">
-            {waitingPatients.length}
-          </Badge>
-        )}
+      <CardHeader className="relative bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+            <Clock className="h-5 w-5" />
+            Waiting Room
+          </CardTitle>
+          {!isLoading && waitingPatients && waitingPatients.length > 0 && (
+            <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+              {waitingPatients.length}
+            </div>
+          )}
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-16 w-full" />
+              <Skeleton key={i} className="h-16 w-full rounded-lg" />
             ))}
           </div>
         ) : waitingPatients && waitingPatients.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {displayedPatients.map((appointment) => {
               const waitMinutes = calculateWaitTime(appointment.checked_in_at);
               return (
                 <div
                   key={appointment.id}
-                  className="flex items-start gap-3 p-3 rounded-lg border bg-card"
+                  className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-br from-amber-50/50 to-amber-100/30 dark:from-amber-950/20 dark:to-amber-900/10 hover:scale-[1.01] transition-transform duration-200"
                 >
-                  <Clock className={`h-4 w-4 mt-1 ${getWaitTimeColor(waitMinutes)}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium truncate flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="font-semibold truncate flex-1">
                         {appointment.patient
                           ? `${appointment.patient.first_name} ${appointment.patient.last_name}`
                           : "Unknown Patient"}
@@ -120,7 +122,8 @@ export function WaitingRoomWidget() {
                         />
                       )}
                     </div>
-                    <div className={`text-sm ${getWaitTimeColor(waitMinutes)}`}>
+                    <div className={`text-sm font-medium flex items-center gap-2 ${getWaitTimeColor(waitMinutes)}`}>
+                      <Clock className="h-3.5 w-3.5" />
                       {waitMinutes} min{waitMinutes !== 1 ? 's' : ''} waiting
                     </div>
                   </div>
@@ -129,9 +132,9 @@ export function WaitingRoomWidget() {
             })}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No patients waiting</p>
+          <div className="text-center py-12 text-muted-foreground">
+            <Clock className="h-16 w-16 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">No patients waiting</p>
           </div>
         )}
       </CardContent>

@@ -131,34 +131,40 @@ export function TodayAppointmentsWidget() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Today's Appointments
-          </CardTitle>
+      <Card variant="modern">
+        <CardHeader className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+              <Calendar className="h-5 w-5" />
+              Today's Appointments
+            </CardTitle>
+            {!isLoading && appointments && appointments.length > 0 && (
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                {appointments.length}
+              </div>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 bg-muted animate-pulse rounded" />
+                <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
               ))}
             </div>
           ) : appointments && appointments.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {appointments.map((appointment) => (
                 <Button
                   key={appointment.id}
                   variant="ghost"
-                  className="w-full justify-start text-left h-auto p-3 hover:bg-accent"
+                  className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg transition-all duration-200 hover:scale-[1.01]"
                   onClick={() => handleAppointmentClick(appointment)}
                 >
                   <div className="flex items-start gap-3 w-full">
-                    <Clock className="h-4 w-4 mt-1 text-muted-foreground" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium truncate flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="font-semibold truncate flex-1 text-base">
                           {appointment.patient_account 
                             ? `${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`
                             : "Unknown Patient"}
@@ -172,11 +178,12 @@ export function TodayAppointmentsWidget() {
                           />
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" />
                         {format(new Date(appointment.start_time), "h:mm a")}
                       </div>
                     </div>
-                    <Badge className={getStatusColor(appointment.status)}>
+                    <Badge className={`${getStatusColor(appointment.status)} font-medium`}>
                       {appointment.status}
                     </Badge>
                   </div>
@@ -184,9 +191,9 @@ export function TodayAppointmentsWidget() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No appointments today</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No appointments today</p>
             </div>
           )}
         </CardContent>

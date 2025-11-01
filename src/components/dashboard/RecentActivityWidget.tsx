@@ -174,30 +174,33 @@ export function RecentActivityWidget({ className }: { className?: string }) {
   });
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card variant="modern" className={className}>
+      <CardHeader className="bg-gradient-to-br from-teal-50 to-teal-100/50 dark:from-teal-950/30 dark:to-teal-900/20">
+        <CardTitle className="flex items-center gap-2 text-teal-700 dark:text-teal-300">
           <Activity className="h-5 w-5" />
           Recent Activity
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+              <div key={i} className="h-12 bg-muted/50 animate-pulse rounded-lg" />
             ))}
           </div>
         ) : activities && activities.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {activities.map((activity, index) => {
               const Icon = activity.icon;
               return (
-                <div key={index} className="flex items-start gap-3 text-sm">
-                  <Icon className="h-4 w-4 mt-1 text-muted-foreground" />
+                <div 
+                  key={index} 
+                  className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-br from-teal-50/50 to-teal-100/30 dark:from-teal-950/20 dark:to-teal-900/10 hover:scale-[1.01] transition-transform duration-200"
+                >
+                  <Icon className="h-5 w-5 mt-0.5 text-teal-600 dark:text-teal-400" />
                   <div className="flex-1 min-w-0">
-                    <p className="truncate">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm font-medium truncate">{activity.description}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {formatDistanceToNow(new Date(activity.time), { addSuffix: true })}
                     </p>
                   </div>
@@ -206,9 +209,9 @@ export function RecentActivityWidget({ className }: { className?: string }) {
             })}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No recent activity</p>
+          <div className="text-center py-12 text-muted-foreground">
+            <Activity className="h-16 w-16 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">No recent activity</p>
           </div>
         )}
       </CardContent>

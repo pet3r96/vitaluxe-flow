@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, AlertCircle, FolderOpen } from "lucide-react";
@@ -111,86 +111,98 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
 
   return (
     <>
-      <Card className={cn("p-6 bg-card border-border shadow-gold", className)}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
-            <h2 className="text-xl font-semibold text-foreground">Requested Appointments</h2>
+      <Card variant="modern" className={cn("overflow-hidden", className)}>
+        <CardHeader className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+              <AlertCircle className="h-5 w-5" />
+              Requested Appointments
+            </CardTitle>
+            {requestedAppointments.length > 0 && (
+              <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                {requestedAppointments.length}
+              </div>
+            )}
           </div>
-          {requestedAppointments.length > 0 && (
-            <Badge variant="warning" size="sm">
-              {requestedAppointments.length}
-            </Badge>
-          )}
-        </div>
+        </CardHeader>
+        <CardContent className="pt-6">
 
-        {requestedAppointments.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No pending appointment requests</p>
-        ) : (
-          <div className="space-y-3">
-            {requestedAppointments.map((appointment) => {
-              const patientProfile = appointment?.patient_accounts?.profiles;
-              const patientName = patientProfile?.full_name || patientProfile?.name || 'Unknown Patient';
-              const isReschedule = !!appointment.reschedule_requested_at;
-              const requestedAt = appointment.reschedule_requested_at || appointment.start_time;
+          {requestedAppointments.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <AlertCircle className="h-16 w-16 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No pending appointment requests</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {requestedAppointments.map((appointment) => {
+                const patientProfile = appointment?.patient_accounts?.profiles;
+                const patientName = patientProfile?.full_name || patientProfile?.name || 'Unknown Patient';
+                const isReschedule = !!appointment.reschedule_requested_at;
+                const requestedAt = appointment.reschedule_requested_at || appointment.start_time;
 
-              return (
-                <div
-                  key={appointment.id}
-                  className="p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <button
-                      onClick={() => setSelectedAppointment(appointment)}
-                      className="flex-1 min-w-0 text-left"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                        <p className="font-medium text-sm truncate">{patientName}</p>
-                        {isReschedule && (
-                          <Badge variant="outline" className="text-xs">Reschedule</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{format(new Date(appointment.requested_date || appointment.start_time), 'MMM d, yyyy')}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>
-                            {appointment.requested_time 
-                              ? format(parse(appointment.requested_time, 'HH:mm:ss', new Date()), 'h:mm a')
-                              : format(new Date(appointment.start_time), 'h:mm a')}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">{appointment.reason_for_visit}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(requestedAt), { addSuffix: true })}
-                      </p>
-                    </button>
-                    <div className="flex flex-col gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/patients/${appointment.patient_accounts?.id}`);
-                        }}
+                return (
+                  <div
+                    key={appointment.id}
+                    className="p-4 rounded-lg bg-gradient-to-br from-orange-50/50 to-orange-100/30 dark:from-orange-950/20 dark:to-orange-900/10 hover:scale-[1.01] transition-all duration-200"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        onClick={() => setSelectedAppointment(appointment)}
+                        className="flex-1 min-w-0 text-left"
                       >
-                        <FolderOpen className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setSelectedAppointment(appointment)}>
-                        Review
-                      </Button>
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                          <p className="font-semibold text-sm truncate">{patientName}</p>
+                          {isReschedule && (
+                            <Badge variant="outline" className="text-xs">Reschedule</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{format(new Date(appointment.requested_date || appointment.start_time), 'MMM d, yyyy')}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {appointment.requested_time 
+                                ? format(parse(appointment.requested_time, 'HH:mm:ss', new Date()), 'h:mm a')
+                                : format(new Date(appointment.start_time), 'h:mm a')}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate mb-1">{appointment.reason_for_visit}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(requestedAt), { addSuffix: true })}
+                        </p>
+                      </button>
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/patients/${appointment.patient_accounts?.id}`);
+                          }}
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="hover:bg-orange-100 dark:hover:bg-orange-900/30"
+                          onClick={() => setSelectedAppointment(appointment)}
+                        >
+                          Review
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
       </Card>
 
       {selectedAppointment && (

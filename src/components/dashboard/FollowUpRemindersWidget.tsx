@@ -85,32 +85,38 @@ export function FollowUpRemindersWidget() {
   }, [markComplete]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          Patient Follow-Ups
-        </CardTitle>
+    <Card variant="modern">
+      <CardHeader className="bg-gradient-to-br from-rose-50 to-rose-100/50 dark:from-rose-950/30 dark:to-rose-900/20">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
+            <Bell className="h-5 w-5" />
+            Patient Follow-Ups
+          </CardTitle>
+          {!isLoading && followUps && followUps.length > 0 && (
+            <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">
+              {followUps.length}
+            </div>
+          )}
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-muted animate-pulse rounded" />
+              <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
             ))}
           </div>
         ) : followUps && followUps.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {followUps.map((followUp) => (
               <div
                 key={followUp.id}
-                className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-br from-rose-50/50 to-rose-100/30 dark:from-rose-950/20 dark:to-rose-900/10 hover:scale-[1.01] cursor-pointer transition-all duration-200"
                 onClick={() => handleFollowUpClick(followUp.patient_id)}
               >
-                <CalendarIcon className="h-4 w-4 mt-1 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium truncate flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="font-semibold truncate flex-1">
                       {followUp.patient 
                         ? `${followUp.patient.first_name} ${followUp.patient.last_name}`
                         : "Unknown Patient"}
@@ -126,16 +132,17 @@ export function FollowUpRemindersWidget() {
                       </div>
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground truncate">
+                  <div className="text-sm text-muted-foreground truncate mb-2">
                     {followUp.reason}
                   </div>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {getDateBadge(followUp.follow_up_date)}
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CalendarIcon className="h-3 w-3" />
                       {format(new Date(followUp.follow_up_date), "MMM d")}
                     </span>
                     {followUp.priority && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         followUp.priority === 'urgent' ? 'bg-destructive text-destructive-foreground' :
                         followUp.priority === 'high' ? 'bg-orange-500 text-white' :
                         followUp.priority === 'medium' ? 'bg-yellow-500 text-white' :
@@ -149,6 +156,7 @@ export function FollowUpRemindersWidget() {
                 <Button
                   size="sm"
                   variant="ghost"
+                  className="hover:bg-green-100 dark:hover:bg-green-900/30"
                   onClick={(e) => handleMarkComplete(e, followUp.id)}
                   disabled={markComplete.isPending}
                 >
@@ -158,9 +166,9 @@ export function FollowUpRemindersWidget() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No upcoming follow-ups</p>
+          <div className="text-center py-12 text-muted-foreground">
+            <Bell className="h-16 w-16 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">No upcoming follow-ups</p>
           </div>
         )}
       </CardContent>
