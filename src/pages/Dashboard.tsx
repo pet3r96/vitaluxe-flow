@@ -651,35 +651,26 @@ const Dashboard = () => {
 
       {!isSubscribed && effectiveRole !== 'pharmacy' && effectiveRole !== 'admin' && (effectiveRole as any) !== 'provider' && (
         <>
-          {/* Stats cards for non-subscribed doctors/staff */}
+          {/* Stats cards with charts for non-subscribed doctors/staff */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-6">
-            {stats.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={stat.title} className="patient-card">
-                  <div className="p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                          <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                            {stat.title}
-                          </p>
-                        </div>
-                        {stat.isLoading ? (
-                          <Skeleton className="h-7 sm:h-8 w-20" />
-                        ) : (
-                          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                            {stat.value}
-                          </h3>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
+            <StatCardWithChart
+              title="Total Orders"
+              metricKey="orders"
+              icon={ShoppingCart}
+              description="Your practice orders"
+              currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
+              role={effectiveRole}
+              userId={effectiveUserId}
+            />
+            <StatCardWithChart
+              title="Products"
+              metricKey="products"
+              icon={Package}
+              description="Active products"
+              currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
+              role={effectiveRole}
+              userId={effectiveUserId}
+            />
           </div>
           
           <div className="patient-card p-6">
