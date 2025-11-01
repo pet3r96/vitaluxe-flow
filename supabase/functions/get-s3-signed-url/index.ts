@@ -47,7 +47,8 @@ serve(async (req) => {
     const bucket = bucketName || 'patient-documents';
     const path = filePath || s3_key;
     const expires = expiresIn || expires_in || 300;
-    const s3Key = s3_key || `${bucket}/${path}`;
+    // S3 key should just be the path (not bucket/path) when using new format
+    const s3Key = s3_key || path;
 
     if (!path) {
       throw new Error('Missing required field: filePath or s3_key');
