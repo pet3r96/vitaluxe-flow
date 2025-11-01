@@ -21,11 +21,18 @@ export function AnalyticsSection() {
       {isPharmacy ? (
         // Pharmacy: Only show Orders Breakdown
         <OrdersBreakdown />
-      ) : (
-        <div className={`grid grid-cols-1 gap-4 lg:gap-6 ${isPracticeUser || isAdmin ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
+      ) : isAdmin ? (
+        // Admin: Revenue and Orders side-by-side (50/50)
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           <RevenueChart />
           <OrdersBreakdown />
-          {!isPracticeUser && !isAdmin && <TopProducts />}
+        </div>
+      ) : (
+        // Others: Revenue, Orders, and conditionally Top Products
+        <div className={`grid grid-cols-1 gap-4 lg:gap-6 ${isPracticeUser ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
+          <RevenueChart />
+          <OrdersBreakdown />
+          {!isPracticeUser && <TopProducts />}
         </div>
       )}
     </section>
