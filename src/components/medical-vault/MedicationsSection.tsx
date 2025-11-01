@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pill, Plus, Edit, Eye, Trash2 } from "lucide-react";
+import { Pill, Plus, Edit, Eye, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -58,6 +58,28 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
       toast({ title: "Error", description: "Failed to delete medication", variant: "destructive" });
     }
   };
+
+  const handleToggleActive = async (medication: any) => {
+    const action = medication.is_active ? "mark as inactive" : "mark as active";
+    if (!confirm(`Are you sure you want to ${action} ${medication.medication_name}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from("patient_medications")
+        .update({ is_active: !medication.is_active, updated_at: new Date().toISOString() })
+        .eq("id", medication.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["patient-medications", patientAccountId] });
+      toast({ 
+        title: "Success", 
+        description: `Medication ${medication.is_active ? "marked as inactive" : "marked as active"} successfully` 
+      });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update medication status", variant: "destructive" });
+    }
+  };
   
   return (
     <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
@@ -107,17 +129,20 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
                     </p>
                   )}
                 </div>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => openDialog("view", med)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => openDialog("edit", med)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(med)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => openDialog("view", med)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => openDialog("edit", med)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleToggleActive(med)} title="Mark inactive">
+                      <ToggleLeft className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDelete(med)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
               </div>
             ))}
             {activeMedications.length > 2 && (
