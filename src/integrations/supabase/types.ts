@@ -1475,6 +1475,80 @@ export type Database = {
           },
         ]
       }
+      medical_vault_audit_logs: {
+        Row: {
+          action_type: string
+          change_summary: string | null
+          changed_by_role: string | null
+          changed_by_user_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          patient_account_id: string
+        }
+        Insert: {
+          action_type: string
+          change_summary?: string | null
+          changed_by_role?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          patient_account_id: string
+        }
+        Update: {
+          action_type?: string
+          change_summary?: string | null
+          changed_by_role?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          patient_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_vault_audit_logs_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_vault_audit_logs_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_vault_audit_logs_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "medical_vault_audit_logs_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       medical_vault_share_links: {
         Row: {
           accessed_by_ip: string | null

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Activity, AlertCircle, Pill, Heart, Syringe, Scissors, Building2, Phone, ShieldCheck, Share2, Download, FileText, Eye, Printer } from "lucide-react";
+import { Activity, AlertCircle, Pill, Heart, Syringe, Scissors, Building2, Phone, ShieldCheck, Share2, Download, FileText, Eye, Printer, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -22,6 +22,9 @@ import { PharmaciesSection } from "@/components/medical-vault/PharmaciesSection"
 import { EmergencyContactsSection } from "@/components/medical-vault/EmergencyContactsSection";
 import { BasicDemographicsCard } from "@/components/patient/BasicDemographicsCard";
 import { PDFViewer } from "@/components/documents/PDFViewer";
+import { useAuditLogs } from "@/hooks/useAuditLogs";
+import { AuditLogDialog } from "@/components/medical-vault/dialogs/AuditLogDialog";
+import { generateAuditReportPDF } from "@/lib/auditReportPdfGenerator";
 
 export default function PatientMedicalVault() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -31,20 +34,10 @@ export default function PatientMedicalVault() {
   const [showShareLinkDialog, setShowShareLinkDialog] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [shareExpiresAt, setShareExpiresAt] = useState<Date>(new Date());
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   
   const queryClient = useQueryClient();
   const { effectiveUserId } = useAuth();
-
-  // Event listener for impersonation changes - defensive cache invalidation
-  useEffect(() => {
-    const handler = () => {
-      queryClient.invalidateQueries({ 
-        predicate: q => Array.isArray(q.queryKey) && String(q.queryKey[0]).startsWith("patient-")
-      });
-    };
-    window.addEventListener("impersonation-changed", handler);
-    return () => window.removeEventListener("impersonation-changed", handler);
-  }, [queryClient]);
 
   // Get patient account using effectiveUserId from AuthContext
   const { data: patientAccount, isLoading, error } = useQuery({
@@ -67,6 +60,9 @@ export default function PatientMedicalVault() {
     },
     enabled: !!effectiveUserId,
   });
+
+  // Fetch audit logs
+  const { data: auditLogs = [] } = useAuditLogs(patientAccount?.id);
 
   // Fetch all medical data
   const { data: medications } = useQuery({
@@ -278,6 +274,24 @@ export default function PatientMedicalVault() {
     };
   };
 
+  const handleDownloadAuditReport = async () => {
+    if (!patientAccount) return;
+    
+    try {
+      const patientName = `${patientAccount.first_name} ${patientAccount.last_name}`;
+      const pdfBlob = await generateAuditReportPDF(patientName, auditLogs);
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${patientName.replace(/\s+/g, '_')}_Audit_Log_${new Date().toISOString().split('T')[0]}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Success", description: "Audit report downloaded successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to generate audit report", variant: "destructive" });
+    }
+  };
+
   const handleDownloadPDF = async () => {
     if (!patientAccount) {
       toast({ title: "Error", description: "Patient account not loaded", variant: "destructive" });
@@ -407,6 +421,14 @@ export default function PatientMedicalVault() {
         expiresAt={shareExpiresAt}
       />
 
+      {/* Audit Log Dialog */}
+      <AuditLogDialog
+        open={auditDialogOpen}
+        onOpenChange={setAuditDialogOpen}
+        auditLogs={auditLogs}
+        patientName={patientAccount ? `${patientAccount.first_name} ${patientAccount.last_name}` : ''}
+      />
+
       {/* PDF Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={(open) => {
         setPreviewDialogOpen(open);
@@ -497,6 +519,15 @@ export default function PatientMedicalVault() {
               >
                 <Download className="h-3 w-3" />
                 Download
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setAuditDialogOpen(true)}
+                className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
+              >
+                <ClipboardList className="h-3 w-3" />
+                Audit
               </Button>
               <Button 
                 variant="outline" 
