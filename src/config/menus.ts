@@ -21,6 +21,9 @@ import {
   UserRoundCog,
   Truck,
   Settings,
+  Briefcase,
+  UserSquare2,
+  FileSignature,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -54,11 +57,11 @@ export const menus: MenuConfig = {
       isParent: true,
       icon: Users,
       items: [
-        { label: "Accounts", href: "/accounts", icon: Users },
-        { label: "Practices", href: "/practices", icon: Stethoscope },
-        { label: "Representatives", href: "/representatives", icon: Users },
-        { label: "Patients", href: "/patients", icon: Users },
-        { label: "Pharmacies", href: "/pharmacies", icon: Building2 },
+        { label: "All Users", href: "/accounts", icon: Users },
+        { label: "Practices", href: "/practices", icon: Building2 },
+        { label: "Representatives", href: "/representatives", icon: Briefcase },
+        { label: "Patients", href: "/patients", icon: UserSquare2 },
+        { label: "Pharmacies", href: "/pharmacies", icon: Stethoscope },
       ],
     },
     {
@@ -69,22 +72,7 @@ export const menus: MenuConfig = {
         { label: "Orders", href: "/orders", icon: ShoppingCart },
         { label: "Reports", href: "/reports", icon: FileText },
         { label: "Rep Productivity", href: "/rep-productivity", icon: BarChart3 },
-      ],
-    },
-    {
-      title: "Products & Order Management",
-      isParent: true,
-      icon: Package,
-      items: [
         { label: "Product Catalog", href: "/products", icon: Package },
-        { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
-        { label: "Discount Codes", href: "/admin/discount-codes", icon: Tag },
-      ],
-    },
-    {
-      title: "Communications",
-      items: [
-        { label: "Messages", href: "/messages", icon: MessageSquare },
       ],
     },
     {
@@ -92,9 +80,9 @@ export const menus: MenuConfig = {
       isParent: true,
       icon: Settings,
       items: [
-        { label: "Admin Settings", href: "/admin/settings", icon: Shield },
+        { label: "Admin Settings", href: "/admin/settings", icon: Settings },
         { label: "Security", href: "/security", icon: Shield },
-        { label: "Terms Management", href: "/admin/terms", icon: FileText },
+        { label: "Terms Management", href: "/admin/terms", icon: FileSignature },
       ],
     },
   ],
