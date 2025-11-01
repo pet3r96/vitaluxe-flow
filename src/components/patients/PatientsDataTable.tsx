@@ -43,7 +43,7 @@ export const PatientsDataTable = () => {
 
       let patientsData: any[] = [];
 
-      if ((effectiveRole === "doctor" || effectiveRole === "provider") && effectivePracticeId) {
+      if ((effectiveRole === "doctor" || effectiveRole === "provider" || effectiveRole === "staff") && effectivePracticeId) {
         // 1) Patients explicitly assigned to this practice
         const { data: byPractice, error: byPracticeErr } = await supabase
           .from("patient_accounts")

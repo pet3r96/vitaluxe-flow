@@ -548,24 +548,19 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Widgets Grid - Only show for subscribed doctors/staff */}
-            {isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff') && (
+            {/* Widgets Grid - Show for subscribed doctors/staff AND providers */}
+            {(isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff')) || (effectiveRole as any) === 'provider' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                 <TabbedAppointmentsWidget />
                 <WaitingRoomWidget />
                 <TabbedCommunicationsWidget />
                 <RecentActivityWidget />
               </div>
-            )}
-
-            {/* Recent Activity for non-subscribed providers */}
-            {(effectiveRole as any) === 'provider' && !isSubscribed && (
-              <RecentActivityWidget />
-            )}
+            ) : null}
           </div>
 
-          {/* Right Sidebar - 1/4 width - Search & Quick Actions - Only for subscribed */}
-          {isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff') && (
+          {/* Right Sidebar - Search & Quick Actions - Show for subscribed doctors/staff AND providers */}
+          {((isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff')) || (effectiveRole as any) === 'provider') && (
             <div className="lg:col-span-1 space-y-4 lg:space-y-6">
               <PatientQuickSearch />
               <QuickActionsPanel />

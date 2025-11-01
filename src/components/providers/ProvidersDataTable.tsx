@@ -43,7 +43,8 @@ export const ProvidersDataTable = () => {
         .order("created_at", { ascending: false });
       
       // If doctor role, only show their own providers
-      if (effectiveRole === "doctor") {
+      // If staff role, show practice providers
+      if (effectiveRole === "doctor" || effectiveRole === "staff") {
         providersQuery = providersQuery.eq("practice_id", effectiveUserId);
       }
       

@@ -54,9 +54,17 @@ const Support = () => {
   });
 
   // Calculate stats
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
   const openTickets = supportThreads?.filter(t => !t.resolved).length || 0;
   const resolvedTickets = supportThreads?.filter(t => t.resolved).length || 0;
-  const recentTickets = supportThreads?.slice(0, 5) || [];
+  
+  // Pagination logic
+  const totalPages = Math.ceil((supportThreads?.length || 0) / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTickets = supportThreads?.slice(startIndex, endIndex) || [];
 
   if (userRole !== "admin") {
     return (
@@ -162,39 +170,81 @@ const Support = () => {
             <TabsContent value="all" className="space-y-4">
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading tickets...</div>
-              ) : recentTickets.length === 0 ? (
+              ) : paginatedTickets.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">No support tickets found</div>
               ) : (
-                recentTickets.map((ticket) => (
-                  <Card key={ticket.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
-                          <CardDescription>
-                            Patient ID: {ticket.patient_id?.slice(0, 8)}...
-                          </CardDescription>
+                <>
+                  {paginatedTickets.map((ticket) => (
+                    <Card key={ticket.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
+                            <CardDescription>
+                              Patient ID: {ticket.patient_id?.slice(0, 8)}...
+                            </CardDescription>
+                          </div>
+                          <Badge variant={ticket.resolved ? "secondary" : "default"}>
+                            {ticket.resolved ? "Resolved" : "Open"}
+                          </Badge>
                         </div>
-                        <Badge variant={ticket.resolved ? "secondary" : "default"}>
-                          {ticket.resolved ? "Resolved" : "Open"}
-                        </Badge>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {ticket.message_body}
+                        </p>
+                        <div className="flex items-center justify-between mt-4">
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(ticket.created_at), "MMM dd, yyyy 'at' hh:mm a")}
+                          </span>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {startIndex + 1}-{Math.min(endIndex, supportThreads?.length || 0)} of {supportThreads?.length || 0}
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {ticket.message_body}
-                      </p>
-                      <div className="flex items-center justify-between mt-4">
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(ticket.created_at), "MMM dd, yyyy 'at' hh:mm a")}
-                        </span>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="w-8"
+                            >
+                              {page}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
 
