@@ -116,6 +116,7 @@ const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
 const PracticePatientMedicalVault = lazy(() => import("./pages/practice/PatientMedicalVault"));
+const Support = lazy(() => import("./pages/Support"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -222,8 +223,9 @@ const App = () => (
                                       <Route path="/profile" element={<Profile />} />
                                       <Route path="/admin-settings" element={<AdminSettings />} />
                                       <Route path="/subscriptions" element={<Subscriptions />} />
-                                      <Route path="/security" element={<Security />} />
-                                      <Route path="/admin/terms" element={<AdminTermsManagement />} />
+                      <Route path="/security" element={<Security />} />
+                      <Route path="/support" element={<Support />} />
+                      <Route path="/admin/terms" element={<AdminTermsManagement />} />
                                       <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
                                       <Route path="/rep-reports" element={<RepProfitReports />} />
                                       <Route path="/rep-productivity" element={<RepProductivityReport />} />

@@ -24,6 +24,7 @@ import {
   Briefcase,
   UserSquare2,
   FileSignature,
+  LifeBuoy,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -70,16 +71,18 @@ export const menus: MenuConfig = {
       icon: BarChart3,
       items: [
         { label: "Orders", href: "/orders", icon: ShoppingCart },
+        { label: "Support", href: "/support", icon: LifeBuoy },
         { label: "Reports", href: "/reports", icon: FileText },
         { label: "Rep Productivity", href: "/rep-productivity", icon: BarChart3 },
         { label: "Product Catalog", href: "/products", icon: Package },
       ],
     },
     {
-      title: "Admin Settings",
+      title: "Settings",
       isParent: true,
       icon: Settings,
       items: [
+        { label: "Admin Settings", href: "/admin-settings", icon: Settings },
         { label: "Security", href: "/security", icon: Shield },
         { label: "Terms Management", href: "/admin/terms", icon: FileSignature },
       ],
