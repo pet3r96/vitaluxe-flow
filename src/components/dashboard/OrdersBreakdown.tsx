@@ -28,10 +28,14 @@ export function OrdersBreakdown() {
           return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
         }
 
-        // Get order lines assigned to this pharmacy
+        // Get order lines assigned to this pharmacy, include parent order status
         const { data: orderLines, error: linesError } = await supabase
           .from('order_lines')
-          .select('order_id')
+          .select(`
+            order_id,
+            status,
+            orders!inner(status)
+          `)
           .eq('assigned_pharmacy_id', pharmacyData.id);
 
         if (linesError) throw linesError;
@@ -40,38 +44,40 @@ export function OrdersBreakdown() {
           return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
         }
 
-        // Get unique order IDs
-        const orderIds = [...new Set(orderLines.map(line => line.order_id))];
+        // Exclude cancelled parent orders
+        const filtered = orderLines.filter((ol: any) => ol.orders?.status?.toLowerCase() !== 'cancelled');
+        if (filtered.length === 0) {
+          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
+        }
 
-        // Fetch order statuses, excluding cancelled and failed payments
-        const { data: orders, error: ordersError } = await supabase
-          .from('orders')
-          .select('status, payment_status')
-          .in('id', orderIds)
-          .neq('status', 'cancelled')
-          .neq('payment_status', 'payment_failed');
+        // Group line statuses by order
+        const byOrder = new Map<string, string[]>();
+        for (const ol of filtered as any[]) {
+          const arr = byOrder.get(ol.order_id) || [];
+          if (ol.status) arr.push(String(ol.status).toLowerCase());
+          byOrder.set(ol.order_id, arr);
+        }
 
-        if (ordersError) throw ordersError;
-
-        // Count by status
-        const counts = {
-          pending: 0,
-          on_hold: 0,
-          processing: 0,
-          shipped: 0,
-          completed: 0,
-          declined: 0,
-        };
-
-        orders?.forEach(order => {
-          const status = order.status?.toLowerCase();
-          if (status === 'pending') counts.pending++;
-          else if (status === 'on_hold') counts.on_hold++;
-          else if (status === 'processing') counts.processing++;
-          else if (status === 'shipped') counts.shipped++;
-          else if (status === 'delivered' || status === 'completed') counts.completed++;
-          else if (status === 'declined') counts.declined++;
-        });
+        // Precedence: declined(denied) > completed/delivered > shipped > processing > pending/on_hold
+        const counts = { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 } as any;
+        for (const [, statuses] of byOrder) {
+          const has = (s: string) => statuses.includes(s);
+          if (has('denied') || has('declined')) {
+            counts.declined++;
+          } else if (has('delivered') || has('completed')) {
+            counts.completed++;
+          } else if (has('shipped')) {
+            counts.shipped++;
+          } else if (has('processing')) {
+            counts.processing++;
+          } else if (has('on_hold') || has('pending')) {
+            // Treat both as pending bucket for the donut, but keep on_hold tracked
+            if (has('on_hold')) counts.on_hold++;
+            else counts.pending++;
+          } else {
+            counts.pending++;
+          }
+        }
 
         return counts;
       } else if (effectiveRole === 'doctor' || effectiveRole === 'provider' || effectiveRole === 'staff') {
@@ -96,8 +102,7 @@ export function OrdersBreakdown() {
           .from('orders')
           .select('status, payment_status')
           .eq('doctor_id', doctorId)
-          .neq('status', 'cancelled')
-          .neq('payment_status', 'payment_failed');
+          .neq('status', 'cancelled');
 
         if (error) throw error;
 
@@ -140,7 +145,7 @@ export function OrdersBreakdown() {
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <Card variant="modern" className="overflow-hidden">
+    <Card variant="modern" className="overflow-hidden h-full">
       <CardHeader>
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />

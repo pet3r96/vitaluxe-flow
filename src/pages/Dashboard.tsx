@@ -624,12 +624,12 @@ const Dashboard = () => {
       {/* For pharmacy: show Orders by Status next to stats + Recent Activity */}
       {isSubscribed && effectiveRole === 'pharmacy' && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch">
             <div className="lg:col-span-1">
               <OrdersBreakdown />
             </div>
             <div className="lg:col-span-2">
-              <RecentActivityWidget />
+              <RecentActivityWidget className="h-full" />
             </div>
           </div>
         </>
