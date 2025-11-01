@@ -377,13 +377,13 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="patient-container">
+    <div className="patient-container w-full max-w-7xl mx-auto">
       {/* Welcome Header */}
-      <div className="text-center mb-8">
+      <div className="text-center mb-6 sm:mb-8 px-2">
         <h1 className="patient-section-header">
           Welcome, {patientAccount?.first_name || 'Patient'}
         </h1>
-        <p className="text-muted-foreground text-sm md:text-base">Your personal health dashboard</p>
+        <p className="text-muted-foreground text-xs sm:text-sm md:text-base mt-1">Your personal health dashboard</p>
       </div>
 
       {/* Practice Subscription Warning */}
@@ -437,29 +437,29 @@ export default function PatientDashboard() {
       )}
 
       {/* Quick Stats Cards */}
-      <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 xs:grid-cols-2 lg:grid-cols-4">
         {/* Next Appointment Card */}
         <Card 
           variant="modern"
-          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-primary overflow-hidden relative"
+          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-primary overflow-hidden relative touch-manipulation"
           onClick={() => navigate("/appointments")}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium">Next Appointment</CardTitle>
-            <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-              <Calendar className="h-5 w-5 text-primary" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Next Appointment</CardTitle>
+            <div className="p-1.5 sm:p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent className="relative z-10 p-3 sm:p-4 md:p-6 pt-0">
             {loadingAppt ? (
               <Skeleton className="h-8 w-24" />
             ) : nextAppointment ? (
               <>
-                <div className="text-2xl font-bold mb-1">
+                <div className="text-xl sm:text-2xl font-bold mb-1">
                   {format(new Date(nextAppointment.start_time), "MMM dd")}
                 </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                   {nextAppointment.visit_type === 'video' ? (
                     <><Video className="h-3 w-3" /> Video Call</>
                   ) : nextAppointment.visit_type === 'phone' ? (
@@ -473,8 +473,8 @@ export default function PatientDashboard() {
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold mb-1">None</div>
-                <p className="text-xs text-muted-foreground">No upcoming visits</p>
+                <div className="text-xl sm:text-2xl font-bold mb-1">None</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">No upcoming visits</p>
               </>
             )}
           </CardContent>
@@ -483,14 +483,14 @@ export default function PatientDashboard() {
         {/* Unread Messages Card */}
         <Card 
           variant="modern"
-          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-accent overflow-hidden relative"
+          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-accent overflow-hidden relative touch-manipulation"
           onClick={() => navigate("/messages")}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
-            <div className="p-2 rounded-full bg-accent/10 group-hover:bg-accent/20 transition-colors relative">
-              <MessageSquare className="h-5 w-5 text-accent" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Unread Messages</CardTitle>
+            <div className="p-1.5 sm:p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-white flex items-center justify-center font-bold animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -498,13 +498,13 @@ export default function PatientDashboard() {
               )}
             </div>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent className="relative z-10 p-3 sm:p-4 md:p-6 pt-0">
             {loadingMessages ? (
               <Skeleton className="h-8 w-16" />
             ) : (
               <>
-                <div className="text-2xl font-bold mb-1">{unreadCount}</div>
-                <p className="text-xs text-muted-foreground">From providers</p>
+                <div className="text-xl sm:text-2xl font-bold mb-1">{unreadCount}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">From providers</p>
               </>
             )}
           </CardContent>
@@ -513,23 +513,23 @@ export default function PatientDashboard() {
         {/* Medication Reminders Card */}
         <Card 
           variant="modern"
-          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-secondary overflow-hidden relative"
+          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-secondary overflow-hidden relative touch-manipulation"
           onClick={() => navigate("/medical-vault")}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium">Active Medications</CardTitle>
-            <div className="p-2 rounded-full bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-              <Pill className="h-5 w-5 text-secondary" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Active Medications</CardTitle>
+            <div className="p-1.5 sm:p-2 rounded-full bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+              <Pill className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
             </div>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent className="relative z-10 p-3 sm:p-4 md:p-6 pt-0">
             {loadingVault ? (
               <Skeleton className="h-8 w-12" />
             ) : (
               <>
-                <div className="text-2xl font-bold mb-1">{medicationCount}</div>
-                <p className="text-xs text-muted-foreground">Current prescriptions</p>
+                <div className="text-xl sm:text-2xl font-bold mb-1">{medicationCount}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Current prescriptions</p>
               </>
             )}
           </CardContent>
@@ -538,24 +538,24 @@ export default function PatientDashboard() {
         {/* Medical Vault Status Card */}
         <Card 
           variant="modern"
-          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-gold1 overflow-hidden relative"
+          className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-l-gold1 overflow-hidden relative touch-manipulation"
           onClick={() => navigate("/medical-vault")}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-gold1/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium">Medical Vault</CardTitle>
-            <div className="p-2 rounded-full bg-gold1/10 group-hover:bg-gold1/20 transition-colors">
-              <Activity className="h-5 w-5 text-gold1" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Medical Vault</CardTitle>
+            <div className="p-1.5 sm:p-2 rounded-full bg-gold1/10 group-hover:bg-gold1/20 transition-colors">
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gold1" />
             </div>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent className="relative z-10 p-3 sm:p-4 md:p-6 pt-0">
             {loadingVault ? (
               <Skeleton className="h-8 w-20" />
             ) : medicalVault?.has_data ? (
               <>
-                <div className="text-xl font-bold mb-1 text-success">Complete</div>
+                <div className="text-lg sm:text-xl font-bold mb-1 text-success">Complete</div>
                 {medicalVault.updated_at && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                     <Clock className="h-3 w-3" />
                     {formatDistanceToNow(new Date(medicalVault.updated_at), { addSuffix: true })}
                   </p>
@@ -563,8 +563,8 @@ export default function PatientDashboard() {
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold mb-1 text-warning">Empty</div>
-                <p className="text-xs text-muted-foreground">Not yet set up</p>
+                <div className="text-xl sm:text-2xl font-bold mb-1 text-warning">Empty</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Not yet set up</p>
               </>
             )}
           </CardContent>
@@ -734,11 +734,11 @@ export default function PatientDashboard() {
               </div>
               
               <div 
-                className="group flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-accent/5 hover:border-accent/30 transition-all duration-200 cursor-pointer"
+                className="group flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 cursor-pointer"
                 onClick={() => navigate("/messages")}
               >
-                <div className="p-2.5 rounded-lg bg-accent/10 group-hover:bg-accent/20 transition-colors">
-                  <MessageSquare className="h-5 w-5 text-accent" />
+                <div className="p-2.5 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <MessageSquare className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <p className="font-semibold text-sm">Message Provider</p>

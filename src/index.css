@@ -516,19 +516,43 @@
   }
 
   .patient-container {
-    @apply p-4 md:p-6 space-y-4 md:space-y-6;
+    @apply p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6 max-w-full overflow-x-hidden;
   }
 
   .patient-stat-card {
-    @apply patient-card patient-card-hover cursor-pointer;
+    @apply patient-card patient-card-hover cursor-pointer min-h-[120px] sm:min-h-[140px];
   }
 
   .patient-section-header {
-    @apply text-2xl md:text-3xl font-bold tracking-tight;
+    @apply text-xl sm:text-2xl md:text-3xl font-bold tracking-tight;
   }
 
   .patient-button-primary {
-    @apply bg-gradient-to-r from-primary to-gold2 hover:from-primary/90 hover:to-gold2/90 transition-all;
+    @apply bg-gradient-to-r from-primary to-gold2 hover:from-primary/90 hover:to-gold2/90 transition-all min-h-[44px];
+  }
+
+  /* Mobile-first responsive utilities for patient portal */
+  .patient-responsive-grid {
+    @apply grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6;
+  }
+
+  .patient-responsive-card {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+
+  .patient-touch-target {
+    @apply min-h-[44px] min-w-[44px] touch-manipulation;
+  }
+
+  /* Ensure all patient cards stack properly on mobile */
+  @media (max-width: 640px) {
+    .patient-card {
+      @apply w-full;
+    }
+    
+    .patient-container > div {
+      @apply w-full overflow-x-hidden;
+    }
   }
 
   /* Modern status badges */
