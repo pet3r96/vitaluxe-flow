@@ -274,11 +274,8 @@ serve(async (req) => {
                 errors.push(`Failed to add patient role for ${fullName}: ${roleError.message}`);
               }
             }
-          } else {
-            // No auth account yet; skip role creation by design
-            // Optionally record for visibility
-            errors.push(`Skipped adding patient role for ${fullName}: no user account (user_id is NULL)`);
           }
+          // Note: Patients without user_id (no portal account) are skipped - this is expected behavior
         } catch (error: any) {
           errors.push(`Error syncing patient account ${patientAccount.first_name}: ${error.message}`);
         }
