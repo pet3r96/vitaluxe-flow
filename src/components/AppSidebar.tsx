@@ -94,7 +94,7 @@ export function AppSidebar() {
         {roleMenus.map((section) => (
           <SidebarGroup key={section.title}>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-primary font-semibold">
+              <SidebarGroupLabel className="text-black dark:text-white font-semibold">
                 {section.title}
               </SidebarGroupLabel>
             )}
