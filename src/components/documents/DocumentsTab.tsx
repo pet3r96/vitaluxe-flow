@@ -80,8 +80,8 @@ export function DocumentsTab() {
         if (doc.uploaded_by !== effectiveUserId) return false;
       }
       if (filters.source === 'practice_shared') {
-        // Documents that are not internal (shared with practice ecosystem)
-        if (doc.is_internal !== false) return false;
+        // Documents not assigned to patients and not internal
+        if (doc.assigned_patient_ids?.length > 0 || doc.is_internal === true) return false;
       }
       if (filters.source === 'patient_shared') {
         // Documents that have been assigned to at least one patient

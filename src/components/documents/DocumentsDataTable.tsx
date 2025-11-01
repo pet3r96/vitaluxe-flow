@@ -132,9 +132,12 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
       if (sourceFilter === "my_uploads") {
         matchesSource = doc.uploaded_by === effectiveUserId;
       } else if (sourceFilter === "practice_shared") {
-        matchesSource = doc.source_type === 'provider' && doc.is_internal === false;
+        // Documents not assigned to patients and not internal
+        matchesSource = (!doc.assigned_patient_ids || doc.assigned_patient_ids.length === 0) 
+          && doc.is_internal === false;
       } else if (sourceFilter === "patient_shared") {
-        matchesSource = doc.source_type === 'patient';
+        // Documents assigned to at least one patient
+        matchesSource = doc.assigned_patient_ids && doc.assigned_patient_ids.length > 0;
       }
 
       return matchesSearch && matchesStatus && matchesType && matchesSource;
@@ -342,14 +345,14 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
 
                   {/* Source */}
                   <TableCell>
-                    {doc.source_type === 'patient' ? (
+                    {doc.assigned_patient_ids && doc.assigned_patient_ids.length > 0 ? (
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">
-                        Patient Upload
+                        Patient Shared
                       </Badge>
                     ) : doc.is_internal ? (
                       <Badge variant="secondary">Internal</Badge>
                     ) : (
-                      <Badge variant="outline">Practice Shared</Badge>
+                      <Badge variant="outline" className="text-muted-foreground">N/A</Badge>
                     )}
                   </TableCell>
 
