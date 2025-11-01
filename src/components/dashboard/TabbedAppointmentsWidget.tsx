@@ -265,15 +265,15 @@ export function TabbedAppointmentsWidget() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="today" className="mt-0">
+            <TabsContent value="today" className="mt-0 pt-2">
               {appointmentsLoading ? (
-                <div className="space-y-3 pt-6">
+                <div className="min-h-[300px] space-y-3 pt-6">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : appointments && appointments.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
+                <div className="min-h-[300px] space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
                   {appointments.map((appointment) => (
                     <Button
                       key={appointment.id}
@@ -311,7 +311,7 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : (
-                <div className="py-12 flex items-center justify-center text-muted-foreground">
+                <div className="min-h-[300px] py-8 flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No appointments today</p>
@@ -320,15 +320,15 @@ export function TabbedAppointmentsWidget() {
               )}
             </TabsContent>
 
-            <TabsContent value="upcoming" className="mt-0">
+            <TabsContent value="upcoming" className="mt-0 pt-2">
               {upcomingLoading ? (
-                <div className="space-y-3 pt-6">
+                <div className="min-h-[300px] space-y-3 pt-6">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : upcomingAppointments && upcomingAppointments.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
+                <div className="min-h-[300px] space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
                   {upcomingAppointments.map((appointment) => (
                     <Button
                       key={appointment.id}
@@ -368,7 +368,7 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : (
-                <div className="py-12 flex items-center justify-center text-muted-foreground">
+                <div className="min-h-[300px] py-8 flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No upcoming appointments</p>
@@ -377,16 +377,16 @@ export function TabbedAppointmentsWidget() {
               )}
             </TabsContent>
 
-            <TabsContent value="requested" className="mt-0">
+            <TabsContent value="requested" className="mt-0 pt-2">
               {requestedAppointments.length === 0 ? (
-                <div className="py-12 flex items-center justify-center text-muted-foreground">
+                <div className="min-h-[300px] py-8 flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <AlertCircle className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No pending appointment requests</p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
+                <div className="min-h-[300px] space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
                   {requestedAppointments.map((appointment: any) => {
                     const patientProfile = appointment?.patient_accounts?.profiles;
                     const patientName = patientProfile?.full_name || patientProfile?.name || 'Unknown Patient';
