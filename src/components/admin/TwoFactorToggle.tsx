@@ -108,9 +108,9 @@ export const TwoFactorToggle = () => {
             </AlertDescription>
           </Alert>
         ) : (
-          <Alert className="border-amber-500/50 bg-amber-500/10">
-            <ShieldAlert className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-600">
+          <Alert className="border-gold1/50 bg-gold1/10">
+            <ShieldAlert className="h-4 w-4 text-gold1" />
+            <AlertDescription className="text-gold1">
               <strong>2FA Disabled:</strong> Users can log in without two-factor authentication.
               This setting should only be used during development. Existing 2FA enrollments are
               preserved and will be enforced when this is re-enabled.

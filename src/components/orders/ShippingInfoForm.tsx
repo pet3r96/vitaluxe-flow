@@ -254,7 +254,7 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
             </Button>
 
             {isCached && (
-              <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400 p-2 rounded">
+              <div className="text-xs text-gold1 bg-gold1/10 p-2 rounded">
                 ⚠️ Daily limit reached. Showing cached tracking data.
               </div>
             )}

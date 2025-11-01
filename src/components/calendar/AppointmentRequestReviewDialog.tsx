@@ -342,7 +342,7 @@ export const AppointmentRequestReviewDialog = ({
           {isReschedule && appointment.reschedule_reason && (
             <div>
               <Label className="text-sm text-muted-foreground">Reason for Reschedule</Label>
-              <p className="mt-1 p-3 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
+              <p className="mt-1 p-3 bg-gold1/10 rounded border border-gold1/30">
                 {appointment.reschedule_reason}
               </p>
             </div>

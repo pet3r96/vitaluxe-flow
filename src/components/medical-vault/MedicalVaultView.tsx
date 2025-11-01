@@ -403,17 +403,17 @@ export function MedicalVaultView({
 
       {showHeader && (
         <Card className="border-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white shadow-2xl overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-yellow-600/5 to-transparent animate-pulse"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-gold1/10 via-gold2/5 to-transparent animate-pulse"></div>
           
           <CardHeader className="relative z-10 py-8">
             <div className="flex flex-col items-center justify-center space-y-4 max-w-4xl mx-auto">
               <div className="relative">
-                <div className="absolute inset-0 bg-yellow-500/30 blur-2xl rounded-full animate-pulse"></div>
-                <ShieldCheck className="h-16 w-16 text-yellow-500 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
+                <div className="absolute inset-0 bg-gold1/30 blur-2xl rounded-full animate-pulse"></div>
+                <ShieldCheck className="h-16 w-16 text-gold1 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
               </div>
               
               <div className="text-center space-y-1">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-gold1 via-gold1 to-gold2 bg-clip-text text-transparent">
                   {mode === 'patient' ? 'My Medical Vault' : `${displayName} - Medical Vault`}
                 </h1>
                 <p className="text-gray-300 text-xs md:text-sm font-light tracking-wide">

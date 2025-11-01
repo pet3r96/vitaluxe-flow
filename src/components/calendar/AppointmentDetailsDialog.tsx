@@ -293,7 +293,7 @@ export function AppointmentDetailsDialog({
                     <Button
                       onClick={() => approveRescheduleMutation.mutate({ action: 'duplicate', cancelOriginal: true })}
                       disabled={approveRescheduleMutation.isPending}
-                      className="bg-orange-600 hover:bg-orange-700"
+                      className="bg-gold1 hover:bg-gold1/90"
                     >
                       Create New & Cancel Original
                     </Button>

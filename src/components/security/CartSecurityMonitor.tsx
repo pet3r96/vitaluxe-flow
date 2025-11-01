@@ -161,13 +161,13 @@ export const CartSecurityMonitor = () => {
 
       {/* Old Cart Lines Alert */}
       {cartStats && cartStats.expiringIn5Days > 0 && (
-        <Card className="border-yellow-600 bg-yellow-50 dark:bg-yellow-950/20">
+        <Card className="border-gold1 bg-gold1/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-700 dark:text-yellow-600">
+            <CardTitle className="flex items-center gap-2 text-gold1">
               <AlertTriangle className="h-5 w-5" />
               Cart Lines Expiring Soon
             </CardTitle>
-            <CardDescription className="text-yellow-600 dark:text-yellow-500">
+            <CardDescription className="text-gold1">
               The following cart lines contain PHI and will expire within 5 days
             </CardDescription>
           </CardHeader>

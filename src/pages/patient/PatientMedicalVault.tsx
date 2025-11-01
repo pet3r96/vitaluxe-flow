@@ -442,8 +442,8 @@ export default function PatientMedicalVault() {
             
             {/* Modern Shield Icon with Glow Effect - 30% smaller */}
             <div className="relative">
-              <div className="absolute inset-0 bg-yellow-500/30 blur-2xl rounded-full animate-pulse"></div>
-              <ShieldCheck className="h-16 w-16 text-yellow-500 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
+              <div className="absolute inset-0 bg-gold1/30 blur-2xl rounded-full animate-pulse"></div>
+              <ShieldCheck className="h-16 w-16 text-gold1 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
             </div>
             
             {/* Title - 30% smaller */}

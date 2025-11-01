@@ -82,7 +82,7 @@ export function WaitingRoomWidget() {
           Waiting Room
         </CardTitle>
         {!isLoading && waitingPatients && waitingPatients.length > 0 && (
-          <Badge className="absolute top-4 right-4 bg-orange-500 hover:bg-orange-600">
+          <Badge className="absolute top-4 right-4 bg-gold1 hover:bg-gold1/90">
             {waitingPatients.length}
           </Badge>
         )}

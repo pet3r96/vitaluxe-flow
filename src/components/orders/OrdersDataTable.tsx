@@ -662,7 +662,7 @@ export const OrdersDataTable = () => {
                   <TableRow 
                     key={order.id}
                     className={cn(
-                      order.status === 'on_hold' && "bg-yellow-50 hover:bg-yellow-100/70"
+                      order.status === 'on_hold' && "bg-gold1/10 hover:bg-gold1/15"
                     )}
                   >
                     {/* Order ID */}

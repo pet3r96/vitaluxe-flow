@@ -447,9 +447,9 @@ export default function PatientDocuments() {
 
       {/* Show warning if no patient account */}
       {!isLoadingAccount && !patientAccount && effectiveUserId && (
-        <Card className="border-yellow-500 bg-yellow-500/10">
+        <Card className="border-gold1 bg-gold1/10">
           <CardContent className="pt-6">
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+            <p className="text-sm text-gold1">
               ⚠️ Your patient account could not be found. Please contact support to set up your patient profile.
             </p>
           </CardContent>

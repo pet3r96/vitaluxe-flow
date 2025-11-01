@@ -322,9 +322,9 @@ export default function Cart() {
                         {line.product?.dosage}
                       </p>
                       {isExpiringSoon && expiresAt && (
-                        <div className="flex items-center gap-2 mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded border border-yellow-200 dark:border-yellow-800">
-                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                          <span className="text-xs text-yellow-700 dark:text-yellow-400">
+                        <div className="flex items-center gap-2 mt-2 p-2 bg-gold1/10 rounded border border-gold1/30">
+                          <AlertTriangle className="h-4 w-4 text-gold1" />
+                          <span className="text-xs text-gold1">
                             This cart item will expire {formatDistanceToNow(expiresAt, { addSuffix: true })}
                           </span>
                         </div>
@@ -344,9 +344,9 @@ export default function Cart() {
                         </div>
                       )}
                       {line.order_notes && (
-                        <div className="text-xs sm:text-sm mt-2 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
-                          <span className="font-medium text-amber-700 dark:text-amber-300">Notes:</span>
-                          <p className="text-amber-600 dark:text-amber-400 mt-1">{line.order_notes}</p>
+                        <div className="text-xs sm:text-sm mt-2 bg-gold1/10 p-2 rounded border border-gold1/30">
+                          <span className="font-medium text-gold1">Notes:</span>
+                          <p className="text-gold1 mt-1">{line.order_notes}</p>
                         </div>
                       )}
                       {line.prescription_url && (

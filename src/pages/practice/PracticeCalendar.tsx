@@ -297,10 +297,10 @@ export default function PracticeCalendar() {
 
           {/* Pending Appointments Alert */}
           {pendingAppointments.length > 0 && (
-            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between">
+            <div className="mt-4 p-3 bg-gold1/10 border border-gold1/30 rounded-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                <AlertCircle className="h-5 w-5 text-gold1" />
+                <p className="text-sm font-medium text-gold1">
                   You have {pendingAppointments.length} appointment request{pendingAppointments.length > 1 ? 's' : ''} awaiting review
                 </p>
               </div>

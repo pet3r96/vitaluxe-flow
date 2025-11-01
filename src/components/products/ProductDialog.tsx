@@ -552,9 +552,9 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </div>
             
             {formData.requires_prescription && (
-              <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950">
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-                <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
+              <Alert className="border-gold1/50 bg-gold1/10">
+                <AlertCircle className="h-4 w-4 text-gold1" />
+                <AlertDescription className="text-sm text-gold1">
                   <strong>⚕️ Prescription-Required Product (Federal Compliance)</strong>
                   <ul className="list-disc pl-4 mt-2 space-y-1 text-xs">
                     <li><strong>Admin Markup Allowed:</strong> You can set any Practice Price above Base Price</li>

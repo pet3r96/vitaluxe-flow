@@ -59,16 +59,16 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
   };
   
   return (
-    <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-orange-500/10 to-amber-500/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
-      <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-gold1/10 to-gold2/5 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+      <div className="absolute inset-0 bg-gradient-to-r from-gold1/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
       <CardHeader className="relative z-10">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg">
+            <div className="p-2 rounded-lg bg-gold-gradient shadow-lg">
               <AlertCircle className="h-6 w-6 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent font-bold">
+            <span className="bg-gradient-to-r from-gold1 to-gold2 bg-clip-text text-transparent font-bold">
               Allergies
             </span>
           </CardTitle>

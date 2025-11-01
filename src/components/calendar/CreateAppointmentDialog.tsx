@@ -200,7 +200,7 @@ export function CreateAppointmentDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isWalkIn && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gold1/15 text-gold1 dark:bg-gold1/20">
                 WALK-IN
               </span>
             )}

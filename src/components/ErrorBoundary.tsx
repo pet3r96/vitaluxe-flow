@@ -101,15 +101,15 @@ export class ErrorBoundary extends Component<Props, State> {
               
               {(this.state.error?.message?.includes('dynamically imported module') || 
                 this.state.error?.message?.includes('Failed to fetch')) && (
-                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                <div className="mt-4 p-4 bg-muted/30 border border-border rounded-lg">
+                  <p className="text-sm font-semibold mb-2">
                     🔄 Cache Issue Detected
                   </p>
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
+                  <p className="text-sm text-muted-foreground mb-3">
                     The app has been updated. Please try one of these solutions:
                   </p>
-                  <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1.5 list-disc list-inside">
-                    <li><strong>Hard Refresh:</strong> Press <kbd className="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-800 rounded">Ctrl+Shift+R</kbd> (Windows) or <kbd className="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-800 rounded">Cmd+Shift+R</kbd> (Mac)</li>
+                  <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside">
+                    <li><strong>Hard Refresh:</strong> Press <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Ctrl+Shift+R</kbd> (Windows) or <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Cmd+Shift+R</kbd> (Mac)</li>
                     <li><strong>Clear Cache:</strong> Browser Settings → Privacy → Clear Browsing Data</li>
                     <li><strong>Incognito Mode:</strong> Try opening in a private/incognito window</li>
                   </ul>
@@ -118,7 +118,7 @@ export class ErrorBoundary extends Component<Props, State> {
                       sessionStorage.clear();
                       window.location.reload();
                     }}
-                    className="mt-3 px-3 py-1.5 text-sm bg-yellow-600 hover:bg-yellow-700 text-white rounded"
+                    className="mt-3 px-3 py-1.5 text-sm bg-gold1 hover:bg-gold1/90 text-white rounded"
                   >
                     Clear Storage & Reload
                   </button>

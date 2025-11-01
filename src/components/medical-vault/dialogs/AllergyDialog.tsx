@@ -181,7 +181,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-950 dark:bg-gray-950 border-gray-800">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gold1 to-gold2 bg-clip-text text-transparent">
             {mode === "add" ? "Add Allergy" : mode === "edit" ? "Edit Allergy" : "View Allergy"}
           </DialogTitle>
         </DialogHeader>
@@ -284,7 +284,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700"
+                className="bg-gold-gradient hover:opacity-90"
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {mode === "edit" ? "Update" : "Add"} Allergy

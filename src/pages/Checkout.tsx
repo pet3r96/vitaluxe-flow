@@ -1250,7 +1250,7 @@ export default function Checkout() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => document.getElementById(`prescription-upload-${line.id}`)?.click()}
-                                className="w-full border-orange-300 hover:bg-orange-50"
+                                className="w-full border-gold1/30 hover:bg-gold1/10"
                               >
                                 <Upload className="h-4 w-4 mr-2" />
                                 Upload Prescription
