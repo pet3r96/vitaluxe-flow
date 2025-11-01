@@ -19,6 +19,8 @@ import { RequestedAppointmentsWidget } from "@/components/dashboard/RequestedApp
 import { PatientQuickSearch } from "@/components/patients/PatientQuickSearch";
 import { AnalyticsSection } from "@/components/dashboard/AnalyticsSection";
 import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
+import { OrdersBreakdown } from "@/components/dashboard/OrdersBreakdown";
+import { RevenueChart } from "@/components/dashboard/RevenueChart";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
@@ -591,14 +593,21 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Analytics Section - Show for all subscribed users */}
-      {isSubscribed && (
-        <AnalyticsSection />
-      )}
-
-      {/* V2 Widgets - Only for subscribed doctor/provider/staff */}
+      {/* Analytics Section - Restructured for practice users */}
       {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
         <>
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold tracking-tight">Analytics & Insights</h2>
+            {/* Quick Actions & Orders by Status - Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+              <QuickActionsPanel />
+              <OrdersBreakdown />
+            </div>
+            {/* Revenue Chart - Full Width */}
+            <RevenueChart />
+          </section>
+
+          {/* V2 Widgets */}
           <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <TodayAppointmentsWidget />
             <MessagesAndChatWidget />
@@ -609,8 +618,12 @@ const Dashboard = () => {
             <RequestedAppointmentsWidget />
             <RecentActivityWidget />
           </div>
-          <QuickActionsPanel />
         </>
+      )}
+
+      {/* For non-practice users (admin, pharmacy), keep AnalyticsSection as-is */}
+      {isSubscribed && effectiveRole !== 'doctor' && (effectiveRole as any) !== 'provider' && effectiveRole !== 'staff' && (
+        <AnalyticsSection />
       )}
 
       {!isSubscribed && (

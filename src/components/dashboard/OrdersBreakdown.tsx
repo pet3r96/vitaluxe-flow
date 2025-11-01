@@ -4,10 +4,10 @@ import { TrendingUp } from "lucide-react";
 
 // Sample data - replace with real data from your backend
 const data = [
-  { name: "Pending", value: 12, color: "#F59E0B", gradient: "from-amber-400 to-amber-600" },
-  { name: "Processing", value: 25, color: "#3B82F6", gradient: "from-blue-400 to-blue-600" },
-  { name: "Completed", value: 63, color: "#10B981", gradient: "from-emerald-400 to-emerald-600" },
-  { name: "Cancelled", value: 5, color: "#EF4444", gradient: "from-red-400 to-red-600" },
+  { name: "Pending", value: 12, color: "#FF9A76", colorEnd: "#FF7051", gradient: "from-orange-400 to-orange-500" },
+  { name: "Processing", value: 25, color: "#A78BFA", colorEnd: "#8B5CF6", gradient: "from-purple-400 to-purple-600" },
+  { name: "Completed", value: 63, color: "#6EE7B7", colorEnd: "#34D399", gradient: "from-emerald-400 to-emerald-500" },
+  { name: "Cancelled", value: 5, color: "#FB7185", colorEnd: "#F43F5E", gradient: "from-rose-400 to-rose-500" },
 ];
 
 const RADIAN = Math.PI / 180;
@@ -59,7 +59,7 @@ export function OrdersBreakdown() {
                 {data.map((entry, index) => (
                   <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={entry.color} stopOpacity={1} />
-                    <stop offset="100%" stopColor={entry.color} stopOpacity={0.7} />
+                    <stop offset="100%" stopColor={entry.colorEnd} stopOpacity={0.85} />
                   </linearGradient>
                 ))}
               </defs>
@@ -103,8 +103,8 @@ export function OrdersBreakdown() {
           {/* Center text showing total - positioned absolutely in the donut center */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
-              <div className="text-3xl font-bold text-foreground animate-fade-in">{total}</div>
-              <div className="text-xs text-muted-foreground">Total Orders</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white animate-fade-in">{total}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Total Orders</div>
             </div>
           </div>
         </div>
@@ -120,10 +120,10 @@ export function OrdersBreakdown() {
                 className={`w-3 h-3 rounded-full bg-gradient-to-br ${item.gradient} group-hover:scale-110 transition-transform shadow-md`}
               />
               <div className="flex-1">
-                <div className="text-xs font-medium text-foreground">{item.name}</div>
-                <div className="text-lg font-bold text-foreground">{item.value}</div>
+                <div className="text-xs font-medium text-gray-900 dark:text-white">{item.name}</div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">{item.value}</div>
               </div>
-              <div className="text-xs text-muted-foreground font-mono">
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-mono">
                 {((item.value / total) * 100).toFixed(0)}%
               </div>
             </div>
