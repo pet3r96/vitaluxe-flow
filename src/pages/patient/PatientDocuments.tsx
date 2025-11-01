@@ -369,9 +369,13 @@ export default function PatientDocuments() {
       // Determine bucket based on source
       const bucket = doc.source === "provider_assigned" ? "provider-documents" : "patient-documents";
       
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(doc.storage_path, 60);
+      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+        body: {
+          bucketName: bucket,
+          filePath: doc.storage_path,
+          expiresIn: 60
+        }
+      });
 
       if (error) throw error;
 

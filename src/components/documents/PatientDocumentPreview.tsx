@@ -40,9 +40,13 @@ export function PatientDocumentPreview({
   const loadPreview = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .createSignedUrl(storagePath, 300); // 5 min expiry for preview
+      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+        body: {
+          bucketName,
+          filePath: storagePath,
+          expiresIn: 300 // 5 min expiry for preview
+        }
+      });
 
       if (error) throw error;
       setPreviewUrl(data.signedUrl);
@@ -60,9 +64,13 @@ export function PatientDocumentPreview({
 
   const handleDownload = async () => {
     try {
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .createSignedUrl(storagePath, 60);
+      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+        body: {
+          bucketName,
+          filePath: storagePath,
+          expiresIn: 60
+        }
+      });
 
       if (error) throw error;
 
