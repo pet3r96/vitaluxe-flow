@@ -146,6 +146,74 @@ export const MessagesView = () => {
       
       // For non-admins: Fetch support tickets (created by user) separately from order issues (participant-based)
       if (!isAdmin) {
+        // For reps (topline/downline), only show support tickets to admin
+        if (effectiveRole === 'topline' || effectiveRole === 'downline') {
+          // Fetch only support tickets created by rep
+          let supportQuery = supabase
+            .from("message_threads")
+            .select(`
+              *,
+              thread_participants(user_id),
+              orders(id, status, created_at, total_amount)
+            `)
+            .eq("thread_type", "support")
+            .eq("created_by", effectiveUserId)
+            .order("updated_at", { ascending: false });
+
+          // Apply resolved filter
+          if (resolvedFilter === "resolved") {
+            supportQuery = supportQuery.eq("resolved", true);
+          } else if (resolvedFilter === "unresolved") {
+            supportQuery = supportQuery.eq("resolved", false);
+          }
+
+          const { data: supportData, error: supportError } = await supportQuery;
+
+          if (supportError) throw supportError;
+
+          const threadsData = supportData || [];
+          
+          // Fetch creator, resolver, and participant details
+          if (threadsData.length > 0) {
+            const creatorIds = [...new Set(threadsData.map(t => t.created_by).filter(Boolean))];
+            const resolverIds = [...new Set(threadsData.map(t => t.resolved_by).filter(Boolean))];
+            const allUserIds = [...new Set([...creatorIds, ...resolverIds])];
+
+            const threadIds = threadsData.map(t => t.id);
+            const { data: participants } = await supabase
+              .from("thread_participants")
+              .select("thread_id, user_id, profiles(id, name, email)")
+              .in("thread_id", threadIds);
+
+            if (allUserIds.length > 0) {
+              const { data: profiles } = await supabase
+                .from("profiles")
+                .select("id, name, email")
+                .in("id", allUserIds);
+
+              const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+              const participantMap = new Map();
+              
+              participants?.forEach(p => {
+                if (!participantMap.has(p.thread_id)) {
+                  participantMap.set(p.thread_id, []);
+                }
+                participantMap.get(p.thread_id).push(p.profiles);
+              });
+
+              return threadsData.map(thread => ({
+                ...thread,
+                creator: thread.created_by ? profileMap.get(thread.created_by) : null,
+                resolver: thread.resolved_by ? profileMap.get(thread.resolved_by) : null,
+                participants: participantMap.get(thread.id) || [],
+              }));
+            }
+          }
+
+          return threadsData;
+        }
+        
+        // For other roles (practices, pharmacies): show support tickets and order issues
         // Fetch support tickets created by user
         let supportQuery = supabase
           .from("message_threads")
