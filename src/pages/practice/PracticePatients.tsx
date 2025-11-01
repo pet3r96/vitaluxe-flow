@@ -17,7 +17,7 @@ export default function PracticePatients() {
   const queryClient = useQueryClient();
 
   // Fetch patients with portal status
-  const { data: patientsWithStatus = [], isLoading } = useQuery({
+  const { data: rawPatients = [], isLoading } = useQuery({
     queryKey: ['patients-with-portal-status', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -26,7 +26,7 @@ export default function PracticePatients() {
         .from('v_patients_with_portal_status')
         .select('*')
         .eq('practice_id', user.id)
-        .order('name', { ascending: true });
+        .order('first_name', { ascending: true });
 
       if (error) throw error;
       return data || [];
@@ -34,13 +34,20 @@ export default function PracticePatients() {
     enabled: !!user,
   });
 
+  // Add computed name field for display
+  // Type cast since TypeScript types haven't regenerated after migration
+  const patientsWithStatus = rawPatients.map((p: any) => ({
+    ...p,
+    name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email
+  }));
+
   // Filter patients
-  const filteredPatients = patientsWithStatus.filter(patient =>
+  const filteredPatients = patientsWithStatus.filter((patient: any) =>
     patient.name.toLowerCase().includes(search.toLowerCase())
   );
 
   // Get patients without portal access
-  const patientsWithoutPortal = filteredPatients.filter(p => !p.has_portal_access);
+  const patientsWithoutPortal = filteredPatients.filter((p: any) => !p.has_portal_account);
 
   // Invite individual patient mutation
   const invitePatientMutation = useMutation({
@@ -73,11 +80,13 @@ export default function PracticePatients() {
       // Get patient details
       const { data: patient } = await supabase
         .from('patient_accounts')
-        .select('name, first_name, last_name, email, practice_id')
+        .select('first_name, last_name, email, practice_id')
         .eq('id', patientId)
         .single();
 
       if (!patient) throw new Error('Patient not found');
+
+      const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.email;
 
       // Send welcome email (works for both new and re-invited patients)
       const { data: emailData, error: emailError } = await supabase.functions.invoke(
@@ -86,7 +95,7 @@ export default function PracticePatients() {
           body: {
             userId: accountData.userId,
             email: patient.email.toLowerCase(),
-            name: patient.name,
+            name: patientName,
             token: accountData.token,
             practiceId: patient.practice_id,
           },
@@ -169,15 +178,15 @@ export default function PracticePatients() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filteredPatients.map(patient => (
-            <Card key={patient.patient_id} className="patient-card p-4 sm:p-6">
+          {filteredPatients.map((patient: any) => (
+            <Card key={patient.id} className="patient-card p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div className="flex-1 space-y-2 w-full">
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="font-semibold text-base sm:text-lg">{patient.name}</h3>
                     <PatientPortalStatusBadge
-                      hasPortalAccount={patient.has_portal_access}
-                      status={patient.portal_status as 'active' | 'invited' | null}
+                      hasPortalAccount={patient.has_portal_account}
+                      status={patient.status as 'active' | 'invited' | null}
                       lastLoginAt={patient.last_login_at}
                     />
                   </div>
@@ -189,21 +198,21 @@ export default function PracticePatients() {
                 </div>
 
                 <div className="flex gap-2 w-full sm:w-auto">
-                  {!patient.has_portal_access ? (
+                  {!patient.has_portal_account ? (
                     <Button
                       size="sm"
-                      onClick={() => invitePatientMutation.mutate(patient.patient_id)}
+                      onClick={() => invitePatientMutation.mutate(patient.id)}
                       disabled={invitePatientMutation.isPending}
                       className="gap-2 flex-1 sm:flex-none touch-target-sm"
                     >
                       <Send className="w-3 h-3" />
                       Invite to Portal
                     </Button>
-                  ) : patient.portal_status === 'invited' && !patient.last_login_at ? (
+                  ) : patient.status === 'invited' && !patient.last_login_at ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => invitePatientMutation.mutate(patient.patient_id)}
+                      onClick={() => invitePatientMutation.mutate(patient.id)}
                       disabled={invitePatientMutation.isPending}
                       className="gap-2 flex-1 sm:flex-none touch-target-sm"
                     >
@@ -221,7 +230,7 @@ export default function PracticePatients() {
       <PatientInvitationDialog
         open={bulkInviteDialogOpen}
         onOpenChange={setBulkInviteDialogOpen}
-        patientIds={patientsWithoutPortal.map(p => p.patient_id)}
+        patientIds={patientsWithoutPortal.map((p: any) => p.id)}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
         }}
