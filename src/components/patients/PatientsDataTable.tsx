@@ -122,17 +122,13 @@ export const PatientsDataTable = () => {
     enabled: effectiveRole === "admin" || effectiveRole === "doctor" || (effectiveRole === "provider" && !!effectivePracticeId),
   });
 
-  const getDisplayName = useCallback((patient: any) => {
-    return patient.name || 
+  const filteredPatients = useMemo(() => patients?.filter(patient => {
+    const displayName = patient.name || 
       (patient.first_name && patient.last_name 
         ? `${patient.first_name} ${patient.last_name}`.trim() 
         : patient.first_name || patient.last_name || patient.email?.split('@')[0] || 'Unknown');
-  }, []);
-
-  const filteredPatients = useMemo(() => patients?.filter(patient => {
-    const displayName = getDisplayName(patient);
     return displayName.toLowerCase().includes(searchQuery.toLowerCase());
-  }) || [], [patients, searchQuery, getDisplayName]);
+  }) || [], [patients, searchQuery]);
 
   const {
     currentPage,
@@ -338,7 +334,12 @@ export const PatientsDataTable = () => {
             ) : (
               paginatedPatients?.map((patient) => (
                 <TableRow key={patient.id}>
-                  <TableCell className="font-medium">{getDisplayName(patient)}</TableCell>
+                  <TableCell className="font-medium">
+                    {patient.name || 
+                      (patient.first_name && patient.last_name 
+                        ? `${patient.first_name} ${patient.last_name}`.trim() 
+                        : patient.first_name || patient.last_name || patient.email?.split('@')[0] || 'Unknown')}
+                  </TableCell>
                   <TableCell>{patient.email || "-"}</TableCell>
                   <TableCell>{formatPhoneNumber(patient.phone)}</TableCell>
                   <TableCell className="max-w-xs truncate">
