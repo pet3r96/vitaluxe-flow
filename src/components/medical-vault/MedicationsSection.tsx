@@ -76,7 +76,8 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
           </CardTitle>
           <Button 
             size="sm" 
-            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            variant="outline"
+            className="shadow-sm"
             onClick={() => openDialog("add")}
             disabled={!patientAccountId}
           >

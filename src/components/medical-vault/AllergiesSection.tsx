@@ -74,7 +74,8 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
           </CardTitle>
           <Button 
             size="sm" 
-            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            variant="outline"
+            className="shadow-sm"
             onClick={() => openDialog("add")}
             disabled={!patientAccountId || !!nkaRecord}
             title={nkaRecord ? "Remove NKA first to add specific allergies" : ""}

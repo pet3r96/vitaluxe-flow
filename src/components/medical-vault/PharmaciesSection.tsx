@@ -78,7 +78,8 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
               setDialogMode("add");
               setDialogOpen(true);
             }}
-            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            variant="outline"
+            className="shadow-sm"
           >
             <Plus className="h-4 w-4" />
             Add
