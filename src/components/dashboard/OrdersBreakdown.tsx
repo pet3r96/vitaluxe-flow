@@ -161,9 +161,9 @@ export function OrdersBreakdown() {
           Orders by Status
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 sm:p-6">
         <div className="relative flex flex-col items-center">
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={180} className="min-h-[180px] sm:min-h-[200px]">
             <PieChart>
               <defs>
                 {data.map((entry, index) => (
@@ -178,8 +178,8 @@ export function OrdersBreakdown() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                outerRadius={70}
-                innerRadius={45}
+                outerRadius={60}
+                innerRadius={40}
                 fill="#8884d8"
                 dataKey="value"
                 animationBegin={0}
@@ -212,27 +212,27 @@ export function OrdersBreakdown() {
           {/* Center text showing total - positioned absolutely in the donut center */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white animate-fade-in">{total}</div>
-              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Total Orders</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white animate-fade-in">{total}</div>
+              <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Total Orders</div>
             </div>
           </div>
         </div>
 
         {/* Legend */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-3 sm:mt-4 grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
           {data.map((item) => (
             <div
               key={item.name}
-              className="flex items-center gap-2 p-2 rounded-lg bg-gradient-to-br from-accent/30 to-accent/10 hover:from-accent/40 hover:to-accent/20 transition-all duration-200 group cursor-pointer"
+              className="flex items-center gap-2 p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-accent/30 to-accent/10 hover:from-accent/40 hover:to-accent/20 transition-all duration-200 group cursor-pointer"
             >
               <div
-                className={`w-2.5 h-2.5 rounded-full bg-gradient-to-br ${item.gradient} group-hover:scale-110 transition-transform shadow-md`}
+                className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-gradient-to-br ${item.gradient} group-hover:scale-110 transition-transform shadow-md flex-shrink-0`}
               />
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-gray-900 dark:text-white truncate">{item.name}</div>
-                <div className="text-sm font-bold text-gray-900 dark:text-white">{item.value}</div>
+                <div className="text-[10px] sm:text-xs font-medium text-gray-900 dark:text-white truncate">{item.name}</div>
+                <div className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">{item.value}</div>
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+              <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-mono flex-shrink-0">
                 {total > 0 ? ((item.value / total) * 100).toFixed(0) : 0}%
               </div>
             </div>

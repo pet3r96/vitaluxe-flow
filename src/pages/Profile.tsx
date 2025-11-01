@@ -4,6 +4,7 @@ import { ProviderProfileForm } from "@/components/profile/ProviderProfileForm";
 import { RepProfileForm } from "@/components/profile/RepProfileForm";
 import { PharmacyProfileForm } from "@/components/profile/PharmacyProfileForm";
 import { StaffProfileForm } from "@/components/profile/StaffProfileForm";
+import { AdminProfileForm } from "@/components/profile/AdminProfileForm";
 import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSection";
 import PatientProfile from "@/pages/patient/PatientProfile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +17,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   
   const isRep = effectiveRole === "topline" || effectiveRole === "downline";
-  const allowedRoles = ["doctor", "topline", "downline", "provider", "patient", "pharmacy", "staff"];
+  const allowedRoles = ["doctor", "topline", "downline", "provider", "patient", "pharmacy", "staff", "admin"];
 
   useEffect(() => {
     const checkProviderStatus = async () => {
@@ -85,7 +86,9 @@ const Profile = () => {
       )}
 
       <div className="space-y-6">
-        {isRep ? (
+        {effectiveRole === "admin" ? (
+          <AdminProfileForm />
+        ) : isRep ? (
           <RepProfileForm />
         ) : effectiveRole === "staff" ? (
           <StaffProfileForm />

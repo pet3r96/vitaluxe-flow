@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ShoppingCart } from "lucide-react";
+import { Search, ShoppingCart, Plus } from "lucide-react";
 import { ProductDialog } from "./ProductDialog";
 import { PatientSelectionDialog } from "./PatientSelectionDialog";
 import { ProductCard } from "./ProductCard";
@@ -758,17 +758,17 @@ export const ProductsGrid = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex flex-1 gap-3 flex-col sm:flex-row">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
+        <div className="flex flex-1 gap-2 sm:gap-3 flex-col sm:flex-row w-full sm:w-auto">
+          <div className="relative flex-1 max-w-full sm:max-w-sm">
+            <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-8 sm:pl-9 text-sm sm:text-base h-10"
             />
           </div>
           <Select
@@ -806,16 +806,16 @@ export const ProductsGrid = () => {
           </Select>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
           {(isProvider || (isStaffAccount && canOrder)) && (
             <Button
               variant="outline"
-              size="lg"
-              className="relative"
+              size="default"
+              className="relative h-10 px-3 sm:px-4"
               onClick={() => setCartSheetOpen(true)}
             >
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              Cart
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Cart</span>
               {cartCount > 0 && (
                 <Badge
                   variant="destructive"
@@ -829,13 +829,17 @@ export const ProductsGrid = () => {
           
           {isAdmin && (
             <Button
+              size="default"
+              className="h-10 px-3 sm:px-4"
               onClick={() => {
                 setSelectedProduct(null);
                 setIsEditing(false);
                 setDialogOpen(true);
               }}
             >
-              Add Product
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Add Product</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           )}
           
@@ -854,7 +858,7 @@ export const ProductsGrid = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {paginatedProducts?.map((product) => (
               <ProductCard
                 key={product.id}

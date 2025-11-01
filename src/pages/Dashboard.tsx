@@ -648,10 +648,17 @@ const Dashboard = () => {
         </>
       )}
 
-      {/* For admin: AnalyticsSection and Recent Activity */}
+      {/* For admin: Orders Breakdown, Analytics, and Recent Activity */}
       {effectiveRole === 'admin' && (
         <>
-          <AnalyticsSection />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch">
+            <div className="lg:col-span-1">
+              <OrdersBreakdown />
+            </div>
+            <div className="lg:col-span-2">
+              <AnalyticsSection />
+            </div>
+          </div>
           <RecentActivityWidget className="mt-4 lg:mt-6" />
         </>
       )}

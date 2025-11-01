@@ -6,8 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 export function AnalyticsSection() {
   const { effectiveRole } = useAuth();
   
-  // Hide Top Products for practice users (doctors, providers, staff)
+  // Hide Top Products for practice users (doctors, providers, staff) and admin
   const isPracticeUser = effectiveRole === 'doctor' || effectiveRole === 'provider' || effectiveRole === 'staff';
+  const isAdmin = effectiveRole === 'admin';
   
   // Hide Revenue and Top Products for pharmacy users
   const isPharmacy = effectiveRole === 'pharmacy';
@@ -21,10 +22,10 @@ export function AnalyticsSection() {
         // Pharmacy: Only show Orders Breakdown
         <OrdersBreakdown />
       ) : (
-        <div className={`grid grid-cols-1 gap-4 lg:gap-6 ${isPracticeUser ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
+        <div className={`grid grid-cols-1 gap-4 lg:gap-6 ${isPracticeUser || isAdmin ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
           <RevenueChart />
           <OrdersBreakdown />
-          {!isPracticeUser && <TopProducts />}
+          {!isPracticeUser && !isAdmin && <TopProducts />}
         </div>
       )}
     </section>
