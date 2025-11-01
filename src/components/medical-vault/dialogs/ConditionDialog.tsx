@@ -14,6 +14,8 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchConditions } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const conditionSchema = z.object({
   condition_name: z.string().min(1, "Condition name is required"),
@@ -40,6 +42,7 @@ interface ConditionDialogProps {
 
 export function ConditionDialog({ open, onOpenChange, patientAccountId, condition, mode }: ConditionDialogProps) {
   const isReadOnly = mode === "view";
+  const { effectiveUserId } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<ConditionFormData>({
     resolver: zodResolver(conditionSchema),
@@ -128,8 +131,25 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
       },
       successMessage: mode === "edit" ? "Condition updated successfully" : "Condition added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} condition`,
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        
+        // Log audit trail
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: mode === "edit" ? "updated" : "created",
+          entityType: "condition",
+          entityId: condition?.id,
+          entityName: watch("condition_name"),
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: "patient",
+          oldData: mode === "edit" ? condition : undefined,
+          newData: watch(),
+          changeSummary: mode === "edit" 
+            ? `Updated condition: ${watch("condition_name")}` 
+            : `Added new condition: ${watch("condition_name")}`
+        });
+        
         onOpenChange(false);
       },
     }

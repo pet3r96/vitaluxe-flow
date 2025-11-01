@@ -18,6 +18,8 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchMedications } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const medicationSchema = z.object({
   medication_name: z.string().min(1, "Medication name is required"),
@@ -47,6 +49,7 @@ interface MedicationDialogProps {
 
 export function MedicationDialog({ open, onOpenChange, patientAccountId, medication, mode }: MedicationDialogProps) {
   const isReadOnly = mode === "view";
+  const { effectiveUserId } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<MedicationFormData>({
     resolver: zodResolver(medicationSchema),
@@ -164,8 +167,25 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
       },
       successMessage: mode === "edit" ? "Medication updated successfully" : "Medication added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} medication`,
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        
+        // Log audit trail
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: mode === "edit" ? "updated" : "created",
+          entityType: "medication",
+          entityId: medication?.id,
+          entityName: watch("medication_name"),
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: "patient",
+          oldData: mode === "edit" ? medication : undefined,
+          newData: watch(),
+          changeSummary: mode === "edit" 
+            ? `Updated medication: ${watch("medication_name")}` 
+            : `Added new medication: ${watch("medication_name")}`
+        });
+        
         onOpenChange(false);
       },
     }

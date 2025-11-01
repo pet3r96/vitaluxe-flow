@@ -15,6 +15,8 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchAllergens } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const allergySchema = z.object({
   nka: z.boolean().optional(),
@@ -46,6 +48,7 @@ interface AllergyDialogProps {
 
 export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, mode }: AllergyDialogProps) {
   const isReadOnly = mode === "view";
+  const { effectiveUserId } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<AllergyFormData>({
     resolver: zodResolver(allergySchema),
@@ -166,8 +169,26 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
       },
       successMessage: mode === "edit" ? "Allergy updated successfully" : "Allergy added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} allergy`,
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        
+        // Log audit trail
+        const formData = watch();
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: mode === "edit" ? "updated" : "created",
+          entityType: "allergy",
+          entityId: allergy?.id,
+          entityName: formData.nka ? "No Known Allergies (NKA)" : formData.allergen_name || "Unknown Allergen",
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: "patient",
+          oldData: mode === "edit" ? allergy : undefined,
+          newData: formData,
+          changeSummary: mode === "edit" 
+            ? `Updated allergy: ${formData.nka ? "NKA" : formData.allergen_name}` 
+            : `Added new allergy: ${formData.nka ? "NKA" : formData.allergen_name}`
+        });
+        
         onOpenChange(false);
       },
     }

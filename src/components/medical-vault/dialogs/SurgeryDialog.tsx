@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const surgerySchema = z.object({
   surgery_type: z.string().min(1, "Surgery type is required"),
@@ -29,6 +31,7 @@ interface SurgeryDialogProps {
 
 export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, mode }: SurgeryDialogProps) {
   const isReadOnly = mode === "view";
+  const { effectiveUserId } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<SurgeryFormData>({
     resolver: zodResolver(surgerySchema),
@@ -78,8 +81,25 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
       },
       successMessage: mode === "edit" ? "Surgery updated successfully" : "Surgery added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} surgery`,
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        
+        // Log audit trail
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: mode === "edit" ? "updated" : "created",
+          entityType: "surgery",
+          entityId: surgery?.id,
+          entityName: watch("surgery_type"),
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: "patient",
+          oldData: mode === "edit" ? surgery : undefined,
+          newData: watch(),
+          changeSummary: mode === "edit" 
+            ? `Updated surgery: ${watch("surgery_type")}` 
+            : `Added new surgery: ${watch("surgery_type")}`
+        });
+        
         onOpenChange(false);
         if (mode === "add") {
           reset();

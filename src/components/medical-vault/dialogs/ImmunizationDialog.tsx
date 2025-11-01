@@ -11,6 +11,8 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { searchVaccines } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const immunizationSchema = z.object({
   vaccine_name: z.string().min(1, "Vaccine name is required"),
@@ -29,6 +31,7 @@ interface ImmunizationDialogProps {
 
 export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immunization, mode }: ImmunizationDialogProps) {
   const isReadOnly = mode === "view";
+  const { effectiveUserId } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<ImmunizationFormData>({
     resolver: zodResolver(immunizationSchema),
@@ -78,8 +81,25 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
       },
       successMessage: mode === "edit" ? "Immunization updated successfully" : "Immunization added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} immunization`,
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        
+        // Log audit trail
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: mode === "edit" ? "updated" : "created",
+          entityType: "immunization",
+          entityId: immunization?.id,
+          entityName: watch("vaccine_name"),
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: "patient",
+          oldData: mode === "edit" ? immunization : undefined,
+          newData: watch(),
+          changeSummary: mode === "edit" 
+            ? `Updated immunization: ${watch("vaccine_name")}` 
+            : `Added new immunization: ${watch("vaccine_name")}`
+        });
+        
         onOpenChange(false);
         if (mode === "add") {
           reset();

@@ -12,6 +12,8 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { phoneSchema } from "@/lib/validators";
 import { useQueryClient } from "@tanstack/react-query";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const emergencyContactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -34,8 +36,9 @@ interface EmergencyContactDialogProps {
 
 export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, contact, mode }: EmergencyContactDialogProps) {
   const isReadOnly = mode === "view";
+  const { effectiveUserId } = useAuth();
   
-  const { register, handleSubmit, control, formState: { errors, isSubmitting }, reset } = useForm<EmergencyContactFormData>({
+  const { register, handleSubmit, control, formState: { errors, isSubmitting }, reset, watch } = useForm<EmergencyContactFormData>({
     resolver: zodResolver(emergencyContactSchema),
     defaultValues: contact || {
       name: "",
@@ -88,8 +91,34 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       },
       successMessage: mode === "edit" ? "Emergency contact updated successfully" : "Emergency contact added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} emergency contact`,
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        
+        // Log audit trail
+        const formData = {
+          name: watch("name"),
+          relationship: watch("relationship"),
+          phone: watch("phone"),
+          email: watch("email"),
+          address: watch("address"),
+          preferred_contact_method: watch("preferred_contact_method")
+        };
+        
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: mode === "edit" ? "updated" : "created",
+          entityType: "emergency_contact",
+          entityId: contact?.id,
+          entityName: `${formData.name} (${formData.relationship})`,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: "patient",
+          oldData: mode === "edit" ? contact : undefined,
+          newData: formData,
+          changeSummary: mode === "edit" 
+            ? `Updated emergency contact: ${formData.name}` 
+            : `Added new emergency contact: ${formData.name}`
+        });
+        
         onOpenChange(false);
         if (mode === "add") {
           reset();

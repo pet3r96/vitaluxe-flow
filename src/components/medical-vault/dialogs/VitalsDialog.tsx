@@ -11,6 +11,8 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const vitalsSchema = z.object({
   vital_type: z.string().optional(),
@@ -52,6 +54,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
   const isReadOnly = mode === "view";
   const isBasicVitalMode = mode === "add-basic";
   const isTimeSeriesMode = mode === "add-timeseries";
+  const { effectiveUserId } = useAuth();
   
   // Helper to format height for display in input (convert stored inches to feet-inches)
   const formatHeightForInput = (height: number | undefined, unit: string | undefined): string => {
@@ -209,8 +212,29 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       },
       successMessage: mode === "edit" || (isBasicVitalMode && vitals) ? "Vitals updated successfully" : "Vitals added successfully",
       errorMessage: `Failed to ${mode === "edit" || (isBasicVitalMode && vitals) ? "update" : "add"} vitals`,
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: ["patient-medical-vault-status"] });
+        
+        // Log audit trail
+        const formData = watch();
+        const vitalType = formData.vital_type || vitals?.vital_type;
+        const entityName = vitalType ? `${vitalType.replace(/_/g, ' ')}` : "vitals";
+        
+        await logMedicalVaultChange({
+          patientAccountId,
+          actionType: mode === "edit" || (isBasicVitalMode && vitals) ? "updated" : "created",
+          entityType: "vital",
+          entityId: vitals?.id,
+          entityName: entityName,
+          changedByUserId: effectiveUserId || undefined,
+          changedByRole: "patient",
+          oldData: mode === "edit" || (isBasicVitalMode && vitals) ? vitals : undefined,
+          newData: formData,
+          changeSummary: mode === "edit" || (isBasicVitalMode && vitals)
+            ? `Updated ${entityName}` 
+            : `Added new ${entityName}`
+        });
+        
         onOpenChange(false);
       },
     }
