@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShieldCheck, Eye, Printer, Download, Share2 } from "lucide-react";
+import { ShieldCheck, Eye, Printer, Download, Share2, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { useAuditLogs } from "@/hooks/useAuditLogs";
+import { AuditLogDialog } from "@/components/medical-vault/dialogs/AuditLogDialog";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
 import { ShareConsentDialog } from "@/components/medical-vault/ShareConsentDialog";
 import { ShareLinkDialog } from "@/components/medical-vault/ShareLinkDialog";
@@ -45,7 +47,11 @@ export function MedicalVaultView({
   const [showShareLinkDialog, setShowShareLinkDialog] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [shareExpiresAt, setShareExpiresAt] = useState<Date>(new Date());
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+
+  // Fetch audit logs
+  const { data: auditLogs = [] } = useAuditLogs(patientAccountId);
 
   // Real-time subscriptions for automatic updates
   useEffect(() => {
@@ -378,6 +384,14 @@ export function MedicalVaultView({
         expiresAt={shareExpiresAt}
       />
 
+      {/* Audit Log Dialog */}
+      <AuditLogDialog
+        open={auditDialogOpen}
+        onOpenChange={setAuditDialogOpen}
+        auditLogs={auditLogs}
+        patientName={displayName}
+      />
+
       <Dialog open={previewDialogOpen} onOpenChange={(open) => {
         setPreviewDialogOpen(open);
         if (!open && pdfPreviewUrl) {
@@ -451,6 +465,15 @@ export function MedicalVaultView({
                 >
                   <Download className="h-3 w-3" />
                   Download
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setAuditDialogOpen(true)}
+                  className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 text-white hover:text-white transition-all duration-300 shadow-lg hover:shadow-yellow-500/50"
+                >
+                  <ClipboardList className="h-3 w-3" />
+                  Audit
                 </Button>
                 {mode === 'patient' && (
                   <Button 
