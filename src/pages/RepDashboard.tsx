@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Package, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
 
 const RepDashboard = () => {
   const { user, effectiveRole, effectiveUserId } = useAuth();
@@ -283,7 +284,7 @@ const RepDashboard = () => {
 
   return (
     <div className="patient-container">
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">
           {effectiveRole === 'topline' ? 'Topline' : 'Downline'} Dashboard
         </h1>
@@ -292,34 +293,38 @@ const RepDashboard = () => {
         </p>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div key={stat.title} className="patient-stat-card p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-              </div>
-              <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-foreground mt-2">
-                {stat.value}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stat.description}
-              </p>
-            </div>
-          );
-        })}
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 mb-6">
+        {stats.map((stat) => (
+          <StatCardWithChart
+            key={stat.title}
+            title={stat.title}
+            metricKey={
+              stat.title === "My Practices" ? "users" :
+              stat.title === "My Downlines" ? "users" :
+              stat.title === "Total Orders" ? "orders" :
+              stat.title === "Total Profit" ? "revenue" :
+              stat.title === "Pending Profit" ? "pending_revenue" :
+              "revenue"
+            }
+            icon={stat.icon}
+            description={stat.description}
+            currentValue={stat.value}
+            role={effectiveRole || "downline"}
+            userId={repData?.id}
+          />
+        ))}
       </div>
 
-      <div className="patient-card p-6">
-        <h2 className="text-2xl font-semibold mb-4 text-primary text-center">Recent Activity</h2>
-        <p className="text-sm text-muted-foreground text-center">
-          View detailed reports in the Reports section
-        </p>
-      </div>
+      <Card className="patient-card">
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl text-primary">Recent Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            View detailed reports in the Reports section
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
