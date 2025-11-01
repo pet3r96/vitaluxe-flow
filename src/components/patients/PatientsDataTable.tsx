@@ -345,68 +345,70 @@ export const PatientsDataTable = () => {
                     </TableCell>
                   )}
                   <TableCell className="text-right">
-                    {!isAdmin && (
-                      <div className="flex items-center justify-end gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/patients/${patient.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>View Patient File</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditPatient(patient)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        
-                        <TooltipProvider>
-                          {isSubscribed && !portalStatusMap?.get(patient.id)?.has_portal_access ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleGrantPortalAccess(patient.id)}
-                                  disabled={invitePatientMutation.isPending}
-                                >
-                                  <UserPlus className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Grant Portal Access</TooltipContent>
-                            </Tooltip>
-                          ) : portalStatusMap?.get(patient.id)?.has_portal_access ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center justify-center w-9 h-9">
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>Portal Access Granted</TooltipContent>
-                            </Tooltip>
-                          ) : !isSubscribed ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center justify-center w-9 h-9">
-                                  <Lock className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>VitaLuxePro Required</TooltipContent>
-                            </Tooltip>
-                          ) : null}
-                        </TooltipProvider>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-end gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/patients/${patient.id}`)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Patient File</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      {!isAdmin && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditPatient(patient)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          
+                          <TooltipProvider>
+                            {isSubscribed && !portalStatusMap?.get(patient.id)?.has_portal_access ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleGrantPortalAccess(patient.id)}
+                                    disabled={invitePatientMutation.isPending}
+                                  >
+                                    <UserPlus className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Grant Portal Access</TooltipContent>
+                              </Tooltip>
+                            ) : portalStatusMap?.get(patient.id)?.has_portal_access ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center justify-center w-9 h-9">
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>Portal Access Granted</TooltipContent>
+                              </Tooltip>
+                            ) : !isSubscribed ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center justify-center w-9 h-9">
+                                    <Lock className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>VitaLuxePro Required</TooltipContent>
+                              </Tooltip>
+                            ) : null}
+                          </TooltipProvider>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
