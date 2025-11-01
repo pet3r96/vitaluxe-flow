@@ -273,15 +273,15 @@ Deno.serve(async (req) => {
         invitation_sent_at
       `)
       .eq('id', patientId)
-      .eq('practice_id', effectivePracticeId)
-      .single();
+      .maybeSingle();
 
     console.log('[create-patient-portal-account] Patient query result:', {
       found: !!patient,
       error: patientError?.message,
       errorCode: patientError?.code,
       errorDetails: patientError?.details,
-      patientId: patient?.id
+      patientId: patient?.id,
+      practiceMatch: patient?.practice_id === effectivePracticeId
     });
 
     if (patientError || !patient) {
@@ -304,6 +304,26 @@ Deno.serve(async (req) => {
           }
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Ensure the patient belongs to the effective practice
+    if (patient.practice_id !== effectivePracticeId) {
+      console.error('[create-patient-portal-account] Patient not in practice context', {
+        patientId: patient.id,
+        patientPracticeId: patient.practice_id,
+        effectivePracticeId
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Patient not associated with this practice',
+          debug: {
+            patientId: patient.id,
+            patientPracticeId: patient.practice_id,
+            effectivePracticeId
+          }
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
