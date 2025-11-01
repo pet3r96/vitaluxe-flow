@@ -89,8 +89,8 @@ export function RepProfileForm() {
     
     setIsResettingPassword(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
-        redirectTo: `${window.location.origin}/auth`,
+      const { error } = await supabase.functions.invoke('send-password-reset-email', {
+        body: { email: profile.email },
       });
 
       if (error) throw error;

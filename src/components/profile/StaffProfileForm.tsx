@@ -114,8 +114,8 @@ export const StaffProfileForm = () => {
     
     setIsResettingPassword(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(staffData.email, {
-        redirectTo: `${window.location.origin}/auth`,
+      const { error } = await supabase.functions.invoke('send-password-reset-email', {
+        body: { email: staffData.email },
       });
 
       if (error) throw error;
