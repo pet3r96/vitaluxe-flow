@@ -56,6 +56,37 @@ export function TabbedAppointmentsWidget() {
     staleTime: 60000,
   });
 
+  // Upcoming Appointments Query (Next 7 days, limit 3)
+  const { data: upcomingAppointments, isLoading: upcomingLoading } = useQuery({
+    queryKey: ["upcoming-appointments", effectivePracticeId],
+    enabled: !!effectivePracticeId,
+    queryFn: async () => {
+      if (!effectivePracticeId) return [] as any[];
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const nextWeek = new Date(tomorrow);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+
+      const { data, error } = await supabase
+        .from("patient_appointments")
+        .select(`
+          *,
+          patient_account:patient_accounts(id, first_name, last_name)
+        `)
+        .eq("practice_id", effectivePracticeId)
+        .gte("start_time", tomorrow.toISOString())
+        .lt("start_time", nextWeek.toISOString())
+        .neq("status", "cancelled")
+        .order("start_time", { ascending: true })
+        .limit(3);
+
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    staleTime: 60000,
+  });
+
   // Requested Appointments Query
   const { data: requestedAppointments = [], refetch: refetchRequested } = useQuery({
     queryKey: ["requested-appointments", effectivePracticeId],
@@ -170,6 +201,7 @@ export function TabbedAppointmentsWidget() {
     
     realtimeManager.subscribe('patient_appointments', () => {
       queryClient.invalidateQueries({ queryKey: ["today-appointments", effectivePracticeId] });
+      queryClient.invalidateQueries({ queryKey: ["upcoming-appointments", effectivePracticeId] });
     });
 
     const channel = supabase
@@ -212,11 +244,17 @@ export function TabbedAppointmentsWidget() {
         </CardHeader>
         <CardContent className="pt-6">
           <Tabs defaultValue="today" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
               <TabsTrigger value="today" className="flex items-center gap-2">
                 Today
                 {!appointmentsLoading && appointments && appointments.length > 0 && (
                   <Badge variant="secondary" className="ml-1">{appointments.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="upcoming" className="flex items-center gap-2">
+                Upcoming
+                {!upcomingLoading && upcomingAppointments && upcomingAppointments.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{upcomingAppointments.length}</Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="requested" className="flex items-center gap-2">
@@ -276,6 +314,61 @@ export function TabbedAppointmentsWidget() {
                 <div className="text-center py-12 text-muted-foreground">
                   <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
                   <p className="font-medium">No appointments today</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="upcoming" className="mt-0">
+              {upcomingLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : upcomingAppointments && upcomingAppointments.length > 0 ? (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {upcomingAppointments.map((appointment) => (
+                    <Button
+                      key={appointment.id}
+                      variant="ghost"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg transition-all duration-200 hover:scale-[1.01]"
+                      onClick={() => setSelectedAppointment(appointment)}
+                    >
+                      <div className="flex items-start gap-3 w-full">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="font-semibold truncate flex-1 text-base">
+                              {appointment.patient_account 
+                                ? `${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`
+                                : "Unknown Patient"}
+                            </div>
+                            {appointment.patient_account?.id && (
+                              <PatientQuickAccessButton
+                                patientId={appointment.patient_account.id}
+                                patientName={`${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`}
+                                variant="icon"
+                                size="sm"
+                              />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {format(new Date(appointment.start_time), "MMM d")}
+                            <Clock className="h-3.5 w-3.5 ml-2" />
+                            {format(new Date(appointment.start_time), "h:mm a")}
+                          </div>
+                        </div>
+                        <Badge className={`${getStatusColor(appointment.status)} font-medium`}>
+                          {appointment.status}
+                        </Badge>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">No upcoming appointments</p>
                 </div>
               )}
             </TabsContent>
