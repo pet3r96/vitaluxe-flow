@@ -44,7 +44,40 @@ export function DocumentsTab() {
       }
 
       // Parse JSONB response
-      const documents = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
+      let documents = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
+      
+      // CLIENT-SIDE SECURITY: Validate all documents belong to the correct practice
+      if (effectivePracticeId && (effectiveRole === 'doctor' || effectiveRole === 'staff')) {
+        const invalidDocuments = documents.filter((doc: any) => 
+          doc.practice_id && doc.practice_id !== effectivePracticeId
+        );
+        
+        if (invalidDocuments.length > 0) {
+          console.error('[DocumentsTab] SECURITY: Cross-practice documents detected', {
+            count: invalidDocuments.length,
+            userPractice: effectivePracticeId,
+            invalidPractices: [...new Set(invalidDocuments.map((d: any) => d.practice_id))]
+          });
+          
+          // Log suspicious access
+          import('@/lib/auditLogger').then(({ logSuspiciousAccess }) => {
+            invalidDocuments.forEach((doc: any) => {
+              logSuspiciousAccess({
+                userId: effectiveUserId || '',
+                attemptedPracticeId: doc.practice_id,
+                userPracticeId: effectivePracticeId,
+                resource: 'provider_documents',
+                details: { document_id: doc.id }
+              });
+            });
+          });
+          
+          // Filter out invalid documents
+          documents = documents.filter((doc: any) => 
+            !doc.practice_id || doc.practice_id === effectivePracticeId
+          );
+        }
+      }
       
       if (import.meta.env.DEV && documents?.length > 0) {
         console.log('[DocumentsTab] Sample document:', documents[0]);

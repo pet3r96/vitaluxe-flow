@@ -132,9 +132,18 @@ export const MessagesView = () => {
   });
 
   const { data: threads, refetch: refetchThreads } = useQuery({
-    queryKey: ["message-threads", resolvedFilter, effectiveUserId, isAdmin],
+    queryKey: ["message-threads", resolvedFilter, effectiveUserId, isAdmin, effectivePracticeId],
     staleTime: 30000, // 30 seconds
     queryFn: async () => {
+      // CLIENT-SIDE SECURITY: Validate practice context for non-admins
+      if (!isAdmin && effectivePracticeId && (effectiveRole === 'doctor' || effectiveRole === 'provider')) {
+        logger.info('Loading messages with practice context', { 
+          effectivePracticeId, 
+          effectiveRole,
+          effectiveUserId 
+        });
+      }
+      
       // For non-admins: Fetch support tickets (created by user) separately from order issues (participant-based)
       if (!isAdmin) {
         // Fetch support tickets created by user

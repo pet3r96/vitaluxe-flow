@@ -98,6 +98,39 @@ export const PatientsDataTable = () => {
 
       logger.info('Patients fetched', { count: patientsData?.length || 0 });
 
+      // CLIENT-SIDE SECURITY: Validate all patients belong to the correct practice
+      if ((effectiveRole === "doctor" || effectiveRole === "provider") && effectivePracticeId) {
+        const invalidPatients = patientsData.filter(p => 
+          p.practice_id && p.practice_id !== effectivePracticeId
+        );
+        
+        if (invalidPatients.length > 0) {
+          logger.error('SECURITY: Cross-practice patients detected', {
+            count: invalidPatients.length,
+            userPractice: effectivePracticeId,
+            invalidPractices: [...new Set(invalidPatients.map(p => p.practice_id))]
+          });
+          
+          // Log suspicious access for each invalid patient
+          import('@/lib/auditLogger').then(({ logSuspiciousAccess }) => {
+            invalidPatients.forEach(patient => {
+              logSuspiciousAccess({
+                userId: user?.id || '',
+                attemptedPracticeId: patient.practice_id,
+                userPracticeId: effectivePracticeId,
+                resource: 'patient_accounts',
+                details: { patient_id: patient.id }
+              });
+            });
+          });
+          
+          // Filter out invalid patients
+          patientsData = patientsData.filter(p => 
+            !p.practice_id || p.practice_id === effectivePracticeId
+          );
+        }
+      }
+
       // Fetch practice details for all patients
       if (patientsData && patientsData.length > 0) {
         const practiceIds = [...new Set(patientsData.map(p => p.practice_id).filter(Boolean))];

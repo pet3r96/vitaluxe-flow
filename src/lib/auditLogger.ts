@@ -41,3 +41,41 @@ export async function logPatientPHIAccess(params: PatientPHIAccessLog): Promise<
     });
   }
 }
+
+export interface SuspiciousAccessLog {
+  userId: string;
+  attemptedPracticeId: string;
+  userPracticeId: string;
+  resource: string;
+  details?: Record<string, any>;
+}
+
+/**
+ * SECURITY: Log suspicious cross-practice access attempts
+ * This function should be called when client-side validation detects potential data leaks
+ */
+export async function logSuspiciousAccess(params: SuspiciousAccessLog): Promise<void> {
+  try {
+    const { error } = await supabase.from('audit_logs').insert({
+      action_type: 'suspicious_cross_practice_access',
+      entity_type: params.resource,
+      details: {
+        user_id: params.userId,
+        attempted_practice: params.attemptedPracticeId,
+        user_practice: params.userPracticeId,
+        timestamp: new Date().toISOString(),
+        ...params.details,
+      }
+    });
+
+    if (error) {
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Failed to log suspicious access', error);
+      });
+    }
+  } catch (error) {
+    import('@/lib/logger').then(({ logger }) => {
+      logger.error('Suspicious access logging error', error);
+    });
+  }
+}
