@@ -98,7 +98,7 @@ export const menus: MenuConfig = {
         { label: "Orders", href: "/orders", icon: ShoppingCart },
         { label: "Messages", href: "/messages", icon: MessageSquare },
         { label: "Patients", href: "/patients", icon: Users },
-        { label: "Providers", href: "/providers", icon: UserRoundCog, isPro: true },
+        { label: "Providers", href: "/providers", icon: UserRoundCog },
         { label: "Staff", href: "/staff", icon: Users, isPro: true },
         { label: "Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
         { label: "Patient Inbox", href: "/practice/patient-inbox", icon: Inbox, isPro: true },
