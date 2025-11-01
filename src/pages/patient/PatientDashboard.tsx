@@ -63,11 +63,13 @@ export default function PatientDashboard() {
         supabase
           .from("patient_allergies")
           .select("id")
-          .eq("patient_account_id", patientAccount.id),
+          .eq("patient_account_id", patientAccount.id)
+          .eq("is_active", true),
         supabase
           .from("patient_conditions")
           .select("id")
-          .eq("patient_account_id", patientAccount.id),
+          .eq("patient_account_id", patientAccount.id)
+          .eq("is_active", true),
         supabase
           .from("patient_surgeries")
           .select("id")

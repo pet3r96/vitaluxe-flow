@@ -73,10 +73,25 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       if (!patientAccount?.practice_id) return [] as any[];
       const { data, error } = await supabase
         .from("providers")
-        .select("id, user_id, profiles!providers_user_id_fkey(name)")
+        .select(`
+          id, 
+          user_id,
+          first_name,
+          last_name,
+          profiles!providers_user_id_fkey(name, email)
+        `)
         .eq("practice_id", patientAccount.practice_id);
       if (error) throw error;
-      return data || [];
+      
+      // Format provider display name
+      return (data || []).map((provider: any) => ({
+        ...provider,
+        displayName: provider.first_name && provider.last_name 
+          ? `${provider.first_name} ${provider.last_name}`
+          : provider.profiles?.name && provider.profiles.name !== provider.profiles?.email
+            ? provider.profiles.name
+            : provider.profiles?.email || 'Unknown Provider'
+      }));
     },
     enabled: !!patientAccount?.practice_id,
   });
@@ -297,7 +312,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
                 <SelectContent>
                   {providers.map((provider: any) => (
                     <SelectItem key={provider.id} value={provider.id}>
-                      {provider.profiles?.name}
+                      {provider.displayName}
                     </SelectItem>
                   ))}
                 </SelectContent>
