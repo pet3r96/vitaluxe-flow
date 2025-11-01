@@ -231,28 +231,29 @@ serve(async (req) => {
         try {
           const fullName = `${patientAccount.first_name} ${patientAccount.last_name}`.trim();
           
-          // Check if profile needs name update
-          const { data: profile } = await supabaseAdmin
-            .from('profiles')
-            .select('name')
-            .eq('id', patientAccount.user_id)
-            .maybeSingle();
-          
-          if (profile && (profile.name === 'New User' || !profile.name || profile.name === '')) {
-            const { error: updateError } = await supabaseAdmin
-              .from('profiles')
-              .update({ name: fullName, updated_at: new Date().toISOString() })
-              .eq('id', patientAccount.user_id);
-            
-            if (!updateError) {
-              addedPatientProfiles++;
-            } else {
-              errors.push(`Failed to update patient profile name for ${fullName}: ${updateError.message}`);
-            }
-          }
-          
-          // Ensure patient role exists only if the patient has an auth user
+          // Only sync profiles and roles for patients with auth accounts
           if (patientAccount.user_id) {
+            // Check if profile needs name update
+            const { data: profile } = await supabaseAdmin
+              .from('profiles')
+              .select('name')
+              .eq('id', patientAccount.user_id)
+              .maybeSingle();
+            
+            if (profile && (profile.name === 'New User' || !profile.name || profile.name === '')) {
+              const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({ name: fullName, updated_at: new Date().toISOString() })
+                .eq('id', patientAccount.user_id);
+              
+              if (!updateError) {
+                addedPatientProfiles++;
+              } else {
+                errors.push(`Failed to update patient profile name for ${fullName}: ${updateError.message}`);
+              }
+            }
+            
+            // Ensure patient role exists
             const { data: existingRole } = await supabaseAdmin
               .from('user_roles')
               .select('id')
