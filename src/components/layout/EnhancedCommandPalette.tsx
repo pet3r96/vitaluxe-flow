@@ -168,10 +168,26 @@ export function EnhancedCommandPalette() {
           {!loading && search.length >= 2 && results.length === 0 && (
             <CommandEmpty>No results found.</CommandEmpty>
           )}
-          {!loading && search.length < 2 && (
+          {!loading && search.length === 0 && roleMenus.map((section) => (
+            <CommandGroup key={section.title} heading={section.title}>
+              {section.items.map((item) => (
+                <CommandItem
+                  key={item.href}
+                  onSelect={() => {
+                    navigate(item.href);
+                    setOpen(false);
+                  }}
+                >
+                  <item.icon className="mr-2 h-4 w-4" />
+                  <span>{item.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ))}
+          {!loading && search.length > 0 && search.length < 2 && (
             <CommandEmpty>Type at least 2 characters to search...</CommandEmpty>
           )}
-          {!loading && Object.entries(groupedResults).map(([type, items]) => (
+          {!loading && search.length >= 2 && Object.entries(groupedResults).map(([type, items]) => (
             <CommandGroup key={type} heading={typeLabels[type as keyof typeof typeLabels]}>
               {items.map((result) => {
                 const Icon = result.icon;
