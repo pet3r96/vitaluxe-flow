@@ -25,8 +25,8 @@ import { menus } from "@/config/menus";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { FlyoutMenu } from "./FlyoutMenu";
-import logoLight from "@/assets/logo-light.svg";
-import logoDark from "@/assets/logo-dark.svg";
+import logoLight from "@/assets/vitaluxe-logo-light.png";
+import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
 
 export function AdminSidebar() {
   const [hoveredParent, setHoveredParent] = useState<string | null>(null);
