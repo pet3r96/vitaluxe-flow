@@ -524,95 +524,121 @@ const Dashboard = () => {
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
         {/* Stats cards - Left side with enhanced charts */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 flex-1 min-w-0">
-          {/* Total Orders */}
-          <StatCardWithChart
-            title="Total Orders"
-            metricKey="orders"
-            icon={ShoppingCart}
-            description={effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders"}
-            currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
-            role={effectiveRole}
-            userId={effectiveUserId}
-          />
-
-          {/* Products */}
-          <StatCardWithChart
-            title="Products"
-            metricKey="products"
-            icon={Package}
-            description="Active products"
-            currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
-            role={effectiveRole}
-            userId={effectiveUserId}
-          />
-
-          {/* Pending Orders - Pharmacy only */}
-          {effectiveRole === "pharmacy" && (
-            <StatCardWithChart
-              title="Pending Orders"
-              metricKey="pending_orders"
-              icon={Clock}
-              description="Orders awaiting fulfillment"
-              currentValue={pendingOrdersLoading ? "..." : pendingOrdersCount?.toString() || "0"}
-              role={effectiveRole}
-              userId={effectiveUserId}
-            />
+          {/* Practice users: Show Total Orders and Products */}
+          {(effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
+            <>
+              <StatCardWithChart
+                title="Total Orders"
+                metricKey="orders"
+                icon={ShoppingCart}
+                description={effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders"}
+                currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
+                role={effectiveRole}
+                userId={effectiveUserId}
+              />
+              <StatCardWithChart
+                title="Products"
+                metricKey="products"
+                icon={Package}
+                description="Active products"
+                currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
+                role={effectiveRole}
+                userId={effectiveUserId}
+              />
+            </>
           )}
 
-          {/* Users - Admin only */}
-          {effectiveRole === "admin" && (
-            <StatCardWithChart
-              title="Users"
-              metricKey="users"
-              icon={Users}
-              description="Active accounts"
-              currentValue={usersLoading ? "..." : usersCount?.toString() || "0"}
-              role={effectiveRole}
-              userId={effectiveUserId}
-            />
-          )}
+          {/* Other roles - show their relevant stats */}
+          {effectiveRole !== 'doctor' && (effectiveRole as any) !== 'provider' && effectiveRole !== 'staff' && (
+            <>
+              {/* Total Orders */}
+              <StatCardWithChart
+                title="Total Orders"
+                metricKey="orders"
+                icon={ShoppingCart}
+                description={effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders"}
+                currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
+                role={effectiveRole}
+                userId={effectiveUserId}
+              />
 
-          {/* Collected Revenue - Admin only */}
-          {effectiveRole === "admin" && (
-            <StatCardWithChart
-              title="Collected Revenue"
-              metricKey="revenue"
-              icon={DollarSign}
-              description="Paid orders revenue"
-              currentValue={collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`}
-              role={effectiveRole}
-              userId={effectiveUserId}
-              valueFormatter={(v) => `$${v.toFixed(2)}`}
-            />
+              {/* Products */}
+              <StatCardWithChart
+                title="Products"
+                metricKey="products"
+                icon={Package}
+                description="Active products"
+                currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
+                role={effectiveRole}
+                userId={effectiveUserId}
+              />
+
+              {/* Pending Orders - Pharmacy only */}
+              {effectiveRole === "pharmacy" && (
+                <StatCardWithChart
+                  title="Pending Orders"
+                  metricKey="pending_orders"
+                  icon={Clock}
+                  description="Orders awaiting fulfillment"
+                  currentValue={pendingOrdersLoading ? "..." : pendingOrdersCount?.toString() || "0"}
+                  role={effectiveRole}
+                  userId={effectiveUserId}
+                />
+              )}
+
+              {/* Users - Admin only */}
+              {effectiveRole === "admin" && (
+                <StatCardWithChart
+                  title="Users"
+                  metricKey="users"
+                  icon={Users}
+                  description="Active accounts"
+                  currentValue={usersLoading ? "..." : usersCount?.toString() || "0"}
+                  role={effectiveRole}
+                  userId={effectiveUserId}
+                />
+              )}
+
+              {/* Collected Revenue - Admin only */}
+              {effectiveRole === "admin" && (
+                <StatCardWithChart
+                  title="Collected Revenue"
+                  metricKey="revenue"
+                  icon={DollarSign}
+                  description="Paid orders revenue"
+                  currentValue={collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`}
+                  role={effectiveRole}
+                  userId={effectiveUserId}
+                  valueFormatter={(v) => `$${v.toFixed(2)}`}
+                />
+              )}
+            </>
           )}
         </div>
+
+        {/* Right Sidebar - Search & Quick Actions for practice users only */}
+        {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
+          <div className="w-full lg:w-80 space-y-4">
+            <PatientQuickSearch />
+            <QuickActionsPanel />
+          </div>
+        )}
       </div>
 
       {/* New Dashboard Layout for Practice Users */}
       {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
-          {/* Main Content Area - 3/4 width */}
-          <div className="lg:col-span-3 space-y-4 lg:space-y-6">
-            {/* Top Row - Appointments & Waiting Room */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-              <TabbedAppointmentsWidget />
-              <WaitingRoomWidget />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+          {/* Appointments */}
+          <TabbedAppointmentsWidget />
+          
+          {/* Waiting Room */}
+          <WaitingRoomWidget />
 
-            {/* Bottom Row - Communications & Recent Activity */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-              <TabbedCommunicationsWidget />
-              <RecentActivityWidget />
-            </div>
-          </div>
-
-          {/* Right Sidebar - 1/4 width - Search & Quick Actions */}
-          <div className="lg:col-span-1 space-y-4 lg:space-y-6">
-            <div className="w-full">
-              <PatientQuickSearch />
-            </div>
-            <QuickActionsPanel />
-          </div>
+          {/* Communications */}
+          <TabbedCommunicationsWidget />
+          
+          {/* Recent Activity */}
+          <RecentActivityWidget />
         </div>
       )}
 
