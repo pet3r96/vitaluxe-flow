@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { lazy, Suspense } from "react";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -170,7 +171,7 @@ const SubscribeToVitaLuxeProWrapper = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <ErrorBoundary>
         <TooltipProvider>
           <Toaster />
@@ -203,56 +204,58 @@ const App = () => (
                             <AppSidebar />
                             <main className="flex-1 flex flex-col overflow-y-auto">
                               <Topbar />
-                              <div className="flex-1 p-4 sm:p-6 lg:p-8 relative">
+                              <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden relative">
                                 <div className="relative z-10">
                                 <Suspense fallback={<PageLoader />}>
-                                  <Routes>
-                                    <Route path="/" element={<DashboardRouter />} />
-                                    <Route path="/dashboard" element={<DashboardRouter />} />
-                                    <Route path="/accounts" element={<Accounts />} />
-                                    <Route path="/practices" element={<Practices />} />
-                                    <Route path="/representatives" element={<Representatives />} />
-                                    <Route path="/patients" element={<Patients />} />
-                                    <Route path="/patients/:patientId" element={<PatientDetail />} />
-                                    <Route path="/practice/patients/:patientId/medical-vault" element={<PracticePatientMedicalVault />} />
-                                    <Route path="/providers" element={<Providers />} />
-                                    <Route path="/staff" element={<SubscriptionProtectedRoute><ProGate><Staff /></ProGate></SubscriptionProtectedRoute>} />
-                                    <Route path="/products" element={<Products />} />
-                                    <Route path="/orders" element={<Orders />} />
-                                    <Route path="/messages" element={<Messages />} />
-                                    <Route path="/pharmacies" element={<Pharmacies />} />
-                                    <Route path="/reports" element={<Reports />} />
-                                    <Route path="/cart" element={<Cart />} />
-                                    <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
-                                    <Route path="/checkout" element={<Checkout />} />
-                                    <Route path="/order-confirmation" element={<Checkout />} />
-                                    <Route path="/downlines" element={<MyDownlines />} />
-                                    <Route path="/med-spas" element={<MedSpas />} />
-                                    <Route path="/profile" element={<Profile />} />
-                                    <Route path="/admin-settings" element={<AdminSettings />} />
-                                    <Route path="/subscriptions" element={<Subscriptions />} />
-                                    <Route path="/security" element={<Security />} />
-                                    <Route path="/admin/terms" element={<AdminTermsManagement />} />
-                                    <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
-                                    <Route path="/rep-reports" element={<RepProfitReports />} />
-                                    <Route path="/rep-productivity" element={<RepProductivityReport />} />
-                                    <Route path="/downline-performance" element={<DownlinePerformanceView />} />
-                                    <Route path="/shipping" element={<PharmacyShipping />} />
-                                    <Route path="/appointments" element={<PatientAppointments />} />
-                                    <Route path="/medical-vault" element={<PatientMedicalVault />} />
-                                    <Route path="/documents" element={<PatientDocuments />} />
-                                    <Route path="/patient-messages" element={<PatientMessages />} />
-                                    <Route path="/practice/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
-                                    <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
-                                    <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
-                                    <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
-                                    <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
-                                    <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
-                                    {/* Patient Inbox removed - now integrated into Messages */}
-                                    {/* Redirect old practice-patients route to new merged Patients page */}
-                                    <Route path="/practice-patients" element={<Navigate to="/patients" replace />} />
-                                    <Route path="*" element={<NotFound />} />
-                                  </Routes>
+                                  <AnimatePresence mode="wait">
+                                    <Routes>
+                                      <Route path="/" element={<DashboardRouter />} />
+                                      <Route path="/dashboard" element={<DashboardRouter />} />
+                                      <Route path="/accounts" element={<Accounts />} />
+                                      <Route path="/practices" element={<Practices />} />
+                                      <Route path="/representatives" element={<Representatives />} />
+                                      <Route path="/patients" element={<Patients />} />
+                                      <Route path="/patients/:patientId" element={<PatientDetail />} />
+                                      <Route path="/practice/patients/:patientId/medical-vault" element={<PracticePatientMedicalVault />} />
+                                      <Route path="/providers" element={<Providers />} />
+                                      <Route path="/staff" element={<SubscriptionProtectedRoute><ProGate><Staff /></ProGate></SubscriptionProtectedRoute>} />
+                                      <Route path="/products" element={<Products />} />
+                                      <Route path="/orders" element={<Orders />} />
+                                      <Route path="/messages" element={<Messages />} />
+                                      <Route path="/pharmacies" element={<Pharmacies />} />
+                                      <Route path="/reports" element={<Reports />} />
+                                      <Route path="/cart" element={<Cart />} />
+                                      <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
+                                      <Route path="/checkout" element={<Checkout />} />
+                                      <Route path="/order-confirmation" element={<Checkout />} />
+                                      <Route path="/downlines" element={<MyDownlines />} />
+                                      <Route path="/med-spas" element={<MedSpas />} />
+                                      <Route path="/profile" element={<Profile />} />
+                                      <Route path="/admin-settings" element={<AdminSettings />} />
+                                      <Route path="/subscriptions" element={<Subscriptions />} />
+                                      <Route path="/security" element={<Security />} />
+                                      <Route path="/admin/terms" element={<AdminTermsManagement />} />
+                                      <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
+                                      <Route path="/rep-reports" element={<RepProfitReports />} />
+                                      <Route path="/rep-productivity" element={<RepProductivityReport />} />
+                                      <Route path="/downline-performance" element={<DownlinePerformanceView />} />
+                                      <Route path="/shipping" element={<PharmacyShipping />} />
+                                      <Route path="/appointments" element={<PatientAppointments />} />
+                                      <Route path="/medical-vault" element={<PatientMedicalVault />} />
+                                      <Route path="/documents" element={<PatientDocuments />} />
+                                      <Route path="/patient-messages" element={<PatientMessages />} />
+                                      <Route path="/practice/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
+                                      <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
+                                      <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
+                                      <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
+                                      <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
+                                      <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
+                                      {/* Patient Inbox removed - now integrated into Messages */}
+                                      {/* Redirect old practice-patients route to new merged Patients page */}
+                                      <Route path="/practice-patients" element={<Navigate to="/patients" replace />} />
+                                      <Route path="*" element={<NotFound />} />
+                                    </Routes>
+                                  </AnimatePresence>
                                 </Suspense>
                                 </div>
                               </div>

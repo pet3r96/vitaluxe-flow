@@ -1,19 +1,14 @@
 import { RepresentativesDataTable } from "@/components/admin/RepresentativesDataTable";
+import { ResponsivePage } from "@/components/layout/ResponsivePage";
 
 const Representatives = () => {
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-4xl sm:text-5xl font-heading font-bold gold-text-modern tracking-tight">
-          Representatives
-        </h1>
-        <p className="text-base text-muted-foreground">
-          Manage your topline and downline sales representatives
-        </p>
-      </div>
-
+    <ResponsivePage
+      title="Representatives"
+      subtitle="Manage your topline and downline sales representatives"
+    >
       <RepresentativesDataTable />
-    </div>
+    </ResponsivePage>
   );
 };
 

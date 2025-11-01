@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Responsive utilities */
+@layer utilities {
+  .responsive-container {
+    @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
+  }
+
+  .responsive-page {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  .responsive-card-padding {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  .no-horizontal-scroll {
+    @apply overflow-x-hidden;
+  }
+
+  .mobile-table-scroll {
+    @apply overflow-x-auto -mx-4 sm:mx-0;
+  }
+
+  .mobile-table-scroll table {
+    @apply min-w-full;
+  }
+
+  .touch-button {
+    @apply min-h-[44px] min-w-[44px];
+  }
+}
+
 :root {
   /* Brand Gold Gradient - Core Identity */
   --gold-1: 46 43% 52%;  /* #BE9B4B */
@@ -109,6 +140,11 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  html {
+    color-scheme: light dark;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   body {

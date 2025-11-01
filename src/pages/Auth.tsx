@@ -239,7 +239,7 @@ const Auth = () => {
   // Full-screen verification reminder (for login attempts with unverified email)
   if (showVerificationReminder) {
     return <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-2xl text-center space-y-6">
+        <div className="w-full max-w-2xl px-4 text-center space-y-4 sm:space-y-6">
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
               <Mail className="w-6 h-6 text-primary" />
@@ -265,7 +265,7 @@ const Auth = () => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center pt-6 sm:pt-8">
             <Button onClick={async () => {
             try {
               setLoading(true);
@@ -309,7 +309,7 @@ const Auth = () => {
   // Full-screen verification message (for successful signup)
   if (showVerificationMessage && !isLogin) {
     return <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-2xl text-center space-y-6">
+        <div className="w-full max-w-2xl px-4 text-center space-y-4 sm:space-y-6">
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
               <Mail className="w-6 h-6 text-primary" />
@@ -353,7 +353,7 @@ const Auth = () => {
       </div>;
   }
   return <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md p-8 bg-card border-border shadow-gold">
+      <Card className="w-full max-w-md sm:max-w-lg p-4 sm:p-6 lg:p-8 bg-card border-border shadow-gold">
         <div className="flex flex-center justify-center mb-8">
           <img src={logo} alt="Vitaluxe Services" className="h-32 w-auto" />
         </div>
@@ -373,7 +373,7 @@ const Auth = () => {
             <p className="text-xs text-white leading-relaxed">For Security & Compliance, you'll be automatically logged out after 30 minutes. TEST</p>
           </div>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {!isLogin && <>
               <div className="space-y-2">
                 <Label htmlFor="name">Practice Name</Label>
