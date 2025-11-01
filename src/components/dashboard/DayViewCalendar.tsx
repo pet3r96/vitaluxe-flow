@@ -71,14 +71,14 @@ export function DayViewCalendar() {
   const isToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <Card variant="modern" className="h-full">
+    <Card variant="modern" className="h-full flex flex-col">
       <CardHeader className="bg-gradient-to-br from-cyan-50 to-cyan-100/50 dark:from-cyan-950/30 dark:to-cyan-900/20">
         <CardTitle className="flex items-center gap-2 text-cyan-700 dark:text-cyan-300">
           <Calendar className="h-5 w-5" />
           Day Schedule
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-6 flex-1 flex flex-col overflow-hidden">
         {/* Date Navigation */}
         <div className="flex items-center justify-between mb-4">
           <Button
@@ -119,7 +119,7 @@ export function DayViewCalendar() {
         )}
 
         {/* Appointments List */}
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (

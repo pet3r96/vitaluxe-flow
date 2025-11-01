@@ -646,14 +646,47 @@ const Dashboard = () => {
       )}
 
       {!isSubscribed && (
-        <div className="patient-card p-6">
-        <h2 className="text-2xl font-semibold mb-4 text-primary text-center">
-          Recent Activity
-        </h2>
-        <p className="text-muted-foreground text-center">
-          No recent activity to display.
-        </p>
-        </div>
+        <>
+          {/* Stats cards for non-subscribed users */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-6">
+            {stats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={stat.title} className="patient-card">
+                  <div className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                          <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                            {stat.title}
+                          </p>
+                        </div>
+                        {stat.isLoading ? (
+                          <Skeleton className="h-7 sm:h-8 w-20" />
+                        ) : (
+                          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                            {stat.value}
+                          </h3>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+          
+          <div className="patient-card p-6">
+            <h2 className="text-2xl font-semibold mb-4 text-primary text-center">
+              Recent Activity
+            </h2>
+            <p className="text-muted-foreground text-center">
+              No recent activity to display.
+            </p>
+          </div>
+        </>
       )}
     </div>
   );
