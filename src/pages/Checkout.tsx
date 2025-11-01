@@ -565,6 +565,7 @@ export default function Checkout() {
           const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost + lineMerchantFee;
           
           // Create ONE order for THIS line
+          const selectedPaymentMethod = paymentMethods?.find(pm => pm.id === selectedPaymentMethodId);
           const { data: practiceOrder, error: practiceOrderError } = await supabase
             .from("orders")
             .insert({
@@ -580,6 +581,9 @@ export default function Checkout() {
               status: "pending",
               ship_to: "practice",
               practice_address: practiceAddress,
+              formatted_shipping_address: practiceAddress, // Immutable snapshot
+              payment_method_id: selectedPaymentMethodId, // Capture immediately
+              payment_method_used: selectedPaymentMethod?.payment_type || null, // Capture payment type
             })
             .select()
             .single();
@@ -668,6 +672,7 @@ export default function Checkout() {
           const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost + lineMerchantFee;
           
           // Create ONE order for THIS line
+          const selectedPaymentMethod = paymentMethods?.find(pm => pm.id === selectedPaymentMethodId);
           const { data: patientOrder, error: patientOrderError } = await supabase
             .from("orders")
             .insert({
@@ -683,6 +688,9 @@ export default function Checkout() {
               status: "pending",
               ship_to: "patient",
               practice_address: null,
+              formatted_shipping_address: null, // Patient orders ship to patient address
+              payment_method_id: selectedPaymentMethodId, // Capture immediately
+              payment_method_used: selectedPaymentMethod?.payment_type || null, // Capture payment type
             })
             .select()
             .single();
