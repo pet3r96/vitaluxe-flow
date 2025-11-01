@@ -71,7 +71,7 @@ export function DayViewCalendar() {
   const isToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <Card variant="modern" className="h-full flex flex-col">
+    <Card variant="modern" className="max-h-[600px] flex flex-col">
       <CardHeader className="bg-gradient-to-br from-cyan-50 to-cyan-100/50 dark:from-cyan-950/30 dark:to-cyan-900/20">
         <CardTitle className="flex items-center gap-2 text-cyan-700 dark:text-cyan-300">
           <Calendar className="h-5 w-5" />
