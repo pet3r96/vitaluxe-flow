@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Plus, Edit, Eye, Trash2 } from "lucide-react";
+import { Heart, Plus, Edit, Eye, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -25,13 +25,12 @@ interface ConditionsSectionProps {
 
 export function ConditionsSection({ patientAccountId, conditions }: ConditionsSectionProps) {
   const queryClient = useQueryClient();
-  const activeConditions = conditions.filter(c => c.is_active);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
   
-  const visibleConditions = expanded ? activeConditions : activeConditions.slice(0, 2);
+  const visibleConditions = expanded ? conditions : conditions.slice(0, 2);
 
   const openDialog = (mode: "add" | "edit" | "view", condition?: any) => {
     setDialogMode(mode);
@@ -54,6 +53,28 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
       toast({ title: "Success", description: "Condition deleted successfully" });
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete condition", variant: "destructive" });
+    }
+  };
+
+  const handleToggleActive = async (condition: any) => {
+    const action = condition.is_active ? "mark as inactive" : "mark as active";
+    if (!confirm(`Are you sure you want to ${action} ${condition.condition_name}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from("patient_conditions")
+        .update({ is_active: !condition.is_active })
+        .eq("id", condition.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["patient-conditions", patientAccountId] });
+      toast({ 
+        title: "Success", 
+        description: `Condition ${condition.is_active ? "marked as inactive" : "marked as active"} successfully` 
+      });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update condition status", variant: "destructive" });
     }
   };
   
@@ -84,14 +105,19 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
         </div>
       </CardHeader>
       <CardContent className="relative z-10">
-        {activeConditions.length > 0 ? (
+        {conditions.length > 0 ? (
           <div className="space-y-3">
             {visibleConditions.map((condition) => (
               <div key={condition.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium">{condition.condition_name}</p>
-                    <Badge variant="secondary" className="text-xs">Active</Badge>
+                    <Badge 
+                      variant={condition.is_active ? "success" : "outline"} 
+                      className="text-xs"
+                    >
+                      {condition.is_active ? "Active" : "Inactive"}
+                    </Badge>
                     {condition.severity && (
                       <Badge 
                         variant={
@@ -121,13 +147,21 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
                   <Button size="sm" variant="ghost" onClick={() => openDialog("edit", condition)}>
                     <Edit className="h-4 w-4" />
                   </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleToggleActive(condition)} 
+                    title={condition.is_active ? "Mark inactive" : "Mark active"}
+                  >
+                    {condition.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => handleDelete(condition)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             ))}
-            {activeConditions.length > 2 && (
+            {conditions.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}

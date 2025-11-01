@@ -56,6 +56,7 @@ export interface Allergy {
   reaction_type?: string | null;
   severity?: string | null;
   notes?: string | null;
+  is_active?: boolean;
 }
 
 export interface Vital {
@@ -428,12 +429,13 @@ export const generateMedicalVaultPDF = async (
       cond.condition_name,
       cond.diagnosis_date ? new Date(cond.diagnosis_date).toLocaleDateString() : 'N/A',
       cond.severity || 'N/A',
+      cond.is_active ? 'Active' : 'Inactive',
       cond.notes || '',
     ]);
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Condition', 'Diagnosis Date', 'Severity', 'Notes']],
+      head: [['Condition', 'Diagnosis Date', 'Severity', 'Status', 'Notes']],
       body: conditionsData,
       theme: 'grid',
       headStyles: {
@@ -450,10 +452,11 @@ export const generateMedicalVaultPDF = async (
         fillColor: [249, 249, 249],
       },
       columnStyles: {
-        0: { cellWidth: 50 },
-        1: { cellWidth: 35 },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 60 },
+        0: { cellWidth: 45 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 53 },
       },
       styles: {
         lineColor: [0, 0, 0],
@@ -473,11 +476,12 @@ export const generateMedicalVaultPDF = async (
       allergy.allergen || allergy.allergen_name || 'Unknown',
       allergy.reaction || allergy.reaction_type || 'N/A',
       allergy.severity || 'N/A',
+      (allergy as any).is_active !== undefined ? ((allergy as any).is_active ? 'Active' : 'Inactive') : 'Active',
     ]);
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Allergen', 'Reaction', 'Severity']],
+      head: [['Allergen', 'Reaction', 'Severity', 'Status']],
       body: allergiesData,
       theme: 'grid',
       headStyles: {
@@ -494,9 +498,10 @@ export const generateMedicalVaultPDF = async (
         fillColor: [249, 249, 249],
       },
       columnStyles: {
-        0: { cellWidth: 60 },
-        1: { cellWidth: 70 },
-        2: { cellWidth: 40 },
+        0: { cellWidth: 50 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 30 },
       },
       styles: {
         lineColor: [0, 0, 0],

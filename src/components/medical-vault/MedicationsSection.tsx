@@ -27,13 +27,12 @@ interface MedicationsSectionProps {
 
 export function MedicationsSection({ patientAccountId, medications }: MedicationsSectionProps) {
   const queryClient = useQueryClient();
-  const activeMedications = medications.filter(m => m.is_active);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMedication, setSelectedMedication] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
   
-  const visibleMedications = expanded ? activeMedications : activeMedications.slice(0, 2);
+  const visibleMedications = expanded ? medications : medications.slice(0, 2);
 
   const openDialog = (mode: "add" | "edit" | "view", medication?: any) => {
     setDialogMode(mode);
@@ -109,14 +108,19 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
         </div>
       </CardHeader>
       <CardContent className="relative z-10">
-        {activeMedications.length > 0 ? (
+        {medications.length > 0 ? (
           <div className="space-y-3">
             {visibleMedications.map((med) => (
               <div key={med.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium">{med.medication_name}</p>
-                    <Badge variant="secondary" className="text-xs">Active</Badge>
+                    <Badge 
+                      variant={med.is_active ? "success" : "outline"} 
+                      className="text-xs"
+                    >
+                      {med.is_active ? "Active" : "Inactive"}
+                    </Badge>
                   </div>
                   {med.dosage && (
                     <p className="text-sm text-muted-foreground">
@@ -136,8 +140,13 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
                     <Button size="sm" variant="ghost" onClick={() => openDialog("edit", med)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleToggleActive(med)} title="Mark inactive">
-                      <ToggleLeft className="h-4 w-4" />
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleToggleActive(med)} 
+                      title={med.is_active ? "Mark inactive" : "Mark active"}
+                    >
+                      {med.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => handleDelete(med)}>
                       <Trash2 className="h-4 w-4" />
@@ -145,7 +154,7 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
                   </div>
               </div>
             ))}
-            {activeMedications.length > 2 && (
+            {medications.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}

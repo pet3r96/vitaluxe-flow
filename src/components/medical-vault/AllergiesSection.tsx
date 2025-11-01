@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Plus, Edit, Eye, Trash2 } from "lucide-react";
+import { AlertCircle, Plus, Edit, Eye, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { AllergyDialog } from "./dialogs/AllergyDialog";
@@ -26,13 +26,13 @@ interface AllergiesSectionProps {
 export function AllergiesSection({ patientAccountId, allergies }: AllergiesSectionProps) {
   const queryClient = useQueryClient();
   const nkaRecord = allergies.find(a => a.is_active && a.nka);
-  const activeAllergies = allergies.filter(a => a.is_active && !a.nka);
+  const regularAllergies = allergies.filter(a => !a.nka);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAllergy, setSelectedAllergy] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
   const [expanded, setExpanded] = useState(false);
   
-  const visibleAllergies = expanded ? activeAllergies : activeAllergies.slice(0, 2);
+  const visibleAllergies = expanded ? regularAllergies : regularAllergies.slice(0, 2);
 
   const openDialog = (mode: "add" | "edit" | "view", allergy?: any) => {
     setDialogMode(mode);
@@ -55,6 +55,28 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
       toast({ title: "Success", description: "Allergy deleted successfully" });
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete allergy", variant: "destructive" });
+    }
+  };
+
+  const handleToggleActive = async (allergy: any) => {
+    const action = allergy.is_active ? "mark as inactive" : "mark as active";
+    if (!confirm(`Are you sure you want to ${action} ${allergy.allergen_name}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from("patient_allergies")
+        .update({ is_active: !allergy.is_active })
+        .eq("id", allergy.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["patient-allergies", patientAccountId] });
+      toast({ 
+        title: "Success", 
+        description: `Allergy ${allergy.is_active ? "marked as inactive" : "marked as active"} successfully` 
+      });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update allergy status", variant: "destructive" });
     }
   };
   
@@ -108,13 +130,19 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
               </Button>
             </div>
           </div>
-        ) : activeAllergies.length > 0 ? (
+        ) : regularAllergies.length > 0 ? (
           <div className="space-y-3">
             {visibleAllergies.map((allergy) => (
               <div key={allergy.id} className="flex items-start justify-between p-3 border rounded-lg border-destructive/20 bg-destructive/5">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium">{allergy.allergen_name}</p>
+                    <Badge 
+                      variant={allergy.is_active ? "success" : "outline"} 
+                      className="text-xs"
+                    >
+                      {allergy.is_active ? "Active" : "Inactive"}
+                    </Badge>
                     <Badge 
                       variant={
                         allergy.severity === 'severe' ? 'destructive' : 
@@ -139,13 +167,21 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
                   <Button size="sm" variant="ghost" onClick={() => openDialog("edit", allergy)}>
                     <Edit className="h-4 w-4" />
                   </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleToggleActive(allergy)} 
+                    title={allergy.is_active ? "Mark inactive" : "Mark active"}
+                  >
+                    {allergy.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => handleDelete(allergy)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             ))}
-            {activeAllergies.length > 2 && (
+            {regularAllergies.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Show more"}
