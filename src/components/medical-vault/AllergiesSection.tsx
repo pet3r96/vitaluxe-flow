@@ -7,7 +7,7 @@ import { AllergyDialog } from "./dialogs/AllergyDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Allergy {
@@ -64,7 +64,7 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
           entityId: allergy.id,
           entityName: allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown Allergen'),
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: allergy,
           changeSummary: `Deleted allergy: ${allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown')}`,
         });
@@ -99,7 +99,7 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
           entityId: allergy.id,
           entityName: allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown Allergen'),
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: { is_active: allergy.is_active },
           newData: { is_active: !allergy.is_active },
           changeSummary: `Set allergy ${allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown')} to ${allergy.is_active ? 'inactive' : 'active'}`,

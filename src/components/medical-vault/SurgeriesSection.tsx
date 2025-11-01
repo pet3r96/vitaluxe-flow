@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { SurgeryDialog } from "./dialogs/SurgeryDialog";
 import { toast } from "@/hooks/use-toast";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface SurgeriesSectionProps {
@@ -62,7 +62,7 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
           entityId: surgery.id,
           entityName: surgery.surgery_type,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: surgery,
           changeSummary: `Deleted surgery: ${surgery.surgery_type}`,
         });

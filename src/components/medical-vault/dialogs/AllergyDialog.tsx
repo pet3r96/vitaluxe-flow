@@ -15,7 +15,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchAllergens } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 const allergySchema = z.object({
@@ -48,7 +48,7 @@ interface AllergyDialogProps {
 
 export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, mode }: AllergyDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<AllergyFormData>({
     resolver: zodResolver(allergySchema),
@@ -181,7 +181,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           entityId: allergy?.id,
           entityName: formData.nka ? "No Known Allergies (NKA)" : formData.allergen_name || "Unknown Allergen",
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: "patient",
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: mode === "edit" ? allergy : undefined,
           newData: formData,
           changeSummary: mode === "edit" 

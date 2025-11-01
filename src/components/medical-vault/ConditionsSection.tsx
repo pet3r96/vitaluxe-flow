@@ -8,7 +8,7 @@ import { ConditionDialog } from "./dialogs/ConditionDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Condition {
@@ -62,7 +62,7 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
           entityId: condition.id,
           entityName: condition.condition_name,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : 'provider',
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: condition,
           changeSummary: `Deleted condition: ${condition.condition_name}`,
         });
@@ -97,7 +97,7 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
           entityId: condition.id,
           entityName: condition.condition_name,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : 'provider',
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: { is_active: condition.is_active },
           newData: { is_active: !condition.is_active },
           changeSummary: `Set condition ${condition.condition_name} to ${condition.is_active ? 'inactive' : 'active'}`,

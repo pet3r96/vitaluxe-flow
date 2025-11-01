@@ -11,7 +11,7 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 const vitalsSchema = z.object({
@@ -54,7 +54,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
   const isReadOnly = mode === "view";
   const isBasicVitalMode = mode === "add-basic";
   const isTimeSeriesMode = mode === "add-timeseries";
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   // Helper to format height for display in input (convert stored inches to feet-inches)
   const formatHeightForInput = (height: number | undefined, unit: string | undefined): string => {
@@ -227,7 +227,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
           entityId: vitals?.id,
           entityName: entityName,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: "patient",
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: mode === "edit" || (isBasicVitalMode && vitals) ? vitals : undefined,
           newData: formData,
           changeSummary: mode === "edit" || (isBasicVitalMode && vitals)

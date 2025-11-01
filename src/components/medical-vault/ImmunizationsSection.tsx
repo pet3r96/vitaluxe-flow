@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { ImmunizationDialog } from "./dialogs/ImmunizationDialog";
 import { toast } from "@/hooks/use-toast";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ImmunizationsSectionProps {
@@ -62,7 +62,7 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
           entityId: immunization.id,
           entityName: immunization.vaccine_name,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: immunization,
           changeSummary: `Deleted immunization: ${immunization.vaccine_name}`,
         });

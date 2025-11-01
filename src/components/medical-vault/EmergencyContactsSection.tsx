@@ -8,7 +8,7 @@ import { useState } from "react";
 import { EmergencyContactDialog } from "./dialogs/EmergencyContactDialog";
 import { formatPhoneNumber } from "@/lib/validators";
 import { toast } from "@/hooks/use-toast";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface EmergencyContactsSectionProps {
@@ -63,7 +63,7 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
           entityId: contact.id,
           entityName: contact.name,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: contact,
           changeSummary: `Deleted emergency contact: ${contact.name}`,
         });

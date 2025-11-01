@@ -16,6 +16,24 @@ export interface AuditLog {
   created_at: string;
 }
 
+// Helper function to map effective role to audit log role
+export const mapRoleToAuditRole = (effectiveRole: string | null): 'patient' | 'doctor' | 'staff' | 'provider' => {
+  switch (effectiveRole) {
+    case 'patient':
+      return 'patient';
+    case 'doctor':
+      return 'doctor';
+    case 'staff':
+      return 'staff';
+    case 'provider':
+      return 'provider';
+    case 'admin':
+      return 'staff'; // Admins are treated as staff for audit purposes
+    default:
+      return 'patient'; // Default fallback
+  }
+};
+
 export const useAuditLogs = (patientAccountId?: string) => {
   return useQuery({
     queryKey: ["medical-vault-audit-logs", patientAccountId],

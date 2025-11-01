@@ -12,7 +12,7 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { phoneSchema } from "@/lib/validators";
 import { useQueryClient } from "@tanstack/react-query";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 const emergencyContactSchema = z.object({
@@ -36,7 +36,7 @@ interface EmergencyContactDialogProps {
 
 export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, contact, mode }: EmergencyContactDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { register, handleSubmit, control, formState: { errors, isSubmitting }, reset, watch } = useForm<EmergencyContactFormData>({
     resolver: zodResolver(emergencyContactSchema),
@@ -111,7 +111,7 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
           entityId: contact?.id,
           entityName: `${formData.name} (${formData.relationship})`,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: "patient",
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: mode === "edit" ? contact : undefined,
           newData: formData,
           changeSummary: mode === "edit" 

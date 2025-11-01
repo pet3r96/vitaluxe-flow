@@ -8,7 +8,7 @@ import { MedicationDialog } from "./dialogs/MedicationDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Medication {
@@ -64,7 +64,7 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
           entityId: medication.id,
           entityName: medication.medication_name,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : 'provider',
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: medication,
           changeSummary: `Deleted medication: ${medication.medication_name}`,
         });
@@ -99,7 +99,7 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
           entityId: medication.id,
           entityName: medication.medication_name,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : 'provider',
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: { is_active: medication.is_active },
           newData: { is_active: !medication.is_active },
           changeSummary: `Set medication ${medication.medication_name} to ${medication.is_active ? 'inactive' : 'active'}`,

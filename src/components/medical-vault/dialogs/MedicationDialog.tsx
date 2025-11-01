@@ -18,7 +18,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchMedications } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 const medicationSchema = z.object({
@@ -49,7 +49,7 @@ interface MedicationDialogProps {
 
 export function MedicationDialog({ open, onOpenChange, patientAccountId, medication, mode }: MedicationDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<MedicationFormData>({
     resolver: zodResolver(medicationSchema),
@@ -178,7 +178,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
           entityId: medication?.id,
           entityName: watch("medication_name"),
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: "patient",
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: mode === "edit" ? medication : undefined,
           newData: watch(),
           changeSummary: mode === "edit" 

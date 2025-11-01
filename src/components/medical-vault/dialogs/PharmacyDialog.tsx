@@ -12,7 +12,7 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 const pharmacySchema = z.object({
@@ -40,7 +40,7 @@ interface PharmacyDialogProps {
 
 export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy, mode }: PharmacyDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<PharmacyFormData>({
     resolver: zodResolver(pharmacySchema),
@@ -130,7 +130,7 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
           entityId: pharmacy?.id,
           entityName: formData.pharmacy_name || `Pharmacy at ${formData.address}`,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: "patient",
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: mode === "edit" ? pharmacy : undefined,
           newData: formData,
           changeSummary: mode === "edit" 

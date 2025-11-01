@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 const surgerySchema = z.object({
@@ -31,7 +31,7 @@ interface SurgeryDialogProps {
 
 export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, mode }: SurgeryDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<SurgeryFormData>({
     resolver: zodResolver(surgerySchema),
@@ -92,7 +92,7 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
           entityId: surgery?.id,
           entityName: watch("surgery_type"),
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: "patient",
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: mode === "edit" ? surgery : undefined,
           newData: watch(),
           changeSummary: mode === "edit" 

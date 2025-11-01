@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { PharmacyDialog } from "./dialogs/PharmacyDialog";
 import { toast } from "@/hooks/use-toast";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface PharmaciesSectionProps {
@@ -62,7 +62,7 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
           entityId: pharmacy.id,
           entityName: pharmacy.pharmacy_name || pharmacy.address,
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: effectiveRole === 'patient' ? 'patient' : (effectiveRole === 'staff' ? 'staff' : 'doctor'),
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: pharmacy,
           changeSummary: `Deleted pharmacy: ${pharmacy.pharmacy_name || pharmacy.address}`,
         });

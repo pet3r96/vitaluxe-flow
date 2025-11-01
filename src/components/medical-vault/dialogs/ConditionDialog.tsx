@@ -14,7 +14,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchConditions } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 const conditionSchema = z.object({
@@ -42,7 +42,7 @@ interface ConditionDialogProps {
 
 export function ConditionDialog({ open, onOpenChange, patientAccountId, condition, mode }: ConditionDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<ConditionFormData>({
     resolver: zodResolver(conditionSchema),
@@ -142,7 +142,7 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
           entityId: condition?.id,
           entityName: watch("condition_name"),
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: "patient",
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: mode === "edit" ? condition : undefined,
           newData: watch(),
           changeSummary: mode === "edit" 

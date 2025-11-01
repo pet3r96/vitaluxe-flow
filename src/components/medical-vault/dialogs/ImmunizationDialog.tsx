@@ -11,7 +11,7 @@ import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { searchVaccines } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
-import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
 const immunizationSchema = z.object({
@@ -31,7 +31,7 @@ interface ImmunizationDialogProps {
 
 export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immunization, mode }: ImmunizationDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<ImmunizationFormData>({
     resolver: zodResolver(immunizationSchema),
@@ -92,7 +92,7 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           entityId: immunization?.id,
           entityName: watch("vaccine_name"),
           changedByUserId: effectiveUserId || undefined,
-          changedByRole: "patient",
+          changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: mode === "edit" ? immunization : undefined,
           newData: watch(),
           changeSummary: mode === "edit" 
