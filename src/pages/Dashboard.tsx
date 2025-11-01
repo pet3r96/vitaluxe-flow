@@ -561,9 +561,13 @@ const Dashboard = () => {
 
           {/* Right Sidebar - Search & Quick Actions - Show for subscribed doctors/staff AND providers */}
           {((isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff')) || (effectiveRole as any) === 'provider') && (
-            <div className="lg:col-span-1 space-y-4 lg:space-y-6">
-              <PatientQuickSearch />
-              <QuickActionsPanel />
+            <div className="lg:col-span-1 flex flex-col gap-4 lg:gap-6 h-full min-h-0">
+              <div className="shrink-0">
+                <PatientQuickSearch />
+              </div>
+              <div className="shrink-0">
+                <QuickActionsPanel />
+              </div>
               <DayViewCalendar />
             </div>
           )}
