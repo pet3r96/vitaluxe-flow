@@ -22,8 +22,8 @@ export function AnalyticsSection() {
         // Pharmacy: Only show Orders Breakdown
         <OrdersBreakdown />
       ) : isAdmin ? (
-        // Admin: Revenue and Orders side-by-side (50/50)
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        // Admin: Revenue and Orders side-by-side (50/50) - always horizontal on desktop
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
           <RevenueChart />
           <OrdersBreakdown />
         </div>
