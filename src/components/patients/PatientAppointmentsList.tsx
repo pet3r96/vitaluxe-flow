@@ -26,24 +26,64 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
   const { data: appointments, isLoading } = useQuery({
     queryKey: ['patient-appointments', patientId, practiceId],
     queryFn: async () => {
+      console.log('[PatientAppointmentsList] 🔍 Fetching appointments for:', { patientId, practiceId });
+      
+      // Simplified query without FK traversals that might fail
       const { data, error } = await supabase
         .from('patient_appointments')
-        .select(`
-          *,
-          patient_accounts(first_name, last_name, phone, email),
-          providers(first_name, last_name, specialty),
-          practice_rooms(name)
-        `)
+        .select('*')
         .eq('patient_id', patientId)
         .eq('practice_id', practiceId)
         .order('start_time', { ascending: false });
 
       if (error) {
-        console.error('[PatientAppointmentsList] Query error:', error);
+        console.error('[PatientAppointmentsList] ❌ Query error:', error);
         throw error;
       }
-      console.log('[PatientAppointmentsList] Fetched appointments:', data?.length || 0);
-      return data;
+      
+      console.log('[PatientAppointmentsList] ✅ Fetched appointments:', data?.length || 0);
+      
+      if (!data || data.length === 0) {
+        return [];
+      }
+      
+      // Enrich with provider and patient details
+      const providerIds = [...new Set(data.map(a => a.provider_id).filter(Boolean))];
+      const roomIds = [...new Set(data.map(a => a.room_id).filter(Boolean))];
+      
+      const [providersData, roomsData, patientData] = await Promise.all([
+        providerIds.length > 0 
+          ? supabase.from('providers').select('id, user_id').in('id', providerIds)
+          : Promise.resolve({ data: [] }),
+        roomIds.length > 0
+          ? supabase.from('practice_rooms').select('id, name').in('id', roomIds)
+          : Promise.resolve({ data: [] }),
+        supabase.from('patient_accounts').select('id, first_name, last_name, phone, email').eq('id', patientId).maybeSingle()
+      ]);
+      
+      // Get profiles for providers
+      const userIds = (providersData.data || []).map(p => p.user_id).filter(Boolean);
+      const { data: profilesData } = userIds.length > 0
+        ? await supabase.from('profiles').select('id, full_name, name').in('id', userIds)
+        : { data: [] };
+      
+      // Map data back to appointments
+      const enriched = data.map(appt => ({
+        ...appt,
+        patient_accounts: patientData.data,
+        providers: providerIds.includes(appt.provider_id) ? {
+          id: appt.provider_id,
+          ...(profilesData || []).find(p => 
+            (providersData.data || []).find(prov => prov.id === appt.provider_id)?.user_id === p.id
+          )
+        } : null,
+        practice_rooms: roomIds.includes(appt.room_id) 
+          ? (roomsData.data || []).find(r => r.id === appt.room_id)
+          : null
+      }));
+      
+      console.log('[PatientAppointmentsList] 📊 Enriched appointments sample:', enriched[0]);
+      return enriched;
     },
     staleTime: 10000, // 10 seconds
   });
