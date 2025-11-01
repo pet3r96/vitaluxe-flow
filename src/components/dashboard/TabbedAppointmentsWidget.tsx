@@ -278,7 +278,7 @@ export function TabbedAppointmentsWidget() {
                     <Button
                       key={appointment.id}
                       variant="ghost"
-                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg overflow-hidden transition-all duration-200"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg transition-all duration-200"
                       onClick={() => setSelectedAppointment(appointment)}
                     >
                       <div className="flex items-start justify-between gap-3 w-full">
@@ -333,7 +333,7 @@ export function TabbedAppointmentsWidget() {
                     <Button
                       key={appointment.id}
                       variant="ghost"
-                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg overflow-hidden transition-all duration-200"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg transition-all duration-200"
                       onClick={() => setSelectedAppointment(appointment)}
                     >
                       <div className="flex items-start justify-between gap-3 w-full">
