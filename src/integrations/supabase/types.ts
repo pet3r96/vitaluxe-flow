@@ -7921,6 +7921,10 @@ export type Database = {
         Args: { p_practice_id: string }
         Returns: undefined
       }
+      user_can_access_practice_documents: {
+        Args: { p_practice_id: string }
+        Returns: boolean
+      }
       validate_discount_code: {
         Args: { p_code: string }
         Returns: {
