@@ -31,6 +31,8 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    console.log('[get-s3-signed-url] 🔐 Authenticated user:', user.id);
+
     // Parse request body - accept both old and new formats
     const body = await req.json();
     const { 
@@ -51,8 +53,6 @@ serve(async (req) => {
       throw new Error('Missing required field: filePath or s3_key');
     }
 
-    console.log('[get-s3-signed-url] Request:', { bucket, path, userId: user.id });
-
     // Determine effective user (check for impersonation)
     let effectiveUserId = user.id;
     const { data: impersonationData } = await supabase
@@ -63,25 +63,37 @@ serve(async (req) => {
 
     if (impersonationData?.impersonated_user_id) {
       effectiveUserId = impersonationData.impersonated_user_id;
-      console.log('[get-s3-signed-url] Using impersonated user:', effectiveUserId);
+      console.log('[get-s3-signed-url] 🔄 Using impersonated user:', effectiveUserId);
     }
 
-    // Get user's role and practice context
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, id')
-      .eq('id', effectiveUserId)
-      .single();
+    // Get user's role (try user_roles first, fallback to profiles)
+    let userRole: string | null = null;
+    const { data: userRoleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', effectiveUserId)
+      .maybeSingle();
+    
+    if (userRoleData?.role) {
+      userRole = userRoleData.role;
+    } else {
+      // Fallback to profiles table
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', effectiveUserId)
+        .maybeSingle();
+      userRole = profile?.role || null;
+    }
 
-    const userRole = profile?.role;
-    console.log('[get-s3-signed-url] User role:', userRole);
+    console.log('[get-s3-signed-url] 👤 Role:', userRole, '| Request:', { bucket, path });
 
     // Compute effective practice ID for authorization
     let effectivePracticeId: string | null = null;
     if (userRole === 'doctor') {
       // Doctor is the practice owner
       effectivePracticeId = effectiveUserId;
-    } else if (userRole === 'provider' || userRole === 'staff') {
+    } else if (userRole === 'provider') {
       // Lookup practice_id from providers table
       const { data: providerRecord } = await supabase
         .from('providers')
@@ -89,8 +101,27 @@ serve(async (req) => {
         .eq('user_id', effectiveUserId)
         .maybeSingle();
       effectivePracticeId = providerRecord?.practice_id || null;
+    } else if (userRole === 'staff') {
+      // Try practice_staff first, fallback to providers
+      const { data: staffRecord } = await supabase
+        .from('practice_staff')
+        .select('practice_id')
+        .eq('user_id', effectiveUserId)
+        .maybeSingle();
+      
+      if (staffRecord?.practice_id) {
+        effectivePracticeId = staffRecord.practice_id;
+      } else {
+        // Fallback: staff member might also be a provider
+        const { data: providerRecord } = await supabase
+          .from('providers')
+          .select('practice_id')
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+        effectivePracticeId = providerRecord?.practice_id || null;
+      }
     }
-    console.log('[get-s3-signed-url] Effective practice ID:', effectivePracticeId);
+    console.log('[get-s3-signed-url] 🏥 Effective practice ID:', effectivePracticeId);
 
     // Authorization checks based on bucket
     if (bucket === 'patient-documents') {
@@ -117,28 +148,37 @@ serve(async (req) => {
         throw new Error('Patient account not found');
       }
 
-      // Check authorization
+      // Authorization logic
+      let authResult = { allowed: false, reason: '' };
+      
       if (userRole === 'patient') {
         // Patient can only access their own documents
-        if (patientAccount.user_id !== effectiveUserId) {
-          console.error('[get-s3-signed-url] Patient accessing another patient\'s document');
-          throw new Error('Access denied: Not your document');
+        if (patientAccount.user_id === effectiveUserId) {
+          authResult = { allowed: true, reason: 'patient owns document' };
+        } else {
+          authResult = { allowed: false, reason: 'patient accessing another patient\'s document' };
         }
       } else if (userRole === 'doctor' || userRole === 'provider' || userRole === 'staff') {
         // Practice users can only access shared documents from their practice
         if (!document.share_with_practice) {
-          console.error('[get-s3-signed-url] Document not shared with practice');
-          throw new Error('Access denied: Document not shared');
+          authResult = { allowed: false, reason: 'document not shared with practice' };
+        } else if (!effectivePracticeId) {
+          authResult = { allowed: false, reason: 'no practice context' };
+        } else if (patientAccount.practice_id !== effectivePracticeId) {
+          authResult = { allowed: false, reason: 'document from different practice' };
+        } else {
+          authResult = { allowed: true, reason: 'practice user accessing shared document' };
         }
-        if (!effectivePracticeId || patientAccount.practice_id !== effectivePracticeId) {
-          console.error('[get-s3-signed-url] Document belongs to different practice', {
-            patientPracticeId: patientAccount.practice_id,
-            effectivePracticeId
-          });
-          throw new Error('Access denied: Document from different practice');
-        }
-      } else if (userRole !== 'admin') {
-        throw new Error('Access denied: Invalid role');
+      } else if (userRole === 'admin') {
+        authResult = { allowed: true, reason: 'admin access' };
+      } else {
+        authResult = { allowed: false, reason: 'invalid role' };
+      }
+
+      console.log('[get-s3-signed-url] 🔐 Authorization:', authResult);
+
+      if (!authResult.allowed) {
+        throw new Error(`Access denied: ${authResult.reason}`);
       }
 
     } else if (bucket === 'provider-documents') {
@@ -154,10 +194,11 @@ serve(async (req) => {
         throw new Error('Document not found');
       }
 
-      // Check authorization
+      // Authorization logic
+      let authResult = { allowed: false, reason: '' };
+      
       if (userRole === 'patient') {
         // Patient can only access provider docs assigned to them
-        // First, get the patient account ID
         const { data: patientAccount } = await supabase
           .from('patient_accounts')
           .select('id')
@@ -165,34 +206,43 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!patientAccount) {
-          console.error('[get-s3-signed-url] Patient account not found for user');
-          throw new Error('Access denied: Patient account not found');
+          authResult = { allowed: false, reason: 'patient account not found' };
+        } else {
+          // Check for assignment
+          const { data: assignment } = await supabase
+            .from('provider_document_patients')
+            .select('id, hidden, is_hidden')
+            .eq('document_id', providerDoc.id)
+            .eq('patient_id', patientAccount.id)
+            .maybeSingle();
+
+          if (!assignment) {
+            authResult = { allowed: false, reason: 'document not assigned to patient' };
+          } else if (assignment.hidden || assignment.is_hidden) {
+            authResult = { allowed: false, reason: 'document hidden from patient' };
+          } else {
+            authResult = { allowed: true, reason: 'patient has assignment' };
+          }
         }
-
-        // Check for assignment
-        const { data: assignment } = await supabase
-          .from('provider_document_patients')
-          .select('id, patient_id, hidden, is_hidden')
-          .eq('document_id', providerDoc.id)
-          .eq('patient_id', patientAccount.id)
-          .maybeSingle();
-
-        if (!assignment || assignment.hidden || assignment.is_hidden) {
-          console.error('[get-s3-signed-url] Provider document not assigned to patient or is hidden');
-          throw new Error('Access denied: Document not available');
-        }
-
       } else if (userRole === 'doctor' || userRole === 'provider' || userRole === 'staff') {
         // Practice users can access documents from their practice
-        if (!effectivePracticeId || providerDoc.practice_id !== effectivePracticeId) {
-          console.error('[get-s3-signed-url] Provider document from different practice', {
-            docPracticeId: providerDoc.practice_id,
-            effectivePracticeId
-          });
-          throw new Error('Access denied: Document from different practice');
+        if (!effectivePracticeId) {
+          authResult = { allowed: false, reason: 'no practice context' };
+        } else if (providerDoc.practice_id !== effectivePracticeId) {
+          authResult = { allowed: false, reason: 'document from different practice' };
+        } else {
+          authResult = { allowed: true, reason: 'practice user accessing own practice document' };
         }
-      } else if (userRole !== 'admin') {
-        throw new Error('Access denied: Invalid role');
+      } else if (userRole === 'admin') {
+        authResult = { allowed: true, reason: 'admin access' };
+      } else {
+        authResult = { allowed: false, reason: 'invalid role' };
+      }
+
+      console.log('[get-s3-signed-url] 🔐 Authorization:', authResult);
+
+      if (!authResult.allowed) {
+        throw new Error(`Access denied: ${authResult.reason}`);
       }
     } else {
       throw new Error('Invalid bucket');
@@ -207,32 +257,57 @@ serve(async (req) => {
     const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
     const s3BucketName = Deno.env.get('S3_BUCKET_NAME');
 
+    let storageMethod: 's3' | 'supabase' = 'supabase';
+    
     if (awsAccessKeyId && awsSecretAccessKey && s3BucketName) {
-      // Use S3
-      console.log('[get-s3-signed-url] Generating S3 signed URL');
-      const s3Client = new S3Client({
-        region: awsRegion,
-        credentials: {
-          accessKeyId: awsAccessKeyId,
-          secretAccessKey: awsSecretAccessKey,
-        },
-      });
+      // Try S3 first
+      try {
+        console.log('[get-s3-signed-url] 📦 Attempting S3 signed URL');
+        const s3Client = new S3Client({
+          region: awsRegion,
+          credentials: {
+            accessKeyId: awsAccessKeyId,
+            secretAccessKey: awsSecretAccessKey,
+          },
+        });
 
-      const command = new GetObjectCommand({
-        Bucket: s3BucketName,
-        Key: s3Key,
-      });
+        const command = new GetObjectCommand({
+          Bucket: s3BucketName,
+          Key: s3Key,
+        });
 
-      signedUrl = await getSignedUrl(s3Client, command, { expiresIn: expires });
+        signedUrl = await getSignedUrl(s3Client, command, { expiresIn: expires });
+        storageMethod = 's3';
+        console.log('[get-s3-signed-url] ✅ S3 signed URL generated');
+      } catch (s3Error: any) {
+        console.warn('[get-s3-signed-url] ⚠️ S3 failed, falling back to Supabase Storage:', s3Error.message);
+        
+        // Fallback to Supabase Storage
+        const { data: storageData, error: storageError } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(path, expires);
+
+        if (storageError) {
+          console.error('[get-s3-signed-url] ❌ Storage fallback also failed:', storageError);
+          throw storageError;
+        }
+
+        if (!storageData?.signedUrl) {
+          throw new Error('Failed to generate signed URL from storage');
+        }
+
+        signedUrl = storageData.signedUrl;
+        console.log('[get-s3-signed-url] ✅ Supabase Storage signed URL generated (fallback)');
+      }
     } else {
-      // Fallback to Supabase Storage
-      console.log('[get-s3-signed-url] Falling back to Supabase Storage');
+      // No S3 configured - use Supabase Storage directly
+      console.log('[get-s3-signed-url] 📦 AWS not configured, using Supabase Storage');
       const { data: storageData, error: storageError } = await supabase.storage
         .from(bucket)
         .createSignedUrl(path, expires);
 
       if (storageError) {
-        console.error('[get-s3-signed-url] Storage error:', storageError);
+        console.error('[get-s3-signed-url] ❌ Storage error:', storageError);
         throw storageError;
       }
 
@@ -243,8 +318,6 @@ serve(async (req) => {
       signedUrl = storageData.signedUrl;
     }
 
-    console.log('[get-s3-signed-url] Successfully generated signed URL');
-
     // Log access for HIPAA compliance
     await supabase.rpc('log_audit_event', {
       action_type: 'document_access',
@@ -253,6 +326,7 @@ serve(async (req) => {
       details: {
         bucket,
         path,
+        storage_method: storageMethod,
         access_type: 'download',
         expires
       }
@@ -266,6 +340,7 @@ serve(async (req) => {
         signedUrl: signedUrl,      // New format
         expires_in: expires,       // Old format
         expiresIn: expires,        // New format
+        storage_method: storageMethod,
         s3_key: s3Key
       }),
       {

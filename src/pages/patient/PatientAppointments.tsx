@@ -29,18 +29,19 @@ export default function PatientAppointments() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Check for impersonation (wrapped in try/catch)
+      // Check for impersonation
       let effectiveUserId = user.id;
       try {
         const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
         if (impersonationData?.session?.impersonated_user_id) {
           effectiveUserId = impersonationData.session.impersonated_user_id;
+          console.log('[PatientAppointments] 🔄 Impersonation active:', effectiveUserId);
         }
       } catch (impersonationError) {
-        console.warn('[PatientAppointments] Impersonation check failed, using direct user.id:', impersonationError);
+        console.warn('[PatientAppointments] ⚠️ Impersonation check failed, using direct user.id:', impersonationError);
       }
 
-      console.log("👤 [PatientAppointments] Effective user ID:", effectiveUserId);
+      console.log('[PatientAppointments] 👤 Effective user ID:', effectiveUserId);
 
       // 1) Try RPC first
       let shouldUseFallback = false;
@@ -49,14 +50,15 @@ export default function PatientAppointments() {
           .rpc('get_patient_appointments_with_details', { p_user_id: effectiveUserId });
         
         if (error) {
-          console.warn('[PatientAppointments] RPC error:', error);
+          console.warn('[PatientAppointments] ⚠️ RPC error:', error.message);
           shouldUseFallback = true;
         } else {
           const rows = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
+          console.log('[PatientAppointments] 📊 RPC result count:', rows?.length || 0);
           
           // If RPC returns empty or invalid, use fallback
           if (!rows || rows.length === 0) {
-            console.log('[PatientAppointments] RPC returned empty, trying fallback');
+            console.log('[PatientAppointments] 🔄 RPC returned empty, using fallback');
             shouldUseFallback = true;
           } else {
 
@@ -113,13 +115,13 @@ export default function PatientAppointments() {
           }
         }
       } catch (rpcError: any) {
-        console.warn('[PatientAppointments] RPC failed completely:', rpcError);
+        console.warn('[PatientAppointments] ❌ RPC failed completely:', rpcError.message);
         shouldUseFallback = true;
       }
 
       // 2) Fallback: direct queries with RLS-safe selects (always run if RPC failed or returned empty)
       if (shouldUseFallback) {
-        console.log('[PatientAppointments] Using fallback direct query');
+        console.log('[PatientAppointments] 🔄 Using fallback direct query');
         const { data: patientAccount, error: paErr } = await supabase
           .from('patient_accounts')
           .select('id, practice_id')
@@ -127,14 +129,17 @@ export default function PatientAppointments() {
           .maybeSingle();
         
         if (paErr) {
-          console.error('[PatientAppointments] Patient account lookup error:', paErr);
+          console.error('[PatientAppointments] ❌ Patient account lookup error:', paErr);
           throw paErr;
         }
         
         if (!patientAccount) {
-          console.warn('[PatientAppointments] No patient account found for user:', effectiveUserId);
+          console.warn('[PatientAppointments] ⚠️ No patient account found for user:', effectiveUserId);
+          // Return empty array with helpful context
           return [];
         }
+        
+        console.log('[PatientAppointments] ✅ Patient account found:', patientAccount.id);
 
         const { data: apptRows, error: apptErr } = await supabase
           .from('patient_appointments')
@@ -143,6 +148,8 @@ export default function PatientAppointments() {
           .order('start_time', { ascending: false });
         if (apptErr) throw apptErr;
         const rows = apptRows || [];
+        
+        console.log('[PatientAppointments] 📊 Fallback query result count:', rows.length);
 
         // Fetch providers and their profiles for display_name
         const providerIds = Array.from(new Set(rows.map((r: any) => r.provider_id).filter(Boolean)));
@@ -316,6 +323,8 @@ export default function PatientAppointments() {
 
   const upcoming = appointments?.filter((a: any) => new Date(a.start_time) >= new Date() && a.status !== 'cancelled') || [];
   const past = appointments?.filter((a: any) => new Date(a.start_time) < new Date()) || [];
+  
+  console.log('[PatientAppointments] 📊 Past/Upcoming counts:', { past: past.length, upcoming: upcoming.length });
 
   return (
     <div className="patient-container">

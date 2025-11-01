@@ -100,6 +100,23 @@ export default function PatientDashboard() {
       const pharmaciesCount = pharmaciesRes.data?.length || 0;
       const emergencyContactsCount = emergencyContactsRes.data?.length || 0;
       
+      const has_data = medicationsCount > 0 || allergiesCount > 0 || conditionsCount > 0 || 
+                       surgeriesCount > 0 || immunizationsCount > 0 || vitalsCount > 0 || 
+                       pharmaciesCount > 0 || emergencyContactsCount > 0 || !!vaultRes.data?.blood_type;
+      
+      console.log('[PatientDashboard] 🏥 Medical vault status:', {
+        medications: medicationsCount,
+        allergies: allergiesCount,
+        conditions: conditionsCount,
+        surgeries: surgeriesCount,
+        immunizations: immunizationsCount,
+        vitals: vitalsCount,
+        pharmacies: pharmaciesCount,
+        emergency_contacts: emergencyContactsCount,
+        blood_type: !!vaultRes.data?.blood_type,
+        has_data
+      });
+      
       return {
         id: vaultRes.data?.id,
         blood_type: vaultRes.data?.blood_type,
@@ -112,11 +129,12 @@ export default function PatientDashboard() {
         vitals_count: vitalsCount,
         pharmacies_count: pharmaciesCount,
         emergency_contacts_count: emergencyContactsCount,
-        has_data: medicationsCount > 0 || allergiesCount > 0 || conditionsCount > 0 || surgeriesCount > 0 || immunizationsCount > 0 || vitalsCount > 0 || pharmaciesCount > 0 || emergencyContactsCount > 0 || !!vaultRes.data?.blood_type
+        has_data
       };
     },
     enabled: !!patientAccount?.id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Reduce to 0 for immediate updates
+    refetchOnWindowFocus: true, // Refetch on window focus
   });
 
   // Fetch next upcoming appointment
