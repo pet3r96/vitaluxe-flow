@@ -348,15 +348,23 @@ Deno.serve(async (req) => {
     console.log('[create-patient-portal-account] Normalized email:', normalizedEmail);
 
     // Check if patient already has a portal account (case-insensitive)
+    // CRITICAL: Only match accounts that have a linked auth user (user_id is not null)
     const { data: existingAccount } = await supabaseAdmin
       .from('patient_accounts')
       .select('id, user_id, status')
       .eq('practice_id', patient.practice_id)
       .ilike('email', normalizedEmail)
+      .not('user_id', 'is', null)
       .maybeSingle();
 
+    console.log('[create-patient-portal-account] Existing account check:', {
+      found: !!existingAccount,
+      hasUserId: !!existingAccount?.user_id,
+      accountId: existingAccount?.id
+    });
+
     if (existingAccount) {
-      console.log('[create-patient-portal-account] Found existing account, re-inviting:', existingAccount.id);
+      console.log('[create-patient-portal-account] Found existing account with user_id, re-inviting:', existingAccount.id);
       
       // If account exists but is not active, reactivate it
       if (existingAccount.status !== 'active') {
