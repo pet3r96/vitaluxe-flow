@@ -70,19 +70,19 @@ export function AdminSidebar() {
       collapsible="icon"
     >
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-center py-4">
+        <div className="flex items-center justify-center py-4 px-2">
           <img
             src={currentLogo}
             alt="Vitaluxe Services"
             className={cn(
-              "transition-all duration-200",
+              "transition-all duration-200 object-contain w-full",
               isCollapsed
                 ? theme === "light"
-                  ? "h-12"
-                  : "h-16"
+                  ? "h-10"
+                  : "h-12"
                 : theme === "light"
-                ? "h-16"
-                : "h-20"
+                ? "h-14"
+                : "h-16"
             )}
           />
         </div>
