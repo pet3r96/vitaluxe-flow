@@ -9,7 +9,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/vitaluxe-logo-dark-bg.png";
+import { useTheme } from "next-themes";
+import logoLight from "@/assets/vitaluxe-logo-light.png";
+import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
 import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
 import { validatePasswordStrength } from "@/lib/passwordStrength";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
@@ -17,6 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { cn } from "@/lib/utils";
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -49,6 +52,8 @@ const Auth = () => {
   const {
     toast
   } = useToast();
+  const { theme } = useTheme();
+  const currentLogo = theme === "light" ? logoLight : logoDark;
 
   // Doctor-specific fields
   const [providerFullName, setProviderFullName] = useState("");
@@ -352,14 +357,19 @@ const Auth = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md sm:max-w-lg p-4 sm:p-6 lg:p-8 bg-card border-border shadow-gold">
+  return <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background via-background to-muted/20">
+      <Card className={cn(
+        "w-full max-w-md sm:max-w-lg p-4 sm:p-6 lg:p-8 border-border shadow-gold",
+        theme === "light" 
+          ? "bg-gradient-to-b from-[#FDFBF7] to-[#FAF6F0]"
+          : "bg-card"
+      )}>
         <div className="flex flex-center justify-center mb-8">
-          <img src={logo} alt="Vitaluxe Services" className="h-32 w-auto" />
+          <img src={currentLogo} alt="Vitaluxe Services" className="h-24 sm:h-28 md:h-32 w-auto object-contain max-w-full" />
         </div>
         
-        {urlMessage && <Alert className="mb-6 border-blue-500 bg-blue-50">
-            <AlertDescription className="text-blue-800">
+        {urlMessage && <Alert className="mb-6 border-info/30 bg-info/10 dark:bg-info/20">
+            <AlertDescription className="text-info dark:text-info">
               {urlMessage}
             </AlertDescription>
           </Alert>}
@@ -368,9 +378,9 @@ const Auth = () => {
           {isLogin ? "Sign in to your account" : "Create your account"}
         </p>
 
-        {isLogin && !showVerificationMessage && <div className="mb-6 flex items-start gap-2 rounded-lg bg-accent/50 border border-border/50 p-3 backdrop-blur-sm">
+        {isLogin && !showVerificationMessage && <div className="mb-6 flex items-start gap-2 rounded-lg bg-muted/20 border border-border p-3">
             <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-white leading-relaxed">For Security & Compliance, you'll be automatically logged out after 30 minutes. TEST</p>
+            <p className="text-xs text-foreground leading-relaxed">For Security & Compliance, you'll be automatically logged out after 30 minutes.</p>
           </div>}
 
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
@@ -503,7 +513,7 @@ const Auth = () => {
               </button>
             </div>}
 
-          <Button type="submit" className="w-full gold-gradient text-primary-foreground font-semibold" disabled={loading}>
+          <Button type="submit" className="w-full bg-gold1 hover:bg-gold1/90 text-white font-semibold shadow-sm" disabled={loading}>
             {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
           </Button>
         </form>

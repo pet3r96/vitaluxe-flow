@@ -129,7 +129,7 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-[#BE9B4B]/10 border border-[#BE9B4B]/30 rounded-lg p-4">
+          <div className="bg-gold1/10 border border-gold1/30 rounded-lg p-4">
             <p className="text-foreground font-medium mb-2">
               No Payment Methods Found
             </p>

@@ -256,10 +256,10 @@ export default function SubscribeToVitaLuxePro() {
             <CardContent className="space-y-4">
               <div>
                 <div className="flex flex-col sm:flex-row items-baseline gap-1 sm:gap-2 mb-2">
-                  <span className="text-4xl sm:text-5xl font-bold text-[#BE9B4B]">$99.99</span>
+                  <span className="text-4xl sm:text-5xl font-bold text-gold1">$99.99</span>
                   <span className="text-sm sm:text-base text-muted-foreground/70">/month + processing fees</span>
                 </div>
-                <Badge className="bg-[#BE9B4B] hover:bg-[#D8C07A] text-white border-none">
+                <Badge variant="gold">
                   7-Day Free Trial
                 </Badge>
               </div>
@@ -326,7 +326,8 @@ export default function SubscribeToVitaLuxePro() {
               <Button
                 onClick={handleStartTrial}
                 disabled={!agreedToTerms || isProcessing}
-                className="w-full bg-[#BE9B4B] hover:bg-[#D8C07A] text-white font-semibold h-11 sm:h-12 text-sm sm:text-base"
+                variant="gold"
+                className="w-full font-semibold h-11 sm:h-12 text-sm sm:text-base"
               >
                 {isProcessing ? (
                   <>
