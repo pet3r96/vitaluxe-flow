@@ -76,7 +76,9 @@ export function AppSidebar() {
             src={currentLogo} 
             alt="Vitaluxe Services" 
             className={`transition-all duration-200 ${
-              isCollapsed ? "h-12" : "h-16"
+              isCollapsed 
+                ? (theme === "light" ? "h-12" : "h-16")
+                : (theme === "light" ? "h-16" : "h-20")
             }`}
           />
         </div>
