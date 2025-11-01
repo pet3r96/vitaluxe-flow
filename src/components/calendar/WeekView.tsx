@@ -29,7 +29,7 @@ export function WeekView({
   selectedProviders,
   blockedTime = [],
 }: WeekViewProps) {
-  const HOUR_HEIGHT = 60;
+  const HOUR_HEIGHT = 72;
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
   const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour ?? 20));
   const slotPx = (HOUR_HEIGHT * slotDuration) / 60;
@@ -38,30 +38,11 @@ export function WeekView({
   const weekStart = startOfWeek(currentDate);
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   
-  // Add "Unassigned" pseudo-provider for appointments without providers
-  const providersWithUnassigned = useMemo(() => {
-    const hasUnassignedAppointments = appointments.some(appt => !appt.provider_id);
-    
-    if (hasUnassignedAppointments) {
-      return [
-        ...providers,
-        { 
-          id: 'unassigned', 
-          first_name: 'Unassigned', 
-          last_name: '',
-          specialty: 'No Provider'
-        }
-      ];
-    }
-    return providers;
-  }, [providers, appointments]);
-
   const filteredProviders = useMemo(() => {
-    if (selectedProviders.length === 0) return providersWithUnassigned;
-    return providersWithUnassigned.filter(p => selectedProviders.includes(p.id));
-  }, [providersWithUnassigned, selectedProviders]);
+    if (selectedProviders.length === 0) return providers;
+    return providers.filter(p => selectedProviders.includes(p.id));
+  }, [providers, selectedProviders]);
 
-  // Generate time slots using safe operational hours
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let hour = safeStart; hour < safeEnd; hour++) {
@@ -72,26 +53,16 @@ export function WeekView({
     return slots;
   }, [safeStart, safeEnd, slotDuration]);
 
-  // Auto-scroll to current time on mount
+  // Auto-scroll to current time
   useEffect(() => {
-    if (scrollRef.current && appointments.length >= 0) {
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          if (scrollRef.current) {
-            const currentHour = new Date().getHours();
-            const targetHour = currentHour >= safeStart && currentHour < safeEnd 
-              ? currentHour 
-              : Math.max(safeStart, 8);
-            
-            const scrollPosition = ((targetHour - safeStart) / (safeEnd - safeStart)) * scrollRef.current.scrollHeight;
-            scrollRef.current.scrollTop = Math.max(0, scrollPosition - 100);
-          }
-        }, 100);
-      });
+    if (scrollRef.current) {
+      const currentHour = new Date().getHours();
+      const targetHour = currentHour >= safeStart && currentHour < safeEnd ? currentHour : Math.max(safeStart, 8);
+      const scrollPosition = ((targetHour - safeStart) * HOUR_HEIGHT) - 100;
+      scrollRef.current.scrollTop = Math.max(0, scrollPosition);
     }
-  }, [safeStart, safeEnd, appointments.length]);
+  }, [safeStart, safeEnd]);
 
-  // Calculate appointment positions with bounds checking
   const getAppointmentStyle = (appointment: any) => {
     const start = new Date(appointment.start_time);
     const end = new Date(appointment.end_time);
@@ -99,11 +70,9 @@ export function WeekView({
     const endMinutes = end.getHours() * 60 + end.getMinutes();
     const durationMinutes = endMinutes - startMinutes;
     
-    // Clamp to operational hours
     const minMinutes = safeStart * 60;
     const maxMinutes = safeEnd * 60;
     
-    // Don't render if completely outside operational hours
     if (endMinutes <= minMinutes || startMinutes >= maxMinutes) {
       return { display: 'none', duration: durationMinutes };
     }
@@ -112,67 +81,34 @@ export function WeekView({
     const clampedEnd = Math.max(minMinutes, Math.min(maxMinutes, endMinutes));
     
     const top = ((clampedStart - minMinutes) / 60) * HOUR_HEIGHT;
-    const height = ((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT;
-    
-    // Let content determine minimum height based on duration
-    const minHeight = durationMinutes < 30 ? 32 : durationMinutes < 60 ? 48 : 64;
+    const height = Math.max(((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT, 36);
     
     return {
       top: `${top}px`,
-      height: `${Math.max(height, minHeight)}px`,
+      height: `${height}px`,
       duration: durationMinutes
     };
   };
 
-  const getAppointmentsForDayAndProvider = (day: Date, providerId: string) => {
-    const dayProviderAppointments = appointments.filter((appt) => {
-      const matchesDay = isSameDay(new Date(appt.start_time), day);
-      if (providerId === 'unassigned') {
-        return !appt.provider_id && matchesDay;
-      }
-      return matchesDay && appt.provider_id === providerId;
-    });
-    return detectOverlaps(dayProviderAppointments);
+  const getAppointmentsForDay = (day: Date) => {
+    const dayAppointments = appointments.filter(appt => 
+      isSameDay(new Date(appt.start_time), day)
+    );
+    return detectOverlaps(dayAppointments);
   };
 
-  const getBlockedTimesForDayAndProvider = (day: Date, providerId: string) => {
-    return blockedTime.filter((block) => {
-      const blockStart = new Date(block.start_time);
-      const blockEnd = new Date(block.end_time);
-      const dayMatch = isSameDay(blockStart, day) || (blockStart <= day && blockEnd >= day);
-      
-      if (block.block_type === 'practice_closure') {
-        return dayMatch;
-      }
-      
-      if (block.block_type === 'provider_unavailable') {
-        return dayMatch && block.provider_id === providerId;
-      }
-      
-      return false;
-    });
-  };
-
-  const getBlockedTimeStyle = (block: any, day: Date) => {
-    const blockStart = new Date(block.start_time);
-    const blockEnd = new Date(block.end_time);
+  const getCurrentTimeStyle = (day: Date) => {
+    const now = new Date();
+    if (!isSameDay(day, now)) return { display: 'none' };
     
-    const dayStart = new Date(day);
-    dayStart.setHours(safeStart, 0, 0, 0);
-    const dayEnd = new Date(day);
-    dayEnd.setHours(safeEnd, 0, 0, 0);
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const minMinutes = safeStart * 60;
+    const maxMinutes = safeEnd * 60;
     
-    const clampedStart = blockStart < dayStart ? dayStart : blockStart;
-    const clampedEnd = blockEnd > dayEnd ? dayEnd : blockEnd;
+    if (minutes < minMinutes || minutes > maxMinutes) return { display: 'none' };
     
-    const startMinutes = (clampedStart.getHours() - safeStart) * 60 + clampedStart.getMinutes();
-    const endMinutes = (clampedEnd.getHours() - safeStart) * 60 + clampedEnd.getMinutes();
-    const durationMinutes = endMinutes - startMinutes;
-    
-    const top = (startMinutes / 60) * HOUR_HEIGHT;
-    const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 40);
-    
-    return { top: `${top}px`, height: `${height}px` };
+    const top = ((minutes - minMinutes) / 60) * HOUR_HEIGHT;
+    return { top: `${top}px` };
   };
 
   if (filteredProviders.length === 0) {
@@ -184,139 +120,108 @@ export function WeekView({
   }
 
   return (
-    <div className="flex flex-col h-full border rounded-lg bg-background">
-      {/* Header with days */}
-      <div className="flex border-b sticky top-0 bg-background z-10">
-        <div className="w-16 flex-shrink-0 border-r" />
+    <div className="flex flex-col h-full bg-background">
+      {/* Days Header */}
+      <div className="flex border-b bg-background/95 backdrop-blur sticky top-0 z-10">
+        <div className="w-20 flex-shrink-0 border-r bg-muted/30" />
         {daysOfWeek.map((day) => (
-          <div
-            key={day.toString()}
-            className="flex-1 p-2 text-center border-r last:border-r-0"
-          >
-            <div className="text-sm font-semibold">{format(day, 'EEE')}</div>
-            <div
-              className={cn(
-                "text-2xl",
-                isSameDay(day, new Date()) && "text-primary font-bold"
-              )}
-            >
+          <div key={day.toString()} className="flex-1 p-4 text-center border-r last:border-r-0">
+            <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              {format(day, 'EEE')}
+            </div>
+            <div className={cn(
+              "text-2xl font-semibold mt-1",
+              isSameDay(day, new Date()) 
+                ? "text-primary bg-primary/10 rounded-full w-8 h-8 flex items-center justify-center mx-auto" 
+                : "text-foreground"
+            )}>
               {format(day, 'd')}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Time grid */}
-      <div 
-        ref={scrollRef} 
-        className="flex-1 overflow-y-auto pt-12 pb-20"
-        style={{ height: `${HOUR_HEIGHT * (safeEnd - safeStart)}px` }}
-      >
-        <div className="flex relative">
-          {/* Time labels */}
-          <div className="w-16 flex-shrink-0">
+      {/* Calendar Grid */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div className="flex relative" style={{ height: `${HOUR_HEIGHT * (safeEnd - safeStart)}px` }}>
+          {/* Time Labels */}
+          <div className="w-20 flex-shrink-0 border-r bg-muted/30">
             {timeSlots.map(({ hour, minute }) => (
               minute === 0 && (
-                <div key={`${hour}-${minute}`} className="pr-2 text-right text-xs text-muted-foreground border-r" style={{ height: `${HOUR_HEIGHT}px` }}>
-                  {format(setHours(setMinutes(new Date(), minute), hour), 'h a')}
+                <div key={hour} className="relative" style={{ height: `${HOUR_HEIGHT}px` }}>
+                  <div className="absolute -top-2.5 right-3 text-xs font-medium text-muted-foreground">
+                    {format(setHours(setMinutes(new Date(), 0), hour), 'h a')}
+                  </div>
                 </div>
               )
             ))}
           </div>
 
-          {/* Day columns */}
+          {/* Day Columns */}
           {daysOfWeek.map((day) => (
-            <div key={day.toString()} className="flex-1 border-r last:border-r-0 h-full">
-              <div className="flex h-full">
-                {filteredProviders.map((provider, providerIndex) => (
+            <div key={day.toString()} className="flex-1 border-r last:border-r-0 relative">
+              {/* Grid Background */}
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent ${HOUR_HEIGHT - 1}px, hsl(var(--border)) ${HOUR_HEIGHT - 1}px, hsl(var(--border)) ${HOUR_HEIGHT}px)`
+                }}
+              />
+              
+              {/* Current Time Indicator */}
+              <div 
+                className="absolute inset-x-0 h-0.5 bg-red-500 z-30 opacity-80"
+                style={getCurrentTimeStyle(day)}
+              />
+              
+              {/* Click Areas */}
+              {timeSlots.map(({ hour, minute }) => {
+                const slotDate = setHours(setMinutes(day, minute), hour);
+                return (
                   <div
-                    key={provider.id}
-                    className={cn(
-                      "flex-1 relative h-full",
-                      providerIndex > 0 && "border-l border-dashed"
-                    )}
-                    style={{
-                      backgroundImage: `repeating-linear-gradient(to bottom, hsl(var(--border) / 0.25) 0px, hsl(var(--border) / 0.25) 1px, transparent 1px, transparent ${slotPx}px), repeating-linear-gradient(to bottom, hsl(var(--border)) 0px, hsl(var(--border)) 2px, transparent 2px, transparent ${HOUR_HEIGHT}px)`
+                    key={`${hour}-${minute}`}
+                    className="absolute inset-x-0 cursor-pointer hover:bg-primary/5 transition-colors"
+                    style={{ 
+                      top: `${((hour - safeStart) * 60 + minute) / 60 * HOUR_HEIGHT}px`,
+                      height: `${slotPx}px`
                     }}
-                  >
-                    {timeSlots.map(({ hour, minute }) => {
-                      const slotDate = setHours(setMinutes(day, minute), hour);
-                      return (
-                        <div
-                          key={`${hour}-${minute}`}
-                          className="cursor-pointer hover:bg-accent/50 transition-colors"
-                          style={{ height: `${slotPx}px` }}
-                          onClick={() => onTimeSlotClick(slotDate, provider.id)}
-                        />
-                      );
-                    })}
-                    
-                    {/* Blocked time overlays */}
-                    {getBlockedTimesForDayAndProvider(day, provider.id).map((block) => {
-                      const blockStyle = getBlockedTimeStyle(block, day);
-                      return (
-                        <div
-                          key={block.id}
-                          className="absolute inset-x-0 blocked-time-slot pointer-events-none flex items-center justify-center px-2"
-                          style={blockStyle}
-                        >
-                          <span className="text-xs font-medium text-muted-foreground text-center">
-                            Blocked: {block.reason || 'Unavailable'}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    onClick={() => onTimeSlotClick(slotDate)}
+                  />
+                );
+              })}
 
-                    {/* Appointments overlay */}
-                    <div className="absolute inset-0 pointer-events-none">
-                      <div className="relative h-full">
-                        {getAppointmentsForDayAndProvider(day, provider.id).map((appointment) => {
-                          const styleWithDuration = getAppointmentStyle(appointment);
-                          const { duration, ...baseStyle } = styleWithDuration;
-                          return (
-                            <div
-                              key={appointment.id}
-                              className="absolute pointer-events-auto px-0.5"
-                              style={{
-                                ...baseStyle,
-                                left: `${appointment.columnLeft}%`,
-                                width: `${appointment.columnWidth}%`,
-                                zIndex: appointment.columnIndex
-                              }}
-                            >
-                              <AppointmentCard
-                                appointment={appointment}
-                                onClick={() => onAppointmentClick(appointment)}
-                                duration={duration}
-                              />
-                            </div>
-                          );
-                        })}
+              {/* Appointments */}
+              <div className="absolute inset-0 pointer-events-none">
+                {getAppointmentsForDay(day).map((appointment) => {
+                  const styleWithDuration = getAppointmentStyle(appointment);
+                  const { duration, ...baseStyle } = styleWithDuration;
+                  
+                  return (
+                    <div
+                      key={appointment.id}
+                      className="absolute pointer-events-auto px-1"
+                      style={{
+                        ...baseStyle,
+                        left: `${appointment.columnLeft}%`,
+                        width: `${appointment.columnWidth}%`,
+                        zIndex: 10 + appointment.columnIndex
+                      }}
+                    >
+                      <div className="h-full">
+                        <AppointmentCard
+                          appointment={appointment}
+                          onClick={() => onAppointmentClick(appointment)}
+                          duration={duration}
+                        />
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Provider legend */}
-      {filteredProviders.length > 1 && (
-        <div className="border-t p-2 flex gap-2 flex-wrap bg-muted/50">
-          {filteredProviders.map((provider) => (
-            <div key={provider.id} className="text-xs flex items-center gap-1 px-2 py-1 bg-background rounded">
-              <span className="font-medium">
-                {provider.first_name} {provider.last_name}
-              </span>
-              {provider.specialty && (
-                <span className="text-muted-foreground">({provider.specialty})</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

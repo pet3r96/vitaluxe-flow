@@ -29,7 +29,7 @@ export function DayView({
   selectedProviders,
   blockedTime = [],
 }: DayViewProps) {
-  const HOUR_HEIGHT = 80;
+  const HOUR_HEIGHT = 88;
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
   const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour ?? 20));
   const slotPx = (HOUR_HEIGHT * slotDuration) / 60;
