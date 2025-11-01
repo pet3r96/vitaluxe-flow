@@ -54,17 +54,32 @@ const Support = () => {
   });
 
   // Calculate stats
-  const [currentPage, setCurrentPage] = useState(1);
+  const [allPage, setAllPage] = useState(1);
+  const [openPage, setOpenPage] = useState(1);
+  const [resolvedPage, setResolvedPage] = useState(1);
   const itemsPerPage = 10;
   
-  const openTickets = supportThreads?.filter(t => !t.resolved).length || 0;
-  const resolvedTickets = supportThreads?.filter(t => t.resolved).length || 0;
+  const openTicketsList = supportThreads?.filter(t => !t.resolved) || [];
+  const resolvedTicketsList = supportThreads?.filter(t => t.resolved) || [];
   
-  // Pagination logic
-  const totalPages = Math.ceil((supportThreads?.length || 0) / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedTickets = supportThreads?.slice(startIndex, endIndex) || [];
+  const openTickets = openTicketsList.length;
+  const resolvedTickets = resolvedTicketsList.length;
+  
+  // Pagination logic for each tab
+  const allTotalPages = Math.ceil((supportThreads?.length || 0) / itemsPerPage);
+  const allStartIndex = (allPage - 1) * itemsPerPage;
+  const allEndIndex = allStartIndex + itemsPerPage;
+  const paginatedAllTickets = supportThreads?.slice(allStartIndex, allEndIndex) || [];
+
+  const openTotalPages = Math.ceil(openTicketsList.length / itemsPerPage);
+  const openStartIndex = (openPage - 1) * itemsPerPage;
+  const openEndIndex = openStartIndex + itemsPerPage;
+  const paginatedOpenTickets = openTicketsList.slice(openStartIndex, openEndIndex);
+
+  const resolvedTotalPages = Math.ceil(resolvedTicketsList.length / itemsPerPage);
+  const resolvedStartIndex = (resolvedPage - 1) * itemsPerPage;
+  const resolvedEndIndex = resolvedStartIndex + itemsPerPage;
+  const paginatedResolvedTickets = resolvedTicketsList.slice(resolvedStartIndex, resolvedEndIndex);
 
   if (userRole !== "admin") {
     return (
@@ -160,7 +175,7 @@ const Support = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="all" className="w-full">
+          <Tabs defaultValue="open" className="w-full">
             <TabsList>
               <TabsTrigger value="all">All Tickets</TabsTrigger>
               <TabsTrigger value="open">Open</TabsTrigger>
@@ -170,11 +185,11 @@ const Support = () => {
             <TabsContent value="all" className="space-y-4">
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading tickets...</div>
-              ) : paginatedTickets.length === 0 ? (
+              ) : paginatedAllTickets.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">No support tickets found</div>
               ) : (
                 <>
-                  {paginatedTickets.map((ticket) => (
+                  {paginatedAllTickets.map((ticket) => (
                     <Card key={ticket.id}>
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
@@ -206,27 +221,27 @@ const Support = () => {
                   ))}
                   
                   {/* Pagination */}
-                  {totalPages > 1 && (
+                  {allTotalPages > 1 && (
                     <div className="flex items-center justify-between mt-4">
                       <div className="text-sm text-muted-foreground">
-                        Showing {startIndex + 1}-{Math.min(endIndex, supportThreads?.length || 0)} of {supportThreads?.length || 0}
+                        Showing {allStartIndex + 1}-{Math.min(allEndIndex, supportThreads?.length || 0)} of {supportThreads?.length || 0}
                       </div>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                          disabled={currentPage === 1}
+                          onClick={() => setAllPage(p => Math.max(1, p - 1))}
+                          disabled={allPage === 1}
                         >
                           Previous
                         </Button>
                         <div className="flex items-center gap-1">
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                          {Array.from({ length: allTotalPages }, (_, i) => i + 1).map(page => (
                             <Button
                               key={page}
-                              variant={currentPage === page ? "default" : "outline"}
+                              variant={allPage === page ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setCurrentPage(page)}
+                              onClick={() => setAllPage(page)}
                               className="w-8"
                             >
                               {page}
@@ -236,8 +251,8 @@ const Support = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                          disabled={currentPage === totalPages}
+                          onClick={() => setAllPage(p => Math.min(allTotalPages, p + 1))}
+                          disabled={allPage === allTotalPages}
                         >
                           Next
                         </Button>
@@ -249,72 +264,156 @@ const Support = () => {
             </TabsContent>
 
             <TabsContent value="open" className="space-y-4">
-              {supportThreads?.filter(t => !t.resolved).length === 0 ? (
+              {openTicketsList.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">No open tickets</div>
               ) : (
-                supportThreads?.filter(t => !t.resolved).map((ticket) => (
-                  <Card key={ticket.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
-                          <CardDescription>
-                            Patient ID: {ticket.patient_id?.slice(0, 8)}...
-                          </CardDescription>
+                <>
+                  {paginatedOpenTickets.map((ticket) => (
+                    <Card key={ticket.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
+                            <CardDescription>
+                              Patient ID: {ticket.patient_id?.slice(0, 8)}...
+                            </CardDescription>
+                          </div>
+                          <Badge>Open</Badge>
                         </div>
-                        <Badge>Open</Badge>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {ticket.message_body}
+                        </p>
+                        <div className="flex items-center justify-between mt-4">
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(ticket.created_at), "MMM dd, yyyy 'at' hh:mm a")}
+                          </span>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {/* Pagination */}
+                  {openTotalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {openStartIndex + 1}-{Math.min(openEndIndex, openTicketsList.length)} of {openTicketsList.length}
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {ticket.message_body}
-                      </p>
-                      <div className="flex items-center justify-between mt-4">
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(ticket.created_at), "MMM dd, yyyy")}
-                        </span>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setOpenPage(p => Math.max(1, p - 1))}
+                          disabled={openPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: openTotalPages }, (_, i) => i + 1).map(page => (
+                            <Button
+                              key={page}
+                              variant={openPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setOpenPage(page)}
+                              className="w-8"
+                            >
+                              {page}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setOpenPage(p => Math.min(openTotalPages, p + 1))}
+                          disabled={openPage === openTotalPages}
+                        >
+                          Next
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
 
             <TabsContent value="resolved" className="space-y-4">
-              {supportThreads?.filter(t => t.resolved).length === 0 ? (
+              {resolvedTicketsList.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">No resolved tickets</div>
               ) : (
-                supportThreads?.filter(t => t.resolved).map((ticket) => (
-                  <Card key={ticket.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
-                          <CardDescription>
-                            Patient ID: {ticket.patient_id?.slice(0, 8)}...
-                          </CardDescription>
+                <>
+                  {paginatedResolvedTickets.map((ticket) => (
+                    <Card key={ticket.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
+                            <CardDescription>
+                              Patient ID: {ticket.patient_id?.slice(0, 8)}...
+                            </CardDescription>
+                          </div>
+                          <Badge variant="secondary">Resolved</Badge>
                         </div>
-                        <Badge variant="secondary">Resolved</Badge>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {ticket.message_body}
+                        </p>
+                        <div className="flex items-center justify-between mt-4">
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(ticket.created_at), "MMM dd, yyyy 'at' hh:mm a")}
+                          </span>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {/* Pagination */}
+                  {resolvedTotalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {resolvedStartIndex + 1}-{Math.min(resolvedEndIndex, resolvedTicketsList.length)} of {resolvedTicketsList.length}
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {ticket.message_body}
-                      </p>
-                      <div className="flex items-center justify-between mt-4">
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(ticket.created_at), "MMM dd, yyyy")}
-                        </span>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setResolvedPage(p => Math.max(1, p - 1))}
+                          disabled={resolvedPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: resolvedTotalPages }, (_, i) => i + 1).map(page => (
+                            <Button
+                              key={page}
+                              variant={resolvedPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setResolvedPage(page)}
+                              className="w-8"
+                            >
+                              {page}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setResolvedPage(p => Math.min(resolvedTotalPages, p + 1))}
+                          disabled={resolvedPage === resolvedTotalPages}
+                        >
+                          Next
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
           </Tabs>
