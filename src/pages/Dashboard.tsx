@@ -23,6 +23,7 @@ import { OrdersBreakdown } from "@/components/dashboard/OrdersBreakdown";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TabbedAppointmentsWidget } from "@/components/dashboard/TabbedAppointmentsWidget";
 import { TabbedCommunicationsWidget } from "@/components/dashboard/TabbedCommunicationsWidget";
+import { DayViewCalendar } from "@/components/dashboard/DayViewCalendar";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
@@ -560,6 +561,7 @@ const Dashboard = () => {
           <div className="lg:col-span-1 space-y-4 lg:space-y-6">
             <PatientQuickSearch />
             <QuickActionsPanel />
+            <DayViewCalendar />
           </div>
         </div>
       )}
