@@ -54,6 +54,13 @@ export default function PracticePatients() {
     mutationFn: async (patientId: string) => {
       console.log('[PracticePatients] Inviting patient:', { patientId });
       
+      // Invalidate any cached patient data to ensure fresh data
+      await queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
+      await queryClient.invalidateQueries({ queryKey: ['patient-accounts'] });
+      
+      // Small delay to ensure cache is cleared
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Create portal account
       const { data: accountData, error: accountError } = await supabase.functions.invoke(
         'create-patient-portal-account',

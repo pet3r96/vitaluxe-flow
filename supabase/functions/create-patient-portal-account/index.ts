@@ -245,6 +245,12 @@ Deno.serve(async (req) => {
     });
 
     // Fetch patient record and verify it belongs to effective practice
+    console.log('[create-patient-portal-account] Querying patient:', {
+      patientId,
+      effectivePracticeId,
+      timestamp: new Date().toISOString()
+    });
+
     const { data: patient, error: patientError } = await supabaseAdmin
       .from('patient_accounts')
       .select(`
@@ -270,9 +276,33 @@ Deno.serve(async (req) => {
       .eq('practice_id', effectivePracticeId)
       .single();
 
+    console.log('[create-patient-portal-account] Patient query result:', {
+      found: !!patient,
+      error: patientError?.message,
+      errorCode: patientError?.code,
+      errorDetails: patientError?.details,
+      patientId: patient?.id
+    });
+
     if (patientError || !patient) {
+      console.error('[create-patient-portal-account] Patient not found:', {
+        patientId,
+        effectivePracticeId,
+        error: patientError,
+        queryAttempted: true
+      });
+      
       return new Response(
-        JSON.stringify({ error: 'Patient not found' }),
+        JSON.stringify({ 
+          error: 'Patient not found',
+          debug: {
+            patientId,
+            practiceId: effectivePracticeId,
+            errorMessage: patientError?.message,
+            errorCode: patientError?.code,
+            errorDetails: patientError?.details
+          }
+        }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
