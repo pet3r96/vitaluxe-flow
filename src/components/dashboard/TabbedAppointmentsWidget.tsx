@@ -267,13 +267,13 @@ export function TabbedAppointmentsWidget() {
 
             <TabsContent value="today" className="mt-0">
               {appointmentsLoading ? (
-                <div className="h-[400px] space-y-3 overflow-hidden">
+                <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : appointments && appointments.length > 0 ? (
-                <div className="h-[400px] overflow-y-auto space-y-2 pr-1">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                   {appointments.map((appointment) => (
                     <Button
                       key={appointment.id}
@@ -311,7 +311,7 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : (
-                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                <div className="py-12 flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No appointments today</p>
@@ -322,13 +322,13 @@ export function TabbedAppointmentsWidget() {
 
             <TabsContent value="upcoming" className="mt-0">
               {upcomingLoading ? (
-                <div className="h-[400px] space-y-3 overflow-hidden">
+                <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : upcomingAppointments && upcomingAppointments.length > 0 ? (
-                <div className="h-[400px] overflow-y-auto space-y-2 pr-1">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                   {upcomingAppointments.map((appointment) => (
                     <Button
                       key={appointment.id}
@@ -368,7 +368,7 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : (
-                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                <div className="py-12 flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No upcoming appointments</p>
@@ -379,14 +379,14 @@ export function TabbedAppointmentsWidget() {
 
             <TabsContent value="requested" className="mt-0">
               {requestedAppointments.length === 0 ? (
-                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                <div className="py-12 flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <AlertCircle className="h-16 w-16 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No pending appointment requests</p>
                   </div>
                 </div>
               ) : (
-                <div className="h-[400px] overflow-y-auto space-y-2 pr-1">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                   {requestedAppointments.map((appointment: any) => {
                     const patientProfile = appointment?.patient_accounts?.profiles;
                     const patientName = patientProfile?.full_name || patientProfile?.name || 'Unknown Patient';
