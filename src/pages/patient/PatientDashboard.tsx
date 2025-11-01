@@ -397,8 +397,8 @@ export default function PatientDashboard() {
         </Alert>
       )}
 
-      {/* Intake Form Prompt */}
-      {!patientAccount?.intake_completed_at && (
+      {/* Intake Form Prompt - only show if intake not complete AND no medical vault data */}
+      {!patientAccount?.intake_completed_at && !medicalVault?.has_data && (
         <IntakePromptCard onComplete={() => navigate('/intake')} />
       )}
 
