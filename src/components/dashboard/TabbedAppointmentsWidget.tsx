@@ -311,9 +311,11 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">No appointments today</p>
+                <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+                  <div className="text-center">
+                    <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">No appointments today</p>
+                  </div>
                 </div>
               )}
             </TabsContent>
@@ -366,18 +368,22 @@ export function TabbedAppointmentsWidget() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">No upcoming appointments</p>
+                <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+                  <div className="text-center">
+                    <Calendar className="h-16 w-16 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">No upcoming appointments</p>
+                  </div>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="requested" className="mt-0">
               {requestedAppointments.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <AlertCircle className="h-16 w-16 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">No pending appointment requests</p>
+                <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+                  <div className="text-center">
+                    <AlertCircle className="h-16 w-16 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">No pending appointment requests</p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
