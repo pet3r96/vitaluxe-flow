@@ -154,6 +154,87 @@
 }
 
 @layer utilities {
+  /* Layered Background System */
+  .vitaluxe-base-bg {
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.08), transparent),
+      linear-gradient(135deg, 
+        hsl(45 33% 98%) 0%, 
+        hsl(46 43% 95%) 50%, 
+        hsl(45 33% 98%) 100%
+      );
+  }
+
+  .dark .vitaluxe-base-bg {
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.12), transparent),
+      linear-gradient(135deg, 
+        hsl(240 10% 6%) 0%, 
+        hsl(240 10% 8%) 50%, 
+        hsl(240 10% 6%) 100%
+      );
+  }
+
+  /* Frosted Glass Card System */
+  .glass-card {
+    background: hsl(0 0% 100% / 0.7);
+    backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.18);
+    box-shadow: 
+      0 8px 32px rgba(190, 155, 75, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .dark .glass-card {
+    background: hsl(240 8% 10% / 0.6);
+    backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid hsl(240 8% 20% / 0.3);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(190, 155, 75, 0.1);
+  }
+
+  /* Multi-Level Shadow System */
+  .shadow-elevated {
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.04),
+      0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .shadow-elevated {
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .shadow-hover {
+    transition: all 0.3s ease;
+  }
+
+  .shadow-hover:hover {
+    box-shadow: 
+      0 4px 12px rgba(190, 155, 75, 0.12),
+      0 12px 32px rgba(190, 155, 75, 0.08);
+    transform: translateY(-2px);
+  }
+
+  /* Gold Accent System */
+  .accent-gold-primary {
+    background: linear-gradient(135deg, hsl(46 43% 52%), hsl(46 51% 65%));
+    color: white;
+  }
+
+  .accent-gold-light {
+    background: hsl(46 51% 65% / 0.15);
+    color: hsl(46 43% 52%);
+    border: 1px solid hsl(46 43% 52% / 0.2);
+  }
+
+  .accent-success {
+    background: hsl(142 60% 35% / 0.12);
+    color: hsl(142 60% 35%);
+  }
+
   /* Modern gold gradient */
   .bg-gold-gradient-modern {
     background: var(--gold-gradient);

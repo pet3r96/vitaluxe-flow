@@ -199,12 +199,11 @@ const App = () => (
                     element={
                       <ProtectedRoute>
                         <SidebarProvider>
-                          <div className="flex min-h-screen w-full bg-background overflow-hidden">
+                          <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                             <AppSidebar />
                             <main className="flex-1 flex flex-col overflow-y-auto">
                               <Topbar />
                               <div className="flex-1 p-4 sm:p-6 lg:p-8 relative">
-                                <div className="fixed inset-0 bg-gold-gradient opacity-[0.02] pointer-events-none" />
                                 <div className="relative z-10">
                                 <Suspense fallback={<PageLoader />}>
                                   <Routes>
