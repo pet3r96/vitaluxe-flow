@@ -32,6 +32,8 @@ export interface MenuItem {
   href: string;
   icon: LucideIcon;
   isPro?: boolean;
+  hideForStaff?: boolean;
+  hideForProvider?: boolean;
 }
 
 export interface MenuSection {
@@ -91,39 +93,99 @@ export const menus: MenuConfig = {
 
   doctor: [
     {
-      title: "Main Menu",
+      title: "Dashboard",
       items: [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: "User Management",
+      isParent: true,
+      icon: Users,
+      items: [
+        { label: "Providers", href: "/providers", icon: UserRoundCog },
+        { label: "Patients", href: "/patients", icon: Users },
+        { label: "Staff", href: "/staff", icon: Users, isPro: true },
+        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
+      ],
+    },
+    {
+      title: "Orders & Reporting",
+      isParent: true,
+      icon: ShoppingCart,
+      items: [
         { label: "Products", href: "/products", icon: Package },
         { label: "Orders", href: "/orders", icon: ShoppingCart },
-        { label: "Messages", href: "/messages", icon: MessageSquare },
-        { label: "Patients", href: "/patients", icon: Users },
-        { label: "Providers", href: "/providers", icon: UserRoundCog },
-        { label: "Staff", href: "/staff", icon: Users, isPro: true },
-        { label: "Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
-        { label: "Patient Inbox", href: "/practice/patient-inbox", icon: Inbox, isPro: true },
+        { label: "My Cart", href: "/cart", icon: ShoppingCart },
+        { label: "Reporting", href: "/practice-reporting", icon: BarChart3, isPro: true, hideForStaff: true },
+      ],
+    },
+    {
+      title: "Communication",
+      isParent: true,
+      icon: MessageSquare,
+      items: [
+        { label: "Support", href: "/support", icon: LifeBuoy },
+        { label: "Chat System", href: "/internal-chat", icon: MessageSquare, isPro: true },
         { label: "Document Center", href: "/document-center", icon: FileCheck, isPro: true },
-        { label: "Reporting", href: "/practice-reporting", icon: BarChart3, isPro: true },
-        { label: "Internal Chat", href: "/internal-chat", icon: MessageSquare, isPro: true },
-        { label: "My Subscription", href: "/my-subscription", icon: CreditCard, isPro: true },
+      ],
+    },
+    {
+      title: "Settings",
+      isParent: true,
+      icon: Settings,
+      items: [
+        { label: "My Profile", href: "/profile", icon: UserSquare2 },
+        { label: "My Subscription", href: "/my-subscription", icon: CreditCard, isPro: true, hideForStaff: true, hideForProvider: true },
       ],
     },
   ],
 
   provider: [
     {
-      title: "Main Menu",
+      title: "Dashboard",
       items: [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: "User Management",
+      isParent: true,
+      icon: Users,
+      items: [
+        { label: "Providers", href: "/providers", icon: UserRoundCog },
+        { label: "Patients", href: "/patients", icon: Users },
+        { label: "Staff", href: "/staff", icon: Users, isPro: true },
+        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
+      ],
+    },
+    {
+      title: "Orders & Reporting",
+      isParent: true,
+      icon: ShoppingCart,
+      items: [
         { label: "Products", href: "/products", icon: Package },
         { label: "Orders", href: "/orders", icon: ShoppingCart },
-        { label: "Messages", href: "/messages", icon: MessageSquare },
-        { label: "Patients", href: "/patients", icon: Users },
-        { label: "Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
-        { label: "Patient Inbox", href: "/practice/patient-inbox", icon: Inbox, isPro: true },
+        { label: "My Cart", href: "/cart", icon: ShoppingCart },
+        { label: "Reporting", href: "/practice-reporting", icon: BarChart3, isPro: true, hideForStaff: true },
+      ],
+    },
+    {
+      title: "Communication",
+      isParent: true,
+      icon: MessageSquare,
+      items: [
+        { label: "Support", href: "/support", icon: LifeBuoy },
+        { label: "Chat System", href: "/internal-chat", icon: MessageSquare, isPro: true },
         { label: "Document Center", href: "/document-center", icon: FileCheck, isPro: true },
-        { label: "Reporting", href: "/practice-reporting", icon: BarChart3, isPro: true },
-        { label: "Internal Chat", href: "/internal-chat", icon: MessageSquare, isPro: true },
+      ],
+    },
+    {
+      title: "Settings",
+      isParent: true,
+      icon: Settings,
+      items: [
+        { label: "My Profile", href: "/profile", icon: UserSquare2 },
       ],
     },
   ],
@@ -182,17 +244,47 @@ export const menus: MenuConfig = {
 
   staff: [
     {
-      title: "Main Menu",
+      title: "Dashboard",
       items: [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: "User Management",
+      isParent: true,
+      icon: Users,
+      items: [
+        { label: "Providers", href: "/providers", icon: UserRoundCog },
+        { label: "Patients", href: "/patients", icon: Users },
+        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar },
+      ],
+    },
+    {
+      title: "Orders & Reporting",
+      isParent: true,
+      icon: ShoppingCart,
+      items: [
         { label: "Products", href: "/products", icon: Package },
         { label: "Orders", href: "/orders", icon: ShoppingCart },
-        { label: "Messages", href: "/messages", icon: MessageSquare },
-        { label: "Patients", href: "/patients", icon: Users },
-        { label: "Calendar", href: "/practice-calendar", icon: Calendar },
-        { label: "Patient Inbox", href: "/practice/patient-inbox", icon: Inbox },
+        { label: "My Cart", href: "/cart", icon: ShoppingCart },
+      ],
+    },
+    {
+      title: "Communication",
+      isParent: true,
+      icon: MessageSquare,
+      items: [
+        { label: "Support", href: "/support", icon: LifeBuoy },
+        { label: "Chat System", href: "/internal-chat", icon: MessageSquare },
         { label: "Document Center", href: "/document-center", icon: FileCheck },
-        { label: "Internal Chat", href: "/internal-chat", icon: MessageSquare },
+      ],
+    },
+    {
+      title: "Settings",
+      isParent: true,
+      icon: Settings,
+      items: [
+        { label: "My Profile", href: "/profile", icon: UserSquare2 },
       ],
     },
   ],

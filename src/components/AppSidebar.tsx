@@ -36,12 +36,27 @@ export function AppSidebar() {
   // Determine which logo to use based on theme (default to dark)
   const currentLogo = theme === "light" ? logoLight : logoDark;
 
+  // Filter menu items based on role
+  const filterMenuItems = (items: any[]) => {
+    return items.filter(item => {
+      if (isStaffAccount && item.hideForStaff) return false;
+      if (isProviderAccount && item.hideForProvider) return false;
+      return true;
+    });
+  };
+
   const roleMenus = effectiveRole 
     ? (isStaffAccount ? menus.staff : menus[effectiveRole]) || []
     : [];
 
+  // Apply role-based filtering to menu sections
+  const filteredMenus = roleMenus.map(section => ({
+    ...section,
+    items: filterMenuItems(section.items)
+  })).filter(section => section.items.length > 0);
+
   // Flatten for mobile nav
-  const items = roleMenus.flatMap(section => 
+  const items = filteredMenus.flatMap(section => 
     section.items.map(item => ({
       title: item.label,
       url: item.href,
@@ -60,7 +75,7 @@ export function AppSidebar() {
   // Mobile view - use hamburger menu
   if (isMobile) {
     // Transform sections to match MobileMenuNav expected format
-    const mobileSections = roleMenus.map(section => ({
+    const mobileSections = filteredMenus.map(section => ({
       title: section.title,
       items: section.items.map(item => ({
         title: item.label,
@@ -110,7 +125,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {roleMenus.map((section) => (
+        {filteredMenus.map((section) => (
           <SidebarGroup key={section.title}>
             {!isCollapsed && (
               <SidebarGroupLabel className="text-gray-900 dark:text-white font-semibold">
