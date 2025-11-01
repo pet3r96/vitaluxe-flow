@@ -7908,6 +7908,10 @@ export type Database = {
         Returns: undefined
       }
       notify_due_follow_ups: { Args: never; Returns: undefined }
+      patient_can_view_provider_document: {
+        Args: { p_document_id: string }
+        Returns: boolean
+      }
       recompute_order_profits: {
         Args: { p_order_ids?: string[]; p_status_filter?: string[] }
         Returns: {
