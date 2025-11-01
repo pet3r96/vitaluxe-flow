@@ -20,7 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 export const MessagesView = () => {
-  const { user, effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
+  const { user, effectiveUserId, effectiveRole, effectivePracticeId, isImpersonating } = useAuth();
   const { isSubscribed } = useSubscription();
   const queryClient = useQueryClient();
   const { markThreadAsRead } = useMessageAlerts();
@@ -33,6 +33,8 @@ export const MessagesView = () => {
   const [showNewThread, setShowNewThread] = useState(false);
   const [resolvedFilter, setResolvedFilter] = useState<"all" | "unresolved" | "resolved">("unresolved");
   const [isAdmin, setIsAdmin] = useState(false);
+  // Treat admin as non-admin while impersonating to honor privacy in UI queries
+  const isAdminEffective = isAdmin && !isImpersonating;
   const [recipientType, setRecipientType] = useState<"admin" | "pharmacy">("admin");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [dispositionType, setDispositionType] = useState<string>("");
@@ -132,11 +134,11 @@ export const MessagesView = () => {
   });
 
   const { data: threads, refetch: refetchThreads } = useQuery({
-    queryKey: ["message-threads", resolvedFilter, effectiveUserId, isAdmin, effectivePracticeId],
+    queryKey: ["message-threads", resolvedFilter, effectiveUserId, isAdminEffective, effectivePracticeId],
     staleTime: 30000, // 30 seconds
     queryFn: async () => {
       // CLIENT-SIDE SECURITY: Validate practice context for non-admins
-      if (!isAdmin && effectivePracticeId && (effectiveRole === 'doctor' || effectiveRole === 'provider')) {
+      if (!isAdminEffective && effectivePracticeId && (effectiveRole === 'doctor' || effectiveRole === 'provider')) {
         logger.info('Loading messages with practice context', { 
           effectivePracticeId, 
           effectiveRole,
@@ -145,7 +147,7 @@ export const MessagesView = () => {
       }
       
       // For non-admins: Fetch support tickets (created by user) separately from order issues (participant-based)
-      if (!isAdmin) {
+      if (!isAdminEffective) {
         // For reps (topline/downline), only show support tickets to admin
         if (effectiveRole === 'topline' || effectiveRole === 'downline') {
           // Fetch only support tickets created by rep
