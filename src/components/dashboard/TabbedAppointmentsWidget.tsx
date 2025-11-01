@@ -267,13 +267,13 @@ export function TabbedAppointmentsWidget() {
 
             <TabsContent value="today" className="mt-0">
               {appointmentsLoading ? (
-                <div className="space-y-3">
+                <div className="space-y-3 pt-6">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : appointments && appointments.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
                   {appointments.map((appointment) => (
                     <Button
                       key={appointment.id}
@@ -322,13 +322,13 @@ export function TabbedAppointmentsWidget() {
 
             <TabsContent value="upcoming" className="mt-0">
               {upcomingLoading ? (
-                <div className="space-y-3">
+                <div className="space-y-3 pt-6">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : upcomingAppointments && upcomingAppointments.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
                   {upcomingAppointments.map((appointment) => (
                     <Button
                       key={appointment.id}
@@ -386,7 +386,7 @@ export function TabbedAppointmentsWidget() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 pt-6">
                   {requestedAppointments.map((appointment: any) => {
                     const patientProfile = appointment?.patient_accounts?.profiles;
                     const patientName = patientProfile?.full_name || patientProfile?.name || 'Unknown Patient';
