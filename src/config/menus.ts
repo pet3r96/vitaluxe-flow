@@ -76,12 +76,11 @@ export const menus: MenuConfig = {
       ],
     },
     {
-      title: "Settings",
+      title: "Admin Settings",
       isParent: true,
       icon: Settings,
       items: [
         { label: "Admin Settings", href: "/admin/settings", icon: Settings },
-        { label: "Security", href: "/security", icon: Shield },
         { label: "Terms Management", href: "/admin/terms", icon: FileSignature },
       ],
     },
