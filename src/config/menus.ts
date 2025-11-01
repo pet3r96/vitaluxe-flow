@@ -105,7 +105,7 @@ export const menus: MenuConfig = {
       items: [
         { label: "Providers", href: "/providers", icon: UserRoundCog, hideForProvider: true },
         { label: "Patients", href: "/patients", icon: Users },
-        { label: "Staff", href: "/staff", icon: Users, isPro: true },
+        { label: "Staff", href: "/staff", icon: Users, isPro: true, hideForStaff: true },
         { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
       ],
     },
@@ -256,7 +256,7 @@ export const menus: MenuConfig = {
       items: [
         { label: "Providers", href: "/providers", icon: UserRoundCog, hideForProvider: true },
         { label: "Patients", href: "/patients", icon: Users },
-        { label: "Staff", href: "/staff", icon: Users, isPro: true, hideForProvider: true },
+        { label: "Staff", href: "/staff", icon: Users, isPro: true, hideForProvider: true, hideForStaff: true },
         { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar },
       ],
     },
