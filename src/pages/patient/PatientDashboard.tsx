@@ -11,24 +11,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IntakePromptCard } from "@/components/patient/IntakePromptCard";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const [practiceSubscription, setPracticeSubscription] = useState<any>(null);
+  const { effectiveUserId } = useAuth();
 
-  // Fetch patient account info
+  // Fetch patient account info - cache key includes effectiveUserId to prevent data leakage
   const { data: patientAccount, isLoading: loadingAccount } = useQuery({
-    queryKey: ["patient-account-dashboard"],
+    queryKey: ["patient-account-dashboard", effectiveUserId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!effectiveUserId) throw new Error('No effective user ID');
       
-      // Check for impersonation
-      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
-      
-      console.log('[PatientDashboard] 👤 Effective user ID:', effectiveUserId, '| Is impersonating:', !!impersonationData?.session);
+      console.log('[PatientDashboard] 👤 Fetching for user ID:', effectiveUserId);
       
       const { data, error } = await supabase
         .from("patient_accounts")
@@ -40,6 +37,7 @@ export default function PatientDashboard() {
       console.log('[PatientDashboard] ✅ Patient account found:', data?.id, '| Name:', data?.first_name, data?.last_name);
       return data;
     },
+    enabled: !!effectiveUserId,
     staleTime: 5 * 60 * 1000,
   });
 

@@ -11,37 +11,27 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PatientAppointments() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const isMobile = useIsMobile();
+  const { effectiveUserId } = useAuth();
  
   const queryClient = useQueryClient();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
+  // Cache key includes effectiveUserId to prevent data leakage across impersonations
   const { data: appointments, refetch } = useQuery<any[]>({
-    queryKey: ["patient-appointments"],
+    queryKey: ["patient-appointments", effectiveUserId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!effectiveUserId) throw new Error('No effective user ID');
 
-      // Check for impersonation
-      let effectiveUserId = user.id;
-      try {
-        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-        if (impersonationData?.session?.impersonated_user_id) {
-          effectiveUserId = impersonationData.session.impersonated_user_id;
-          console.log('[PatientAppointments] 🔄 Impersonation active:', effectiveUserId);
-        }
-      } catch (impersonationError) {
-        console.warn('[PatientAppointments] ⚠️ Impersonation check failed, using direct user.id:', impersonationError);
-      }
-
-      console.log('[PatientAppointments] 👤 Effective user ID:', effectiveUserId);
+      console.log('[PatientAppointments] 👤 Fetching appointments for user ID:', effectiveUserId);
 
       // 1) Try RPC first
       let shouldUseFallback = false;
@@ -223,7 +213,8 @@ export default function PatientAppointments() {
       
       // Should never reach here, but TypeScript needs this
       return [];
-    }
+    },
+    enabled: !!effectiveUserId,
   });
 
   const handleCancelAppointment = (appointmentId: string) => {
@@ -241,7 +232,7 @@ export default function PatientAppointments() {
       if (error) throw error;
 
       // Optimistically remove from cache so it disappears immediately
-      queryClient.setQueryData(["patient-appointments"], (old: any[] | undefined) => {
+      queryClient.setQueryData(["patient-appointments", effectiveUserId], (old: any[] | undefined) => {
         if (!old) return old;
         return old.filter((a) => a.id !== cancelId);
       });
