@@ -146,6 +146,7 @@ export const menus: MenuConfig = {
       items: [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Products", href: "/products", icon: Package },
+        { label: "My Practices", href: "/practices", icon: Building2 },
         { label: "My Downlines", href: "/downlines", icon: TrendingDown },
         { label: "Reports", href: "/rep-reports", icon: BarChart3 },
         { label: "Messages", href: "/messages", icon: MessageSquare },

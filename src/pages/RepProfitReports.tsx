@@ -57,6 +57,9 @@ const RepProfitReports = () => {
     if (!earningsData) return [];
     
     if (earningFilter === "all") return earningsData;
+    if (earningFilter === "commission") {
+      return earningsData.filter(e => e.earning_type === 'product_commission');
+    }
     return earningsData.filter(e => e.earning_type === earningFilter);
   }, [earningsData, earningFilter]);
 
@@ -93,7 +96,7 @@ const RepProfitReports = () => {
     if (effectiveRole !== 'topline') return 0;
     return earningsData
       ?.filter(item => item.order_status !== 'cancelled')
-      ?.filter(item => item.earning_type === 'commission')
+      ?.filter(item => item.earning_type === 'product_commission')
       .reduce((sum, item) => sum + parseFloat(item.amount?.toString() || '0'), 0) || 0;
   }, [earningsData, effectiveRole]);
 
@@ -244,11 +247,21 @@ const RepProfitReports = () => {
                           <TableCell>
                             {format(new Date(earning.created_at), "MMM dd, yyyy")}
                           </TableCell>
-                          <TableCell>
-                            <Badge variant={earning.earning_type === 'commission' ? 'default' : 'secondary'}>
-                              {earning.earning_type === 'commission' ? 'Commission' : 'Dev Fee'}
-                            </Badge>
-                          </TableCell>
+                           <TableCell>
+                             <Badge variant={
+                               earning.earning_type === 'practice_dev_fee' 
+                                 ? 'secondary' 
+                                 : earning.is_rx_required 
+                                   ? 'outline' 
+                                   : 'default'
+                             }>
+                               {earning.earning_type === 'practice_dev_fee' 
+                                 ? 'Dev Fee' 
+                                 : earning.is_rx_required 
+                                   ? 'N/A' 
+                                   : 'Commission'}
+                             </Badge>
+                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
                               <div className="font-medium">{earning.reference_number}</div>
