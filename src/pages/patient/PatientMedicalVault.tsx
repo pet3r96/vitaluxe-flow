@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,21 +31,28 @@ export default function PatientMedicalVault() {
   const [showShareLinkDialog, setShowShareLinkDialog] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [shareExpiresAt, setShareExpiresAt] = useState<Date>(new Date());
+  
+  const queryClient = useQueryClient();
+  const { effectiveUserId } = useAuth();
 
-  // Get patient account - check for impersonation first
+  // Event listener for impersonation changes - defensive cache invalidation
+  useEffect(() => {
+    const handler = () => {
+      queryClient.invalidateQueries({ 
+        predicate: q => Array.isArray(q.queryKey) && String(q.queryKey[0]).startsWith("patient-")
+      });
+    };
+    window.addEventListener("impersonation-changed", handler);
+    return () => window.removeEventListener("impersonation-changed", handler);
+  }, [queryClient]);
+
+  // Get patient account using effectiveUserId from AuthContext
   const { data: patientAccount, isLoading, error } = useQuery({
-    queryKey: ["patient-account"],
+    queryKey: ["patient-account-vault", effectiveUserId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log("🔍 Current authenticated user:", user?.id, user?.email);
+      if (!effectiveUserId) throw new Error("Not authenticated");
       
-      if (!user) throw new Error("Not authenticated");
-      
-      // Check for active impersonation session
-      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
-      
-      console.log("👤 Effective user ID (impersonated or real):", effectiveUserId);
+      console.log("👤 Fetching patient account for user ID:", effectiveUserId);
       
       const { data, error } = await supabase
         .from("patient_accounts")
@@ -55,8 +63,9 @@ export default function PatientMedicalVault() {
       console.log("📋 Patient account query result:", data, error);
       
       if (error) throw error;
-      return { ...data, effectiveUserId };
+      return data;
     },
+    enabled: !!effectiveUserId,
   });
 
   // Fetch all medical data
@@ -507,7 +516,7 @@ export default function PatientMedicalVault() {
       {/* Basic Demographics Card */}
       <BasicDemographicsCard 
         patientAccount={patientAccount}
-        effectiveUserId={patientAccount?.effectiveUserId || ''}
+        effectiveUserId={effectiveUserId || ''}
       />
 
       {/* 8 Medical Vault Sections */}

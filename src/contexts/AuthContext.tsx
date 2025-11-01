@@ -1311,6 +1311,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setImpersonatedUserId(userId || null);
     setImpersonatedUserName(userName || null);
     
+    // Dispatch event to notify pages that impersonation changed
+    window.dispatchEvent(new CustomEvent("impersonation-changed", { 
+      detail: { effectiveUserId: userId || user?.id || null } 
+    }));
+    
     if (role) {
       toast.success(`Now viewing as ${userName || role}`);
     } else {
@@ -1369,6 +1374,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setImpersonatedUserId(null);
     setImpersonatedUserName(null);
     setCurrentLogId(null);
+    
+    // Dispatch event to notify pages that impersonation ended
+    window.dispatchEvent(new CustomEvent("impersonation-changed", { 
+      detail: { effectiveUserId: user?.id || null } 
+    }));
     
     toast.success("Returned to your Admin account");
   };

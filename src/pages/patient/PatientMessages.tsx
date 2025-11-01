@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PatientMessages() {
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
@@ -22,9 +23,10 @@ export default function PatientMessages() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [showThreadList, setShowThreadList] = useState(true);
+  const { effectiveUserId } = useAuth();
 
   const { data: threads } = useQuery({
-    queryKey: ["patient-message-threads", filterTab, searchQuery],
+    queryKey: ["patient-message-threads", effectiveUserId, filterTab, searchQuery],
     queryFn: async () => {
       let query = supabase
         .from("patient_messages")
@@ -60,6 +62,7 @@ export default function PatientMessages() {
 
       return result;
     },
+    enabled: !!effectiveUserId,
   });
 
   // Real-time subscription for instant updates using centralized manager
@@ -73,6 +76,17 @@ export default function PatientMessages() {
     });
     
     // Cleanup handled by realtimeManager
+  }, [queryClient]);
+
+  // Event listener for impersonation changes - defensive cache invalidation
+  useEffect(() => {
+    const handler = () => {
+      queryClient.invalidateQueries({ 
+        predicate: q => Array.isArray(q.queryKey) && String(q.queryKey[0]).startsWith("patient-")
+      });
+    };
+    window.addEventListener("impersonation-changed", handler);
+    return () => window.removeEventListener("impersonation-changed", handler);
   }, [queryClient]);
 
   const activeCount = threads?.filter((t: any) => !t.resolved).length || 0;
