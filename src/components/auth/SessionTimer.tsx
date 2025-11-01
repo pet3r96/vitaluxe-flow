@@ -50,12 +50,19 @@ export const SessionTimer = ({ userId }: SessionTimerProps) => {
       )}>
         {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
       </span>
-      <Tooltip>
+      <Tooltip delayDuration={200}>
         <TooltipTrigger asChild>
-          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+          <button type="button" className="focus:outline-none focus:ring-2 focus:ring-primary/50 rounded">
+            <Info className="h-3 w-3 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+          </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-xs">
-          <p className="text-sm">
+        <TooltipContent 
+          side="right" 
+          align="center"
+          sideOffset={8}
+          className="z-[100] max-w-xs bg-popover border border-border shadow-lg"
+        >
+          <p className="text-sm leading-relaxed">
             You will be automatically logged out when this timer reaches zero for compliance reasons.
           </p>
         </TooltipContent>
