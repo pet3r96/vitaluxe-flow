@@ -91,54 +91,54 @@ export const DataSyncButton = ({ onSyncComplete }: DataSyncButtonProps) => {
           {syncResults && (
             <div className="space-y-3 py-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex justify-between p-3 bg-muted rounded-md">
-                  <span className="text-muted-foreground">Profiles added:</span>
-                  <span className="font-semibold">{syncResults.addedProfiles}</span>
+                <div className="flex justify-between p-3 bg-card border border-border rounded-md">
+                  <span className="text-foreground/70">Profiles added:</span>
+                  <span className="font-semibold text-foreground">{syncResults.addedProfiles}</span>
                 </div>
-                <div className="flex justify-between p-3 bg-muted rounded-md">
-                  <span className="text-muted-foreground">User Roles added:</span>
-                  <span className="font-semibold">{syncResults.addedRoles}</span>
+                <div className="flex justify-between p-3 bg-card border border-border rounded-md">
+                  <span className="text-foreground/70">User Roles added:</span>
+                  <span className="font-semibold text-foreground">{syncResults.addedRoles}</span>
                 </div>
-                <div className="flex justify-between p-3 bg-muted rounded-md">
-                  <span className="text-muted-foreground">Pharmacies fixed:</span>
-                  <span className="font-semibold">{syncResults.repairedPharmacies}</span>
+                <div className="flex justify-between p-3 bg-card border border-border rounded-md">
+                  <span className="text-foreground/70">Pharmacies fixed:</span>
+                  <span className="font-semibold text-foreground">{syncResults.repairedPharmacies}</span>
                 </div>
                 {syncResults.orphanedPharmaciesConverted > 0 && (
-                  <div className="flex justify-between p-3 bg-primary/10 rounded-md border border-primary/20">
-                    <span className="text-muted-foreground font-semibold">Orphaned → Converted:</span>
-                    <span className="font-bold text-primary">{syncResults.orphanedPharmaciesConverted}</span>
+                  <div className="flex justify-between p-3 bg-gold1/10 rounded-md border border-gold1/30">
+                    <span className="text-foreground/70 font-semibold">Orphaned → Converted:</span>
+                    <span className="font-bold text-gold1">{syncResults.orphanedPharmaciesConverted}</span>
                   </div>
                 )}
-                <div className="flex justify-between p-3 bg-muted rounded-md">
-                  <span className="text-muted-foreground">Providers fixed:</span>
-                  <span className="font-semibold">{syncResults.repairedProviders}</span>
+                <div className="flex justify-between p-3 bg-card border border-border rounded-md">
+                  <span className="text-foreground/70">Providers fixed:</span>
+                  <span className="font-semibold text-foreground">{syncResults.repairedProviders}</span>
                 </div>
-                <div className="flex justify-between p-3 bg-muted rounded-md">
-                  <span className="text-muted-foreground">Downlines fixed:</span>
-                  <span className="font-semibold">{syncResults.repairedDownlines}</span>
+                <div className="flex justify-between p-3 bg-card border border-border rounded-md">
+                  <span className="text-foreground/70">Downlines fixed:</span>
+                  <span className="font-semibold text-foreground">{syncResults.repairedDownlines}</span>
                 </div>
-                <div className="flex justify-between p-3 bg-muted rounded-md">
-                  <span className="text-muted-foreground">Toplines fixed:</span>
-                  <span className="font-semibold">{syncResults.repairedToplines}</span>
+                <div className="flex justify-between p-3 bg-card border border-border rounded-md">
+                  <span className="text-foreground/70">Toplines fixed:</span>
+                  <span className="font-semibold text-foreground">{syncResults.repairedToplines}</span>
                 </div>
                 {syncResults.repLinksAdded > 0 && (
-                  <div className="flex justify-between p-3 bg-success/10 rounded-md border border-success/20">
-                    <span className="text-muted-foreground font-semibold">Practice links added:</span>
-                    <span className="font-bold text-success">{syncResults.repLinksAdded}</span>
+                  <div className="flex justify-between p-3 bg-emerald-500/10 rounded-md border border-emerald-500/30">
+                    <span className="text-foreground/70 font-semibold">Practice links added:</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{syncResults.repLinksAdded}</span>
                   </div>
                 )}
                 {syncResults.doctorRolesAdded > 0 && (
-                  <div className="flex justify-between p-3 bg-success/10 rounded-md border border-success/20">
-                    <span className="text-muted-foreground font-semibold">Doctor roles added:</span>
-                    <span className="font-bold text-success">{syncResults.doctorRolesAdded}</span>
+                  <div className="flex justify-between p-3 bg-emerald-500/10 rounded-md border border-emerald-500/30">
+                    <span className="text-foreground/70 font-semibold">Doctor roles added:</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{syncResults.doctorRolesAdded}</span>
                   </div>
                 )}
               </div>
 
-              <div className="p-4 bg-primary/10 rounded-md border-l-4 border-primary">
+              <div className="p-4 bg-gold-gradient rounded-md border border-gold1/30 shadow-sm">
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold text-base">Total records repaired:</span>
-                  <span className="text-2xl font-bold text-primary">{syncResults.totalRepaired}</span>
+                  <span className="font-semibold text-base text-white">Total records repaired:</span>
+                  <span className="text-2xl font-bold text-white">{syncResults.totalRepaired}</span>
                 </div>
               </div>
 
@@ -155,7 +155,7 @@ export const DataSyncButton = ({ onSyncComplete }: DataSyncButtonProps) => {
             </div>
           )}
 
-          <Button onClick={() => setShowResults(false)} className="w-full">
+          <Button onClick={() => setShowResults(false)} className="w-full bg-gold-gradient hover:opacity-90">
             Close
           </Button>
         </DialogContent>
