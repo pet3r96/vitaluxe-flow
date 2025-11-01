@@ -4,7 +4,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { NavLink } from "react-router-dom";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
 import { useResponsive } from "@/hooks/use-mobile";
-import { MobileBottomNav } from "@/components/responsive/MobileBottomNav";
+import { MobileMenuNav } from "@/components/responsive/MobileMenuNav";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { menus } from "@/config/menus";
 import { Lock, LogOut, Sparkles } from "lucide-react";
@@ -57,13 +57,32 @@ export function AppSidebar() {
       ? "bg-sidebar-accent text-primary font-medium glow-gold"
       : "hover:bg-sidebar-accent/50";
 
-  // Mobile view - use bottom navigation
+  // Mobile view - use hamburger menu
   if (isMobile) {
+    // Transform sections to match MobileMenuNav expected format
+    const mobileSections = roleMenus.map(section => ({
+      title: section.title,
+      items: section.items.map(item => ({
+        title: item.label,
+        url: item.href,
+        icon: item.icon,
+        isPro: item.isPro || false,
+      }))
+    }));
+
     return (
-      <MobileBottomNav 
-        items={items}
-        maxVisibleItems={4}
-      />
+      <>
+        <MobileMenuNav 
+          items={items}
+          sections={mobileSections}
+          isSubscribed={isSubscribed}
+          effectiveRole={effectiveRole || ''}
+          isStaffAccount={isStaffAccount}
+          onSignOut={signOut}
+          onUpgrade={() => setShowUpgradeDialog(true)}
+        />
+        <UpgradeDialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog} />
+      </>
     );
   }
 
