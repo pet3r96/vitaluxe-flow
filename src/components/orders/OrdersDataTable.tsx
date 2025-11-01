@@ -139,7 +139,7 @@ export const OrdersDataTable = () => {
               id,
               practice_id
             ),
-            patients(allergies),
+            patient_accounts!order_lines_patient_id_fkey(id, allergies),
             orders!inner(
               *,
               profiles:doctor_id(name)
@@ -183,7 +183,7 @@ export const OrdersDataTable = () => {
               id,
               practice_id
             ),
-            patients(allergies)
+            patient_accounts!order_lines_patient_id_fkey(id, allergies)
           ),
           profiles:doctor_id(name)
         `);

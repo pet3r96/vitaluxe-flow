@@ -96,7 +96,7 @@ const InternalChat = () => {
         .from('internal_messages')
         .select(`
           *,
-          patient:patients(id, name),
+          patient:patient_accounts!internal_messages_patient_id_fkey(id, first_name, last_name, name),
           recipients:internal_message_recipients(
             id,
             recipient_id,
@@ -192,7 +192,7 @@ const InternalChat = () => {
         .from('internal_messages')
         .select(`
           *,
-          patient:patients(id, name)
+          patient:patient_accounts!internal_messages_patient_id_fkey(id, first_name, last_name, name)
         `)
         .eq('id', selectedMessageId)
         .single();
