@@ -42,7 +42,12 @@ export default function PatientAppointments() {
         if (error) throw error;
 
         const rows = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
-        if (!rows || rows.length === 0) return [];
+        
+        // If RPC returns empty, try fallback
+        if (!rows || rows.length === 0) {
+          console.log('[PatientAppointments] RPC returned empty, trying fallback');
+          throw new Error('RPC returned empty, using fallback');
+        }
 
         // Enrich RPC results with practice address/name when missing
         const practiceIds = Array.from(

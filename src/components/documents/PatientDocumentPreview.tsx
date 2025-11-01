@@ -49,7 +49,7 @@ export function PatientDocumentPreview({
       });
 
       if (error) throw error;
-      setPreviewUrl(data.signedUrl);
+      setPreviewUrl(data.signedUrl || data.signed_url);
     } catch (error: any) {
       console.error("Preview error:", error);
       toast({
@@ -74,7 +74,7 @@ export function PatientDocumentPreview({
 
       if (error) throw error;
 
-      const response = await fetch(data.signedUrl);
+      const response = await fetch(data.signedUrl || data.signed_url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");

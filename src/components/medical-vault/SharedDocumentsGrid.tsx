@@ -110,7 +110,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
         throw error;
       }
 
-      const response = await fetch(data.signedUrl);
+      const response = await fetch(data.signedUrl || data.signed_url);
       if (!response.ok) {
         throw new Error(`Failed to fetch document: ${response.statusText}`);
       }

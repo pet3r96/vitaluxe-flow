@@ -95,7 +95,7 @@ export default function PracticePatients() {
 
       const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.email;
 
-      // Send welcome email (works for both new and re-invited patients)
+      // Try to send welcome email (works for both new and re-invited patients)
       const { data: emailData, error: emailError } = await supabase.functions.invoke(
         'send-patient-welcome-email',
         {
@@ -109,18 +109,36 @@ export default function PracticePatients() {
         }
       );
 
+      // Don't fail the entire operation if email fails
       if (emailError) {
-        console.error('[Patient Portal] Email error:', emailError);
-        throw emailError;
+        console.warn('[Patient Portal] Email sending failed:', emailError);
+        return { 
+          accountData, 
+          emailError,
+          activationLink: `https://app.vitaluxeservices.com/change-password?token=${accountData.token}`
+        };
       }
 
       return { accountData, emailData };
     },
     onSuccess: (data) => {
-      const message = data.accountData.alreadyHadAccount 
-        ? 'Portal invitation re-sent successfully'
-        : 'Welcome email sent successfully';
-      toast.success(message);
+      if (data.emailError) {
+        // Account created but email failed
+        toast.success(
+          data.accountData.alreadyHadAccount 
+            ? 'Portal account ready' 
+            : 'Portal account created',
+          {
+            description: `Email could not be sent. Share this link manually:\n${data.activationLink}`
+          }
+        );
+      } else {
+        // Full success
+        const message = data.accountData.alreadyHadAccount 
+          ? 'Portal invitation re-sent successfully'
+          : 'Welcome email sent successfully';
+        toast.success(message);
+      }
       queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
     },
     onError: (error: Error) => {

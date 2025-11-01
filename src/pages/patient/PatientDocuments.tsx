@@ -379,7 +379,7 @@ export default function PatientDocuments() {
 
       if (error) throw error;
 
-      const response = await fetch(data.signedUrl);
+      const response = await fetch(data.signedUrl || data.signed_url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
