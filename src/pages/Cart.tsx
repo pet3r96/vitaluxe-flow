@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,10 +62,40 @@ export default function Cart() {
       return { id: cartData.id, lines: lines || [] };
     },
     enabled: !!effectiveUserId,
-    staleTime: 30000, // 30 seconds - cart changes frequently but 30s is reasonable
+    staleTime: 0, // Always fresh - we rely on realtime updates
     refetchOnMount: true,
-    refetchOnWindowFocus: true, // Refetch when tab gains focus
+    refetchOnWindowFocus: true,
   });
+
+  // Realtime subscription for instant cart updates
+  useEffect(() => {
+    if (!effectiveUserId || !cart?.id) return;
+
+    console.log('Setting up realtime subscription for cart:', cart.id);
+
+    const channel = supabase
+      .channel('cart-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'cart_lines',
+          filter: `cart_id=eq.${cart.id}`
+        },
+        (payload) => {
+          console.log('Cart realtime update received:', payload);
+          // Instantly invalidate and refetch cart data
+          queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up cart realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveUserId, cart?.id, queryClient]);
 
   const removeMutation = useMutation({
     mutationFn: async (lineId: string) => {
