@@ -1,9 +1,6 @@
 import { PatientsDataTable } from "@/components/patients/PatientsDataTable";
-import { useAuth } from "@/contexts/AuthContext";
 
 const Patients = () => {
-  const { effectiveRole } = useAuth();
-
   return (
     <div className="patient-container">
       <div className="mb-8">

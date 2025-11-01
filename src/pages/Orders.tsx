@@ -1,5 +1,6 @@
 import { OrdersDataTable } from "@/components/orders/OrdersDataTable";
 
+// Orders page component
 const Orders = () => {
   return (
     <div className="patient-container">
