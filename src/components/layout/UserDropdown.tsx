@@ -9,7 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "./ThemeToggle";
 import { useNavigate } from "react-router-dom";
 
 export function UserDropdown() {
@@ -38,11 +37,6 @@ export function UserDropdown() {
           <Shield className="mr-2 h-4 w-4" />
           <span>Security</span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <div className="flex items-center justify-between px-2 py-2">
-          <span className="text-sm">Theme</span>
-          <ThemeToggle />
-        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="text-destructive">
           <LogOut className="mr-2 h-4 w-4" />

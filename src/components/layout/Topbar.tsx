@@ -3,6 +3,7 @@ import { CommandPalette } from "./CommandPalette";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { UserDropdown } from "./UserDropdown";
 import { RoleImpersonationDropdown } from "./RoleImpersonationDropdown";
+import { ThemeToggle } from "./ThemeToggle";
 import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +32,9 @@ export function Topbar() {
 
         {/* Notifications */}
         <NotificationBell />
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Admin Impersonation */}
         <RoleImpersonationDropdown />
