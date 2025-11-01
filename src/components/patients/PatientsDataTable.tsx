@@ -39,20 +39,61 @@ export const PatientsDataTable = () => {
     staleTime: 300000, // 5 minutes - patient data changes infrequently
     queryFn: async () => {
       logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
-      let patientsQuery = supabase
-        .from("patient_accounts")
-        .select("id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at")
-        .order("created_at", { ascending: false });
+      const columns = "id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at";
 
-      // If user is a practice (doctor) or provider, only show their practice's patients
+      let patientsData: any[] = [];
+
       if ((effectiveRole === "doctor" || effectiveRole === "provider") && effectivePracticeId) {
-        patientsQuery = patientsQuery.eq("practice_id", effectivePracticeId);
-      }
+        // 1) Patients explicitly assigned to this practice
+        const { data: byPractice, error: byPracticeErr } = await supabase
+          .from("patient_accounts")
+          .select(columns)
+          .eq("practice_id", effectivePracticeId)
+          .order("created_at", { ascending: false });
 
-      const { data: patientsData, error: patientsError } = await patientsQuery;
-      if (patientsError) {
-        logger.error("Error fetching patients", patientsError);
-        throw patientsError;
+        if (byPracticeErr) {
+          logger.error("Error fetching patients by practice", byPracticeErr);
+          throw byPracticeErr;
+        }
+        patientsData = byPractice || [];
+
+        // 2) Also include patients assigned to providers that belong to this practice (even if practice_id is NULL)
+        const { data: providerRows } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("practice_id", effectivePracticeId);
+
+        const providerIds = (providerRows || []).map(p => p.id);
+        if (providerIds.length > 0) {
+          const { data: byProvider, error: byProviderErr } = await supabase
+            .from("patient_accounts")
+            .select(columns)
+            .in("provider_id", providerIds)
+            .order("created_at", { ascending: false });
+
+          if (byProviderErr) {
+            logger.error("Error fetching patients by provider", byProviderErr);
+            throw byProviderErr;
+          }
+
+          // Merge and de-duplicate
+          const map = new Map<string, any>();
+          for (const p of [...patientsData, ...(byProvider || [])]) {
+            map.set(p.id, p);
+          }
+          patientsData = Array.from(map.values());
+        }
+      } else {
+        // Admins (or roles without a practice context) get full list per RLS
+        const { data, error } = await supabase
+          .from("patient_accounts")
+          .select(columns)
+          .order("created_at", { ascending: false });
+        if (error) {
+          logger.error("Error fetching patients", error);
+          throw error;
+        }
+        patientsData = data || [];
       }
 
       logger.info('Patients fetched', { count: patientsData?.length || 0 });
