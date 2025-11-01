@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LifeBuoy, MessageSquare, Search, Mail, Phone, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { CreateSupportTicketDialog } from "@/components/support/CreateSupportTicketDialog";
 
 interface PatientMessage {
   id: string;
@@ -32,7 +33,7 @@ const Support = () => {
       const result = await supabase
         .from("patient_messages")
         .select("*")
-        .eq("thread_type", "support")
+        .eq("sender_type", "patient")
         .order("created_at", { ascending: false});
 
       if (result.error) throw result.error;
@@ -67,11 +68,14 @@ const Support = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold gold-text-gradient">Support Center</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage support tickets and help users across the platform
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-4xl font-bold gold-text-gradient">Support Center</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage support tickets and help users across the platform
+          </p>
+        </div>
+        <CreateSupportTicketDialog />
       </div>
 
       {/* Stats Overview */}

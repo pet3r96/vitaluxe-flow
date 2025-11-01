@@ -15,15 +15,22 @@ import {
 } from "@/components/ui/table";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EndOfDayReportsProps {
   dateRange: { from: Date; to: Date };
 }
 
 export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
+  const { effectivePracticeId } = useAuth();
+  
   const { data: dailyData, isLoading } = useQuery({
-    queryKey: ["end-of-day", dateRange],
+    queryKey: ["end-of-day", dateRange, effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) {
+        throw new Error("No practice ID available");
+      }
+
       const from = new Date(dateRange.from);
       from.setHours(0, 0, 0, 0);
       const to = new Date(dateRange.to);
@@ -32,8 +39,9 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
       const { data: appointments, error } = await supabase
         .from("patient_appointments")
         .select(
-          "id, status, start_time, end_time, service_type, patient_id, provider_id, cancellation_reason"
+          "id, status, start_time, end_time, service_type, patient_id, provider_id, cancellation_reason, practice_id"
         )
+        .eq("practice_id", effectivePracticeId)
         .gte("start_time", from.toISOString())
         .lte("start_time", to.toISOString())
         .order("start_time", { ascending: true });
@@ -83,6 +91,7 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
         appointments: enrichedAppointments,
       };
     },
+    enabled: !!effectivePracticeId,
   });
 
   const exportToPDF = () => {

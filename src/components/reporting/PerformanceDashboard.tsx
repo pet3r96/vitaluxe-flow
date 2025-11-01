@@ -5,15 +5,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Users, XCircle, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PerformanceDashboardProps {
   dateRange: { from: Date; to: Date };
 }
 
 export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
+  const { effectivePracticeId } = useAuth();
+  
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ["performance-metrics", dateRange],
+    queryKey: ["performance-metrics", dateRange, effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) {
+        throw new Error("No practice ID available");
+      }
+
       const from = new Date(dateRange.from);
       from.setHours(0, 0, 0, 0);
       const to = new Date(dateRange.to);
@@ -22,8 +29,9 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
       const { data: appointments, error } = await supabase
         .from("patient_appointments")
         .select(
-          "id, status, start_time, end_time, service_type, cancellation_reason, provider_id, patient_id"
+          "id, status, start_time, end_time, service_type, cancellation_reason, provider_id, patient_id, practice_id"
         )
+        .eq("practice_id", effectivePracticeId)
         .gte("start_time", from.toISOString())
         .lte("start_time", to.toISOString())
         .order("start_time", { ascending: true });
@@ -38,6 +46,7 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
       const { count: newPatients } = await supabase
         .from("patient_accounts")
         .select("*", { count: 'exact', head: true })
+        .eq("practice_id", effectivePracticeId)
         .gte("created_at", from.toISOString())
         .lte("created_at", to.toISOString());
 
@@ -70,6 +79,7 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
         providerStats: Object.values(providerStats || {}),
       };
     },
+    enabled: !!effectivePracticeId,
   });
 
   if (isLoading) {
