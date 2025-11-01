@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
+import { searchMedications, searchAllergens, searchConditions, searchSurgeries } from "@/lib/medical-api-service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -32,8 +34,13 @@ const intakeSchema = z.object({
     .transform(val => val.replace(/\D/g, ''))
     .refine(val => val.length === 10, "Phone must be exactly 10 digits"),
   emergency_contact_email: z.string().email().optional().or(z.literal("")),
-  height_feet: z.string().optional(),
-  height_inches: z.string().optional(),
+  height: z.string()
+    .optional()
+    .refine((val) => {
+      if (!val || val === "") return true;
+      const heightRegex = /^[3-8]-([0-9]|1[01])$/;
+      return heightRegex.test(val);
+    }, "Height must be in format like 5-5, 5-11, or 6-0 (feet-inches)"),
   weight: z.string().optional(),
   blood_type: z.string().optional(),
   pharmacy_name: z.string().min(1, "Pharmacy name is required"),
@@ -111,8 +118,7 @@ export default function PatientIntakeForm() {
       emergency_contact_relationship: "",
       emergency_contact_phone: "",
       emergency_contact_email: "",
-      height_feet: "",
-      height_inches: "",
+      height: "",
       weight: "",
       blood_type: "",
       pharmacy_name: "",
@@ -139,8 +145,7 @@ export default function PatientIntakeForm() {
         emergency_contact_relationship: "",
         emergency_contact_phone: patientAccount.emergency_contact_phone || "",
         emergency_contact_email: "",
-        height_feet: "",
-        height_inches: "",
+        height: "",
         weight: "",
         blood_type: "",
         pharmacy_name: "",
@@ -195,11 +200,15 @@ export default function PatientIntakeForm() {
       if (accountError) throw accountError;
 
       // Insert vitals if provided
-      if (data.height_feet || data.weight) {
-        const heightInches = (parseInt(data.height_feet || "0") * 12) + parseInt(data.height_inches || "0");
+      if (data.height || data.weight) {
+        let heightInches = null;
+        if (data.height) {
+          const [feet, inches] = data.height.split('-').map(Number);
+          heightInches = (feet * 12) + inches;
+        }
         await supabase.from('patient_vitals').upsert({
           patient_account_id: patientAccount.id,
-          height: heightInches > 0 ? heightInches : null,
+          height: heightInches,
           weight: data.weight ? parseFloat(data.weight) : null,
           date_recorded: new Date().toISOString(),
         });
@@ -598,34 +607,22 @@ export default function PatientIntakeForm() {
               <CardDescription>Basic health measurements</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="height_feet"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Height (feet)</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="0" max="8" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="height_inches"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Height (inches)</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="0" max="11" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="height"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Height</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="e.g., 5-5, 5-11, 6-0 (feet-inches)"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -681,14 +678,15 @@ export default function PatientIntakeForm() {
             <CardContent className="space-y-4">
               {medications.map((med, index) => (
                 <div key={index} className="flex gap-2 items-start">
-                  <Input
-                    placeholder="Medication name"
+                  <AutocompleteInput
+                    placeholder="Search medication name"
                     value={med.name}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const newMeds = [...medications];
-                      newMeds[index].name = e.target.value;
+                      newMeds[index].name = value;
                       setMedications(newMeds);
                     }}
+                    onSearch={searchMedications}
                   />
                   <Input
                     placeholder="Dosage"
@@ -747,14 +745,15 @@ export default function PatientIntakeForm() {
             <CardContent className="space-y-4">
               {allergies.map((allergy, index) => (
                 <div key={index} className="flex gap-2 items-start">
-                  <Input
-                    placeholder="Allergen name"
+                  <AutocompleteInput
+                    placeholder="Search allergen name"
                     value={allergy.name}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const newAllergies = [...allergies];
-                      newAllergies[index].name = e.target.value;
+                      newAllergies[index].name = value;
                       setAllergies(newAllergies);
                     }}
+                    onSearch={searchAllergens}
                   />
                   <Input
                     placeholder="Reaction"
@@ -812,14 +811,15 @@ export default function PatientIntakeForm() {
             <CardContent className="space-y-4">
               {conditions.map((condition, index) => (
                 <div key={index} className="flex gap-2 items-start">
-                  <Input
-                    placeholder="Condition name"
+                  <AutocompleteInput
+                    placeholder="Search condition name"
                     value={condition.name}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const newConditions = [...conditions];
-                      newConditions[index].name = e.target.value;
+                      newConditions[index].name = value;
                       setConditions(newConditions);
                     }}
+                    onSearch={searchConditions}
                   />
                   <Input
                     type="date"
@@ -879,14 +879,15 @@ export default function PatientIntakeForm() {
               {surgeries.map((surgery, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex gap-2 items-start">
-                    <Input
-                      placeholder="Surgery type"
+                    <AutocompleteInput
+                      placeholder="Search surgery type"
                       value={surgery.type}
-                      onChange={(e) => {
+                      onChange={(value) => {
                         const newSurgeries = [...surgeries];
-                        newSurgeries[index].type = e.target.value;
+                        newSurgeries[index].type = value;
                         setSurgeries(newSurgeries);
                       }}
+                      onSearch={searchSurgeries}
                     />
                     <Input
                       type="date"
