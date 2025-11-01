@@ -107,97 +107,92 @@ Deno.serve(async (req) => {
 
     if (appointmentsError) throw appointmentsError;
 
-    // Get practice settings
-    const { data: settings } = await supabaseClient
-      .from('appointment_settings')
-      .select('*')
-      .eq('practice_id', practiceId)
-      .maybeSingle();
-
-    // Get providers based on user type
-    let transformedProviders: any[] = [];
-    
-    if (isProviderScoped && providerRecord) {
-      // Provider-scoped users only see themselves in the provider list
-      const effectiveUserId = effectiveProviderUserId || user.id;
-      
-      const { data: providerProfile } = await supabaseClient
-        .from('profiles')
-        .select('id, name, full_name')
-        .eq('id', effectiveUserId)
-        .single();
-
-      if (providerProfile) {
-        const displayName = providerProfile.full_name || providerProfile.name || 'Unknown Provider';
-        const nameParts = displayName.trim().split(' ');
-        
-        transformedProviders = [{
-          id: providerRecord.id,
-          user_id: effectiveUserId,
-          active: true,
-          first_name: nameParts[0] || '',
-          last_name: nameParts.slice(1).join(' ') || '',
-          full_name: displayName,
-          specialty: null
-        }];
-        console.log('Returning single provider:', transformedProviders[0]);
-      }
-    } else {
-      // Practice owners/staff see all providers (step 1)
-      const { data: providerRecords } = await supabaseClient
-        .from('providers')
-        .select('id, user_id, active')
+    // Parallel fetch for better performance
+    const [settingsResult, providersData, roomsResult, blockedTimeResult] = await Promise.all([
+      // Get practice settings
+      supabaseClient
+        .from('appointment_settings')
+        .select('*')
         .eq('practice_id', practiceId)
-        .eq('active', true);
+        .maybeSingle(),
       
-      if (providerRecords && providerRecords.length > 0) {
-        // Get profiles for those provider user accounts (step 2)
-        const userIds = providerRecords.map(p => p.user_id);
-        const { data: providerProfiles } = await supabaseClient
-          .from('profiles')
-          .select('id, name, full_name')
-          .in('id', userIds);
+      // Get providers based on user type
+      (async () => {
+        if (isProviderScoped && providerRecord) {
+          const effectiveUserId = effectiveProviderUserId || user.id;
+          const { data: providerProfile } = await supabaseClient
+            .from('profiles')
+            .select('id, name, full_name')
+            .eq('id', effectiveUserId)
+            .single();
 
-        // Map profiles by id for quick lookup
-        const profilesById = new Map(
-          (providerProfiles || []).map(prof => [prof.id, prof])
-        );
-
-        // Build transformed providers with correct names
-        transformedProviders = providerRecords.map((p: any) => {
-          const profile = profilesById.get(p.user_id);
-          const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
-          const nameParts = displayName.trim().split(' ');
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.slice(1).join(' ') || '';
+          if (providerProfile) {
+            const displayName = providerProfile.full_name || providerProfile.name || 'Unknown Provider';
+            const nameParts = displayName.trim().split(' ');
+            return [{
+              id: providerRecord.id,
+              user_id: effectiveUserId,
+              active: true,
+              first_name: nameParts[0] || '',
+              last_name: nameParts.slice(1).join(' ') || '',
+              full_name: displayName,
+              specialty: null
+            }];
+          }
+          return [];
+        } else {
+          // Fetch providers with their profiles in a single query using join
+          const { data: providerRecords } = await supabaseClient
+            .from('providers')
+            .select(`
+              id,
+              user_id,
+              active,
+              profiles!providers_user_id_fkey(id, name, full_name)
+            `)
+            .eq('practice_id', practiceId)
+            .eq('active', true);
           
-          return {
-            id: p.id,
-            user_id: p.user_id,
-            active: p.active,
-            first_name: firstName,
-            last_name: lastName,
-            full_name: displayName,
-            specialty: null
-          };
-        });
-      }
-    }
+          if (providerRecords && providerRecords.length > 0) {
+            return providerRecords.map((p: any) => {
+              const profile = p.profiles;
+              const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
+              const nameParts = displayName.trim().split(' ');
+              return {
+                id: p.id,
+                user_id: p.user_id,
+                active: p.active,
+                first_name: nameParts[0] || '',
+                last_name: nameParts.slice(1).join(' ') || '',
+                full_name: displayName,
+                specialty: null
+              };
+            });
+          }
+          return [];
+        }
+      })(),
 
-    // Get all rooms for the practice
-    const { data: allRooms } = await supabaseClient
-      .from('practice_rooms')
-      .select('*')
-      .eq('practice_id', practiceId)
-      .eq('active', true)
-      .order('name');
+      // Get all rooms for the practice
+      supabaseClient
+        .from('practice_rooms')
+        .select('*')
+        .eq('practice_id', practiceId)
+        .eq('active', true)
+        .order('name'),
 
-    // Fetch blocked time for the date range
-    const { data: blockedTime } = await supabaseClient
-      .from('practice_blocked_time')
-      .select('*')
-      .eq('practice_id', practiceId)
-      .or(`start_time.lte.${endDate},end_time.gte.${startDate}`);
+      // Fetch blocked time for the date range
+      supabaseClient
+        .from('practice_blocked_time')
+        .select('*')
+        .eq('practice_id', practiceId)
+        .or(`start_time.lte.${endDate},end_time.gte.${startDate}`)
+    ]);
+
+    const settings = settingsResult.data;
+    const transformedProviders = providersData;
+    const allRooms = roomsResult.data;
+    const blockedTime = blockedTimeResult.data;
 
     return new Response(
       JSON.stringify({

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,46 +50,46 @@ export default function PracticeCalendar() {
   const practiceId = effectivePracticeId || user?.id;
   const isProviderView = effectiveRole === 'provider';
 
-  // Calculate date range based on view
-  const getDateRange = () => {
+  // Calculate date range based on view - memoized
+  const getDateRange = useCallback(() => {
     switch (view) {
       case 'day':
         return {
-          start: format(currentDate, 'yyyy-MM-dd'),
-          end: format(currentDate, 'yyyy-MM-dd')
+          startDate: format(currentDate, 'yyyy-MM-dd'),
+          endDate: format(currentDate, 'yyyy-MM-dd')
         };
       case 'week':
         const weekStart = startOfWeek(currentDate);
         const weekEnd = endOfWeek(currentDate);
         return {
-          start: format(weekStart, 'yyyy-MM-dd'),
-          end: format(weekEnd, 'yyyy-MM-dd')
+          startDate: format(weekStart, 'yyyy-MM-dd'),
+          endDate: format(weekEnd, 'yyyy-MM-dd')
         };
       case 'month':
       case 'agenda':
         const monthStart = startOfMonth(currentDate);
         const monthEnd = endOfMonth(currentDate);
         return {
-          start: format(monthStart, 'yyyy-MM-dd'),
-          end: format(monthEnd, 'yyyy-MM-dd')
+          startDate: format(monthStart, 'yyyy-MM-dd'),
+          endDate: format(monthEnd, 'yyyy-MM-dd')
         };
       default:
         return {
-          start: format(currentDate, 'yyyy-MM-dd'),
-          end: format(currentDate, 'yyyy-MM-dd')
+          startDate: format(currentDate, 'yyyy-MM-dd'),
+          endDate: format(currentDate, 'yyyy-MM-dd')
         };
     }
-  };
+  }, [view, currentDate]);
 
-  // Fetch calendar data
-  const { data: calendarData, isLoading, refetch } = useQuery({
-    queryKey: ['calendar-data', practiceId, getDateRange(), selectedProviders, selectedRooms, selectedStatuses, isProviderView],
-    queryFn: async () => {
-      const dateRange = getDateRange();
+  // Fetch calendar data with realtime updates
+  const { data: calendarData, isLoading, refetch } = useRealtimeQuery(
+    ['calendar-data', practiceId, view, currentDate.toISOString(), JSON.stringify(selectedProviders), JSON.stringify(selectedRooms), JSON.stringify(selectedStatuses), String(isProviderView)],
+    async () => {
+      const { startDate, endDate } = getDateRange();
       
-      // Use local timezone boundaries to prevent off-by-hours issues
-      const start = new Date(`${dateRange.start}T00:00:00`);
-      const end = new Date(`${dateRange.end}T23:59:59`);
+      // Use local timezone boundaries
+      const start = new Date(`${startDate}T00:00:00`);
+      const end = new Date(`${endDate}T23:59:59`);
       
       const { data, error } = await supabase.functions.invoke('get-calendar-data', {
         body: {
@@ -106,63 +106,12 @@ export default function PracticeCalendar() {
       if (error) throw error;
       return data;
     },
-    enabled: !!practiceId,
-  });
-
-  // Set up realtime subscription for appointments and rooms with debouncing
-  useEffect(() => {
-    if (!practiceId) return;
-    
-    let debounceTimeout: NodeJS.Timeout;
-    
-    const debouncedRefetch = () => {
-      clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(() => {
-        console.log('🔄 Refetching calendar data...');
-        refetch();
-      }, 100); // Reduced from 300ms for faster updates
-    };
-
-    const appointmentsChannel = supabase
-      .channel('calendar-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'patient_appointments',
-          filter: `practice_id=eq.${practiceId}`,
-        },
-        (payload) => {
-          console.log('📅 Appointment changed:', payload.eventType);
-          debouncedRefetch();
-        }
-      )
-      .subscribe();
-
-    const roomsChannel = supabase
-      .channel('room-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'practice_rooms',
-          filter: `practice_id=eq.${practiceId}`,
-        },
-        (payload) => {
-          console.log('🚪 Room changed:', payload.eventType);
-          debouncedRefetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      clearTimeout(debounceTimeout);
-      supabase.removeChannel(appointmentsChannel);
-      supabase.removeChannel(roomsChannel);
-    };
-  }, [practiceId, refetch]);
+    {
+      enabled: !!practiceId,
+      staleTime: 30000, // 30 seconds
+      gcTime: 300000, // 5 minutes
+    }
+  );
 
   const appointments = calendarData?.appointments || [];
   const blockedTime = calendarData?.blockedTime || [];

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, memo } from "react";
 import { format, addDays, startOfWeek, isSameDay, setHours, setMinutes } from "date-fns";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ interface WeekViewProps {
   blockedTime?: any[];
 }
 
-export function WeekView({
+export const WeekView = memo(function WeekView({
   currentDate,
   appointments,
   startHour,
@@ -224,4 +224,4 @@ export function WeekView({
       </div>
     </div>
   );
-}
+});

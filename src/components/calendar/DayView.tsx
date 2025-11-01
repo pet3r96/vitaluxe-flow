@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, memo } from "react";
 import { format, setHours, setMinutes, isSameDay } from "date-fns";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ interface DayViewProps {
   blockedTime?: any[];
 }
 
-export function DayView({
+export const DayView = memo(function DayView({
   currentDate,
   appointments,
   startHour,
@@ -286,4 +286,4 @@ export function DayView({
       </div>
     </div>
   );
-}
+});
