@@ -28,12 +28,14 @@ export default function PatientMessages() {
   const { data: threads } = useQuery({
     queryKey: ["patient-message-threads", effectiveUserId, filterTab, searchQuery],
     queryFn: async () => {
+      // CRITICAL SECURITY FIX: Only fetch messages for the specific patient
       let query = supabase
         .from("patient_messages")
         .select(`
           *,
           practice:profiles!patient_messages_practice_id_fkey(name)
         `)
+        .eq('patient_id', effectiveUserId)  // SECURITY: Filter by patient_id
         .is('parent_message_id', null);  // Only fetch root messages
 
       // Apply status filter
