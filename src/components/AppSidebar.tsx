@@ -1,35 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/responsive/MobileBottomNav";
-import {
-  LayoutDashboard,
-  Users,
-  Package,
-  Building2,
-  ShoppingCart,
-  FileText,
-  MessageSquare,
-  LogOut,
-  Stethoscope,
-  UserCircle,
-  Settings,
-  ShieldCheck,
-  UserCog,
-  AlertCircle,
-  Tag,
-  Shield,
-  Pill,
-  Sparkles,
-  Calendar,
-  CreditCard,
-  Lock,
-  Inbox,
-  BarChart3,
-} from "lucide-react";
+import { menus } from "@/config/menus";
+import { Lock, LogOut, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -45,126 +22,27 @@ import {
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/vitaluxe-logo-dark-bg.png";
 
-const menuItems = {
-  admin: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Accounts", url: "/accounts", icon: Users },
-    { title: "Practices", url: "/practices", icon: Stethoscope },
-    { title: "Representatives", url: "/representatives", icon: Users },
-    { title: "Patients", url: "/patients", icon: Users },
-    { title: "Products", url: "/products", icon: Package },
-    { title: "Pharmacies", url: "/pharmacies", icon: Building2 },
-    { title: "Orders", url: "/orders", icon: ShoppingCart },
-    { title: "Reports", url: "/reports", icon: FileText },
-    { title: "Rep Productivity", url: "/rep-productivity", icon: UserCog },
-    { title: "Discount Codes", url: "/admin/discount-codes", icon: Tag },
-    { title: "Subscriptions", url: "/subscriptions", icon: CreditCard },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "Security", url: "/security", icon: Shield },
-    { title: "Terms Management", url: "/admin/terms", icon: FileText },
-    { title: "Admin Settings", url: "/admin-settings", icon: Settings },
-  ],
-  doctor: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Products", url: "/products", icon: Package },
-    { title: "My Cart", url: "/cart", icon: ShoppingCart },
-    { title: "Patients", url: "/patients", icon: Users },
-    { title: "Providers", url: "/providers", icon: UserCog },
-    { title: "My Orders", url: "/orders", icon: FileText },
-    { title: "Reports", url: "/reports", icon: FileText },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "My Profile", url: "/profile", icon: UserCircle },
-    { title: "PRO_SEPARATOR", url: "", icon: null, isPro: false },
-    { title: "My Staff", url: "/staff", icon: Users, isPro: true },
-    { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
-    { title: "Document Center", url: "/document-center", icon: FileText, isPro: true },
-    { title: "My Subscription", url: "/my-subscription", icon: CreditCard, isPro: true },
-    { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
-    { title: "Chat System", url: "/internal-chat", icon: Inbox, isPro: true },
-  ],
-  provider: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Products", url: "/products", icon: Package },
-    { title: "My Cart", url: "/cart", icon: ShoppingCart },
-    { title: "Patients", url: "/patients", icon: Users },
-    { title: "My Orders", url: "/orders", icon: FileText },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "My Profile", url: "/profile", icon: UserCircle },
-    { title: "PRO_SEPARATOR", url: "", icon: null, isPro: false },
-    { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
-    { title: "Document Center", url: "/document-center", icon: FileText, isPro: true },
-    { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
-    { title: "Chat System", url: "/internal-chat", icon: Inbox, isPro: true },
-  ],
-  pharmacy: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Products", url: "/products", icon: Pill },
-    { title: "Shipping", url: "/shipping", icon: Package },
-    { title: "Orders", url: "/orders", icon: ShoppingCart },
-    { title: "Reports", url: "/reports", icon: FileText },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "My Profile", url: "/profile", icon: UserCircle },
-  ],
-  topline: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Products", url: "/products", icon: Package },
-    { title: "My Practices", url: "/practices", icon: Stethoscope },
-    { title: "My Downlines", url: "/downlines", icon: Users },
-    { title: "Downline Performance", url: "/downline-performance", icon: UserCog },
-    { title: "Orders", url: "/orders", icon: ShoppingCart },
-    { title: "Reports", url: "/reports", icon: FileText },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "Profile", url: "/profile", icon: UserCircle },
-  ],
-  downline: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Products", url: "/products", icon: Package },
-    { title: "My Practices", url: "/practices", icon: Stethoscope },
-    { title: "Orders", url: "/orders", icon: ShoppingCart },
-    { title: "Reports", url: "/reports", icon: FileText },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "Profile", url: "/profile", icon: UserCircle },
-  ],
-  patient: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "My Appointments", url: "/appointments", icon: Calendar },
-    { title: "Medical Vault", url: "/medical-vault", icon: FileText },
-    { title: "Documents", url: "/documents", icon: FileText },
-    { title: "Support/Messages", url: "/patient-messages", icon: MessageSquare },
-    { title: "My Profile", url: "/profile", icon: UserCircle },
-  ],
-  staff: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Products", url: "/products", icon: Package },
-    { title: "My Cart", url: "/cart", icon: ShoppingCart },
-    { title: "Patients", url: "/patients", icon: Users },
-    { title: "My Orders", url: "/orders", icon: FileText },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "My Profile", url: "/profile", icon: UserCircle },
-    { title: "PRO_SEPARATOR", url: "", icon: null, isPro: false },
-    { title: "Practice Calendar", url: "/practice-calendar", icon: Calendar, isPro: true },
-    { title: "Document Center", url: "/document-center", icon: FileText, isPro: true },
-    { title: "Practice Reporting", url: "/practice-reporting", icon: BarChart3, isPro: true },
-    { title: "Chat System", url: "/internal-chat", icon: Inbox, isPro: true },
-  ],
-};
-
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { effectiveRole, isImpersonating, isProviderAccount, isStaffAccount, signOut } = useAuth();
+  const { effectiveRole, isProviderAccount, isStaffAccount, signOut } = useAuth();
   const { isSubscribed } = useSubscription();
-  const location = useLocation();
-  const currentPath = location.pathname;
+  const { isMobile } = useResponsive();
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const { isMobile, isTablet } = useResponsive();
 
-  let items = effectiveRole ? menuItems[effectiveRole as keyof typeof menuItems] || [] : [];
-  
-  if (isStaffAccount) {
-    // Staff get their own dedicated menu with Pro features
-    items = menuItems.staff;
-  }
-  
+  const roleMenus = effectiveRole 
+    ? (isStaffAccount ? menus.staff : menus[effectiveRole]) || []
+    : [];
+
+  // Flatten for mobile nav
+  const items = roleMenus.flatMap(section => 
+    section.items.map(item => ({
+      title: item.label,
+      url: item.href,
+      icon: item.icon,
+      isPro: item.isPro || false,
+    }))
+  );
+
   const isCollapsed = state === "collapsed";
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -176,14 +54,7 @@ export function AppSidebar() {
   if (isMobile) {
     return (
       <MobileBottomNav 
-        items={items
-          .filter(item => item.url && item.title !== 'PRO_SEPARATOR')
-          .map(item => ({
-            title: item.title,
-            url: item.url,
-            icon: item.icon,
-            isPro: (item as any).isPro || false
-          }))}
+        items={items}
         maxVisibleItems={4}
       />
     );
@@ -206,56 +77,46 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-primary font-semibold">
-              {isImpersonating ? "Impersonated View" : "Main Menu"}
-            </SidebarGroupLabel>
-          )}
+        {roleMenus.map((section) => (
+          <SidebarGroup key={section.title}>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-primary font-semibold">
+                {section.title}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {section.items.map((item) => {
+                  const isPro = item.isPro;
+                  const isLocked = isPro && !isSubscribed && !isProviderAccount;
+                  const Icon = item.icon;
 
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item: any) => {
-                if (item.title === "PRO_SEPARATOR") {
                   return (
-                    <div key="pro-separator" className="px-3 py-3 mt-4">
-                      <div className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
-                        Pro Features
-                      </div>
-                    </div>
+                    <SidebarMenuItem key={item.href}>
+                      {isLocked ? (
+                        <button
+                          onClick={() => setShowUpgradeDialog(true)}
+                          className={`flex w-full items-center rounded-lg px-3 py-2 text-sm hover:bg-sidebar-accent/50 text-sidebar-foreground/50 cursor-pointer min-h-[44px]`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {!isCollapsed && <span className="ml-3">{item.label}</span>}
+                          {!isCollapsed && <Lock className="ml-auto h-3 w-3" />}
+                        </button>
+                      ) : (
+                        <SidebarMenuButton asChild className="min-h-[44px]">
+                          <NavLink to={item.href} className={getNavCls}>
+                            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                            {!isCollapsed && <span className="ml-3 text-sm sm:text-base">{item.label}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      )}
+                    </SidebarMenuItem>
                   );
-                }
-                const isProFeature = item.isPro && !isSubscribed && !isStaffAccount;
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="min-h-[44px]">
-                      <NavLink 
-                        to={item.url} 
-                        end 
-                        className={({ isActive }) => {
-                          const baseClass = getNavCls({ isActive });
-                          return isProFeature 
-                            ? `${baseClass} opacity-60` 
-                            : baseClass;
-                        }}
-                      >
-                        <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                        {!isCollapsed && (
-                          <span className="text-sm sm:text-base flex items-center gap-2 flex-1">
-                            {item.title}
-                {item.isPro && !isSubscribed && !isStaffAccount && (
-                  <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
-                )}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <div className="mt-auto border-t border-sidebar-border p-4 space-y-2">

@@ -14,7 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Poppins', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
+        heading: ['Playfair Display', 'serif'],
+        display: ['Poppins', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -50,6 +52,10 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        gold1: "hsl(var(--gold-1))",
+        gold2: "hsl(var(--gold-2))",
+        success: "hsl(var(--success))",
+        info: "hsl(var(--info))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -60,6 +66,14 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      backgroundImage: {
+        "gold-gradient": "var(--gold-gradient)",
+      },
+      boxShadow: {
+        soft: "0 8px 20px rgba(0,0,0,0.05)",
+        card: "0 4px 12px rgba(0,0,0,0.08)",
+        "card-dark": "0 4px 12px rgba(0,0,0,0.3)",
       },
       borderRadius: {
         lg: "var(--radius)",
