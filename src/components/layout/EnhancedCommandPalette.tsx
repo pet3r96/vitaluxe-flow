@@ -30,7 +30,7 @@ export function EnhancedCommandPalette() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const navigate = useNavigate();
-  const { effectiveRole, isStaffAccount, user } = useAuth();
+  const { effectiveRole, isStaffAccount, user, effectivePracticeId } = useAuth();
   const debouncedSearch = useDebounce(search, 300);
 
   useEffect(() => {
@@ -79,8 +79,36 @@ export function EnhancedCommandPalette() {
         });
       });
 
-      // Search patients (for practice, pharmacy, admin, topline)
-      if (['practice', 'pharmacy', 'admin', 'topline'].includes(effectiveRole || '')) {
+      // Search patients (for practice, staff, provider roles - filter by practice)
+      if (['doctor', 'staff', 'provider'].includes(effectiveRole || '') && effectivePracticeId) {
+        try {
+          const { data: patients } = await supabase
+            .from('patient_accounts')
+            .select('id, first_name, last_name, date_of_birth, email, practice_id')
+            .eq('practice_id', effectivePracticeId)
+            .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+            .limit(10);
+
+          patients?.forEach((patient: any) => {
+            searchResults.push({
+              id: `patient-${patient.id}`,
+              title: `${patient.first_name} ${patient.last_name}`,
+              subtitle: patient.email || (patient.date_of_birth ? `DOB: ${new Date(patient.date_of_birth).toLocaleDateString()}` : ''),
+              type: 'patient',
+              icon: User,
+              action: () => {
+                navigate(`/patients/${patient.id}`);
+                setOpen(false);
+              }
+            });
+          });
+        } catch (err) {
+          console.error('Patients search error:', err);
+        }
+      }
+
+      // Search patients (for admin, pharmacy, topline - all patients)
+      if (['admin', 'pharmacy', 'topline'].includes(effectiveRole || '')) {
         try {
           const { data: patients } = await supabase
             .from('patient_accounts')
@@ -177,34 +205,8 @@ export function EnhancedCommandPalette() {
         }
       }
 
-      // Search orders (for all non-patient roles)
-      if (effectiveRole !== 'patient') {
-        try {
-          const { data: orders } = await supabase
-            .from('orders')
-            .select('id, order_number, status, created_at')
-            .ilike('order_number', `%${searchTerm}%`)
-            .neq('status', 'cancelled')
-            .order('created_at', { ascending: false })
-            .limit(10);
-
-          orders?.forEach((order: any) => {
-            searchResults.push({
-              id: `order-${order.id}`,
-              title: `Order #${order.order_number}`,
-              subtitle: `Status: ${order.status} - ${new Date(order.created_at).toLocaleDateString()}`,
-              type: 'order',
-              icon: FileText,
-              action: () => {
-                navigate('/orders');
-                setOpen(false);
-              }
-            });
-          });
-        } catch (err) {
-          console.error('Orders search error:', err);
-        }
-      }
+      // Note: Orders table doesn't have searchable text fields (no order_number column)
+      // Search has been disabled for orders
 
       // Search products
       if (effectiveRole !== 'patient') {
@@ -240,7 +242,7 @@ export function EnhancedCommandPalette() {
     } finally {
       setLoading(false);
     }
-  }, [effectiveRole, roleMenus, navigate, user]);
+  }, [effectiveRole, effectivePracticeId, roleMenus, navigate, user]);
 
   useEffect(() => {
     if (debouncedSearch) {
