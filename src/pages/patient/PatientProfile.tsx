@@ -14,6 +14,7 @@ import { ActivityLogSection } from "@/components/patient/ActivityLogSection";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
 import { validatePhone } from "@/lib/validators";
+import { logPatientPHIAccess } from "@/lib/auditLogger";
 
 export default function PatientProfile() {
   const { effectiveUserId } = useAuth();
@@ -40,6 +41,28 @@ export default function PatientProfile() {
       return data;
     },
   });
+
+  // HIPAA Compliance: Log when patient views their own PHI
+  useEffect(() => {
+    if (profile && effectiveUserId) {
+      const hasPHI = profile.address || profile.phone || profile.emergency_contact_phone;
+      
+      if (hasPHI) {
+        logPatientPHIAccess({
+          patientId: profile.id,
+          patientName: profile.first_name && profile.last_name 
+            ? `${profile.first_name} ${profile.last_name}` 
+            : profile.email || 'Patient',
+          accessedFields: {
+            address: !!profile.address,
+          },
+          viewerRole: 'patient',
+          relationship: 'practice_admin', // Patient viewing own data
+          componentContext: 'PatientProfile - Self View',
+        });
+      }
+    }
+  }, [profile, effectiveUserId]);
 
   // Initialize state from profile data
   useEffect(() => {

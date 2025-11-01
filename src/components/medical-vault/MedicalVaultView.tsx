@@ -13,6 +13,8 @@ import { AuditLogDialog } from "@/components/medical-vault/dialogs/AuditLogDialo
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
 import { ShareConsentDialog } from "@/components/medical-vault/ShareConsentDialog";
 import { ShareLinkDialog } from "@/components/medical-vault/ShareLinkDialog";
+import { logPatientPHIAccess } from "@/lib/auditLogger";
+import { useAuth } from "@/contexts/AuthContext";
 import { MedicationsSection } from "@/components/medical-vault/MedicationsSection";
 import { ConditionsSection } from "@/components/medical-vault/ConditionsSection";
 import { AllergiesSection } from "@/components/medical-vault/AllergiesSection";
@@ -49,6 +51,7 @@ export function MedicalVaultView({
   const [shareExpiresAt, setShareExpiresAt] = useState<Date>(new Date());
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { effectiveRole, user } = useAuth();
 
   // Fetch audit logs
   const { data: auditLogs = [], isLoading: isLoadingAuditLogs } = useAuditLogs(patientAccountId);
@@ -209,6 +212,41 @@ export function MedicalVaultView({
     },
     enabled: !!patientAccountId,
   });
+
+  // HIPAA Compliance: Log PHI access when medical vault is viewed
+  useEffect(() => {
+    if (patientAccount && medications && allergies && user) {
+      const hasPHI = 
+        (allergies && allergies.length > 0) || 
+        (medications && medications.length > 0) ||
+        patientAccount.address;
+      
+      if (hasPHI) {
+        // Determine relationship based on role
+        let relationship: 'practice_admin' | 'provider' | 'admin' = 'practice_admin';
+        if (effectiveRole === 'admin') {
+          relationship = 'admin';
+        } else if (effectiveRole === 'provider') {
+          relationship = 'provider';
+        }
+
+        const displayName = patientName || `${patientAccount.first_name} ${patientAccount.last_name}`;
+
+        logPatientPHIAccess({
+          patientId: patientAccountId,
+          patientName: displayName,
+          accessedFields: {
+            allergies: !!(allergies && allergies.length > 0),
+            notes: !!(medications && medications.length > 0), // Medications contain notes
+            address: !!patientAccount.address,
+          },
+          viewerRole: effectiveRole || (mode === 'patient' ? 'patient' : 'doctor'),
+          relationship,
+          componentContext: `MedicalVaultView - ${mode}`,
+        });
+      }
+    }
+  }, [patientAccount, medications, allergies, user, effectiveRole, patientAccountId, patientName, mode]);
 
   // PDF generation handlers
   const handleViewPDF = async () => {

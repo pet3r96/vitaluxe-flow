@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { RescheduleAppointmentDialog } from "./RescheduleAppointmentDialog";
 import { CreateFollowUpFromAppointmentDialog } from "./CreateFollowUpFromAppointmentDialog";
+import { logPatientPHIAccess } from "@/lib/auditLogger";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AppointmentDetailsDialogProps {
   open: boolean;
@@ -58,6 +60,29 @@ export function AppointmentDetailsDialog({
       setStatus(appointment.status);
     }
   }, [appointment?.status]);
+
+  // HIPAA Compliance: Log PHI access when viewing appointment with patient contact info
+  useEffect(() => {
+    if (appointment && open && appointment.patient_accounts) {
+      const patient = appointment.patient_accounts;
+      const hasPHI = patient.phone || patient.email;
+      
+      if (hasPHI) {
+        const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Patient';
+        
+        logPatientPHIAccess({
+          patientId: patient.id,
+          patientName,
+          accessedFields: {
+            // Phone and email contact info
+          },
+          viewerRole: 'doctor', // Appointment viewers are practice staff
+          relationship: 'practice_admin',
+          componentContext: 'AppointmentDetailsDialog',
+        });
+      }
+    }
+  }, [appointment, open]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {

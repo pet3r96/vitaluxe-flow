@@ -11,6 +11,8 @@ import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-
 import { toast } from "sonner";
 import { Loader2, User, Calendar, MapPin, Mail, CheckCircle2, Edit2 } from "lucide-react";
 import { format, differenceInYears } from "date-fns";
+import { logPatientPHIAccess } from "@/lib/auditLogger";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BasicDemographicsCardProps {
   patientAccount: any;
@@ -21,12 +23,35 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [addressValue, setAddressValue] = useState<AddressValue>({});
   const queryClient = useQueryClient();
+  const { effectiveRole } = useAuth();
 
   // Form state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState<string>("");
+
+  // HIPAA Compliance: Log PHI access when demographics are displayed
+  useEffect(() => {
+    if (patientAccount && effectiveUserId) {
+      const hasPHI = patientAccount.address || patientAccount.date_of_birth;
+      
+      if (hasPHI) {
+        logPatientPHIAccess({
+          patientId: patientAccount.id,
+          patientName: patientAccount.first_name && patientAccount.last_name 
+            ? `${patientAccount.first_name} ${patientAccount.last_name}` 
+            : patientAccount.email || 'Patient',
+          accessedFields: {
+            address: !!patientAccount.address,
+          },
+          viewerRole: effectiveRole || 'patient',
+          relationship: 'practice_admin',
+          componentContext: 'BasicDemographicsCard',
+        });
+      }
+    }
+  }, [patientAccount, effectiveUserId, effectiveRole]);
 
   // Initialize form state when dialog opens
   useEffect(() => {
