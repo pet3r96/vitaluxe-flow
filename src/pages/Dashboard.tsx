@@ -21,6 +21,8 @@ import { AnalyticsSection } from "@/components/dashboard/AnalyticsSection";
 import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
 import { OrdersBreakdown } from "@/components/dashboard/OrdersBreakdown";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
+import { TabbedAppointmentsWidget } from "@/components/dashboard/TabbedAppointmentsWidget";
+import { TabbedCommunicationsWidget } from "@/components/dashboard/TabbedCommunicationsWidget";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
@@ -584,40 +586,37 @@ const Dashboard = () => {
             />
           )}
         </div>
-        
-        {/* Search bar - Right side (above where Follow-Ups will be) */}
-        {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
-          <div className="w-full lg:w-80">
-            <PatientQuickSearch />
-          </div>
-        )}
       </div>
 
-      {/* Analytics Section - Restructured for practice users */}
+      {/* New Dashboard Layout for Practice Users */}
       {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
-        <>
-          {/* V2 Widgets */}
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <TodayAppointmentsWidget />
-            <MessagesAndChatWidget />
-            <WaitingRoomWidget />
-            <FollowUpRemindersWidget />
-          </div>
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-            <RequestedAppointmentsWidget />
-            <RecentActivityWidget />
-          </div>
-          
-          {/* Analytics & Insights - Below Requested Appointments & Recent Activity */}
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bold tracking-tight">Analytics & Insights</h2>
-            {/* Orders by Status & Quick Actions - Side by Side (switched order) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+          {/* Main Content Area - 3/4 width */}
+          <div className="lg:col-span-3 space-y-4 lg:space-y-6">
+            {/* Top Row - Orders & Recent Activity */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <OrdersBreakdown />
-              <QuickActionsPanel />
+              <RecentActivityWidget />
             </div>
-          </section>
-        </>
+
+            {/* Middle Row - Appointments & Waiting Room */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+              <TabbedAppointmentsWidget />
+              <WaitingRoomWidget />
+            </div>
+
+            {/* Bottom Row - Communications */}
+            <TabbedCommunicationsWidget />
+          </div>
+
+          {/* Right Sidebar - 1/4 width - Search & Quick Actions */}
+          <div className="lg:col-span-1 space-y-4 lg:space-y-6">
+            <div className="w-full">
+              <PatientQuickSearch />
+            </div>
+            <QuickActionsPanel />
+          </div>
+        </div>
       )}
 
       {/* For pharmacy: show Orders by Status next to stats + Recent Activity */}
