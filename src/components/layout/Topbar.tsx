@@ -14,7 +14,7 @@ export function Topbar() {
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-3 lg:px-6">
       <div className="flex items-center gap-4 flex-1">
-        <SidebarTrigger className="lg:hidden" />
+        <SidebarTrigger className="h-9 w-9" />
         <CommandPalette />
       </div>
 
