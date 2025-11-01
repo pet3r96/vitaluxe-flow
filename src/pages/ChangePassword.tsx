@@ -276,8 +276,8 @@ export default function ChangePassword() {
         
         <CardContent>
           {!isImpersonating && (
-            <Alert className="mb-6 border-amber-500 bg-amber-50">
-              <AlertDescription className="text-amber-800">
+            <Alert className="mb-6 border-gold1/50 bg-gold1/10">
+              <AlertDescription className="text-gold1">
                 <strong>Security Notice:</strong> Your temporary password was sent via email. Please create a strong, unique password that meets all requirements below.
               </AlertDescription>
             </Alert>

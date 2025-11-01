@@ -96,32 +96,57 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify ownership: practice card OR provider card (if provider belongs to this practice)
+    // Get the current user placing the order
+    const currentUserId = user.id;
+    console.log('Authorization check starting:', { currentUserId, order_doctor_id: order.doctor_id, payment_method_practice_id: paymentMethod.practice_id });
+
+    // Verify ownership: payment method must belong to the practice or the user must be authorized
     let isAuthorized = false;
 
     // Case 1: Payment method belongs to the practice that owns the order
     if (paymentMethod.practice_id === order.doctor_id) {
-      console.log('✓ Payment authorized: practice card for practice order');
+      console.log('✓ Payment authorized: practice card');
+      isAuthorized = true;
+    } else if (currentUserId === order.doctor_id) {
+      // Case 2: Current user is the practice owner
+      console.log('✓ Payment authorized: practice owner');
       isAuthorized = true;
     } else {
-      // Case 2: Payment method may belong to a provider linked to this practice
+      console.log('Checking staff/provider membership for user on practice...');
+      // Check if user is a provider for this practice
       const { data: providerLink } = await supabaseAdmin
         .from('providers')
-        .select('practice_id')
-        .eq('user_id', paymentMethod.practice_id)
+        .select('practice_id, user_id, active')
+        .eq('user_id', currentUserId)
+        .eq('practice_id', order.doctor_id)
         .eq('active', true)
-        .single();
+        .maybeSingle();
 
-      if (providerLink && providerLink.practice_id === order.doctor_id) {
-        console.log('✓ Payment authorized: provider card for linked practice order');
-        isAuthorized = true;
+      // Check if user is a staff member for this practice
+      const { data: staffMembership } = await supabaseAdmin
+        .from('practice_staff')
+        .select('practice_id, user_id, active')
+        .eq('user_id', currentUserId)
+        .eq('practice_id', order.doctor_id)
+        .eq('active', true)
+        .maybeSingle();
+
+      console.log('Membership checks:', { hasProviderLink: !!providerLink, hasStaffMembership: !!staffMembership });
+
+      if (providerLink || staffMembership) {
+        // User is linked to this practice: allow practice card or personal card
+        if (paymentMethod.practice_id === order.doctor_id || paymentMethod.practice_id === currentUserId) {
+          console.log('✓ Payment authorized: linked user using practice or personal card');
+          isAuthorized = true;
+        }
       }
     }
 
     if (!isAuthorized) {
       console.error('Payment authorization failed', {
         payment_method_practice_id: paymentMethod.practice_id,
-        order_doctor_id: order.doctor_id
+        order_doctor_id: order.doctor_id,
+        current_user_id: currentUserId
       });
       return new Response(
         JSON.stringify({ 

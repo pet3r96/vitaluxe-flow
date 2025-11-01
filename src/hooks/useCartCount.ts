@@ -11,7 +11,7 @@ export const useCartCount = (userId: string | null) => {
         .from("cart")
         .select("id")
         .eq("doctor_id", userId)
-        .single();
+        .maybeSingle();
 
       if (!cart) return 0;
 
@@ -25,7 +25,7 @@ export const useCartCount = (userId: string | null) => {
       return count || 0;
     },
     enabled: !!userId,
-    staleTime: 30000, // 30 seconds - cart count updates frequently
+    staleTime: 5000, // 5 seconds - more responsive cart updates
     refetchOnMount: true, // Always check cart on mount
   });
 };

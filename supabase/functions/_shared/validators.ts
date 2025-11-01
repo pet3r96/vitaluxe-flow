@@ -179,18 +179,41 @@ export function validateEnum(
 }
 
 // IP address validation
-export function validateIP(ip: any): ValidationResult {
-  if (!ip) return { valid: true };
-  
-  const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-  const ipv6Regex = /^([0-9a-fA-F]{0,4}:){7}[0-9a-fA-F]{0,4}$/;
-  
-  const ipStr = String(ip);
-  if (!ipv4Regex.test(ipStr) && !ipv6Regex.test(ipStr)) {
-    return { valid: false, error: "Invalid IP address format" };
+export function validateIP(ip: any, required: boolean = false): ValidationResult {
+  if (!ip || ip === 'unknown') {
+    if (required && ip !== 'unknown') {
+      return { valid: false, error: "IP address is required" };
+    }
+    return { valid: true };
   }
   
-  return { valid: true };
+  const ipStr = String(ip).trim();
+  
+  // Allow "unknown" as a valid IP when extraction fails
+  if (ipStr === 'unknown') return { valid: true };
+  
+  // IPv4 validation with proper octet range (0-255)
+  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const ipv4Match = ipStr.match(ipv4Regex);
+  if (ipv4Match) {
+    const octets = [
+      parseInt(ipv4Match[1]),
+      parseInt(ipv4Match[2]),
+      parseInt(ipv4Match[3]),
+      parseInt(ipv4Match[4])
+    ];
+    if (octets.every(octet => octet >= 0 && octet <= 255)) {
+      return { valid: true };
+    }
+  }
+  
+  // IPv6 validation (simplified)
+  const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|::1|::)$/;
+  if (ipv6Regex.test(ipStr)) {
+    return { valid: true };
+  }
+  
+  return { valid: false, error: "Invalid IP address format" };
 }
 
 // Array validation

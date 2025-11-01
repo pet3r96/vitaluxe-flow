@@ -6,9 +6,19 @@ import RepProfitReports from "./RepProfitReports";
 import PracticeProfitReports from "./PracticeProfitReports";
 import ToplinePaymentManager from "@/components/admin/ToplinePaymentManager";
 import PracticeDevelopmentFeeManager from "@/components/admin/PracticeDevelopmentFeeManager";
+import SubscriptionCommissionManager from "@/components/admin/SubscriptionCommissionManager";
 
 const Reports = () => {
-  const { userRole, effectiveRole, isImpersonating } = useAuth();
+  const { userRole, effectiveRole, isImpersonating, isProviderAccount, isStaffAccount } = useAuth();
+
+  // Restrict access for provider/staff accounts
+  if ((effectiveRole === 'doctor' || effectiveRole === 'provider') && (isProviderAccount || isStaffAccount)) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">You do not have access to this page.</p>
+      </div>
+    );
+  }
 
   // Admin (not impersonating) → Admin Profit Report with Tabs
   const showAdminReport = userRole === 'admin' && !isImpersonating;
@@ -26,6 +36,7 @@ const Reports = () => {
           <TabsTrigger value="profit-reports">Profit Reports</TabsTrigger>
           <TabsTrigger value="rep-payments">Rep Payments</TabsTrigger>
           <TabsTrigger value="development-fees">Practice Development Fees</TabsTrigger>
+          <TabsTrigger value="subscription-commissions">Subscription Commissions</TabsTrigger>
         </TabsList>
         
         <TabsContent value="profit-reports">
@@ -38,6 +49,10 @@ const Reports = () => {
         
         <TabsContent value="development-fees">
           <PracticeDevelopmentFeeManager />
+        </TabsContent>
+        
+        <TabsContent value="subscription-commissions">
+          <SubscriptionCommissionManager />
         </TabsContent>
       </Tabs>
     );

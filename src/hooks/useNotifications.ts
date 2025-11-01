@@ -25,8 +25,8 @@ export function useNotifications() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
+  // Fetch notifications with optional type filter
+  const fetchNotifications = async (typeFilter?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -36,10 +36,16 @@ export function useNotifications() {
         return;
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user.id);
+
+      if (typeFilter) {
+        query = query.eq("notification_type", typeFilter as any);
+      }
+
+      const { data, error } = await query
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -180,11 +186,14 @@ export function useNotifications() {
             setNotifications((prev) => [newNotification, ...prev]);
             setUnreadCount((prev) => prev + 1);
 
-            // Show toast for new notification
+            // Show toast for new notification with enhanced styling
             toast({
               title: newNotification.title,
               description: newNotification.message,
-              variant: newNotification.severity === "error" ? "destructive" : "default",
+              variant: newNotification.severity === "error" || newNotification.severity === "warning" 
+                ? "destructive" 
+                : "default",
+              duration: newNotification.notification_type.includes('appointment') ? 10000 : 5000,
             });
           }
         )

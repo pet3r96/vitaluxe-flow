@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, UserPlus, Eye, Power, PowerOff } from "lucide-react";
+import { Search, UserPlus, Eye, Power, PowerOff, Users, TrendingUp, Users2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
@@ -154,138 +154,181 @@ export const RepresentativesDataTable = () => {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Summary Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{stats.totalReps}</div>
-            <p className="text-xs text-muted-foreground">Total Representatives</p>
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card variant="glass" className="shadow-hover">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Total Representatives</p>
+                <div className="text-3xl font-bold gold-text-modern">{stats.totalReps}</div>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-gold1/10 flex items-center justify-center">
+                <Users className="h-6 w-6 text-gold1" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{stats.activeTopline}</div>
-            <p className="text-xs text-muted-foreground">Active Topline Reps</p>
+        <Card variant="glass" className="shadow-hover">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Active Topline</p>
+                <div className="text-3xl font-bold text-primary">{stats.activeTopline}</div>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-primary" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{stats.activeDownline}</div>
-            <p className="text-xs text-muted-foreground">Active Downline Reps</p>
+        <Card variant="glass" className="shadow-hover">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Active Downline</p>
+                <div className="text-3xl font-bold text-success">{stats.activeDownline}</div>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                <Users2 className="h-6 w-6 text-success" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Search Bar and Add Button */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
-        <div className="relative flex-1 max-w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-full sm:max-w-md">
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by name, email, or role..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 w-full"
+            className="pl-12 h-11 glass-card border-border/50"
           />
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
+        <Button 
+          onClick={() => setAddDialogOpen(true)}
+          className="accent-gold-primary h-11 px-6 shadow-hover"
+        >
+          <UserPlus className="mr-2 h-5 w-5" />
           Add Representative
         </Button>
       </div>
 
       {/* Data Table */}
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1200px]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Assigned To</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center">
-                    Loading...
-                  </TableCell>
+      <Card variant="glass" className="shadow-elevated overflow-hidden">
+        <div className="p-6 border-b border-border/50">
+          <h3 className="text-lg font-semibold">All Representatives</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {filteredReps?.length || 0} total • {stats.activeTopline} topline • {stats.activeDownline} downline
+          </p>
+        </div>
+        <div className="overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1200px]">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-border/50">
+                  <TableHead className="h-12 px-6 font-semibold">Name</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold">Email</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold">Phone</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold">Role</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold">Assigned To</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold">Status</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold text-right">Actions</TableHead>
                 </TableRow>
-              ) : !filteredReps || filteredReps.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No representatives found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedReps?.map((rep) => (
-                  <TableRow key={rep.id}>
-                    <TableCell className="font-medium">{rep.profiles?.name || "-"}</TableCell>
-                    <TableCell>{rep.profiles?.email || "-"}</TableCell>
-                    <TableCell>
-                      {twoFAPhones?.[rep.user_id] ? (
-                        formatPhoneNumber(twoFAPhones[rep.user_id])
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Not Set</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={rep.role === "topline" ? "default" : "secondary"}>
-                        {rep.role === "topline" ? "Topline" : "Downline"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {rep.role === "downline" && rep.topline_rep?.profiles?.name 
-                        ? rep.topline_rep.profiles.name 
-                        : rep.role === "topline" 
-                        ? "-" 
-                        : "Unassigned"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={rep.profiles?.active ? "default" : "secondary"}>
-                        {rep.profiles?.active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedRep(rep);
-                            setDetailsOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleStatusMutation.mutate({
-                            profileId: rep.profiles?.id,
-                            currentStatus: rep.profiles?.active
-                          })}
-                        >
-                          {rep.profiles?.active ? (
-                            <PowerOff className="h-4 w-4 text-destructive" />
-                          ) : (
-                            <Power className="h-4 w-4 text-primary" />
-                          )}
-                        </Button>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center h-32">
+                      <div className="flex items-center justify-center">
+                        <div className="h-8 w-8 border-4 border-gold1 border-t-transparent rounded-full animate-spin"></div>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : !filteredReps || filteredReps.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground h-32">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Users className="h-12 w-12 text-muted-foreground/50" />
+                        <p>No representatives found</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedReps?.map((rep) => (
+                    <TableRow key={rep.id} className="hover:bg-muted/5 transition-colors">
+                      <TableCell className="font-medium px-6 py-4">{rep.profiles?.name || "-"}</TableCell>
+                      <TableCell className="px-6 py-4 text-muted-foreground">{rep.profiles?.email || "-"}</TableCell>
+                      <TableCell className="px-6 py-4">
+                        {twoFAPhones?.[rep.user_id] ? (
+                          <span className="font-mono text-sm">{formatPhoneNumber(twoFAPhones[rep.user_id])}</span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Not Set</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <span className={rep.role === "topline" ? "accent-gold-light" : "accent-success"}>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border">
+                            {rep.role === "topline" ? "Topline" : "Downline"}
+                          </span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-muted-foreground text-sm">
+                        {rep.role === "downline" && rep.topline_rep?.profiles?.name 
+                          ? rep.topline_rep.profiles.name 
+                          : rep.role === "topline" 
+                          ? "—" 
+                          : "Unassigned"}
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <span className={rep.profiles?.active ? "accent-success" : "bg-muted/20 text-muted border-border"}>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border">
+                            {rep.profiles?.active ? "Active" : "Inactive"}
+                          </span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRep(rep);
+                              setDetailsOpen(true);
+                            }}
+                            className="h-9 w-9 p-0 hover:bg-gold1/10"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleStatusMutation.mutate({
+                              profileId: rep.profiles?.id,
+                              currentStatus: rep.profiles?.active
+                            })}
+                            className="h-9 w-9 p-0 hover:bg-destructive/10"
+                          >
+                            {rep.profiles?.active ? (
+                              <PowerOff className="h-4 w-4 text-destructive" />
+                            ) : (
+                              <Power className="h-4 w-4 text-success" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Pagination Component */}
       {filteredReps && filteredReps.length > 0 && (

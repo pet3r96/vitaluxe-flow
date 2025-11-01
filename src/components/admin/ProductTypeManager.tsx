@@ -33,7 +33,7 @@ interface ProductType {
   count: number;
 }
 
-export const ProductTypeManager = () => {
+export const ProductTypeManager = ({ showHeader = true }: { showHeader?: boolean }) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingType, setEditingType] = useState<string | null>(null);
   const [deletingType, setDeletingType] = useState<string | null>(null);
@@ -91,13 +91,15 @@ export const ProductTypeManager = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold">Product Type Management</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage product categories and track usage
-          </p>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)}>
+        {showHeader && (
+          <div>
+            <h3 className="text-lg font-semibold">Product Type Management</h3>
+            <p className="text-sm text-muted-foreground">
+              Manage product categories and track usage
+            </p>
+          </div>
+        )}
+        <Button onClick={() => setShowAddDialog(true)} className={!showHeader ? "ml-auto" : ""}>
           <Plus className="h-4 w-4 mr-2" />
           Add Type
         </Button>

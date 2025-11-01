@@ -366,11 +366,11 @@ export function PrescriptionWriterDialog({
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border bg-yellow-50 p-4">
-              <h3 className="font-semibold mb-2 text-yellow-900">Office Dispensing</h3>
-              <div className="text-sm space-y-1 text-yellow-800">
+            <div className="rounded-lg border bg-gold1/10 p-4">
+              <h3 className="font-semibold mb-2 text-gold1">Office Dispensing</h3>
+              <div className="text-sm space-y-1 text-gold1">
                 <p className="font-bold text-lg">DISPENSING IN OFFICE ONLY</p>
-                <p className="text-xs text-yellow-700">This prescription is for practice use. No patient-specific information required.</p>
+                <p className="text-xs">This prescription is for practice use. No patient-specific information required.</p>
               </div>
             </div>
           )}

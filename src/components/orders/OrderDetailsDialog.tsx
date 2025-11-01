@@ -682,7 +682,7 @@ export const OrderDetailsDialog = ({
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium text-muted-foreground">Prescription Details</p>
                         {line.products?.requires_prescription && (
-                          <Badge variant="default" className="bg-green-600">Required</Badge>
+                          <Badge variant="success" size="sm">Required</Badge>
                         )}
                       </div>
                       

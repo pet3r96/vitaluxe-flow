@@ -138,6 +138,7 @@ export const AlertRulesManager = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Security Events</div>
                       <SelectItem value="failed_login">Failed Login</SelectItem>
                       <SelectItem value="brute_force">Brute Force</SelectItem>
                       <SelectItem value="anomaly">Anomaly</SelectItem>
@@ -146,6 +147,24 @@ export const AlertRulesManager = () => {
                       <SelectItem value="encryption_failure">Encryption Failure</SelectItem>
                       <SelectItem value="suspicious_prescription_access">Suspicious Prescription Access</SelectItem>
                       <SelectItem value="payment_bulk_access">Payment Method Bulk Access</SelectItem>
+                      
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Appointment Events</div>
+                      <SelectItem value="appointment_new">New Appointment</SelectItem>
+                      <SelectItem value="appointment_modified">Appointment Modified</SelectItem>
+                      <SelectItem value="appointment_canceled">Appointment Canceled</SelectItem>
+                      
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Communication Events</div>
+                      <SelectItem value="patient_message">Message from Patient</SelectItem>
+                      
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Document Events</div>
+                      <SelectItem value="document_uploaded">Document Uploaded</SelectItem>
+                      
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Financial Events</div>
+                      <SelectItem value="subscription_status_change">Subscription Status Change</SelectItem>
+                      
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Order Events</div>
+                      <SelectItem value="order_delivered">Order Delivered</SelectItem>
+                      <SelectItem value="order_completed">Order Completed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

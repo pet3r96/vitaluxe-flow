@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useResponsive } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -41,6 +43,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export const AccountsDataTable = () => {
   const { toast } = useToast();
   const { effectiveRole } = useAuth();
+  const { isMobile } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
@@ -54,14 +57,15 @@ export const AccountsDataTable = () => {
     enabled: !!effectiveRole,
     staleTime: 300000, // 5 minutes - user accounts change infrequently
     queryFn: async () => {
-      // First, get all profiles with their roles
+      // First, get all profiles with their roles and patient accounts - only select needed fields
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select(`
-          *,
+          id, name, email, active, created_at, parent_id, linked_topline_id,
           user_roles(role),
           parent:profiles!parent_id(id, name, email),
-          linked_topline:profiles!linked_topline_id(id, name, email)
+          linked_topline:profiles!linked_topline_id(id, name, email),
+          patient_accounts(first_name, last_name, email)
         `)
         .order("created_at", { ascending: false });
 
@@ -157,7 +161,23 @@ export const AccountsDataTable = () => {
       return account.isProvider ? 'provider' : 'practice';
     }
     
+    // Fallback: Check if user has patient_accounts entry
+    if (!baseRole && account.patient_accounts && account.patient_accounts.length > 0) {
+      return 'patient';
+    }
+    
     return baseRole || 'No role';
+  };
+
+  const getDisplayName = (account: any): string => {
+    // If name is 'New User' and patient_accounts exists, use patient name
+    if ((account.name === 'New User' || !account.name) && 
+        account.patient_accounts && 
+        account.patient_accounts.length > 0) {
+      const patientAccount = account.patient_accounts[0];
+      return `${patientAccount.first_name} ${patientAccount.last_name}`.trim();
+    }
+    return account.name || 'Unknown';
   };
 
   const cleanupMutation = useMutation({
@@ -192,7 +212,7 @@ export const AccountsDataTable = () => {
     },
   });
 
-  const toggleAccountStatus = async (accountId: string, currentStatus: boolean) => {
+  const toggleAccountStatus = useCallback(async (accountId: string, currentStatus: boolean) => {
     const { error } = await supabase
       .from("profiles")
       .update({ active: !currentStatus })
@@ -201,12 +221,12 @@ export const AccountsDataTable = () => {
     if (!error) {
       refetch();
     }
-  };
+  }, [refetch]);
 
-  const handleDeleteClick = (account: any) => {
+  const handleDeleteClick = useCallback((account: any) => {
     setAccountToDelete(account);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
   const confirmDelete = () => {
     if (accountToDelete?.email) {
@@ -214,7 +234,7 @@ export const AccountsDataTable = () => {
     }
   };
 
-  const filteredAccounts = accounts?.filter((account) => {
+  const filteredAccounts = useMemo(() => accounts?.filter((account) => {
     const matchesSearch = account.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.email?.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -222,7 +242,7 @@ export const AccountsDataTable = () => {
     const matchesRole = roleFilter === "all" || displayRole === roleFilter;
     
     return matchesSearch && matchesRole;
-  });
+  }), [accounts, searchQuery, roleFilter]);
 
   const {
     currentPage,
@@ -245,10 +265,10 @@ export const AccountsDataTable = () => {
       practice: "bg-primary text-primary-foreground",
       provider: "bg-primary/80 text-primary-foreground",
       pharmacy: "bg-secondary text-secondary-foreground",
-      topline: "bg-muted text-muted-foreground",
-      downline: "bg-card text-card-foreground",
+      topline: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
+      downline: "bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
     };
-    return colors[role] || "bg-muted";
+    return colors[role] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200";
   };
 
   // Don't run queries until auth is ready
@@ -297,8 +317,93 @@ export const AccountsDataTable = () => {
       </div>
 
       <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1200px]">
-          <Table>
+        {isMobile ? (
+          // Mobile Card View
+          <div className="divide-y divide-border">
+            {isLoading ? (
+              <div className="p-8 text-center text-muted-foreground">Loading...</div>
+            ) : filteredAccounts?.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">No accounts found</div>
+            ) : (
+              paginatedAccounts?.map((account) => (
+                <Card key={account.id} className="border-0 rounded-none shadow-none">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <div className="font-medium text-base truncate">{getDisplayName(account)}</div>
+                        <div className="text-sm text-muted-foreground truncate">{account.email}</div>
+                      </div>
+                      <Badge className={getRoleBadgeColor(getDisplayRole(account))}>
+                        {getDisplayRole(account)}
+                      </Badge>
+                    </div>
+                    
+                    {((account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') && 
+                      (account.linked_topline_display?.name || account.linked_topline?.name)) ||
+                      account.parent ? (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Parent: </span>
+                        <span className="text-foreground">
+                          {(account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') ? (
+                            account.linked_topline_display?.name || account.linked_topline?.name || "-"
+                          ) : (
+                            account.parent?.name || "-"
+                          )}
+                        </span>
+                      </div>
+                    ) : null}
+                    
+                    <div className="flex items-center justify-between pt-2">
+                      <Badge variant={account.active ? "default" : "secondary"}>
+                        {account.active ? "Active" : "Inactive"}
+                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAccount(account);
+                            setDetailsOpen(true);
+                          }}
+                          className="h-9 w-9 p-0"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleAccountStatus(account.id, account.active)}
+                          className="h-9 w-9 p-0"
+                          title={account.active ? "Disable Account" : "Enable Account"}
+                        >
+                          {account.active ? (
+                            <PowerOff className="h-4 w-4 text-orange-500" />
+                          ) : (
+                            <Power className="h-4 w-4 text-green-500" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(account)}
+                          disabled={cleanupMutation.isPending}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
+                          title="Delete Account"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        ) : (
+          // Desktop/Tablet Table View
+          <div className="min-w-[1200px]">
+            <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -325,7 +430,7 @@ export const AccountsDataTable = () => {
             ) : (
               paginatedAccounts?.map((account) => (
                 <TableRow key={account.id}>
-                  <TableCell className="font-medium">{account.name}</TableCell>
+                  <TableCell className="font-medium">{getDisplayName(account)}</TableCell>
                   <TableCell>{account.email}</TableCell>
                   <TableCell>
                     <Badge className={getRoleBadgeColor(getDisplayRole(account))}>
@@ -395,6 +500,7 @@ export const AccountsDataTable = () => {
           </TableBody>
         </Table>
         </div>
+        )}
       </div>
 
       {filteredAccounts && filteredAccounts.length > 0 && (

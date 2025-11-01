@@ -20,9 +20,11 @@ import { AddCreditCardDialog } from "@/components/profile/AddCreditCardDialog";
 import { formatCardDisplay } from "@/lib/authorizenet-acceptjs";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
 import { logger } from "@/lib/logger";
+import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Checkout() {
-  const { effectiveUserId, user } = useAuth();
+  const { effectiveUserId, effectivePracticeId, user, isStaffAccount, isProviderAccount } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -30,6 +32,11 @@ export default function Checkout() {
   const [uploadingPrescriptions, setUploadingPrescriptions] = useState<Record<string, boolean>>({});
   const [prescriptionFiles, setPrescriptionFiles] = useState<Record<string, File>>({});
   const [prescriptionPreviews, setPrescriptionPreviews] = useState<Record<string, string>>({});
+  const { canOrder, isLoading: checkingPrivileges } = useStaffOrderingPrivileges();
+  
+  // Calculate the correct practice ID for shipping address
+  // Providers and staff use effectivePracticeId, practice owners use effectiveUserId
+  const practiceIdForShipping = (isProviderAccount || isStaffAccount) ? effectivePracticeId : effectiveUserId;
   
   // Payment method state
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>("");
@@ -46,6 +53,13 @@ export default function Checkout() {
   // Get merchant fee
   const { calculateMerchantFee } = useMerchantFee();
   const merchantFeePercentage = location.state?.merchantFeePercentage || 3.75;
+
+  // Staff without ordering privileges cannot access checkout - compute flags only (avoid early return before hooks)
+  const showStaffCheckoutLoading = checkingPrivileges && isStaffAccount;
+  const showStaffCheckoutNoAccess = isStaffAccount && !canOrder;
+
+  // For staff members and providers with ordering privileges, use practice payment methods
+  const practiceIdForPayment = (isStaffAccount || isProviderAccount) ? effectivePracticeId : effectiveUserId;
 
   // Track component mount state to prevent operations during navigation
   const [isMounted, setIsMounted] = useState(true);
@@ -107,15 +121,38 @@ export default function Checkout() {
 
       if (!cartData) return { lines: [] };
 
-      const { data: lines, error: linesError } = await supabase
+      const { data: linesRaw, error: linesError } = await supabase
         .from("cart_lines")
         .select(`
           *,
           product:products(name, dosage, sig, image_url, base_price, requires_prescription)
         `)
-        .eq("cart_id", cartData.id);
+        .eq("cart_id", cartData.id)
+        .gte("expires_at", new Date().toISOString());
 
       if (linesError) throw linesError;
+
+      const lines = (linesRaw || []) as any[];
+
+      // Manually hydrate patient data from patient_accounts table
+      const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
+      if (patientIds.length > 0) {
+        const { data: patients, error: patientsError } = await supabase
+          .from('patient_accounts')
+          .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
+          .in('id', patientIds);
+        
+        if (!patientsError && patients) {
+          const patientMap = new Map(patients.map((p: any) => [p.id, p]));
+          for (const line of lines) {
+            if (line.patient_id) {
+              const patient = patientMap.get(line.patient_id) || null;
+              line.patient = patient;
+              line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
+            }
+          }
+        }
+      }
 
       return { id: cartData.id, lines: lines || [] };
     },
@@ -159,15 +196,39 @@ export default function Checkout() {
     if (cartError) throw cartError;
     if (!cartData) return { id: undefined as unknown as string, lines: [] as any[] };
 
-    const { data: lines, error: linesError } = await supabase
+    const { data: linesRaw, error: linesError } = await supabase
       .from("cart_lines")
       .select(`
         *,
         product:products(name, dosage, sig, image_url, base_price, requires_prescription)
       `)
-      .eq("cart_id", cartData.id);
+      .eq("cart_id", cartData.id)
+      .gte("expires_at", new Date().toISOString());
 
     if (linesError) throw linesError;
+    
+    const lines = (linesRaw || []) as any[];
+
+    // Manually hydrate patient data from patient_accounts table
+    const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
+    if (patientIds.length > 0) {
+      const { data: patients, error: patientsError } = await supabase
+        .from('patient_accounts')
+        .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
+        .in('id', patientIds);
+      
+      if (!patientsError && patients) {
+        const patientMap = new Map(patients.map((p: any) => [p.id, p]));
+        for (const line of lines) {
+          if (line.patient_id) {
+            const patient = patientMap.get(line.patient_id) || null;
+            line.patient = patient;
+            line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
+          }
+        }
+      }
+    }
+    
     return { id: cartData.id, lines: lines || [] };
   };
 
@@ -176,29 +237,35 @@ export default function Checkout() {
   );
 
   const { data: providerProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ["provider-shipping", effectiveUserId],
+    queryKey: ["provider-shipping", practiceIdForShipping],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_formatted, name")
-        .eq("id", effectiveUserId)
+        .eq("id", practiceIdForShipping)
         .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!practiceIdForShipping,
   });
 
-  // Fetch payment methods (credit cards only)
+  // Fetch payment methods (credit cards only) - include both practice and personal cards for staff
   const { data: paymentMethods } = useQuery({
-    queryKey: ["payment-methods", effectiveUserId],
+    queryKey: ["payment-methods", practiceIdForPayment, user?.id],
     queryFn: async () => {
+      // For staff/providers, fetch cards from both practice AND their personal account
+      const practiceIds = (isStaffAccount || isProviderAccount) 
+        ? [practiceIdForPayment, user?.id].filter(Boolean)
+        : [practiceIdForPayment];
+
       const { data, error } = await supabase
         .from("practice_payment_methods")
         .select("*")
-        .eq("practice_id", effectiveUserId)
+        .in("practice_id", practiceIds)
         .eq("payment_type", "credit_card")
+        .neq("status", "declined")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
 
@@ -212,7 +279,7 @@ export default function Checkout() {
       
       return data || [];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!practiceIdForPayment && !!user,
   });
 
   // Fetch checkout attestation
@@ -357,6 +424,27 @@ export default function Checkout() {
         
         doctorIdForOrder = provider.practice_id;
       }
+      
+      // Also check if current user is staff and resolve to their practice
+      if (userRole?.role === 'staff') {
+        const { data: staffMember, error: staffError } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", doctorIdForOrder)
+          .eq("active", true)
+          .single();
+        
+        if (staffError || !staffMember?.practice_id) {
+          throw new Error("Staff member not associated with a practice. Please contact support.");
+        }
+        
+        console.debug('[OrderConfirmation] Staff order - linking to practice', {
+          staff_user_id: doctorIdForOrder,
+          practice_id: staffMember.practice_id
+        });
+        
+        doctorIdForOrder = staffMember.practice_id;
+      }
       const createdOrders = [];
       
       // Helper function to create shipping groups
@@ -477,6 +565,7 @@ export default function Checkout() {
           const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost + lineMerchantFee;
           
           // Create ONE order for THIS line
+          const selectedPaymentMethod = paymentMethods?.find(pm => pm.id === selectedPaymentMethodId);
           const { data: practiceOrder, error: practiceOrderError } = await supabase
             .from("orders")
             .insert({
@@ -492,6 +581,9 @@ export default function Checkout() {
               status: "pending",
               ship_to: "practice",
               practice_address: practiceAddress,
+              formatted_shipping_address: practiceAddress, // Immutable snapshot
+              payment_method_id: selectedPaymentMethodId, // Capture immediately
+              payment_method_used: selectedPaymentMethod?.payment_type || null, // Capture payment type
             })
             .select()
             .single();
@@ -580,6 +672,7 @@ export default function Checkout() {
           const totalAfterDiscount = lineTotal - discountAmount + lineShippingCost + lineMerchantFee;
           
           // Create ONE order for THIS line
+          const selectedPaymentMethod = paymentMethods?.find(pm => pm.id === selectedPaymentMethodId);
           const { data: patientOrder, error: patientOrderError } = await supabase
             .from("orders")
             .insert({
@@ -595,6 +688,9 @@ export default function Checkout() {
               status: "pending",
               ship_to: "patient",
               practice_address: null,
+              formatted_shipping_address: null, // Patient orders ship to patient address
+              payment_method_id: selectedPaymentMethodId, // Capture immediately
+              payment_method_used: selectedPaymentMethod?.payment_type || null, // Capture payment type
             })
             .select()
             .single();
@@ -731,7 +827,8 @@ export default function Checkout() {
           title: "Order Placed Successfully! 🎉",
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
         });
-        queryClient.invalidateQueries({ queryKey: ["cart"] });
+        queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+        queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
         navigate("/orders");
       } else {
         // Some payments failed - show retry dialog
@@ -901,6 +998,41 @@ export default function Checkout() {
     return null;
   }
 
+  if (showStaffCheckoutLoading) {
+    return (
+      <div className="patient-container">
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
+  }
+
+  if (showStaffCheckoutNoAccess) {
+    return (
+      <div className="patient-container">
+        <Card className="patient-card">
+          <CardHeader>
+            <CardTitle className="text-xl sm:text-2xl">Checkout</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>
+                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
+              </AlertDescription>
+            </Alert>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/cart')}
+              className="mt-4 touch-target"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Cart
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Progress Indicator */}
@@ -959,7 +1091,7 @@ export default function Checkout() {
                         <img
                           src={line.product.image_url}
                           alt={line.product.name}
-                          className="h-20 w-20 object-cover rounded-md border border-border"
+                          className="h-20 w-20 flex-shrink-0 object-cover rounded-md border border-border"
                         />
                       )}
                       <div className="flex-1 space-y-1">
@@ -1011,7 +1143,7 @@ export default function Checkout() {
                   <img
                     src={line.product.image_url}
                     alt={line.product.name}
-                    className="h-20 w-20 object-cover rounded-md border border-border"
+                    className="h-20 w-20 flex-shrink-0 object-cover rounded-md border border-border"
                   />
                 )}
                 <div className="flex-1 space-y-1">
@@ -1058,7 +1190,7 @@ export default function Checkout() {
                   {line.product?.requires_prescription && (
                     <div className="mt-2 space-y-2">
                       {line.prescription_url ? (
-                        <Badge variant="default" className="bg-green-600">
+                        <Badge variant="success" size="sm">
                           <FileCheck className="h-3 w-3 mr-1" />
                           Prescription Uploaded
                         </Badge>
@@ -1126,7 +1258,7 @@ export default function Checkout() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => document.getElementById(`prescription-upload-${line.id}`)?.click()}
-                                className="w-full border-orange-300 hover:bg-orange-50"
+                                className="w-full border-gold1/30 hover:bg-gold1/10"
                               >
                                 <Upload className="h-4 w-4 mr-2" />
                                 Upload Prescription

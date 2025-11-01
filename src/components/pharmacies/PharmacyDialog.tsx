@@ -39,6 +39,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
   const [formData, setFormData] = useState({
     name: "",
     contact_email: "",
+    phone: "",
     address_street: "",
     address_city: "",
     address_state: "",
@@ -87,6 +88,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         setFormData({
           name: pharmacy.name || "",
           contact_email: pharmacy.contact_email || "",
+          phone: pharmacy.phone || "",
           address_street: pharmacy.address_street || "",
           address_city: pharmacy.address_city || "",
           address_state: pharmacy.address_state || "",
@@ -135,6 +137,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         const pharmacyData = {
           name: formData.name,
           contact_email: formData.contact_email,
+          phone: formData.phone,
           address_street: formData.address_street,
           address_city: formData.address_city,
           address_state: formData.address_state,
@@ -173,6 +176,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             csrfToken, // Include in body as fallback
             roleData: {
               contactEmail: formData.contact_email,
+              phone: formData.phone,
               statesServiced: formData.states_serviced,
               address: `${formData.address_street}, ${formData.address_city}, ${formData.address_state} ${formData.address_zip}`.trim()
             }
@@ -188,6 +192,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         const { error: updateError } = await supabase
           .from("pharmacies")
           .update({
+            phone: formData.phone,
             address_street: formData.address_street,
             address_city: formData.address_city,
             address_state: formData.address_state,
@@ -265,6 +270,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
     setFormData({
       name: "",
       contact_email: "",
+      phone: "",
       address_street: "",
       address_city: "",
       address_state: "",
@@ -316,6 +322,17 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
                 required
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="(555) 555-5555"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
           </div>
 
           <GoogleAddressAutocomplete

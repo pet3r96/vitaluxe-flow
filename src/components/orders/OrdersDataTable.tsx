@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { realtimeManager } from "@/lib/realtimeManager";
 import {
   Table,
   TableBody,
@@ -70,9 +71,11 @@ export const OrdersDataTable = () => {
 
   const { data: orders, isLoading, refetch, error } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
-    staleTime: 0, // Always consider stale - realtime handles updates
+    staleTime: 2 * 60 * 1000, // 2min - trust realtime for freshness
+    gcTime: 5 * 60 * 1000,
     refetchInterval: false, // Disable polling - use realtime instead
-    refetchOnWindowFocus: true, // Refetch when tab gains focus
+    refetchOnMount: false, // Trust cache on mount
+    refetchOnWindowFocus: false, // Realtime handles updates
     queryFn: async () => {
       try {
         logger.info('OrdersDataTable query', logger.sanitize({ 
@@ -136,7 +139,7 @@ export const OrdersDataTable = () => {
               id,
               practice_id
             ),
-            patients(allergies),
+            patient_accounts!order_lines_patient_id_fkey(id, allergies),
             orders!inner(
               *,
               profiles:doctor_id(name)
@@ -180,10 +183,16 @@ export const OrdersDataTable = () => {
               id,
               practice_id
             ),
-            patients(allergies)
+            patient_accounts!order_lines_patient_id_fkey(id, allergies)
           ),
           profiles:doctor_id(name)
         `);
+
+      // Admin role has access to all orders (no filtering needed)
+      if (effectiveRole === "admin") {
+        // No additional filters - admin sees everything
+        logger.info('Admin fetching all orders');
+      }
 
       // For doctor role, explicitly filter by doctor_id (defense in depth with RLS)
       if (effectiveRole === "doctor") {
@@ -216,6 +225,24 @@ export const OrdersDataTable = () => {
         } else {
           return []; // Provider not found
         }
+      }
+
+      // Filter by staff practice if role is staff
+      if (effectiveRole === "staff") {
+        // Get staff's practice_id from practice_staff table
+        const { data: staffData } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", effectiveUserId)
+          .eq("active", true)
+          .maybeSingle();
+        
+        if (!staffData || !staffData.practice_id) {
+          return []; // Staff record not found or inactive
+        }
+        
+        // Filter orders by the staff member's practice
+        query = query.eq("doctor_id", staffData.practice_id);
       }
 
       // Filter by downline rep if role is downline
@@ -318,7 +345,14 @@ export const OrdersDataTable = () => {
         .order("created_at", { ascending: false });
 
       if (error) {
-        logger.error('Orders query error', error, { effectiveRole, effectiveUserId });
+        logger.error('Orders query error', { 
+          error: error.message || error, 
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          effectiveRole, 
+          effectiveUserId 
+        });
         throw error;
       }
       
@@ -332,11 +366,18 @@ export const OrdersDataTable = () => {
       }
       
       return data;
-      } catch (error) {
-        logger.error('Orders fetch failed', error);
+      } catch (error: any) {
+        logger.error('Orders fetch failed', { 
+          error: error.message || String(error), 
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          effectiveRole,
+          effectiveUserId
+        });
         toast({
           title: "Error loading orders",
-          description: "Unable to load orders. Please refresh or contact support.",
+          description: error?.message || "Unable to load orders. Please refresh or contact support.",
           variant: "destructive"
         });
         throw error;
@@ -344,44 +385,24 @@ export const OrdersDataTable = () => {
     },
   });
 
-  // Set up real-time subscription for order updates
+  // Set up real-time subscription for order updates using centralized manager
   useEffect(() => {
     // Don't set up subscription if no effective user
     if (!effectiveUserId) return;
     
-    const channel = supabase
-      .channel('order-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          filter: effectiveRole === 'doctor' ? `doctor_id=eq.${effectiveUserId}` : undefined
-        },
-        () => {
-          logger.info('Order update detected, refetching');
-          refetch();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'order_lines'
-        },
-        () => {
-          logger.info('Order line update detected, refetching');
-          refetch();
-        }
-      )
-      .subscribe();
+    // Subscribe to both orders and order_lines tables
+    realtimeManager.subscribe('orders', () => {
+      logger.info('Order update detected, refetching');
+      refetch();
+    });
+    
+    realtimeManager.subscribe('order_lines', () => {
+      logger.info('Order line update detected, refetching');
+      refetch();
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [effectiveUserId, effectiveRole, refetch]);
+    // Cleanup handled by realtimeManager
+  }, [effectiveUserId, refetch]);
 
   // Calculate counts for each status (including search filter)
   const statusCounts = useMemo(() => {
@@ -661,7 +682,7 @@ export const OrdersDataTable = () => {
                   <TableRow 
                     key={order.id}
                     className={cn(
-                      order.status === 'on_hold' && "bg-yellow-50 hover:bg-yellow-100/70"
+                      order.status === 'on_hold' && "bg-gold1/10 hover:bg-gold1/15"
                     )}
                   >
                     {/* Order ID */}

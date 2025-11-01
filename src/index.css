@@ -2,69 +2,187 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
-@layer base {
-  :root {
-    /* Vitaluxe Gold-on-Black Theme */
-    --background: 0 0% 4.3%;
-    --foreground: 45 52% 88%;
-    
-    /* Lighter background for main content area */
-    --main-content-bg: 0 0% 18%;
-
-    --card: 0 0% 16%;
-    --card-foreground: 45 52% 88%;
-
-    --popover: 0 0% 6%;
-    --popover-foreground: 45 52% 88%;
-
-    /* Gold gradient colors */
-    --gold-dark: 42 66% 34%;     /* #8E6E1E */
-    --gold-mid: 42 50% 55%;      /* #C8A64B */
-    --gold-light: 45 64% 72%;    /* #E2C977 */
-
-    --primary: 42 50% 55%;
-    --primary-foreground: 0 0% 4.3%;
-
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 45 52% 88%;
-
-    --muted: 0 0% 15%;
-    --muted-foreground: 45 20% 65%;
-
-    --accent: 42 66% 34%;
-    --accent-foreground: 45 52% 88%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 45 52% 88%;
-
-    --border: 0 0% 15%;
-    --input: 0 0% 12%;
-    --ring: 42 50% 55%;
-
-    --radius: 0.5rem;
-
-    /* Sidebar colors */
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 45 52% 88%;
-    --sidebar-primary: 42 50% 55%;
-    --sidebar-primary-foreground: 0 0% 4.3%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 45 52% 88%;
-    --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 42 50% 55%;
-
-    /* Custom gradients */
-    --gradient-gold: linear-gradient(135deg, hsl(42 66% 34%), hsl(42 50% 55%), hsl(45 64% 72%));
-    --gradient-gold-subtle: linear-gradient(180deg, hsl(0 0% 6%), hsl(0 0% 4.3%));
-
-    /* Shadows */
-    --shadow-gold: 0 10px 40px -10px hsl(42 50% 55% / 0.3);
-    --shadow-gold-glow: 0 0 30px hsl(42 50% 55% / 0.2);
+/* Responsive utilities */
+@layer utilities {
+  /* Responsive utilities */
+  .responsive-container {
+    @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
   }
+
+  .responsive-page {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  .responsive-card-padding {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  .no-horizontal-scroll {
+    @apply overflow-x-hidden;
+  }
+
+  .mobile-table-scroll {
+    @apply overflow-x-auto -mx-4 sm:mx-0;
+  }
+
+  .mobile-table-scroll table {
+    @apply min-w-full;
+  }
+
+  .touch-button {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .responsive-text-sm {
+    @apply text-sm sm:text-base;
+  }
+
+  .responsive-text-base {
+    @apply text-base sm:text-lg;
+  }
+
+  .responsive-text-lg {
+    @apply text-lg sm:text-xl;
+  }
+
+  .responsive-text-xl {
+    @apply text-xl sm:text-2xl;
+  }
+
+  .responsive-grid-1-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6;
+  }
+
+  .responsive-grid-1-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+
+  .responsive-flex-col-row {
+    @apply flex flex-col sm:flex-row gap-3 sm:gap-4;
+  }
+
+  /* Modern Utilities */
+  .modern-table {
+    @apply rounded-lg overflow-hidden border border-border/50 shadow-sm;
+  }
+
+  .modern-table-header {
+    @apply bg-muted/30 backdrop-blur-xl border-b border-border/50 font-semibold text-xs sm:text-sm tracking-wide uppercase;
+  }
+
+  .modern-card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:scale-[1.01] hover:border-primary/20;
+  }
+
+  .modern-input-focus {
+    @apply focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
+  }
+}
+
+:root {
+  /* Brand Gold Gradient - Core Identity */
+  --gold-1: 46 43% 52%;  /* #BE9B4B */
+  --gold-2: 46 51% 65%;  /* #D8C07A */
+  --gold-gradient: linear-gradient(135deg, hsl(var(--gold-1)) 0%, hsl(var(--gold-2)) 100%);
+
+  /* Base Surfaces (Light Mode) - Modern Cool Palette */
+  --background: 210 20% 98%;     /* Soft cool white */
+  --foreground: 222 47% 11%;     /* Deep text */
+  --card: 0 0% 100%;             /* Pure white cards */
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;          /* Subtle muted background for light mode */
+  --muted-foreground: 215 16% 46.9%; /* Readable muted text on light */
+  --border: 214 15% 91%;         /* Subtle blue-gray borders */
+  --input: 210 20% 96%;          /* Input backgrounds */
+  --ring: 46 43% 52%;            /* Focus ring = gold */
+
+  /* Accent Colors */
+  --primary: var(--gold-1);
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 15% 55%;         /* Medium slate grey for contrast */
+  --secondary-foreground: 0 0% 100%; /* White text for proper contrast */
+  --accent: 210 20% 95%;
+  --accent-foreground: 222 47% 11%;
+
+  /* Status Colors - Vibrant & Modern */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 76% 36%;
+  --info: 199 89% 48%;
+  --warning: 48 96% 53%;
+
+  /* Sidebar (Light Mode) */
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-primary: var(--gold-1);
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 210 20% 96%;
+  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-border: 214 15% 91%;
+  --sidebar-ring: var(--gold-1);
+
+  /* Layout */
+  --main-content-bg: 210 20% 98%;
+  --radius: 0.75rem;
+
+  /* Chart colors - Modern Vibrant */
+  --chart-1: 46 43% 52%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 142 76% 36%;
+  --chart-4: 0 72% 51%;
+  --chart-5: 271 81% 56%;
+}
+
+.dark {
+  /* Base Surfaces (Dark Mode) - Deep Navy, NOT Pure Black */
+  --background: 222 47% 11%;     /* Deep navy-blue (like Taskly) */
+  --foreground: 210 20% 98%;     /* Soft off-white */
+  --card: 217 33% 17%;           /* Elevated card color */
+  --card-foreground: 210 20% 98%;
+  --popover: 217 33% 17%;
+  --popover-foreground: 210 20% 98%;
+  --muted: 217 32% 17.5%;          /* Muted surface for dark mode */
+  --muted-foreground: 215 20.2% 65.1%; /* Subtle text in dark */
+  --border: 215 20% 25%;         /* Visible but subtle borders */
+  --input: 217 33% 20%;          /* Input backgrounds */
+  --ring: 46 43% 52%;            /* Focus ring = gold */
+
+  /* Accent Colors (Gold stays identical) */
+  --primary: var(--gold-1);
+  --primary-foreground: 210 20% 98%;
+  --secondary: 215 30% 40%;         /* Lighter slate for better contrast in dark mode */
+  --secondary-foreground: 0 0% 100%; /* Pure white text */
+  --accent: 215 25% 22%;
+  --accent-foreground: 210 20% 98%;
+
+  /* Status Colors - Vibrant for Dark Mode */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 76% 36%;
+  --info: 199 89% 48%;
+  --warning: 48 96% 53%;
+
+  /* Sidebar (Dark Mode) */
+  --sidebar-background: 222 47% 13%;
+  --sidebar-foreground: 210 20% 98%;
+  --sidebar-primary: var(--gold-1);
+  --sidebar-primary-foreground: 210 20% 98%;
+  --sidebar-accent: 215 25% 22%;
+  --sidebar-accent-foreground: 210 20% 98%;
+  --sidebar-border: 215 20% 25%;
+  --sidebar-ring: var(--gold-1);
+
+  /* Layout */
+  --main-content-bg: 222 47% 11%;
+
+  /* Chart colors - Brighter for Dark Mode */
+  --chart-1: 46 51% 65%;
+  --chart-2: 199 89% 60%;
+  --chart-3: 142 76% 45%;
+  --chart-4: 0 72% 60%;
+  --chart-5: 271 81% 65%;
 }
 
 @layer base {
@@ -72,12 +190,17 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    color-scheme: light dark;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold;
+    @apply font-heading font-bold;
   }
 
   /* Hide browser autofill suggestions for address fields */
@@ -97,26 +220,174 @@ All colors MUST be HSL.
   .pac-item-query {
     font-size: 14px;
   }
+
+  /* Ensure native date/time inputs follow theme colors and icons are visible */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--input));
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+    opacity: 0.75;
+  }
 }
 
 @layer utilities {
-  .gold-gradient {
-    background: var(--gradient-gold);
+  /* Layered Background System */
+  .vitaluxe-base-bg {
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.08), transparent),
+      linear-gradient(135deg, 
+        hsl(210 20% 98%) 0%, 
+        hsl(210 20% 99%) 50%, 
+        hsl(210 20% 98%) 100%
+      );
   }
-  
-  .gold-text-gradient {
-    background: var(--gradient-gold);
+
+  .dark .vitaluxe-base-bg {
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.15), transparent),
+      linear-gradient(135deg, 
+        hsl(222 47% 11%) 0%, 
+        hsl(222 47% 13%) 50%, 
+        hsl(222 47% 11%) 100%
+      );
+  }
+
+  /* Frosted Glass Card System */
+  .glass-card {
+    background: hsl(0 0% 100% / 0.7);
+    backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.18);
+    box-shadow: 
+      0 8px 32px rgba(190, 155, 75, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .dark .glass-card {
+    background: hsl(240 8% 10% / 0.6);
+    backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid hsl(240 8% 20% / 0.3);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(190, 155, 75, 0.1);
+  }
+
+  /* Multi-Level Shadow System */
+  .shadow-elevated {
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.04),
+      0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .shadow-elevated {
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .shadow-hover {
+    transition: all 0.3s ease;
+  }
+
+  .shadow-hover:hover {
+    box-shadow: 
+      0 4px 12px rgba(190, 155, 75, 0.12),
+      0 12px 32px rgba(190, 155, 75, 0.08);
+    transform: translateY(-2px);
+  }
+
+  /* Gold Accent System */
+  .accent-gold-primary {
+    background: linear-gradient(135deg, hsl(46 43% 52%), hsl(46 51% 65%));
+    color: white;
+  }
+
+  .accent-gold-light {
+    background: hsl(46 51% 65% / 0.15);
+    color: hsl(46 43% 52%);
+    border: 1px solid hsl(46 43% 52% / 0.2);
+  }
+
+  .accent-success {
+    background: hsl(142 60% 35% / 0.12);
+    color: hsl(142 60% 35%);
+  }
+
+  /* Modern gold gradient */
+  .bg-gold-gradient-modern {
+    background: var(--gold-gradient);
+  }
+
+  .gold-text-modern {
+    background: var(--gold-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .shadow-gold {
-    box-shadow: var(--shadow-gold);
+  /* Legacy gold utilities (backward compatibility) */
+  .gold-gradient {
+    background: var(--gold-gradient);
+  }
+  
+  .gold-text-gradient {
+    background: var(--gold-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Card shadows with dark mode */
+  .shadow-card-adaptive {
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  }
+
+  .dark .shadow-card-adaptive {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  /* Soft inset glow */
+  .shadow-inset-soft {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  .dark .shadow-inset-soft {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  /* Hover glow effect */
+  .hover-glow-gold {
+    transition: all 0.3s ease-in-out;
+  }
+
+  .hover-glow-gold:hover {
+    box-shadow: 0 0 20px rgba(190, 155, 75, 0.3);
+  }
+
+  /* Active indicator */
+  .active-gold-indicator {
+    position: relative;
+  }
+
+  .active-gold-indicator::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--gold-gradient);
+    box-shadow: 0 0 8px hsl(var(--gold-1));
   }
 
   .glow-gold {
-    box-shadow: var(--shadow-gold-glow);
+    box-shadow: 0 0 12px rgba(190, 155, 75, 0.2);
   }
 
   /* Touch-friendly minimum sizes */
@@ -201,5 +472,103 @@ All colors MUST be HSL.
   .terms-content ul li {
     list-style-type: disc;
     margin-bottom: 0.25rem;
+  }
+
+  /* Blocked time visual indicators */
+  .blocked-time-slot {
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(239, 68, 68, 0.05),
+      rgba(239, 68, 68, 0.05) 10px,
+      rgba(239, 68, 68, 0.1) 10px,
+      rgba(239, 68, 68, 0.1) 20px
+    );
+    cursor: not-allowed;
+    pointer-events: none;
+    border: 1px dashed rgba(239, 68, 68, 0.3);
+  }
+
+  .provider-unavailable {
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(156, 163, 175, 0.05),
+      rgba(156, 163, 175, 0.05) 10px,
+      rgba(156, 163, 175, 0.1) 10px,
+      rgba(156, 163, 175, 0.1) 20px
+    );
+    cursor: not-allowed;
+    pointer-events: none;
+    border: 1px dashed rgba(156, 163, 175, 0.3);
+  }
+
+  .service-badge-medical { @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200; }
+  .service-badge-cosmetic { @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200; }
+  .service-badge-wellness { @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200; }
+  .service-badge-diagnostic { @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200; }
+
+  /* Patient Portal Modern Cards */
+  .patient-card {
+    @apply bg-card border-border rounded-lg shadow-lg backdrop-blur-sm;
+  }
+
+  .patient-card-hover {
+    @apply transition-all duration-300 hover:border-primary/30 hover:shadow-card-adaptive;
+  }
+
+  .patient-container {
+    @apply p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6 max-w-full overflow-x-hidden;
+  }
+
+  .patient-stat-card {
+    @apply patient-card patient-card-hover cursor-pointer min-h-[120px] sm:min-h-[140px];
+  }
+
+  .patient-section-header {
+    @apply text-xl sm:text-2xl md:text-3xl font-bold tracking-tight;
+  }
+
+  .patient-button-primary {
+    @apply bg-gradient-to-r from-primary to-gold2 hover:from-primary/90 hover:to-gold2/90 transition-all min-h-[44px];
+  }
+
+  /* Mobile-first responsive utilities for patient portal */
+  .patient-responsive-grid {
+    @apply grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6;
+  }
+
+  .patient-responsive-card {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+
+  .patient-touch-target {
+    @apply min-h-[44px] min-w-[44px] touch-manipulation;
+  }
+
+  /* Ensure all patient cards stack properly on mobile */
+  @media (max-width: 640px) {
+    .patient-card {
+      @apply w-full;
+    }
+    
+    .patient-container > div {
+      @apply w-full overflow-x-hidden;
+    }
+  }
+
+  /* Modern status badges */
+  .status-badge-scheduled {
+    @apply bg-primary/20 text-primary border border-primary/30;
+  }
+
+  .status-badge-completed {
+    @apply bg-green-500/20 text-green-500 border border-green-500/30;
+  }
+
+  .status-badge-cancelled {
+    @apply bg-red-500/20 text-red-500 border border-red-500/30;
+  }
+
+  .status-badge-pending {
+    @apply bg-yellow-500/20 text-yellow-500 border border-yellow-500/30;
   }
 }

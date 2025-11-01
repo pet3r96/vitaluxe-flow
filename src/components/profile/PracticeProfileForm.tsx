@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -29,6 +30,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Save, KeyRound, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
 
@@ -66,6 +68,9 @@ export const PracticeProfileForm = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<
+    null | "verifying" | "verified" | "failed"
+  >(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["practice-profile", effectiveUserId],
@@ -170,6 +175,24 @@ export const PracticeProfileForm = () => {
   });
 
   const onSubmit = (values: ProfileFormValues) => {
+    // Check NPI verification status
+    if (npiVerificationStatus !== "verified") {
+      if (npiVerificationStatus === "verifying") {
+        toast({
+          title: "Please wait",
+          description: "NPI verification is in progress",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Verification Required",
+          description: "NPI must be verified before saving",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     updateMutation.mutate(values);
   };
 
@@ -178,8 +201,8 @@ export const PracticeProfileForm = () => {
     
     setIsResettingPassword(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
-        redirectTo: `${window.location.origin}/auth`,
+      const { error } = await supabase.functions.invoke('send-password-reset-email', {
+        body: { email: profile.email },
       });
 
       if (error) throw error;
@@ -260,15 +283,10 @@ export const PracticeProfileForm = () => {
                 <FormItem>
                   <FormLabel>Practice Phone Number</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="tel"
-                      placeholder="1234567890" 
-                      maxLength={10}
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        field.onChange(value);
-                      }}
+                    <PhoneInput
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="(555) 123-4567"
                     />
                   </FormControl>
                   <FormDescription>
@@ -314,11 +332,58 @@ export const PracticeProfileForm = () => {
                       onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, '');
                         field.onChange(value);
+                        
+                        // Reset verification status when NPI changes
+                        if (value.length !== 10) {
+                          setNpiVerificationStatus(null);
+                        } else {
+                          setNpiVerificationStatus("verifying");
+                        }
+                        
+                        // Real-time NPI verification
+                        if (value && value.length === 10) {
+                          verifyNPIDebounced(value, (result) => {
+                            if (field.value === result.npi) {
+                              if (result.valid && !result.error) {
+                                setNpiVerificationStatus("verified");
+                                if (result.providerName) {
+                                  toast({
+                                    title: "NPI Verified ✓",
+                                    description: `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`,
+                                  });
+                                }
+                                if (result.warning) {
+                                  toast({
+                                    title: "Warning",
+                                    description: result.warning,
+                                    variant: "default",
+                                  });
+                                }
+                              } else if (result.error) {
+                                setNpiVerificationStatus("failed");
+                                toast({
+                                  title: "Invalid NPI",
+                                  description: result.error,
+                                  variant: "destructive",
+                                });
+                              }
+                            }
+                          });
+                        }
                       }}
                     />
                   </FormControl>
+                  {npiVerificationStatus === "verifying" && (
+                    <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
+                  )}
+                  {npiVerificationStatus === "verified" && (
+                    <p className="text-sm text-green-600">✅ NPI Verified</p>
+                  )}
+                  {npiVerificationStatus === "failed" && (
+                    <p className="text-sm text-destructive">❌ Invalid NPI</p>
+                  )}
                   <FormDescription>
-                    Your practice's National Provider Identifier (10 digits)
+                    Your practice's National Provider Identifier (verified against NPPES)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -453,7 +518,7 @@ export const PracticeProfileForm = () => {
 
       <Button
               type="submit" 
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || npiVerificationStatus !== "verified"}
               className="w-full sm:w-auto"
             >
               {updateMutation.isPending ? (

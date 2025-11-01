@@ -92,7 +92,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
     queryKey: ["encryption-coverage"],
     queryFn: async () => {
       const [patientsRes, orderLinesRes] = await Promise.all([
-        supabase.from("patients").select("id, allergies_encrypted, notes_encrypted"),
+        supabase.from("patient_accounts").select("id, allergies, notes"),
         supabase.from("order_lines").select("id, prescription_url_encrypted"),
       ]);
 
@@ -101,7 +101,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
       const totalRecords = patients.length + orderLines.length;
       if (totalRecords === 0) return 100;
 
-      const encryptedPatients = patients.filter(p => p.allergies_encrypted || p.notes_encrypted).length;
+      const encryptedPatients = patients.filter(p => p.allergies || p.notes).length;
       const encryptedOrders = orderLines.filter(o => o.prescription_url_encrypted).length;
       
       return ((encryptedPatients + encryptedOrders) / totalRecords) * 100;
@@ -151,7 +151,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
               <span className="text-sm">{encryptionCoverage?.toFixed(0) || 0}%</span>
             </div>
             <Progress value={encryptionCoverage || 0} className="h-2" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm pt-2">
               <div>
                 <p className="text-muted-foreground">RLS Policies</p>
                 <p className="font-medium flex items-center gap-1">
@@ -178,7 +178,7 @@ export const SecurityOverview = ({ onViewAllErrors }: SecurityOverviewProps) => 
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">PHI Accesses</CardTitle>

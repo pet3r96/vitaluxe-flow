@@ -2,9 +2,9 @@ import { PharmacyShippingManager } from "@/components/pharmacies/PharmacyShippin
 
 const PharmacyShipping = () => {
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Shipping Management</h1>
+    <div className="patient-container">
+      <div className="mb-8">
+        <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">Shipping Management</h1>
         <p className="text-muted-foreground mt-2">
           Process orders, download prescriptions, and manage shipments
         </p>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,9 @@ import { DiscountCodeInput } from "@/components/orders/DiscountCodeInput";
 import { ShippingSpeedSelector } from "@/components/cart/ShippingSpeedSelector";
 import { Separator } from "@/components/ui/separator";
 import { useMerchantFee } from "@/hooks/useMerchantFee";
+import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Cart() {
   const { effectiveUserId, user } = useAuth();
@@ -21,6 +24,11 @@ export default function Cart() {
   const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const { feePercentage, calculateMerchantFee } = useMerchantFee();
+  const { canOrder, isLoading: checkingPrivileges, isStaffAccount } = useStaffOrderingPrivileges();
+
+  // Staff without ordering privileges cannot access cart - compute flags only (avoid early return before hooks)
+  const showStaffLoading = checkingPrivileges && isStaffAccount;
+  const showStaffNoAccess = isStaffAccount && !canOrder;
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -38,13 +46,13 @@ export default function Cart() {
       const { data: lines, error: linesError } = await supabase
         .from("cart_lines")
         .select(`
-          *,
-          product:products(name, dosage, image_url),
-          provider:providers(
-            id,
-            user_id,
-            profiles(name, npi, dea)
-          )
+        *,
+        product:products(name, dosage, image_url),
+        provider:providers(
+          id,
+          user_id,
+          profiles!providers_user_id_fkey(name, npi, dea)
+        )
         `)
         .eq("cart_id", cartData.id)
         .gte("expires_at", new Date().toISOString());
@@ -54,10 +62,40 @@ export default function Cart() {
       return { id: cartData.id, lines: lines || [] };
     },
     enabled: !!effectiveUserId,
-    staleTime: 0, // Always consider data stale for immediate refetch
+    staleTime: 0, // Always fresh - we rely on realtime updates
     refetchOnMount: true,
-    refetchOnWindowFocus: true, // Refetch when tab gains focus
+    refetchOnWindowFocus: true,
   });
+
+  // Realtime subscription for instant cart updates
+  useEffect(() => {
+    if (!effectiveUserId || !cart?.id) return;
+
+    console.log('Setting up realtime subscription for cart:', cart.id);
+
+    const channel = supabase
+      .channel('cart-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'cart_lines',
+          filter: `cart_id=eq.${cart.id}`
+        },
+        (payload) => {
+          console.log('Cart realtime update received:', payload);
+          // Instantly invalidate and refetch cart data
+          queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up cart realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveUserId, cart?.id, queryClient]);
 
   const removeMutation = useMutation({
     mutationFn: async (lineId: string) => {
@@ -191,6 +229,36 @@ export default function Cart() {
     return calculateTotal() + shippingPreview + merchantFee;
   }, [calculateTotal, shippingPreview, merchantFee]);
 
+  if (showStaffLoading) {
+    return (
+      <div className="patient-container">
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    );
+  }
+
+  if (showStaffNoAccess) {
+    return (
+      <div className="patient-container">
+        <Card className="patient-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+              <ShoppingCart className="h-6 w-6" />
+              Cart
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>
+                You don't have permission to place orders. Please contact your practice administrator to request ordering privileges.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -200,19 +268,19 @@ export default function Cart() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Cart</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+    <div className="patient-container">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="text-center sm:text-left w-full sm:w-auto">
+          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">My Cart</h1>
+          <p className="text-muted-foreground">
             Review and manage your cart items
           </p>
         </div>
-        <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+        <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 text-primary hidden sm:block" />
       </div>
 
       {isEmpty ? (
-        <Card>
+        <Card className="patient-card">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Your cart is empty</h3>
@@ -222,9 +290,9 @@ export default function Cart() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {patientGroups.map((group: any, groupIndex: number) => (
-            <Card key={`group-${group.patient_id || groupIndex}`} className="overflow-hidden">
+            <Card key={`group-${group.patient_id || groupIndex}`} className="patient-card overflow-hidden">
               <CardHeader className="bg-muted/50 p-4">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Package className="h-5 w-5" />
@@ -254,9 +322,9 @@ export default function Cart() {
                         {line.product?.dosage}
                       </p>
                       {isExpiringSoon && expiresAt && (
-                        <div className="flex items-center gap-2 mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded border border-yellow-200 dark:border-yellow-800">
-                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                          <span className="text-xs text-yellow-700 dark:text-yellow-400">
+                        <div className="flex items-center gap-2 mt-2 p-2 bg-gold1/10 rounded border border-gold1/30">
+                          <AlertTriangle className="h-4 w-4 text-gold1" />
+                          <span className="text-xs text-gold1">
                             This cart item will expire {formatDistanceToNow(expiresAt, { addSuffix: true })}
                           </span>
                         </div>
@@ -276,9 +344,9 @@ export default function Cart() {
                         </div>
                       )}
                       {line.order_notes && (
-                        <div className="text-xs sm:text-sm mt-2 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
-                          <span className="font-medium text-amber-700 dark:text-amber-300">Notes:</span>
-                          <p className="text-amber-600 dark:text-amber-400 mt-1">{line.order_notes}</p>
+                        <div className="text-xs sm:text-sm mt-2 bg-gold1/10 p-2 rounded border border-gold1/30">
+                          <span className="font-medium text-gold1">Notes:</span>
+                          <p className="text-gold1 mt-1">{line.order_notes}</p>
                         </div>
                       )}
                       {line.prescription_url && (

@@ -8,6 +8,50 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to get practice logo URL and name
+async function getPracticeBranding(supabase: any, userId: string): Promise<{ logoUrl: string | null; practiceName: string | null }> {
+  try {
+    // Get practice_id (user might be practice owner or provider)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, company')
+      .eq('id', userId)
+      .single();
+
+    if (!profile) return { logoUrl: null, practiceName: null };
+
+    // Get practice branding
+    const { data: branding } = await supabase
+      .from('practice_branding')
+      .select('logo_url, practice_name')
+      .eq('practice_id', profile.id)
+      .maybeSingle();
+
+    const practiceName = branding?.practice_name || profile.company || 'VITALUXE SERVICES LLC';
+    return { 
+      logoUrl: branding?.logo_url || null,
+      practiceName 
+    };
+  } catch (error) {
+    console.warn('Failed to get practice branding:', error);
+    return { logoUrl: null, practiceName: 'VITALUXE SERVICES LLC' };
+  }
+}
+
+// Helper function to fetch logo as base64
+async function fetchLogoAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    return base64;
+  } catch (error) {
+    console.warn('Failed to fetch logo:', error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -77,15 +121,41 @@ serve(async (req) => {
       }
     }
 
-    // Fetch terms content
-    const { data: terms, error: termsError } = await supabase
-      .from('terms_and_conditions')
+    // Fetch terms content from patient or staff tables
+    let terms: any = null;
+    let isPatientTerms = false;
+
+    // Try patient terms first
+    const patientTermsRes = await supabase
+      .from('patient_portal_terms')
       .select('*')
       .eq('id', terms_id)
-      .single();
+      .maybeSingle();
 
-    if (termsError || !terms) {
-      throw new Error('Terms not found');
+    if (patientTermsRes.data) {
+      terms = patientTermsRes.data;
+      isPatientTerms = true;
+    } else {
+      // Fallback to staff/provider terms
+      const staffTermsRes = await supabase
+        .from('terms_and_conditions')
+        .select('*')
+        .eq('id', terms_id)
+        .maybeSingle();
+
+      if (staffTermsRes.error) {
+        console.error('Error fetching terms:', staffTermsRes.error);
+      }
+      terms = staffTermsRes.data;
+      isPatientTerms = false;
+    }
+
+    if (!terms) {
+      console.error('Terms not found for ID:', terms_id);
+      return new Response(
+        JSON.stringify({ error: 'Terms not found', details: { terms_id } }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Fetch user profile for the target user
@@ -115,13 +185,29 @@ serve(async (req) => {
       doc.text(`Document Version ${terms.version}`, 7.95, 10.5, { align: 'right' });
     };
 
-    // Professional Header
+    // Professional Header with Logo
+    const { logoUrl, practiceName } = await getPracticeBranding(supabase, user.id);
+    const logoBase64 = logoUrl ? await fetchLogoAsBase64(logoUrl) : null;
+    
     doc.setFillColor(200, 166, 75); // Gold color
     doc.rect(0, 0, 8.5, 1, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('VITALUXE SERVICES LLC', 4.25, 0.65, { align: 'center' });
+    
+    if (logoBase64) {
+      try {
+        // Add logo on left side of header
+        doc.addImage(logoBase64, 'PNG', 0.5, 0.25, 0.5, 0.5);
+      } catch (e) {
+        console.warn('Failed to add logo to PDF:', e);
+      }
+    }
+    
+    // Only display practice name if it exists
+    if (practiceName) {
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text(practiceName, 4.25, 0.65, { align: 'center' });
+    }
 
     // Document Title with Border
     doc.setDrawColor(200, 166, 75);
@@ -382,8 +468,8 @@ serve(async (req) => {
     doc.text(`Email:`, 1.25, infoY + 0.55);
     doc.text(`${profile?.email}`, 2.5, infoY + 0.55);
     
-    doc.text(`Role:`, 1.25, infoY + 0.8);
-    doc.text(`${terms.role.charAt(0).toUpperCase() + terms.role.slice(1)}`, 2.5, infoY + 0.8);
+    doc.text(`Document Version:`, 1.25, infoY + 0.8);
+    doc.text(`${terms.version}`, 2.5, infoY + 0.8);
 
     // Acceptance metadata
     doc.setFontSize(9);
@@ -476,30 +562,87 @@ serve(async (req) => {
       console.log('Terms PDF uploaded to Supabase Storage:', fileName);
     }
 
-    // Record acceptance in database (for target user)
-    // Use upsert to handle cases where user re-accepts terms
-    const { data: acceptance, error: acceptanceError } = await supabase
-      .from('user_terms_acceptances')
-      .upsert({
-        user_id: targetUserId,
-        terms_id: terms.id,
-        role: terms.role,
-        terms_version: terms.version,
-        signature_name,
-        signed_pdf_url: fileName,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        accepted_at: new Date().toISOString() // Explicitly update timestamp
-      }, {
-        onConflict: 'user_id,terms_id', // Handle duplicate key constraint
-        ignoreDuplicates: false // Update existing records
-      })
-      .select()
-      .single();
+    // Record acceptance based on which terms table matched
+    let acceptance: any;
+    let acceptanceError: any;
+
+    if (isPatientTerms) {
+      console.log('Recording patient terms acceptance for user:', targetUserId);
+      const result = await supabase
+        .from('patient_terms_acceptances')
+        .upsert(
+          {
+            user_id: targetUserId,
+            terms_id: terms.id,
+            terms_version: terms.version,
+            signature_name,
+            signed_pdf_url: fileName,
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            accepted_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_id,terms_id',
+            ignoreDuplicates: false,
+          },
+        )
+        .select()
+        .single();
+
+      acceptance = result.data;
+      acceptanceError = result.error;
+    } else {
+      console.log('Recording provider/staff terms acceptance for user:', targetUserId);
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+
+      // Never write 'patient' into app_role enum for this table
+      const rawRole = roleData?.role;
+      const userRole = rawRole === 'patient' ? 'provider' : (rawRole || 'provider');
+
+      const result = await supabase
+        .from('user_terms_acceptances')
+        .upsert(
+          {
+            user_id: targetUserId,
+            terms_id: terms.id,
+            role: userRole,
+            terms_version: terms.version,
+            signature_name,
+            signed_pdf_url: fileName,
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            accepted_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_id,terms_id',
+            ignoreDuplicates: false,
+          },
+        )
+        .select()
+        .single();
+
+      acceptance = result.data;
+      acceptanceError = result.error;
+    }
 
     if (acceptanceError) {
       console.error('Acceptance error:', acceptanceError);
-      throw new Error('Failed to record acceptance');
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to record acceptance',
+          details: {
+            message: acceptanceError.message,
+            code: acceptanceError.code,
+            hint: acceptanceError.hint,
+            table: isPatientTerms ? 'patient_terms_acceptances' : 'user_terms_acceptances',
+          },
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
 
     // Update user_password_status (for target user) - using UPSERT to handle missing rows
@@ -552,10 +695,13 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: 'An error occurred processing the request' }),
+      JSON.stringify({
+        error: error?.message || 'An error occurred processing the request',
+        details: error?.stack || null,
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
+        status: 400,
       }
     );
   }

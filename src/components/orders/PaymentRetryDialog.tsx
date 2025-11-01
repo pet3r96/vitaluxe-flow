@@ -38,25 +38,32 @@ export const PaymentRetryDialog = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectivePracticeId, isStaffAccount, isProviderAccount, user } = useAuth();
   const [retryPaymentMethodId, setRetryPaymentMethodId] = useState<string>("");
+  
+  // Use practice context for payment methods (same logic as Checkout)
+  const practiceIdForPayment = (isStaffAccount || isProviderAccount) ? effectivePracticeId : effectiveUserId;
 
-  // Fetch payment methods
+  // Fetch payment methods - include practice + personal cards for staff/providers
   const { data: paymentMethods } = useQuery({
-    queryKey: ["payment-methods", effectiveUserId],
+    queryKey: ["payment-methods", practiceIdForPayment, user?.id, open],
     queryFn: async () => {
-    const { data, error } = await supabase
-      .from("practice_payment_methods")
-      .select("*")
-      .eq("practice_id", effectiveUserId)
-      .neq("status", "declined")
-      .neq("status", "removed")
-      .order("is_default", { ascending: false });
+      const practiceIds = (isStaffAccount || isProviderAccount)
+        ? [practiceIdForPayment, user?.id].filter(Boolean)
+        : [practiceIdForPayment];
+
+      const { data, error } = await supabase
+        .from("practice_payment_methods")
+        .select("*")
+        .in("practice_id", practiceIds)
+        .eq("payment_type", "credit_card")
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as PaymentMethod[];
     },
-    enabled: !!effectiveUserId && open,
+    enabled: !!practiceIdForPayment && open,
   });
 
   const retryPaymentMutation = useMutation({
@@ -185,34 +192,40 @@ export const PaymentRetryDialog = ({
             <Label>Choose a different payment method:</Label>
             {paymentMethods && paymentMethods.length > 0 ? (
               <RadioGroup value={retryPaymentMethodId} onValueChange={setRetryPaymentMethodId}>
-                {paymentMethods.map(method => (
-                  <div key={method.id} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer">
-                    <RadioGroupItem value={method.id} id={method.id} />
-                    <Label htmlFor={method.id} className="flex-1 cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {method.payment_type === 'credit_card' ? (
-                            <>
-                              <CreditCard className="h-4 w-4" />
-                              <span className="font-medium">{method.card_type} •••• {method.card_last_five}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Building2 className="h-4 w-4" />
-                              <span className="font-medium">{method.bank_name} {method.account_type} •••• {method.account_last_five}</span>
-                            </>
-                          )}
-                          {method.is_default && (
-                            <Badge variant="secondary" className="text-xs">Default</Badge>
+                {paymentMethods.map(method => {
+                  const isDisabled = method.status && method.status !== 'active';
+                  return (
+                    <div key={method.id} className={`flex items-center space-x-2 p-3 border rounded-lg ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-accent/50 cursor-pointer'}`}>
+                      <RadioGroupItem value={method.id} id={method.id} disabled={isDisabled} />
+                      <Label htmlFor={method.id} className={`flex-1 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {method.payment_type === 'credit_card' ? (
+                              <>
+                                <CreditCard className="h-4 w-4" />
+                                <span className="font-medium">{method.card_type} •••• {method.card_last_five}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Building2 className="h-4 w-4" />
+                                <span className="font-medium">{method.bank_name} {method.account_type} •••• {method.account_last_five}</span>
+                              </>
+                            )}
+                            {method.is_default && (
+                              <Badge variant="secondary" className="text-xs">Default</Badge>
+                            )}
+                            {method.status && method.status !== 'active' && (
+                              <Badge variant="destructive" className="text-xs capitalize">{method.status}</Badge>
+                            )}
+                          </div>
+                          {method.payment_type === 'credit_card' && (
+                            <span className="text-xs text-muted-foreground">Exp: {method.card_expiry}</span>
                           )}
                         </div>
-                        {method.payment_type === 'credit_card' && (
-                          <span className="text-xs text-muted-foreground">Exp: {method.card_expiry}</span>
-                        )}
-                      </div>
-                    </Label>
-                  </div>
-                ))}
+                      </Label>
+                    </div>
+                  );
+                })}
               </RadioGroup>
             ) : (
               <Alert>

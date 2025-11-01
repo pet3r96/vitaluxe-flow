@@ -52,7 +52,7 @@ export const PatientSelectionDialog = ({
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<'details' | 'prescription'>('details');
-  const [shipTo, setShipTo] = useState<'patient' | 'practice'>('patient');
+  const [shipTo, setShipTo] = useState<'patient' | 'practice'>(effectiveRole === 'staff' ? 'practice' : 'patient');
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -73,13 +73,21 @@ export const PatientSelectionDialog = ({
       if (!effectivePracticeId) return [];
       
       const { data, error } = await supabase
-        .from("patients" as any)
+        .from("patient_accounts" as any)
         .select("*")
         .eq("practice_id", effectivePracticeId)
         .order("name");
 
       if (error) throw error;
-      return data as any[] || [];
+      
+      // Filter out patients with incomplete data that would cause cart errors
+      const validPatients = (data as any[] || []).filter((patient: any) => {
+        const hasEmail = !!patient.email;
+        const hasId = !!patient.id;
+        return hasEmail && hasId;
+      });
+      
+      return validPatients;
     },
     enabled: open && !!effectivePracticeId,
   });
@@ -90,40 +98,45 @@ export const PatientSelectionDialog = ({
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       
-      // Step 1: Fetch providers for this practice
-      const { data: providerRows, error: providerError } = await supabase
-        .from("providers" as any)
-        .select("id, user_id, active, created_at")
+      // Step 1: Get provider records
+      const { data: providerRecords, error: providerError } = await supabase
+        .from("providers")
+        .select("id, user_id, active")
         .eq("practice_id", effectivePracticeId)
-        .eq("active", true)
-        .order("created_at", { ascending: false });
+        .eq("active", true);
       
       if (providerError) throw providerError;
-      if (!providerRows || providerRows.length === 0) return [];
-      
-      // Step 2: Fetch profiles for these providers
-      const userIds = providerRows.map((p: any) => p.user_id);
-      const { data: profileRows, error: profilesError } = await supabase
+      if (!providerRecords || providerRecords.length === 0) return [];
+
+      // Step 2: Get profiles for those provider user accounts
+      const userIds = providerRecords.map((p: any) => p.user_id);
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, full_name, company, name, npi, dea")
+        .select("id, name, full_name, npi, dea")
         .in("id", userIds);
       
       if (profilesError) throw profilesError;
-      
-      // Step 3: Map the data together
-      const mappedData = providerRows.map((p: any) => {
-        const profile = profileRows?.find((pr: any) => pr.id === p.user_id);
+
+      // Map profiles by id
+      const profilesById = new Map(
+        (profiles || []).map((prof: any) => [prof.id, prof])
+      );
+
+      // Combine provider + profile data
+      const mappedData = providerRecords.map((p: any) => {
+        const profile = profilesById.get(p.user_id);
+        const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
+        
         return {
           id: p.id,
           user_id: p.user_id,
-          prescriber_name: profile?.full_name || 
-                           profile?.company || 
-                           profile?.name?.split('@')[0] || 
-                           'Unknown Provider',
+          prescriber_name: displayName,
+          specialty: '',
           npi: profile?.npi || '',
           dea: profile?.dea || ''
         };
       });
+      
       return mappedData;
     },
     enabled: open && !!effectivePracticeId
@@ -136,17 +149,19 @@ export const PatientSelectionDialog = ({
     // For providers: find their own provider record
     if (effectiveRole === "provider" && effectiveUserId) {
       const matchingProvider = providers.find((p: any) => p.user_id === effectiveUserId);
-      if (matchingProvider && matchingProvider.id !== selectedProviderId) {
+      if (matchingProvider) {
         setSelectedProviderId(matchingProvider.id);
       }
     }
-    // For doctors: auto-select if only one provider, otherwise leave null for manual selection
-    else if (effectiveRole === "doctor") {
-      if (providers.length === 1 && !selectedProviderId) {
-        setSelectedProviderId(providers[0].id);
-      }
+    // For doctors and staff: auto-select if only one provider
+    else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length === 1) {
+      setSelectedProviderId(providers[0].id);
     }
-  }, [open, providers, effectiveRole, effectiveUserId, selectedProviderId]);
+    // For doctors/staff with multiple providers: don't auto-select, let them choose
+    else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length > 1 && !selectedProviderId) {
+      setSelectedProviderId(null);
+    }
+  }, [open, providers, effectiveRole, effectiveUserId]);
 
   // Fetch provider details for prescription writer
   const { data: selectedProviderData } = useQuery({
@@ -154,30 +169,23 @@ export const PatientSelectionDialog = ({
     queryFn: async () => {
       if (!selectedProviderId) return null;
       
-      // Step 1: Fetch provider to get user_id
-      const { data: provider, error: providerError } = await supabase
+      const { data, error } = await supabase
         .from("providers")
-        .select("id, user_id")
+        .select(`
+          id,
+          profiles!providers_user_id_fkey!inner(
+            id,
+            name,
+            npi,
+            dea,
+            license_number
+          )
+        `)
         .eq("id", selectedProviderId)
-        .maybeSingle();
+        .single();
       
-      if (providerError) throw providerError;
-      if (!provider) return null;
-      
-      // Step 2: Fetch their profile
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, name, npi, dea, license_number")
-        .eq("id", provider.user_id)
-        .maybeSingle();
-      
-      if (profileError) throw profileError;
-      
-      // Return in the expected format
-      return {
-        id: provider.id,
-        profiles: profile
-      };
+      if (error) throw error;
+      return data;
     },
     enabled: !!selectedProviderId && currentStep === 'prescription' && prescriptionMethod === 'written'
   });
@@ -459,27 +467,32 @@ export const PatientSelectionDialog = ({
           {/* PAGE 1: Details Section */}
           {currentStep === 'details' && (
             <>
-              {/* Provider Selection for Practices */}
-              {effectiveRole === "doctor" && providers && providers.length > 0 && (
+              {/* Provider Selection */}
+              {providers && providers.length > 0 && (
                 <div className="grid gap-3 pb-4 border-b">
                   <Label className="text-base font-semibold">Select Provider *</Label>
                   {providers.length === 1 ? (
-                    <div className="p-3 border rounded-md bg-muted">
+                   <div className="p-3 border rounded-md bg-muted">
                       <p className="text-sm font-medium">{providers[0].prescriber_name}</p>
-                      {providers[0].npi && (
-                        <p className="text-xs text-muted-foreground">Provider NPI: {providers[0].npi}</p>
-                      )}
+                      <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                        {providers[0].specialty && <p>Specialty: {providers[0].specialty}</p>}
+                        {providers[0].npi && <p>NPI: {providers[0].npi}</p>}
+                      </div>
                     </div>
                   ) : (
-                    <RadioGroup value={selectedProviderId || ""} onValueChange={setSelectedProviderId}>
+                    <RadioGroup value={selectedProviderId || ""} onValueChange={(value) => {
+                      console.log('[PatientSelectionDialog] Provider selected:', value);
+                      setSelectedProviderId(value);
+                    }}>
                       {providers.map((provider: any) => (
-                        <div key={provider.id} className="flex items-center space-x-2 p-2 border rounded-md">
+                        <div key={provider.id} className="flex items-center space-x-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer" onClick={() => setSelectedProviderId(provider.id)}>
                           <RadioGroupItem value={provider.id} id={provider.id} />
                           <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
-                            <span className="font-medium">{provider.prescriber_name}</span>
-                            {provider.npi && (
-                              <span className="text-xs text-muted-foreground ml-2">NPI: {provider.npi}</span>
-                            )}
+                            <div className="font-medium">{provider.prescriber_name}</div>
+                            <div className="text-xs text-muted-foreground space-x-2 mt-0.5">
+                              {provider.specialty && <span>• {provider.specialty}</span>}
+                              {provider.npi && <span>• NPI: {provider.npi}</span>}
+                            </div>
                           </Label>
                         </div>
                       ))}
@@ -654,11 +667,11 @@ export const PatientSelectionDialog = ({
 
                 {/* Show upload input if upload method selected - Only for RX Required */}
                 {product?.requires_prescription && prescriptionMethod === 'upload' && (
-                    <div className="space-y-3 p-4 border-2 border-orange-300 rounded-lg bg-orange-50/50">
+                    <div className="space-y-3 p-4 border-2 border-gold1/30 rounded-lg bg-gold1/10">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <AlertCircle className="h-5 w-5 text-gold1 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <Label className="text-base font-semibold text-orange-900">
+                          <Label className="text-base font-semibold text-gold1">
                             Upload Prescription File
                           </Label>
                           <p className="text-sm text-orange-700 mt-1">
@@ -713,7 +726,7 @@ export const PatientSelectionDialog = ({
                             type="button"
                             variant="outline"
                             onClick={() => document.getElementById("prescription-upload")?.click()}
-                            className="w-full border-orange-300 hover:bg-orange-50"
+                            className="w-full border-gold1/30 hover:bg-gold1/10"
                           >
                             <Upload className="h-4 w-4 mr-2" />
                             Upload Prescription (PDF or PNG)

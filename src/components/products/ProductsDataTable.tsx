@@ -368,15 +368,27 @@ export const ProductsDataTable = () => {
 
         if (error) throw error;
       } else {
-        // Patient order - get patient with ALL address fields
-        const { data: patient } = await supabase
-          .from("patients")
-          .select("name, email, phone, address, address_formatted, address_street, address_city, address_state, address_zip")
+        // Patient order - fetch from patient_accounts table (patientId is patient_accounts.id from dialog)
+        const { data: patientRecord, error: patientError } = await supabase
+          .from("patient_accounts")
+          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id")
           .eq("id", patientId!)
           .single();
+        
+        if (patientError || !patientRecord) {
+          console.error("Failed to fetch patient:", patientError);
+          toast.error("Unable to find patient information. Please refresh and try again.");
+          return;
+        }
 
-        // Use direct state field from Google Address (no parsing needed)
-        const destinationState = patient?.address_state || '';
+        // Validate patient has required data
+        if (!patientRecord.email) {
+          toast.error("Patient email is required. Please update the patient record before adding to cart.");
+          return;
+        }
+
+        // Use state from patients table
+        const destinationState = patientRecord.address_state || '';
 
         if (!isValidStateCode(destinationState)) {
           toast.error(
@@ -420,23 +432,31 @@ export const ProductsDataTable = () => {
           return;
         }
 
-        // Build formatted address for display
-        const patientAddress = patient?.address_formatted ||
-          (patient?.address_street && patient?.address_city && patient?.address_state && patient?.address_zip
-            ? `${patient.address_street}, ${patient.address_city}, ${patient.address_state} ${patient.address_zip}`
-            : patient?.address || null);
+        // Validate patient address completeness - all 4 fields required
+        const hasCompleteAddress = !!(
+          patientRecord.address_street && 
+          patientRecord.address_city && 
+          patientRecord.address_state && 
+          patientRecord.address_zip
+        );
 
         const { error } = await supabase
           .from("cart_lines" as any)
           .insert({
             cart_id: cart.id,
             product_id: productForCart.id,
-            patient_id: patientId,
+            patient_id: patientRecord.id, // Use patient_accounts.id for foreign key
             provider_id: actualProviderId,
-            patient_name: patient?.name || "Unknown",
-            patient_email: patient?.email,
-            patient_phone: patient?.phone,
-            patient_address: patientAddress,
+            patient_name: patientRecord.name || "Unknown",
+            patient_email: patientRecord.email,
+            patient_phone: patientRecord.phone,
+            patient_address: null, // Clear legacy field
+            patient_address_street: patientRecord.address_street || null,
+            patient_address_city: patientRecord.address_city || null,
+            patient_address_state: patientRecord.address_state || null,
+            patient_address_zip: patientRecord.address_zip || null,
+            patient_address_validated: hasCompleteAddress,
+            patient_address_validation_source: hasCompleteAddress ? 'patient_record' : null,
             quantity: quantity,
             price_snapshot: correctPrice,
             destination_state: destinationState,
@@ -452,6 +472,14 @@ export const ProductsDataTable = () => {
       }
 
       toast.success("Product added to cart");
+      // Optimistic update: increment count immediately
+      queryClient.setQueryData(
+        ["cart-count", effectiveUserId],
+        (old: number | undefined) => (old || 0) + quantity
+      );
+      // Then refetch to sync with server
+      queryClient.refetchQueries({ queryKey: ["cart-count", effectiveUserId], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ["cart", effectiveUserId], type: 'active' });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error adding to cart", error);

@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Package, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
 
 const RepDashboard = () => {
   const { user, effectiveRole, effectiveUserId } = useAuth();
@@ -10,7 +12,7 @@ const RepDashboard = () => {
   // Get rep ID
   const { data: repData } = useQuery({
     queryKey: ["rep-data", effectiveUserId],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")
@@ -27,7 +29,7 @@ const RepDashboard = () => {
   // Get practice count (only for toplines)
   const { data: practiceCount } = useQuery({
     queryKey: ["rep-practice-count", repData?.id, effectiveUserId, effectiveRole],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!repData?.id || !effectiveUserId) return 0;
       
@@ -77,7 +79,7 @@ const RepDashboard = () => {
   // Get order count (using rep_practice_links for consistency)
   const { data: orderCount } = useQuery({
     queryKey: ["rep-order-count", repData?.id, effectiveUserId, effectiveRole],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!repData?.id || !effectiveUserId) return 0;
       
@@ -148,7 +150,7 @@ const RepDashboard = () => {
   // Get downline count (only for toplines)
   const { data: downlineCount } = useQuery({
     queryKey: ["downline-count", repData?.id],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!repData?.id) return 0;
       
@@ -167,7 +169,7 @@ const RepDashboard = () => {
   // Get profit stats (commissions + practice dev fees for topline)
   const { data: profitStats } = useQuery({
     queryKey: ["rep-profit-stats", repData?.id, effectiveRole],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!repData?.id) return null;
       
@@ -233,7 +235,8 @@ const RepDashboard = () => {
     enabled: !!repData?.id,
   });
 
-  const stats = effectiveRole === 'topline' ? [
+  // Memoize stats array to prevent unnecessary re-renders
+  const stats = useMemo(() => effectiveRole === 'topline' ? [
     {
       title: "My Practices",
       value: practiceCount || 0,
@@ -277,47 +280,47 @@ const RepDashboard = () => {
       icon: Package,
       description: "Orders not yet delivered",
     },
-  ];
+  ], [practiceCount, downlineCount, orderCount, profitStats, effectiveRole]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
+    <div className="patient-container">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">
           {effectiveRole === 'topline' ? 'Topline' : 'Downline'} Dashboard
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">
           Overview of your network and performance
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 mb-6">
+        {stats.map((stat) => (
+          <StatCardWithChart
+            key={stat.title}
+            title={stat.title}
+            metricKey={
+              stat.title === "My Practices" ? "users" :
+              stat.title === "My Downlines" ? "users" :
+              stat.title === "Total Orders" ? "orders" :
+              stat.title === "Total Profit" ? "revenue" :
+              stat.title === "Pending Profit" ? "pending_revenue" :
+              "revenue"
+            }
+            icon={stat.icon}
+            description={stat.description}
+            currentValue={stat.value}
+            role={effectiveRole || "downline"}
+            userId={repData?.id}
+          />
+        ))}
       </div>
 
-      <Card>
+      <Card className="patient-card">
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle className="text-lg sm:text-xl text-primary">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             View detailed reports in the Reports section
           </p>
         </CardContent>

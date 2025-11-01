@@ -107,7 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw passwordError;
     }
 
-    // Mark token as used in the appropriate table
+    // Mark token as used in the appropriate table (one-time use enforcement)
     if (tokenSource === 'temp_password') {
       // For temp_password_tokens, update both 'used' boolean and 'used_at' timestamp
       await supabaseAdmin
@@ -118,10 +118,13 @@ const handler = async (req: Request): Promise<Response> => {
         })
         .eq('token', token);
     } else {
-      // For password_reset_tokens, update only 'used_at' timestamp
+      // For password_reset_tokens, update both 'used' boolean and 'used_at' timestamp
       await supabaseAdmin
         .from('password_reset_tokens')
-        .update({ used_at: new Date().toISOString() })
+        .update({ 
+          used: true,
+          used_at: new Date().toISOString() 
+        })
         .eq('token', token);
     }
 

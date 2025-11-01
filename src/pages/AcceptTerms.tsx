@@ -39,11 +39,30 @@ export default function AcceptTerms() {
     if (!user || !effectiveRole || (effectiveRole === 'admin' && !isImpersonating)) return;
 
     const fetchTerms = async () => {
-      const { data, error } = await supabase
-        .from('terms_and_conditions')
-        .select('*')
-        .eq('role', effectiveRole as any)
-        .maybeSingle();
+      let data: any = null;
+      let error: any = null;
+
+      // Special handling for patients - they use a separate table
+      if (effectiveRole === 'patient') {
+        const res = await supabase
+          .from('patient_portal_terms')
+          .select('*')
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = res.data;
+        error = res.error;
+      } else {
+        const res = await supabase
+          .from('terms_and_conditions')
+          .select('*')
+          .eq('role', effectiveRole as any)
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = res.data;
+        error = res.error;
+      }
 
       if (error) {
         import('@/lib/logger').then(({ logger }) => {
@@ -128,7 +147,12 @@ export default function AcceptTerms() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        const backendError = (data as any)?.error || (error as any)?.message || "Failed to accept terms";
+        const details = (data as any)?.details;
+        toast.error(details ? `${backendError} — ${typeof details === 'string' ? details : JSON.stringify(details)}` : backendError);
+        return;
+      }
 
       if (data.success) {
         // Set session flag to prevent re-prompts in this session
@@ -145,7 +169,10 @@ export default function AcceptTerms() {
         
         navigate("/");
       } else {
-        throw new Error(data.error || "Failed to accept terms");
+        const backendError = (data as any)?.error || "Failed to accept terms";
+        const details = (data as any)?.details;
+        toast.error(details ? `${backendError} — ${typeof details === 'string' ? details : JSON.stringify(details)}` : backendError);
+        return;
       }
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {

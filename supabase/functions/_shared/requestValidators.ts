@@ -126,7 +126,7 @@ export function validateApproveUserRequest(data: any) {
 
 export function validateCreateAccountRequest(data: any) {
   const validations = [
-    validateEnum(data.role, 'role', ['admin', 'doctor', 'provider', 'pharmacy', 'practice', 'topline', 'downline'], true),
+    validateEnum(data.role, 'role', ['admin', 'doctor', 'provider', 'pharmacy', 'practice', 'topline', 'downline', 'staff'], true),
     validateString(data.name, 'name', { required: true, maxLength: 255 }),
     validateEmail(data.email)
   ];
@@ -137,7 +137,7 @@ export function validateCreateAccountRequest(data: any) {
 export function validateAssignRoleRequest(data: any) {
   const validations = [
     validateUUID(data.userId, 'userId'),
-    validateEnum(data.role, 'role', ['admin', 'doctor', 'provider', 'pharmacy', 'practice', 'topline', 'downline'], true),
+    validateEnum(data.role, 'role', ['admin', 'doctor', 'provider', 'pharmacy', 'practice', 'topline', 'downline', 'staff'], true),
     validateString(data.name, 'name', { maxLength: 255 }),
     validateEmail(data.email)
   ];

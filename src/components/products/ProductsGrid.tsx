@@ -12,13 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ShoppingCart } from "lucide-react";
+import { Search, ShoppingCart, Plus } from "lucide-react";
 import { ProductDialog } from "./ProductDialog";
 import { PatientSelectionDialog } from "./PatientSelectionDialog";
 import { ProductCard } from "./ProductCard";
 import { CartSheet } from "./CartSheet";
 import { usePagination } from "@/hooks/usePagination";
 import { useCartCount } from "@/hooks/useCartCount";
+import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
 import { extractStateWithFallback, isValidStateCode } from "@/lib/addressUtils";
@@ -34,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsGrid = () => {
-  const { effectiveRole, effectiveUserId, isImpersonating } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId, isImpersonating } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
@@ -57,6 +58,7 @@ export const ProductsGrid = () => {
   // Only real non-impersonating admins bypass visibility filtering
   const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
 
+  const { canOrder, isStaffAccount } = useStaffOrderingPrivileges();
   const { data: cartCount } = useCartCount(effectiveUserId);
 
   const { data: products, isLoading, refetch } = useQuery({
@@ -406,7 +408,8 @@ export const ProductsGrid = () => {
       }
 
       // ORDER CONTEXT: For providers, resolve practice_id for shipping/routing/profits
-      // (but cart stays linked to provider's user_id above)
+      // For staff, use effectivePracticeId directly for practice context
+      // (but cart stays linked to provider's/staff's user_id above)
       let resolvedDoctorId = effectiveUserId;
       const { data: userRoleData } = await supabase
         .from("user_roles")
@@ -424,6 +427,13 @@ export const ProductsGrid = () => {
         console.debug('[ProductsGrid] Provider detected - using practice context for orders', { 
           provider_user_id: effectiveUserId, 
           practice_id: practiceId 
+        });
+      } else if (userRoleData?.role === 'staff' && effectivePracticeId) {
+        // For staff, use the effectivePracticeId from context
+        resolvedDoctorId = effectivePracticeId;
+        console.debug('[ProductsGrid] Staff detected - using practice context for orders', { 
+          staff_user_id: effectiveUserId, 
+          practice_id: effectivePracticeId 
         });
       }
 
@@ -513,26 +523,112 @@ export const ProductsGrid = () => {
 
         if (error) throw error;
       } else {
-        // Fetch patient with ALL address fields
-        const { data: patient } = await supabase
-          .from("patients")
-          .select("name, email, phone, address, address_formatted, address_street, address_city, address_state, address_zip")
+        // PATIENT ORDER - fetch from patient_accounts table (patientId is patient_accounts.id from dialog)
+        const { data: patientRecord, error: patientError } = await supabase
+          .from("patient_accounts")
+          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id")
           .eq("id", patientId!)
           .single();
 
-        // Use direct state field from Google Address (no parsing needed)
-        const destinationState = patient?.address_state || '';
+        if (patientError || !patientRecord) {
+          console.error("Failed to fetch patient:", patientError);
+          toast.error("Unable to find patient information. Please refresh and try again.");
+          return;
+        }
+
+        // Validate patient has required data
+        if (!patientRecord.email) {
+          toast.error("Patient email is required. Please update the patient record before adding to cart.");
+          return;
+        }
+
+        // Use state from patients table
+        const destinationState = patientRecord.address_state || '';
 
         // Build formatted address for display
-        const patientAddress = patient?.address_formatted ||
-          (patient?.address_street && patient?.address_city && patient?.address_state && patient?.address_zip
-            ? `${patient.address_street}, ${patient.address_city}, ${patient.address_state} ${patient.address_zip}`
-            : patient?.address || null);
+        const patientAddress = patientRecord.address_street && patientRecord.address_city && patientRecord.address_state && patientRecord.address_zip
+            ? `${patientRecord.address_street}, ${patientRecord.address_city}, ${patientRecord.address_state} ${patientRecord.address_zip}`
+            : patientRecord.address_street || null;
+
 
         if (!isValidStateCode(destinationState)) {
-          toast.error(
-            "Patient address is incomplete or invalid. Please update the patient's address with valid state information."
+          // If destination state is invalid/missing, allow adding to cart without routing.
+          // Use placeholder state "XX" to satisfy NOT NULL constraint, will be corrected on Delivery Confirmation
+          console.warn('[ProductsGrid] Missing/invalid patient state. Skipping routing and inserting unassigned line with placeholder state.');
+          const actualProviderId = await getProviderIdFromUserId(providerId);
+          if (!actualProviderId) {
+            toast.error("Unable to find provider record. Please contact support.");
+            return;
+          }
+
+          const { error: insertError } = await supabase
+            .from("cart_lines" as any)
+            .insert({
+              cart_id: cart.id,
+              product_id: productForCart.id,
+              patient_id: patientRecord.id, // Use patient_accounts.id for foreign key
+              provider_id: actualProviderId,
+              patient_name: patientRecord.name || "Unknown",
+              patient_email: patientRecord.email,
+              patient_phone: patientRecord.phone,
+              patient_address: null,
+              patient_address_street: patientRecord.address_street || null,
+              patient_address_city: patientRecord.address_city || null,
+              patient_address_state: patientRecord.address_state || null,
+              patient_address_zip: patientRecord.address_zip || null,
+              patient_address_validated: false,
+              patient_address_validation_source: null,
+              quantity: quantity,
+              price_snapshot: correctPrice,
+              destination_state: 'XX', // Placeholder for missing/invalid state
+              assigned_pharmacy_id: null,
+              prescription_url: prescriptionUrl,
+              custom_sig: customSig,
+              custom_dosage: customDosage,
+              order_notes: orderNotes,
+              prescription_method: prescriptionMethod,
+            });
+
+          if (insertError) throw insertError;
+
+          toast.message("Added to cart", { description: "Please complete patient address on Delivery Confirmation." });
+          // Optimistic update: increment count immediately
+          queryClient.setQueryData(
+            ["cart-count", effectiveUserId],
+            (old: number | undefined) => (old || 0) + quantity
           );
+          queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+          // Optimistically push item into cart cache so CartSheet updates instantly
+          queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
+            const productMeta = {
+              id: productForCart.id,
+              name: productForCart.name,
+              dosage: (productForCart as any).dosage,
+              image_url: (productForCart as any).image_url,
+            };
+            const optimisticItem = {
+              id: `temp_${Date.now()}`,
+              cart_id: cart.id,
+              product_id: productForCart.id,
+              product: productMeta,
+              patient_name: patientRecord.name || 'Unknown',
+              quantity,
+              price_snapshot: correctPrice,
+              destination_state: 'XX',
+              created_at: new Date().toISOString(),
+            };
+            if (!old) {
+              return { cartId: cart.id, items: [optimisticItem] };
+            }
+            if (old.items) {
+              return { ...old, items: [...old.items, optimisticItem] };
+            }
+            if (old.lines) {
+              return { ...old, lines: [...old.lines, optimisticItem] };
+            }
+            return old;
+          });
+          queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
           return;
         }
 
@@ -574,17 +670,31 @@ export const ProductsGrid = () => {
         // Success - pharmacy found, proceed with insertion
         console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
 
+        // Validate patient address completeness - all 4 fields required
+        const hasCompleteAddress = !!(
+          patientRecord.address_street && 
+          patientRecord.address_city && 
+          patientRecord.address_state && 
+          patientRecord.address_zip
+        );
+
         const { error } = await supabase
           .from("cart_lines" as any)
           .insert({
             cart_id: cart.id,
             product_id: productForCart.id,
-            patient_id: patientId,
+            patient_id: patientRecord.id, // Use patients.id for foreign key
             provider_id: actualProviderId,
-            patient_name: patient?.name || "Unknown",
-            patient_email: patient?.email,
-            patient_phone: patient?.phone,
-            patient_address: patientAddress,
+            patient_name: patientRecord.name || "Unknown",
+            patient_email: patientRecord.email,
+            patient_phone: patientRecord.phone,
+            patient_address: null, // Clear legacy field
+            patient_address_street: patientRecord.address_street || null,
+            patient_address_city: patientRecord.address_city || null,
+            patient_address_state: patientRecord.address_state || null,
+            patient_address_zip: patientRecord.address_zip || null,
+            patient_address_validated: hasCompleteAddress,
+            patient_address_validation_source: hasCompleteAddress ? 'patient_record' : null,
             quantity: quantity,
             price_snapshot: correctPrice,
             destination_state: destinationState,
@@ -600,8 +710,45 @@ export const ProductsGrid = () => {
       }
 
       toast.success("Product added to cart");
-      queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
-      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+      // Optimistic update: increment count immediately
+      queryClient.setQueryData(
+        ["cart-count", effectiveUserId],
+        (old: number | undefined) => (old || 0) + quantity
+      );
+      // Optimistic update: push item into cart cache for instant UI
+      queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
+        const patientName = 'Practice Order';
+        const productMeta = {
+          id: productForCart.id,
+          name: productForCart.name,
+          dosage: (productForCart as any).dosage,
+          image_url: (productForCart as any).image_url,
+        };
+        const optimisticItem = {
+          id: `temp_${Date.now()}`,
+          cart_id: cart.id,
+          product_id: productForCart.id,
+          product: productMeta,
+          patient_name: patientName,
+          quantity,
+          price_snapshot: correctPrice,
+          destination_state: 'XX',
+          created_at: new Date().toISOString(),
+        };
+        if (!old) {
+          return { cartId: cart.id, items: [optimisticItem] };
+        }
+        if (old.items) {
+          return { ...old, items: [...old.items, optimisticItem] };
+        }
+        if (old.lines) {
+          return { ...old, lines: [...old.lines, optimisticItem] };
+        }
+        return old;
+      });
+      // Then refetch to sync with server
+      queryClient.refetchQueries({ queryKey: ["cart-count", effectiveUserId], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ["cart", effectiveUserId], type: 'active' });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error adding to cart", error);
@@ -611,17 +758,17 @@ export const ProductsGrid = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex flex-1 gap-3 flex-col sm:flex-row">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
+        <div className="flex flex-1 gap-2 sm:gap-3 flex-col sm:flex-row w-full sm:w-auto">
+          <div className="relative flex-1 max-w-full sm:max-w-sm">
+            <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-8 sm:pl-9 text-sm sm:text-base h-10"
             />
           </div>
           <Select
@@ -659,16 +806,16 @@ export const ProductsGrid = () => {
           </Select>
         </div>
         
-        <div className="flex items-center gap-3">
-          {isProvider && (
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
+          {(isProvider || (isStaffAccount && canOrder)) && (
             <Button
               variant="outline"
-              size="lg"
-              className="relative"
+              size="default"
+              className="relative h-10 px-3 sm:px-4"
               onClick={() => setCartSheetOpen(true)}
             >
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              Cart
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Cart</span>
               {cartCount > 0 && (
                 <Badge
                   variant="destructive"
@@ -682,13 +829,17 @@ export const ProductsGrid = () => {
           
           {isAdmin && (
             <Button
+              size="default"
+              className="h-10 px-3 sm:px-4"
               onClick={() => {
                 setSelectedProduct(null);
                 setIsEditing(false);
                 setDialogOpen(true);
               }}
             >
-              Add Product
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Add Product</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           )}
           
@@ -707,7 +858,7 @@ export const ProductsGrid = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {paginatedProducts?.map((product) => (
               <ProductCard
                 key={product.id}
@@ -717,6 +868,7 @@ export const ProductsGrid = () => {
                 isToplineRep={isToplineRep}
                 isDownlineRep={isDownlineRep}
                 role={effectiveRole}
+                canOrder={canOrder}
                 isHiddenFromDownline={isToplineRep && visibilitySettings?.[product.id] === false}
                 onEdit={(product) => {
                   setSelectedProduct(product);

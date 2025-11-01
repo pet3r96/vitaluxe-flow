@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,55 +60,82 @@ export const PatientDialog = ({
   }>({ allergies: null, notes: null });
 
   useEffect(() => {
-    if (patient) {
-      setFormData({
-        name: patient.name || "",
-        email: patient.email || "",
-        phone: patient.phone || "",
-        birth_date: patient.birth_date || "",
-        allergies: "", // Will be populated by decryption useEffect
-        notes: "", // Will be populated by decryption useEffect
-        address_street: patient.address_street || "",
-        address_city: patient.address_city || "",
-        address_state: patient.address_state || "",
-        address_zip: patient.address_zip || "",
-        address_formatted: patient.address_formatted || "",
-        address_verification_status: patient.address_verification_status || "unverified",
-        address_verification_source: patient.address_verification_source || "",
-      });
-    } else {
-      resetForm();
-    }
-  }, [patient, open]);
-
-  // Decrypt patient PHI when editing existing patient
-  useEffect(() => {
-    const fetchDecryptedPHI = async () => {
-      if (!patient || !open || !patient.id) {
+    const loadPatientData = async () => {
+      if (!patient) {
+        resetForm();
         setDecryptedPHI({ allergies: null, notes: null });
         return;
       }
 
+      // Fetch full patient data if any required fields are missing
+      let fullPatient = patient;
+      if (!patient.birth_date || patient.allergies === undefined || patient.notes === undefined) {
+        try {
+          const { data: fetchedPatient, error } = await supabase
+            .from("patient_accounts")
+            .select("id, name, first_name, last_name, email, phone, birth_date, date_of_birth, allergies, notes, address_street, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
+            .eq("id", patient.id)
+            .single();
+
+          if (error) throw error;
+          if (fetchedPatient) {
+            fullPatient = fetchedPatient;
+          }
+        } catch (error) {
+          console.error('[PatientDialog] Failed to fetch full patient data:', error);
+          toast.error('Failed to load complete patient information');
+        }
+      }
+
+      // Set base fields immediately
+      const birthRaw = fullPatient.birth_date as string | null;
+      let birthFormatted = "";
+      if (birthRaw) {
+        if (typeof birthRaw === "string") {
+          birthFormatted = birthRaw.includes("T")
+            ? birthRaw.split("T")[0]
+            : birthRaw.slice(0, 10);
+        } else {
+          try {
+            birthFormatted = new Date(birthRaw as any).toISOString().split("T")[0];
+          } catch {}
+        }
+      }
+      const baseData = {
+        name: fullPatient.name || "",
+        email: fullPatient.email || "",
+        phone: fullPatient.phone || "",
+        birth_date: birthFormatted,
+        address_street: fullPatient.address_street || "",
+        address_city: fullPatient.address_city || "",
+        address_state: fullPatient.address_state || "",
+        address_zip: fullPatient.address_zip || "",
+        address_formatted: fullPatient.address_formatted || "",
+        address_verification_status: fullPatient.address_verification_status || "unverified",
+        address_verification_source: fullPatient.address_verification_source || "",
+      };
+
       // Check if allergies or notes are encrypted
-      const hasEncryptedData = patient.allergies === '[ENCRYPTED]' || patient.notes === '[ENCRYPTED]';
+      const hasEncryptedData = fullPatient.allergies === '[ENCRYPTED]' || fullPatient.notes === '[ENCRYPTED]';
       
       if (!hasEncryptedData) {
-        // No encryption, use plain text values
+        // No encryption, use plain text values directly
         setDecryptedPHI({
-          allergies: patient.allergies,
-          notes: patient.notes
+          allergies: fullPatient.allergies,
+          notes: fullPatient.notes
         });
-        setFormData(prev => ({
-          ...prev,
-          allergies: patient.allergies || "",
-          notes: patient.notes || ""
-        }));
+        setFormData({
+          ...baseData,
+          allergies: fullPatient.allergies || "",
+          notes: fullPatient.notes || ""
+        });
         return;
       }
 
+      // Encrypted - decrypt first
       try {
         const { data, error } = await supabase.rpc('get_decrypted_patient_phi', {
-          p_patient_id: patient.id
+          p_patient_id: fullPatient.id
         });
 
         if (error) throw error;
@@ -117,21 +145,32 @@ export const PatientDialog = ({
             allergies: data[0].allergies,
             notes: data[0].notes
           });
-
-          // Update formData with decrypted values
-          setFormData(prev => ({
-            ...prev,
+          setFormData({
+            ...baseData,
             allergies: data[0].allergies || "",
             notes: data[0].notes || ""
-          }));
+          });
+        } else {
+          // Fallback to empty if no data
+          setFormData({
+            ...baseData,
+            allergies: "",
+            notes: ""
+          });
         }
       } catch (error) {
         console.error('[PatientDialog] Failed to decrypt patient PHI:', error);
         toast.error('Failed to load patient information');
+        // Fallback to empty on error
+        setFormData({
+          ...baseData,
+          allergies: "",
+          notes: ""
+        });
       }
     };
 
-    fetchDecryptedPHI();
+    loadPatientData();
   }, [patient, open]);
 
   // HIPAA Compliance: Log PHI access when viewing patient with sensitive data
@@ -234,8 +273,15 @@ export const PatientDialog = ({
     setLoading(true);
 
     try {
+      // Parse name into first and last name
+      const nameParts = formData.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       const patientData = {
         name: formData.name,
+        first_name: firstName,
+        last_name: lastName,
         email: formData.email || null,
         phone: formData.phone || null,
         birth_date: formData.birth_date || null,
@@ -252,13 +298,25 @@ export const PatientDialog = ({
       };
 
       if (patient) {
-        // Update existing patient
-        const { error } = await supabase
-          .from("patients")
+        // Update existing patient - CRITICAL: Verify patient.id to prevent cross-patient updates
+        if (!patient.id) {
+          throw new Error("Patient ID is required for updates");
+        }
+
+        console.log('[PatientDialog] Updating patient:', { 
+          patientId: patient.id, 
+          email: patientData.email 
+        });
+
+        const { error, count } = await supabase
+          .from("patient_accounts")
           .update(patientData)
-          .eq("id", patient.id);
+          .eq("id", patient.id)
+          .select();
 
         if (error) throw error;
+        
+        console.log('[PatientDialog] Update affected rows:', count);
         toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient
@@ -268,11 +326,11 @@ export const PatientDialog = ({
         }
         
         const { error } = await supabase
-          .from("patients")
-          .insert({
+          .from("patient_accounts")
+          .insert([{
             ...patientData,
             practice_id: effectivePracticeId,
-          });
+          }]);
 
         if (error) throw error;
         toast.success("✅ Patient added successfully");
@@ -355,24 +413,14 @@ export const PatientDialog = ({
 
               <div className="grid gap-2">
                 <Label htmlFor="phone">Phone (Optional)</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  type="tel"
                   value={formData.phone}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
+                  onChange={(value) => {
                     setFormData({ ...formData, phone: value });
                     setValidationErrors({ ...validationErrors, phone: "" });
                   }}
-                  onBlur={() => {
-                    if (formData.phone) {
-                      const result = validatePhone(formData.phone);
-                      setValidationErrors({ ...validationErrors, phone: result.error || "" });
-                    }
-                  }}
-                  placeholder="1234567890"
-                  maxLength={10}
-                  className={validationErrors.phone ? "border-destructive" : ""}
+                  placeholder="(555) 123-4567"
                 />
                 {validationErrors.phone && (
                   <p className="text-sm text-destructive">{validationErrors.phone}</p>

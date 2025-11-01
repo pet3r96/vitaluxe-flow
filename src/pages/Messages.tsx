@@ -1,17 +1,22 @@
 import { MessagesView } from "@/components/messages/MessagesView";
+import { ResponsivePage } from "@/components/layout/ResponsivePage";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Messages = () => {
+  const { effectiveRole } = useAuth();
+  
+  // Different subtitle based on role
+  const subtitle = (effectiveRole === 'topline' || effectiveRole === 'downline')
+    ? "Contact admin support team"
+    : "Support tickets and order issue communications";
+    
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Messages</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          Manage your support tickets and order issues
-        </p>
-      </div>
-
+    <ResponsivePage
+      title="Messages"
+      subtitle={subtitle}
+    >
       <MessagesView />
-    </div>
+    </ResponsivePage>
   );
 };
 

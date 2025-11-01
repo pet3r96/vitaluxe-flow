@@ -89,7 +89,7 @@ export const AccountDetailsDialog = ({
   // Fetch potential parent options based on role
   const { data: potentialParents } = useQuery({
     queryKey: ["potential-parents", role],
-    staleTime: 0, // Always consider data stale
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!isRep) return [];
 

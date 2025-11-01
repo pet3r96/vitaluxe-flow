@@ -1,9 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { corsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -15,10 +11,11 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
     
+    // If no token provided, return no active session (not an error - just means not authenticated)
     if (!token) {
       return new Response(
-        JSON.stringify({ error: 'Missing or invalid authorization token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ session: null }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -31,9 +28,10 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
       console.error('[get-active-impersonation] Authentication failed:', userError);
+      // Return no session instead of 401 - invalid token just means no active impersonation
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ session: null }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

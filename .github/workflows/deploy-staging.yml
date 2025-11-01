@@ -1,0 +1,101 @@
+name: Deploy Vitaluxe Staging
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_STAGING }}
+      LIGHTSAIL_SERVICE_NAME: ${{ secrets.LIGHTSAIL_SERVICE_NAME_STAGING }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build Docker Image for Staging
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: vitaluxe-staging:latest
+          build-args: |
+            VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: Login & Push to Staging ECR
+        run: |
+          echo "🔐 Logging into ECR..."
+          REGISTRY_URL=$(echo "$ECR_REPOSITORY" | cut -d'/' -f1)
+
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$REGISTRY_URL"
+
+          echo "🏷️ Tagging image..."
+          docker tag vitaluxe-staging:latest "$ECR_REPOSITORY:latest"
+
+          echo "📦 Pushing image to ECR..."
+          docker push "$ECR_REPOSITORY:latest"
+
+      - name: Deploy to Lightsail
+        run: |
+          SERVICE_NAME_CLEAN=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
+
+          echo "🚀 Deploying to Lightsail: $SERVICE_NAME_CLEAN"
+
+          aws lightsail create-container-service-deployment \
+            --service-name "$SERVICE_NAME_CLEAN" \
+            --containers "{
+              \"vitaluxe-staging\": {
+                \"image\": \"${ECR_REPOSITORY}:latest\",
+                \"ports\": {\"8080\": \"HTTP\"}
+              }
+            }" \
+            --public-endpoint "{
+              \"containerName\": \"vitaluxe-staging\",
+              \"containerPort\": 8080
+            }"
+
+      - name: Display Lightsail URL
+        run: |
+          SERVICE_NAME_CLEAN=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
+
+          echo "🔍 Fetching URL..."
+          URL=$(aws lightsail get-container-services \
+            --service-name "$SERVICE_NAME_CLEAN" \
+            --query "containerServices[0].url" \
+            --output text)
+
+          echo "🌍 Staging URL: $URL"

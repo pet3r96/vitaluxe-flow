@@ -3,10 +3,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
 interface AddPracticeRequestDialogProps {
@@ -18,6 +20,9 @@ interface AddPracticeRequestDialogProps {
 export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddPracticeRequestDialogProps) => {
   const { user, effectiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<
+    null | "verifying" | "verified" | "failed"
+  >(null);
   const [validationErrors, setValidationErrors] = useState({
     phone: "",
     npi: "",
@@ -42,6 +47,16 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check NPI verification status BEFORE format validation
+    if (npiVerificationStatus !== "verified") {
+      if (npiVerificationStatus === "verifying") {
+        toast.error("Please wait for NPI verification to complete");
+      } else {
+        toast.error("NPI must be verified before submitting request");
+      }
+      return;
+    }
     
     // Validate all fields
     const phoneResult = validatePhone(formData.phone);
@@ -99,6 +114,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
       toast.success("Practice request submitted for admin approval");
       onSuccess?.();
       onOpenChange(false);
+      setNpiVerificationStatus(null);
       setFormData({
         practice_name: "",
         email: "",
@@ -168,23 +184,15 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  type="tel"
                   value={formData.phone}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
+                  onChange={(value) => {
                     setFormData({ ...formData, phone: value });
                     setValidationErrors({ ...validationErrors, phone: "" });
                   }}
-                  onBlur={() => {
-                    const result = validatePhone(formData.phone);
-                    setValidationErrors({ ...validationErrors, phone: result.error || "" });
-                  }}
-                  placeholder="1234567890"
-                  maxLength={10}
+                  placeholder="(555) 123-4567"
                   required
-                  className={validationErrors.phone ? "border-destructive" : ""}
                 />
                 {validationErrors.phone && (
                   <p className="text-sm text-destructive">{validationErrors.phone}</p>
@@ -198,7 +206,42 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
                     setFormData({ ...formData, npi: value });
-                    setValidationErrors({ ...validationErrors, npi: "" });
+                    setValidationErrors(prev => ({ ...prev, npi: "" }));
+                    
+                    // Reset verification status when NPI changes
+                    if (value.length !== 10) {
+                      setNpiVerificationStatus(null);
+                    } else {
+                      setNpiVerificationStatus("verifying");
+                    }
+                    
+                    // Real-time NPI verification
+                    if (value && value.length === 10) {
+                      verifyNPIDebounced(value, (result) => {
+                        // Only apply result if it matches the CURRENT form value
+                        setFormData(currentFormData => {
+                          if (currentFormData.npi === result.npi) {
+                            if (result.valid) {
+                              setNpiVerificationStatus("verified");
+                              // Show success message for all valid NPIs
+                              if (result.providerName) {
+                                toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                              } else {
+                                // Organization NPIs or NPIs without names
+                                toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
+                              }
+                              if (result.warning) {
+                                toast.info(result.warning);
+                              }
+                            } else if (result.error) {
+                              setNpiVerificationStatus("failed");
+                              setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
+                            }
+                          }
+                          return currentFormData;
+                        });
+                      });
+                    }
                   }}
                   onBlur={() => {
                     const result = validateNPI(formData.npi);
@@ -211,6 +254,15 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 />
                 {validationErrors.npi && (
                   <p className="text-sm text-destructive">{validationErrors.npi}</p>
+                )}
+                {npiVerificationStatus === "verifying" && (
+                  <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
+                )}
+                {npiVerificationStatus === "verified" && (
+                  <p className="text-sm text-green-600">✅ NPI Verified</p>
+                )}
+                {!npiVerificationStatus && formData.npi.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -275,7 +327,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || npiVerificationStatus !== "verified"}>
               {loading ? "Submitting..." : "Submit Request"}
             </Button>
           </DialogFooter>

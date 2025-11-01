@@ -1,0 +1,263 @@
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Send, Circle, Info, AlertCircle, AlertTriangle, UserPlus } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface CreatePatientMessageDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  practiceId: string;
+  onSuccess: () => void;
+}
+
+export function CreatePatientMessageDialog({
+  open,
+  onOpenChange,
+  practiceId,
+  onSuccess
+}: CreatePatientMessageDialogProps) {
+  const { effectiveUserId } = useAuth();
+  
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [urgency, setUrgency] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [sending, setSending] = useState(false);
+
+  // Fetch patients with portal status using view
+  const { data: patients = [], isLoading: isLoadingPatients, refetch: refetchPatients } = useQuery({
+    queryKey: ['practice-patients-portal', practiceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_patients_with_portal_status')
+        .select('patient_id, name, email, phone, has_portal_access, patient_account_id, practice_id')
+        .eq('practice_id', practiceId)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!practiceId
+  });
+
+  // Mutation to create portal account
+  const createPortalAccountMutation = useMutation({
+    mutationFn: async (patientId: string) => {
+      const { data, error } = await supabase.functions.invoke('create-patient-portal-account', {
+        body: { patientId }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Portal account created successfully');
+      refetchPatients();
+    },
+    onError: (error: any) => {
+      console.error('Error creating portal account:', error);
+      toast.error(error.message || 'Failed to create portal account');
+    }
+  });
+
+  const handleSend = async () => {
+    if (!effectiveUserId) {
+      toast.error('Not authorized to send messages. Please refresh and try again.');
+      return;
+    }
+
+    // Validate fields
+    if (!selectedPatient || !subject.trim() || !body.trim()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Check if patient has portal account
+    if (!selectedPatient.patient_account_id) {
+      toast.error('This patient does not have a portal account. Please create one first.');
+      return;
+    }
+
+    setSending(true);
+    try {
+      // Use the edge function with patient_account_id
+      const { data, error } = await supabase.functions.invoke('send-patient-message', {
+        body: {
+          patient_id: selectedPatient.patient_account_id,
+          subject: subject,
+          message: body,
+          sender_type: 'provider',
+          urgency: urgency || 'medium'
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Message sent to patient');
+      onSuccess();
+      handleClose();
+    } catch (error) {
+      console.error('Error sending patient message:', error);
+      toast.error('Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleClose = () => {
+    setSelectedPatient(null);
+    setUrgency('medium');
+    setSubject('');
+    setBody('');
+    onOpenChange(false);
+  };
+
+  const canSend = selectedPatient && subject.trim() && body.trim();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>New Patient Message</DialogTitle>
+          <DialogDescription>
+            Send a message to a patient
+          </DialogDescription>
+        </DialogHeader>
+
+        <ScrollArea className="max-h-[60vh]">
+          <form className="space-y-4 p-1">
+            {/* Patient Selector */}
+            <div className="space-y-2">
+              <Label>Patient *</Label>
+              <Select 
+                value={selectedPatient?.patient_id || ''} 
+                onValueChange={(id) => {
+                  const patient = patients.find((p: any) => p.patient_id === id);
+                  setSelectedPatient(patient || null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a patient" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingPatients ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      Loading patients...
+                    </div>
+                  ) : patients.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      No patients found
+                    </div>
+                  ) : (
+                    patients.map((patient: any) => (
+                      <SelectItem key={patient.patient_id} value={patient.patient_id}>
+                        <div className="flex flex-col">
+                          <span>{patient.name}</span>
+                          {patient.email && (
+                            <span className="text-xs text-muted-foreground">{patient.email}</span>
+                          )}
+                          {!patient.has_portal_access && (
+                            <span className="text-xs text-orange-500">⚠ No portal account</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              
+              {/* Create Portal Account Button */}
+              {selectedPatient && !selectedPatient.has_portal_access && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => createPortalAccountMutation.mutate(selectedPatient.patient_id)}
+                  disabled={createPortalAccountMutation.isPending}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {createPortalAccountMutation.isPending ? 'Creating...' : 'Create Portal Account'}
+                </Button>
+              )}
+            </div>
+
+            {/* Priority/Urgency */}
+            <div className="space-y-2">
+              <Label>Urgency</Label>
+              <Select value={urgency} onValueChange={(v: any) => setUrgency(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">
+                    <div className="flex items-center gap-2">
+                      <Circle className="h-4 w-4 text-gray-500" />
+                      Low
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-blue-500" />
+                      Medium
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-orange-500" />
+                      High
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="urgent">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      Urgent
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Subject */}
+            <div className="space-y-2">
+              <Label>Subject *</Label>
+              <Input
+                placeholder="Enter message subject..."
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+
+            {/* Message Body */}
+            <div className="space-y-2">
+              <Label>Message *</Label>
+              <Textarea
+                placeholder="Type your message here..."
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={6}
+              />
+            </div>
+          </form>
+        </ScrollArea>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSend} disabled={!canSend || sending}>
+            <Send className="mr-2 h-4 w-4" />
+            {sending ? 'Sending...' : 'Send Message'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

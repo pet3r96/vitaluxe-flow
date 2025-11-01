@@ -16,14 +16,17 @@ import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
-type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy';
+type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy' | 'subscription' | 'patient' | 'staff';
 
 const ROLE_LABELS: Record<AppRole, string> = {
   doctor: 'Practice',
   provider: 'Provider',
   topline: 'Topline Rep',
   downline: 'Downline Rep',
-  pharmacy: 'Pharmacy'
+  pharmacy: 'Pharmacy',
+  subscription: 'VitaLuxePro Subscription',
+  patient: 'Patient Portal',
+  staff: 'Practice Staff'
 };
 
 export default function AdminTermsManagement() {
@@ -54,11 +57,29 @@ export default function AdminTermsManagement() {
   }, []);
 
   const loadTerms = async () => {
-    const { data, error } = await supabase
-      .from('terms_and_conditions')
-      .select('*')
-      .eq('role', activeRole)
-      .single();
+    let data: any = null;
+    let error: any = null;
+
+    if (activeRole === 'patient') {
+      const res = await supabase
+        .from('patient_portal_terms')
+        .select('*')
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      data = res.data;
+      error = res.error;
+    } else {
+      const res = await supabase
+        .from('terms_and_conditions')
+        .select('*')
+        .eq('role', activeRole as any)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error) {
       import('@/lib/logger').then(({ logger }) => {
@@ -68,9 +89,16 @@ export default function AdminTermsManagement() {
       return;
     }
 
-    setTerms(data);
-    setTitle(data.title);
-    setContent(data.content);
+    if (data) {
+      setTerms(data);
+      setTitle(data.title);
+      setContent(data.content);
+    } else {
+      // No terms exist yet for this role - initialize empty state
+      setTerms(null);
+      setTitle("");
+      setContent("");
+    }
   };
 
   const loadAcceptances = async () => {
@@ -163,20 +191,72 @@ export default function AdminTermsManagement() {
     setSaving(true);
 
     try {
-      const { error } = await supabase
-        .from('terms_and_conditions')
-        .update({
-          title,
-          content,
-          version: (terms?.version || 0) + 1,
-          updated_at: new Date().toISOString(),
-          updated_by: (await supabase.auth.getUser()).data.user?.id
-        })
-        .eq('id', terms.id);
+      const currentUser = (await supabase.auth.getUser()).data.user?.id;
 
-      if (error) throw error;
+      if (activeRole === 'patient') {
+        if (terms?.id) {
+          // Update existing patient portal terms
+          const { error } = await supabase
+            .from('patient_portal_terms')
+            .update({
+              title,
+              content,
+              version: (terms?.version || 0) + 1,
+              updated_at: new Date().toISOString(),
+              updated_by: currentUser
+            })
+            .eq('id', terms.id);
 
-      toast.success("Terms updated successfully");
+          if (error) throw error;
+        } else {
+          // Insert new patient portal terms
+          const { error } = await supabase
+            .from('patient_portal_terms')
+            .insert({
+              title,
+              content,
+              version: 1,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              updated_by: currentUser
+            });
+
+          if (error) throw error;
+        }
+      } else {
+        if (terms?.id) {
+          // Update existing terms
+          const { error } = await supabase
+            .from('terms_and_conditions')
+            .update({
+              title,
+              content,
+              version: (terms?.version || 0) + 1,
+              updated_at: new Date().toISOString(),
+              updated_by: currentUser
+            })
+            .eq('id', terms.id);
+
+          if (error) throw error;
+        } else {
+          // Insert new terms
+          const { error } = await supabase
+            .from('terms_and_conditions')
+            .insert({
+              role: activeRole as any,
+              title,
+              content,
+              version: 1,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              updated_by: currentUser
+            });
+
+          if (error) throw error;
+        }
+      }
+
+      toast.success("Terms saved successfully");
       await loadTerms();
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
@@ -292,17 +372,18 @@ export default function AdminTermsManagement() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Terms & Conditions Management</h1>
-        <p className="text-muted-foreground">Manage terms and conditions for each user role</p>
+    <div className="patient-container">
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">Terms & Conditions Management</h1>
+        <p className="text-muted-foreground mt-2">Manage terms and conditions for each user role</p>
       </div>
 
       <Tabs defaultValue="editor" className="space-y-4">
-        <TabsList className="grid-cols-1 sm:grid-cols-3">
+        <TabsList className="grid-cols-1 sm:grid-cols-4">
           <TabsTrigger value="editor">Terms Editor</TabsTrigger>
           <TabsTrigger value="acceptances">User Acceptances</TabsTrigger>
           <TabsTrigger value="checkout">Checkout Attestation</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription Terms</TabsTrigger>
         </TabsList>
 
         <TabsContent value="editor" className="space-y-4">
@@ -563,6 +644,28 @@ export default function AdminTermsManagement() {
                   </div>
                 </>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subscription" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>VitaLuxePro Subscription Terms</CardTitle>
+              <CardDescription>Manage subscription-specific terms and conditions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setActiveRole('subscription');
+                  // Force switch to editor tab
+                  const editorTab = document.querySelector('[value="editor"]') as HTMLElement;
+                  editorTab?.click();
+                }}
+              >
+                Edit Subscription Terms
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

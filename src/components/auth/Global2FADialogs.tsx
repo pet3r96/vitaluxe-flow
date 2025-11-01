@@ -21,7 +21,8 @@ export const Global2FADialogs = () => {
   // - 2FA status hasn't been checked yet
   // - User is impersonating
   // - User must change password first
-  if (!twoFAStatusChecked || isImpersonating || mustChangePassword) {
+  // - Neither setup nor verify is required (2FA might be globally disabled)
+  if (!twoFAStatusChecked || isImpersonating || mustChangePassword || (!requires2FASetup && !requires2FAVerify)) {
     return null;
   }
 

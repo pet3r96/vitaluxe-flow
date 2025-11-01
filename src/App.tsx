@@ -2,19 +2,25 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { lazy, Suspense } from "react";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GlobalImpersonationBanner } from "@/components/layout/GlobalImpersonationBanner";
-import { RoleImpersonationDropdown } from "./components/layout/RoleImpersonationDropdown";
-import { NotificationBell } from "./components/notifications/NotificationBell";
+import { Topbar } from "./components/layout/Topbar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
+import { GlobalIntakeDialog } from "./components/patient/GlobalIntakeDialog";
+import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
+import { PracticeOnlyRoute } from "./components/subscription/PracticeOnlyRoute";
 import { SessionTimer } from "./components/auth/SessionTimer";
+import { realtimeManager } from "./lib/realtimeManager";
+import { ProGate } from "./components/subscription/ProGate";
 
 // Helper function to retry dynamic imports on failure
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
@@ -58,12 +64,12 @@ const lazyWithRetry = (componentImport: () => Promise<any>) =>
 
 // Lazy load all page components for better code splitting
 const Auth = lazy(() => import("./pages/Auth"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Accounts = lazy(() => import("./pages/Accounts"));
 const Practices = lazy(() => import("./pages/Practices"));
 const Representatives = lazy(() => import("./pages/Representatives"));
 const Patients = lazy(() => import("./pages/Patients"));
 const Providers = lazy(() => import("./pages/Providers"));
+const Staff = lazy(() => import("./pages/Staff"));
 const Products = lazy(() => import("./pages/Products"));
 const Orders = lazy(() => import("./pages/Orders"));
 const Messages = lazy(() => import("./pages/Messages"));
@@ -76,6 +82,7 @@ const Downlines = lazy(() => import("./pages/Downlines"));
 const MedSpas = lazy(() => import("./pages/MedSpas"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const Security = lazy(() => import("./pages/Security"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const MyDownlines = lazy(() => import("./pages/MyDownlines"));
@@ -89,6 +96,26 @@ const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
 const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"));
+const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
+const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
+const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
+const InternalChat = lazy(() => import("./pages/InternalChat"));
+const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
+const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
+const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
+const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
+const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
+const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
+const MedicalVaultShare = lazy(() => import("./pages/public/MedicalVaultShare"));
+const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
+const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
+const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
+const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
+const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
+const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
+const PatientDetail = lazy(() => import("./pages/PatientDetail"));
+const PracticePatientMedicalVault = lazy(() => import("./pages/practice/PatientMedicalVault"));
+const Support = lazy(() => import("./pages/Support"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -100,99 +127,117 @@ const PageLoader = () => (
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 10 * 60 * 1000, // 10 minutes - increased for better caching
-      gcTime: 15 * 60 * 1000, // 15 minutes (formerly cacheTime)
-      refetchOnWindowFocus: false,
-      retry: 1,
-      refetchOnMount: false, // Don't refetch on component mount if data is fresh
+      staleTime: 5 * 60 * 1000, // 5min - realtime keeps data fresh
+      gcTime: 10 * 60 * 1000, // 10min garbage collection
+      refetchOnMount: false, // Trust realtime updates
+      refetchOnWindowFocus: true, // Sync on tab return
+      retry: 1, // Fast failure
+      retryDelay: 1000,
     },
   },
 });
 
+// Initialize realtime manager with React Query client for automatic cache invalidation
+realtimeManager.setQueryClient(queryClient);
+
 // SessionTimerWrapper component to access auth context and location
 const SessionTimerWrapper = () => {
-  const { user } = useAuth();
-  const location = useLocation();
-  
-  // Only show timer when user is authenticated and not on auth page
-  if (!user || location.pathname === '/auth') {
-    return null;
-  }
-  
-    return (
-      <div className="fixed bottom-6 right-6 z-50">
-        <SessionTimer userId={user.id} />
-      </div>
-    );
+  // Timer is now in Topbar - no longer needed here
+  return null;
 };
+
+// Wrapper removed - subscriptions are now automatic on first login
+// Users are auto-enrolled in 14-day trial when they create a practice account
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <ErrorBoundary>
         <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
           <AuthProvider>
-            <SessionTimerWrapper />
-            <GlobalImpersonationBanner>
-              <Global2FADialogs />
-              <Suspense fallback={<PageLoader />}>
+            <SubscriptionProvider>
+              <SessionTimerWrapper />
+              <GlobalImpersonationBanner>
+                <Global2FADialogs />
+                <GlobalIntakeDialog />
+                <Suspense fallback={<PageLoader />}>
                 <Routes>
+                  {/* Public Routes */}
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
+                  <Route path="/share/:token" element={<MedicalVaultShare />} />
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
+                  <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
+                  <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />
+                  <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
                   <Route
                     path="/*"
                     element={
                       <ProtectedRoute>
                         <SidebarProvider>
-                          <div className="flex min-h-screen w-full bg-background overflow-hidden">
+                          <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                             <AppSidebar />
-                            <main className="flex-1 flex flex-col overflow-y-auto bg-[hsl(var(--main-content-bg))]">
-                              <div className="sticky top-0 z-10 flex items-center justify-between p-4 lg:p-6 border-b border-border bg-[hsl(var(--main-content-bg))]">
-                                <SidebarTrigger className="lg:hidden" />
-              <div className="ml-auto flex items-center gap-2">
-                <NotificationBell />
-                <RoleImpersonationDropdown />
-              </div>
-                              </div>
-                              <div className="flex-1 p-4 sm:p-6 lg:p-8">
+                            <main className="flex-1 flex flex-col overflow-y-auto">
+                              <Topbar />
+                              <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden relative">
+                                <div className="relative z-10">
                                 <Suspense fallback={<PageLoader />}>
-                                  <Routes>
-                                    <Route path="/" element={<DashboardRouter />} />
-                                    <Route path="/dashboard" element={<DashboardRouter />} />
-                                    <Route path="/accounts" element={<Accounts />} />
-                                    <Route path="/practices" element={<Practices />} />
-                                    <Route path="/representatives" element={<Representatives />} />
-                                    <Route path="/patients" element={<Patients />} />
-                                    <Route path="/providers" element={<Providers />} />
-                                    <Route path="/products" element={<Products />} />
-                                    <Route path="/orders" element={<Orders />} />
-                                    <Route path="/messages" element={<Messages />} />
-                                    <Route path="/pharmacies" element={<Pharmacies />} />
-                                    <Route path="/reports" element={<Reports />} />
-                                    <Route path="/cart" element={<Cart />} />
-                                    <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
-                                    <Route path="/checkout" element={<Checkout />} />
-                                    <Route path="/order-confirmation" element={<Checkout />} />
-                                    <Route path="/downlines" element={<MyDownlines />} />
-                                    <Route path="/med-spas" element={<MedSpas />} />
-                                    <Route path="/profile" element={<Profile />} />
-                                    <Route path="/admin-settings" element={<AdminSettings />} />
-                                    <Route path="/security" element={<Security />} />
-                                    <Route path="/admin/terms" element={<AdminTermsManagement />} />
-                                    <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
-                                    <Route path="/rep-reports" element={<RepProfitReports />} />
-                                    <Route path="/rep-productivity" element={<RepProductivityReport />} />
-                                    <Route path="/downline-performance" element={<DownlinePerformanceView />} />
-                                    <Route path="/shipping" element={<PharmacyShipping />} />
-                                    <Route path="*" element={<NotFound />} />
-                                  </Routes>
+                                  <AnimatePresence mode="wait">
+                                    <Routes>
+                                      <Route path="/" element={<DashboardRouter />} />
+                                      <Route path="/dashboard" element={<DashboardRouter />} />
+                                      <Route path="/accounts" element={<Accounts />} />
+                                      <Route path="/practices" element={<Practices />} />
+                                      <Route path="/representatives" element={<Representatives />} />
+                                      <Route path="/patients" element={<Patients />} />
+                                      <Route path="/patients/:patientId" element={<PatientDetail />} />
+                                      <Route path="/practice/patients/:patientId/medical-vault" element={<PracticePatientMedicalVault />} />
+                                      <Route path="/providers" element={<Providers />} />
+                                      <Route path="/staff" element={<SubscriptionProtectedRoute><ProGate><Staff /></ProGate></SubscriptionProtectedRoute>} />
+                                      <Route path="/products" element={<Products />} />
+                                      <Route path="/orders" element={<Orders />} />
+                                      <Route path="/messages" element={<Messages />} />
+                                      <Route path="/pharmacies" element={<Pharmacies />} />
+                                      <Route path="/reports" element={<Reports />} />
+                                      <Route path="/cart" element={<Cart />} />
+                                      <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
+                                      <Route path="/checkout" element={<Checkout />} />
+                                      <Route path="/order-confirmation" element={<Checkout />} />
+                                      <Route path="/downlines" element={<MyDownlines />} />
+                                      <Route path="/med-spas" element={<MedSpas />} />
+                                      <Route path="/profile" element={<Profile />} />
+                                      <Route path="/admin-settings" element={<AdminSettings />} />
+                                      <Route path="/subscriptions" element={<Subscriptions />} />
+                      <Route path="/security" element={<Security />} />
+                      <Route path="/support" element={<Support />} />
+                      <Route path="/admin/terms" element={<AdminTermsManagement />} />
+                                      <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
+                                      <Route path="/rep-reports" element={<RepProfitReports />} />
+                                      <Route path="/rep-productivity" element={<RepProductivityReport />} />
+                                      <Route path="/downline-performance" element={<DownlinePerformanceView />} />
+                                      <Route path="/shipping" element={<PharmacyShipping />} />
+                                      <Route path="/appointments" element={<PatientAppointments />} />
+                                      <Route path="/medical-vault" element={<PatientMedicalVault />} />
+                                      <Route path="/documents" element={<PatientDocuments />} />
+                                      <Route path="/patient-messages" element={<PatientMessages />} />
+                                      <Route path="/practice/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
+                                      <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
+                                      <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
+                                      <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
+                                      <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
+                                      <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
+                                      {/* Patient Inbox removed - now integrated into Messages */}
+                                      {/* Redirect old practice-patients route to new merged Patients page */}
+                                      <Route path="/practice-patients" element={<Navigate to="/patients" replace />} />
+                                      <Route path="*" element={<NotFound />} />
+                                    </Routes>
+                                  </AnimatePresence>
                                 </Suspense>
+                                </div>
                               </div>
                             </main>
                           </div>
@@ -202,9 +247,10 @@ const App = () => (
                   />
                 </Routes>
               </Suspense>
-            </GlobalImpersonationBanner>
-        </AuthProvider>
-      </BrowserRouter>
+              </GlobalImpersonationBanner>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </BrowserRouter>
     </TooltipProvider>
       </ErrorBoundary>
     </ThemeProvider>

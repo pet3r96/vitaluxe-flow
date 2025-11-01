@@ -15,6 +15,7 @@ import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, A
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
+import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 
 const AdminSettings = () => {
   return (
@@ -27,7 +28,7 @@ const AdminSettings = () => {
       </div>
 
       <Tabs defaultValue="practices" className="space-y-4">
-        <TabsList className="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <TabsList className="flex flex-wrap h-auto w-full justify-start gap-2 p-2 bg-accent/30 border-border/50">
           <TabsTrigger value="practices" className="gap-2">
             <Building2 className="h-4 w-4" />
             Practices
@@ -120,7 +121,7 @@ const AdminSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RepsManagement />
+              <RepsManagement showHeader={false} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -176,7 +177,7 @@ const AdminSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <EasyPostShipmentManager />
+              <EasyPostShipmentManager showHeader={false} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -190,7 +191,7 @@ const AdminSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProductTypeManager />
+              <ProductTypeManager showHeader={false} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -210,6 +211,7 @@ const AdminSettings = () => {
         </TabsContent>
 
         <TabsContent value="system" className="space-y-4">
+          <TwoFactorToggle />
           <MerchantFeeSettings />
         </TabsContent>
 

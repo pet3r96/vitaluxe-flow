@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, KeyRound } from "lucide-react";
 import { phoneSchema } from "@/lib/validators";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const repFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -88,8 +89,8 @@ export function RepProfileForm() {
     
     setIsResettingPassword(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
-        redirectTo: `${window.location.origin}/auth`,
+      const { error } = await supabase.functions.invoke('send-password-reset-email', {
+        body: { email: profile.email },
       });
 
       if (error) throw error;
@@ -173,15 +174,10 @@ export function RepProfileForm() {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="tel" 
-                        placeholder="1234567890" 
-                        maxLength={10}
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          field.onChange(value);
-                        }}
+                      <PhoneInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="(555) 123-4567"
                       />
                     </FormControl>
                     <FormMessage />

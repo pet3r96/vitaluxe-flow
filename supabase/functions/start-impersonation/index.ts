@@ -68,6 +68,15 @@ Deno.serve(async (req) => {
 
     const { role, userId, userName, targetEmail }: StartImpersonationRequest = await req.json();
 
+    // Validate role is allowed for impersonation
+    const allowedRoles = ['doctor', 'pharmacy', 'topline', 'downline', 'provider', 'patient', 'staff'];
+    if (!allowedRoles.includes(role)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid role for impersonation' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('[start-impersonation] Request:', { 
       adminUserId: user.id, 
       role, 

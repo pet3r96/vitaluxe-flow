@@ -140,13 +140,13 @@ export const PendingProductsApproval = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
+        return <Badge variant="warning" size="sm">Pending</Badge>;
       case "approved":
-        return <Badge className="bg-green-500">Approved</Badge>;
+        return <Badge variant="success" size="sm">Approved</Badge>;
       case "rejected":
-        return <Badge variant="destructive">Rejected</Badge>;
+        return <Badge variant="destructive" size="sm">Rejected</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge variant="outline" size="sm">{status}</Badge>;
     }
   };
 

@@ -9,7 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Edit2, Save, X, Loader2 } from "lucide-react";
 import { sanitizeEncrypted } from "@/lib/utils";
-import { validateNPI, validateDEA } from "@/lib/validators";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { formatPhoneNumber, validateNPI, validateDEA } from "@/lib/validators";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 
 interface ProviderDetailsDialogProps {
   open: boolean;
@@ -27,14 +29,34 @@ export const ProviderDetailsDialog = ({
   const { effectiveRole, effectiveUserId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [originalNpi, setOriginalNpi] = useState("");
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<
+    null | "verifying" | "verified" | "failed"
+  >(null);
   const [formData, setFormData] = useState({
     fullName: provider.profiles?.full_name || provider.profiles?.name || "",
     prescriberName: provider.profiles?.full_name || "",
     npi: sanitizeEncrypted(provider.profiles?.npi),
     dea: sanitizeEncrypted(provider.profiles?.dea),
     licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
-    phone: provider.profiles?.phone || "",
+    phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
   });
+
+  // Sync form data when provider changes to prevent cross-contamination
+  useEffect(() => {
+    const npiValue = sanitizeEncrypted(provider.profiles?.npi);
+    setFormData({
+      fullName: provider.profiles?.full_name || provider.profiles?.name || "",
+      prescriberName: provider.profiles?.full_name || "",
+      npi: npiValue,
+      dea: sanitizeEncrypted(provider.profiles?.dea),
+      licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
+      phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
+    });
+    setOriginalNpi(npiValue);
+    setNpiVerificationStatus(null);
+    setIsEditing(false); // Reset editing state when provider changes
+  }, [provider]);
 
   const isPractice = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
   const isOwnProvider = effectiveRole === "provider" && effectiveUserId === provider.user_id;
@@ -44,6 +66,18 @@ export const ProviderDetailsDialog = ({
   const handleSave = async () => {
     setLoading(true);
     try {
+      // Check NPI verification only if NPI was changed
+      const npiChanged = formData.npi !== originalNpi;
+      if (npiChanged && npiVerificationStatus !== "verified") {
+        if (npiVerificationStatus === "verifying") {
+          toast.error("Please wait for NPI verification to complete");
+        } else {
+          toast.error("NPI must be verified before saving changes");
+        }
+        setLoading(false);
+        return;
+      }
+
       // Validate no "[ENCRYPTED]" placeholders
       if (formData.npi === '[ENCRYPTED]' || formData.dea === '[ENCRYPTED]' || formData.licenseNumber === '[ENCRYPTED]') {
         toast.error("Please enter actual credential values, not [ENCRYPTED] placeholders");
@@ -85,8 +119,8 @@ export const ProviderDetailsDialog = ({
         // Practices and admins can update everything
         profileUpdateData.full_name = formData.fullName;
         profileUpdateData.npi = formData.npi;
-        profileUpdateData.dea = formData.dea || null;
-        profileUpdateData.license_number = formData.licenseNumber || null;
+        profileUpdateData.dea = formData.dea || null; // Explicit null if empty
+        profileUpdateData.license_number = formData.licenseNumber || null; // Explicit null if empty
         profileUpdateData.phone = formData.phone || null;
       }
 
@@ -195,9 +229,49 @@ export const ProviderDetailsDialog = ({
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '');
                           setFormData({ ...formData, npi: value });
+                          
+                          // Reset verification status when NPI changes
+                          if (value.length !== 10) {
+                            setNpiVerificationStatus(null);
+                          } else if (value !== originalNpi) {
+                            setNpiVerificationStatus("verifying");
+                            
+                            // Real-time NPI verification
+                            verifyNPIDebounced(value, (result) => {
+                              setFormData(currentFormData => {
+                                if (currentFormData.npi === result.npi) {
+                                  if (result.valid && !result.error) {
+                                    setNpiVerificationStatus("verified");
+                                    if (result.providerName) {
+                                      toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                                    }
+                                    if (result.warning) {
+                                      toast.info(result.warning);
+                                    }
+                                  } else if (result.error) {
+                                    setNpiVerificationStatus("failed");
+                                    toast.error(result.error);
+                                  }
+                                }
+                                return currentFormData;
+                              });
+                            });
+                          } else {
+                            // NPI unchanged - no verification needed
+                            setNpiVerificationStatus(null);
+                          }
                         }}
                         placeholder="1234567890"
                       />
+                      {npiVerificationStatus === "verifying" && (
+                        <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
+                      )}
+                      {npiVerificationStatus === "verified" && (
+                        <p className="text-sm text-green-600">✅ NPI Verified</p>
+                      )}
+                      {npiVerificationStatus === "failed" && (
+                        <p className="text-sm text-destructive">❌ Invalid NPI</p>
+                      )}
                     </div>
                   ) : (
                     <div className="p-2 bg-muted rounded-md">
@@ -259,12 +333,13 @@ export const ProviderDetailsDialog = ({
           <div className="space-y-2">
             <Label>Phone</Label>
             {isEditing ? (
-              <Input
+              <PhoneInput
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(phone) => setFormData({ ...formData, phone })}
+                placeholder="(555) 123-4567"
               />
             ) : (
-              <div className="p-2 bg-muted rounded-md">{provider.profiles?.phone || "N/A"}</div>
+              <div className="p-2 bg-muted rounded-md">{formatPhoneNumber(provider.profiles?.phone)}</div>
             )}
           </div>
 
@@ -274,14 +349,17 @@ export const ProviderDetailsDialog = ({
                 variant="outline"
                 onClick={() => {
                   setIsEditing(false);
+                  const npiValue = sanitizeEncrypted(provider.profiles?.npi);
                   setFormData({
                     fullName: provider.profiles?.full_name || provider.profiles?.name || "",
                     prescriberName: provider.profiles?.full_name || "",
-                    npi: sanitizeEncrypted(provider.profiles?.npi),
+                    npi: npiValue,
                     dea: sanitizeEncrypted(provider.profiles?.dea),
                     licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
-                    phone: provider.profiles?.phone || "",
+                    phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
                   });
+                  setOriginalNpi(npiValue);
+                  setNpiVerificationStatus(null);
                 }}
                 disabled={loading}
               >

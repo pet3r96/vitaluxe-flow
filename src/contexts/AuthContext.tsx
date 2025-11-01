@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { realtimeManager } from "@/lib/realtimeManager";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { generateCSRFToken, clearCSRFToken } from "@/lib/csrf";
@@ -24,6 +25,7 @@ interface AuthContextType {
   effectivePracticeId: string | null;
   canImpersonate: boolean;
   isProviderAccount: boolean;
+  isStaffAccount: boolean;
   mustChangePassword: boolean;
   termsAccepted: boolean;
   requires2FASetup: boolean;
@@ -31,6 +33,8 @@ interface AuthContextType {
   user2FAPhone: string | null;
   twoFAStatusChecked: boolean;
   passwordStatusChecked: boolean;
+  showIntakeDialog: boolean;
+  setShowIntakeDialog: (show: boolean) => void;
   mark2FAVerified: () => void;
   checkPasswordStatus: (roleOverride?: string, userIdOverride?: string) => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
@@ -63,6 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false); // Only for critical operations (sign in/out)
   const [initializing, setInitializing] = useState(true); // Only for first-time bootstrap
   const [isProviderAccount, setIsProviderAccount] = useState(false);
+  const [isStaffAccount, setIsStaffAccount] = useState(false);
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -73,14 +78,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user2FAPhone, setUser2FAPhone] = useState<string | null>(null);
   const [twoFAStatusChecked, setTwoFAStatusChecked] = useState(false);
   const [is2FAVerifiedThisSession, setIs2FAVerifiedThisSession] = useState(false);
+  const [twoFAEnforcementEnabled, setTwoFAEnforcementEnabled] = useState<boolean>(true);
+  const [showIntakeDialog, setShowIntakeDialog] = useState(false);
   
   // Hard 30-minute session timeout with activity refresh
   const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
   const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // Refresh if < 5 minutes remaining
+  const MAX_SESSION_MS = 120 * 60 * 1000; // 2 hours maximum
   const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
+  const getSessionStartKey = (userId: string) => `vitaluxe_session_start_${userId}`;
   const hardTimerRef = useRef<number | null>(null);
   const checkIntervalRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const activityListenersAttached = useRef(false);
   
   const navigate = useNavigate();
   
@@ -93,9 +103,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const effectiveUserId = impersonatedUserId || user?.id || null;
   const canImpersonate = userRole === 'admin' && canImpersonateDb;
 
+  // Function to fetch 2FA enforcement setting
+  const fetchTwoFAEnforcementSetting = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'two_fa_enforcement_enabled')
+        .single();
+      
+      if (error) throw error;
+      
+      // Parse the setting value (stored as string 'true'/'false')
+      const isEnabled = data.setting_value === 'true';
+      setTwoFAEnforcementEnabled(isEnabled);
+      return isEnabled;
+    } catch (error) {
+      logger.error('Error fetching 2FA enforcement setting', error);
+      // Default to enabled for security
+      setTwoFAEnforcementEnabled(true);
+      return true;
+    }
+  };
+
   // Function to check GHL 2FA status
   const check2FAStatus = async (userId: string) => {
     console.log('[AuthContext] check2FAStatus - START for userId:', userId);
+    
+    // Check if 2FA enforcement is enabled system-wide
+    const isEnforced = await fetchTwoFAEnforcementSetting();
+    
+    if (!isEnforced) {
+      console.log('[AuthContext] check2FAStatus - 2FA enforcement DISABLED system-wide');
+      setRequires2FASetup(false);
+      setRequires2FAVerify(false);
+      setTwoFAStatusChecked(true);
+      return;
+    }
     
     try {
       // Query the decrypted view to get actual phone number instead of [ENCRYPTED]
@@ -166,11 +210,88 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       
-      // If retry fails, force clear and let ProtectedRoute handle redirect
-      logger.error('Auth bootstrap failed after retry');
+      // If retry fails, try using cached data as fallback
+      logger.warn('Auth bootstrap timeout - attempting cache fallback');
+      try {
+        const cached = sessionStorage.getItem('vitaluxe_auth_cache');
+        if (cached) {
+          const { role, practiceId, canImpersonate, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 2 * 60 * 1000) { // 2min cache validity - aggressive for speed
+            logger.info('Using cached auth data from failsafe');
+            setUserRole(role);
+            if (practiceId) setPracticeParentId(practiceId);
+            if (typeof canImpersonate === 'boolean') setCanImpersonateDb(canImpersonate);
+            setPasswordStatusChecked(true);
+            setTwoFAStatusChecked(true);
+            setInitializing(false);
+            return;
+          }
+        }
+      } catch (e) {
+        logger.error('Cache fallback failed', e);
+      }
+      
+      // Final fallback - clear state
+      logger.error('Auth bootstrap failed after retry and cache fallback');
       setInitializing(false);
       setUserRole(null);
-    }, 8000);
+    }, 2000); // Reduced from 8000ms to 2000ms
+
+    // Activity tracking for session extension
+    const handleActivity = () => {
+      if (!user?.id) return;
+      
+      const now = Date.now();
+      lastActivityRef.current = now;
+      
+      // Check if we should extend the session
+      const sessionExpStr = localStorage.getItem(getSessionExpKey(user.id));
+      const sessionStartStr = localStorage.getItem(getSessionStartKey(user.id));
+      
+      if (!sessionExpStr || !sessionStartStr) return;
+      
+      const sessionExp = parseInt(sessionExpStr);
+      const sessionStart = parseInt(sessionStartStr);
+      const timeRemaining = sessionExp - now;
+      const totalSessionTime = now - sessionStart;
+      
+      // Only extend if:
+      // 1. Less than 5 minutes remaining
+      // 2. Haven't exceeded 2 hour max session
+      if (timeRemaining < REFRESH_THRESHOLD_MS && totalSessionTime < MAX_SESSION_MS) {
+        const newExpireAt = now + HARD_SESSION_TIMEOUT_MS;
+        const cappedExpireAt = Math.min(newExpireAt, sessionStart + MAX_SESSION_MS);
+        
+        localStorage.setItem(getSessionExpKey(user.id), String(cappedExpireAt));
+        
+        // Clear and reset timeout
+        if (hardTimerRef.current) {
+          clearTimeout(hardTimerRef.current);
+        }
+        
+        const timeUntilExpiry = cappedExpireAt - now;
+        hardTimerRef.current = window.setTimeout(() => {
+          logger.info('Extended session timer triggered logout');
+          void doHardSignOut();
+        }, timeUntilExpiry);
+        
+        logger.info('Session extended due to activity', {
+          newExpiresAt: new Date(cappedExpireAt).toISOString(),
+          minutesAdded: Math.round((cappedExpireAt - sessionExp) / 60000)
+        });
+      }
+    };
+
+    // Attach activity listeners once
+    if (user?.id && !activityListenersAttached.current) {
+      const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+      events.forEach(event => {
+        document.addEventListener(event, handleActivity, { passive: true });
+      });
+      activityListenersAttached.current = true;
+      
+      logger.info('Activity listeners attached');
+    }
 
     // Event handlers for tab visibility and focus
     const handleVisibilityChange = () => {
@@ -222,9 +343,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             checkIntervalRef.current = null;
           }
           
-          // Set hard session expiration (60 minutes from now)
+          // Set hard session expiration (30 minutes from now)
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
+          const sessionStart = Date.now();
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
+          localStorage.setItem(getSessionStartKey(session.user.id), String(sessionStart));
           lastActivityRef.current = Date.now();
           
           // Schedule primary hard timeout
@@ -240,23 +363,88 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           logger.info('Session timer started', { 
             expiresAt: new Date(expireAt).toISOString(),
-            minutesRemaining: 60 
+            minutesRemaining: 30
           });
           
-          // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
-          setTimeout(() => {
-            console.log('[AuthContext] Executing deferred backend calls');
-            
-            // Fetch role and CSRF token asynchronously (don't block)
-            Promise.all([
-              fetchUserRole(session.user.id),
-              generateCSRFToken()
-            ]).then(() => {
-              logger.info('SIGNED_IN: user data loaded');
-            }).catch((error) => {
-              logger.error('Error loading user data after sign in', error);
-            });
-          }, 0);
+            // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
+            setTimeout(() => {
+              console.log('[AuthContext] Executing deferred backend calls');
+              
+              // Fetch role and CSRF token asynchronously (don't block)
+              Promise.all([
+                fetchUserRole(session.user.id),
+                generateCSRFToken()
+              ]).then(async ([roleResult]) => {
+                logger.info('SIGNED_IN: user data loaded');
+                
+                // Check if user needs to complete intake (patient-only feature)
+                const { data: patientData } = await supabase
+                  .from('patient_accounts')
+                  .select('intake_completed_at')
+                  .eq('user_id', session.user.id)
+                  .maybeSingle();
+                
+                // If patient account exists and intake is incomplete, show dialog
+                if (patientData && !patientData.intake_completed_at) {
+                  console.log('[AuthContext] Patient needs to complete intake, showing dialog');
+                  setShowIntakeDialog(true);
+                } else {
+                  console.log('[AuthContext] No intake required', { 
+                    hasPatientAccount: !!patientData, 
+                    intakeComplete: patientData?.intake_completed_at 
+                  });
+                }
+                
+                // Auto-enroll practice owners (doctors) in 14-day trial
+                // Wait a bit for userRole state to be set by fetchUserRole
+                setTimeout(async () => {
+                  // Query for user's role from user_roles table
+                  const { data: userRoles } = await supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('user_id', session.user.id)
+                    .maybeSingle();
+
+                  if (userRoles?.role === 'doctor') {
+                    // Check if subscription exists
+                    const { data: existingSub } = await supabase
+                      .from('practice_subscriptions')
+                      .select('id')
+                      .eq('practice_id', session.user.id)
+                      .maybeSingle();
+                    
+                    if (!existingSub) {
+                      // Auto-create trial subscription
+                      console.log('[AuthContext] Auto-enrolling new practice in 14-day trial');
+                      
+                      try {
+                        const { error: subError } = await supabase.functions.invoke(
+                          'subscribe-to-vitaluxepro',
+                          { body: { autoEnroll: true } }
+                        );
+                        
+                        if (subError) {
+                          console.error('[AuthContext] Auto-enrollment failed:', subError);
+                        } else {
+                          // Show welcome notification
+                          toast.success(
+                            "Welcome to VitaLuxePro! 🎉",
+                            {
+                              description: "You've been automatically enrolled in a 14-day free trial with full access to all features. Add a payment method before day 14 to continue.",
+                              duration: 10000,
+                            }
+                          );
+                        }
+                      } catch (error) {
+                        console.error('[AuthContext] Auto-enrollment error:', error);
+                      }
+                    }
+                  }
+                }, 500);
+              }).catch((error) => {
+                logger.error('Error loading user data after sign in', error);
+              });
+            }, 0);
           
         } else if (event === 'USER_UPDATED' && session?.user) {
           // User data updated - refresh role data silently (no loading state)
@@ -284,6 +472,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Clear session storage using captured ID
           if (userIdToClean) {
             localStorage.removeItem(getSessionExpKey(userIdToClean));
+            localStorage.removeItem(getSessionStartKey(userIdToClean));
           }
           
           // Clear 2FA verification using captured ID
@@ -308,6 +497,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIs2FAVerifiedThisSession(false);
           setRequires2FASetup(false);
           setRequires2FAVerify(false);
+          setShowIntakeDialog(false);
           
           clearCSRFToken();
           logger.info('SIGNED_OUT: state cleared');
@@ -503,8 +693,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('user_id', effectiveUserId)
             .maybeSingle();
           
-          setIsProviderAccount(!error && data !== null);
-        } 
+          if (!error && data !== null) {
+            setIsProviderAccount(true);
+            setIsStaffAccount(false);
+          } else {
+            // Check if this is a staff account
+            const { data: staffData, error: staffError } = await supabase
+              .from('practice_staff')
+              .select('practice_id')
+              .eq('user_id', effectiveUserId)
+              .maybeSingle();
+
+            if (!staffError && staffData?.practice_id) {
+              setEffectivePracticeId(staffData.practice_id);
+              setIsStaffAccount(true);
+              setIsProviderAccount(false);
+              logger.info('Auth: doctor is staff member', logger.sanitize({ practiceId: staffData.practice_id }));
+            } else {
+              setIsProviderAccount(false);
+              setIsStaffAccount(false);
+            }
+          }
+        }
         // If role is provider, fetch the practice_id from providers table
         else if (effectiveRole === 'provider') {
           const { data, error } = await supabase
@@ -523,10 +733,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsProviderAccount(false);
             if (error) logger.info('Auth: provider practice lookup', logger.sanitize({ error: error.message }));
           }
+        } 
+        // If role is staff, fetch the practice_id from practice_staff table
+        else if (effectiveRole === 'staff') {
+          const { data, error } = await supabase
+            .from('practice_staff')
+            .select('practice_id')
+            .eq('user_id', effectiveUserId)
+            .maybeSingle();
+
+          if (!error && data?.practice_id) {
+            setEffectivePracticeId(data.practice_id);
+            setIsStaffAccount(true);
+            setIsProviderAccount(false);
+            console.debug('Auth: effectivePracticeId set for staff member', data.practice_id);
+          } else {
+            setEffectivePracticeId(null);
+            setIsStaffAccount(false);
+            setIsProviderAccount(false);
+            if (error) logger.info('Auth: staff practice lookup', logger.sanitize({ error: error.message }));
+          }
+        } else if (effectiveRole === 'patient') {
+          // For patients, fetch practice_id from patient_accounts
+          const { data, error } = await supabase
+            .from('patient_accounts')
+            .select('practice_id')
+            .eq('user_id', effectiveUserId)
+            .maybeSingle();
+
+          if (!error && data?.practice_id) {
+            setEffectivePracticeId(data.practice_id);
+            setIsProviderAccount(false);
+            setIsStaffAccount(false);
+            console.debug('Auth: effectivePracticeId set for patient', data.practice_id);
+          } else {
+            setEffectivePracticeId(null);
+            setIsProviderAccount(false);
+            setIsStaffAccount(false);
+            if (error) logger.info('Auth: patient practice lookup', logger.sanitize({ error: error.message }));
+          }
         } else {
           // Admin or other roles
           setEffectivePracticeId(null);
           setIsProviderAccount(false);
+          setIsStaffAccount(false);
         }
       } catch (error) {
         logger.error('Error checking provider status and practice', error);
@@ -542,57 +792,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('profile-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`
-        },
-        (payload) => {
-          if (payload.new.active === false && payload.old.active === true) {
-            toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
-            setTimeout(() => {
-              void (async () => {
-                // End impersonation session if active
-                try {
-                  const { data: { session: authSession } } = await supabase.auth.getSession();
-                  const token = authSession?.access_token;
-                  if (token) {
-                    const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+    realtimeManager.subscribe('profiles', (payload) => {
+      if (payload.eventType === 'UPDATE' && (payload.new as any).id === user.id) {
+        if ((payload.new as any).active === false && (payload.old as any).active === true) {
+          toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
+          setTimeout(() => {
+            void (async () => {
+              // End impersonation session if active
+              try {
+                const { data: { session: authSession } } = await supabase.auth.getSession();
+                const token = authSession?.access_token;
+                if (token) {
+                  const { data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  if (sessionData?.session) {
+                    await supabase.functions.invoke('end-impersonation', {
                       headers: { Authorization: `Bearer ${token}` }
                     });
-                    if (sessionData?.session) {
-                      await supabase.functions.invoke('end-impersonation', {
-                        headers: { Authorization: `Bearer ${token}` }
-                      });
-                    }
                   }
-                } catch (e) {
-                  logger.error('Error ending impersonation on deactivation', e);
                 }
-                
-                await supabase.auth.signOut();
-                setUserRole(null);
-                setImpersonatedRole(null);
-                setImpersonatedUserId(null);
-                setImpersonatedUserName(null);
-                setCurrentLogId(null);
-                setIs2FAVerifiedThisSession(false);
-                // Server-side session cleanup handled above
-                navigate("/auth");
-              })();
-            }, 3000);
-          }
+              } catch (e) {
+                logger.error('Error ending impersonation on deactivation', e);
+              }
+              
+              await supabase.auth.signOut();
+              setUserRole(null);
+              setImpersonatedRole(null);
+              setImpersonatedUserId(null);
+              setImpersonatedUserName(null);
+              setCurrentLogId(null);
+              setIs2FAVerifiedThisSession(false);
+              // Server-side session cleanup handled above
+              navigate("/auth");
+            })();
+          }, 3000);
         }
-      )
-      .subscribe();
+      }
+    });
 
     return () => {
-      void supabase.removeChannel(channel);
+      // Manager handles cleanup
     };
   }, [user, navigate]);
 
@@ -653,7 +893,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         roleResult,
         providerResult,
         impersonationResult,
-        passwordResult
+        passwordResult,
+        patientTermsResult
       ] = await Promise.allSettled([
         // 1. Fetch role
         supabase
@@ -677,13 +918,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .from('user_password_status')
           .select('must_change_password, terms_accepted')
           .eq('user_id', userId)
+          .maybeSingle(),
+        
+        // 5. Check patient terms acceptance
+        supabase
+          .from('patient_terms_acceptances')
+          .select('id')
+          .eq('user_id', userId)
           .maybeSingle()
       ]);
 
       // Process role
-      const role = roleResult.status === 'fulfilled' && roleResult.value.data?.role 
+      let role: string | null = roleResult.status === 'fulfilled' && roleResult.value.data?.role 
         ? roleResult.value.data.role 
         : null;
+      
+      // If no role found in user_roles, check if user is a patient
+      if (!role) {
+        logger.info('No role in user_roles, checking patient_accounts');
+        const { data: patientData } = await supabase
+          .from('patient_accounts')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (patientData) {
+          logger.info('User identified as patient via patient_accounts');
+          role = 'patient';
+        }
+      }
       
       if (!role) throw new Error('No role found');
       
@@ -734,18 +997,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTermsAccepted(true);
       } else if (passwordResult.status === 'fulfilled' && passwordResult.value.data) {
         setMustChangePassword(passwordResult.value.data.must_change_password || false);
-        setTermsAccepted(passwordResult.value.data.terms_accepted || false);
+        
+        // Check terms acceptance from either user_password_status OR patient_terms_acceptances
+        const termsAcceptInStatus = passwordResult.value.data.terms_accepted || false;
+        const hasPatientTerms = patientTermsResult.status === 'fulfilled' && patientTermsResult.value.data !== null;
+        setTermsAccepted(termsAcceptInStatus || hasPatientTerms);
       } else {
-        // FALLBACK: If password check failed, use safe defaults
+        // FALLBACK: If password check failed, check if patient has terms acceptance
+        const hasPatientTerms = patientTermsResult.status === 'fulfilled' && patientTermsResult.value.data !== null;
         logger.warn('Password status check failed, using safe defaults');
         setMustChangePassword(false);
-        setTermsAccepted(false);
+        setTermsAccepted(hasPatientTerms);
       }
       // ALWAYS set this to true, even if checks fail
       setPasswordStatusChecked(true);
 
-      // Process 2FA status using dedicated check function
-      await check2FAStatus(userId);
+      // Defer 2FA status check to avoid blocking initial render
+      setTimeout(() => {
+        void check2FAStatus(userId);
+      }, 100);
 
       // Cache auth data in sessionStorage
       sessionStorage.setItem('vitaluxe_auth_cache', JSON.stringify({
@@ -834,8 +1104,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Not impersonating: direct read
       logger.info('checkPasswordStatus direct read of user_password_status and profiles');
       
-      // Check both user_password_status and profiles.temp_password
-      const [passwordStatusResult, profileResult] = await Promise.all([
+      // Check password status, profile, and patient terms acceptance
+      const [passwordStatusResult, profileResult, patientTermsResult] = await Promise.all([
         supabase
           .from('user_password_status')
           .select('must_change_password, terms_accepted')
@@ -845,6 +1115,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .from('profiles')
           .select('temp_password')
           .eq('id', uid)
+          .maybeSingle(),
+        supabase
+          .from('patient_terms_acceptances')
+          .select('id')
+          .eq('user_id', uid)
           .maybeSingle()
       ]);
 
@@ -863,7 +1138,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Check if user has temp_password flag set
       const hasTempPassword = profileResult.data?.temp_password || false;
       const mustChange = passwordStatusResult.data?.must_change_password || false;
-      const termsAccept = passwordStatusResult.data?.terms_accepted || false;
+      
+      // Check if terms are accepted - either in user_password_status OR patient_terms_acceptances
+      const termsAcceptInStatus = passwordStatusResult.data?.terms_accepted || false;
+      const hasPatientTermsAcceptance = patientTermsResult.data !== null;
+      const termsAccept = termsAcceptInStatus || hasPatientTermsAcceptance;
 
       // If user has temp_password flag, they must change password regardless of other flags
       const finalMustChange = mustChange || hasTempPassword;
@@ -1141,6 +1420,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setImpersonatedUserId(userId || null);
     setImpersonatedUserName(userName || null);
     
+    // Dispatch event to notify pages that impersonation changed
+    window.dispatchEvent(new CustomEvent("impersonation-changed", { 
+      detail: { effectiveUserId: userId || user?.id || null } 
+    }));
+    
     if (role) {
       toast.success(`Now viewing as ${userName || role}`);
     } else {
@@ -1149,6 +1433,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clearImpersonation = async () => {
+    console.log('[AuthContext] Clearing impersonation');
+    
     // Update the log before clearing
     if (currentLogId) {
       try {
@@ -1161,11 +1447,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     
-    setImpersonatedRole(null);
-    setImpersonatedUserId(null);
-    setImpersonatedUserName(null);
-    setCurrentLogId(null);
-    // End server-side session
+    // End server-side session first
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const token = authSession?.access_token;
@@ -1180,9 +1462,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         logger.error('Error ending impersonation session', error);
       }
+      
+      // Verify session is actually cleared
+      try {
+        const { data: sessionCheck } = await supabase.functions.invoke('get-active-impersonation');
+        if (sessionCheck?.hasSession) {
+          logger.warn('[AuthContext] Impersonation session still active after end attempt');
+        } else {
+          logger.info('[AuthContext] Impersonation session successfully cleared');
+        }
+      } catch (verifyError) {
+        logger.error('[AuthContext] Error verifying impersonation session ended', verifyError);
+      }
     } catch (err) {
       logger.error('Error calling end-impersonation in clearImpersonation', err);
     }
+    
+    // Clear local state
+    setImpersonatedRole(null);
+    setImpersonatedUserId(null);
+    setImpersonatedUserName(null);
+    setCurrentLogId(null);
+    
+    // Dispatch event to notify pages that impersonation ended
+    window.dispatchEvent(new CustomEvent("impersonation-changed", { 
+      detail: { effectiveUserId: user?.id || null } 
+    }));
+    
     toast.success("Returned to your Admin account");
   };
 
@@ -1273,6 +1579,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       effectivePracticeId,
       canImpersonate,
       isProviderAccount,
+      isStaffAccount,
       mustChangePassword,
       termsAccepted,
       passwordStatusChecked,
@@ -1280,6 +1587,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       requires2FAVerify,
       user2FAPhone,
       twoFAStatusChecked,
+      showIntakeDialog,
+      setShowIntakeDialog,
       mark2FAVerified,
       checkPasswordStatus,
       setImpersonation,

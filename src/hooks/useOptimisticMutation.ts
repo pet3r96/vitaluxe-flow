@@ -46,9 +46,12 @@ export const useOptimisticMutation = <TData, TVariables>(
         queryClient.setQueryData(queryKey, context.previousData);
       }
       
+      // Extract error message from Supabase error
+      const errorDetails = error instanceof Error ? error.message : String(error);
+      
       toast({
         title: "Error",
-        description: errorMessage || "An error occurred. Please try again.",
+        description: errorMessage || errorDetails || "An error occurred. Please try again.",
         variant: "destructive",
       });
       

@@ -233,9 +233,9 @@ export const AddressInput = ({
         )}
 
         {showSuggestion && validation?.formatted_address && (
-          <Alert className="border-amber-600/20 bg-amber-50 dark:bg-amber-950/20">
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-            <AlertDescription className="text-amber-800 dark:text-amber-300">
+          <Alert className="border-gold1/30 bg-gold1/10">
+            <AlertTriangle className="h-4 w-4 text-gold1" />
+            <AlertDescription className="text-gold1">
               <div className="space-y-2">
                 <p className="font-semibold">⚠️ Address Issue Detected</p>
                 <div className="text-sm space-y-1">

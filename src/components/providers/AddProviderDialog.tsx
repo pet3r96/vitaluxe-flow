@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { getCurrentCSRFToken } from "@/lib/csrf";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface AddProviderDialogProps {
   open: boolean;
@@ -20,6 +23,7 @@ interface AddProviderDialogProps {
 
 export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }: AddProviderDialogProps) => {
   const { effectiveUserId, effectiveRole } = useAuth();
+  const { isSubscribed, status, trialEndsAt, currentPeriodEnd } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [selectedPractice, setSelectedPractice] = useState(practiceId || "");
   const [validationErrors, setValidationErrors] = useState({
@@ -36,6 +40,12 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
     licenseNumber: "",
     phone: "",
   });
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<
+    null | "verifying" | "verified" | "failed"
+  >(null);
+  
+  // Ref to track current NPI for race condition prevention
+  const currentNpiRef = useRef(formData.npi);
 
   const { data: practices } = useQuery({
     queryKey: ["practices"],
@@ -74,10 +84,31 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
       licenseNumber: "",
       phone: "",
     });
+    setNpiVerificationStatus(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check Pro subscription requirement
+    const hasActivePro = 
+      (status === 'trial' && trialEndsAt && new Date(trialEndsAt) > new Date()) ||
+      (status === 'active' && currentPeriodEnd && new Date(currentPeriodEnd) > new Date());
+    
+    if (!hasActivePro) {
+      toast.error("VitaLuxePro subscription required to add providers. Please upgrade your practice subscription.");
+      return;
+    }
+    
+    // Check NPI verification status BEFORE format validation
+    if (npiVerificationStatus !== "verified") {
+      if (npiVerificationStatus === "verifying") {
+        toast.error("Please wait for NPI verification to complete");
+      } else {
+        toast.error("NPI must be verified before adding provider");
+      }
+      return;
+    }
     
     // Validate required NPI field first
     if (!formData.npi || !formData.npi.trim()) {
@@ -140,13 +171,13 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
         fullName: formData.fullName,
         prescriberName: formData.prescriberName,
         role: 'provider',
-        csrfToken,
+        csrfToken, // Include in body as fallback
         roleData: {
           practiceId: targetPracticeId,
           npi: formData.npi,
-          dea: formData.dea || null,
+          dea: formData.dea || null, // Explicit null if empty
           licenseNumber: formData.licenseNumber,
-          phone: formData.phone || null,
+          phone: formData.phone || null, // Explicit null if empty
         }
       };
 
@@ -246,11 +277,49 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
               onChange={(e) => {
                 const value = e.target.value.replace(/\D/g, '');
                 setFormData({ ...formData, npi: value });
-                setValidationErrors({ ...validationErrors, npi: "" });
+                
+                // Update ref to track current NPI
+                currentNpiRef.current = value;
+                
+                // Clear error immediately when user changes the value
+                setValidationErrors(prev => ({ ...prev, npi: "" }));
+                
+                // Reset verification status when NPI changes
+                if (value.length !== 10) {
+                  setNpiVerificationStatus(null);
+                } else {
+                  setNpiVerificationStatus("verifying");
+                }
+                
+                // Real-time NPI verification
+                if (value && value.length === 10) {
+                  verifyNPIDebounced(value, (result) => {
+                    // Only apply result if it matches the CURRENT ref value
+                    // (prevents race conditions from stale debounced calls)
+                    if (currentNpiRef.current === result.npi) {
+                      if (result.valid) {
+                        setNpiVerificationStatus("verified");
+                        // Show success message for all valid NPIs
+                        if (result.providerName) {
+                          toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                        } else {
+                          // Organization NPIs or NPIs without names
+                          toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
+                        }
+                        if (result.warning) {
+                          toast.info(result.warning);
+                        }
+                      } else if (result.error) {
+                        setNpiVerificationStatus("failed");
+                        setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
+                      }
+                    }
+                  });
+                }
               }}
               onBlur={() => {
                 const result = validateNPI(formData.npi);
-                setValidationErrors({ ...validationErrors, npi: result.error || "" });
+                setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
               }}
               placeholder="1234567890"
               maxLength={10}
@@ -259,6 +328,15 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
             />
             {validationErrors.npi && (
               <p className="text-sm text-destructive">{validationErrors.npi}</p>
+            )}
+            {npiVerificationStatus === "verifying" && (
+              <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
+            )}
+            {npiVerificationStatus === "verified" && (
+              <p className="text-sm text-green-600">✅ NPI Verified</p>
+            )}
+            {!npiVerificationStatus && formData.npi.length === 0 && (
+              <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
             )}
           </div>
 
@@ -308,22 +386,14 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
 
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input
+          <PhoneInput
             id="phone"
-            type="tel"
             value={formData.phone || ""}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '');
+            onChange={(value) => {
               setFormData({ ...formData, phone: value });
               setValidationErrors({ ...validationErrors, phone: "" });
             }}
-            onBlur={() => {
-              const result = validatePhone(formData.phone);
-              setValidationErrors({ ...validationErrors, phone: result.error || "" });
-            }}
-            placeholder="1234567890"
-            maxLength={10}
-            className={validationErrors.phone ? "border-destructive" : ""}
+            placeholder="(555) 123-4567"
           />
           {validationErrors.phone && (
             <p className="text-sm text-destructive">{validationErrors.phone}</p>
@@ -342,7 +412,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || npiVerificationStatus !== "verified"}>
               {loading ? "Adding..." : "Add Provider"}
             </Button>
           </div>

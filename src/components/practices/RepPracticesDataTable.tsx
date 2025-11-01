@@ -60,7 +60,7 @@ export const RepPracticesDataTable = () => {
   // Fetch practices based on role using rep_practice_links
   const { data: practices, isLoading, refetch } = useQuery({
     queryKey: ["rep-practices", effectiveUserId, effectiveRole],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!effectiveUserId) return [];
@@ -218,7 +218,7 @@ export const RepPracticesDataTable = () => {
 
   const { data: stats } = useQuery({
     queryKey: ["rep-practice-stats", effectiveUserId, effectiveRole],
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!practices || practices.length === 0) {

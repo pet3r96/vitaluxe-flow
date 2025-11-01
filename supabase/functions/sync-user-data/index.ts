@@ -218,7 +218,72 @@ serve(async (req) => {
       }
     }
 
-    // Step 2: Check all profiles for missing user_roles
+    // Step 2: Sync patient_accounts to profiles and roles
+    let addedPatientProfiles = 0;
+    let addedPatientRoles = 0;
+    
+    const { data: patientAccounts } = await supabaseAdmin
+      .from('patient_accounts')
+      .select('user_id, first_name, last_name');
+    
+    if (patientAccounts) {
+      for (const patientAccount of patientAccounts) {
+        try {
+          const fullName = `${patientAccount.first_name} ${patientAccount.last_name}`.trim();
+          
+          // Only sync profiles and roles for patients with auth accounts
+          if (patientAccount.user_id) {
+            // Check if profile needs name update
+            const { data: profile } = await supabaseAdmin
+              .from('profiles')
+              .select('name')
+              .eq('id', patientAccount.user_id)
+              .maybeSingle();
+            
+            if (profile && (profile.name === 'New User' || !profile.name || profile.name === '')) {
+              const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({ name: fullName, updated_at: new Date().toISOString() })
+                .eq('id', patientAccount.user_id);
+              
+              if (!updateError) {
+                addedPatientProfiles++;
+              } else {
+                errors.push(`Failed to update patient profile name for ${fullName}: ${updateError.message}`);
+              }
+            }
+            
+            // Ensure patient role exists
+            const { data: existingRole } = await supabaseAdmin
+              .from('user_roles')
+              .select('id')
+              .eq('user_id', patientAccount.user_id)
+              .eq('role', 'patient')
+              .maybeSingle();
+            
+            if (!existingRole) {
+              const { error: roleError } = await supabaseAdmin
+                .from('user_roles')
+                .insert({
+                  user_id: patientAccount.user_id,
+                  role: 'patient'
+                });
+              
+              if (!roleError) {
+                addedPatientRoles++;
+              } else {
+                errors.push(`Failed to add patient role for ${fullName}: ${roleError.message}`);
+              }
+            }
+          }
+          // Note: Patients without user_id (no portal account) are skipped - this is expected behavior
+        } catch (error: any) {
+          errors.push(`Error syncing patient account ${patientAccount.first_name}: ${error.message}`);
+        }
+      }
+    }
+
+    // Step 3: Check all profiles for missing user_roles
     const { data: profiles } = await supabaseAdmin
       .from('profiles')
       .select(`
@@ -262,7 +327,7 @@ serve(async (req) => {
       }
     }
 
-    // Step 3: Backfill missing rep_practice_links for approved practices
+    // Step 4: Backfill missing rep_practice_links for approved practices
     // Now handles BOTH toplines AND downlines as owners
     let repLinksAdded = 0;
     let doctorRolesAdded = 0;
@@ -361,7 +426,7 @@ serve(async (req) => {
       }
     }
 
-    // Step 4: Fix missing parent_id relationships
+    // Step 5: Fix missing parent_id relationships
     const { data: pharmaciesWithoutParent } = await supabaseAdmin
       .from('pharmacies')
       .select('id, user_id, name')
@@ -386,6 +451,8 @@ serve(async (req) => {
     const summary = {
       addedProfiles,
       addedRoles,
+      addedPatientProfiles,
+      addedPatientRoles,
       repairedPharmacies,
       repairedProviders,
       repairedToplines,
@@ -393,7 +460,7 @@ serve(async (req) => {
       orphanedPharmaciesConverted,
       repLinksAdded,
       doctorRolesAdded,
-      totalRepaired,
+      totalRepaired: totalRepaired + addedPatientProfiles + addedPatientRoles,
       errors: errors.length > 0 ? errors : null
     };
 

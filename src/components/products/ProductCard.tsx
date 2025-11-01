@@ -21,6 +21,7 @@ interface ProductCardProps {
   isToplineRep: boolean;
   isDownlineRep: boolean;
   role: string | null;
+  canOrder: boolean;
   isHiddenFromDownline?: boolean;
   onEdit: (product: any) => void;
   onDelete: (product: any) => void;
@@ -35,6 +36,7 @@ export const ProductCard = memo(({
   isToplineRep,
   isDownlineRep,
   role,
+  canOrder,
   isHiddenFromDownline,
   onEdit,
   onDelete,
@@ -215,21 +217,21 @@ export const ProductCard = memo(({
           {/* Badges */}
           <div className="flex flex-wrap gap-2 min-h-[28px] justify-start">
             {product.requires_prescription && (
-              <Badge variant="default" className="text-xs">Rx Required</Badge>
+              <Badge variant="info" size="sm" className="bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30">Rx Required</Badge>
             )}
             {product.product_type && (
-              <Badge variant="default" className="text-xs bg-slate-500 hover:bg-slate-600">{product.product_type}</Badge>
+              <Badge variant="secondary" size="sm">{product.product_type}</Badge>
             )}
-            <Badge variant={product.active ? "secondary" : "outline"} className="text-xs">
+            <Badge variant={product.active ? "success" : "outline"} size="sm">
               {product.active ? "Active" : "Inactive"}
             </Badge>
             {isToplineRep && isHiddenFromDownline && (
-              <Badge variant="destructive" className="text-xs">
+              <Badge variant="destructive" size="sm">
                 Deactivated
               </Badge>
             )}
             {effectivePrice?.has_override && (isToplineRep || isDownlineRep || isProvider) && (
-              <Badge variant="secondary" className="text-xs bg-amber-500 hover:bg-amber-600 text-white">
+              <Badge variant="warning" size="sm">
                 Custom Price
               </Badge>
             )}
@@ -260,8 +262,8 @@ export const ProductCard = memo(({
       </CardContent>
 
       <CardFooter className="p-4 pt-0 flex gap-2">
-        {/* Provider Actions */}
-        {isProvider && (
+        {/* Provider and Staff with ordering privileges Actions */}
+        {canOrder && (
           <Button
             className="w-full"
             onClick={() => onAddToCart(product)}

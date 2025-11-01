@@ -32,10 +32,14 @@ export const PHIAccessMonitor = () => {
         query = query.gte("created_at", new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString());
       }
 
-      // Filter by PHI-related actions
+      // Filter by PHI-related actions including medical vault share links
       const phiActions = [
         "SELECT_patient", "UPDATE_patient", "INSERT_patient", "DELETE_patient",
-        "prescription_accessed", "cart_line_accessed"
+        "prescription_accessed", "cart_line_accessed",
+        "medical_vault_share_link_accessed",
+        "medical_vault_share_link_already_used",
+        "medical_vault_share_link_expired",
+        "medical_vault_share_link_revoked"
       ];
 
       if (entityFilter !== "all") {
@@ -63,7 +67,11 @@ export const PHIAccessMonitor = () => {
 
       const phiActions = [
         "SELECT_patient", "UPDATE_patient", "INSERT_patient", "DELETE_patient",
-        "prescription_accessed", "cart_line_accessed"
+        "prescription_accessed", "cart_line_accessed",
+        "medical_vault_share_link_accessed",
+        "medical_vault_share_link_already_used",
+        "medical_vault_share_link_expired",
+        "medical_vault_share_link_revoked"
       ];
 
       const { data, error } = await supabase
@@ -173,6 +181,7 @@ export const PHIAccessMonitor = () => {
                 <SelectItem value="UPDATE_patient">Patient Updates</SelectItem>
                 <SelectItem value="prescription_accessed">Prescriptions</SelectItem>
                 <SelectItem value="cart_line_accessed">Cart Access</SelectItem>
+                <SelectItem value="medical_vault_share_link_accessed">Share Link Access</SelectItem>
               </SelectContent>
             </Select>
 
