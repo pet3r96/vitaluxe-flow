@@ -15,16 +15,29 @@ export function OrdersBreakdown() {
       if (!effectiveUserId) return null;
 
       if (effectiveRole === 'pharmacy') {
-        // For pharmacies, get orders where they have assigned order lines
+        // For pharmacies, get pharmacy ID first, then get orders
+        const { data: pharmacyData, error: pharmacyError } = await supabase
+          .from('pharmacies')
+          .select('id')
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+
+        if (pharmacyError) throw pharmacyError;
+
+        if (!pharmacyData) {
+          return { pending: 0, on_hold: 0, processing: 0, completed: 0, cancelled: 0 };
+        }
+
+        // Get order lines assigned to this pharmacy
         const { data: orderLines, error: linesError } = await supabase
           .from('order_lines')
           .select('order_id')
-          .eq('assigned_pharmacy_id', effectiveUserId);
+          .eq('assigned_pharmacy_id', pharmacyData.id);
 
         if (linesError) throw linesError;
 
         if (!orderLines || orderLines.length === 0) {
-          return { pending: 0, processing: 0, completed: 0, cancelled: 0 };
+          return { pending: 0, on_hold: 0, processing: 0, completed: 0, cancelled: 0 };
         }
 
         // Get unique order IDs
@@ -41,6 +54,7 @@ export function OrdersBreakdown() {
         // Count by status
         const counts = {
           pending: 0,
+          on_hold: 0,
           processing: 0,
           completed: 0,
           cancelled: 0,
@@ -49,9 +63,10 @@ export function OrdersBreakdown() {
         orders?.forEach(order => {
           const status = order.status?.toLowerCase();
           if (status === 'pending') counts.pending++;
+          else if (status === 'on_hold') counts.on_hold++;
           else if (status === 'processing' || status === 'shipped') counts.processing++;
           else if (status === 'delivered' || status === 'completed') counts.completed++;
-          else if (status === 'cancelled') counts.cancelled++;
+          else if (status === 'cancelled' || status === 'declined') counts.cancelled++;
         });
 
         return counts;
@@ -82,6 +97,7 @@ export function OrdersBreakdown() {
 
         const counts = {
           pending: 0,
+          on_hold: 0,
           processing: 0,
           completed: 0,
           cancelled: 0,
@@ -90,25 +106,26 @@ export function OrdersBreakdown() {
         orders?.forEach(order => {
           const status = order.status?.toLowerCase();
           if (status === 'pending') counts.pending++;
+          else if (status === 'on_hold') counts.on_hold++;
           else if (status === 'processing' || status === 'shipped') counts.processing++;
           else if (status === 'delivered' || status === 'completed') counts.completed++;
-          else if (status === 'cancelled') counts.cancelled++;
+          else if (status === 'cancelled' || status === 'declined') counts.cancelled++;
         });
 
         return counts;
       }
 
-      return { pending: 0, processing: 0, completed: 0, cancelled: 0 };
+      return { pending: 0, on_hold: 0, processing: 0, completed: 0, cancelled: 0 };
     },
     enabled: !!effectiveUserId,
   });
 
   const data = [
-    { name: "Pending", value: ordersData?.pending || 0, color: "#FF9A76", colorEnd: "#FF7051", gradient: "from-orange-400 to-orange-500" },
+    { name: "Pending", value: (ordersData?.pending || 0) + (ordersData?.on_hold || 0), color: "#FF9A76", colorEnd: "#FF7051", gradient: "from-orange-400 to-orange-500" },
     { name: "Processing", value: ordersData?.processing || 0, color: "#A78BFA", colorEnd: "#8B5CF6", gradient: "from-purple-400 to-purple-600" },
     { name: "Completed", value: ordersData?.completed || 0, color: "#6EE7B7", colorEnd: "#34D399", gradient: "from-emerald-400 to-emerald-500" },
     { name: "Cancelled", value: ordersData?.cancelled || 0, color: "#FB7185", colorEnd: "#F43F5E", gradient: "from-rose-400 to-rose-500" },
-  ];
+  ].filter(item => item.value > 0); // Only show items with values
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
@@ -192,7 +209,7 @@ export function OrdersBreakdown() {
                 <div className="text-lg font-bold text-gray-900 dark:text-white">{item.value}</div>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                {((item.value / total) * 100).toFixed(0)}%
+                {total > 0 ? ((item.value / total) * 100).toFixed(0) : 0}%
               </div>
             </div>
           ))}
