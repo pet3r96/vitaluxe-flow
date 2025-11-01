@@ -521,8 +521,8 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Dashboard Layout for Practice Users */}
-      {isSubscribed && (effectiveRole === 'doctor' || (effectiveRole as any) === 'provider' || effectiveRole === 'staff') && (
+      {/* Dashboard Layout for Practice Users - Providers don't need subscription */}
+      {((effectiveRole as any) === 'provider' || (isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff'))) && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
           {/* Main Content Area - 3/4 width */}
           <div className="lg:col-span-3 space-y-4 lg:space-y-6">
@@ -548,21 +548,25 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Widgets Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-              <TabbedAppointmentsWidget />
-              <WaitingRoomWidget />
-              <TabbedCommunicationsWidget />
-              <RecentActivityWidget />
-            </div>
+            {/* Widgets Grid - Only show for subscribed doctors/staff */}
+            {isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff') && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                <TabbedAppointmentsWidget />
+                <WaitingRoomWidget />
+                <TabbedCommunicationsWidget />
+                <RecentActivityWidget />
+              </div>
+            )}
           </div>
 
-          {/* Right Sidebar - 1/4 width - Search & Quick Actions */}
-          <div className="lg:col-span-1 space-y-4 lg:space-y-6">
-            <PatientQuickSearch />
-            <QuickActionsPanel />
-            <DayViewCalendar />
-          </div>
+          {/* Right Sidebar - 1/4 width - Search & Quick Actions - Only for subscribed */}
+          {isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff') && (
+            <div className="lg:col-span-1 space-y-4 lg:space-y-6">
+              <PatientQuickSearch />
+              <QuickActionsPanel />
+              <DayViewCalendar />
+            </div>
+          )}
         </div>
       )}
 
@@ -645,9 +649,9 @@ const Dashboard = () => {
         <AnalyticsSection />
       )}
 
-      {!isSubscribed && (
+      {!isSubscribed && effectiveRole !== 'pharmacy' && effectiveRole !== 'admin' && (effectiveRole as any) !== 'provider' && (
         <>
-          {/* Stats cards for non-subscribed users */}
+          {/* Stats cards for non-subscribed doctors/staff */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-6">
             {stats.map((stat) => {
               const Icon = stat.icon;
