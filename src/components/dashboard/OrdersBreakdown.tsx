@@ -1,46 +1,115 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { TrendingUp } from "lucide-react";
-
-// Sample data - replace with real data from your backend
-const data = [
-  { name: "Pending", value: 12, color: "#FF9A76", colorEnd: "#FF7051", gradient: "from-orange-400 to-orange-500" },
-  { name: "Processing", value: 25, color: "#A78BFA", colorEnd: "#8B5CF6", gradient: "from-purple-400 to-purple-600" },
-  { name: "Completed", value: 63, color: "#6EE7B7", colorEnd: "#34D399", gradient: "from-emerald-400 to-emerald-500" },
-  { name: "Cancelled", value: 5, color: "#FB7185", colorEnd: "#F43F5E", gradient: "from-rose-400 to-rose-500" },
-];
-
-const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({
-  cx,
-  cy,
-  midAngle,
-  innerRadius,
-  outerRadius,
-  percent,
-}: any) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-  if (percent < 0.05) return null;
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="white"
-      textAnchor={x > cx ? "start" : "end"}
-      dominantBaseline="central"
-      className="text-xs font-bold"
-      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
-    >
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
-};
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export function OrdersBreakdown() {
+  const { effectiveRole, effectiveUserId } = useAuth();
+
+  // Fetch orders data based on role
+  const { data: ordersData } = useQuery({
+    queryKey: ["orders-breakdown", effectiveUserId, effectiveRole],
+    queryFn: async () => {
+      if (!effectiveUserId) return null;
+
+      if (effectiveRole === 'pharmacy') {
+        // For pharmacies, get orders where they have assigned order lines
+        const { data: orderLines, error: linesError } = await supabase
+          .from('order_lines')
+          .select('order_id')
+          .eq('assigned_pharmacy_id', effectiveUserId);
+
+        if (linesError) throw linesError;
+
+        if (!orderLines || orderLines.length === 0) {
+          return { pending: 0, processing: 0, completed: 0, cancelled: 0 };
+        }
+
+        // Get unique order IDs
+        const orderIds = [...new Set(orderLines.map(line => line.order_id))];
+
+        // Fetch order statuses
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select('status')
+          .in('id', orderIds);
+
+        if (ordersError) throw ordersError;
+
+        // Count by status
+        const counts = {
+          pending: 0,
+          processing: 0,
+          completed: 0,
+          cancelled: 0,
+        };
+
+        orders?.forEach(order => {
+          const status = order.status?.toLowerCase();
+          if (status === 'pending') counts.pending++;
+          else if (status === 'processing' || status === 'shipped') counts.processing++;
+          else if (status === 'delivered' || status === 'completed') counts.completed++;
+          else if (status === 'cancelled') counts.cancelled++;
+        });
+
+        return counts;
+      } else if (effectiveRole === 'doctor' || effectiveRole === 'provider' || effectiveRole === 'staff') {
+        // For practices: get their own orders
+        let doctorId = effectiveUserId;
+        
+        // For staff members, get their practice_id
+        if (effectiveRole === 'staff') {
+          const { data: staffData } = await supabase
+            .from("practice_staff")
+            .select("practice_id")
+            .eq("user_id", effectiveUserId)
+            .eq("active", true)
+            .maybeSingle();
+          
+          if (staffData?.practice_id) {
+            doctorId = staffData.practice_id;
+          }
+        }
+
+        const { data: orders, error } = await supabase
+          .from('orders')
+          .select('status')
+          .eq('doctor_id', doctorId);
+
+        if (error) throw error;
+
+        const counts = {
+          pending: 0,
+          processing: 0,
+          completed: 0,
+          cancelled: 0,
+        };
+
+        orders?.forEach(order => {
+          const status = order.status?.toLowerCase();
+          if (status === 'pending') counts.pending++;
+          else if (status === 'processing' || status === 'shipped') counts.processing++;
+          else if (status === 'delivered' || status === 'completed') counts.completed++;
+          else if (status === 'cancelled') counts.cancelled++;
+        });
+
+        return counts;
+      }
+
+      return { pending: 0, processing: 0, completed: 0, cancelled: 0 };
+    },
+    enabled: !!effectiveUserId,
+  });
+
+  const data = [
+    { name: "Pending", value: ordersData?.pending || 0, color: "#FF9A76", colorEnd: "#FF7051", gradient: "from-orange-400 to-orange-500" },
+    { name: "Processing", value: ordersData?.processing || 0, color: "#A78BFA", colorEnd: "#8B5CF6", gradient: "from-purple-400 to-purple-600" },
+    { name: "Completed", value: ordersData?.completed || 0, color: "#6EE7B7", colorEnd: "#34D399", gradient: "from-emerald-400 to-emerald-500" },
+    { name: "Cancelled", value: ordersData?.cancelled || 0, color: "#FB7185", colorEnd: "#F43F5E", gradient: "from-rose-400 to-rose-500" },
+  ];
+
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
@@ -68,7 +137,6 @@ export function OrdersBreakdown() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={renderCustomizedLabel}
                 outerRadius={90}
                 innerRadius={55}
                 fill="#8884d8"
@@ -103,8 +171,8 @@ export function OrdersBreakdown() {
           {/* Center text showing total - positioned absolutely in the donut center */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 dark:text-white animate-fade-in">{total}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Total Orders</div>
+              <div className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white animate-fade-in">{total}</div>
+              <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Total Orders</div>
             </div>
           </div>
         </div>
