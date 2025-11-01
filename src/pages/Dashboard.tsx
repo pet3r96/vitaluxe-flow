@@ -621,14 +621,11 @@ const Dashboard = () => {
               <WaitingRoomWidget />
             </div>
 
-            {/* Third Row - Communications & Orders */}
+            {/* Third Row - Communications & Recent Activity */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <TabbedCommunicationsWidget />
-              <OrdersBreakdown />
+              <RecentActivityWidget />
             </div>
-
-            {/* Bottom Row - Recent Activity */}
-            <RecentActivityWidget />
           </div>
 
           {/* Right Sidebar - 1/4 width - Search & Quick Actions */}

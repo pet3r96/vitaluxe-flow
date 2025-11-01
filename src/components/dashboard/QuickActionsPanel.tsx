@@ -34,11 +34,11 @@ export function QuickActionsPanel() {
   ];
 
   return (
-    <Card variant="modern" className="h-full">
-      <CardHeader className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-950/30 dark:to-indigo-900/20">
+    <Card variant="modern" className="h-full max-h-[500px] flex flex-col">
+      <CardHeader className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-950/30 dark:to-indigo-900/20 flex-shrink-0">
         <CardTitle className="text-indigo-700 dark:text-indigo-300">Quick Actions</CardTitle>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-6 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-2">
           {actions.map((action) => {
             const Icon = action.icon;
