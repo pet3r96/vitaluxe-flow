@@ -79,7 +79,134 @@ export function EnhancedCommandPalette() {
         });
       });
 
-      // Search products using RPC to avoid type issues
+      // Search patients (for practice, pharmacy, admin, topline)
+      if (['practice', 'pharmacy', 'admin', 'topline'].includes(effectiveRole || '')) {
+        try {
+          const { data: patients } = await supabase
+            .from('patient_accounts')
+            .select('id, first_name, last_name, date_of_birth, email')
+            .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+            .limit(10);
+
+          patients?.forEach((patient: any) => {
+            searchResults.push({
+              id: `patient-${patient.id}`,
+              title: `${patient.first_name} ${patient.last_name}`,
+              subtitle: patient.email || (patient.date_of_birth ? `DOB: ${new Date(patient.date_of_birth).toLocaleDateString()}` : ''),
+              type: 'patient',
+              icon: User,
+              action: () => {
+                navigate(`/patients/${patient.id}`);
+                setOpen(false);
+              }
+            });
+          });
+        } catch (err) {
+          console.error('Patients search error:', err);
+        }
+      }
+
+      // Search representatives (for admin, topline, pharmacy)
+      if (['admin', 'topline', 'pharmacy'].includes(effectiveRole || '')) {
+        try {
+          const { data: reps } = await supabase
+            .from('reps')
+            .select(`
+              id,
+              role,
+              user_id,
+              profiles!reps_user_id_fkey(name, email, full_name)
+            `)
+            .limit(10);
+
+          reps?.forEach((rep: any) => {
+            const profile = rep.profiles;
+            const displayName = profile?.full_name || profile?.name || profile?.email || 'Unknown';
+            const matchesSearch = displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  profile?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            if (matchesSearch) {
+              searchResults.push({
+                id: `rep-${rep.id}`,
+                title: displayName,
+                subtitle: `${rep.role === 'topline' ? 'Topline' : 'Downline'} Rep${profile?.email ? ` - ${profile.email}` : ''}`,
+                type: 'representative',
+                icon: Users,
+                action: () => {
+                  navigate('/representatives');
+                  setOpen(false);
+                }
+              });
+            }
+          });
+        } catch (err) {
+          console.error('Representatives search error:', err);
+        }
+      }
+
+      // Search practices (for admin, pharmacy, topline)
+      if (['admin', 'pharmacy', 'topline'].includes(effectiveRole || '')) {
+        try {
+          const { data: practices } = await supabase
+            .from('profiles')
+            .select('id, name, full_name, email, company, address_city, address_state')
+            .or(`name.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%`)
+            .not('name', 'is', null)
+            .limit(10);
+
+          practices?.forEach((practice: any) => {
+            const displayName = practice.full_name || practice.name || practice.company;
+            const location = practice.address_city && practice.address_state 
+              ? `${practice.address_city}, ${practice.address_state}` 
+              : practice.email;
+            
+            searchResults.push({
+              id: `practice-${practice.id}`,
+              title: displayName,
+              subtitle: location,
+              type: 'practice',
+              icon: Building2,
+              action: () => {
+                navigate('/practices');
+                setOpen(false);
+              }
+            });
+          });
+        } catch (err) {
+          console.error('Practices search error:', err);
+        }
+      }
+
+      // Search orders (for all non-patient roles)
+      if (effectiveRole !== 'patient') {
+        try {
+          const { data: orders } = await supabase
+            .from('orders')
+            .select('id, order_number, status, created_at')
+            .ilike('order_number', `%${searchTerm}%`)
+            .neq('status', 'cancelled')
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+          orders?.forEach((order: any) => {
+            searchResults.push({
+              id: `order-${order.id}`,
+              title: `Order #${order.order_number}`,
+              subtitle: `Status: ${order.status} - ${new Date(order.created_at).toLocaleDateString()}`,
+              type: 'order',
+              icon: FileText,
+              action: () => {
+                navigate('/orders');
+                setOpen(false);
+              }
+            });
+          });
+        } catch (err) {
+          console.error('Orders search error:', err);
+        }
+      }
+
+      // Search products
       if (effectiveRole !== 'patient') {
         try {
           const { data: products } = await supabase
@@ -113,7 +240,7 @@ export function EnhancedCommandPalette() {
     } finally {
       setLoading(false);
     }
-  }, [effectiveRole, roleMenus, navigate]);
+  }, [effectiveRole, roleMenus, navigate, user]);
 
   useEffect(() => {
     if (debouncedSearch) {
@@ -155,7 +282,7 @@ export function EnhancedCommandPalette() {
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput 
-          placeholder="Search patients, orders, products..." 
+          placeholder="Search patients, reps, orders, practices..." 
           value={search}
           onValueChange={setSearch}
         />
