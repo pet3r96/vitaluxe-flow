@@ -136,11 +136,12 @@ export function OrdersBreakdown() {
 
         return counts;
       } else if (effectiveRole === 'admin') {
-        // For admin: get ALL orders in the system (excluding cancelled)
+        // For admin: get ALL orders in the system (excluding cancelled and failed payments)
         const { data: orders, error } = await supabase
           .from('orders')
           .select('status, payment_status')
-          .neq('status', 'cancelled');
+          .neq('status', 'cancelled')
+          .neq('payment_status', 'payment_failed');
 
         if (error) throw error;
 
