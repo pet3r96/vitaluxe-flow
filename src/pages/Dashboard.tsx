@@ -557,6 +557,11 @@ const Dashboard = () => {
                 <RecentActivityWidget />
               </div>
             )}
+
+            {/* Recent Activity for non-subscribed providers */}
+            {(effectiveRole as any) === 'provider' && !isSubscribed && (
+              <RecentActivityWidget />
+            )}
           </div>
 
           {/* Right Sidebar - 1/4 width - Search & Quick Actions - Only for subscribed */}
@@ -644,9 +649,12 @@ const Dashboard = () => {
         </>
       )}
 
-      {/* For admin: keep AnalyticsSection as-is */}
+      {/* For admin: AnalyticsSection and Recent Activity */}
       {isSubscribed && effectiveRole === 'admin' && (
-        <AnalyticsSection />
+        <>
+          <AnalyticsSection />
+          <RecentActivityWidget className="mt-4 lg:mt-6" />
+        </>
       )}
 
       {!isSubscribed && effectiveRole !== 'pharmacy' && effectiveRole !== 'admin' && (effectiveRole as any) !== 'provider' && (
