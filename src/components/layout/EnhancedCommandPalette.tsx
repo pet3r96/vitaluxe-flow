@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Loader2, User, Package, FileText, Building2, Users } from "lucide-react";
+import { Search, Loader2, User, Package, FileText, Building2, Users, SearchX } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -166,7 +166,15 @@ export function EnhancedCommandPalette() {
             </div>
           )}
           {!loading && search.length >= 2 && results.length === 0 && (
-            <CommandEmpty>No results found.</CommandEmpty>
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <div className="rounded-full bg-gold1/10 p-4 mb-4">
+                <SearchX className="h-8 w-8 text-gold1" />
+              </div>
+              <p className="text-base font-semibold text-foreground mb-2">No results found</p>
+              <p className="text-sm text-muted-foreground text-center max-w-sm">
+                Try searching with different keywords or check your spelling
+              </p>
+            </div>
           )}
           {!loading && search.length === 0 && roleMenus.map((section) => (
             <CommandGroup key={section.title} heading={section.title}>
@@ -185,7 +193,14 @@ export function EnhancedCommandPalette() {
             </CommandGroup>
           ))}
           {!loading && search.length > 0 && search.length < 2 && (
-            <CommandEmpty>Type at least 2 characters to search...</CommandEmpty>
+            <div className="flex flex-col items-center justify-center py-8 px-4">
+              <div className="rounded-full bg-muted/50 p-3 mb-3">
+                <Search className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Type at least 2 characters to search...
+              </p>
+            </div>
           )}
           {!loading && search.length >= 2 && Object.entries(groupedResults).map(([type, items]) => (
             <CommandGroup key={type} heading={typeLabels[type as keyof typeof typeLabels]}>
