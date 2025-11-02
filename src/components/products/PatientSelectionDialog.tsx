@@ -112,7 +112,7 @@ export const PatientSelectionDialog = ({
       const userIds = providerRecords.map((p: any) => p.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, name, full_name, npi, dea")
+        .select("id, name, full_name, prescriber_name, npi, dea")
         .in("id", userIds);
       
       if (profilesError) throw profilesError;
@@ -125,8 +125,9 @@ export const PatientSelectionDialog = ({
       // Combine provider + profile data
       const mappedData = providerRecords.map((p: any) => {
         const profile = profilesById.get(p.user_id);
-        // Prioritize full_name, fallback to name if not an email, then email
-        const displayName = profile?.full_name || 
+        // Prioritize prescriber_name, then full_name, fallback to name if not an email
+        const displayName = profile?.prescriber_name || 
+                           profile?.full_name || 
                            (profile?.name?.includes('@') ? '' : profile?.name) || 
                            'Unknown Provider';
         
@@ -195,12 +196,20 @@ export const PatientSelectionDialog = ({
 
       const decryptedCreds = creds[0];
       
+      // Get prescriber_name from profiles
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("prescriber_name")
+        .eq("id", providerRecord.user_id)
+        .single();
+      
       return {
         id: providerRecord.id,
         user_id: providerRecord.user_id,
         profiles: {
           id: providerRecord.user_id,
-          name: decryptedCreds.full_name,
+          name: profileData?.prescriber_name || decryptedCreds.full_name,
+          prescriber_name: profileData?.prescriber_name,
           npi: decryptedCreds.npi,
           dea: decryptedCreds.dea,
           license_number: decryptedCreds.license_number
@@ -823,7 +832,7 @@ export const PatientSelectionDialog = ({
             patient={shipTo === 'practice' ? null : selectedPatient}
             provider={selectedProviderData ? {
               id: selectedProviderData.id,
-              name: selectedProviderData.profiles?.name || 'Unknown',
+              name: selectedProviderData.profiles?.prescriber_name || selectedProviderData.profiles?.name || 'Unknown',
               email: 'N/A',
               npi: selectedProviderData.profiles?.npi || 'N/A',
               dea: selectedProviderData.profiles?.dea || 'N/A',

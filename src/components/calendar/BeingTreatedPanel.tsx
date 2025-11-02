@@ -55,7 +55,7 @@ export function BeingTreatedPanel({
           ),
           provider:providers!patient_appointments_provider_id_fkey(
             id,
-            user:profiles!providers_user_id_fkey(full_name)
+            user:profiles!providers_user_id_fkey(full_name, prescriber_name)
           ),
           practice_rooms (
             id,
@@ -85,8 +85,8 @@ export function BeingTreatedPanel({
   }, [practiceId, refetch]);
 
   const getProviderName = (appointment: any) => {
-    // Use the directly joined provider data from the query
-    return appointment.provider?.user?.full_name || "Unknown Provider";
+    // Prioritize prescriber_name, fallback to full_name
+    return appointment.provider?.user?.prescriber_name || appointment.provider?.user?.full_name || "Unknown Provider";
   };
 
   const getTreatmentDuration = (startedAt: string) => {
