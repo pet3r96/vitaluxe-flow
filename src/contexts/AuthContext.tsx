@@ -1398,10 +1398,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (logData) {
           setCurrentLogId(logData.id);
-          // Server-side session creation - no longer using sessionStorage
+          // Server-side session creation - refresh token to ensure it's valid
           try {
-            const { data: { session: authSession } } = await supabase.auth.getSession();
-            const token = authSession?.access_token;
+            const { data: { session: authSession }, error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError || !authSession) {
+              logger.error('Session refresh failed', refreshError);
+              toast.error("Your session has expired. Please log in again.");
+              await supabase.auth.signOut();
+              return;
+            }
+            
+            const token = authSession.access_token;
             const options: any = {
               body: { 
                 role, 
