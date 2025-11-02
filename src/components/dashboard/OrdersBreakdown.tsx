@@ -194,7 +194,7 @@ export function OrdersBreakdown() {
       </CardHeader>
       <CardContent className="p-3 sm:p-6">
         <div className="relative flex flex-col items-center">
-          <ResponsiveContainer width="100%" height={180} className="min-h-[180px] sm:min-h-[200px]">
+          <ResponsiveContainer width="100%" height={200} className="min-h-[200px] sm:min-h-[220px]">
             <PieChart>
               <defs>
                 {data.map((entry, index) => (
@@ -209,8 +209,8 @@ export function OrdersBreakdown() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                outerRadius={60}
-                innerRadius={40}
+                outerRadius={70}
+                innerRadius={48}
                 fill="#8884d8"
                 dataKey="value"
                 animationBegin={0}
@@ -246,10 +246,10 @@ export function OrdersBreakdown() {
           </ResponsiveContainer>
 
           {/* Center text showing total - positioned absolutely in the donut center */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-white drop-shadow-md animate-fade-in">{total}</div>
-              <div className="text-[10px] sm:text-xs text-white/90 drop-shadow-sm mt-0.5 sm:mt-1">Total Orders</div>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '10px', height: '200px' }}>
+            <div className="text-center bg-card/90 rounded-full p-4 backdrop-blur-sm">
+              <div className="text-3xl sm:text-4xl font-bold text-white drop-shadow-lg animate-fade-in">{total}</div>
+              <div className="text-xs sm:text-sm text-white/95 drop-shadow-md mt-1 font-medium">Total Orders</div>
             </div>
           </div>
         </div>
