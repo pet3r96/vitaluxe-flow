@@ -171,7 +171,12 @@ jobs:
         run: |
           echo "🚀 Deploying new container version to Lightsail..."
           LIGHTSAIL_SERVICE_NAME=$(echo "$LIGHTSAIL_SERVICE_NAME" | tr -d '\n' | tr -d '\r' | xargs)
+          
+          # Get commit SHA for unique image tag
+          COMMIT_SHA=$(echo "${GITHUB_SHA::7}")
+          IMAGE_TAG="$ECR_REPOSITORY:$COMMIT_SHA"
           echo "Using Lightsail service: $LIGHTSAIL_SERVICE_NAME"
+          echo "Using image tag: $IMAGE_TAG"
           
           # Debug: Check if service exists
           echo "🔍 Checking if Lightsail service exists..."
@@ -206,9 +211,9 @@ jobs:
           
           # Debug: Check ECR image exists
           echo "🔍 Verifying ECR image exists..."
-          IMAGE_CHECK=$(aws ecr describe-images --repository-name $(echo "$ECR_REPOSITORY" | cut -d'/' -f2) --image-ids imageTag=latest 2>&1)
+          IMAGE_CHECK=$(aws ecr describe-images --repository-name $(echo "$ECR_REPOSITORY" | cut -d'/' -f2) --image-ids imageTag=$COMMIT_SHA 2>&1)
           if [ $? -ne 0 ]; then
-            echo "❌ ECR image '${ECR_REPOSITORY}:latest' not found"
+            echo "❌ ECR image '${IMAGE_TAG}' not found"
             echo "Image check result: $IMAGE_CHECK"
             exit 1
           fi
@@ -218,7 +223,7 @@ jobs:
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --containers "{
               \"vitaluxe-app\": {
-                \"image\": \"${ECR_REPOSITORY}:latest\",
+                \"image\": \"${IMAGE_TAG}\",
                 \"ports\": {\"8080\": \"HTTP\"},
                 \"environment\": {},
                 \"dependsOn\": []
