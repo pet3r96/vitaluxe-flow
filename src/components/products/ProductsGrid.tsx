@@ -746,9 +746,9 @@ export const ProductsGrid = () => {
         }
         return old;
       });
-      // Then refetch to sync with server
-      queryClient.refetchQueries({ queryKey: ["cart-count", effectiveUserId], type: 'active' });
-      queryClient.refetchQueries({ queryKey: ["cart", effectiveUserId], type: 'active' });
+      // Immediately invalidate to force fresh fetch
+      await queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+      await queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error adding to cart", error);

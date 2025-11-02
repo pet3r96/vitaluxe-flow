@@ -62,8 +62,9 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
       };
     },
     enabled: !!effectiveUserId && open,
-    staleTime: 30000, // 30 seconds - cart sheet updates frequently
+    staleTime: 0, // Always fetch fresh data for immediate sync
     refetchOnMount: true,
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
   });
 
   const updateQuantityMutation = useMutation({
