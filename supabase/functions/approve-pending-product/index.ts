@@ -121,7 +121,6 @@ Deno.serve(async (req) => {
         name: adminData.name || request.name,
         dosage: adminData.dosage || request.dosage,
         sig: adminData.sig || request.sig,
-        description: adminData.description || request.description,
         base_price: adminData.base_price,
         topline_price: request.requires_prescription ? null : adminData.topline_price,
         downline_price: request.requires_prescription ? null : adminData.downline_price,
