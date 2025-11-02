@@ -188,50 +188,53 @@ export const ProductCard = memo(({
   };
 
   return (
-    <Card className="group hover:shadow-lg transition-shadow duration-200 flex flex-col h-full">
-      <CardContent className="p-4 flex-1">
+    <Card className="group hover:shadow-lg transition-all duration-200 flex flex-col h-full">
+      <CardContent className="p-4 sm:p-5 lg:p-6 flex-1 flex flex-col">
         {/* Product Image */}
-        <div className="aspect-square mb-4 rounded-lg overflow-hidden bg-muted">
+        <div className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted/50">
           {product.image_url ? (
             <img
               src={product.image_url}
               alt={product.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
               No image
             </div>
           )}
         </div>
 
         {/* Product Info */}
-        <div className={`space-y-2 flex flex-col items-start ${isAdmin ? 'h-[320px]' : 'h-[240px]'}`}>
-          <h3 className="font-semibold text-lg line-clamp-2 h-[56px]">{product.name}</h3>
-          <div className="h-[28px]">
+        <div className="space-y-3 flex flex-col items-start flex-1">
+          <div className="w-full space-y-1">
+            <h3 className="font-semibold text-base sm:text-lg lg:text-xl line-clamp-2 leading-tight">{product.name}</h3>
             {product.dosage && (
-              <p className="text-sm text-muted-foreground line-clamp-2">{product.dosage}</p>
+              <p className="text-sm text-muted-foreground line-clamp-1">{product.dosage}</p>
             )}
           </div>
 
           {/* Badges */}
-          <div className="flex flex-wrap gap-2 min-h-[28px] justify-start">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 w-full">
             {product.requires_prescription && (
-              <Badge variant="info" size="sm" className="bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30">Rx Required</Badge>
+              <Badge variant="info" size="sm" className="bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30 text-xs">
+                Rx Required
+              </Badge>
             )}
             {product.product_type && (
-              <Badge variant="secondary" size="sm">{product.product_type}</Badge>
+              <Badge variant="secondary" size="sm" className="text-xs">{product.product_type}</Badge>
             )}
-            <Badge variant={product.active ? "success" : "outline"} size="sm">
+            <Badge variant={product.active ? "success" : "outline"} size="sm" className="text-xs">
               {product.active ? "Active" : "Inactive"}
             </Badge>
             {isToplineRep && isHiddenFromDownline && (
-              <Badge variant="destructive" size="sm">
+              <Badge variant="destructive" size="sm" className="text-xs">
                 Deactivated
               </Badge>
             )}
             {effectivePrice?.has_override && (isToplineRep || isDownlineRep || isProvider) && (
-              <Badge variant="warning" size="sm">
+              <Badge variant="warning" size="sm" className="text-xs">
                 Custom Price
               </Badge>
             )}
@@ -241,15 +244,15 @@ export const ProductCard = memo(({
           <div className="flex-1"></div>
 
           {/* Price Display */}
-          <div className="pt-2 border-t mt-auto">
+          <div className="w-full pt-3 border-t mt-auto">
             {getPriceDisplay()}
           </div>
 
           {/* Admin Info */}
           {isAdmin && (
-            <div className="pt-2 border-t">
+            <div className="w-full pt-3 border-t">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Status:</span>
+                <span className="text-muted-foreground font-medium">Status:</span>
                 <Switch
                   checked={product.active}
                   onCheckedChange={() => onToggleStatus(product.id, product.active)}
@@ -261,11 +264,11 @@ export const ProductCard = memo(({
         </div>
       </CardContent>
 
-      <CardFooter className="p-4 pt-0 flex gap-2">
+      <CardFooter className="p-4 sm:p-5 lg:p-6 pt-0 flex gap-2">
         {/* Provider and Staff with ordering privileges Actions */}
         {canOrder && (
           <Button
-            className="w-full"
+            className="w-full min-h-[44px] text-sm sm:text-base"
             onClick={() => onAddToCart(product)}
             disabled={!product.active}
           >
@@ -278,7 +281,7 @@ export const ProductCard = memo(({
         {isAdmin && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full min-h-[44px] text-sm sm:text-base">
                 <MoreVertical className="h-4 w-4 mr-2" />
                 Actions
               </Button>

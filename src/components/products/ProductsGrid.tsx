@@ -16,6 +16,7 @@ import { Search, ShoppingCart, Plus } from "lucide-react";
 import { ProductDialog } from "./ProductDialog";
 import { PatientSelectionDialog } from "./PatientSelectionDialog";
 import { ProductCard } from "./ProductCard";
+import { ProductCardSkeleton } from "./ProductCardSkeleton";
 import { CartSheet } from "./CartSheet";
 import { usePagination } from "@/hooks/usePagination";
 import { useCartCount } from "@/hooks/useCartCount";
@@ -758,7 +759,7 @@ export const ProductsGrid = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1600px] space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
         <div className="flex flex-1 gap-2 sm:gap-3 flex-col sm:flex-row w-full sm:w-auto">
@@ -849,16 +850,19 @@ export const ProductsGrid = () => {
 
       {/* Products Grid */}
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">
-          Loading products...
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
         </div>
       ) : filteredProducts?.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          No products found
+        <div className="text-center py-12">
+          <p className="text-muted-foreground text-lg mb-2">No products found</p>
+          <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
             {paginatedProducts?.map((product) => (
               <ProductCard
                 key={product.id}
