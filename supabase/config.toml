@@ -314,3 +314,6 @@ verify_jwt = true
 
 [functions.validate-share-link]
 verify_jwt = false
+
+[functions.set-all-test-passwords]
+verify_jwt = false
