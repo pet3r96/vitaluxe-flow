@@ -471,13 +471,31 @@ export const PatientSelectionDialog = ({
               {providers && providers.length > 0 && (
                 <div className="grid gap-3 pb-4 border-b">
                   <Label className="text-base font-semibold">Select Provider *</Label>
-                  {providers.length === 1 ? (
-                   <div className="p-3 border rounded-md bg-muted">
-                      <p className="text-sm font-medium">{providers[0].prescriber_name}</p>
+                  
+                  {/* Show read-only if provider is logged in OR only one provider exists */}
+                  {(providers.length === 1 || 
+                    (effectiveRole === 'provider' && selectedProviderId && 
+                     providers.find(p => p.id === selectedProviderId))) ? (
+                    <div className="p-3 border rounded-md bg-muted">
+                      <p className="text-sm font-medium">
+                        {providers.find(p => p.id === selectedProviderId)?.prescriber_name || providers[0].prescriber_name}
+                      </p>
                       <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
-                        {providers[0].specialty && <p>Specialty: {providers[0].specialty}</p>}
-                        {providers[0].npi && <p>NPI: {providers[0].npi}</p>}
+                        {(() => {
+                          const provider = providers.find(p => p.id === selectedProviderId) || providers[0];
+                          return (
+                            <>
+                              {provider.specialty && <p>Specialty: {provider.specialty}</p>}
+                              {provider.npi && <p>NPI: {provider.npi}</p>}
+                            </>
+                          );
+                        })()}
                       </div>
+                      {effectiveRole === 'provider' && (
+                        <p className="text-xs text-muted-foreground italic mt-2">
+                          Automatically set to your provider account
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <RadioGroup value={selectedProviderId || ""} onValueChange={(value) => {

@@ -13,6 +13,7 @@ import { Loader2, User, Calendar, MapPin, Mail, CheckCircle2, Edit2 } from "luci
 import { format, differenceInYears } from "date-fns";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatPatientEmail } from "@/lib/emailUtils";
 
 interface BasicDemographicsCardProps {
   patientAccount: any;
@@ -328,7 +329,7 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
             {/* Email - Read Only Display */}
             <div className="space-y-2 p-4 rounded-lg bg-muted/50 border border-border/50">
               <Label className="text-sm text-muted-foreground">Email (cannot be edited)</Label>
-              <p className="text-sm font-medium text-foreground">{patientAccount?.email || "Not available"}</p>
+              <p className="text-sm font-medium text-muted-foreground">{formatPatientEmail(patientAccount?.email)}</p>
             </div>
 
             <DialogFooter className="gap-2">

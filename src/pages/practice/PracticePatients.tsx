@@ -9,6 +9,7 @@ import { PatientPortalStatusBadge } from "@/components/patients/PatientPortalSta
 import { PatientInvitationDialog } from "@/components/patients/PatientInvitationDialog";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { formatPatientEmail } from "@/lib/emailUtils";
 
 export default function PracticePatients() {
   const { user, effectivePracticeId } = useAuth();
@@ -236,7 +237,7 @@ export default function PracticePatients() {
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Mail className="w-4 h-4" />
-                    <span className="break-all">{patient.email}</span>
+                    <span className="break-all">{formatPatientEmail(patient.email)}</span>
                   </div>
                 </div>
 

@@ -21,6 +21,7 @@ import { RescheduleAppointmentDialog } from "./RescheduleAppointmentDialog";
 import { CreateFollowUpFromAppointmentDialog } from "./CreateFollowUpFromAppointmentDialog";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatPatientEmail } from "@/lib/emailUtils";
 
 interface AppointmentDetailsDialogProps {
   open: boolean;
@@ -270,7 +271,7 @@ export function AppointmentDetailsDialog({
                 {appointment.patient_accounts?.email && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Mail className="h-4 w-4" />
-                    <span>{appointment.patient_accounts.email}</span>
+                    <span>{formatPatientEmail(appointment.patient_accounts.email)}</span>
                   </div>
                 )}
               </div>

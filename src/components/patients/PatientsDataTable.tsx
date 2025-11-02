@@ -24,6 +24,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { formatPhoneNumber } from "@/lib/validators";
 import { logger } from "@/lib/logger";
+import { formatPatientEmail } from "@/lib/emailUtils";
 
 export const PatientsDataTable = () => {
   const { effectiveRole, effectivePracticeId, user } = useAuth();
@@ -411,7 +412,7 @@ export const PatientsDataTable = () => {
                         ? `${patient.first_name} ${patient.last_name}`.trim() 
                         : patient.first_name || patient.last_name || patient.email?.split('@')[0] || 'Unknown')}
                   </TableCell>
-                  <TableCell>{patient.email || "-"}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatPatientEmail(patient.email)}</TableCell>
                   <TableCell>{formatPhoneNumber(patient.phone)}</TableCell>
                   <TableCell className="max-w-xs truncate">
                     {patient.address_formatted || 
