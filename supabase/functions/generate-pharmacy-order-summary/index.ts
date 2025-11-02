@@ -59,7 +59,7 @@ serve(async (req) => {
     if (linesError) throw linesError;
 
     // Import jsPDF dynamically
-    const { default: jsPDF } = await import('https://cdn.skypack.dev/jspdf@2.5.1');
+    const { default: jsPDF } = await import('https://esm.sh/jspdf@2.5.2');
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
