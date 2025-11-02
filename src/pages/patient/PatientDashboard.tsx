@@ -29,7 +29,7 @@ export default function PatientDashboard() {
       
       const { data, error } = await supabase
         .from("patient_accounts")
-        .select("id, first_name, last_name, practice_id, user_id, email, date_of_birth, address, city, state, zip_code, gender_at_birth, intake_completed_at")
+        .select("id, first_name, last_name, practice_id, user_id, email, birth_date, address_street, address_city, address_state, address_zip, address_formatted, gender_at_birth, intake_completed_at")
         .eq("user_id", effectiveUserId)
         .maybeSingle();
       

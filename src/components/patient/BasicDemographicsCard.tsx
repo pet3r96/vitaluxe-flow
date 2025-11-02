@@ -34,7 +34,7 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
   // HIPAA Compliance: Log PHI access when demographics are displayed
   useEffect(() => {
     if (patientAccount && effectiveUserId) {
-      const hasPHI = patientAccount.address || patientAccount.date_of_birth;
+      const hasPHI = patientAccount.address_street || patientAccount.address || patientAccount.birth_date || patientAccount.date_of_birth;
       
       if (hasPHI) {
         logPatientPHIAccess({
@@ -43,7 +43,7 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
             ? `${patientAccount.first_name} ${patientAccount.last_name}` 
             : patientAccount.email || 'Patient',
           accessedFields: {
-            address: !!patientAccount.address,
+            address: !!(patientAccount.address_street || patientAccount.address),
           },
           viewerRole: effectiveRole || 'patient',
           relationship: 'practice_admin',
@@ -58,19 +58,23 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
     if (isEditDialogOpen && patientAccount) {
       setFirstName(patientAccount.first_name || "");
       setLastName(patientAccount.last_name || "");
-      setDateOfBirth(patientAccount.date_of_birth || "");
+      setDateOfBirth(patientAccount.birth_date || patientAccount.date_of_birth || "");
       setGender(patientAccount.gender_at_birth || "");
 
-      // Initialize address value
-      if (patientAccount.address) {
+      // Initialize address value - use new columns first, fallback to old
+      const street = patientAccount.address_street || patientAccount.address || "";
+      const city = patientAccount.address_city || patientAccount.city || "";
+      const state = patientAccount.address_state || patientAccount.state || "";
+      const zip = patientAccount.address_zip || patientAccount.zip_code || "";
+      
+      if (street) {
         setAddressValue({
-          street: patientAccount.address || "",
-          city: patientAccount.city || "",
-          state: patientAccount.state || "",
-          zip: patientAccount.zip_code || "",
-          formatted: patientAccount.address
-            ? `${patientAccount.address}${patientAccount.city ? ", " + patientAccount.city : ""}${patientAccount.state ? ", " + patientAccount.state : ""}${patientAccount.zip_code ? " " + patientAccount.zip_code : ""}`
-            : "",
+          street,
+          city,
+          state,
+          zip,
+          formatted: patientAccount.address_formatted || 
+            (street ? `${street}${city ? ", " + city : ""}${state ? ", " + state : ""}${zip ? " " + zip : ""}` : ""),
           status: "verified",
           source: "manual",
         });
@@ -118,7 +122,14 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
     updateMutation.mutate({
       first_name: firstName,
       last_name: lastName,
+      // Update both new and old columns for backward compatibility
+      birth_date: dateOfBirth,
       date_of_birth: dateOfBirth,
+      address_street: addressValue.street || "",
+      address_city: addressValue.city || "",
+      address_state: addressValue.state || "",
+      address_zip: addressValue.zip || "",
+      address_formatted: addressValue.formatted || "",
       address: addressValue.street || "",
       city: addressValue.city || "",
       state: addressValue.state || "",
@@ -132,17 +143,23 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
     ? `${patientAccount.first_name} ${patientAccount.last_name}`
     : "Not provided";
 
-  const formattedDOB = patientAccount?.date_of_birth
-    ? format(new Date(patientAccount.date_of_birth), "MMM dd, yyyy")
+  // Use new column first, fallback to old
+  const dobValue = patientAccount?.birth_date || patientAccount?.date_of_birth;
+  const formattedDOB = dobValue
+    ? format(new Date(dobValue), "MMM dd, yyyy")
     : "Not provided";
 
-  const age = patientAccount?.date_of_birth
-    ? differenceInYears(new Date(), new Date(patientAccount.date_of_birth))
+  const age = dobValue
+    ? differenceInYears(new Date(), new Date(dobValue))
     : null;
 
-  const formattedAddress = patientAccount?.address
-    ? `${patientAccount.address}${patientAccount.city ? ", " + patientAccount.city : ""}${patientAccount.state ? ", " + patientAccount.state : ""}${patientAccount.zip_code ? " " + patientAccount.zip_code : ""}`
-    : "Not provided";
+  // Use new columns first, fallback to old
+  const formattedAddress = patientAccount?.address_formatted || 
+    (patientAccount?.address_street 
+      ? `${patientAccount.address_street}${patientAccount.address_city ? ", " + patientAccount.address_city : ""}${patientAccount.address_state ? ", " + patientAccount.address_state : ""}${patientAccount.address_zip ? " " + patientAccount.address_zip : ""}`
+      : patientAccount?.address
+        ? `${patientAccount.address}${patientAccount.city ? ", " + patientAccount.city : ""}${patientAccount.state ? ", " + patientAccount.state : ""}${patientAccount.zip_code ? " " + patientAccount.zip_code : ""}`
+        : "Not provided");
 
   return (
     <>
