@@ -477,51 +477,46 @@ export function MedicalVaultView({
               
               <div className="flex flex-wrap gap-1.5 justify-center pt-2">
                 <Button 
-                  variant="outline" 
+                  variant="vault" 
                   size="sm"
                   onClick={handleViewPDF}
                   disabled={isGeneratingPdf}
-                  className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/50 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-gold1 dark:text-white hover:text-gold1 dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50 disabled:opacity-50"
                 >
                   <Eye className="h-3 w-3" />
                   {isGeneratingPdf ? 'Generating...' : 'View'}
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant="vault" 
                   size="sm"
                   onClick={handleViewPDF}
                   disabled={isGeneratingPdf}
-                  className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/50 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-gold1 dark:text-white hover:text-gold1 dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50 disabled:opacity-50"
                 >
                   <Printer className="h-3 w-3" />
                   Print
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant="vault" 
                   size="sm"
                   onClick={handleDownloadPDF}
                   disabled={isGeneratingPdf}
-                  className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/50 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-gold1 dark:text-white hover:text-gold1 dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50 disabled:opacity-50"
                 >
                   <Download className="h-3 w-3" />
                   Download
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant="vault" 
                   size="sm"
                   onClick={() => setAuditDialogOpen(true)}
-                  className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/50 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-gold1 dark:text-white hover:text-gold1 dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50"
                 >
                   <ClipboardList className="h-3 w-3" />
                   Audit
                 </Button>
                 {mode === 'patient' && (
                   <Button 
-                    variant="outline" 
+                    variant="vault" 
                     size="sm"
                     onClick={handleSharePDF}
                     disabled={isGeneratingPdf}
-                     className="bg-gold1/10 dark:bg-white/10 backdrop-blur-md border-gold1/50 dark:border-white/20 hover:bg-gold1/20 dark:hover:bg-white/20 text-gold1 dark:text-white hover:text-gold1 dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-gold1/50 dark:hover:shadow-yellow-500/50 disabled:opacity-50"
                   >
                     <Share2 className="h-3 w-3" />
                     Share
