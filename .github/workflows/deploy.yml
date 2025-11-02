@@ -231,15 +231,7 @@ jobs:
             }" \
             --public-endpoint "{
               \"containerName\": \"vitaluxe-app\",
-              \"containerPort\": 8080,
-              \"healthCheck\": {
-                \"healthyThreshold\": 2,
-                \"unhealthyThreshold\": 2,
-                \"timeoutSeconds\": 5,
-                \"intervalSeconds\": 30,
-                \"path\": \"/\",
-                \"successCodes\": \"200-399\"
-              }
+              \"containerPort\": 8080
             }" 2>&1)
           
           DEPLOYMENT_EXIT_CODE=$?
