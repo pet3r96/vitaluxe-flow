@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import type { Database } from "@/integrations/supabase/types";
+import { usePatients } from "@/hooks/usePatients";
 import {
   Table,
   TableBody,
@@ -35,126 +36,11 @@ export const PatientsDataTable = () => {
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: patients, isLoading, refetch } = useQuery<any[]>({
-    queryKey: ["patients", effectiveRole, effectivePracticeId],
-    staleTime: 300000, // 5 minutes - patient data changes infrequently
-    queryFn: async () => {
-      logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
-      const columns = "id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at";
+  // Use centralized hook for patient data (bypasses RLS via edge function)
+  const { data: patients, isLoading, refetch } = usePatients(effectivePracticeId);
 
-      let patientsData: any[] = [];
-
-      if ((effectiveRole === "doctor" || effectiveRole === "provider" || effectiveRole === "staff") && effectivePracticeId) {
-        // 1) Patients explicitly assigned to this practice
-        const { data: byPractice, error: byPracticeErr } = await supabase
-          .from("patient_accounts")
-          .select(columns)
-          .eq("practice_id", effectivePracticeId)
-          .order("created_at", { ascending: false });
-
-        if (byPracticeErr) {
-          logger.error("Error fetching patients by practice", byPracticeErr);
-          throw byPracticeErr;
-        }
-        patientsData = byPractice || [];
-
-        // 2) Also include patients assigned to providers that belong to this practice (even if practice_id is NULL)
-        const { data: providerRows } = await supabase
-          .from("providers")
-          .select("id")
-          .eq("practice_id", effectivePracticeId);
-
-        const providerIds = (providerRows || []).map(p => p.id);
-        if (providerIds.length > 0) {
-          const { data: byProvider, error: byProviderErr } = await supabase
-            .from("patient_accounts")
-            .select(columns)
-            .in("provider_id", providerIds)
-            .order("created_at", { ascending: false });
-
-          if (byProviderErr) {
-            logger.error("Error fetching patients by provider", byProviderErr);
-            throw byProviderErr;
-          }
-
-          // Merge and de-duplicate
-          const map = new Map<string, any>();
-          for (const p of [...patientsData, ...(byProvider || [])]) {
-            map.set(p.id, p);
-          }
-          patientsData = Array.from(map.values());
-        }
-      } else {
-        // Admins (or roles without a practice context) get full list per RLS
-        const { data, error } = await supabase
-          .from("patient_accounts")
-          .select(columns)
-          .order("created_at", { ascending: false });
-        if (error) {
-          logger.error("Error fetching patients", error);
-          throw error;
-        }
-        patientsData = data || [];
-      }
-
-      logger.info('Patients fetched', { count: patientsData?.length || 0 });
-
-      // CLIENT-SIDE SECURITY: Validate all patients belong to the correct practice
-      if ((effectiveRole === "doctor" || effectiveRole === "provider") && effectivePracticeId) {
-        const invalidPatients = patientsData.filter(p => 
-          p.practice_id && p.practice_id !== effectivePracticeId
-        );
-        
-        if (invalidPatients.length > 0) {
-          logger.error('SECURITY: Cross-practice patients detected', {
-            count: invalidPatients.length,
-            userPractice: effectivePracticeId,
-            invalidPractices: [...new Set(invalidPatients.map(p => p.practice_id))]
-          });
-          
-          // Log suspicious access for each invalid patient
-          import('@/lib/auditLogger').then(({ logSuspiciousAccess }) => {
-            invalidPatients.forEach(patient => {
-              logSuspiciousAccess({
-                userId: user?.id || '',
-                attemptedPracticeId: patient.practice_id,
-                userPracticeId: effectivePracticeId,
-                resource: 'patient_accounts',
-                details: { patient_id: patient.id }
-              });
-            });
-          });
-          
-          // Filter out invalid patients
-          patientsData = patientsData.filter(p => 
-            !p.practice_id || p.practice_id === effectivePracticeId
-          );
-        }
-      }
-
-      // Fetch practice details for all patients
-      if (patientsData && patientsData.length > 0) {
-        const practiceIds = [...new Set(patientsData.map(p => p.practice_id).filter(Boolean))];
-        
-        if (practiceIds.length > 0) {
-          const { data: practicesData } = await supabase
-            .from("profiles")
-            .select("id, name, email")
-            .in("id", practiceIds);
-
-          // Map practice data to patients
-          const practicesMap = new Map(practicesData?.map(p => [p.id, p]) || []);
-          return patientsData.map(patient => ({
-            ...patient,
-            practice: practicesMap.get(patient.practice_id)
-          }));
-        }
-      }
-
-      return patientsData || [];
-    },
-    enabled: effectiveRole === "admin" || effectiveRole === "doctor" || effectiveRole === "staff" || (effectiveRole === "provider" && !!effectivePracticeId),
-  });
+  // Log patient fetch results
+  logger.info('Patients fetched via hook', { count: patients?.length || 0 });
 
   const filteredPatients = useMemo(() => patients?.filter(patient => {
     const displayName = patient.name || 
