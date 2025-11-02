@@ -32,30 +32,38 @@ jobs:
       - name: Parse ECR Repository Details
         run: |
           echo "🔧 Parsing ECR Repository details..."
-          ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
-          
-          # Validate ECR_REPOSITORY format (should be full URI)
-          if [[ ! "$ECR_REPO" =~ ^[0-9]+\.dkr\.ecr\..+\.amazonaws\.com/.+ ]]; then
-            echo "❌ ERROR: ECR_REPOSITORY must be a full ECR URI"
-            echo "Expected format: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/REPO_NAME"
-            echo "Received: $ECR_REPO"
-            exit 1
+          RAW_ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
+
+          # Discover AWS account ID if not provided in the repo string
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGION="${{ secrets.AWS_REGION }}"
+
+          # Support both full ECR URI and plain repo name
+          if [[ "$RAW_ECR_REPO" =~ ^[0-9]+\.dkr\.ecr\..+\.amazonaws\.com/.+ ]]; then
+            # Full URI provided
+            ECR_REPOSITORY_URI="$RAW_ECR_REPO"
+            ECR_ACCOUNT_ID=$(echo "$RAW_ECR_REPO" | cut -d'.' -f1)
+            ECR_REGION=$(echo "$RAW_ECR_REPO" | cut -d'.' -f4)
+            REPO_NAME=$(echo "$RAW_ECR_REPO" | cut -d'/' -f2)
+          else
+            # Only repo name provided -> construct full URI
+            REPO_NAME="$RAW_ECR_REPO"
+            ECR_ACCOUNT_ID="$ACCOUNT_ID"
+            ECR_REGION="$REGION"
+            ECR_REPOSITORY_URI="$ECR_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com/$REPO_NAME"
           fi
-          
-          # Extract components from ECR URI
-          ECR_ACCOUNT_ID=$(echo "$ECR_REPO" | cut -d'.' -f1)
-          ECR_REGION=$(echo "$ECR_REPO" | cut -d'.' -f4)
-          REPO_NAME=$(echo "$ECR_REPO" | cut -d'/' -f2)
-          
+
           echo "Parsed ECR details:"
           echo "  Account ID: $ECR_ACCOUNT_ID"
           echo "  Region: $ECR_REGION"
           echo "  Repository Name: $REPO_NAME"
-          
+          echo "  Full URI: $ECR_REPOSITORY_URI"
+
           # Export to GITHUB_ENV for use in subsequent steps
           echo "ECR_ACCOUNT_ID=$ECR_ACCOUNT_ID" >> $GITHUB_ENV
           echo "ECR_REGION=$ECR_REGION" >> $GITHUB_ENV
           echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+          echo "ECR_REPOSITORY_URI=$ECR_REPOSITORY_URI" >> $GITHUB_ENV
 
       # ✅ Step 2: Validate Required Secrets
       - name: Validate Required Secrets
@@ -168,25 +176,33 @@ jobs:
 
       # 🔑 Step 5: Login & Push to Amazon ECR
       - name: Login & Push to ECR
-        env:
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
           echo "🔐 Logging into Amazon ECR..."
           echo "Using AWS account: $ECR_ACCOUNT_ID"
           echo "Using ECR region: $ECR_REGION"
           echo "Using repository: $REPO_NAME"
+          echo "Full ECR URI: $ECR_REPOSITORY_URI"
+
+          # Ensure repository exists
+          if ! aws ecr describe-repositories --region "$ECR_REGION" --repository-names "$REPO_NAME" >/dev/null 2>&1; then
+            echo "📦 ECR repository '$REPO_NAME' not found in $ECR_REGION. Creating it..."
+            aws ecr create-repository --region "$ECR_REGION" --repository-name "$REPO_NAME" >/dev/null
+            echo "✅ Repository created"
+          else
+            echo "✅ ECR repository exists"
+          fi
 
           # Login to ECR using the parsed region
           aws ecr get-login-password --region "$ECR_REGION" | docker login --username AWS --password-stdin "$ECR_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com"
 
           echo "🏗️ Tagging Docker image..."
           COMMIT_SHA=$(echo "${GITHUB_SHA::7}")
-          docker tag vitaluxe-app:latest "$ECR_REPOSITORY:$COMMIT_SHA"
-          docker tag vitaluxe-app:latest "$ECR_REPOSITORY:latest"
+          docker tag vitaluxe-app:latest "$ECR_REPOSITORY_URI:$COMMIT_SHA"
+          docker tag vitaluxe-app:latest "$ECR_REPOSITORY_URI:latest"
 
           echo "📦 Pushing image to ECR..."
-          docker push "$ECR_REPOSITORY:$COMMIT_SHA"
-          docker push "$ECR_REPOSITORY:latest"
+          docker push "$ECR_REPOSITORY_URI:$COMMIT_SHA"
+          docker push "$ECR_REPOSITORY_URI:latest"
 
       # 🚀 Step 6: Deploy to AWS Lightsail
       - name: Deploy to Lightsail
@@ -245,13 +261,14 @@ jobs:
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --containers "{
               \"vitaluxe-app\": {
-                \"image\": \"${ECR_REPOSITORY}:latest\",
+                \"image\": \"${ECR_REPOSITORY_URI}:latest\",
                 \"ports\": {\"8080\": \"HTTP\"}
               }
             }" \
             --public-endpoint "{
               \"containerName\": \"vitaluxe-app\",
-              \"containerPort\": 8080
+              \"containerPort\": 8080,
+              \"healthCheck\": {\"path\": \"/\", \"intervalSeconds\": 10, \"timeoutSeconds\": 5, \"healthyThreshold\": 2, \"unhealthyThreshold\": 2}
             }" 2>&1)
           
           DEPLOYMENT_EXIT_CODE=$?
@@ -362,19 +379,16 @@ jobs:
             --query "containerServices[0].currentDeployment.containers" \
             --output json
           
-          echo "\n📝 Recent Container Logs:"
-          # Get container logs (last 50 lines)
-          LOG_GROUP=$(aws logs describe-log-groups --log-group-name-prefix "/aws/lightsail/$LIGHTSAIL_SERVICE_NAME" --query "logGroups[0].logGroupName" --output text 2>/dev/null || echo "")
-          if [ ! -z "$LOG_GROUP" ] && [ "$LOG_GROUP" != "None" ]; then
-            LOG_STREAM=$(aws logs describe-log-streams --log-group-name "$LOG_GROUP" --order-by LastEventTime --descending --max-items 1 --query "logStreams[0].logStreamName" --output text 2>/dev/null || echo "")
-            if [ ! -z "$LOG_STREAM" ] && [ "$LOG_STREAM" != "None" ]; then
-              aws logs get-log-events --log-group-name "$LOG_GROUP" --log-stream-name "$LOG_STREAM" --start-time $(date -d '5 minutes ago' +%s)000 --query "events[-50:].message" --output text 2>/dev/null || echo "No recent log events found"
-            else
-              echo "No log streams found"
-            fi
-          else
-            echo "No log groups found"
-          fi
+          echo "\n📝 Recent Container Logs (Lightsail):"
+          # Fetch last 200 log events from the container service directly
+          aws lightsail get-container-service-logs \
+            --service-name "$LIGHTSAIL_SERVICE_NAME" \
+            --container-name vitaluxe-app \
+            --start-time $(date -d '15 minutes ago' +%s) \
+            --end-time $(date +%s) \
+            --query "logEvents[-200:].message" \
+            --output text 2>/dev/null || echo "No recent log events found"
+
           
           echo "\n🌐 Testing Service Health:"
           URL=$(aws lightsail get-container-services \
