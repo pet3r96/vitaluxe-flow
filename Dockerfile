@@ -24,12 +24,11 @@ ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080
 
+# Copy built assets and node_modules from builder to avoid reinstalling
 COPY --from=builder /app/dist ./dist
-COPY package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
 
-# Install all dependencies including serve
-RUN npm ci
-
-# Run serve using npm start script
-CMD ["npm", "start"]
+# Run serve directly from node_modules
+CMD ["node_modules/.bin/serve", "-s", "dist", "-l", "8080"]
 
