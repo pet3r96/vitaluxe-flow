@@ -188,24 +188,46 @@ export default function DeliveryConfirmation() {
       if (patientId) {
         console.log('[DeliveryConfirmation] Updating patient record with ID:', patientId);
 
-        // Update patient_accounts table
+        // Prefer updating patients table (source of truth)
         const { data: patientsData, error: patientsError } = await supabase
           .from("patient_accounts")
           .update({
-            address: address.formatted || `${address.street}, ${address.city}, ${address.state} ${address.zip}`,
-            city: address.city,
-            state: address.state,
-            zip_code: address.zip,
-            updated_at: new Date().toISOString(),
+            address_street: address.street,
+            address_city: address.city,
+            address_state: address.state,
+            address_zip: address.zip,
+            address_formatted: address.formatted,
+            address_verification_status: address.status,
+            address_verification_source: address.source || 'manual',
+            address_verified_at: address.status === 'verified' ? new Date().toISOString() : null,
           })
           .eq("id", patientId)
           .select('id');
 
         if (patientsError || !patientsData || patientsData.length === 0) {
-          console.error('[DeliveryConfirmation] Patient update failed:', patientsError);
-          toast.warning("Address saved for this order, but the patient record could not be updated.");
+          console.warn('[DeliveryConfirmation] Patients update failed or no rows affected, attempting patient_accounts fallback');
+
+          // Fallback: try updating patient_accounts table if patientId actually refers to that table in legacy data
+          const { data: patientData, error: patientError } = await supabase
+            .from("patient_accounts")
+            .update({
+              address: address.formatted || `${address.street}, ${address.city}, ${address.state} ${address.zip}`,
+              city: address.city,
+              state: address.state,
+              zip_code: address.zip,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", patientId)
+            .select('id');
+
+          if (patientError || !patientData || patientData.length === 0) {
+            console.error('[DeliveryConfirmation] Both patient updates failed:', { patientError, patientsError });
+            toast.warning("Address saved for this order, but the patient record could not be updated.");
+          } else {
+            console.log('[DeliveryConfirmation] Patient_accounts table updated successfully:', patientData);
+          }
         } else {
-          console.log('[DeliveryConfirmation] Patient_accounts table updated successfully:', patientsData);
+          console.log('[DeliveryConfirmation] Patients table updated successfully:', patientsData);
         }
       }
       

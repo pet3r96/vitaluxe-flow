@@ -307,7 +307,7 @@ const AdminProfitReports = () => {
                                   description: "Order ID copied to clipboard",
                                 });
                               }}
-                              className="group inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
                             >
                               {profit.order_id?.slice(0, 8)}...
                               <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100" />

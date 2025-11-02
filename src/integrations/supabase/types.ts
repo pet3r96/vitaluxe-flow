@@ -792,8 +792,22 @@ export type Database = {
             foreignKeyName: "cart_lines_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
-            referencedRelation: "patients"
+            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "cart_lines_patient_id_fkey"
@@ -1421,8 +1435,22 @@ export type Database = {
             foreignKeyName: "internal_messages_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
-            referencedRelation: "patients"
+            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_messages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_messages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "internal_messages_patient_id_fkey"
@@ -1444,6 +1472,80 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_vault_audit_logs: {
+        Row: {
+          action_type: string
+          change_summary: string | null
+          changed_by_role: string | null
+          changed_by_user_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          patient_account_id: string
+        }
+        Insert: {
+          action_type: string
+          change_summary?: string | null
+          changed_by_role?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          patient_account_id: string
+        }
+        Update: {
+          action_type?: string
+          change_summary?: string | null
+          changed_by_role?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          patient_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_vault_audit_logs_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_vault_audit_logs_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_vault_audit_logs_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "medical_vault_audit_logs_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -1503,7 +1605,21 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_vault_share_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "medical_vault_share_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -1914,8 +2030,22 @@ export type Database = {
             foreignKeyName: "order_lines_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
-            referencedRelation: "patients"
+            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "order_lines_patient_id_fkey"
@@ -2425,6 +2555,7 @@ export type Database = {
           expires_at: string
           id: string
           token: string
+          used: boolean | null
           used_at: string | null
           user_id: string
         }
@@ -2433,6 +2564,7 @@ export type Database = {
           expires_at: string
           id?: string
           token: string
+          used?: boolean | null
           used_at?: string | null
           user_id: string
         }
@@ -2441,6 +2573,7 @@ export type Database = {
           expires_at?: string
           id?: string
           token?: string
+          used?: boolean | null
           used_at?: string | null
           user_id?: string
         }
@@ -2449,6 +2582,16 @@ export type Database = {
       patient_accounts: {
         Row: {
           address: string | null
+          address_city: string | null
+          address_formatted: string | null
+          address_state: string | null
+          address_street: string | null
+          address_verification_source: string | null
+          address_verification_status: string | null
+          address_verified_at: string | null
+          address_zip: string | null
+          allergies: string | null
+          birth_date: string | null
           city: string | null
           created_at: string
           date_of_birth: string | null
@@ -2462,21 +2605,34 @@ export type Database = {
           invitation_sent_at: string | null
           last_login_at: string | null
           last_name: string
+          name: string | null
+          notes: string | null
           phone: string | null
           practice_id: string
           primary_provider_id: string | null
+          provider_id: string | null
           state: string | null
           status: string
           updated_at: string
-          user_id: string
+          user_id: string | null
           zip_code: string | null
         }
         Insert: {
           address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
+          allergies?: string | null
+          birth_date?: string | null
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
-          email: string
+          email?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name: string
@@ -2486,17 +2642,30 @@ export type Database = {
           invitation_sent_at?: string | null
           last_login_at?: string | null
           last_name: string
+          name?: string | null
+          notes?: string | null
           phone?: string | null
           practice_id: string
           primary_provider_id?: string | null
+          provider_id?: string | null
           state?: string | null
           status?: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           zip_code?: string | null
         }
         Update: {
           address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
+          allergies?: string | null
+          birth_date?: string | null
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -2510,13 +2679,16 @@ export type Database = {
           invitation_sent_at?: string | null
           last_login_at?: string | null
           last_name?: string
+          name?: string | null
+          notes?: string | null
           phone?: string | null
           practice_id?: string
           primary_provider_id?: string | null
+          provider_id?: string | null
           state?: string | null
           status?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           zip_code?: string | null
         }
         Relationships: [
@@ -2589,7 +2761,21 @@ export type Database = {
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_allergies_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_allergies_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -2703,7 +2889,21 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "patient_appointments_practice_id_fkey"
@@ -2797,7 +2997,21 @@ export type Database = {
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_conditions_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_conditions_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -2863,7 +3077,21 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -2920,7 +3148,21 @@ export type Database = {
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_emergency_contacts_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_emergency_contacts_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -2989,7 +3231,21 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_follow_ups_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_follow_ups_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -3040,7 +3296,21 @@ export type Database = {
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_immunizations_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_immunizations_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -3112,7 +3382,21 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "patient_medical_vault_provider_id_fkey"
@@ -3191,7 +3475,21 @@ export type Database = {
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medications_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_medications_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -3279,7 +3577,21 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_messages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_messages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "patient_messages_practice_id_fkey"
@@ -3364,7 +3676,21 @@ export type Database = {
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_pharmacies_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_pharmacies_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -3445,7 +3771,21 @@ export type Database = {
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_surgeries_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_surgeries_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -3565,97 +3905,21 @@ export type Database = {
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
-            referencedColumns: ["patient_account_id"]
-          },
-        ]
-      }
-      patients: {
-        Row: {
-          address: string | null
-          address_city: string | null
-          address_formatted: string | null
-          address_state: string | null
-          address_street: string | null
-          address_verification_source: string | null
-          address_verification_status: string | null
-          address_verified_at: string | null
-          address_zip: string | null
-          allergies: string | null
-          allergies_encrypted: string | null
-          birth_date: string | null
-          created_at: string
-          email: string | null
-          id: string
-          name: string
-          notes: string | null
-          notes_encrypted: string | null
-          patient_account_id: string | null
-          phone: string | null
-          practice_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          address_city?: string | null
-          address_formatted?: string | null
-          address_state?: string | null
-          address_street?: string | null
-          address_verification_source?: string | null
-          address_verification_status?: string | null
-          address_verified_at?: string | null
-          address_zip?: string | null
-          allergies?: string | null
-          allergies_encrypted?: string | null
-          birth_date?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          name: string
-          notes?: string | null
-          notes_encrypted?: string | null
-          patient_account_id?: string | null
-          phone?: string | null
-          practice_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          address_city?: string | null
-          address_formatted?: string | null
-          address_state?: string | null
-          address_street?: string | null
-          address_verification_source?: string | null
-          address_verification_status?: string | null
-          address_verified_at?: string | null
-          address_zip?: string | null
-          allergies?: string | null
-          allergies_encrypted?: string | null
-          birth_date?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          name?: string
-          notes?: string | null
-          notes_encrypted?: string | null
-          patient_account_id?: string | null
-          phone?: string | null
-          practice_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "patients_patient_account_id_fkey"
-            columns: ["patient_account_id"]
-            isOneToOne: false
-            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "patients_patient_account_id_fkey"
+            foreignKeyName: "patient_vitals_patient_account_id_fkey"
             columns: ["patient_account_id"]
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_vitals_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -5318,8 +5582,22 @@ export type Database = {
             foreignKeyName: "provider_document_patients_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
-            referencedRelation: "patients"
+            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "provider_document_patients_patient_id_fkey"
@@ -5396,8 +5674,22 @@ export type Database = {
             foreignKeyName: "provider_documents_assigned_patient_id_fkey"
             columns: ["assigned_patient_id"]
             isOneToOne: false
-            referencedRelation: "patients"
+            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "provider_documents_assigned_patient_id_fkey"
@@ -6835,15 +7127,6 @@ export type Database = {
       }
     }
     Views: {
-      addresses_missing_state: {
-        Row: {
-          id: string | null
-          missing_field: string | null
-          record_name: string | null
-          table_name: string | null
-        }
-        Relationships: []
-      }
       cart_lines_masked: {
         Row: {
           cart_id: string | null
@@ -6923,8 +7206,22 @@ export type Database = {
             foreignKeyName: "cart_lines_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
-            referencedRelation: "patients"
+            referencedRelation: "patient_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
           },
           {
             foreignKeyName: "cart_lines_patient_id_fkey"
@@ -7245,25 +7542,99 @@ export type Database = {
       }
       v_patients_with_portal_status: {
         Row: {
-          address: string | null
-          birth_date: string | null
-          city: string | null
+          address_city: string | null
+          address_state: string | null
+          address_street: string | null
+          address_verification_source: string | null
+          address_verification_status: string | null
+          address_zip: string | null
+          created_at: string | null
+          date_of_birth: string | null
           email: string | null
+          first_name: string | null
           has_portal_access: boolean | null
-          invitation_sent_at: string | null
+          has_portal_account: boolean | null
+          id: string | null
           last_login_at: string | null
+          last_name: string | null
           name: string | null
           patient_account_id: string | null
           patient_id: string | null
           phone: string | null
-          portal_created_at: string | null
           portal_status: string | null
           practice_id: string | null
-          state: string | null
+          provider_id: string | null
+          updated_at: string | null
           user_id: string | null
-          zip_code: string | null
         }
-        Relationships: []
+        Insert: {
+          address_city?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_zip?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          first_name?: string | null
+          has_portal_access?: never
+          has_portal_account?: never
+          id?: string | null
+          last_login_at?: string | null
+          last_name?: string | null
+          name?: never
+          patient_account_id?: string | null
+          patient_id?: string | null
+          phone?: string | null
+          portal_status?: never
+          practice_id?: string | null
+          provider_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address_city?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_zip?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          first_name?: string | null
+          has_portal_access?: never
+          has_portal_account?: never
+          id?: string | null
+          last_login_at?: string | null
+          last_name?: string | null
+          name?: never
+          patient_account_id?: string | null
+          patient_id?: string | null
+          phone?: string | null
+          portal_status?: never
+          practice_id?: string | null
+          provider_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_accounts_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_accounts_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -7301,10 +7672,12 @@ export type Database = {
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       cleanup_expired_sms_attempts: { Args: never; Returns: undefined }
       cleanup_expired_sms_codes: { Args: never; Returns: undefined }
-      create_practice_subscription: {
-        Args: { p_practice_id: string; p_start_trial?: boolean }
-        Returns: string
-      }
+      create_practice_subscription:
+        | {
+            Args: { p_practice_id: string; p_start_trial?: boolean }
+            Returns: string
+          }
+        | { Args: { practice_user_id: string }; Returns: string }
       create_user_with_role:
         | {
             Args: {
@@ -7439,24 +7812,22 @@ export type Database = {
       get_patient_unified_documents: {
         Args: { p_patient_id: string }
         Returns: {
-          assigned_by: string
-          assignment_message: string
-          bucket_name: string
-          created_at: string
-          custom_title: string
           document_name: string
           document_type: string
           file_size: number
-          hidden_by_patient: boolean
           id: string
-          is_provider_document: boolean
-          mime_type: string
+          is_hidden: boolean
           notes: string
           patient_id: string
+          practice_id: string
           share_with_practice: boolean
           source: string
+          status: string
           storage_path: string
-          updated_at: string
+          uploaded_at: string
+          uploader_id: string
+          uploader_name: string
+          uploader_role: string
         }[]
       }
       get_practice_assignable_users: {
@@ -7486,7 +7857,28 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_provider_documents: { Args: { p_practice_id: string }; Returns: Json }
+      get_provider_documents: {
+        Args: { p_practice_id: string }
+        Returns: {
+          assigned_patient_id: string
+          assigned_patient_ids: string[]
+          assigned_patient_names: string[]
+          document_name: string
+          document_type: string
+          file_size: number
+          id: string
+          is_internal: boolean
+          mime_type: string
+          notes: string
+          practice_id: string
+          source_type: string
+          status: string
+          storage_path: string
+          tags: string[]
+          uploaded_at: string
+          uploaded_by: string
+        }[]
+      }
       get_rep_earnings: {
         Args: { _rep_id: string }
         Returns: {
@@ -7592,6 +7984,10 @@ export type Database = {
         Returns: undefined
       }
       notify_due_follow_ups: { Args: never; Returns: undefined }
+      patient_can_view_provider_document: {
+        Args: { p_document_id: string }
+        Returns: boolean
+      }
       recompute_order_profits: {
         Args: { p_order_ids?: string[]; p_status_filter?: string[] }
         Returns: {
@@ -7604,6 +8000,10 @@ export type Database = {
       sync_practice_address_to_providers: {
         Args: { p_practice_id: string }
         Returns: undefined
+      }
+      user_can_access_practice_documents: {
+        Args: { p_practice_id: string }
+        Returns: boolean
       }
       validate_discount_code: {
         Args: { p_code: string }
