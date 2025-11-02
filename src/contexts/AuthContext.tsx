@@ -83,13 +83,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Hard 30-minute session timeout with activity refresh
   const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-  const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // Refresh if < 5 minutes remaining
+  const REFRESH_THRESHOLD_MS = 15 * 60 * 1000; // Refresh if < 15 minutes remaining (more user-friendly)
   const MAX_SESSION_MS = 120 * 60 * 1000; // 2 hours maximum
   const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
   const getSessionStartKey = (userId: string) => `vitaluxe_session_start_${userId}`;
   const hardTimerRef = useRef<number | null>(null);
   const checkIntervalRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const lastExtensionCheck = useRef<number>(0); // Throttle extension checks
   const activityListenersAttached = useRef(false);
   
   const navigate = useNavigate();
@@ -244,6 +245,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const now = Date.now();
       lastActivityRef.current = now;
       
+      // Throttle extension checks to once every 3 seconds (prevent excessive localStorage writes)
+      if (now - lastExtensionCheck.current < 3000) return;
+      lastExtensionCheck.current = now;
+      
       // Check if we should extend the session
       const sessionExpStr = localStorage.getItem(getSessionExpKey(user.id));
       const sessionStartStr = localStorage.getItem(getSessionStartKey(user.id));
@@ -255,8 +260,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const timeRemaining = sessionExp - now;
       const totalSessionTime = now - sessionStart;
       
+      // Debug logging
+      console.log('[Session] Activity detected, checking extension...', {
+        timeRemainingMinutes: Math.round(timeRemaining / 60000),
+        totalSessionMinutes: Math.round(totalSessionTime / 60000),
+        thresholdMinutes: Math.round(REFRESH_THRESHOLD_MS / 60000),
+        maxSessionMinutes: Math.round(MAX_SESSION_MS / 60000),
+        willExtend: timeRemaining < REFRESH_THRESHOLD_MS && totalSessionTime < MAX_SESSION_MS
+      });
+      
       // Only extend if:
-      // 1. Less than 5 minutes remaining
+      // 1. Less than 15 minutes remaining
       // 2. Haven't exceeded 2 hour max session
       if (timeRemaining < REFRESH_THRESHOLD_MS && totalSessionTime < MAX_SESSION_MS) {
         const newExpireAt = now + HARD_SESSION_TIMEOUT_MS;
@@ -275,22 +289,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           void doHardSignOut();
         }, timeUntilExpiry);
         
+        const minutesAdded = Math.round((cappedExpireAt - sessionExp) / 60000);
+        console.log('[Session] ✅ Session extended due to activity!', {
+          newExpiresAt: new Date(cappedExpireAt).toISOString(),
+          minutesAdded,
+          newTimeRemaining: Math.round((cappedExpireAt - now) / 60000) + 'm'
+        });
+        
         logger.info('Session extended due to activity', {
           newExpiresAt: new Date(cappedExpireAt).toISOString(),
-          minutesAdded: Math.round((cappedExpireAt - sessionExp) / 60000)
+          minutesAdded
         });
+      } else {
+        // Log why extension didn't happen
+        if (timeRemaining >= REFRESH_THRESHOLD_MS) {
+          console.log('[Session] ⏳ No extension - still above threshold', {
+            timeRemaining: Math.round(timeRemaining / 60000) + 'm',
+            threshold: Math.round(REFRESH_THRESHOLD_MS / 60000) + 'm'
+          });
+        } else if (totalSessionTime >= MAX_SESSION_MS) {
+          console.log('[Session] 🛑 No extension - at maximum session time (2 hours)');
+        }
       }
     };
 
     // Attach activity listeners once
     if (user?.id && !activityListenersAttached.current) {
-      const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+      const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'mousemove'];
       events.forEach(event => {
         document.addEventListener(event, handleActivity, { passive: true });
       });
       activityListenersAttached.current = true;
       
-      logger.info('Activity listeners attached');
+      console.log('[Session] 🎧 Activity listeners attached:', events);
+      logger.info('Activity listeners attached with click and mousemove');
     }
 
     // Event handlers for tab visibility and focus
