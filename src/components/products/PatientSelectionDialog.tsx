@@ -168,56 +168,10 @@ export const PatientSelectionDialog = ({
     }
   }, [open, providers, effectiveRole, effectiveUserId]);
 
-  // Fetch provider details for prescription writer - get decrypted credentials
-  const { data: selectedProviderData } = useQuery({
-    queryKey: ["provider-details", selectedProviderId],
-    queryFn: async () => {
-      if (!selectedProviderId) return null;
-      
-      // First get the provider record to get user_id
-      const { data: providerRecord, error: providerError } = await supabase
-        .from("providers")
-        .select("id, user_id")
-        .eq("id", selectedProviderId)
-        .single();
-      
-      if (providerError || !providerRecord) throw providerError || new Error("Provider not found");
-      
-      // Get decrypted credentials
-      const { data: creds, error: credsError } = await supabase.rpc('get_decrypted_profile_credentials', {
-        p_user_id: providerRecord.user_id
-      });
-
-      if (credsError) throw credsError;
-
-      if (!creds || creds.length === 0) {
-        throw new Error("Unable to load provider credentials");
-      }
-
-      const decryptedCreds = creds[0];
-      
-      // Get prescriber_name from profiles
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("prescriber_name")
-        .eq("id", providerRecord.user_id)
-        .single();
-      
-      return {
-        id: providerRecord.id,
-        user_id: providerRecord.user_id,
-        profiles: {
-          id: providerRecord.user_id,
-          name: profileData?.prescriber_name || decryptedCreds.full_name,
-          prescriber_name: profileData?.prescriber_name,
-          npi: decryptedCreds.npi,
-          dea: decryptedCreds.dea,
-          license_number: decryptedCreds.license_number
-        }
-      };
-    },
-    enabled: !!selectedProviderId && currentStep === 'prescription' && prescriptionMethod === 'written'
-  });
+  // Compute provider data locally from existing providers list (no RPC needed)
+  const selectedProviderData = selectedProviderId 
+    ? providers?.find((p: any) => p.id === selectedProviderId)
+    : null;
 
   // Fetch practice details for prescription writer
   const { data: practiceData } = useQuery({
@@ -798,6 +752,7 @@ export const PatientSelectionDialog = ({
                         variant="outline" 
                         onClick={() => setShowPrescriptionWriter(true)}
                         className="w-full"
+                        disabled={!selectedProviderData || !practiceData}
                       >
                         <FileText className="mr-2 h-4 w-4" />
                         Open Prescription Writer
@@ -824,24 +779,24 @@ export const PatientSelectionDialog = ({
         </div>
 
         {/* Prescription Writer Dialog */}
-        {prescriptionMethod === 'written' && (
+        {prescriptionMethod === 'written' && selectedProviderData && practiceData && (
           <PrescriptionWriterDialog
             open={showPrescriptionWriter}
             onOpenChange={setShowPrescriptionWriter}
             product={product}
             patient={shipTo === 'practice' ? null : selectedPatient}
-            provider={selectedProviderData ? {
+            provider={{
               id: selectedProviderData.id,
-              name: selectedProviderData.profiles?.prescriber_name || selectedProviderData.profiles?.name || 'Unknown',
+              name: selectedProviderData.prescriber_name || 'Unknown',
               email: 'N/A',
-              npi: selectedProviderData.profiles?.npi || 'N/A',
-              dea: selectedProviderData.profiles?.dea || 'N/A',
+              npi: selectedProviderData.npi || 'N/A',
+              dea: selectedProviderData.dea || 'N/A',
               license: selectedProviderData.profiles?.license_number || 'N/A'
-            } : null}
-            practice={practiceData ? {
+            }}
+            practice={{
               name: practiceData.name || 'Unknown Practice',
               address: practiceData.address_formatted || practiceData.address || 'N/A'
-            } : null}
+            }}
             quantity={quantity}
             initialSig={customSig}
             initialDosage={customDosage}

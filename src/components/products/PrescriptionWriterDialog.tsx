@@ -103,7 +103,13 @@ export function PrescriptionWriterDialog({
         }
       } catch (error) {
         logger.error('Failed to decrypt patient allergies', error, logger.sanitize({ patientId: patient.id }));
-        setDecryptedAllergies(null);
+        
+        // Fallback to plain-text if available
+        if (patient?.allergies && patient.allergies !== '[ENCRYPTED]') {
+          setDecryptedAllergies(patient.allergies);
+        } else {
+          setDecryptedAllergies(null);
+        }
       } finally {
         setIsLoadingAllergies(false);
       }
@@ -361,9 +367,18 @@ export function PrescriptionWriterDialog({
                   </div>
                 )}
                 
-                {patient.address_formatted && (
-                  <p className="mt-2"><strong>Address:</strong> {patient.address_formatted}</p>
-                )}
+                {/* Display address with fallback logic */}
+                {(() => {
+                  if (patient.address_formatted) {
+                    return <p className="mt-2"><strong>Address:</strong> {patient.address_formatted}</p>;
+                  } else if (patient.address_street) {
+                    const addr = `${patient.address_street}, ${patient.address_city || ''}, ${patient.address_state || ''} ${patient.address_zip || ''}`.trim();
+                    return <p className="mt-2"><strong>Address:</strong> {addr}</p>;
+                  } else if (patient.address) {
+                    return <p className="mt-2"><strong>Address:</strong> {patient.address}</p>;
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           ) : (
