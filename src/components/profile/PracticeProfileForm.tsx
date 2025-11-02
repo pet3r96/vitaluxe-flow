@@ -232,16 +232,18 @@ export const PracticeProfileForm = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="p-4 sm:p-6">
-      <CardHeader className="px-0 pt-0">
-        <CardTitle className="text-lg sm:text-xl">Practice Profile</CardTitle>
-        <CardDescription className="text-sm">
-          Manage your practice information and shipping preferences
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-0">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Card 1: Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+              <CardDescription>
+                Essential practice details and credentials
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+            {/* Practice Name - Full Width */}
             <FormField
               control={form.control}
               name="name"
@@ -251,302 +253,324 @@ export const PracticeProfileForm = () => {
                   <FormControl>
                     <Input placeholder="Smith Medical Practice" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    Your practice or clinic name
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contact Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="practice@example.com" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Primary contact email for your practice
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* 2-Column Grid for Contact Info and Credentials */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column: Contact Information */}
+              <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="practice@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Practice Phone Number</FormLabel>
-                  <FormControl>
-                    <PhoneInput
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      placeholder="(555) 123-4567"
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Main phone number for your practice (10 digits)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <PhoneInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          placeholder="(555) 123-4567"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <GoogleAddressAutocomplete
-                      label="Practice Address"
-                      value={field.value || {}}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Physical location of your practice
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="npi"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Practice NPI Number</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="tel"
-                      placeholder="1234567890" 
-                      maxLength={10}
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        field.onChange(value);
-                        
-                        // Reset verification status when NPI changes
-                        if (value.length !== 10) {
-                          setNpiVerificationStatus(null);
-                        } else {
-                          setNpiVerificationStatus("verifying");
-                        }
-                        
-                        // Real-time NPI verification with timeout handling
-                        if (value && value.length === 10) {
-                          const expectedNpi = value; // Capture current value
-verifyNPIDebounced(value, (result) => {
-                            // Only apply result if NPI still matches expected value
-                            if (form.getValues('npi') === expectedNpi) {
-                              if (result.valid && !result.error) {
-                                setNpiVerificationStatus("verified");
-                                if (result.providerName) {
-                                  toast({
-                                    title: "NPI Verified ✓",
-                                    description: `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`,
-                                  });
-                                } else {
-                                  toast({
-                                    title: "NPI Verified ✓",
-                                    description: `NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`,
-                                  });
-                                }
-                              } else {
-                                // Failed or has error
-                                setNpiVerificationStatus("failed");
-                                toast({
-                                  title: "Invalid NPI",
-                                  description: result.error || "NPI verification failed",
-                                  variant: "destructive",
-                                });
-                              }
+              {/* Right Column: Credentials */}
+              <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="npi"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>NPI Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="tel"
+                          placeholder="1234567890" 
+                          maxLength={10}
+                          {...field}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            field.onChange(value);
+                            
+                            if (value.length !== 10) {
+                              setNpiVerificationStatus(null);
+                            } else {
+                              setNpiVerificationStatus("verifying");
                             }
-                          });
-                        }
-                      }}
-                    />
-                  </FormControl>
-                  {npiVerificationStatus === "verifying" && (
-                    <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
+                            
+                            if (value && value.length === 10) {
+                              const expectedNpi = value;
+                              verifyNPIDebounced(value, (result) => {
+                                if (form.getValues('npi') === expectedNpi) {
+                                  if (result.valid && !result.error) {
+                                    setNpiVerificationStatus("verified");
+                                    if (result.providerName) {
+                                      toast({
+                                        title: "NPI Verified ✓",
+                                        description: `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`,
+                                      });
+                                    } else {
+                                      toast({
+                                        title: "NPI Verified ✓",
+                                        description: `NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`,
+                                      });
+                                    }
+                                  } else {
+                                    setNpiVerificationStatus("failed");
+                                    toast({
+                                      title: "Invalid NPI",
+                                      description: result.error || "NPI verification failed",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }
+                              });
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      {npiVerificationStatus === "verifying" && (
+                        <p className="text-sm text-muted-foreground">🔄 Verifying...</p>
+                      )}
+                      {npiVerificationStatus === "verified" && (
+                        <p className="text-sm text-green-600">✅ Verified</p>
+                      )}
+                      {npiVerificationStatus === "failed" && (
+                        <p className="text-sm text-destructive">❌ Invalid</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  {npiVerificationStatus === "verified" && (
-                    <p className="text-sm text-green-600">✅ NPI Verified</p>
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dea"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>DEA Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="text"
+                          placeholder="AB1234567" 
+                          maxLength={9}
+                          {...field}
+                          onChange={(e) => {
+                            let value = e.target.value.toUpperCase();
+                            value = value.replace(/[^A-Z0-9]/g, '');
+                            if (value.length <= 2) {
+                              value = value.replace(/[^A-Z]/g, '');
+                            } else {
+                              const letters = value.slice(0, 2).replace(/[^A-Z]/g, '');
+                              const digits = value.slice(2).replace(/\D/g, '');
+                              value = letters + digits;
+                            }
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  {npiVerificationStatus === "failed" && (
-                    <p className="text-sm text-destructive">❌ Invalid NPI</p>
+                />
+
+                <FormField
+                  control={form.control}
+                  name="license_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>License Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="MED123456" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  <FormDescription>
-                    Your practice's National Provider Identifier (verified against NPPES)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <FormField
-              control={form.control}
-              name="dea"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Practice DEA Number</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="text"
-                      placeholder="AB1234567" 
-                      maxLength={9}
-                      {...field}
-                      onChange={(e) => {
-                        let value = e.target.value.toUpperCase();
-                        value = value.replace(/[^A-Z0-9]/g, '');
-                        if (value.length <= 2) {
-                          value = value.replace(/[^A-Z]/g, '');
-                        } else {
-                          const letters = value.slice(0, 2).replace(/[^A-Z]/g, '');
-                          const digits = value.slice(2).replace(/\D/g, '');
-                          value = letters + digits;
-                        }
-                        field.onChange(value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Practice DEA registration (2 letters + 7 digits)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {/* Card 2: Addresses */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Addresses</CardTitle>
+            <CardDescription>
+              Manage practice location, shipping, and billing addresses
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            {/* Practice Address */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium">Practice Address</h3>
+                <p className="text-sm text-muted-foreground">Physical location of your practice</p>
+              </div>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <GoogleAddressAutocomplete
+                        value={field.value || {}}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="license_number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Practice License Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="MED123456" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Your practice or business license number
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Divider */}
+            <div className="border-t" />
 
-            <FormField
-              control={form.control}
-              name="shipping_address"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center gap-2">
-                    <FormLabel>Practice Shipping Address</FormLabel>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>This address will be used when you order for your practice/med spa</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <FormControl>
-                    <GoogleAddressAutocomplete
-                      value={field.value || {}}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Shipping Address */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Shipping Address</h3>
+                  <p className="text-sm text-muted-foreground">Where products will be delivered</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const practiceAddr = form.getValues('address');
+                    if (practiceAddr) {
+                      form.setValue('shipping_address', {
+                        street: practiceAddr.street,
+                        city: practiceAddr.city,
+                        state: practiceAddr.state,
+                        zip: practiceAddr.zip,
+                      });
+                    }
+                  }}
+                >
+                  Copy from Practice
+                </Button>
+              </div>
+              <FormField
+                control={form.control}
+                name="shipping_address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <GoogleAddressAutocomplete
+                        value={field.value || {}}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-medium">Billing Address</h3>
-            <p className="text-sm text-muted-foreground">
-              This will be your default billing address for payment methods
-            </p>
-          </div>
+            {/* Divider */}
+            <div className="border-t" />
+
+            {/* Billing Address */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Billing Address</h3>
+                  <p className="text-sm text-muted-foreground">Default billing address for payments</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const shippingAddr = form.getValues('shipping_address');
+                    if (shippingAddr) {
+                      form.setValue('billing_address', {
+                        street: shippingAddr.street,
+                        city: shippingAddr.city,
+                        state: shippingAddr.state,
+                        zip: shippingAddr.zip,
+                      });
+                    }
+                  }}
+                >
+                  Copy from Shipping
+                </Button>
+              </div>
+              <FormField
+                control={form.control}
+                name="billing_address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <GoogleAddressAutocomplete
+                        value={field.value || {}}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Save Button */}
+        <div className="flex justify-end">
           <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const shippingAddr = form.getValues('shipping_address');
-              if (shippingAddr) {
-                form.setValue('billing_address', {
-                  street: shippingAddr.street,
-                  city: shippingAddr.city,
-                  state: shippingAddr.state,
-                  zip: shippingAddr.zip,
-                });
-              }
-            }}
+            type="submit" 
+            disabled={updateMutation.isPending || npiVerificationStatus !== "verified"}
+            className="w-full sm:w-auto"
           >
-            Copy from Shipping
+            {updateMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Profile
+              </>
+            )}
           </Button>
         </div>
+      </form>
+    </Form>
 
-        <FormField
-          control={form.control}
-          name="billing_address"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <GoogleAddressAutocomplete
-                  label="Billing Address"
-                  value={field.value || {}}
-                  onChange={field.onChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <Button
-              type="submit" 
-              disabled={updateMutation.isPending || npiVerificationStatus !== "verified"}
-              className="w-full sm:w-auto"
-            >
-              {updateMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Profile
-                </>
-              )}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-
-    <Card className="p-4 sm:p-6">
-      <CardHeader className="px-0 pt-0">
-        <CardTitle className="text-lg sm:text-xl">Account Security</CardTitle>
-        <CardDescription className="text-sm">
+    {/* Card 3: Account Security */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Account Security</CardTitle>
+        <CardDescription>
           Manage your password and account security settings
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-0">
+      <CardContent>
         <Button
           variant="outline"
           onClick={handleResetPassword}
