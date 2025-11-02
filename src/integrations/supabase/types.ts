@@ -5440,6 +5440,7 @@ export type Database = {
           phone: string | null
           phone_encrypted: string | null
           practice_npi: string | null
+          prescriber_name: string | null
           shipping_address: string | null
           shipping_address_city: string | null
           shipping_address_formatted: string | null
@@ -5493,6 +5494,7 @@ export type Database = {
           phone?: string | null
           phone_encrypted?: string | null
           practice_npi?: string | null
+          prescriber_name?: string | null
           shipping_address?: string | null
           shipping_address_city?: string | null
           shipping_address_formatted?: string | null
@@ -5546,6 +5548,7 @@ export type Database = {
           phone?: string | null
           phone_encrypted?: string | null
           practice_npi?: string | null
+          prescriber_name?: string | null
           shipping_address?: string | null
           shipping_address_city?: string | null
           shipping_address_formatted?: string | null
