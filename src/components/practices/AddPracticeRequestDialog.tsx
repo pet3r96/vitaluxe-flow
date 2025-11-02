@@ -18,7 +18,7 @@ interface AddPracticeRequestDialogProps {
 }
 
 export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddPracticeRequestDialogProps) => {
-  const { user, effectiveRole } = useAuth();
+  const { user, effectiveRole, effectiveUserId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [npiVerificationStatus, setNpiVerificationStatus] = useState<
     null | "verifying" | "verified" | "failed"
@@ -76,16 +76,16 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
     setLoading(true);
 
     try {
-      if (!user?.id) {
+      if (!effectiveUserId) {
         throw new Error("User not authenticated");
       }
 
       const { error } = await supabase
         .from("pending_practices")
         .insert([{
-          created_by_user_id: user.id,
+          created_by_user_id: effectiveUserId,
           created_by_role: effectiveRole as any,
-          assigned_rep_user_id: user.id,
+          assigned_rep_user_id: effectiveUserId,
           practice_name: formData.practice_name,
           email: formData.email,
           npi: formData.npi,

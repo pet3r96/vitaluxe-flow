@@ -506,9 +506,10 @@ export const MessagesView = () => {
       .insert(participants);
 
     if (participantsError) {
-      toast.error("Failed to add participants");
       logger.error("Participants error", participantsError);
-      return;
+      // Don't block ticket creation - participants can be added later
+      // Show warning but continue
+      toast.warning("Ticket created but some participants may not be added yet");
     }
 
     // Create the first message
