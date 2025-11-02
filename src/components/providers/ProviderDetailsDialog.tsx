@@ -26,7 +26,7 @@ export const ProviderDetailsDialog = ({
   provider, 
   onSuccess 
 }: ProviderDetailsDialogProps) => {
-  const { effectiveRole, effectiveUserId } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [originalNpi, setOriginalNpi] = useState("");
@@ -58,7 +58,7 @@ export const ProviderDetailsDialog = ({
     setIsEditing(false); // Reset editing state when provider changes
   }, [provider]);
 
-  const isPractice = effectiveRole === "doctor" && effectiveUserId === provider.practice_id;
+  const isPractice = effectiveRole === "doctor" && (effectiveUserId === provider.practice_id || effectivePracticeId === provider.practice_id);
   const isOwnProvider = effectiveRole === "provider" && effectiveUserId === provider.user_id;
   const isAdmin = effectiveRole === "admin";
   const canViewCredentials = ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole || '');

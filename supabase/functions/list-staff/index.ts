@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
     const userIds = staffRows.map(s => s.user_id);
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, name, email, phone, address')
+      .select('id, name, full_name, email, phone, address')
       .in('id', userIds);
 
     if (profilesError) {

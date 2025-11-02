@@ -125,7 +125,7 @@ export const PatientSelectionDialog = ({
       // Combine provider + profile data
       const mappedData = providerRecords.map((p: any) => {
         const profile = profilesById.get(p.user_id);
-        const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
+        const displayName = profile?.name || profile?.full_name || 'Unknown Provider';
         
         return {
           id: p.id,

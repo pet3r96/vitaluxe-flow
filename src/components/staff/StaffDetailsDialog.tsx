@@ -23,15 +23,15 @@ export const StaffDetailsDialog = ({
   staff, 
   onSuccess 
 }: StaffDetailsDialogProps) => {
-  const { effectiveRole, effectiveUserId } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: staff.profiles?.name || "",
+    fullName: staff.profiles?.full_name || staff.profiles?.name || "",
     phone: staff.profiles?.phone ? staff.profiles.phone.replace(/\D/g, "") : "",
   });
 
-  const isPractice = effectiveRole === "doctor" && effectiveUserId === staff.practice_id;
+  const isPractice = (effectiveRole === "doctor" || effectiveRole === "staff") && (effectiveUserId === staff.practice_id || effectivePracticeId === staff.practice_id);
   const isAdmin = effectiveRole === "admin";
 
   const handleSave = async () => {
@@ -41,7 +41,7 @@ export const StaffDetailsDialog = ({
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
-          name: formData.fullName,
+          full_name: formData.fullName,
           phone: formData.phone,
         })
         .eq("id", staff.user_id);
@@ -103,7 +103,7 @@ export const StaffDetailsDialog = ({
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
               />
             ) : (
-              <div className="p-2 bg-muted rounded-md">{staff.profiles?.name || 'N/A'}</div>
+              <div className="p-2 bg-muted rounded-md">{staff.profiles?.full_name || staff.profiles?.name || 'N/A'}</div>
             )}
           </div>
 
@@ -175,7 +175,7 @@ export const StaffDetailsDialog = ({
                 onClick={() => {
                   setIsEditing(false);
                   setFormData({
-                    fullName: staff.profiles?.name || "",
+                    fullName: staff.profiles?.full_name || staff.profiles?.name || "",
                     phone: staff.profiles?.phone ? staff.profiles.phone.replace(/\D/g, "") : "",
                   });
                 }}

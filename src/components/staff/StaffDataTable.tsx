@@ -155,7 +155,7 @@ export const StaffDataTable = () => {
             {filteredStaff && filteredStaff.length > 0 ? (
               paginatedStaff?.map((staffMember) => (
                 <TableRow key={staffMember.id}>
-                  <TableCell className="font-medium">{staffMember.profiles?.name || staffMember.profiles?.email || 'Unknown'}</TableCell>
+                  <TableCell className="font-medium">{staffMember.profiles?.full_name || staffMember.profiles?.name || staffMember.profiles?.email || 'Unknown'}</TableCell>
                   <TableCell>{staffMember.practice?.name || staffMember.practice?.company}</TableCell>
                   <TableCell>{staffMember.profiles?.email || 'N/A'}</TableCell>
                   <TableCell>{staffMember.profiles?.phone || 'N/A'}</TableCell>
