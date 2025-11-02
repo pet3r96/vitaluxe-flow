@@ -7988,6 +7988,16 @@ export type Database = {
         Args: { p_document_id: string }
         Returns: boolean
       }
+      recalculate_order_profits_for_practice: {
+        Args: { practice_user_id: string }
+        Returns: {
+          result_downline_profit: number
+          result_downline_rep_id: string
+          result_order_line_id: string
+          result_topline_profit: number
+          result_topline_rep_id: string
+        }[]
+      }
       recompute_order_profits: {
         Args: { p_order_ids?: string[]; p_status_filter?: string[] }
         Returns: {
