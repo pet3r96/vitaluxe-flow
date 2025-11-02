@@ -86,7 +86,7 @@
   --gold-gradient: linear-gradient(135deg, hsl(var(--gold-1)) 0%, hsl(var(--gold-2)) 100%);
 
   /* Base Surfaces (Light Mode) - Modern Cool Palette */
-  --background: 210 20% 98%;     /* Soft cool white */
+  --background: 0 0% 98%;     /* Gray-50 neutral background */
   --foreground: 222 47% 11%;     /* Deep text */
   --card: 0 0% 100%;             /* Pure white cards */
   --card-foreground: 222 47% 11%;
@@ -124,7 +124,7 @@
   --sidebar-ring: var(--gold-1);
 
   /* Layout */
-  --main-content-bg: 210 20% 98%;
+  --main-content-bg: 0 0% 98%;
   --radius: 0.75rem;
 
   /* Chart colors - Modern Vibrant */
@@ -243,9 +243,9 @@
     background: 
       radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.08), transparent),
       linear-gradient(135deg, 
-        hsl(210 20% 98%) 0%, 
-        hsl(210 20% 99%) 50%, 
-        hsl(210 20% 98%) 100%
+        hsl(0 0% 98%) 0%, 
+        hsl(0 0% 99%) 50%, 
+        hsl(0 0% 98%) 100%
       );
   }
 
