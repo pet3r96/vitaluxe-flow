@@ -48,6 +48,7 @@ export const OrderDetailsDialog = ({
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [decryptedPatientPHI, setDecryptedPatientPHI] = useState<Map<string, { allergies?: string | null, notes?: string | null }>>(new Map());
   const [decryptedContactInfo, setDecryptedContactInfo] = useState<Map<string, { patient_email?: string | null, patient_phone?: string | null, patient_address?: string | null }>>(new Map());
+  const [patientFallbackData, setPatientFallbackData] = useState<Map<string, any>>(new Map());
   const [regeneratedPrescriptionUrls, setRegeneratedPrescriptionUrls] = useState<Map<string, string>>(new Map());
   const [regeneratingUrls, setRegeneratingUrls] = useState(false);
 
@@ -133,17 +134,25 @@ export const OrderDetailsDialog = ({
       const phiCache = new Map<string, { allergies?: string | null, notes?: string | null }>();
       const contactCache = new Map<string, { patient_email?: string | null, patient_phone?: string | null, patient_address?: string | null }>();
       
-      // Fetch plain-text patient data as fallback
+      // Collect patient account IDs from order lines
+      const patientAccountIds = new Set<string>();
+      order.order_lines.forEach((line: any) => {
+        if (line.patient_id) {
+          patientAccountIds.add(line.patient_id);
+        }
+      });
+
+      // Fetch plain-text patient data as fallback by id (not user_id)
       const patientDataMap = new Map<string, any>();
-      if (patientIds.size > 0) {
+      if (patientAccountIds.size > 0) {
         try {
           const { data: patientData } = await supabase
             .from('patient_accounts')
-            .select('user_id, email, phone, address, allergies')
-            .in('user_id', Array.from(patientIds));
+            .select('id, user_id, first_name, last_name, email, phone, address, allergies')
+            .in('id', Array.from(patientAccountIds));
           
           patientData?.forEach(p => {
-            patientDataMap.set(p.user_id, p);
+            patientDataMap.set(p.id, p); // Key by id, not user_id
           });
         } catch (error) {
           logger.error('Failed to fetch patient fallback data', error);
@@ -172,7 +181,7 @@ export const OrderDetailsDialog = ({
           logger.error(`Failed to decrypt PHI for patient`, error, logger.sanitize({ patientId }));
         }
         
-        // Fallback to plain-text if available
+        // Fallback to plain-text if available (using id not user_id)
         const plainData = patientDataMap.get(patientId);
         if (plainData?.allergies && plainData.allergies !== '[ENCRYPTED]') {
           return {
@@ -184,7 +193,13 @@ export const OrderDetailsDialog = ({
           };
         }
         
-        return { patientId, phi: {} }; // Always return something to mark as loaded
+        // Always return something to mark as loaded
+        return { 
+          patientId, 
+          phi: { 
+            allergies: 'NKDA' // Default fallback
+          } 
+        };
       });
 
       // Fetch contact info for each order line
@@ -281,6 +296,7 @@ export const OrderDetailsDialog = ({
 
       setDecryptedPatientPHI(phiCache);
       setDecryptedContactInfo(contactCache);
+      setPatientFallbackData(patientDataMap);
 
       // REGENERATE SIGNED URLs for uploaded prescriptions
       setRegeneratingUrls(true);
@@ -666,10 +682,17 @@ export const OrderDetailsDialog = ({
                     <div className="pt-2 border-t border-border">
                       <p className="text-sm text-muted-foreground mb-2">Patient Information</p>
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Name</p>
-                          <p className="text-sm font-medium">{line.patient_name}</p>
-                        </div>
+                         <div>
+                           <p className="text-xs text-muted-foreground">Name</p>
+                           <p className="text-sm font-medium">
+                             {line.patient_name || (() => {
+                               const patientInfo = patientFallbackData.get(line.patient_id);
+                               return patientInfo?.first_name && patientInfo?.last_name 
+                                 ? `${patientInfo.first_name} ${patientInfo.last_name}` 
+                                 : 'Patient';
+                             })()}
+                           </p>
+                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Email</p>
                           <p className="text-sm">
@@ -699,26 +722,28 @@ export const OrderDetailsDialog = ({
                             <p className="text-xs font-semibold text-primary flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
                               Patient Allergies (PHI)
-                            </p>
-                             {(() => {
-                               const allergies = decryptedPatientPHI.get(line.patient_id)?.allergies;
-                               const isLoading = !decryptedPatientPHI.has(line.patient_id);
-                               
-                               return isLoading ? (
-                                 <p className="text-xs text-muted-foreground italic mt-1">
-                                   Loading...
-                                 </p>
-                               ) : !allergies ? (
-                                 <p className="text-xs text-muted-foreground italic mt-1">
-                                   None provided
-                                 </p>
-                               ) : (
-                                 <p className="text-sm text-primary-foreground bg-primary/25 p-2 rounded mt-1 border border-primary/40 shadow-inner">
-                                   {allergies}
-                                 </p>
-                               );
-                             })()}
-                          </div>
+                             </p>
+                              {(() => {
+                                const phi = decryptedPatientPHI.get(line.patient_id);
+                                const isLoading = !decryptedPatientPHI.has(line.patient_id);
+                                
+                                if (isLoading) {
+                                  return (
+                                    <p className="text-xs text-muted-foreground italic mt-1">
+                                      Loading...
+                                    </p>
+                                  );
+                                }
+                                
+                                const allergiesText = phi?.allergies || 'NKDA';
+                                
+                                return (
+                                  <p className="text-sm text-primary-foreground bg-primary/25 p-2 rounded mt-1 border border-primary/40 shadow-inner">
+                                    {allergiesText}
+                                  </p>
+                                );
+                              })()}
+                           </div>
                         )}
                       </div>
                     </div>

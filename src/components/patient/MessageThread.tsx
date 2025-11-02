@@ -5,6 +5,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Send, CheckCircle2, RotateCcw } from "lucide-react";
@@ -206,7 +207,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-3 max-h-[400px] overflow-y-auto">
+        <ScrollArea className="max-h-[60vh] p-4">
           {messages?.map((msg: any) => (
             <div
               key={msg.id}
@@ -229,7 +230,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
               <p className="text-sm">{firstMsg.resolution_notes}</p>
             </div>
           )}
-        </div>
+        </ScrollArea>
 
         {!isResolved && (
           <div className="flex gap-2">

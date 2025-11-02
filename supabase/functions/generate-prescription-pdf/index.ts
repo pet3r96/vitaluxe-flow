@@ -228,6 +228,12 @@ serve(async (req) => {
       });
     }
 
+    // Compute prescriber display name
+    const prescriberDisplayName = profileData.prescriber_name || 
+                                  profileData.full_name || 
+                                  provider_name || 
+                                  'Provider';
+
     // Fetch and decrypt patient allergies if patient_id is provided
     let patient_allergies = 'NKDA';
     if (patient_id && !is_office_dispensing) {
@@ -258,32 +264,26 @@ serve(async (req) => {
     doc.setLineWidth(0.02);
     doc.rect(0.5, 0.5, 7.5, 10, 'S');
 
-    // Top credentials bar - compact single line with better spacing
-    // Measure text widths to prevent overlap
-    doc.setFontSize(9);
+    // Top section: Prescriber name and credentials (two-line compact layout)
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     
-    const deaText = `DEA# ${provider_dea}`;
-    const licenseText = `License # ${provider_license}`;
-    const npiText = `NPI # ${provider_npi}`;
+    // Line 1: Prescriber Name (left) + NPI (right)
+    doc.text(prescriberDisplayName, 0.75, 0.75);
+    const npiText = provider_npi ? `NPI: ${provider_npi}` : '';
+    const npiWidth = doc.getTextWidth(npiText);
+    doc.text(npiText, 7.75 - npiWidth, 0.75);
     
-    const deaWidth = doc.getTextWidth(deaText);
+    // Line 2: DEA (left) + License (right)
+    doc.setFontSize(9);
+    const deaText = provider_dea ? `DEA: ${provider_dea}` : '';
+    const licenseText = provider_license ? `License: ${provider_license}` : '';
+    doc.text(deaText, 0.75, 0.95);
     const licenseWidth = doc.getTextWidth(licenseText);
+    doc.text(licenseText, 7.75 - licenseWidth, 0.95);
     
-    // Position with proper spacing
-    let xPos = 0.75;
-    doc.text(deaText, xPos, 0.75);
-    xPos += deaWidth + 0.3;
-    
-    // Adjust spacing if needed
-    if (xPos + licenseWidth > 5.5) {
-      xPos = 3.0;
-    }
-    doc.text(licenseText, xPos, 0.75);
-    
-    // NPI on the right
-    doc.text(npiText, 6.0, 0.75);
-    doc.line(0.5, 0.85, 8, 0.85); // Line below credentials
+    // Line below credentials
+    doc.line(0.5, 1.05, 8, 1.05);
 
     // Helper to check if string is an email
     const isEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str || '');
@@ -305,17 +305,17 @@ serve(async (req) => {
                                        profileData.address_state, profileData.address_zip) ||
                           'Address on file';
 
-    // Provider/Practice info (centered)
+    // Provider/Practice info (centered) - moved down after header credentials
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(displayName, 4.25, 1.2, { align: 'center' });
+    doc.text(displayName, 4.25, 1.4, { align: 'center' });
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(displayAddress, 4.25, 1.5, { align: 'center' });
+    doc.text(displayAddress, 4.25, 1.7, { align: 'center' });
 
     // Patient information section
     doc.setFontSize(11);
-    const startY = 2.2;
+    const startY = 2.3;
     const rowHeight = 0.35; // Increased spacing for better readability
 
     if (is_office_dispensing) {

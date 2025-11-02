@@ -479,7 +479,7 @@ export default function PatientMedicalVault() {
                 ) : patientAccount?.first_name && patientAccount?.last_name ? (
                   `${patientAccount.first_name} ${patientAccount.last_name} - Secure Medical Vault`
                 ) : patientAccount?.first_name || patientAccount?.last_name ? (
-                  `${(patientAccount.first_name || '') + ' ' + (patientAccount.last_name || '')}`.trim() + " - Secure Medical Vault"
+                  `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim() + " - Secure Medical Vault"
                 ) : (
                   "Patient Secure Medical Vault"
                 )}

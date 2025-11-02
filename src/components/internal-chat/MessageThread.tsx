@@ -126,7 +126,7 @@ export function MessageThread({
       </div>
 
       {/* Message Body */}
-      <ScrollArea className="flex-1 p-3">
+      <ScrollArea className="max-h-[60vh] p-3">
         {/* Original Message */}
         <div className="mb-6 p-4 bg-muted rounded-lg">
           <div className="flex items-center gap-2 mb-2">

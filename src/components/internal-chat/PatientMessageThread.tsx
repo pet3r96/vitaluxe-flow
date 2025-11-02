@@ -134,7 +134,7 @@ export function PatientMessageThread({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="max-h-[60vh] p-4">
         <div className="space-y-4 max-w-4xl mx-auto">
           {/* Original Message */}
           <div className="space-y-2">

@@ -92,57 +92,59 @@ export const PatientSelectionDialog = ({
     enabled: open && !!effectivePracticeId,
   });
 
-  // Fetch active providers for practice (both doctor and provider roles need this)
+  // Helper to derive readable name from email
+  const deriveNameFromEmail = (email: string): string => {
+    const localPart = email.split('@')[0];
+    return localPart
+      .replace(/[._-]/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Fetch active providers for practice using backend function to avoid RLS issues
   const { data: providers } = useQuery({
     queryKey: ["practice-providers", effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       
-      // Step 1: Get provider records
-      const { data: providerRecords, error: providerError } = await supabase
-        .from("providers")
-        .select("id, user_id, active")
-        .eq("practice_id", effectivePracticeId)
-        .eq("active", true);
-      
-      if (providerError) throw providerError;
-      if (!providerRecords || providerRecords.length === 0) return [];
-
-      // Step 2: Get profiles for those provider user accounts
-      const userIds = providerRecords.map((p: any) => p.user_id);
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, name, full_name, prescriber_name, npi, dea")
-        .in("id", userIds);
-      
-      if (profilesError) throw profilesError;
-
-      // Map profiles by id
-      const profilesById = new Map(
-        (profiles || []).map((prof: any) => [prof.id, prof])
-      );
-
-      // Combine provider + profile data
-      const mappedData = providerRecords.map((p: any) => {
-        const profile = profilesById.get(p.user_id);
-        // Prioritize prescriber_name, then full_name, fallback to name if not an email
-        const displayName = profile?.prescriber_name || 
-                           profile?.full_name || 
-                           (profile?.name?.includes('@') ? '' : profile?.name) || 
-                           'Unknown Provider';
+      try {
+        const { data, error } = await supabase.functions.invoke('list-providers', {
+          body: { practice_id: effectivePracticeId }
+        });
         
-        return {
-          id: p.id,
-          user_id: p.user_id,
-          prescriber_name: displayName,
-          specialty: '',
-          npi: profile?.npi || '',
-          dea: profile?.dea || '',
-          profiles: profile // Include full profile for later use
-        };
-      });
-      
-      return mappedData;
+        if (error) throw error;
+        
+        return (data?.providers || []).map((p: any) => {
+          // Derive display name with robust fallbacks
+          let displayName = p.profiles?.prescriber_name || 
+                           p.profiles?.full_name || 
+                           p.profiles?.name;
+          
+          // If displayName is an email, derive a readable name from it
+          if (displayName?.includes('@')) {
+            displayName = deriveNameFromEmail(displayName);
+          }
+          
+          // Final fallback
+          if (!displayName) {
+            displayName = 'Provider';
+          }
+          
+          return {
+            id: p.id,
+            user_id: p.user_id,
+            prescriber_name: displayName,
+            specialty: '',
+            npi: p.profiles?.npi || '',
+            dea: p.profiles?.dea || '',
+            profiles: p.profiles
+          };
+        });
+      } catch (error) {
+        console.error('Error fetching providers:', error);
+        return [];
+      }
     },
     enabled: open && !!effectivePracticeId
   });
