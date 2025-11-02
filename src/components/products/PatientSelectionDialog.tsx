@@ -125,7 +125,10 @@ export const PatientSelectionDialog = ({
       // Combine provider + profile data
       const mappedData = providerRecords.map((p: any) => {
         const profile = profilesById.get(p.user_id);
-        const displayName = profile?.name || profile?.full_name || 'Unknown Provider';
+        // Prioritize full_name, fallback to name if not an email, then email
+        const displayName = profile?.full_name || 
+                           (profile?.name?.includes('@') ? '' : profile?.name) || 
+                           'Unknown Provider';
         
         return {
           id: p.id,
@@ -133,7 +136,8 @@ export const PatientSelectionDialog = ({
           prescriber_name: displayName,
           specialty: '',
           npi: profile?.npi || '',
-          dea: profile?.dea || ''
+          dea: profile?.dea || '',
+          profiles: profile // Include full profile for later use
         };
       });
       
@@ -163,31 +167,46 @@ export const PatientSelectionDialog = ({
     }
   }, [open, providers, effectiveRole, effectiveUserId]);
 
-  // Fetch provider details for prescription writer
+  // Fetch provider details for prescription writer - get decrypted credentials
   const { data: selectedProviderData } = useQuery({
     queryKey: ["provider-details", selectedProviderId],
     queryFn: async () => {
       if (!selectedProviderId) return null;
       
-      const { data, error } = await supabase
+      // First get the provider record to get user_id
+      const { data: providerRecord, error: providerError } = await supabase
         .from("providers")
-        .select(`
-          id,
-          user_id,
-          profiles!providers_user_id_fkey!inner(
-            id,
-            name,
-            email,
-            npi,
-            dea,
-            license_number
-          )
-        `)
+        .select("id, user_id")
         .eq("id", selectedProviderId)
         .single();
       
-      if (error) throw error;
-      return data;
+      if (providerError || !providerRecord) throw providerError || new Error("Provider not found");
+      
+      // Get decrypted credentials
+      const { data: creds, error: credsError } = await supabase.rpc('get_decrypted_profile_credentials', {
+        p_user_id: providerRecord.user_id
+      });
+
+      if (credsError) throw credsError;
+
+      if (!creds || creds.length === 0) {
+        throw new Error("Unable to load provider credentials");
+      }
+
+      const decryptedCreds = creds[0];
+      
+      return {
+        id: providerRecord.id,
+        user_id: providerRecord.user_id,
+        profiles: {
+          id: providerRecord.user_id,
+          name: decryptedCreds.full_name,
+          email: decryptedCreds.email,
+          npi: decryptedCreds.npi,
+          dea: decryptedCreds.dea,
+          license_number: decryptedCreds.license_number
+        }
+      };
     },
     enabled: !!selectedProviderId && currentStep === 'prescription' && prescriptionMethod === 'written'
   });

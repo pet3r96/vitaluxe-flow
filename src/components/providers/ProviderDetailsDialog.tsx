@@ -34,28 +34,64 @@ export const ProviderDetailsDialog = ({
     null | "verifying" | "verified" | "failed"
   >(null);
   const [formData, setFormData] = useState({
-    fullName: provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "",
-    prescriberName: provider.profiles?.full_name || "",
-    npi: sanitizeEncrypted(provider.profiles?.npi),
-    dea: sanitizeEncrypted(provider.profiles?.dea),
-    licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
-    phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
+    fullName: "",
+    prescriberName: "",
+    npi: "",
+    dea: "",
+    licenseNumber: "",
+    phone: "",
   });
+  const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
 
-  // Sync form data when provider changes to prevent cross-contamination
+  // Load decrypted credentials when provider changes
   useEffect(() => {
-    const npiValue = sanitizeEncrypted(provider.profiles?.npi);
-    setFormData({
-      fullName: provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "",
-      prescriberName: provider.profiles?.full_name || "",
-      npi: npiValue,
-      dea: sanitizeEncrypted(provider.profiles?.dea),
-      licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
-      phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
-    });
-    setOriginalNpi(npiValue);
+    const loadDecryptedCredentials = async () => {
+      if (!provider.user_id) return;
+      
+      setIsLoadingCredentials(true);
+      try {
+        const { data, error } = await supabase.rpc('get_decrypted_profile_credentials', {
+          p_user_id: provider.user_id
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const creds = data[0];
+          const fullNameValue = creds.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "";
+          const npiValue = creds.npi || "";
+          
+          setFormData({
+            fullName: fullNameValue,
+            prescriberName: creds.full_name || "",
+            npi: npiValue,
+            dea: creds.dea || "",
+            licenseNumber: creds.license_number || "",
+            phone: creds.phone ? creds.phone.replace(/\D/g, '') : "",
+          });
+          setOriginalNpi(npiValue);
+        }
+      } catch (error) {
+        console.error('Error loading decrypted credentials:', error);
+        // Fallback to sanitized values
+        const npiValue = sanitizeEncrypted(provider.profiles?.npi);
+        setFormData({
+          fullName: provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "",
+          prescriberName: provider.profiles?.full_name || "",
+          npi: npiValue,
+          dea: sanitizeEncrypted(provider.profiles?.dea),
+          licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
+          phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
+        });
+        setOriginalNpi(npiValue);
+      } finally {
+        setIsLoadingCredentials(false);
+      }
+    };
+
+    loadDecryptedCredentials();
     setNpiVerificationStatus(null);
-    setIsEditing(false); // Reset editing state when provider changes
+    setIsEditing(false);
   }, [provider]);
 
   const isPractice = effectiveRole === "doctor" && (effectiveUserId === provider.practice_id || effectivePracticeId === provider.practice_id);
@@ -349,18 +385,36 @@ export const ProviderDetailsDialog = ({
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                onClick={() => {
+                onClick={async () => {
                   setIsEditing(false);
-                  const npiValue = sanitizeEncrypted(provider.profiles?.npi);
-                  setFormData({
-                    fullName: provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "",
-                    prescriberName: provider.profiles?.full_name || "",
-                    npi: npiValue,
-                    dea: sanitizeEncrypted(provider.profiles?.dea),
-                    licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
-                    phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
-                  });
-                  setOriginalNpi(npiValue);
+                  // Reload decrypted credentials on cancel
+                  if (!provider.user_id) return;
+                  
+                  try {
+                    const { data, error } = await supabase.rpc('get_decrypted_profile_credentials', {
+                      p_user_id: provider.user_id
+                    });
+
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                      const creds = data[0];
+                      const fullNameValue = creds.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "";
+                      const npiValue = creds.npi || "";
+                      
+                      setFormData({
+                        fullName: fullNameValue,
+                        prescriberName: creds.full_name || "",
+                        npi: npiValue,
+                        dea: creds.dea || "",
+                        licenseNumber: creds.license_number || "",
+                        phone: creds.phone ? creds.phone.replace(/\D/g, '') : "",
+                      });
+                      setOriginalNpi(npiValue);
+                    }
+                  } catch (error) {
+                    console.error('Error reloading credentials:', error);
+                  }
                   setNpiVerificationStatus(null);
                 }}
                 disabled={loading}

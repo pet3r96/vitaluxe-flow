@@ -87,17 +87,63 @@ export const ProviderProfileForm = () => {
   });
 
 
+  const [originalNpi, setOriginalNpi] = useState("");
+
   const form = useForm<ProviderFormValues>({
     resolver: zodResolver(providerFormSchema),
-    values: profile ? {
-      full_name: profile.full_name || "",
-      email: profile.email || "",
-      phone: profile.phone ? profile.phone.replace(/\D/g, "") : "",
-      npi: sanitizeEncrypted(profile.npi),
-      dea: sanitizeEncrypted(profile.dea),
-      license_number: sanitizeEncrypted(profile.license_number),
-    } : undefined,
+    defaultValues: {
+      full_name: "",
+      email: "",
+      phone: "",
+      npi: "",
+      dea: "",
+      license_number: "",
+    },
   });
+
+  // Load decrypted credentials when profile loads
+  useEffect(() => {
+    const loadDecryptedCredentials = async () => {
+      if (!effectiveUserId) return;
+      
+      try {
+        const { data, error } = await supabase.rpc('get_decrypted_profile_credentials', {
+          p_user_id: effectiveUserId
+        });
+
+        if (!error && data && data.length > 0) {
+          const creds = data[0];
+          const npiValue = creds.npi || "";
+          
+          form.reset({
+            full_name: creds.full_name || "",
+            email: creds.email || "",
+            phone: creds.phone ? creds.phone.replace(/\D/g, '') : "",
+            npi: npiValue,
+            dea: creds.dea || "",
+            license_number: creds.license_number || "",
+          });
+          setOriginalNpi(npiValue);
+        } else if (profile) {
+          // Fallback to sanitized values if RPC fails
+          const npiValue = sanitizeEncrypted(profile.npi);
+          form.reset({
+            full_name: profile.full_name || "",
+            email: profile.email || "",
+            phone: profile.phone ? profile.phone.replace(/\D/g, "") : "",
+            npi: npiValue,
+            dea: sanitizeEncrypted(profile.dea),
+            license_number: sanitizeEncrypted(profile.license_number),
+          });
+          setOriginalNpi(npiValue);
+        }
+      } catch (error) {
+        console.error('Error loading decrypted credentials:', error);
+      }
+    };
+
+    loadDecryptedCredentials();
+  }, [profile, form, effectiveUserId]);
 
   const updateMutation = useMutation({
     mutationFn: async (values: ProviderFormValues) => {
@@ -132,8 +178,9 @@ export const ProviderProfileForm = () => {
   });
 
   const onSubmit = (values: ProviderFormValues) => {
-    // Check NPI verification status
-    if (npiVerificationStatus !== "verified") {
+    // Check NPI verification only if NPI changed
+    const npiChanged = values.npi !== originalNpi;
+    if (npiChanged && npiVerificationStatus !== "verified") {
       if (npiVerificationStatus === "verifying") {
         toast({
           title: "Please wait",

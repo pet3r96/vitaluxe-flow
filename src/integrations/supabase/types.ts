@@ -7846,6 +7846,17 @@ export type Database = {
           npi: string
         }[]
       }
+      get_decrypted_profile_credentials: {
+        Args: { p_user_id: string }
+        Returns: {
+          dea: string
+          email: string
+          full_name: string
+          license_number: string
+          npi: string
+          phone: string
+        }[]
+      }
       get_decrypted_provider_credentials: {
         Args: { p_provider_id: string }
         Returns: {
