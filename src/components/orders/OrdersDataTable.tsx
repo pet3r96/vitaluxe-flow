@@ -675,16 +675,13 @@ export const OrdersDataTable = () => {
               <TableHead>Order Status</TableHead>
               <TableHead>Payment Status</TableHead>
               {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
-              {(effectiveRole === "topline" || effectiveRole === "downline") && (
-                <TableHead>My Commission</TableHead>
-              )}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
@@ -848,31 +845,6 @@ export const OrdersDataTable = () => {
                     {/* Total Amount (if not pharmacy) */}
                     {effectiveRole !== "pharmacy" && (
                       <TableCell>${order.total_amount}</TableCell>
-                    )}
-
-                    {/* My Commission (for reps only) */}
-                    {(effectiveRole === "topline" || effectiveRole === "downline") && (
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            ${(orderCommissions?.[order.id]?.total || 0).toFixed(2)}
-                          </span>
-                          {orderCommissions?.[order.id]?.hasRx && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="outline" className="text-xs">
-                                    RX
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Order contains RX products (0% commission)</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      </TableCell>
                     )}
 
                     {/* Actions */}

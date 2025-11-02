@@ -387,10 +387,12 @@ export const MessagesView = () => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedThread) return;
 
+    // CRITICAL: Always use user.id (not effectiveUserId) as sender_id
+    // The RLS policy requires auth.uid() = sender_id to prevent message spoofing
     const { error } = await supabase.from("messages").insert([
       {
         thread_id: selectedThread,
-        sender_id: effectiveUserId,
+        sender_id: user!.id, // Use actual logged-in user, not impersonated user
         body: newMessage,
       },
     ]);
@@ -527,11 +529,13 @@ export const MessagesView = () => {
     }
 
     // Create the first message
+    // CRITICAL: Always use user.id (not effectiveUserId) as sender_id
+    // The RLS policy requires auth.uid() = sender_id to prevent message spoofing
     const { error: messageError } = await supabase
       .from("messages")
       .insert([{
         thread_id: thread.id,
-        sender_id: effectiveUserId,
+        sender_id: user!.id, // Use actual logged-in user, not impersonated user
         body: newThreadMessage,
       }]);
 
