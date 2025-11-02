@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,10 +30,12 @@ export default function PatientDetail() {
   const navigate = useNavigate();
   const { effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
 
   console.log('[PatientDetail] effectivePracticeId:', effectivePracticeId);
 
@@ -473,7 +475,7 @@ export default function PatientDetail() {
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="w-full overflow-x-auto flex-nowrap justify-start">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="medical-vault">Medical Vault</TabsTrigger>
@@ -506,7 +508,10 @@ export default function PatientDetail() {
             </Button>
           </div>
           
-          <MedicalVaultSummaryCard patientAccountId={actualPatientId!} />
+          <MedicalVaultSummaryCard 
+            patientAccountId={actualPatientId!} 
+            onViewVault={() => setActiveTab('medical-vault')}
+          />
         </TabsContent>
 
         <TabsContent value="medical-vault">

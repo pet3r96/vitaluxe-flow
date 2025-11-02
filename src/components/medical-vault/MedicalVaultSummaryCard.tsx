@@ -8,9 +8,10 @@ import { useNavigate } from "react-router-dom";
 
 interface MedicalVaultSummaryCardProps {
   patientAccountId: string;
+  onViewVault?: () => void;
 }
 
-export function MedicalVaultSummaryCard({ patientAccountId }: MedicalVaultSummaryCardProps) {
+export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: MedicalVaultSummaryCardProps) {
   const navigate = useNavigate();
 
   const { data: counts, isLoading } = useQuery({
@@ -56,7 +57,11 @@ export function MedicalVaultSummaryCard({ patientAccountId }: MedicalVaultSummar
   });
 
   const handleViewVault = () => {
-    navigate(`/practice/patients/${patientAccountId}/medical-vault`);
+    if (onViewVault) {
+      onViewVault();
+    } else {
+      navigate(`/practice/patients/${patientAccountId}/medical-vault`);
+    }
   };
 
   if (isLoading) {

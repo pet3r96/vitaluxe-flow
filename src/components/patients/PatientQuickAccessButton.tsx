@@ -71,7 +71,7 @@ export function PatientQuickAccessButton({
   });
 
   const handleViewMedicalVault = () => {
-    navigate(`/practice/patients/${patientId}/medical-vault`);
+    navigate(`/patients/${patientId}?tab=medical-vault`);
   };
 
   const handleViewDocuments = () => {
