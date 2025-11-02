@@ -41,7 +41,12 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           // Core React framework (must stay together)
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          
+          // React-related libraries that need React context
+          if (id.includes('react-router') || id.includes('react-router-dom')) {
             return 'react-vendor';
           }
           
@@ -56,14 +61,14 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
     // Chunk size warning limit
     chunkSizeWarningLimit: 500,
-    // Enable minification with aggressive settings
+    // Enable minification with less aggressive settings to avoid bugs
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: mode === 'production',
+        drop_console: false, // Keep console for debugging
         drop_debugger: mode === 'production',
-        pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
-        passes: 2, // Multiple passes for better compression
+        pure_funcs: [],
+        passes: 1, // Single pass to avoid issues
       },
       mangle: {
         safari10: true, // Safari 10 support
