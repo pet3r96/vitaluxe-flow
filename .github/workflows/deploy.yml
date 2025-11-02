@@ -28,6 +28,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 🔧 Step 1.5: Parse ECR Repository Details
+      - name: Parse ECR Repository Details
+        run: |
+          echo "🔧 Parsing ECR Repository details..."
+          ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
+          
+          # Validate ECR_REPOSITORY format (should be full URI)
+          if [[ ! "$ECR_REPO" =~ ^[0-9]+\.dkr\.ecr\..+\.amazonaws\.com/.+ ]]; then
+            echo "❌ ERROR: ECR_REPOSITORY must be a full ECR URI"
+            echo "Expected format: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/REPO_NAME"
+            echo "Received: $ECR_REPO"
+            exit 1
+          fi
+          
+          # Extract components from ECR URI
+          ECR_ACCOUNT_ID=$(echo "$ECR_REPO" | cut -d'.' -f1)
+          ECR_REGION=$(echo "$ECR_REPO" | cut -d'.' -f4)
+          REPO_NAME=$(echo "$ECR_REPO" | cut -d'/' -f2)
+          
+          echo "Parsed ECR details:"
+          echo "  Account ID: $ECR_ACCOUNT_ID"
+          echo "  Region: $ECR_REGION"
+          echo "  Repository Name: $REPO_NAME"
+          
+          # Export to GITHUB_ENV for use in subsequent steps
+          echo "ECR_ACCOUNT_ID=$ECR_ACCOUNT_ID" >> $GITHUB_ENV
+          echo "ECR_REGION=$ECR_REGION" >> $GITHUB_ENV
+          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+
       # ✅ Step 2: Validate Required Secrets
       - name: Validate Required Secrets
         run: |
@@ -91,8 +120,8 @@ jobs:
           echo "🔍 Testing Lightsail permissions..."
           aws lightsail get-container-services --query "containerServices[].serviceName" --output table || echo "Lightsail access test failed"
           
-          echo "🔍 Testing ECR permissions..."
-          aws ecr describe-repositories --query "repositories[].repositoryName" --output table || echo "ECR access test failed"
+          echo "🔍 Testing ECR permissions in region $ECR_REGION..."
+          aws ecr describe-repositories --region "$ECR_REGION" --query "repositories[].repositoryName" --output table || echo "ECR access test failed"
 
       # 🐳 Step 2: Set up Docker Buildx
       - name: Set up Docker Buildx
@@ -140,19 +169,15 @@ jobs:
       # 🔑 Step 5: Login & Push to Amazon ECR
       - name: Login & Push to ECR
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
           echo "🔐 Logging into Amazon ECR..."
+          echo "Using AWS account: $ECR_ACCOUNT_ID"
+          echo "Using ECR region: $ECR_REGION"
+          echo "Using repository: $REPO_NAME"
 
-          # Extract account ID and region from ECR_REPOSITORY
-          ACCOUNT_ID=$(echo "$ECR_REPOSITORY" | cut -d'.' -f1)
-          REGION=$(echo "$ECR_REPOSITORY" | cut -d'.' -f4)
-          echo "Using AWS account: $ACCOUNT_ID"
-          echo "Using region: $REGION"
-
-          # Login to ECR using the extracted region
-          aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
+          # Login to ECR using the parsed region
+          aws ecr get-login-password --region "$ECR_REGION" | docker login --username AWS --password-stdin "$ECR_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com"
 
           echo "🏗️ Tagging Docker image..."
           COMMIT_SHA=$(echo "${GITHUB_SHA::7}")
@@ -205,13 +230,14 @@ jobs:
           fi
           
           # Debug: Check ECR image exists
-          echo "🔍 Verifying ECR image exists..."
-          IMAGE_CHECK=$(aws ecr describe-images --repository-name $(echo "$ECR_REPOSITORY" | cut -d'/' -f2) --image-ids imageTag=latest 2>&1)
+          echo "🔍 Verifying ECR image exists in region $ECR_REGION..."
+          IMAGE_CHECK=$(aws ecr describe-images --region "$ECR_REGION" --repository-name "$REPO_NAME" --image-ids imageTag=latest 2>&1)
           if [ $? -ne 0 ]; then
-            echo "❌ ECR image '${ECR_REPOSITORY}:latest' not found"
+            echo "❌ ECR image '${ECR_REPOSITORY}:latest' not found in region $ECR_REGION"
             echo "Image check result: $IMAGE_CHECK"
             exit 1
           fi
+          echo "✅ ECR image verified in region $ECR_REGION"
           
           echo "🚀 Creating Lightsail container service deployment..."
           
