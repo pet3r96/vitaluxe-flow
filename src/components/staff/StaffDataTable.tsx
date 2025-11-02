@@ -32,54 +32,46 @@ export const StaffDataTable = () => {
     queryKey: ["staff", effectiveUserId, effectiveRole],
     staleTime: 300000, // 5 minutes
     queryFn: async () => {
-      // Step 1: Fetch all staff for this practice
-      let staffQuery = supabase
-        .from("practice_staff")
-        .select("*")
-        .order("created_at", { ascending: false });
+      console.log('[StaffDataTable] Fetching staff via edge function', {
+        effectiveUserId,
+        effectiveRole
+      });
       
-      // If doctor role, only show their own staff
-      if (effectiveRole === "doctor") {
-        staffQuery = staffQuery.eq("practice_id", effectiveUserId);
-      }
-      
-      const { data: staffData, error: staffError } = await staffQuery;
-      if (staffError) throw staffError;
+      // Use edge function to get staff with full profile data
+      const { data, error } = await supabase.functions.invoke('list-staff', {
+        body: {}
+      });
 
-      if (!staffData || staffData.length === 0) {
-        return [];
+      if (error) {
+        console.error('[StaffDataTable] Error from edge function:', error);
+        throw error;
       }
 
-      // Step 2: Fetch all user profiles for these staff members
-      const userIds = staffData.map(s => s.user_id);
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, name, full_name, email, phone, staff_role_type")
-        .in("id", userIds);
+      const staffList = data?.staff || [];
+      console.log('[StaffDataTable] Received staff:', {
+        count: staffList.length,
+        sample: staffList[0] ? {
+          id: staffList[0].id,
+          hasProfile: !!staffList[0].profiles,
+          fullName: staffList[0].profiles?.full_name,
+          name: staffList[0].profiles?.name,
+          email: staffList[0].profiles?.email
+        } : null
+      });
+      
+      // Log any missing data
+      staffList.forEach((s: any, idx: number) => {
+        if (!s.profiles?.full_name && !s.profiles?.name && !s.profiles?.email) {
+          console.warn('[StaffDataTable] ⚠️ Staff missing display fields:', {
+            index: idx,
+            staffId: s.id,
+            userId: s.user_id,
+            profileData: s.profiles
+          });
+        }
+      });
 
-      if (profilesError) throw profilesError;
-
-      // Step 3: Fetch practice information
-      const practiceIds = [...new Set(staffData.map(s => s.practice_id))];
-      const { data: practicesData, error: practicesError } = await supabase
-        .from("profiles")
-        .select("id, name, company")
-        .in("id", practiceIds);
-
-      if (practicesError) throw practicesError;
-
-      // Step 4: Create lookup maps
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
-      const practicesMap = new Map(practicesData?.map(p => [p.id, p]) || []);
-
-      // Step 5: Merge the data
-      const enrichedStaff = staffData.map(staffMember => ({
-        ...staffMember,
-        profiles: profilesMap.get(staffMember.user_id) || null,
-        practice: practicesMap.get(staffMember.practice_id) || null,
-      }));
-
-      return enrichedStaff;
+      return staffList;
     },
     enabled: !!effectiveUserId
   });

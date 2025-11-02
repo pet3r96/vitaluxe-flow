@@ -36,57 +36,47 @@ export const ProvidersDataTable = () => {
     queryKey: ["providers", effectiveUserId, effectiveRole, effectivePracticeId],
     staleTime: 300000, // 5 minutes - providers change occasionally
     queryFn: async () => {
-      // Step 1: Fetch all providers for this practice
-      let providersQuery = supabase
-        .from("providers")
-        .select("*")
-        .order("created_at", { ascending: false });
+      console.log('[ProvidersDataTable] Fetching providers via edge function', {
+        effectiveUserId,
+        effectiveRole,
+        effectivePracticeId
+      });
       
-      // If doctor role, use their user ID as practice_id
-      // If staff role, use their associated practice ID
-      if (effectiveRole === "doctor") {
-        providersQuery = providersQuery.eq("practice_id", effectiveUserId);
-      } else if (effectiveRole === "staff" && effectivePracticeId) {
-        providersQuery = providersQuery.eq("practice_id", effectivePracticeId);
-      }
-      
-      const { data: providersData, error: providersError } = await providersQuery;
-      if (providersError) throw providersError;
+      // Use edge function to get providers with full profile data
+      const { data, error } = await supabase.functions.invoke('list-providers', {
+        body: effectivePracticeId ? { practice_id: effectivePracticeId } : {}
+      });
 
-      if (!providersData || providersData.length === 0) {
-        return [];
+      if (error) {
+        console.error('[ProvidersDataTable] Error from edge function:', error);
+        throw error;
       }
 
-      // Step 2: Fetch all user profiles for these providers (include credentials)
-      const userIds = providersData.map(p => p.user_id);
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, name, email, phone, full_name, npi, dea, license_number")
-        .in("id", userIds);
+      const providersList = data?.providers || [];
+      console.log('[ProvidersDataTable] Received providers:', {
+        count: providersList.length,
+        sample: providersList[0] ? {
+          id: providersList[0].id,
+          hasProfile: !!providersList[0].profiles,
+          fullName: providersList[0].profiles?.full_name,
+          name: providersList[0].profiles?.name,
+          email: providersList[0].profiles?.email
+        } : null
+      });
+      
+      // Log any missing data
+      providersList.forEach((p: any, idx: number) => {
+        if (!p.profiles?.full_name && !p.profiles?.name && !p.profiles?.email) {
+          console.warn('[ProvidersDataTable] ⚠️ Provider missing display fields:', {
+            index: idx,
+            providerId: p.id,
+            userId: p.user_id,
+            profileData: p.profiles
+          });
+        }
+      });
 
-      if (profilesError) throw profilesError;
-
-      // Step 3: Fetch practice information
-      const practiceIds = [...new Set(providersData.map(p => p.practice_id))];
-      const { data: practicesData, error: practicesError } = await supabase
-        .from("profiles")
-        .select("id, name, company, email")
-        .in("id", practiceIds);
-
-      if (practicesError) throw practicesError;
-
-      // Step 4: Create lookup maps
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
-      const practicesMap = new Map(practicesData?.map(p => [p.id, p]) || []);
-
-      // Step 5: Merge the data
-      const enrichedProviders = providersData.map(provider => ({
-        ...provider,
-        profiles: profilesMap.get(provider.user_id) || null,
-        practice: practicesMap.get(provider.practice_id) || null,
-      }));
-
-      return enrichedProviders;
+      return providersList;
     },
     enabled: !!(effectiveUserId || effectivePracticeId)
   });

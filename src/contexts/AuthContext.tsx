@@ -1289,6 +1289,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // NOW sign out from Supabase
     await supabase.auth.signOut();
     
+    // Clear session storage reload flag
+    sessionStorage.removeItem('chunk_reload_attempted');
+    
     // Force immediate state reset
     setSession(null);
     setUser(null);
@@ -1303,8 +1306,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRequires2FASetup(false);
     setRequires2FAVerify(false);
     
-    // Navigate to auth
-    navigate('/auth');
+    logger.info('Sign out completed, redirecting with cache-busting reload');
+    
+    // Use cache-busting full reload to clear stale chunks
+    window.location.replace('/auth?ts=' + Date.now());
   };
 
   const signIn = async (email: string, password: string) => {

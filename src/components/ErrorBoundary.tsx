@@ -27,7 +27,8 @@ export class ErrorBoundary extends Component<Props, State> {
     // Detect dynamic import failures (chunk loading errors)
     const isChunkLoadError = error.message?.includes('Failed to fetch dynamically imported module') ||
                             error.message?.includes('error loading dynamically imported module') ||
-                            error.message?.includes('Importing a module script failed');
+                            error.message?.includes('Importing a module script failed') ||
+                            error.message?.includes("'text/html' is not a valid JavaScript MIME type");
     
     import('@/lib/logger').then(({ logger }) => {
       if (isChunkLoadError) {
@@ -40,6 +41,16 @@ export class ErrorBoundary extends Component<Props, State> {
         isChunkLoadError
       }));
     });
+
+    // Auto-reload once for chunk/MIME errors to clear stale cache
+    if (isChunkLoadError && !sessionStorage.getItem('chunk_reload_attempted')) {
+      sessionStorage.setItem('chunk_reload_attempted', 'true');
+      console.log('[ErrorBoundary] Auto-reloading to clear stale cache...');
+      setTimeout(() => {
+        window.location.href = window.location.pathname + '?v=' + Date.now();
+      }, 1000);
+      return;
+    }
 
     // Log error to database via edge function
     supabase.functions
@@ -100,13 +111,14 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
               
               {(this.state.error?.message?.includes('dynamically imported module') || 
-                this.state.error?.message?.includes('Failed to fetch')) && (
+                this.state.error?.message?.includes('Failed to fetch') ||
+                this.state.error?.message?.includes("'text/html' is not a valid JavaScript MIME type")) && (
                 <div className="mt-4 p-4 bg-muted/30 border border-border rounded-lg">
                   <p className="text-sm font-semibold mb-2">
-                    🔄 Cache Issue Detected
+                    🔄 Cache Issue Detected - Auto-reloading...
                   </p>
                   <p className="text-sm text-muted-foreground mb-3">
-                    The app has been updated. Please try one of these solutions:
+                    The app has been updated and will reload automatically. If the issue persists:
                   </p>
                   <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside">
                     <li><strong>Hard Refresh:</strong> Press <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Ctrl+Shift+R</kbd> (Windows) or <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Cmd+Shift+R</kbd> (Mac)</li>
@@ -116,11 +128,11 @@ export class ErrorBoundary extends Component<Props, State> {
                   <button
                     onClick={() => {
                       sessionStorage.clear();
-                      window.location.reload();
+                      window.location.href = window.location.pathname + '?v=' + Date.now();
                     }}
                     className="mt-3 px-3 py-1.5 text-sm bg-gold1 hover:bg-gold1/90 text-white rounded"
                   >
-                    Clear Storage & Reload
+                    Clear Storage & Reload Now
                   </button>
                 </div>
               )}
