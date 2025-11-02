@@ -472,24 +472,21 @@ export const PracticeDetailsDialog = ({
                                     setNpiVerificationStatus("verifying");
                                     
                                     // Real-time NPI verification with timeout handling
-                                    const currentNpi = value;
+                                    const expectedNpi = value; // Capture current value
                                     verifyNPIDebounced(value, (result) => {
-                                      // Only apply result if NPI hasn't changed
-                                      if (form.getValues('npi') === result.npi && currentNpi === result.npi) {
-                                        // FAILURE: invalid OR has error message
-                                        if (!result.valid || result.error) {
-                                          setNpiVerificationStatus("failed");
-                                          toast.error(result.error || "NPI verification failed");
-                                        }
-                                        // SUCCESS: valid AND no error
-                                        else if (result.valid && !result.error) {
+                                      // Only apply result if NPI still matches expected value
+                                      if (form.getValues('npi') === expectedNpi && expectedNpi === value) {
+                                        if (result.valid && !result.error) {
                                           setNpiVerificationStatus("verified");
                                           if (result.providerName) {
                                             toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                                          } else {
+                                            toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
                                           }
-                                          if (result.warning) {
-                                            toast.info(result.warning);
-                                          }
+                                        } else {
+                                          // Failed or has error
+                                          setNpiVerificationStatus("failed");
+                                          toast.error(result.error || "NPI verification failed");
                                         }
                                       }
                                     });

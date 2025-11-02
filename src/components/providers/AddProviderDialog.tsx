@@ -293,32 +293,25 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                 
                 // Real-time NPI verification
                 if (value && value.length === 10) {
+                  const expectedNpi = value; // Capture current value
                   verifyNPIDebounced(value, (result) => {
-                    // Only apply result if it matches the CURRENT ref value
-                    // (prevents race conditions from stale debounced calls)
-                    if (currentNpiRef.current === result.npi) {
-                      // FAILURE: invalid OR has error message
-                      if (!result.valid || result.error) {
+                    // Only apply result if it matches the CURRENT value
+                    if (currentNpiRef.current === expectedNpi && expectedNpi === value) {
+                      if (result.valid && !result.error) {
+                        setNpiVerificationStatus("verified");
+                        setValidationErrors(prev => ({ ...prev, npi: "" }));
+                        if (result.providerName) {
+                          toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                        } else {
+                          toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
+                        }
+                      } else {
+                        // Failed or has error
                         setNpiVerificationStatus("failed");
                         setValidationErrors(prev => ({ 
                           ...prev, 
                           npi: result.error || "NPI verification failed" 
                         }));
-                      }
-                      // SUCCESS: valid AND no error
-                      else if (result.valid && !result.error) {
-                        setNpiVerificationStatus("verified");
-                        setValidationErrors(prev => ({ ...prev, npi: "" }));
-                        // Show success message for all valid NPIs
-                        if (result.providerName) {
-                          toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
-                        } else {
-                          // Organization NPIs or NPIs without names
-                          toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
-                        }
-                        if (result.warning) {
-                          toast.info(result.warning);
-                        }
                       }
                     }
                   });

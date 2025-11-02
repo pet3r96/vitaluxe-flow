@@ -113,13 +113,14 @@ async function withTimeout<T>(
 /**
  * Verify an NPI number against the official CMS NPPES Registry
  * @param npi - The 10-digit NPI number to verify
- * @returns Promise with verification result
+ * @returns Promise with verification result (ALWAYS includes npi field)
  */
 export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
   // Basic format validation
   if (!npi || !/^\d{10}$/.test(npi)) {
     return {
       valid: false,
+      npi, // Always include npi
       error: "NPI must be exactly 10 digits",
     };
   }
@@ -127,7 +128,7 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
   // Check cache first
   const cached = getCachedResult(npi);
   if (cached) {
-    return cached;
+    return { ...cached, npi }; // Ensure npi is included
   }
 
   try {
@@ -151,7 +152,7 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
       return {
         valid: false,
         npi,
-        error: "Verification timed out. Please try again or contact support.",
+        error: "Verification timed out. Please try again.",
       };
     }
 
@@ -160,7 +161,7 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
       return {
         valid: false,
         npi,
-        error: "Could not verify NPI. Please try again or contact support.",
+        error: "Could not verify NPI. Please try again.",
       };
     }
 
@@ -168,12 +169,21 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
     if (data && typeof data === 'object') {
       const result = data as NPIVerificationResult;
       
-      // Cache successful verifications
-      if (result.valid && !result.error) {
-        cacheResult(npi, result);
+      // ALWAYS normalize result to include npi field
+      const normalizedResult = { ...result, npi };
+      
+      // If warning-only (registry unavailable), treat as terminal failed state
+      if (result.warning && !result.valid) {
+        normalizedResult.valid = false;
+        normalizedResult.error = "Registry temporarily unavailable. Please try again.";
       }
       
-      return result;
+      // Cache successful verifications only
+      if (normalizedResult.valid && !normalizedResult.error) {
+        cacheResult(npi, normalizedResult);
+      }
+      
+      return normalizedResult;
     }
 
     // Unexpected response format
@@ -195,8 +205,10 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
 
 /**
  * Debounced NPI verification for real-time input validation
+ * Uses per-call token to prevent race conditions from stale callbacks
  */
 let verificationTimeout: NodeJS.Timeout | null = null;
+let callCounter = 0;
 
 export function verifyNPIDebounced(
   npi: string,
@@ -207,19 +219,28 @@ export function verifyNPIDebounced(
     clearTimeout(verificationTimeout);
   }
 
+  // Generate unique call ID for this invocation
+  const callId = ++callCounter;
+
   // Basic format check first
   if (!npi || npi.length < 10) {
-    callback({ valid: false, error: "" }); // No error for incomplete input
+    callback({ valid: false, npi, error: "" }); // No error for incomplete input
     return;
   }
 
   if (!/^\d{10}$/.test(npi)) {
-    callback({ valid: false, error: "NPI must be exactly 10 digits" });
+    callback({ valid: false, npi, error: "NPI must be exactly 10 digits" });
     return;
   }
 
   verificationTimeout = setTimeout(async () => {
-    const result = await verifyNPI(npi);
-    callback(result);
+    // Only proceed if this is still the latest call
+    if (callId === callCounter) {
+      const result = await verifyNPI(npi);
+      // Final safety check before callback
+      if (callId === callCounter) {
+        callback(result);
+      }
+    }
   }, debounceMs);
 }
