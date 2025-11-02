@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -65,6 +65,10 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     address_zip: "",
     selectedRepId: "",
   });
+
+  // Track latest NPI value to guard against stale callback updates
+  const currentNpiRef = useRef(formData.npi);
+
 
   // Fetch topline reps
   const { data: toplineReps } = useQuery({
@@ -301,9 +305,10 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
               <Input
                 id="npi"
                 value={formData.npi}
-                onChange={(e) => {
+onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, '');
                   setFormData({ ...formData, npi: value });
+                  currentNpiRef.current = value;
                   setValidationErrors({ ...validationErrors, npi: "" });
                   
                   // Reset verification status when NPI changes
@@ -316,9 +321,9 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                   // Real-time NPI verification
                   if (value && value.length === 10) {
                     const expectedNpi = value; // Capture current value
-                    verifyNPIDebounced(value, (result) => {
-                      // Only apply if NPI still matches expected value
-                      if (expectedNpi === value && formData.npi === expectedNpi) {
+verifyNPIDebounced(value, (result) => {
+                      // Only apply if this result matches the latest input value
+                      if (currentNpiRef.current === expectedNpi) {
                         if (result.valid && !result.error) {
                           setNpiVerificationStatus("verified");
                           setValidationErrors(prev => ({ ...prev, npi: "" }));

@@ -296,7 +296,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
                   const expectedNpi = value; // Capture current value
                   verifyNPIDebounced(value, (result) => {
                     // Only apply result if it matches the CURRENT value
-                    if (currentNpiRef.current === expectedNpi && expectedNpi === value) {
+                    if (currentNpiRef.current === expectedNpi) {
                       if (result.valid && !result.error) {
                         setNpiVerificationStatus("verified");
                         setValidationErrors(prev => ({ ...prev, npi: "" }));

@@ -343,9 +343,9 @@ export const PracticeProfileForm = () => {
                         // Real-time NPI verification with timeout handling
                         if (value && value.length === 10) {
                           const expectedNpi = value; // Capture current value
-                          verifyNPIDebounced(value, (result) => {
+verifyNPIDebounced(value, (result) => {
                             // Only apply result if NPI still matches expected value
-                            if (field.value === expectedNpi && expectedNpi === value) {
+                            if (form.getValues('npi') === expectedNpi) {
                               if (result.valid && !result.error) {
                                 setNpiVerificationStatus("verified");
                                 if (result.providerName) {

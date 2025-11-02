@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,9 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
     address_verified_at: undefined as string | undefined,
     address_verification_source: "",
   });
+
+  const currentNpiRef = useRef(formData.npi);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,9 +206,10 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 <Input
                   id="npi"
                   value={formData.npi}
-                  onChange={(e) => {
+onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
                     setFormData({ ...formData, npi: value });
+                    currentNpiRef.current = value;
                     setValidationErrors(prev => ({ ...prev, npi: "" }));
                     
                     // Reset verification status when NPI changes
@@ -218,9 +222,9 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 // Real-time NPI verification
                 if (value && value.length === 10) {
                   const expectedNpi = value; // Capture current value
-                  verifyNPIDebounced(value, (result) => {
-                    // Only apply if NPI still matches expected value
-                    if (expectedNpi === value && formData.npi === expectedNpi) {
+verifyNPIDebounced(value, (result) => {
+                    // Only apply if this result matches the latest input value
+                    if (currentNpiRef.current === expectedNpi) {
                       if (result.valid && !result.error) {
                         setNpiVerificationStatus("verified");
                         setValidationErrors(prev => ({ ...prev, npi: "" }));

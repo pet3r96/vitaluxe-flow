@@ -280,33 +280,33 @@ export const ProviderProfileForm = () => {
                         // Real-time NPI verification with timeout handling
                         if (value && value.length === 10) {
                           const expectedNpi = value; // Capture current value
-                          verifyNPIDebounced(value, (result) => {
-                            // Only apply result if NPI still matches expected value
-                            if (field.value === expectedNpi && expectedNpi === value) {
-                              if (result.valid && !result.error) {
-                                setNpiVerificationStatus("verified");
-                                if (result.providerName) {
-                                  toast({
-                                    title: "NPI Verified ✓",
-                                    description: `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`,
-                                  });
-                                } else {
-                                  toast({
-                                    title: "NPI Verified ✓",
-                                    description: `NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`,
-                                  });
-                                }
-                              } else {
-                                // Failed or has error
-                                setNpiVerificationStatus("failed");
-                                toast({
-                                  title: "Invalid NPI",
-                                  description: result.error || "NPI verification failed",
-                                  variant: "destructive",
-                                });
-                              }
-                            }
-                          });
+verifyNPIDebounced(value, (result) => {
+                             // Only apply result if NPI still matches expected value
+                             if (form.getValues('npi') === expectedNpi) {
+                               if (result.valid && !result.error) {
+                                 setNpiVerificationStatus("verified");
+                                 if (result.providerName) {
+                                   toast({
+                                     title: "NPI Verified ✓",
+                                     description: `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`,
+                                   });
+                                 } else {
+                                   toast({
+                                     title: "NPI Verified ✓",
+                                     description: `NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`,
+                                   });
+                                 }
+                               } else {
+                                 // Failed or has error
+                                 setNpiVerificationStatus("failed");
+                                 toast({
+                                   title: "Invalid NPI",
+                                   description: result.error || "NPI verification failed",
+                                   variant: "destructive",
+                                 });
+                               }
+                             }
+                           });
                         }
                       }}
                     />

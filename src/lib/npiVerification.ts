@@ -207,21 +207,11 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
  * Debounced NPI verification for real-time input validation
  * Uses per-call token to prevent race conditions from stale callbacks
  */
-let verificationTimeout: NodeJS.Timeout | null = null;
-let callCounter = 0;
-
 export function verifyNPIDebounced(
   npi: string,
   callback: (result: NPIVerificationResult) => void,
   debounceMs = 800
 ): void {
-  if (verificationTimeout) {
-    clearTimeout(verificationTimeout);
-  }
-
-  // Generate unique call ID for this invocation
-  const callId = ++callCounter;
-
   // Basic format check first
   if (!npi || npi.length < 10) {
     callback({ valid: false, npi, error: "" }); // No error for incomplete input
@@ -233,14 +223,9 @@ export function verifyNPIDebounced(
     return;
   }
 
-  verificationTimeout = setTimeout(async () => {
-    // Only proceed if this is still the latest call
-    if (callId === callCounter) {
-      const result = await verifyNPI(npi);
-      // Final safety check before callback
-      if (callId === callCounter) {
-        callback(result);
-      }
-    }
+  // Local one-shot debounce per call site; callbacks will self-guard against stale values
+  setTimeout(async () => {
+    const result = await verifyNPI(npi);
+    callback(result);
   }, debounceMs);
 }
