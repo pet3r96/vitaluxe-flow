@@ -474,7 +474,13 @@ export const PracticeDetailsDialog = ({
                                     // Real-time NPI verification
                                     verifyNPIDebounced(value, (result) => {
                                       if (form.getValues('npi') === result.npi) {
-                                        if (result.valid && !result.error) {
+                                        // FAILURE: invalid OR has error message
+                                        if (!result.valid || result.error) {
+                                          setNpiVerificationStatus("failed");
+                                          toast.error(result.error || "NPI verification failed");
+                                        }
+                                        // SUCCESS: valid AND no error
+                                        else if (result.valid && !result.error) {
                                           setNpiVerificationStatus("verified");
                                           if (result.providerName) {
                                             toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
@@ -482,9 +488,6 @@ export const PracticeDetailsDialog = ({
                                           if (result.warning) {
                                             toast.info(result.warning);
                                           }
-                                        } else if (result.error) {
-                                          setNpiVerificationStatus("failed");
-                                          toast.error(result.error);
                                         }
                                       }
                                     });

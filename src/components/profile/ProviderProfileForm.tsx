@@ -281,7 +281,17 @@ export const ProviderProfileForm = () => {
                         if (value && value.length === 10) {
                           verifyNPIDebounced(value, (result) => {
                             if (field.value === result.npi) {
-                              if (result.valid && !result.error) {
+                              // FAILURE: invalid OR has error message
+                              if (!result.valid || result.error) {
+                                setNpiVerificationStatus("failed");
+                                toast({
+                                  title: "Invalid NPI",
+                                  description: result.error || "NPI verification failed",
+                                  variant: "destructive",
+                                });
+                              }
+                              // SUCCESS: valid AND no error
+                              else if (result.valid && !result.error) {
                                 setNpiVerificationStatus("verified");
                                 if (result.providerName) {
                                   toast({
@@ -296,13 +306,6 @@ export const ProviderProfileForm = () => {
                                     variant: "default",
                                   });
                                 }
-                              } else if (result.error) {
-                                setNpiVerificationStatus("failed");
-                                toast({
-                                  title: "Invalid NPI",
-                                  description: result.error,
-                                  variant: "destructive",
-                                });
                               }
                             }
                           });

@@ -221,8 +221,18 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                         // Only apply result if it matches the CURRENT form value
                         setFormData(currentFormData => {
                           if (currentFormData.npi === result.npi) {
-                            if (result.valid) {
+                            // FAILURE: invalid OR has error message
+                            if (!result.valid || result.error) {
+                              setNpiVerificationStatus("failed");
+                              setValidationErrors(prev => ({ 
+                                ...prev, 
+                                npi: result.error || "NPI verification failed" 
+                              }));
+                            }
+                            // SUCCESS: valid AND no error
+                            else if (result.valid && !result.error) {
                               setNpiVerificationStatus("verified");
+                              setValidationErrors(prev => ({ ...prev, npi: "" }));
                               // Show success message for all valid NPIs
                               if (result.providerName) {
                                 toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
@@ -233,9 +243,6 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                               if (result.warning) {
                                 toast.info(result.warning);
                               }
-                            } else if (result.error) {
-                              setNpiVerificationStatus("failed");
-                              setValidationErrors(prev => ({ ...prev, npi: result.error || "" }));
                             }
                           }
                           return currentFormData;
