@@ -712,9 +712,15 @@ export const OrderDetailsDialog = ({
                         <div className="col-span-2">
                           <p className="text-xs text-muted-foreground">Address</p>
                           <p className="text-sm">
-                            {decryptedContactInfo.has(line.id) 
-                              ? (decryptedContactInfo.get(line.id)?.patient_address || "N/A")
-                              : "Loading..."}
+                            {(() => {
+                              if (decryptedContactInfo.has(line.id)) {
+                                return decryptedContactInfo.get(line.id)?.patient_address || "N/A";
+                              }
+                              const patientInfo = patientFallbackData.get(line.patient_id);
+                              return patientInfo?.address && patientInfo.address !== '[ENCRYPTED]' 
+                                ? patientInfo.address 
+                                : "N/A";
+                            })()}
                           </p>
                         </div>
                         {canViewPHI && line.patient_id && (
@@ -735,7 +741,12 @@ export const OrderDetailsDialog = ({
                                   );
                                 }
                                 
-                                const allergiesText = phi?.allergies || 'NKDA';
+                                const patientInfo = patientFallbackData.get(line.patient_id);
+                                const allergiesText = phi?.allergies || 
+                                                     (patientInfo?.allergies && patientInfo.allergies !== '[ENCRYPTED]' 
+                                                       ? patientInfo.allergies 
+                                                       : null) ||
+                                                     'NKDA';
                                 
                                 return (
                                   <p className="text-sm text-primary-foreground bg-primary/25 p-2 rounded mt-1 border border-primary/40 shadow-inner">

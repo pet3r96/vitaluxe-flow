@@ -124,9 +124,9 @@ export const PatientSelectionDialog = ({
         if (error) throw error;
         
         return (data?.providers || []).map((p: any) => {
-          // Derive display name with robust fallbacks
-          let displayName = p.profiles?.prescriber_name || 
-                           p.profiles?.full_name || 
+          // Derive display name with robust fallbacks - prioritize full_name over prescriber_name
+          let displayName = p.profiles?.full_name || 
+                           p.profiles?.prescriber_name || 
                            p.profiles?.name;
           
           // If displayName is an email, derive a readable name from it

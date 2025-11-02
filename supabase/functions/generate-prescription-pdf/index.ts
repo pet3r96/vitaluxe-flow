@@ -228,9 +228,9 @@ serve(async (req) => {
       });
     }
 
-    // Compute prescriber display name
-    const prescriberDisplayName = profileData.prescriber_name || 
-                                  profileData.full_name || 
+    // Compute prescriber display name - prioritize full_name over prescriber_name
+    const prescriberDisplayName = profileData.full_name || 
+                                  profileData.prescriber_name || 
                                   provider_name || 
                                   'Provider';
 

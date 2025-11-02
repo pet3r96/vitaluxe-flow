@@ -15,14 +15,18 @@ export default function PracticePatientMedicalVault() {
     queryFn: async () => {
       if (!patientId) throw new Error("Patient ID is required");
       
-      const { data, error } = await supabase
-        .from("patient_accounts")
-        .select("id, first_name, last_name, practice_id")
-        .eq("id", patientId)
-        .single();
+      console.log("Fetching patient vault data via backend function for patient:", patientId);
       
-      if (error) throw error;
-      return data;
+      const { data, error } = await supabase.functions.invoke('get-patient-vault-data', {
+        body: { patient_account_id: patientId }
+      });
+      
+      if (error) {
+        console.error("Error fetching patient vault data:", error);
+        throw error;
+      }
+      
+      return data?.patient;
     },
     enabled: !!patientId,
   });
