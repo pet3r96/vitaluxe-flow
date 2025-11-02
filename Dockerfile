@@ -27,5 +27,8 @@ EXPOSE 8080
 COPY --from=builder /app/dist ./dist
 COPY package*.json ./
 
+# Install only production dependencies needed for vite preview
+RUN npm ci --production
+
 CMD ["npm", "run", "preview"]
 
