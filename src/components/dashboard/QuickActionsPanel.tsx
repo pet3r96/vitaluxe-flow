@@ -37,12 +37,6 @@ export function QuickActionsPanel() {
       onClick: () => navigate("/document-center"),
       color: "text-green-600",
     },
-    {
-      icon: AlertCircle,
-      label: "Patient Follow-Ups",
-      onClick: () => navigate("/patients"),
-      color: "text-orange-600",
-    },
   ];
 
   return (
