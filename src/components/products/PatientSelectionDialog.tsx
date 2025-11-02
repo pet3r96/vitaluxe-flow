@@ -70,18 +70,26 @@ export const PatientSelectionDialog = ({
   const { data: patients, isLoading } = useQuery({
     queryKey: ["patients", effectivePracticeId],
     queryFn: async () => {
-      if (!effectivePracticeId) return [];
-      
-      const { data, error } = await supabase
-        .from("patient_accounts" as any)
-        .select("*")
-        .eq("practice_id", effectivePracticeId)
-        .order("name");
+      if (!effectivePracticeId) {
+        console.log("No practice ID available");
+        return [];
+      }
 
-      if (error) throw error;
-      
+      console.log("Fetching patients via backend function for practice:", effectivePracticeId);
+
+      const { data, error } = await supabase.functions.invoke('list-patients', {
+        body: { practice_id: effectivePracticeId }
+      });
+
+      if (error) {
+        console.error("Error fetching patients:", error);
+        throw error;
+      }
+
+      console.log("Patients fetched:", data?.patients?.length || 0);
+
       // Filter out patients with incomplete data that would cause cart errors
-      const validPatients = (data as any[] || []).filter((patient: any) => {
+      const validPatients = (data?.patients || []).filter((patient: any) => {
         const hasEmail = !!patient.email;
         const hasId = !!patient.id;
         return hasEmail && hasId;

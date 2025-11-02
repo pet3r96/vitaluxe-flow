@@ -314,3 +314,12 @@ verify_jwt = true
 
 [functions.validate-share-link]
 verify_jwt = false
+
+[functions.list-patients]
+verify_jwt = true
+
+[functions.list-providers]
+verify_jwt = true
+
+[functions.list-staff]
+verify_jwt = true
