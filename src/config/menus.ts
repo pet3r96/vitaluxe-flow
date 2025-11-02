@@ -240,6 +240,7 @@ export const menus: MenuConfig = {
         { label: "Medical Vault", href: "/medical-vault", icon: Shield },
         { label: "Documents", href: "/documents", icon: FileText },
         { label: "Messages", href: "/patient-messages", icon: MessageSquare },
+        { label: "My Profile", href: "/profile", icon: UserSquare2 },
       ],
     },
   ],

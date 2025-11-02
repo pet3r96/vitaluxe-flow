@@ -90,7 +90,7 @@ export function MedicalVaultView({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_accounts")
-        .select("id, first_name, last_name, practice_id, date_of_birth, address, city, state, zip_code, gender_at_birth, user_id")
+        .select("id, first_name, last_name, practice_id, date_of_birth, address, city, state, zip_code, gender_at_birth, user_id, birth_date, address_street, address_city, address_state, address_zip, address_formatted, email, phone")
         .eq("id", patientAccountId)
         .single();
       
