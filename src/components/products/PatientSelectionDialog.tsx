@@ -752,13 +752,13 @@ export const PatientSelectionDialog = ({
 
                       {/* Prescription Summary after generation */}
                       {prescriptionPreview && (
-                        <Alert className="border-green-200 bg-green-50">
-                          <FileCheck className="h-4 w-4 text-green-600" />
+                        <Alert className="border-success/30 bg-success/10 dark:border-success/50 dark:bg-success/20">
+                          <FileCheck className="h-4 w-4 text-success" />
                           <AlertDescription>
                             <div className="space-y-2">
-                              <p className="font-semibold text-green-900">Prescription Generated</p>
-                              <p className="text-sm"><strong>Dosage:</strong> {customDosage || product.dosage}</p>
-                              <p className="text-sm"><strong>SIG:</strong> {customSig || product.sig}</p>
+                              <p className="font-semibold text-foreground">Prescription Generated</p>
+                              <p className="text-sm text-muted-foreground"><strong>Dosage:</strong> {customDosage || product.dosage}</p>
+                              <p className="text-sm text-muted-foreground"><strong>SIG:</strong> {customSig || product.sig}</p>
                             </div>
                           </AlertDescription>
                         </Alert>
