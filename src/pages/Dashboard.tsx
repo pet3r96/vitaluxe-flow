@@ -2,11 +2,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Card } from "@/components/ui/card";
 import { Package, ShoppingCart, Users, DollarSign, Clock, Sparkles, Lock } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { logger } from "@/lib/logger";
 import { PRO_MONTHLY_PRICE_STR, TRIAL_DESCRIPTION } from "@/lib/pricing";
 import { TodayAppointmentsWidget } from "@/components/dashboard/TodayAppointmentsWidget";
@@ -27,9 +28,10 @@ import { DayViewCalendar } from "@/components/dashboard/DayViewCalendar";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
-  const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount } = useAuth();
+  const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount, effectivePracticeId } = useAuth();
   const { isSubscribed, status, trialDaysRemaining } = useSubscription();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
@@ -417,6 +419,126 @@ const Dashboard = () => {
       return total;
     },
   });
+
+  // Real-time subscriptions for instant dashboard updates
+  useEffect(() => {
+    if (!effectiveUserId) return;
+
+    const channels: any[] = [];
+
+    // Subscribe to orders changes
+    const ordersChannel = supabase
+      .channel('dashboard-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          queryClient.invalidateQueries({ 
+            queryKey: ["dashboard-orders-count"],
+            refetchType: 'active'
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ["dashboard-pending-orders-count"],
+            refetchType: 'active'
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ["dashboard-pending-revenue"],
+            refetchType: 'active'
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ["dashboard-collected-revenue"],
+            refetchType: 'active'
+          });
+        }
+      )
+      .subscribe();
+    channels.push(ordersChannel);
+
+    // Subscribe to order_lines changes (affects pharmacy/provider counts)
+    const orderLinesChannel = supabase
+      .channel('dashboard-order-lines-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_lines' },
+        () => {
+          queryClient.invalidateQueries({ 
+            queryKey: ["dashboard-orders-count"],
+            refetchType: 'active'
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ["dashboard-pending-revenue"],
+            refetchType: 'active'
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ["dashboard-collected-revenue"],
+            refetchType: 'active'
+          });
+        }
+      )
+      .subscribe();
+    channels.push(orderLinesChannel);
+
+    // Subscribe to products changes
+    const productsChannel = supabase
+      .channel('dashboard-products-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        () => {
+          queryClient.invalidateQueries({ 
+            queryKey: ["dashboard-products-count"],
+            refetchType: 'active'
+          });
+        }
+      )
+      .subscribe();
+    channels.push(productsChannel);
+
+    // Subscribe to profiles changes (for admin user count)
+    if (effectiveRole === 'admin') {
+      const profilesChannel = supabase
+        .channel('dashboard-profiles-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles' },
+          () => {
+            queryClient.invalidateQueries({ 
+              queryKey: ["dashboard-users-count"],
+              refetchType: 'active'
+            });
+          }
+        )
+        .subscribe();
+      channels.push(profilesChannel);
+    }
+
+    // Subscribe to patient check-ins for practice users
+    if (effectivePracticeId && (effectiveRole === 'doctor' || effectiveRole === 'staff' || effectiveRole === 'provider')) {
+      const appointmentsChannel = supabase
+        .channel('dashboard-appointments-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'patient_appointments',
+            filter: `practice_id=eq.${effectivePracticeId}`
+          },
+          () => {
+            queryClient.invalidateQueries({ 
+              queryKey: ["waiting-room-dashboard"],
+              refetchType: 'active'
+            });
+          }
+        )
+        .subscribe();
+      channels.push(appointmentsChannel);
+    }
+
+    return () => {
+      channels.forEach(channel => supabase.removeChannel(channel));
+    };
+  }, [effectiveUserId, effectiveRole, effectivePracticeId, queryClient]);
 
   const stats = [
     {

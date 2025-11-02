@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { realtimeManager } from "@/lib/realtimeManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -44,12 +43,30 @@ export function WaitingRoomWidget() {
   useEffect(() => {
     if (!effectivePracticeId) return;
 
-    realtimeManager.subscribe('patient_appointments');
+    const channel = supabase
+      .channel('waiting-room-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_appointments',
+          filter: `practice_id=eq.${effectivePracticeId}`
+        },
+        () => {
+          // Invalidate the specific query when patient_appointments change
+          queryClient.invalidateQueries({ 
+            queryKey: ["waiting-room-dashboard", effectivePracticeId],
+            refetchType: 'active'
+          });
+        }
+      )
+      .subscribe();
 
     return () => {
-      // Manager handles cleanup
+      supabase.removeChannel(channel);
     };
-  }, [effectivePracticeId]);
+  }, [effectivePracticeId, queryClient]);
 
   const getWaitTimeColor = useCallback((minutes: number) => {
     if (minutes < 5) return "text-success";
