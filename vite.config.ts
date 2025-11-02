@@ -36,66 +36,26 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Aggressive chunk splitting for optimal caching and lazy loading
+    // Simplified chunk splitting to avoid React context issues
     rollupOptions: {
       output: {
         manualChunks: (id) => {
           // Core React framework (must stay together)
-          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
             return 'react-vendor';
           }
           
-          // React Query (separate for better caching)
-          if (id.includes('@tanstack/react-query')) {
-            return 'query-vendor';
-          }
-          
-          // Supabase
-          if (id.includes('@supabase/supabase-js')) {
-            return 'supabase-vendor';
-          }
-          
-          // All Radix UI components (heavily used)
-          if (id.includes('@radix-ui')) {
-            return 'ui-vendor';
-          }
-          
-          // Form libraries
-          if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
-            return 'form-vendor';
-          }
-          
-          // Chart libraries (lazy load only when needed)
-          if (id.includes('chart.js') || id.includes('recharts') || id.includes('react-chartjs-2')) {
-            return 'chart-vendor';
-          }
-          
-          // PDF generation (lazy load only when needed)
-          if (id.includes('jspdf')) {
-            return 'pdf-vendor';
-          }
-          
-          // Date libraries
-          if (id.includes('date-fns')) {
-            return 'date-vendor';
-          }
-          
-          // Lucide icons (separate chunk)
-          if (id.includes('lucide-react')) {
-            return 'icons-vendor';
-          }
-          
-          // Node modules not matched above
+          // All other node_modules in one chunk to avoid splitting issues
           if (id.includes('node_modules')) {
-            return 'vendor-misc';
+            return 'vendor';
           }
         },
       },
     },
     // Target modern browsers for smaller bundles
     target: 'esnext',
-    // Stricter chunk size warning limit (400kb instead of 500kb)
-    chunkSizeWarningLimit: 400,
+    // Chunk size warning limit
+    chunkSizeWarningLimit: 500,
     // Enable minification with aggressive settings
     minify: 'terser',
     terserOptions: {
