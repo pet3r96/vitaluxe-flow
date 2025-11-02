@@ -192,14 +192,10 @@ export default function DeliveryConfirmation() {
         const { data: patientsData, error: patientsError } = await supabase
           .from("patient_accounts")
           .update({
-            address_street: address.street,
-            address_city: address.city,
-            address_state: address.state,
-            address_zip: address.zip,
-            address_formatted: address.formatted,
-            address_verification_status: address.status,
-            address_verification_source: address.source || 'manual',
-            address_verified_at: address.status === 'verified' ? new Date().toISOString() : null,
+            address: address.street,
+            city: address.city,
+            state: address.state,
+            zip_code: address.zip,
           })
           .eq("id", patientId)
           .select('id');
