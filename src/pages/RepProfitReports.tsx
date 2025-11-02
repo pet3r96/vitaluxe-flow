@@ -22,7 +22,9 @@ import RepSubscriptionReferrals from "@/components/reports/RepSubscriptionReferr
 
 const RepProfitReports = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
-  const [earningFilter, setEarningFilter] = useState<"all" | "commission" | "practice_dev_fee">("all");
+  const [earningFilter, setEarningFilter] = useState<"all" | "commission" | "practice_dev_fee">(
+    effectiveRole === 'topline' ? "practice_dev_fee" : "all"
+  );
 
   // Get rep data
   const { data: repData } = useQuery({
