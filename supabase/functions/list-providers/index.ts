@@ -130,36 +130,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch providers with full profile data using service role
-    // Use explicit relationship aliases to avoid ambiguity
-    let query = supabase
+    // Fetch providers - two-step query to avoid ambiguous relationship error
+    let providersQuery = supabase
       .from('providers')
       .select(`
         id,
         user_id,
         practice_id,
         active,
-        created_at,
-        profiles:profiles!providers_user_id_fkey!inner(
-          id,
-          name,
-          email,
-          phone,
-          address
-        ),
-        practice:profiles!providers_practice_id_fkey(
-          id,
-          name,
-          company
-        )
+        created_at
       `)
       .order('created_at', { ascending: false });
 
     if (practiceId) {
-      query = query.eq('practice_id', practiceId);
+      providersQuery = providersQuery.eq('practice_id', practiceId);
     }
 
-    const { data: providers, error: providersError } = await query;
+    const { data: providersRows, error: providersError } = await providersQuery;
 
     if (providersError) {
       console.error('[list-providers] Query error:', providersError);
@@ -169,12 +156,56 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[list-providers] Found', providers?.length || 0, 'providers for practice', practiceId);
-    if (providers && providers.length > 0) {
+    if (!providersRows || providersRows.length === 0) {
+      console.log('[list-providers] No providers found for practice', practiceId);
+      return new Response(JSON.stringify({ providers: [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Step 2: Fetch user profiles for all providers
+    const userIds = providersRows.map(p => p.user_id);
+    const practiceIds = [...new Set(providersRows.map(p => p.practice_id))];
+
+    const { data: userProfiles, error: userProfilesError } = await supabase
+      .from('profiles')
+      .select('id, name, email, phone, address')
+      .in('id', userIds);
+
+    if (userProfilesError) {
+      console.error('[list-providers] User profiles query error:', userProfilesError);
+      return new Response(JSON.stringify({ error: userProfilesError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Step 3: Fetch practice profiles
+    const { data: practiceProfiles, error: practiceProfilesError } = await supabase
+      .from('profiles')
+      .select('id, name, company')
+      .in('id', practiceIds);
+
+    if (practiceProfilesError) {
+      console.error('[list-providers] Practice profiles query error:', practiceProfilesError);
+    }
+
+    // Merge profiles onto provider rows
+    const userProfilesMap = new Map(userProfiles?.map(p => [p.id, p]) || []);
+    const practiceProfilesMap = new Map(practiceProfiles?.map(p => [p.id, p]) || []);
+    
+    const providers = providersRows.map(p => ({
+      ...p,
+      profiles: userProfilesMap.get(p.user_id) || null,
+      practice: practiceProfilesMap.get(p.practice_id) || null,
+    }));
+
+    console.log('[list-providers] Found', providers.length, 'providers for practice', practiceId);
+    if (providers.length > 0) {
       console.log('[list-providers] First provider profile:', providers[0].profiles?.name || providers[0].profiles?.email || 'no-name');
     }
 
-    return new Response(JSON.stringify({ providers: providers || [] }), {
+    return new Response(JSON.stringify({ providers }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
