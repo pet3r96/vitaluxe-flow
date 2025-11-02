@@ -27,8 +27,9 @@ EXPOSE 8080
 COPY --from=builder /app/dist ./dist
 COPY package*.json ./
 
-# Install only serve for production static file serving
+# Install serve for production static file serving
 RUN npm install -g serve
 
+# Run serve on port 8080, single page mode for SPA
 CMD ["serve", "-s", "dist", "-l", "8080"]
 

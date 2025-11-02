@@ -219,6 +219,9 @@ jobs:
           fi
           
           echo "🚀 Creating Lightsail container service deployment..."
+          echo "Using container image: ${IMAGE_TAG}"
+          
+          # Create deployment with better error handling
           DEPLOYMENT_RESULT=$(aws lightsail create-container-service-deployment \
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --containers "{
