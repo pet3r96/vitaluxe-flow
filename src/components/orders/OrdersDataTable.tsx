@@ -403,7 +403,7 @@ export const OrdersDataTable = () => {
     },
   });
 
-  // Fetch commission data for reps
+  // Fetch commission data - ONLY FOR ADMIN (reps should not see commission data)
   const { data: orderCommissions } = useQuery({
     queryKey: ["order-commissions", currentRepId, effectiveRole, orders],
     queryFn: async () => {
@@ -444,7 +444,8 @@ export const OrdersDataTable = () => {
       
       return commissionMap;
     },
-    enabled: (effectiveRole === "topline" || effectiveRole === "downline") && !!currentRepId && !!orders?.length,
+    // CRITICAL: Only admin should see commissions - disable for topline/downline reps
+    enabled: effectiveRole === 'admin' && !!currentRepId && !!orders?.length,
   });
 
   // Set up real-time subscription for order updates using centralized manager

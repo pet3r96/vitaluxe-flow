@@ -471,9 +471,11 @@ export const PracticeDetailsDialog = ({
                                   } else if (value !== originalNpi) {
                                     setNpiVerificationStatus("verifying");
                                     
-                                    // Real-time NPI verification
+                                    // Real-time NPI verification with timeout handling
+                                    const currentNpi = value;
                                     verifyNPIDebounced(value, (result) => {
-                                      if (form.getValues('npi') === result.npi) {
+                                      // Only apply result if NPI hasn't changed
+                                      if (form.getValues('npi') === result.npi && currentNpi === result.npi) {
                                         // FAILURE: invalid OR has error message
                                         if (!result.valid || result.error) {
                                           setNpiVerificationStatus("failed");

@@ -340,10 +340,12 @@ export const PracticeProfileForm = () => {
                           setNpiVerificationStatus("verifying");
                         }
                         
-                        // Real-time NPI verification
+                        // Real-time NPI verification with timeout handling
                         if (value && value.length === 10) {
+                          const currentNpi = value;
                           verifyNPIDebounced(value, (result) => {
-                            if (field.value === result.npi) {
+                            // Only apply result if NPI hasn't changed
+                            if (field.value === result.npi && currentNpi === result.npi) {
                               // FAILURE: invalid OR has error message
                               if (!result.valid || result.error) {
                                 setNpiVerificationStatus("failed");

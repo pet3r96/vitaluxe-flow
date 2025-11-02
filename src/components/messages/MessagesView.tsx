@@ -434,11 +434,13 @@ export const MessagesView = () => {
 
     const threadType = recipientType === "pharmacy" ? "order_issue" : "support";
 
+    // CRITICAL: Use effectiveUserId for created_by (represents the user creating the request)
+    // but sender_id for messages will use user.id (real authenticated user)
     const { data: thread, error: threadError } = await supabase
       .from("message_threads")
       .insert([{ 
         subject: newThreadSubject, 
-        created_by: effectiveUserId,
+        created_by: effectiveUserId, // Who the ticket is "from" (can be impersonated user)
         thread_type: threadType,
         order_id: recipientType === "pharmacy" ? selectedOrderId : null,
         disposition_type: recipientType === "pharmacy" ? dispositionType : null,

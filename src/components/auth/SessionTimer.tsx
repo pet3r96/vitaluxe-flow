@@ -55,11 +55,10 @@ export const SessionTimer = ({ userId }: SessionTimerProps) => {
 
       const currentExpiration = parseInt(expStr);
       
-      // Only countdown when user is inactive
-      if (!isActive) {
-        const remaining = currentExpiration - Date.now();
-        setTimeRemaining(Math.max(0, remaining));
-      }
+      // ALWAYS show the real time remaining, regardless of activity status
+      // The countdown reflects how much time until forced logout
+      const remaining = currentExpiration - Date.now();
+      setTimeRemaining(Math.max(0, remaining));
       
       // Detect session extension
       if (currentExpiration > prevExpiration && prevExpiration > 0) {
@@ -126,8 +125,8 @@ export const SessionTimer = ({ userId }: SessionTimerProps) => {
         >
           <p className="text-sm leading-relaxed">
             {isActive 
-              ? "Timer paused - you're active. The countdown only runs after 30 seconds of inactivity."
-              : "Your session automatically extends when you're active. You'll be logged out when this timer reaches zero or after 2 hours maximum for compliance reasons."
+              ? "You're active! Your session automatically extends to 30 minutes from your last activity. Time shown is current countdown until forced logout."
+              : "You've been inactive for 30+ seconds. Your session will expire when this timer reaches zero (unless you become active again). Maximum session: 2 hours for compliance."
             }
           </p>
         </TooltipContent>

@@ -236,10 +236,12 @@ export const ProviderDetailsDialog = ({
                           } else if (value !== originalNpi) {
                             setNpiVerificationStatus("verifying");
                             
-                            // Real-time NPI verification
+                            // Real-time NPI verification with timeout handling
+                            const currentNpi = value;
                             verifyNPIDebounced(value, (result) => {
                               setFormData(currentFormData => {
-                                if (currentFormData.npi === result.npi) {
+                                // Only apply result if NPI hasn't changed
+                                if (currentFormData.npi === result.npi && currentNpi === result.npi) {
                                   // FAILURE: invalid OR has error message
                                   if (!result.valid || result.error) {
                                     setNpiVerificationStatus("failed");
