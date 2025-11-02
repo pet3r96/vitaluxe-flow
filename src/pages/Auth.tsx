@@ -374,11 +374,6 @@ const Auth = () => {
           {isLogin ? "Sign in to your account" : "Create your account"}
         </p>
 
-        {isLogin && !showVerificationMessage && <div className="mb-6 flex items-start gap-2 rounded-lg bg-muted/20 border border-border p-3">
-            <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-foreground leading-relaxed">For Security & Compliance, you'll be automatically logged out after 30 minutes.</p>
-          </div>}
-
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {!isLogin && <>
               <div className="space-y-2">
