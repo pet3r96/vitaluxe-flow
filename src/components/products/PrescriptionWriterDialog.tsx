@@ -310,6 +310,8 @@ export function PrescriptionWriterDialog({
             <h3 className="font-semibold mb-2">Prescriber Information</h3>
             <div className="text-sm space-y-1 text-muted-foreground">
               <p><strong>Provider:</strong> {provider.name}</p>
+              {provider.npi && <p><strong>NPI:</strong> {provider.npi}</p>}
+              {provider.email && <p><strong>Email:</strong> {provider.email}</p>}
               {canViewCredentials && (
                 <div className="pt-2 mt-2 border-t">
                   {isLoadingCreds ? (
@@ -319,7 +321,6 @@ export function PrescriptionWriterDialog({
                     </p>
                   ) : decryptedPrescriberCreds ? (
                     <>
-                      {decryptedPrescriberCreds.npi && <p className="text-xs"><strong>NPI:</strong> {decryptedPrescriberCreds.npi}</p>}
                       {decryptedPrescriberCreds.dea && <p className="text-xs"><strong>DEA:</strong> {decryptedPrescriberCreds.dea}</p>}
                       {decryptedPrescriberCreds.license_number && <p className="text-xs"><strong>License:</strong> {decryptedPrescriberCreds.license_number}</p>}
                     </>

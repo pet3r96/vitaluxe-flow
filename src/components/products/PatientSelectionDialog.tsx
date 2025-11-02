@@ -173,9 +173,11 @@ export const PatientSelectionDialog = ({
         .from("providers")
         .select(`
           id,
+          user_id,
           profiles!providers_user_id_fkey!inner(
             id,
             name,
+            email,
             npi,
             dea,
             license_number
@@ -798,6 +800,7 @@ export const PatientSelectionDialog = ({
             provider={selectedProviderData ? {
               id: selectedProviderData.id,
               name: selectedProviderData.profiles?.name || 'Unknown',
+              email: selectedProviderData.profiles?.email || 'N/A',
               npi: selectedProviderData.profiles?.npi || 'N/A',
               dea: selectedProviderData.profiles?.dea || 'N/A',
               license: selectedProviderData.profiles?.license_number || 'N/A'
