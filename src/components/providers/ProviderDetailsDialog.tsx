@@ -34,7 +34,7 @@ export const ProviderDetailsDialog = ({
     null | "verifying" | "verified" | "failed"
   >(null);
   const [formData, setFormData] = useState({
-    fullName: provider.profiles?.full_name || provider.profiles?.name || "",
+    fullName: provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "",
     prescriberName: provider.profiles?.full_name || "",
     npi: sanitizeEncrypted(provider.profiles?.npi),
     dea: sanitizeEncrypted(provider.profiles?.dea),
@@ -46,7 +46,7 @@ export const ProviderDetailsDialog = ({
   useEffect(() => {
     const npiValue = sanitizeEncrypted(provider.profiles?.npi);
     setFormData({
-      fullName: provider.profiles?.full_name || provider.profiles?.name || "",
+      fullName: provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "",
       prescriberName: provider.profiles?.full_name || "",
       npi: npiValue,
       dea: sanitizeEncrypted(provider.profiles?.dea),
@@ -205,7 +205,7 @@ export const ProviderDetailsDialog = ({
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 />
               ) : (
-                <div className="p-2 bg-muted rounded-md">{provider.profiles?.full_name || provider.profiles?.name}</div>
+                <div className="p-2 bg-muted rounded-md">{provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? provider.profiles?.email : provider.profiles?.name) || provider.profiles?.email}</div>
               )}
             </div>
 
@@ -353,7 +353,7 @@ export const ProviderDetailsDialog = ({
                   setIsEditing(false);
                   const npiValue = sanitizeEncrypted(provider.profiles?.npi);
                   setFormData({
-                    fullName: provider.profiles?.full_name || provider.profiles?.name || "",
+                    fullName: provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "",
                     prescriberName: provider.profiles?.full_name || "",
                     npi: npiValue,
                     dea: sanitizeEncrypted(provider.profiles?.dea),

@@ -159,7 +159,7 @@ export const ProvidersDataTable = () => {
             {filteredProviders && filteredProviders.length > 0 ? (
               paginatedProviders?.map((provider) => (
                 <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.profiles?.name || provider.profiles?.full_name || provider.profiles?.email || 'Unknown Provider'}</TableCell>
+                  <TableCell className="font-medium">{provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? '' : provider.profiles?.name) || provider.profiles?.email || 'Unknown Provider'}</TableCell>
                   <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
                   <TableCell>{provider.profiles?.email || 'N/A'}</TableCell>
                   <TableCell>
