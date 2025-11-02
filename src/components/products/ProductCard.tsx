@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProductCardProps {
   product: any;
@@ -191,12 +192,12 @@ export const ProductCard = memo(({
     <Card className="group hover:shadow-lg transition-all duration-200 flex flex-col h-full">
       <CardContent className="p-4 sm:p-5 lg:p-6 flex-1 flex flex-col">
         {/* Product Image */}
-        <div className="aspect-video mb-2 sm:mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted/50">
+        <div className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center p-2">
           {product.image_url ? (
             <img
               src={product.image_url}
               alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
           ) : (
@@ -212,6 +213,26 @@ export const ProductCard = memo(({
             <h3 className="font-semibold text-base sm:text-lg lg:text-xl line-clamp-2 leading-tight">{product.name}</h3>
             {product.dosage && (
               <p className="text-sm text-muted-foreground line-clamp-1">{product.dosage}</p>
+            )}
+            {product.description && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-sm text-muted-foreground line-clamp-1 cursor-help hover:text-foreground transition-colors">
+                      {product.description}
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent 
+                    className="max-w-xs sm:max-w-sm md:max-w-md" 
+                    side="top"
+                    align="start"
+                  >
+                    <p className="text-sm whitespace-pre-wrap break-words">
+                      {product.description}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
 

@@ -5287,6 +5287,7 @@ export type Database = {
           active: boolean | null
           base_price: number
           created_at: string | null
+          description: string | null
           dosage: string | null
           downline_price: number | null
           id: string
@@ -5304,6 +5305,7 @@ export type Database = {
           active?: boolean | null
           base_price: number
           created_at?: string | null
+          description?: string | null
           dosage?: string | null
           downline_price?: number | null
           id?: string
@@ -5321,6 +5323,7 @@ export type Database = {
           active?: boolean | null
           base_price?: number
           created_at?: string | null
+          description?: string | null
           dosage?: string | null
           downline_price?: number | null
           id?: string

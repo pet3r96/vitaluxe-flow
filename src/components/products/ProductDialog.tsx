@@ -43,6 +43,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     name: "",
     dosage: "",
     sig: "",
+    description: "",
     base_price: "",
     topline_price: "",
     downline_price: "",
@@ -145,6 +146,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         name: product.name || "",
         dosage: product.dosage || "",
         sig: product.sig || "",
+        description: product.description || "",
         base_price: product.base_price?.toString() || "",
         // Clear legacy rep prices for Rx products
         topline_price: (product.requires_prescription ? "" : product.topline_price?.toString()) || "",
@@ -265,6 +267,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         name: formData.name,
         dosage: formData.dosage,
         sig: formData.sig,
+        description: formData.description || null,
         base_price: parseFloat(formData.base_price),
         // Force null for Rx products
         topline_price: formData.requires_prescription 
@@ -358,6 +361,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       name: "",
       dosage: "",
       sig: "",
+      description: "",
       base_price: "",
       topline_price: "",
       downline_price: "",
@@ -444,7 +448,23 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                 onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
               />
             </div>
+          </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Describe the product, its benefits, or use cases"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              This will be displayed on the product card with hover tooltip for full text
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="product_type_id">Product Type *</Label>
               <Select

@@ -42,6 +42,7 @@ export const RequestProductDialog = ({
     name: "",
     dosage: "",
     sig: "",
+    description: "",
     vitaluxe_price: "",
     product_type_id: "",
     product_type_name: "",
@@ -138,6 +139,7 @@ export const RequestProductDialog = ({
         name: formData.name,
         dosage: formData.dosage || null,
         sig: formData.sig || null,
+        description: formData.description || null,
         vitaluxe_price: parseFloat(formData.vitaluxe_price),
         product_type_id: formData.product_type_id || null,
         product_type_name: formData.product_type_name || null,
@@ -162,6 +164,7 @@ export const RequestProductDialog = ({
         name: "",
         dosage: "",
         sig: "",
+        description: "",
         vitaluxe_price: "",
         product_type_id: "",
         product_type_name: "",
@@ -250,6 +253,19 @@ export const RequestProductDialog = ({
                 setFormData({ ...formData, sig: e.target.value })
               }
               placeholder="Enter dosage instructions"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              placeholder="Describe the product, its benefits, or use cases"
               rows={3}
             />
           </div>
