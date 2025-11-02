@@ -22,24 +22,25 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const StaffDataTable = () => {
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   const { data: staff, isLoading, refetch } = useQuery({
-    queryKey: ["staff", effectiveUserId, effectiveRole],
+    queryKey: ["staff", effectiveUserId, effectiveRole, effectivePracticeId],
     staleTime: 300000, // 5 minutes
     queryFn: async () => {
       console.log('[StaffDataTable] Fetching staff via edge function', {
         effectiveUserId,
-        effectiveRole
+        effectiveRole,
+        effectivePracticeId
       });
       
       // Use edge function to get staff with full profile data
       const { data, error } = await supabase.functions.invoke('list-staff', {
-        body: {}
+        body: effectivePracticeId ? { practice_id: effectivePracticeId } : {}
       });
 
       if (error) {
@@ -73,7 +74,7 @@ export const StaffDataTable = () => {
 
       return staffList;
     },
-    enabled: !!effectiveUserId
+    enabled: !!(effectiveUserId || effectivePracticeId)
   });
 
   const toggleStatus = async (staffUserId: string, currentStatus: boolean) => {

@@ -48,14 +48,30 @@ Deno.serve(async (req) => {
     console.log('[list-staff] User roles:', roles);
 
     let practiceId: string | null = null;
+    let practiceIdSource = 'none';
+
+    // Accept practice_id from body (for impersonation) or query string
+    const url = new URL(req.url);
+    const queryPracticeId = url.searchParams.get('practice_id');
+    let bodyPracticeId: string | null = null;
+    
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        bodyPracticeId = body.practice_id || null;
+      } catch (e) {
+        // No body or invalid JSON, that's OK
+      }
+    }
 
     if (roles.includes('admin')) {
-      // Admins can optionally filter by practice_id from query params
-      const url = new URL(req.url);
-      practiceId = url.searchParams.get('practice_id');
+      // Admins: prefer body practice_id (impersonation), then query param
+      practiceId = bodyPracticeId || queryPracticeId;
+      practiceIdSource = bodyPracticeId ? 'body' : queryPracticeId ? 'query' : 'none';
     } else if (roles.includes('doctor')) {
       // Doctor: their user_id IS the practice_id
       practiceId = user.id;
+      practiceIdSource = 'computed-doctor';
     } else if (roles.includes('staff')) {
       // Staff: look up their practice_id to see other staff in same practice
       const { data: staffData } = await supabase
@@ -64,6 +80,7 @@ Deno.serve(async (req) => {
         .eq('user_id', user.id)
         .single();
       practiceId = staffData?.practice_id || null;
+      practiceIdSource = 'computed-staff';
     } else {
       console.error('[list-staff] No valid role for user (providers cannot view staff list)');
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
@@ -72,6 +89,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log('[list-staff] practiceId:', practiceId, 'source:', practiceIdSource);
+
     if (!practiceId && !roles.includes('admin')) {
       console.error('[list-staff] No practice_id found for user');
       return new Response(JSON.stringify({ staff: [] }), {
@@ -79,8 +98,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch staff with full profile data using service role
-    let query = supabase
+    // Fetch staff with practice info - two-step query because no FK from practice_staff.user_id to profiles.id
+    let staffQuery = supabase
       .from('practice_staff')
       .select(`
         id,
@@ -90,21 +109,19 @@ Deno.serve(async (req) => {
         can_order,
         active,
         created_at,
-        profiles!practice_staff_user_id_fkey!inner(
+        practice:profiles!practice_staff_practice_id_fkey(
           id,
           name,
-          email,
-          phone,
-          address
+          company
         )
       `)
       .order('created_at', { ascending: false });
 
     if (practiceId) {
-      query = query.eq('practice_id', practiceId);
+      staffQuery = staffQuery.eq('practice_id', practiceId);
     }
 
-    const { data: staff, error: staffError } = await query;
+    const { data: staffRows, error: staffError } = await staffQuery;
 
     if (staffError) {
       console.error('[list-staff] Query error:', staffError);
@@ -114,9 +131,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[list-staff] Found', staff?.length || 0, 'staff members for practice', practiceId);
+    if (!staffRows || staffRows.length === 0) {
+      console.log('[list-staff] No staff found for practice', practiceId);
+      return new Response(JSON.stringify({ staff: [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    return new Response(JSON.stringify({ staff: staff || [] }), {
+    // Step 2: Fetch user profiles for all staff members
+    const userIds = staffRows.map(s => s.user_id);
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name, email, phone, address')
+      .in('id', userIds);
+
+    if (profilesError) {
+      console.error('[list-staff] Profiles query error:', profilesError);
+      return new Response(JSON.stringify({ error: profilesError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Merge profiles onto staff rows
+    const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+    const staff = staffRows.map(s => ({
+      ...s,
+      profiles: profilesMap.get(s.user_id) || null,
+    }));
+
+    console.log('[list-staff] Found', staff.length, 'staff members for practice', practiceId);
+    if (staff.length > 0) {
+      console.log('[list-staff] First staff profile:', staff[0].profiles?.name || staff[0].profiles?.email || 'no-name');
+    }
+
+    return new Response(JSON.stringify({ staff }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

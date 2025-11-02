@@ -48,14 +48,30 @@ Deno.serve(async (req) => {
     console.log('[list-providers] User roles:', roles);
 
     let practiceId: string | null = null;
+    let practiceIdSource = 'none';
+
+    // Accept practice_id from body (for impersonation) or query string
+    const url = new URL(req.url);
+    const queryPracticeId = url.searchParams.get('practice_id');
+    let bodyPracticeId: string | null = null;
+    
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        bodyPracticeId = body.practice_id || null;
+      } catch (e) {
+        // No body or invalid JSON, that's OK
+      }
+    }
 
     if (roles.includes('admin')) {
-      // Admins can optionally filter by practice_id from query params
-      const url = new URL(req.url);
-      practiceId = url.searchParams.get('practice_id');
+      // Admins: prefer body practice_id (impersonation), then query param
+      practiceId = bodyPracticeId || queryPracticeId;
+      practiceIdSource = bodyPracticeId ? 'body' : queryPracticeId ? 'query' : 'none';
     } else if (roles.includes('doctor')) {
       // Doctor: their user_id IS the practice_id
       practiceId = user.id;
+      practiceIdSource = 'computed-doctor';
     } else if (roles.includes('staff')) {
       // Staff: look up their practice_id
       const { data: staffData } = await supabase
@@ -64,6 +80,7 @@ Deno.serve(async (req) => {
         .eq('user_id', user.id)
         .single();
       practiceId = staffData?.practice_id || null;
+      practiceIdSource = 'computed-staff';
     } else if (roles.includes('provider')) {
       // Provider: can only see themselves
       const { data: providerData } = await supabase
@@ -86,11 +103,12 @@ Deno.serve(async (req) => {
         .single();
 
       if (providerData) {
-        console.log('[list-providers] Provider viewing self:', providerData.id);
+        console.log('[list-providers] Provider role: returning own record only');
         return new Response(JSON.stringify({ providers: [providerData] }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } else {
+        console.log('[list-providers] Provider not found for user:', user.id);
         return new Response(JSON.stringify({ providers: [] }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -103,6 +121,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log('[list-providers] practiceId:', practiceId, 'source:', practiceIdSource);
+
     if (!practiceId && !roles.includes('admin')) {
       console.error('[list-providers] No practice_id found for user');
       return new Response(JSON.stringify({ providers: [] }), {
@@ -111,6 +131,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch providers with full profile data using service role
+    // Use explicit relationship aliases to avoid ambiguity
     let query = supabase
       .from('providers')
       .select(`
@@ -119,12 +140,17 @@ Deno.serve(async (req) => {
         practice_id,
         active,
         created_at,
-        profiles!providers_user_id_fkey!inner(
+        profiles:profiles!providers_user_id_fkey!inner(
           id,
           name,
           email,
           phone,
           address
+        ),
+        practice:profiles!providers_practice_id_fkey(
+          id,
+          name,
+          company
         )
       `)
       .order('created_at', { ascending: false });
@@ -144,6 +170,9 @@ Deno.serve(async (req) => {
     }
 
     console.log('[list-providers] Found', providers?.length || 0, 'providers for practice', practiceId);
+    if (providers && providers.length > 0) {
+      console.log('[list-providers] First provider profile:', providers[0].profiles?.name || providers[0].profiles?.email || 'no-name');
+    }
 
     return new Response(JSON.stringify({ providers: providers || [] }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
