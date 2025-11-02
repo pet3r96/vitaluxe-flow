@@ -25,17 +25,32 @@ export default function PatientMessages() {
   const [showThreadList, setShowThreadList] = useState(true);
   const { effectiveUserId } = useAuth();
 
-  const { data: threads } = useQuery({
-    queryKey: ["patient-message-threads", effectiveUserId, filterTab, searchQuery],
+  // First, fetch the patient account to get the correct patient_id
+  const { data: patientAccount } = useQuery({
+    queryKey: ["patient-account", effectiveUserId],
     queryFn: async () => {
-      // CRITICAL SECURITY FIX: Only fetch messages for the specific patient
+      const { data, error } = await supabase
+        .from("patient_accounts")
+        .select("id")
+        .eq("user_id", effectiveUserId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!effectiveUserId,
+  });
+
+  const { data: threads } = useQuery({
+    queryKey: ["patient-message-threads", patientAccount?.id, filterTab, searchQuery],
+    queryFn: async () => {
+      // CRITICAL SECURITY FIX: Only fetch messages for the specific patient using patient_account.id
       let query = supabase
         .from("patient_messages")
         .select(`
           *,
           practice:profiles!patient_messages_practice_id_fkey(name)
         `)
-        .eq('patient_id', effectiveUserId)  // SECURITY: Filter by patient_id
+        .eq('patient_id', patientAccount!.id)  // SECURITY: Filter by patient_account.id
         .is('parent_message_id', null);  // Only fetch root messages
 
       // Apply status filter
@@ -64,7 +79,7 @@ export default function PatientMessages() {
 
       return result;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!patientAccount?.id,
   });
 
   // Real-time subscription for instant updates using centralized manager
