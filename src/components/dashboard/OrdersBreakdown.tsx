@@ -229,12 +229,17 @@ export function OrdersBreakdown() {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
+                  backgroundColor: "hsl(var(--popover))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "12px",
                   boxShadow: "0 8px 16px rgba(0,0,0,0.15)",
                   padding: "12px",
+                  zIndex: 9999,
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  color: "hsl(var(--popover-foreground))",
                 }}
+                wrapperStyle={{ zIndex: 9999 }}
                 formatter={(value: number) => [`${value} orders`, "Count"]}
               />
             </PieChart>
@@ -243,8 +248,8 @@ export function OrdersBreakdown() {
           {/* Center text showing total - positioned absolutely in the donut center */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white animate-fade-in">{total}</div>
-              <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Total Orders</div>
+              <div className="text-2xl sm:text-3xl font-bold text-white drop-shadow-md animate-fade-in">{total}</div>
+              <div className="text-[10px] sm:text-xs text-white/90 drop-shadow-sm mt-0.5 sm:mt-1">Total Orders</div>
             </div>
           </div>
         </div>
