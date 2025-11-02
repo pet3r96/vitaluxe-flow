@@ -102,6 +102,8 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
+            added_by_user_id: effectiveUserId,
+            added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;
       }

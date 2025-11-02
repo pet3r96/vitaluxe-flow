@@ -65,6 +65,8 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
+            added_by_user_id: effectiveUserId,
+            added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;
       }

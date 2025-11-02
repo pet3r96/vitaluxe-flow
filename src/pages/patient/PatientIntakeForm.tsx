@@ -104,6 +104,66 @@ export default function PatientIntakeForm() {
     enabled: !!effectiveUserId,
   });
 
+  // Fetch existing medical vault data (may be added by practice)
+  const { data: existingMedications } = useQuery({
+    queryKey: ['existing-medications', patientAccount?.id],
+    queryFn: async () => {
+      if (!patientAccount?.id) return [];
+      const { data, error } = await supabase
+        .from('patient_medications')
+        .select('*')
+        .eq('patient_account_id', patientAccount.id)
+        .eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!patientAccount?.id,
+  });
+
+  const { data: existingAllergies } = useQuery({
+    queryKey: ['existing-allergies', patientAccount?.id],
+    queryFn: async () => {
+      if (!patientAccount?.id) return [];
+      const { data, error } = await supabase
+        .from('patient_allergies')
+        .select('*')
+        .eq('patient_account_id', patientAccount.id)
+        .eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!patientAccount?.id,
+  });
+
+  const { data: existingConditions } = useQuery({
+    queryKey: ['existing-conditions', patientAccount?.id],
+    queryFn: async () => {
+      if (!patientAccount?.id) return [];
+      const { data, error } = await supabase
+        .from('patient_conditions')
+        .select('*')
+        .eq('patient_account_id', patientAccount.id)
+        .eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!patientAccount?.id,
+  });
+
+  const { data: existingSurgeries } = useQuery({
+    queryKey: ['existing-surgeries', patientAccount?.id],
+    queryFn: async () => {
+      if (!patientAccount?.id) return [];
+      const { data, error } = await supabase
+        .from('patient_surgeries')
+        .select('*')
+        .eq('patient_account_id', patientAccount.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!patientAccount?.id,
+  });
+
   const form = useForm<IntakeFormData>({
     resolver: zodResolver(intakeSchema),
     defaultValues: {
@@ -157,6 +217,51 @@ export default function PatientIntakeForm() {
       });
     }
   }, [patientAccount, form]);
+
+  // Pre-populate medical vault data added by practice
+  useEffect(() => {
+    if (existingMedications && existingMedications.length > 0 && medications.length === 0) {
+      const medList = existingMedications.map(med => ({
+        name: med.medication_name || '',
+        dosage: med.dosage || '',
+        frequency: med.frequency || '',
+      }));
+      setMedications(medList);
+    }
+  }, [existingMedications]);
+
+  useEffect(() => {
+    if (existingAllergies && existingAllergies.length > 0 && allergies.length === 0) {
+      const allergyList = existingAllergies.map(allergy => ({
+        name: allergy.allergen_name || '',
+        reaction: allergy.reaction_type || '',
+        severity: allergy.severity || '',
+      }));
+      setAllergies(allergyList);
+    }
+  }, [existingAllergies]);
+
+  useEffect(() => {
+    if (existingConditions && existingConditions.length > 0 && conditions.length === 0) {
+      const conditionList = existingConditions.map(condition => ({
+        name: condition.condition_name || '',
+        diagnosed_date: condition.date_diagnosed || '',
+        status: 'active', // Default status for intake form
+      }));
+      setConditions(conditionList);
+    }
+  }, [existingConditions]);
+
+  useEffect(() => {
+    if (existingSurgeries && existingSurgeries.length > 0 && surgeries.length === 0) {
+      const surgeryList = existingSurgeries.map(surgery => ({
+        type: surgery.surgery_type || '',
+        date: surgery.surgery_date || '',
+        notes: surgery.notes || '',
+      }));
+      setSurgeries(surgeryList);
+    }
+  }, [existingSurgeries]);
 
   const handleAddressChange = (value: AddressValue) => {
     form.setValue("address", value.street || "");
@@ -249,6 +354,8 @@ export default function PatientIntakeForm() {
           frequency: med.frequency,
           start_date: new Date().toISOString(),
           is_active: true,
+          added_by_user_id: effectiveUserId,
+          added_by_role: 'patient',
         }));
         await supabase.from('patient_medications').insert(medEntries);
       }
@@ -258,8 +365,12 @@ export default function PatientIntakeForm() {
         const allergyEntries = allergies.map(allergy => ({
           patient_account_id: patientAccount.id,
           allergen_name: allergy.name,
-          reaction: allergy.reaction,
+          reaction_type: allergy.reaction,
           severity: allergy.severity,
+          date_recorded: new Date().toISOString(),
+          is_active: true,
+          added_by_user_id: effectiveUserId,
+          added_by_role: 'patient',
         }));
         await supabase.from('patient_allergies').insert(allergyEntries);
       }
@@ -270,7 +381,9 @@ export default function PatientIntakeForm() {
           patient_account_id: patientAccount.id,
           condition_name: condition.name,
           date_diagnosed: condition.diagnosed_date,
-          status: condition.status,
+          is_active: true,
+          added_by_user_id: effectiveUserId,
+          added_by_role: 'patient',
         }));
         await supabase.from('patient_conditions').insert(conditionEntries);
       }
@@ -282,6 +395,8 @@ export default function PatientIntakeForm() {
           surgery_type: surgery.type,
           surgery_date: surgery.date,
           notes: surgery.notes,
+          added_by_user_id: effectiveUserId,
+          added_by_role: 'patient',
         }));
         await supabase.from('patient_surgeries').insert(surgeryEntries);
       }

@@ -2710,6 +2710,8 @@ export type Database = {
       }
       patient_allergies: {
         Row: {
+          added_by_role: string | null
+          added_by_user_id: string | null
           allergen_name: string | null
           created_at: string
           date_recorded: string | null
@@ -2723,6 +2725,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           allergen_name?: string | null
           created_at?: string
           date_recorded?: string | null
@@ -2736,6 +2740,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           allergen_name?: string | null
           created_at?: string
           date_recorded?: string | null
@@ -2937,6 +2943,8 @@ export type Database = {
       }
       patient_conditions: {
         Row: {
+          added_by_role: string | null
+          added_by_user_id: string | null
           associated_provider: string | null
           attachments: Json | null
           condition_name: string
@@ -2953,6 +2961,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           associated_provider?: string | null
           attachments?: Json | null
           condition_name: string
@@ -2969,6 +2979,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           associated_provider?: string | null
           attachments?: Json | null
           condition_name?: string
@@ -3097,6 +3109,8 @@ export type Database = {
       }
       patient_emergency_contacts: {
         Row: {
+          added_by_role: string | null
+          added_by_user_id: string | null
           address: string | null
           contact_order: number | null
           created_at: string
@@ -3110,6 +3124,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           address?: string | null
           contact_order?: number | null
           created_at?: string
@@ -3123,6 +3139,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           address?: string | null
           contact_order?: number | null
           created_at?: string
@@ -3251,6 +3269,8 @@ export type Database = {
       }
       patient_immunizations: {
         Row: {
+          added_by_role: string | null
+          added_by_user_id: string | null
           administering_provider: string | null
           created_at: string
           date_administered: string
@@ -3262,6 +3282,8 @@ export type Database = {
           vaccine_name: string
         }
         Insert: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           administering_provider?: string | null
           created_at?: string
           date_administered: string
@@ -3273,6 +3295,8 @@ export type Database = {
           vaccine_name: string
         }
         Update: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           administering_provider?: string | null
           created_at?: string
           date_administered?: string
@@ -3409,6 +3433,8 @@ export type Database = {
       }
       patient_medications: {
         Row: {
+          added_by_role: string | null
+          added_by_user_id: string | null
           alert_enabled: boolean | null
           associated_condition_id: string | null
           created_at: string
@@ -3427,6 +3453,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           alert_enabled?: boolean | null
           associated_condition_id?: string | null
           created_at?: string
@@ -3445,6 +3473,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           alert_enabled?: boolean | null
           associated_condition_id?: string | null
           created_at?: string
@@ -3625,6 +3655,8 @@ export type Database = {
       }
       patient_pharmacies: {
         Row: {
+          added_by_role: string | null
+          added_by_user_id: string | null
           address: string | null
           city: string | null
           created_at: string
@@ -3638,6 +3670,8 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           address?: string | null
           city?: string | null
           created_at?: string
@@ -3651,6 +3685,8 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           address?: string | null
           city?: string | null
           created_at?: string
@@ -3726,6 +3762,8 @@ export type Database = {
       }
       patient_surgeries: {
         Row: {
+          added_by_role: string | null
+          added_by_user_id: string | null
           created_at: string
           hospital: string | null
           id: string
@@ -3737,6 +3775,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           created_at?: string
           hospital?: string | null
           id?: string
@@ -3748,6 +3788,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           created_at?: string
           hospital?: string | null
           id?: string
@@ -3827,6 +3869,8 @@ export type Database = {
       }
       patient_vitals: {
         Row: {
+          added_by_role: string | null
+          added_by_user_id: string | null
           additional_vitals: Json | null
           blood_pressure_diastolic: number | null
           blood_pressure_systolic: number | null
@@ -3849,6 +3893,8 @@ export type Database = {
           weight_unit: string | null
         }
         Insert: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           additional_vitals?: Json | null
           blood_pressure_diastolic?: number | null
           blood_pressure_systolic?: number | null
@@ -3871,6 +3917,8 @@ export type Database = {
           weight_unit?: string | null
         }
         Update: {
+          added_by_role?: string | null
+          added_by_user_id?: string | null
           additional_vitals?: Json | null
           blood_pressure_diastolic?: number | null
           blood_pressure_systolic?: number | null

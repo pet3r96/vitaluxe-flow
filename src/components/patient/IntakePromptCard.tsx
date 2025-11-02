@@ -14,7 +14,7 @@ export function IntakePromptCard({ onComplete }: IntakePromptCardProps) {
         <div className="flex items-center justify-center gap-2 w-full text-center">
           <AlertCircle className="h-5 w-5 text-warning shrink-0" />
           <p className="text-sm text-foreground">
-            Complete Your Medical Intake - Help your healthcare team provide better care by completing your medical information. This takes about 5-10 minutes.
+            Complete Your Medical Intake - Please review and confirm your medical information. Your practice may have added some information, but we need you to verify and complete it. This takes about 5-10 minutes.
           </p>
         </div>
         <Button onClick={onComplete} className="touch-target mx-auto">
