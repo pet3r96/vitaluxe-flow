@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     } else if (roles.includes('staff')) {
       // Staff: look up their practice_id
       const { data: staffData } = await supabase
-        .from('staff')
+        .from('practice_staff')
         .select('practice_id')
         .eq('user_id', user.id)
         .single();
@@ -72,14 +72,10 @@ Deno.serve(async (req) => {
           id,
           user_id,
           practice_id,
-          npi,
-          dea,
-          license_number,
           active,
           created_at,
-          profiles!inner(
+          profiles!providers_user_id_fkey!inner(
             id,
-            full_name,
             name,
             email,
             phone,
@@ -121,14 +117,10 @@ Deno.serve(async (req) => {
         id,
         user_id,
         practice_id,
-        npi,
-        dea,
-        license_number,
         active,
         created_at,
-        profiles!inner(
+        profiles!providers_user_id_fkey!inner(
           id,
-          full_name,
           name,
           email,
           phone,

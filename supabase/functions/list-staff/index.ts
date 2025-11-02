@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     } else if (roles.includes('staff')) {
       // Staff: look up their practice_id to see other staff in same practice
       const { data: staffData } = await supabase
-        .from('staff')
+        .from('practice_staff')
         .select('practice_id')
         .eq('user_id', user.id)
         .single();
@@ -81,18 +81,17 @@ Deno.serve(async (req) => {
 
     // Fetch staff with full profile data using service role
     let query = supabase
-      .from('staff')
+      .from('practice_staff')
       .select(`
         id,
         user_id,
         practice_id,
-        role,
-        permissions,
+        role_type,
+        can_order,
         active,
         created_at,
-        profiles!inner(
+        profiles!practice_staff_user_id_fkey!inner(
           id,
-          full_name,
           name,
           email,
           phone,

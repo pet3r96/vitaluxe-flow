@@ -99,7 +99,6 @@ export const ProvidersDataTable = () => {
   };
 
   const filteredProviders = providers?.filter((provider) =>
-    provider.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     provider.profiles?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     provider.profiles?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     provider.practice?.name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -152,13 +151,6 @@ export const ProvidersDataTable = () => {
               <TableHead>Full Name</TableHead>
               <TableHead>Practice</TableHead>
               <TableHead>Email</TableHead>
-              {canViewCredentials && (
-                <>
-                  <TableHead>Provider NPI #</TableHead>
-                  <TableHead>Provider DEA #</TableHead>
-                  <TableHead>License</TableHead>
-                </>
-              )}
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -167,28 +159,9 @@ export const ProvidersDataTable = () => {
             {filteredProviders && filteredProviders.length > 0 ? (
               paginatedProviders?.map((provider) => (
                 <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.profiles?.full_name || provider.profiles?.name || provider.profiles?.email || 'Unknown Provider'}</TableCell>
+                  <TableCell className="font-medium">{provider.profiles?.name || provider.profiles?.email || 'Unknown Provider'}</TableCell>
                   <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
                   <TableCell>{provider.profiles?.email || 'N/A'}</TableCell>
-                   {canViewCredentials && (
-                    <>
-                      <TableCell>
-                        <span className="font-mono text-sm">
-                          {sanitizeEncrypted(provider.profiles?.npi) || <span className="text-muted-foreground italic">Not set</span>}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">
-                          {sanitizeEncrypted(provider.profiles?.dea) || <span className="text-muted-foreground italic">Not set</span>}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">
-                          {sanitizeEncrypted(provider.profiles?.license_number) || <span className="text-muted-foreground italic">Not set</span>}
-                        </span>
-                      </TableCell>
-                    </>
-                  )}
                   <TableCell>
                     <Badge variant={provider.active ? "default" : "secondary"}>
                       {provider.active ? "Active" : "Inactive"}
@@ -216,7 +189,7 @@ export const ProvidersDataTable = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={canViewCredentials ? 8 : 5} className="text-center text-muted-foreground">
+                <TableCell colSpan={5} className="text-center text-muted-foreground">
                   No providers found. Add your first provider to get started.
                 </TableCell>
               </TableRow>
