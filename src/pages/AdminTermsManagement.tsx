@@ -379,6 +379,24 @@ export default function AdminTermsManagement() {
         <p className="text-muted-foreground mt-2">Manage terms and conditions for each user role</p>
       </div>
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Common administrative shortcuts</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setActiveRole('subscription');
+              setActiveTab('editor');
+            }}
+          >
+            Edit Subscription Terms
+          </Button>
+        </CardContent>
+      </Card>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid-cols-1 sm:grid-cols-4">
           <TabsTrigger value="editor">Terms Editor</TabsTrigger>
@@ -653,18 +671,12 @@ export default function AdminTermsManagement() {
           <Card>
             <CardHeader>
               <CardTitle>VitaLuxePro Subscription Terms</CardTitle>
-              <CardDescription>Manage subscription-specific terms and conditions</CardDescription>
+              <CardDescription>View and manage subscription-specific terms and conditions</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setActiveRole('subscription');
-                  setActiveTab('editor');
-                }}
-              >
-                Edit Subscription Terms
-              </Button>
+              <p className="text-muted-foreground">
+                Use the "Edit Subscription Terms" button in the Quick Actions section above to edit subscription terms.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
