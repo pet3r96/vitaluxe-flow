@@ -192,7 +192,7 @@ export const ProductCard = memo(({
     <Card className="group hover:shadow-lg transition-all duration-200 flex flex-col h-full">
       <CardContent className="p-4 sm:p-5 lg:p-6 flex-1 flex flex-col">
         {/* Product Image */}
-        <div className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center p-2">
+        <div className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg overflow-hidden bg-muted flex items-center justify-center p-2">
           {product.image_url ? (
             <img
               src={product.image_url}
@@ -239,7 +239,7 @@ export const ProductCard = memo(({
           {/* Badges */}
           <div className="flex flex-wrap gap-1.5 sm:gap-2 w-full">
             {product.requires_prescription && (
-              <Badge variant="info" size="sm" className="bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30 text-xs">
+              <Badge variant="secondary" size="sm" className="text-xs">
                 Rx Required
               </Badge>
             )}

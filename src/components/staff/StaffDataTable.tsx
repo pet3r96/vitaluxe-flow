@@ -54,7 +54,7 @@ export const StaffDataTable = () => {
       const userIds = staffData.map(s => s.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, name, email, phone, staff_role_type")
+        .select("id, name, full_name, email, phone, staff_role_type")
         .in("id", userIds);
 
       if (profilesError) throw profilesError;
@@ -162,9 +162,9 @@ export const StaffDataTable = () => {
             {filteredStaff && filteredStaff.length > 0 ? (
               paginatedStaff?.map((staffMember) => (
                 <TableRow key={staffMember.id}>
-                  <TableCell className="font-medium">{staffMember.profiles?.name}</TableCell>
+                  <TableCell className="font-medium">{staffMember.profiles?.full_name || staffMember.profiles?.name || staffMember.profiles?.email || 'Unknown'}</TableCell>
                   <TableCell>{staffMember.practice?.name || staffMember.practice?.company}</TableCell>
-                  <TableCell>{staffMember.profiles?.email}</TableCell>
+                  <TableCell>{staffMember.profiles?.email || 'N/A'}</TableCell>
                   <TableCell>{staffMember.profiles?.phone || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{staffMember.role_type}</Badge>

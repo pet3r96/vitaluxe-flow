@@ -27,7 +27,7 @@ export const StaffDetailsDialog = ({
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: staff.profiles?.name || "",
+    fullName: staff.profiles?.full_name || staff.profiles?.name || "",
     phone: staff.profiles?.phone ? staff.profiles.phone.replace(/\D/g, "") : "",
   });
 
@@ -103,7 +103,7 @@ export const StaffDetailsDialog = ({
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
               />
             ) : (
-              <div className="p-2 bg-muted rounded-md">{staff.profiles?.name}</div>
+              <div className="p-2 bg-muted rounded-md">{staff.profiles?.full_name || staff.profiles?.name || 'N/A'}</div>
             )}
           </div>
 
@@ -175,7 +175,7 @@ export const StaffDetailsDialog = ({
                 onClick={() => {
                   setIsEditing(false);
                   setFormData({
-                    fullName: staff.profiles?.name || "",
+                    fullName: staff.profiles?.full_name || staff.profiles?.name || "",
                     phone: staff.profiles?.phone ? staff.profiles.phone.replace(/\D/g, "") : "",
                   });
                 }}

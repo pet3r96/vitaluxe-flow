@@ -441,21 +441,26 @@ export const ProductsGrid = () => {
       if (shipToPractice) {
         console.debug('[ProductsGrid] Practice order - fetching practice shipping address', { effectiveUserId });
         
-        // Get practice's shipping address
+        // Get practice's shipping address with fallback to billing address
         const { data: practiceProfile } = await supabase
           .from("profiles")
-          .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
+          .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, address_state")
           .eq("id", resolvedDoctorId)
           .single();
 
-        // Use direct state field from Google Address (no parsing needed)
-        const destinationState = practiceProfile?.shipping_address_state || '';
+        // Use shipping address state with fallback to billing address state
+        const destinationState = practiceProfile?.shipping_address_state || practiceProfile?.address_state || '';
         
-        console.debug('[ProductsGrid] Practice shipping state resolved', { destinationState });
+        console.debug('[ProductsGrid] Practice shipping state resolved', { 
+          destinationState, 
+          hasShippingState: !!practiceProfile?.shipping_address_state,
+          hasBillingState: !!practiceProfile?.address_state
+        });
 
         if (!isValidStateCode(destinationState)) {
           toast.error(
-            "Invalid practice shipping address. Please update your practice shipping address in Profile with a valid 2-letter state."
+            `Invalid or missing practice shipping address${destinationState ? ` (got: "${destinationState}")` : ''}. Please update your practice shipping address in Profile with a valid 2-letter US state code.`,
+            { duration: 8000 }
           );
           return;
         }
@@ -491,8 +496,14 @@ export const ProductsGrid = () => {
         }
 
         if (!routingResult?.pharmacy_id) {
+          console.error('[ProductsGrid] Pharmacy routing failed', { 
+            product: productForCart.name, 
+            destinationState, 
+            reason: routingResult?.reason 
+          });
           toast.error(
-            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please contact support.'}`
+            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" for delivery to ${destinationState}. Reason: ${routingResult?.reason || 'Unknown error'}`,
+            { duration: 10000 }
           );
           return;
         }
@@ -662,8 +673,14 @@ export const ProductsGrid = () => {
         }
 
         if (!routingResult?.pharmacy_id) {
+          console.error('[ProductsGrid] Pharmacy routing failed (patient order)', { 
+            product: productForCart.name, 
+            destinationState, 
+            reason: routingResult?.reason 
+          });
           toast.error(
-            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please contact support.'}`
+            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" for delivery to ${destinationState}. Reason: ${routingResult?.reason || 'Unknown error'}`,
+            { duration: 10000 }
           );
           return;
         }

@@ -81,7 +81,9 @@ const Support = () => {
   const resolvedEndIndex = resolvedStartIndex + itemsPerPage;
   const paginatedResolvedTickets = resolvedTicketsList.slice(resolvedStartIndex, resolvedEndIndex);
 
-  if (userRole !== "admin") {
+  // Allow admin, doctor, staff, and provider roles to access support
+  const allowedRoles = ["admin", "doctor", "staff", "provider"];
+  if (!userRole || !allowedRoles.includes(userRole)) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">You do not have access to this page.</p>
