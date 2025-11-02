@@ -249,15 +249,15 @@
       );
   }
 
-  .dark .vitaluxe-base-bg {
-    background: 
-      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.15), transparent),
-      linear-gradient(135deg, 
-        hsl(222 47% 11%) 0%, 
-        hsl(222 47% 13%) 50%, 
-        hsl(222 47% 11%) 100%
-      );
-  }
+.dark .vitaluxe-base-bg {
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, hsl(46 43% 52% / 0.15), transparent),
+    linear-gradient(135deg, 
+      hsl(0 0% 12%) 0%, 
+      hsl(0 0% 14%) 50%, 
+      hsl(0 0% 12%) 100%
+    );
+}
 
   /* Frosted Glass Card System */
   .glass-card {
