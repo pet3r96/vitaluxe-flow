@@ -237,7 +237,7 @@ export function OrdersBreakdown() {
                   zIndex: 9999,
                   fontSize: "14px",
                   fontWeight: 500,
-                  color: "hsl(var(--popover-foreground))",
+                  color: "#ffffff",
                 }}
                 wrapperStyle={{ zIndex: 9999 }}
                 formatter={(value: number) => [`${value} orders`, "Count"]}
