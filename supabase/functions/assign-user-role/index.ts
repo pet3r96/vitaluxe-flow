@@ -497,6 +497,8 @@ serve(async (req) => {
         p_user_id: userId,
         p_email: signupData.email,
         p_name: signupData.name,
+        p_full_name: signupData.fullName || null,
+        p_prescriber_name: signupData.prescriberName || null,
         p_role: signupData.role,
         p_role_data: roleDataForRpc,
         p_status: userStatus,
