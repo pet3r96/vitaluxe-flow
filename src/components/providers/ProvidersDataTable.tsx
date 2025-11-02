@@ -149,6 +149,7 @@ export const ProvidersDataTable = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Full Name</TableHead>
+              <TableHead>Prescriber Name</TableHead>
               <TableHead>Practice</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
@@ -160,6 +161,7 @@ export const ProvidersDataTable = () => {
               paginatedProviders?.map((provider) => (
                 <TableRow key={provider.id}>
                   <TableCell className="font-medium">{provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? '' : provider.profiles?.name) || provider.profiles?.email || 'Unknown Provider'}</TableCell>
+                  <TableCell>{provider.profiles?.prescriber_name || 'Not Set'}</TableCell>
                   <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
                   <TableCell>{provider.profiles?.email || 'N/A'}</TableCell>
                   <TableCell>
@@ -189,7 +191,7 @@ export const ProvidersDataTable = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No providers found. Add your first provider to get started.
                 </TableCell>
               </TableRow>

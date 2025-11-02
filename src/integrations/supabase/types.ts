@@ -7775,6 +7775,21 @@ export type Database = {
           }
         | {
             Args: {
+              p_created_by?: string
+              p_email: string
+              p_full_name?: string
+              p_name: string
+              p_prescriber_name?: string
+              p_role: Database["public"]["Enums"]["app_role"]
+              p_role_data?: Json
+              p_status?: string
+              p_temp_password?: boolean
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
               p_email: string
               p_name: string
               p_role: Database["public"]["Enums"]["app_role"]
