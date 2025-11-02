@@ -23,44 +23,37 @@ import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";
 
 // Helper function to retry dynamic imports on failure
-const lazyWithRetry = (componentImport: () => Promise<any>) =>
-  lazy(async () => {
-    const retryKey = 'vitaluxe-chunk-retry';
-    const hasRetried = window.sessionStorage.getItem(retryKey) === 'true';
+const lazyWithRetry = (componentImport: () => Promise<any>) => lazy(async () => {
+  const retryKey = 'vitaluxe-chunk-retry';
+  const hasRetried = window.sessionStorage.getItem(retryKey) === 'true';
+  try {
+    const component = await componentImport();
+    // Clear retry flag on successful load
+    window.sessionStorage.removeItem(retryKey);
+    return component;
+  } catch (error: any) {
+    // Detect chunk load errors more reliably
+    const isChunkError = error?.name === 'ChunkLoadError' || error?.message?.includes('Failed to fetch') || error?.message?.includes('dynamically imported module') || error?.message?.includes('Loading chunk');
+    console.error('Component load error:', {
+      name: error?.name,
+      message: error?.message,
+      isChunkError,
+      hasRetried
+    });
 
-    try {
-      const component = await componentImport();
-      // Clear retry flag on successful load
-      window.sessionStorage.removeItem(retryKey);
-      return component;
-    } catch (error: any) {
-      // Detect chunk load errors more reliably
-      const isChunkError = 
-        error?.name === 'ChunkLoadError' ||
-        error?.message?.includes('Failed to fetch') ||
-        error?.message?.includes('dynamically imported module') ||
-        error?.message?.includes('Loading chunk');
-      
-      console.error('Component load error:', {
-        name: error?.name,
-        message: error?.message,
-        isChunkError,
-        hasRetried
-      });
-      
-      // Only retry once for chunk errors
-      if (isChunkError && !hasRetried) {
-        console.warn('Chunk load failed, reloading page...');
-        window.sessionStorage.setItem(retryKey, 'true');
-        // Small delay to ensure error is logged
-        setTimeout(() => window.location.reload(), 100);
-        return new Promise(() => {}); // Prevent further execution
-      }
-      
-      // Either not a chunk error, or already retried
-      throw error;
+    // Only retry once for chunk errors
+    if (isChunkError && !hasRetried) {
+      console.warn('Chunk load failed, reloading page...');
+      window.sessionStorage.setItem(retryKey, 'true');
+      // Small delay to ensure error is logged
+      setTimeout(() => window.location.reload(), 100);
+      return new Promise(() => {}); // Prevent further execution
     }
-  });
+
+    // Either not a chunk error, or already retried
+    throw error;
+  }
+});
 
 // Lazy load all page components for better code splitting
 const Auth = lazy(() => import("./pages/Auth"));
@@ -118,23 +111,25 @@ const PracticePatientMedicalVault = lazy(() => import("./pages/practice/PatientM
 const Support = lazy(() => import("./pages/Support"));
 
 // Loading fallback component
-const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen">
+const PageLoader = () => <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-  </div>
-);
-
+  </div>;
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5min - realtime keeps data fresh
-      gcTime: 10 * 60 * 1000, // 10min garbage collection
-      refetchOnMount: false, // Trust realtime updates
-      refetchOnWindowFocus: true, // Sync on tab return
-      retry: 1, // Fast failure
-      retryDelay: 1000,
-    },
-  },
+      staleTime: 5 * 60 * 1000,
+      // 5min - realtime keeps data fresh
+      gcTime: 10 * 60 * 1000,
+      // 10min garbage collection
+      refetchOnMount: false,
+      // Trust realtime updates
+      refetchOnWindowFocus: true,
+      // Sync on tab return
+      retry: 1,
+      // Fast failure
+      retryDelay: 1000
+    }
+  }
 });
 
 // Initialize realtime manager with React Query client for automatic cache invalidation
@@ -149,8 +144,7 @@ const SessionTimerWrapper = () => {
 // Wrapper removed - subscriptions are now automatic on first login
 // Users are auto-enrolled in 14-day trial when they create a practice account
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+const App = () => <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <ErrorBoundary>
         <TooltipProvider>
@@ -174,16 +168,13 @@ const App = () => (
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
                   <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />
                   <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
-                  <Route
-                    path="/*"
-                    element={
-                      <ProtectedRoute>
+                  <Route path="/*" element={<ProtectedRoute>
                         <SidebarProvider>
                           <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                             <AppSidebar />
                             <main className="flex-1 flex flex-col overflow-y-auto">
                               <Topbar />
-                              <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden relative">
+                              <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden relative bg-stone-900">
                                 <div className="relative z-10">
                                 <Suspense fallback={<PageLoader />}>
                                   <AnimatePresence mode="wait">
@@ -242,9 +233,7 @@ const App = () => (
                             </main>
                           </div>
                         </SidebarProvider>
-                      </ProtectedRoute>
-                    }
-                  />
+                      </ProtectedRoute>} />
                 </Routes>
               </Suspense>
               </GlobalImpersonationBanner>
@@ -254,7 +243,5 @@ const App = () => (
     </TooltipProvider>
       </ErrorBoundary>
     </ThemeProvider>
-  </QueryClientProvider>
-);
-
+  </QueryClientProvider>;
 export default App;
