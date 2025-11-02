@@ -133,6 +133,23 @@ export const OrderDetailsDialog = ({
       const phiCache = new Map<string, { allergies?: string | null, notes?: string | null }>();
       const contactCache = new Map<string, { patient_email?: string | null, patient_phone?: string | null, patient_address?: string | null }>();
       
+      // Fetch plain-text patient data as fallback
+      const patientDataMap = new Map<string, any>();
+      if (patientIds.size > 0) {
+        try {
+          const { data: patientData } = await supabase
+            .from('patient_accounts')
+            .select('user_id, email, phone, address, allergies')
+            .in('user_id', Array.from(patientIds));
+          
+          patientData?.forEach(p => {
+            patientDataMap.set(p.user_id, p);
+          });
+        } catch (error) {
+          logger.error('Failed to fetch patient fallback data', error);
+        }
+      }
+      
       // Fetch PHI for each patient
       const phiPromises = Array.from(patientIds).map(async (patientId) => {
         try {
@@ -154,7 +171,20 @@ export const OrderDetailsDialog = ({
         } catch (error) {
           logger.error(`Failed to decrypt PHI for patient`, error, logger.sanitize({ patientId }));
         }
-        return null;
+        
+        // Fallback to plain-text if available
+        const plainData = patientDataMap.get(patientId);
+        if (plainData?.allergies && plainData.allergies !== '[ENCRYPTED]') {
+          return {
+            patientId,
+            phi: {
+              allergies: plainData.allergies,
+              notes: null
+            }
+          };
+        }
+        
+        return { patientId, phi: {} }; // Always return something to mark as loaded
       });
 
       // Fetch contact info for each order line
@@ -175,7 +205,22 @@ export const OrderDetailsDialog = ({
         } catch (error) {
           logger.error(`Failed to decrypt contact info for order line`, error, logger.sanitize({ lineId }));
         }
-        return null;
+        
+        // Fallback to plain-text patient data
+        const line = order.order_lines.find((l: any) => l.id === lineId);
+        const plainData = line?.patient_id ? patientDataMap.get(line.patient_id) : null;
+        if (plainData) {
+          return {
+            lineId,
+            contact: {
+              patient_email: plainData.email !== '[ENCRYPTED]' ? plainData.email : null,
+              patient_phone: plainData.phone !== '[ENCRYPTED]' ? plainData.phone : null,
+              patient_address: plainData.address !== '[ENCRYPTED]' ? plainData.address : null,
+            }
+          };
+        }
+        
+        return { lineId, contact: {} }; // Always return something to mark as loaded
       });
 
       // Wait for all fetches to complete
@@ -189,9 +234,9 @@ export const OrderDetailsDialog = ({
         if (result) {
           phiCache.set(result.patientId, result.phi);
 
-          // Log PHI access
+          // Log PHI access only if allergies exist
           const line = order.order_lines.find((l: any) => l.patient_id === result.patientId);
-          if (line) {
+          if (line && result.phi.allergies) {
             const relationship = effectiveRole === 'admin' ? 'admin' :
                                effectiveRole === 'pharmacy' ? 'admin' :
                                'practice_admin';
