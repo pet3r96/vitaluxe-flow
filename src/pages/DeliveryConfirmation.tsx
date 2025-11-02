@@ -188,24 +188,42 @@ export default function DeliveryConfirmation() {
       if (patientId) {
         console.log('[DeliveryConfirmation] Updating patient record with ID:', patientId);
 
-        // Update patient_accounts table
+        // Prefer updating patients table (source of truth)
         const { data: patientsData, error: patientsError } = await supabase
           .from("patient_accounts")
           .update({
-            address: address.formatted || `${address.street}, ${address.city}, ${address.state} ${address.zip}`,
+            address: address.street,
             city: address.city,
             state: address.state,
             zip_code: address.zip,
-            updated_at: new Date().toISOString(),
           })
           .eq("id", patientId)
           .select('id');
 
         if (patientsError || !patientsData || patientsData.length === 0) {
-          console.error('[DeliveryConfirmation] Patient update failed:', patientsError);
-          toast.warning("Address saved for this order, but the patient record could not be updated.");
+          console.warn('[DeliveryConfirmation] Patients update failed or no rows affected, attempting patient_accounts fallback');
+
+          // Fallback: try updating patient_accounts table if patientId actually refers to that table in legacy data
+          const { data: patientData, error: patientError } = await supabase
+            .from("patient_accounts")
+            .update({
+              address: address.formatted || `${address.street}, ${address.city}, ${address.state} ${address.zip}`,
+              city: address.city,
+              state: address.state,
+              zip_code: address.zip,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", patientId)
+            .select('id');
+
+          if (patientError || !patientData || patientData.length === 0) {
+            console.error('[DeliveryConfirmation] Both patient updates failed:', { patientError, patientsError });
+            toast.warning("Address saved for this order, but the patient record could not be updated.");
+          } else {
+            console.log('[DeliveryConfirmation] Patient_accounts table updated successfully:', patientData);
+          }
         } else {
-          console.log('[DeliveryConfirmation] Patient_accounts table updated successfully:', patientsData);
+          console.log('[DeliveryConfirmation] Patients table updated successfully:', patientsData);
         }
       }
       
