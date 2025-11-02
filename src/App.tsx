@@ -145,7 +145,7 @@ const SessionTimerWrapper = () => {
 // Users are auto-enrolled in 14-day trial when they create a practice account
 
 const App = () => <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <ErrorBoundary>
         <TooltipProvider>
           <Toaster />
