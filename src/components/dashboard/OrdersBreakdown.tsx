@@ -248,8 +248,8 @@ export function OrdersBreakdown() {
           {/* Center text showing total - positioned absolutely in the donut center */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '10px', height: '220px' }}>
             <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-white drop-shadow-lg animate-fade-in">{total}</div>
-              <div className="text-xs sm:text-sm text-white drop-shadow-md mt-1 font-medium">Total Orders</div>
+              <div className="text-3xl sm:text-4xl font-bold text-foreground drop-shadow-lg animate-fade-in">{total}</div>
+              <div className="text-xs sm:text-sm text-foreground drop-shadow-md mt-1 font-medium">Total Orders</div>
             </div>
           </div>
         </div>
