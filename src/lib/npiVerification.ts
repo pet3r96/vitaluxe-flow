@@ -97,6 +97,20 @@ function cacheResult(npi: string, result: NPIVerificationResult): void {
 }
 
 /**
+ * Timeout wrapper for promises
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutValue: T
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(timeoutValue), timeoutMs))
+  ]);
+}
+
+/**
  * Verify an NPI number against the official CMS NPPES Registry
  * @param npi - The 10-digit NPI number to verify
  * @returns Promise with verification result
@@ -117,19 +131,37 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
   }
 
   try {
-    // Call edge function for verification (routes to NPPES API server-side)
-    const { data, error } = await supabase.functions.invoke('verify-npi', {
+    // Call edge function with 5-second timeout
+    const verificationPromise = supabase.functions.invoke('verify-npi', {
       body: { npi }
     });
 
+    const { data, error } = await withTimeout(
+      verificationPromise,
+      5000, // 5 seconds
+      { 
+        data: null, 
+        error: { message: "Verification timed out" } 
+      }
+    );
+
+    // Handle timeout
+    if (error?.message === "Verification timed out") {
+      console.error("NPI verification timed out after 5 seconds");
+      return {
+        valid: false,
+        npi,
+        error: "Verification timed out. Please try again or contact support.",
+      };
+    }
+
     if (error) {
       console.error("NPI verification edge function error:", error);
-      const result: NPIVerificationResult = {
-        valid: true,
+      return {
+        valid: false,
         npi,
-        warning: "Could not verify NPI - please verify manually.",
+        error: "Could not verify NPI. Please try again or contact support.",
       };
-      return result;
     }
 
     // Edge function returns the full NPIVerificationResult
@@ -145,22 +177,19 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
     }
 
     // Unexpected response format
-    const fallbackResult: NPIVerificationResult = {
-      valid: true,
+    return {
+      valid: false,
       npi,
-      warning: "Could not verify NPI - unexpected response.",
+      error: "Unexpected response from verification service.",
     };
-    return fallbackResult;
   } catch (error) {
     console.error("NPI verification error:", error);
     
-    // Network error - allow submission with warning
-    const result: NPIVerificationResult = {
-      valid: true,
+    return {
+      valid: false,
       npi,
-      warning: "Could not verify NPI - network error. Please verify manually.",
+      error: "Network error. Please check your connection and try again.",
     };
-    return result;
   }
 }
 

@@ -316,30 +316,25 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
                   // Real-time NPI verification
                   if (value && value.length === 10) {
                     verifyNPIDebounced(value, (result) => {
-                      setFormData(currentFormData => {
-                        if (currentFormData.npi === result.npi) {
-                          // FAILURE: invalid OR has error message
-                          if (!result.valid || result.error) {
-                            setNpiVerificationStatus("failed");
-                            setValidationErrors(prev => ({ 
-                              ...prev, 
-                              npi: result.error || "NPI verification failed" 
-                            }));
+                      // Only apply if NPI still matches current value
+                      if (formData.npi === result.npi) {
+                        if (!result.valid || result.error) {
+                          setNpiVerificationStatus("failed");
+                          setValidationErrors(prev => ({ 
+                            ...prev, 
+                            npi: result.error || "NPI verification failed" 
+                          }));
+                        } else if (result.valid && !result.error) {
+                          setNpiVerificationStatus("verified");
+                          setValidationErrors(prev => ({ ...prev, npi: "" }));
+                          if (result.providerName) {
+                            toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
                           }
-                          // SUCCESS: valid AND no error
-                          else if (result.valid && !result.error) {
-                            setNpiVerificationStatus("verified");
-                            setValidationErrors(prev => ({ ...prev, npi: "" }));
-                            if (result.providerName) {
-                              toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
-                            }
-                            if (result.warning) {
-                              toast.info(result.warning);
-                            }
+                          if (result.warning) {
+                            toast.info(result.warning);
                           }
                         }
-                        return currentFormData;
-                      });
+                      }
                     });
                   }
                 }}
