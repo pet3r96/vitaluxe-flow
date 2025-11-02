@@ -28,43 +28,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 🔧 Step 1.5: Parse ECR Repository Details
-      - name: Parse ECR Repository Details
-        run: |
-          echo "🔧 Parsing ECR Repository details..."
-          RAW_ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
-
-          # Discover AWS account ID if not provided in the repo string
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          REGION="${{ secrets.AWS_REGION }}"
-
-          # Support both full ECR URI and plain repo name
-          if [[ "$RAW_ECR_REPO" =~ ^[0-9]+\.dkr\.ecr\..+\.amazonaws\.com/.+ ]]; then
-            # Full URI provided
-            ECR_REPOSITORY_URI="$RAW_ECR_REPO"
-            ECR_ACCOUNT_ID=$(echo "$RAW_ECR_REPO" | cut -d'.' -f1)
-            ECR_REGION=$(echo "$RAW_ECR_REPO" | cut -d'.' -f4)
-            REPO_NAME=$(echo "$RAW_ECR_REPO" | cut -d'/' -f2)
-          else
-            # Only repo name provided -> construct full URI
-            REPO_NAME="$RAW_ECR_REPO"
-            ECR_ACCOUNT_ID="$ACCOUNT_ID"
-            ECR_REGION="$REGION"
-            ECR_REPOSITORY_URI="$ECR_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com/$REPO_NAME"
-          fi
-
-          echo "Parsed ECR details:"
-          echo "  Account ID: $ECR_ACCOUNT_ID"
-          echo "  Region: $ECR_REGION"
-          echo "  Repository Name: $REPO_NAME"
-          echo "  Full URI: $ECR_REPOSITORY_URI"
-
-          # Export to GITHUB_ENV for use in subsequent steps
-          echo "ECR_ACCOUNT_ID=$ECR_ACCOUNT_ID" >> $GITHUB_ENV
-          echo "ECR_REGION=$ECR_REGION" >> $GITHUB_ENV
-          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
-          echo "ECR_REPOSITORY_URI=$ECR_REPOSITORY_URI" >> $GITHUB_ENV
-
       # ✅ Step 2: Validate Required Secrets
       - name: Validate Required Secrets
         run: |
@@ -117,7 +80,44 @@ jobs:
           audience: sts.amazonaws.com
           output-env-credentials: true
 
-      # 🔍 Step 3.5: Verify AWS CLI and Permissions
+      # 🔧 Step 3.5: Parse ECR Repository Details
+      - name: Parse ECR Repository Details
+        run: |
+          echo "🔧 Parsing ECR Repository details..."
+          RAW_ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
+
+          # Discover AWS account ID if not provided in the repo string
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGION="${{ secrets.AWS_REGION }}"
+
+          # Support both full ECR URI and plain repo name
+          if [[ "$RAW_ECR_REPO" =~ ^[0-9]+\.dkr\.ecr\..+\.amazonaws\.com/.+ ]]; then
+            # Full URI provided
+            ECR_REPOSITORY_URI="$RAW_ECR_REPO"
+            ECR_ACCOUNT_ID=$(echo "$RAW_ECR_REPO" | cut -d'.' -f1)
+            ECR_REGION=$(echo "$RAW_ECR_REPO" | cut -d'.' -f4)
+            REPO_NAME=$(echo "$RAW_ECR_REPO" | cut -d'/' -f2)
+          else
+            # Only repo name provided -> construct full URI
+            REPO_NAME="$RAW_ECR_REPO"
+            ECR_ACCOUNT_ID="$ACCOUNT_ID"
+            ECR_REGION="$REGION"
+            ECR_REPOSITORY_URI="$ECR_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com/$REPO_NAME"
+          fi
+
+          echo "Parsed ECR details:"
+          echo "  Account ID: $ECR_ACCOUNT_ID"
+          echo "  Region: $ECR_REGION"
+          echo "  Repository Name: $REPO_NAME"
+          echo "  Full URI: $ECR_REPOSITORY_URI"
+
+          # Export to GITHUB_ENV for use in subsequent steps
+          echo "ECR_ACCOUNT_ID=$ECR_ACCOUNT_ID" >> $GITHUB_ENV
+          echo "ECR_REGION=$ECR_REGION" >> $GITHUB_ENV
+          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+          echo "ECR_REPOSITORY_URI=$ECR_REPOSITORY_URI" >> $GITHUB_ENV
+
+      # 🔍 Step 4: Verify AWS CLI and Permissions
       - name: Verify AWS Setup
         run: |
           echo "🔍 Verifying AWS CLI setup..."
