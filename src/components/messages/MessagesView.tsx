@@ -496,20 +496,34 @@ export const MessagesView = () => {
       orderId: selectedOrderId
     }));
 
-    const participants = Array.from(participantIds).map(userId => ({
-      thread_id: thread.id,
-      user_id: userId
-    }));
+    // Ensure the creator is added as a participant first to satisfy RLS
+    const allParticipantIds = Array.from(participantIds);
+    const senderParticipant = [{ thread_id: thread.id, user_id: effectiveUserId }];
 
-    const { error: participantsError } = await supabase
+    const { error: senderParticipantError } = await supabase
       .from("thread_participants")
-      .insert(participants);
+      .upsert(senderParticipant, { onConflict: "thread_id,user_id" });
 
-    if (participantsError) {
-      logger.error("Participants error", participantsError);
-      // Don't block ticket creation - participants can be added later
-      // Show warning but continue
-      toast.warning("Ticket created but some participants may not be added yet");
+    if (senderParticipantError) {
+      logger.error("Sender participant error", senderParticipantError);
+      toast.error("Ticket created but couldn't add you as participant");
+      return; // Without creator participant, message insert will fail due to RLS
+    }
+
+    // Add the rest of participants (best-effort)
+    const otherParticipants = allParticipantIds
+      .filter((userId) => userId !== effectiveUserId)
+      .map((userId) => ({ thread_id: thread.id, user_id: userId }));
+
+    if (otherParticipants.length > 0) {
+      const { error: participantsError } = await supabase
+        .from("thread_participants")
+        .upsert(otherParticipants, { onConflict: "thread_id,user_id" });
+
+      if (participantsError) {
+        logger.error("Participants error", participantsError);
+        toast.warning("Ticket created but some participants couldn't be added yet");
+      }
     }
 
     // Create the first message
@@ -522,7 +536,7 @@ export const MessagesView = () => {
       }]);
 
     if (messageError) {
-      toast.error("Failed to send initial message");
+      toast.error(`Failed to send initial message: ${messageError.message || 'Unknown error'}`);
       logger.error("Message error", messageError);
       return;
     }
