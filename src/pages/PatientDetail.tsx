@@ -451,7 +451,7 @@ export default function PatientDetail() {
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Address</p>
-            <p className="font-medium">{patient.address || "Not provided"}</p>
+            <p className="font-medium">{patient.address_formatted || patient.address || "Not provided"}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Date of Birth</p>

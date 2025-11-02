@@ -267,11 +267,14 @@ export function CreateInternalMessageDialog({
                 {/* Optional Patient Reference */}
                 <div className="space-y-2">
                   <Label>Regarding Patient (Optional)</Label>
-                  <Select value={regardingPatient} onValueChange={setRegardingPatient}>
+                  <Select value={regardingPatient || "none"} onValueChange={(v) => setRegardingPatient(v === "none" ? "" : v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a patient (optional)" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground italic">None (System-wide message)</span>
+                      </SelectItem>
                       {patients.map((p: any) => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
