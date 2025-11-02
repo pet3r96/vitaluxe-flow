@@ -1,12 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, FileText, AlertCircle } from "lucide-react";
+import { Calendar, Users, FileText, AlertCircle, ShoppingCart, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export function QuickActionsPanel() {
   const navigate = useNavigate();
 
   const actions = [
+    {
+      icon: ShoppingCart,
+      label: "Place an Order",
+      onClick: () => navigate("/products"),
+      color: "text-primary",
+    },
+    {
+      icon: Package,
+      label: "Go to Cart",
+      onClick: () => navigate("/cart"),
+      color: "text-success",
+    },
     {
       icon: Calendar,
       label: "View My Schedule",
