@@ -27,8 +27,8 @@ EXPOSE 8080
 COPY --from=builder /app/dist ./dist
 COPY package*.json ./
 
-# Install all dependencies (including vite for preview)
-RUN npm ci
+# Install only serve for production static file serving
+RUN npm install -g serve
 
-CMD ["npm", "run", "preview"]
+CMD ["serve", "-s", "dist", "-l", "8080"]
 
