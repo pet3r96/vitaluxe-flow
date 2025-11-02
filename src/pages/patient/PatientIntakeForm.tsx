@@ -831,7 +831,7 @@ export default function PatientIntakeForm() {
                   </div>
                   <Input
                     className="flex-1"
-                    type="date"
+                    type="month"
                     placeholder="Diagnosed date"
                     value={condition.diagnosed_date}
                     onChange={(e) => {
@@ -902,7 +902,7 @@ export default function PatientIntakeForm() {
                     </div>
                     <Input
                       className="flex-1"
-                      type="date"
+                      type="month"
                       value={surgery.date}
                       onChange={(e) => {
                         const newSurgeries = [...surgeries];
