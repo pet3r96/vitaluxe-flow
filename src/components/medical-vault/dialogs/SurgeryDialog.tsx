@@ -114,7 +114,7 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-950 dark:bg-gray-950 border-gray-800">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card dark:bg-card border-border">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
             {mode === "add" ? "Add Surgery" : mode === "edit" ? "Edit Surgery" : "View Surgery"}

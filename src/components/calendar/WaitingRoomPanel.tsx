@@ -109,10 +109,10 @@ export function WaitingRoomPanel({
 
   const getWaitTimeColor = (checkedInAt: string) => {
     const minutes = differenceInMinutes(new Date(), new Date(checkedInAt));
-
-    if (minutes < 5) return "bg-black text-white border-l-4 border-l-green-500 hover:bg-gray-900";
-    if (minutes < 10) return "bg-black text-white border-l-4 border-l-yellow-500 hover:bg-gray-900";
-    return "bg-black text-white border-l-4 border-l-red-500 hover:bg-gray-900 animate-pulse";
+    
+    if (minutes < 5) return "bg-card dark:bg-card text-foreground dark:text-white border-l-4 border-l-green-500 hover:bg-muted dark:hover:bg-gray-900";
+    if (minutes < 10) return "bg-card dark:bg-card text-foreground dark:text-white border-l-4 border-l-yellow-500 hover:bg-muted dark:hover:bg-gray-900";
+    return "bg-card dark:bg-card text-foreground dark:text-white border-l-4 border-l-red-500 hover:bg-muted dark:hover:bg-gray-900 animate-pulse";
   };
 
   const getWaitTimeIconColor = (checkedInAt: string) => {

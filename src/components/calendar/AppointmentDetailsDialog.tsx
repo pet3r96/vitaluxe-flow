@@ -281,7 +281,7 @@ export function AppointmentDetailsDialog({
             {/* Reschedule Request Section */}
             {(appointment.requested_date || appointment.requested_time) && (
               <>
-                <div className="bg-black text-white p-4 rounded-lg border border-white/10">
+                <div className="bg-card dark:bg-card text-foreground dark:text-white p-4 rounded-lg border border-border">
                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <CalendarClock className="h-5 w-5" />
                     Reschedule Request
