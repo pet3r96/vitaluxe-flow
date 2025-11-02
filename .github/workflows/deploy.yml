@@ -219,12 +219,22 @@ jobs:
             --containers "{
               \"vitaluxe-app\": {
                 \"image\": \"${ECR_REPOSITORY}:latest\",
-                \"ports\": {\"8080\": \"HTTP\"}
+                \"ports\": {\"8080\": \"HTTP\"},
+                \"environment\": {},
+                \"dependsOn\": []
               }
             }" \
             --public-endpoint "{
               \"containerName\": \"vitaluxe-app\",
-              \"containerPort\": 8080
+              \"containerPort\": 8080,
+              \"healthCheck\": {
+                \"healthyThreshold\": 2,
+                \"unhealthyThreshold\": 2,
+                \"timeoutSeconds\": 5,
+                \"intervalSeconds\": 30,
+                \"path\": \"/\",
+                \"successCodes\": \"200-399\"
+              }
             }" 2>&1)
           
           DEPLOYMENT_EXIT_CODE=$?
