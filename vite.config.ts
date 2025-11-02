@@ -36,42 +36,20 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Simplified chunk splitting to avoid React context issues
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          // Core React framework (must stay together)
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'react-vendor';
-          }
-          
-          // React-related libraries that need React context
-          if (id.includes('react-router') || id.includes('react-router-dom')) {
-            return 'react-vendor';
-          }
-          
-          // All other node_modules in one chunk to avoid splitting issues
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
-        },
-      },
-    },
-    // Target modern browsers for smaller bundles
+    // Disable manual chunking - let Vite handle it automatically
+    // This avoids React context issues from improper chunk splitting
     target: 'esnext',
-    // Chunk size warning limit
     chunkSizeWarningLimit: 500,
-    // Enable minification with less aggressive settings to avoid bugs
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: false, // Keep console for debugging
         drop_debugger: mode === 'production',
         pure_funcs: [],
-        passes: 1, // Single pass to avoid issues
+        passes: 1,
       },
       mangle: {
-        safari10: true, // Safari 10 support
+        safari10: true,
       },
     },
   },
