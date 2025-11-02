@@ -896,12 +896,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         passwordResult,
         patientTermsResult
       ] = await Promise.allSettled([
-        // 1. Fetch role
+        // 1. Fetch ALL roles and select highest priority
         supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", userId)
-          .maybeSingle(),
+          .eq("user_id", userId),
         
         // 2. Fetch provider data (will be filtered after we know role)
         supabase
@@ -928,10 +927,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle()
       ]);
 
-      // Process role
-      let role: string | null = roleResult.status === 'fulfilled' && roleResult.value.data?.role 
-        ? roleResult.value.data.role 
-        : null;
+      // Process role with priority order
+      let role: string | null = null;
+      
+      if (roleResult.status === 'fulfilled' && roleResult.value.data) {
+        const roles = Array.isArray(roleResult.value.data) 
+          ? roleResult.value.data 
+          : [roleResult.value.data];
+        
+        // Priority order: admin > topline > downline > doctor > pharmacy > provider > staff > patient
+        const rolePriority: Record<string, number> = {
+          admin: 1,
+          topline: 2,
+          downline: 3,
+          doctor: 4,
+          pharmacy: 5,
+          provider: 6,
+          staff: 7,
+          patient: 8,
+        };
+        
+        // Sort roles by priority and pick the highest (lowest number)
+        const sortedRoles = roles
+          .map(r => r.role)
+          .sort((a, b) => (rolePriority[a] || 99) - (rolePriority[b] || 99));
+        
+        role = sortedRoles[0] || null;
+      }
       
       // If no role found in user_roles, check if user is a patient
       if (!role) {

@@ -6279,6 +6279,33 @@ export type Database = {
           },
         ]
       }
+      role_cleanup_log: {
+        Row: {
+          cleaned_at: string | null
+          email: string | null
+          id: string
+          kept_role: string
+          removed_role: string
+          user_id: string
+        }
+        Insert: {
+          cleaned_at?: string | null
+          email?: string | null
+          id?: string
+          kept_role: string
+          removed_role: string
+          user_id: string
+        }
+        Update: {
+          cleaned_at?: string | null
+          email?: string | null
+          id?: string
+          kept_role?: string
+          removed_role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       security_events: {
         Row: {
           created_at: string
@@ -7856,6 +7883,10 @@ export type Database = {
           role_type: string
           user_id: string
         }[]
+      }
+      get_primary_role: {
+        Args: { p_user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
       }
       get_provider_documents: {
         Args: { p_practice_id: string }
