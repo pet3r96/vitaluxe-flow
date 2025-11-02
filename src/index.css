@@ -88,14 +88,14 @@
   /* Base Surfaces (Light Mode) - Modern Cool Palette */
   --background: 0 0% 98%;     /* Gray-50 neutral background */
   --foreground: 222 47% 11%;     /* Deep text */
-  --card: 0 0% 100%;             /* Pure white cards */
+  --card: 0 0% 98%;             /* Gray-50 cards */
   --card-foreground: 222 47% 11%;
-  --popover: 0 0% 100%;
+  --popover: 0 0% 98%;
   --popover-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;          /* Subtle muted background for light mode */
+  --muted: 0 0% 96%;          /* Subtle muted background gray-50 */
   --muted-foreground: 215 16% 46.9%; /* Readable muted text on light */
   --border: 214 15% 91%;         /* Subtle blue-gray borders */
-  --input: 210 20% 96%;          /* Input backgrounds */
+  --input: 0 0% 96%;          /* Input backgrounds gray-50 */
   --ring: 46 43% 52%;            /* Focus ring = gold */
 
   /* Accent Colors */
@@ -103,7 +103,7 @@
   --primary-foreground: 0 0% 100%;
   --secondary: 220 15% 55%;         /* Medium slate grey for contrast */
   --secondary-foreground: 0 0% 100%; /* White text for proper contrast */
-  --accent: 210 20% 95%;
+  --accent: 0 0% 95%;
   --accent-foreground: 222 47% 11%;
 
   /* Status Colors - Vibrant & Modern */
@@ -114,11 +114,11 @@
   --warning: 48 96% 53%;
 
   /* Sidebar (Light Mode) */
-  --sidebar-background: 0 0% 100%;
+  --sidebar-background: 0 0% 98%;
   --sidebar-foreground: 222 47% 11%;
   --sidebar-primary: var(--gold-1);
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 20% 96%;
+  --sidebar-accent: 0 0% 96%;
   --sidebar-accent-foreground: 222 47% 11%;
   --sidebar-border: 214 15% 91%;
   --sidebar-ring: var(--gold-1);
