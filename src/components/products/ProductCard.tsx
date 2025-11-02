@@ -191,7 +191,7 @@ export const ProductCard = memo(({
     <Card className="group hover:shadow-lg transition-all duration-200 flex flex-col h-full">
       <CardContent className="p-4 sm:p-5 lg:p-6 flex-1 flex flex-col">
         {/* Product Image */}
-        <div className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted/50">
+        <div className="aspect-video mb-2 sm:mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted/50">
           {product.image_url ? (
             <img
               src={product.image_url}
