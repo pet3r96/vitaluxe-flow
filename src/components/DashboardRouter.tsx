@@ -19,6 +19,6 @@ export default function DashboardRouter() {
     return <LoadingFallback />;
   }
   return <Suspense fallback={<LoadingFallback />}>
-      {effectiveRole === 'patient' ? <PatientDashboard className="bg-gray-100 rounded-none" /> : effectiveRole === 'topline' || effectiveRole === 'downline' ? <RepDashboard /> : <Dashboard />}
+      {effectiveRole === 'patient' ? <PatientDashboard /> : effectiveRole === 'topline' || effectiveRole === 'downline' ? <RepDashboard /> : <Dashboard />}
     </Suspense>;
 }
