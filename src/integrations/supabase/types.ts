@@ -7850,7 +7850,6 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: {
           dea: string
-          email: string
           full_name: string
           license_number: string
           npi: string

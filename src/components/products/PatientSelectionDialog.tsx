@@ -201,7 +201,6 @@ export const PatientSelectionDialog = ({
         profiles: {
           id: providerRecord.user_id,
           name: decryptedCreds.full_name,
-          email: decryptedCreds.email,
           npi: decryptedCreds.npi,
           dea: decryptedCreds.dea,
           license_number: decryptedCreds.license_number
@@ -527,7 +526,13 @@ export const PatientSelectionDialog = ({
                         <div key={provider.id} className="flex items-center space-x-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer" onClick={() => setSelectedProviderId(provider.id)}>
                           <RadioGroupItem value={provider.id} id={provider.id} />
                           <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
-                            <div className="font-medium">{provider.prescriber_name}</div>
+                            <div className="font-medium">
+                              {provider.profiles?.full_name || 
+                               provider.prescriber_name ||
+                               (provider.profiles?.name && !provider.profiles.name.includes('@') ? provider.profiles.name : '') || 
+                               provider.profiles?.email ||
+                               'Unknown Provider'}
+                            </div>
                             <div className="text-xs text-muted-foreground space-x-2 mt-0.5">
                               {provider.specialty && <span>• {provider.specialty}</span>}
                               {provider.npi && <span>• NPI: {provider.npi}</span>}
@@ -819,7 +824,7 @@ export const PatientSelectionDialog = ({
             provider={selectedProviderData ? {
               id: selectedProviderData.id,
               name: selectedProviderData.profiles?.name || 'Unknown',
-              email: selectedProviderData.profiles?.email || 'N/A',
+              email: 'N/A',
               npi: selectedProviderData.profiles?.npi || 'N/A',
               dea: selectedProviderData.profiles?.dea || 'N/A',
               license: selectedProviderData.profiles?.license_number || 'N/A'

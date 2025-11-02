@@ -133,32 +133,62 @@ serve(async (req: Request) => {
 
     console.log('Getting tracking for:', trackingCode, requestData.carrier ? `with carrier: ${requestData.carrier}` : '(auto-detect carrier)');
 
-    // Get tracking information from EasyPost with optional carrier
+    // Get tracking information from EasyPost with optional carrier and auto-retry on carrier mismatch
     let tracking;
     try {
       tracking = await easyPostClient.getTracking(trackingCode, requestData.carrier);
     } catch (trackingError: any) {
-      // Return user-friendly error for invalid tracking numbers
-      console.error('Tracking lookup failed:', trackingError.message);
-      
       const isCarrierMismatch = trackingError.message?.includes('does not belong to the carrier');
-      const isInvalidFormat = trackingError.message?.includes('match the format');
       
-      const userMessage = isCarrierMismatch
-        ? 'The tracking number does not match the selected carrier. Please verify both are correct.'
-        : isInvalidFormat
-        ? 'Invalid tracking number format. Please verify the tracking number.'
-        : 'Unable to retrieve tracking information. Please verify the tracking number is valid.';
-      
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Tracking lookup failed',
-          message: userMessage,
-          details: trackingError.message
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // If carrier mismatch and we had a carrier specified, retry with auto-detect
+      if (isCarrierMismatch && requestData.carrier) {
+        console.log('[get-easypost-tracking] Carrier mismatch detected, retrying with auto-detect...');
+        try {
+          tracking = await easyPostClient.getTracking(trackingCode, undefined);
+          console.log('[get-easypost-tracking] Auto-detect succeeded');
+        } catch (retryError: any) {
+          console.error('[get-easypost-tracking] Auto-detect also failed:', retryError.message);
+          
+          const isInvalidFormat = retryError.message?.includes('match the format');
+          const isNotFound = retryError.message?.includes('not found');
+          
+          return new Response(
+            JSON.stringify({
+              success: false,
+              code: isInvalidFormat ? 'INVALID_FORMAT' : isNotFound ? 'NOT_FOUND' : 'UNKNOWN',
+              message: isInvalidFormat 
+                ? 'Invalid tracking number format. Please verify the tracking number.'
+                : isNotFound
+                ? 'Tracking number not found. It may not be in the carrier system yet.'
+                : 'Unable to retrieve tracking information. Please verify the tracking number is valid.',
+              details: retryError.message
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        // Return user-friendly error for invalid tracking numbers
+        console.error('[get-easypost-tracking] Tracking lookup failed:', trackingError.message);
+        
+        const isInvalidFormat = trackingError.message?.includes('match the format');
+        const isNotFound = trackingError.message?.includes('not found');
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            code: isCarrierMismatch ? 'CARRIER_MISMATCH' : isInvalidFormat ? 'INVALID_FORMAT' : isNotFound ? 'NOT_FOUND' : 'UNKNOWN',
+            message: isCarrierMismatch
+              ? 'The tracking number does not match the selected carrier. Please verify both are correct.'
+              : isInvalidFormat
+              ? 'Invalid tracking number format. Please verify the tracking number.'
+              : isNotFound
+              ? 'Tracking number not found. It may not be in the carrier system yet.'
+              : 'Unable to retrieve tracking information. Please verify the tracking number is valid.',
+            details: trackingError.message
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
     
     // Store tracking events in database
@@ -211,30 +241,15 @@ serve(async (req: Request) => {
       }
     }
 
-    console.log('✅ Tracking retrieved:', {
-      status: tracking.status,
-      events_count: tracking.events.length,
-      carrier: tracking.carrier,
-      has_url: !!tracking.tracking_url
-    });
-
+    console.log('[get-easypost-tracking] Successfully retrieved tracking, returning response');
+    
     return new Response(
-      JSON.stringify({
+      JSON.stringify({ 
         success: true,
-        tracking: {
-          status: tracking.status,
-          tracking_url: tracking.tracking_url,
-          events: tracking.events,
-          carrier: tracking.carrier,
-          est_delivery_date: tracking.est_delivery_date,
-          signed_by: tracking.signed_by,
-          weight: tracking.weight,
-          carrier_detail: tracking.carrier_detail
-        },
-        message: 'Tracking information retrieved successfully'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+        tracking 
+      }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error: any) {
     console.error('Error getting tracking:', error);

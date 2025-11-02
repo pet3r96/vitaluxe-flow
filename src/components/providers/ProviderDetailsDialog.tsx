@@ -50,38 +50,68 @@ export const ProviderDetailsDialog = ({
       
       setIsLoadingCredentials(true);
       try {
-        const { data, error } = await supabase.rpc('get_decrypted_profile_credentials', {
+        console.log('[ProviderDetailsDialog] Loading credentials for user:', provider.user_id);
+        
+        // Try RPC first
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_decrypted_profile_credentials', {
           p_user_id: provider.user_id
         });
 
-        if (error) throw error;
+        if (rpcError) {
+          console.error('[ProviderDetailsDialog] RPC error, falling back to plaintext:', rpcError);
+        }
 
-        if (data && data.length > 0) {
-          const creds = data[0];
-          const fullNameValue = creds.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "";
-          const npiValue = creds.npi || "";
-          
-          setFormData({
-            fullName: fullNameValue,
-            prescriberName: creds.full_name || "",
-            npi: npiValue,
-            dea: creds.dea || "",
-            licenseNumber: creds.license_number || "",
-            phone: creds.phone ? creds.phone.replace(/\D/g, '') : "",
-          });
-          setOriginalNpi(npiValue);
+        const decryptedData = rpcData?.[0];
+        console.log('[ProviderDetailsDialog] RPC returned:', !!decryptedData);
+        
+        // Helper to get display name: full_name > prescriber_name > name (if not email) > empty
+        const getDisplayName = () => {
+          if (decryptedData?.full_name) return decryptedData.full_name;
+          if (provider.profiles?.full_name) return provider.profiles.full_name;
+          if (provider.prescriber_name) return provider.prescriber_name;
+          if (provider.profiles?.name && !provider.profiles.name.includes('@')) {
+            return provider.profiles.name;
+          }
+          return "";
+        };
+        
+        // Get NPI value with fallback
+        const npiValue = decryptedData?.npi || provider.profiles?.npi || "";
+        
+        // Use decrypted data if available, otherwise fall back to plaintext from profiles
+        setFormData({
+          fullName: getDisplayName(),
+          prescriberName: getDisplayName(),
+          npi: npiValue,
+          dea: decryptedData?.dea || provider.profiles?.dea || "",
+          licenseNumber: decryptedData?.license_number || provider.profiles?.license_number || "",
+          phone: (decryptedData?.phone || provider.profiles?.phone || "").replace(/\D/g, ''),
+        });
+        setOriginalNpi(npiValue);
+        
+        if (!decryptedData && !rpcError) {
+          console.log('[ProviderDetailsDialog] No RPC data, used plaintext fallback');
         }
       } catch (error) {
-        console.error('Error loading decrypted credentials:', error);
-        // Fallback to sanitized values
-        const npiValue = sanitizeEncrypted(provider.profiles?.npi);
+        console.error('[ProviderDetailsDialog] Failed to load credentials:', error);
+        // Ultimate fallback
+        const getDisplayName = () => {
+          if (provider.profiles?.full_name) return provider.profiles.full_name;
+          if (provider.prescriber_name) return provider.prescriber_name;
+          if (provider.profiles?.name && !provider.profiles.name.includes('@')) {
+            return provider.profiles.name;
+          }
+          return "";
+        };
+        
+        const npiValue = provider.profiles?.npi || "";
         setFormData({
-          fullName: provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "",
-          prescriberName: provider.profiles?.full_name || "",
+          fullName: getDisplayName(),
+          prescriberName: getDisplayName(),
           npi: npiValue,
-          dea: sanitizeEncrypted(provider.profiles?.dea),
-          licenseNumber: sanitizeEncrypted(provider.profiles?.license_number),
-          phone: provider.profiles?.phone ? provider.profiles.phone.replace(/\D/g, "") : "",
+          dea: provider.profiles?.dea || "",
+          licenseNumber: provider.profiles?.license_number || "",
+          phone: (provider.profiles?.phone || "").replace(/\D/g, ''),
         });
         setOriginalNpi(npiValue);
       } finally {
@@ -241,7 +271,12 @@ export const ProviderDetailsDialog = ({
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 />
               ) : (
-                <div className="p-2 bg-muted rounded-md">{provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? provider.profiles?.email : provider.profiles?.name) || provider.profiles?.email}</div>
+                <div className="p-2 bg-muted rounded-md">
+                  {provider.profiles?.full_name || 
+                   provider.prescriber_name ||
+                   (provider.profiles?.name && !provider.profiles.name.includes('@') ? provider.profiles.name : '') || 
+                   'Not Set'}
+                </div>
               )}
             </div>
 

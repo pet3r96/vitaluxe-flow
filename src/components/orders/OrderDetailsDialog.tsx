@@ -655,22 +655,24 @@ export const OrderDetailsDialog = ({
                               <AlertCircle className="h-3 w-3" />
                               Patient Allergies (PHI)
                             </p>
-                            {(() => {
-                              const allergies = decryptedPatientPHI.get(line.patient_id)?.allergies;
-                              const isPlaceholder = allergies === '[ENCRYPTED]' || !allergies;
-                              
-                              return isPlaceholder ? (
-                                <p className="text-xs text-muted-foreground italic mt-1">
-                                  {decryptedPatientPHI.has(line.patient_id) 
-                                    ? 'No known allergies recorded' 
-                                    : 'Loading...'}
-                                </p>
-                              ) : (
-                                <p className="text-sm text-primary-foreground bg-primary/25 p-2 rounded mt-1 border border-primary/40 shadow-inner">
-                                  {allergies}
-                                </p>
-                              );
-                            })()}
+                             {(() => {
+                               const allergies = decryptedPatientPHI.get(line.patient_id)?.allergies;
+                               const isLoading = !decryptedPatientPHI.has(line.patient_id);
+                               
+                               return isLoading ? (
+                                 <p className="text-xs text-muted-foreground italic mt-1">
+                                   Loading...
+                                 </p>
+                               ) : !allergies ? (
+                                 <p className="text-xs text-muted-foreground italic mt-1">
+                                   None provided
+                                 </p>
+                               ) : (
+                                 <p className="text-sm text-primary-foreground bg-primary/25 p-2 rounded mt-1 border border-primary/40 shadow-inner">
+                                   {allergies}
+                                 </p>
+                               );
+                             })()}
                           </div>
                         )}
                       </div>

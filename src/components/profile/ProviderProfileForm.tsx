@@ -107,38 +107,64 @@ export const ProviderProfileForm = () => {
       if (!effectiveUserId) return;
       
       try {
-        const { data, error } = await supabase.rpc('get_decrypted_profile_credentials', {
+        console.log('[ProviderProfileForm] Loading credentials for user:', effectiveUserId);
+        
+        // Try RPC first
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_decrypted_profile_credentials', {
           p_user_id: effectiveUserId
         });
 
-        if (!error && data && data.length > 0) {
-          const creds = data[0];
-          const npiValue = creds.npi || "";
+        if (rpcError) {
+          console.error('[ProviderProfileForm] RPC error, falling back to plaintext:', rpcError);
+        }
+
+        const creds = rpcData?.[0];
+        console.log('[ProviderProfileForm] RPC returned:', !!creds);
+        
+        // Helper to get display name
+        const getDisplayName = () => {
+          if (creds?.full_name) return creds.full_name;
+          if (profile?.full_name) return profile.full_name;
+          if (profile?.name && !profile.name.includes('@')) return profile.name;
+          return "";
+        };
+        
+        const npiValue = creds?.npi || profile?.npi || "";
+        
+        if (creds || profile) {
+          form.reset({
+            full_name: getDisplayName(),
+            email: profile?.email || "",
+            phone: (creds?.phone || profile?.phone || "").replace(/\D/g, ''),
+            npi: npiValue,
+            dea: creds?.dea || profile?.dea || "",
+            license_number: creds?.license_number || profile?.license_number || "",
+          });
+          setOriginalNpi(npiValue);
           
-          form.reset({
-            full_name: creds.full_name || "",
-            email: creds.email || "",
-            phone: creds.phone ? creds.phone.replace(/\D/g, '') : "",
-            npi: npiValue,
-            dea: creds.dea || "",
-            license_number: creds.license_number || "",
-          });
-          setOriginalNpi(npiValue);
-        } else if (profile) {
-          // Fallback to sanitized values if RPC fails
-          const npiValue = sanitizeEncrypted(profile.npi);
-          form.reset({
-            full_name: profile.full_name || "",
-            email: profile.email || "",
-            phone: profile.phone ? profile.phone.replace(/\D/g, "") : "",
-            npi: npiValue,
-            dea: sanitizeEncrypted(profile.dea),
-            license_number: sanitizeEncrypted(profile.license_number),
-          });
-          setOriginalNpi(npiValue);
+          if (!creds && !rpcError) {
+            console.log('[ProviderProfileForm] No RPC data, used plaintext fallback');
+          }
         }
       } catch (error) {
-        console.error('Error loading decrypted credentials:', error);
+        console.error('[ProviderProfileForm] Error loading decrypted credentials:', error);
+        // Ultimate fallback
+        const getDisplayName = () => {
+          if (profile?.full_name) return profile.full_name;
+          if (profile?.name && !profile.name.includes('@')) return profile.name;
+          return "";
+        };
+        
+        const npiValue = profile?.npi || "";
+        form.reset({
+          full_name: getDisplayName(),
+          email: profile?.email || "",
+          phone: (profile?.phone || "").replace(/\D/g, ""),
+          npi: npiValue,
+          dea: profile?.dea || "",
+          license_number: profile?.license_number || "",
+        });
+        setOriginalNpi(npiValue);
       }
     };
 

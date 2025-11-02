@@ -60,8 +60,8 @@ export const ShipmentTrackingCard = ({
   const [editTrackingNumber, setEditTrackingNumber] = useState(trackingNumber || "");
   const [editCarrier, setEditCarrier] = useState(carrier || "");
 
-  // Normalize carrier for consistent routing
-  const normalizedCarrier = (carrier ?? '').toLowerCase();
+  // Normalize carrier for consistent routing - only pass if not empty
+  const normalizedCarrier = carrier?.trim() ? carrier.toLowerCase() : undefined;
 
   // Fetch tracking information
   const { data: trackingResponse, isLoading, error: trackingError, refetch } = useQuery({
@@ -76,13 +76,22 @@ export const ShipmentTrackingCard = ({
 
       // All tracking now routes through EasyPost
       const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-        body: { tracking_code: trackingNumber, carrier: normalizedCarrier },
+        body: { 
+          tracking_code: trackingNumber, 
+          carrier: normalizedCarrier // Only pass carrier if set
+        },
         headers: {
           'x-csrf-token': csrfToken
         }
       });
 
       if (error) throw error;
+      
+      // Handle success:false response from edge function
+      if (data?.success === false) {
+        throw new Error(data.message || 'Unable to retrieve tracking information.');
+      }
+      
       return { tracking: data.tracking };
     },
     enabled: !!trackingNumber,
@@ -131,22 +140,30 @@ export const ShipmentTrackingCard = ({
       
       // All tracking now routes through EasyPost
       const { data, error } = await supabase.functions.invoke("get-easypost-tracking", {
-        body: { tracking_code: trackingNumber, carrier: normalizedCarrier },
+        body: { 
+          tracking_code: trackingNumber, 
+          carrier: normalizedCarrier // Only pass carrier if set
+        },
         headers: {
           'x-csrf-token': csrfToken
         }
       });
 
       if (error) throw error;
+      
+      // Handle success:false response from edge function
+      if (data?.success === false) {
+        throw new Error(data.message || 'Unable to retrieve tracking information.');
+      }
+      
       return data;
     },
     onSuccess: () => {
-      toast.success("Tracking information updated");
       queryClient.invalidateQueries({ queryKey: ["shipment-tracking", orderLineId] });
       queryClient.invalidateQueries({ queryKey: ["tracking-events", orderLineId] });
     },
     onError: (error: any) => {
-      toast.error(`Failed to refresh tracking: ${error.message}`);
+      toast.error(error.message);
     }
   });
 
