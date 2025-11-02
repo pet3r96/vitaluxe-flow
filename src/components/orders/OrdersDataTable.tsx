@@ -54,6 +54,24 @@ export const OrdersDataTable = () => {
     emptyReason: null
   });
 
+  // Fetch current user's rep ID for commission calculations
+  const { data: currentRepId } = useQuery({
+    queryKey: ["current-rep-id", effectiveUserId, effectiveRole],
+    queryFn: async () => {
+      if (effectiveRole !== "topline" && effectiveRole !== "downline") return null;
+      
+      const { data } = await supabase
+        .from("reps")
+        .select("id")
+        .eq("user_id", effectiveUserId)
+        .eq("role", effectiveRole)
+        .maybeSingle();
+      
+      return data?.id || null;
+    },
+    enabled: effectiveRole === "topline" || effectiveRole === "downline",
+  });
+
   // Fetch available order statuses from config
   const { data: orderStatusConfigs } = useQuery({
     queryKey: ["order_status_configs"],
@@ -385,6 +403,50 @@ export const OrdersDataTable = () => {
     },
   });
 
+  // Fetch commission data for reps
+  const { data: orderCommissions } = useQuery({
+    queryKey: ["order-commissions", currentRepId, effectiveRole, orders],
+    queryFn: async () => {
+      if (!currentRepId || !orders?.length) return {};
+      
+      const orderIds = orders.map(o => o.id);
+      
+      const { data, error } = await supabase
+        .from("order_profits")
+        .select("order_id, topline_profit, downline_profit, product_id, products(requires_rx)")
+        .in("order_id", orderIds);
+      
+      if (error) {
+        logger.error('Commission fetch error', error);
+        return {};
+      }
+      
+      // Aggregate commissions by order_id
+      const commissionMap: Record<string, { total: number; hasRx: boolean }> = {};
+      
+      data?.forEach((profit: any) => {
+        if (!commissionMap[profit.order_id]) {
+          commissionMap[profit.order_id] = { total: 0, hasRx: false };
+        }
+        
+        // Add appropriate profit based on role
+        const myProfit = effectiveRole === "topline" 
+          ? (profit.topline_profit || 0) 
+          : (profit.downline_profit || 0);
+        
+        commissionMap[profit.order_id].total += myProfit;
+        
+        // Track if any product requires RX
+        if (profit.products?.requires_rx) {
+          commissionMap[profit.order_id].hasRx = true;
+        }
+      });
+      
+      return commissionMap;
+    },
+    enabled: (effectiveRole === "topline" || effectiveRole === "downline") && !!currentRepId && !!orders?.length,
+  });
+
   // Set up real-time subscription for order updates using centralized manager
   useEffect(() => {
     // Don't set up subscription if no effective user
@@ -613,19 +675,22 @@ export const OrdersDataTable = () => {
               <TableHead>Order Status</TableHead>
               <TableHead>Payment Status</TableHead>
               {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
+              {(effectiveRole === "topline" || effectiveRole === "downline") && (
+                <TableHead>My Commission</TableHead>
+              )}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
                   <div className="py-8 space-y-2">
                     <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
                     <p className="text-sm font-medium">Unable to load orders</p>
@@ -638,7 +703,7 @@ export const OrdersDataTable = () => {
               </TableRow>
             ) : filteredOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
+                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
                   <div className="py-8 space-y-2 text-muted-foreground">
                     {effectiveRole === "downline" && queryMetadata.emptyReason === 'no_rep' ? (
                       <>
@@ -783,6 +848,31 @@ export const OrdersDataTable = () => {
                     {/* Total Amount (if not pharmacy) */}
                     {effectiveRole !== "pharmacy" && (
                       <TableCell>${order.total_amount}</TableCell>
+                    )}
+
+                    {/* My Commission (for reps only) */}
+                    {(effectiveRole === "topline" || effectiveRole === "downline") && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            ${(orderCommissions?.[order.id]?.total || 0).toFixed(2)}
+                          </span>
+                          {orderCommissions?.[order.id]?.hasRx && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs">
+                                    RX
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Order contains RX products (0% commission)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      </TableCell>
                     )}
 
                     {/* Actions */}
