@@ -678,17 +678,20 @@ export default function PatientIntakeForm() {
             <CardContent className="space-y-4">
               {medications.map((med, index) => (
                 <div key={index} className="flex gap-2 items-start">
-                  <AutocompleteInput
-                    placeholder="Search medication name"
-                    value={med.name}
-                    onChange={(value) => {
-                      const newMeds = [...medications];
-                      newMeds[index].name = value;
-                      setMedications(newMeds);
-                    }}
-                    onSearch={searchMedications}
-                  />
+                  <div className="flex-1">
+                    <AutocompleteInput
+                      placeholder="Search medication name"
+                      value={med.name}
+                      onChange={(value) => {
+                        const newMeds = [...medications];
+                        newMeds[index].name = value;
+                        setMedications(newMeds);
+                      }}
+                      onSearch={searchMedications}
+                    />
+                  </div>
                   <Input
+                    className="flex-1"
                     placeholder="Dosage"
                     value={med.dosage}
                     onChange={(e) => {
@@ -745,17 +748,20 @@ export default function PatientIntakeForm() {
             <CardContent className="space-y-4">
               {allergies.map((allergy, index) => (
                 <div key={index} className="flex gap-2 items-start">
-                  <AutocompleteInput
-                    placeholder="Search allergen name"
-                    value={allergy.name}
-                    onChange={(value) => {
-                      const newAllergies = [...allergies];
-                      newAllergies[index].name = value;
-                      setAllergies(newAllergies);
-                    }}
-                    onSearch={searchAllergens}
-                  />
+                  <div className="flex-1">
+                    <AutocompleteInput
+                      placeholder="Search allergen name"
+                      value={allergy.name}
+                      onChange={(value) => {
+                        const newAllergies = [...allergies];
+                        newAllergies[index].name = value;
+                        setAllergies(newAllergies);
+                      }}
+                      onSearch={searchAllergens}
+                    />
+                  </div>
                   <Input
+                    className="flex-1"
                     placeholder="Reaction"
                     value={allergy.reaction}
                     onChange={(e) => {
@@ -811,17 +817,20 @@ export default function PatientIntakeForm() {
             <CardContent className="space-y-4">
               {conditions.map((condition, index) => (
                 <div key={index} className="flex gap-2 items-start">
-                  <AutocompleteInput
-                    placeholder="Search condition name"
-                    value={condition.name}
-                    onChange={(value) => {
-                      const newConditions = [...conditions];
-                      newConditions[index].name = value;
-                      setConditions(newConditions);
-                    }}
-                    onSearch={searchConditions}
-                  />
+                  <div className="flex-1">
+                    <AutocompleteInput
+                      placeholder="Search condition name"
+                      value={condition.name}
+                      onChange={(value) => {
+                        const newConditions = [...conditions];
+                        newConditions[index].name = value;
+                        setConditions(newConditions);
+                      }}
+                      onSearch={searchConditions}
+                    />
+                  </div>
                   <Input
+                    className="flex-1"
                     type="date"
                     placeholder="Diagnosed date"
                     value={condition.diagnosed_date}
@@ -879,17 +888,20 @@ export default function PatientIntakeForm() {
               {surgeries.map((surgery, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex gap-2 items-start">
-                    <AutocompleteInput
-                      placeholder="Search surgery type"
-                      value={surgery.type}
-                      onChange={(value) => {
-                        const newSurgeries = [...surgeries];
-                        newSurgeries[index].type = value;
-                        setSurgeries(newSurgeries);
-                      }}
-                      onSearch={searchSurgeries}
-                    />
+                    <div className="flex-1">
+                      <AutocompleteInput
+                        placeholder="Search surgery type"
+                        value={surgery.type}
+                        onChange={(value) => {
+                          const newSurgeries = [...surgeries];
+                          newSurgeries[index].type = value;
+                          setSurgeries(newSurgeries);
+                        }}
+                        onSearch={searchSurgeries}
+                      />
+                    </div>
                     <Input
+                      className="flex-1"
                       type="date"
                       value={surgery.date}
                       onChange={(e) => {
