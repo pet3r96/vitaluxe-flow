@@ -30,6 +30,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
 };
 
 export default function AdminTermsManagement() {
+  const [activeTab, setActiveTab] = useState('editor');
   const [activeRole, setActiveRole] = useState<AppRole>('doctor');
   const [terms, setTerms] = useState<any>(null);
   const [title, setTitle] = useState("");
@@ -378,7 +379,7 @@ export default function AdminTermsManagement() {
         <p className="text-muted-foreground mt-2">Manage terms and conditions for each user role</p>
       </div>
 
-      <Tabs defaultValue="editor" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid-cols-1 sm:grid-cols-4">
           <TabsTrigger value="editor">Terms Editor</TabsTrigger>
           <TabsTrigger value="acceptances">User Acceptances</TabsTrigger>
@@ -659,9 +660,7 @@ export default function AdminTermsManagement() {
                 variant="outline"
                 onClick={() => {
                   setActiveRole('subscription');
-                  // Force switch to editor tab
-                  const editorTab = document.querySelector('[value="editor"]') as HTMLElement;
-                  editorTab?.click();
+                  setActiveTab('editor');
                 }}
               >
                 Edit Subscription Terms
