@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePatients } from "@/hooks/usePatients";
+import { useProviders } from "@/hooks/useProviders";
 import {
   Dialog,
   DialogContent,
@@ -67,95 +69,10 @@ export const PatientSelectionDialog = ({
   const [orderNotes, setOrderNotes] = useState("");
   const [providerSignature, setProviderSignature] = useState("");
 
-  const { data: patients, isLoading } = useQuery({
-    queryKey: ["patients", effectivePracticeId],
-    queryFn: async () => {
-      if (!effectivePracticeId) {
-        console.log("No practice ID available");
-        return [];
-      }
+  const { data: patients, isLoading } = usePatients(effectivePracticeId);
 
-      console.log("Fetching patients via backend function for practice:", effectivePracticeId);
-
-      const { data, error } = await supabase.functions.invoke('list-patients', {
-        body: { practice_id: effectivePracticeId }
-      });
-
-      if (error) {
-        console.error("Error fetching patients:", error);
-        throw error;
-      }
-
-      console.log("Patients fetched:", data?.patients?.length || 0);
-
-      // Filter out patients with incomplete data that would cause cart errors
-      const validPatients = (data?.patients || []).filter((patient: any) => {
-        const hasEmail = !!patient.email;
-        const hasId = !!patient.id;
-        return hasEmail && hasId;
-      });
-      
-      return validPatients;
-    },
-    enabled: open && !!effectivePracticeId,
-  });
-
-  // Helper to derive readable name from email
-  const deriveNameFromEmail = (email: string): string => {
-    const localPart = email.split('@')[0];
-    return localPart
-      .replace(/[._-]/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
-
-  // Fetch active providers for practice using backend function to avoid RLS issues
-  const { data: providers } = useQuery({
-    queryKey: ["practice-providers", effectivePracticeId],
-    queryFn: async () => {
-      if (!effectivePracticeId) return [];
-      
-      try {
-        const { data, error } = await supabase.functions.invoke('list-providers', {
-          body: { practice_id: effectivePracticeId }
-        });
-        
-        if (error) throw error;
-        
-        return (data?.providers || []).map((p: any) => {
-          // Derive display name with robust fallbacks - prioritize full_name over prescriber_name
-          let displayName = p.profiles?.full_name || 
-                           p.profiles?.prescriber_name || 
-                           p.profiles?.name;
-          
-          // If displayName is an email, derive a readable name from it
-          if (displayName?.includes('@')) {
-            displayName = deriveNameFromEmail(displayName);
-          }
-          
-          // Final fallback
-          if (!displayName) {
-            displayName = 'Provider';
-          }
-          
-          return {
-            id: p.id,
-            user_id: p.user_id,
-            prescriber_name: displayName,
-            specialty: '',
-            npi: p.profiles?.npi || '',
-            dea: p.profiles?.dea || '',
-            profiles: p.profiles
-          };
-        });
-      } catch (error) {
-        console.error('Error fetching providers:', error);
-        return [];
-      }
-    },
-    enabled: open && !!effectivePracticeId
-  });
+  // Fetch active providers for practice using centralized hook
+  const { data: providers } = useProviders(effectivePracticeId);
 
   // Auto-select provider based on role and available providers
   useEffect(() => {
