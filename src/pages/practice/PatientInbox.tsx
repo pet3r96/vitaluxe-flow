@@ -104,6 +104,27 @@ export default function PatientInbox() {
     enabled: !!practiceId
   });
 
+  // Fetch unread thread IDs (threads with at least one unread patient message)
+  const { data: unreadThreadIds = [] } = useQuery({
+    queryKey: ['inbox-unread-threads', practiceId],
+    queryFn: async () => {
+      if (!practiceId) return [];
+      const { data, error } = await supabase
+        .from('patient_messages')
+        .select('id, thread_id')
+        .eq('practice_id', practiceId)
+        .eq('sender_type', 'patient')
+        .is('read_at', null)
+        .eq('resolved', false);
+
+      if (error) throw error;
+      const threadSet = new Set<string>();
+      (data || []).forEach((m: any) => threadSet.add(m.thread_id || m.id));
+      return Array.from(threadSet);
+    },
+    enabled: !!practiceId
+  });
+
   // Realtime subscription for patient messages
   useEffect(() => {
     if (!practiceId) return;
@@ -121,6 +142,7 @@ export default function PatientInbox() {
         (payload) => {
           console.log('Patient message change:', payload);
           queryClient.invalidateQueries({ queryKey: ["patient-messages-inbox", practiceId] });
+          queryClient.invalidateQueries({ queryKey: ['inbox-unread-threads', practiceId] });
         }
       )
       .subscribe();
@@ -146,10 +168,7 @@ export default function PatientInbox() {
   });
 
   // Calculate counts
-  const unreadCount = useMemo(() => 
-    messages?.filter((m) => !m.read_at).length || 0,
-    [messages]
-  );
+  const unreadCount = unreadThreadIds.length;
 
   const activeCount = useMemo(() => 
     messages?.filter((m) => !m.resolved).length || 0,
@@ -171,6 +190,7 @@ export default function PatientInbox() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient-messages-inbox"] });
+      queryClient.invalidateQueries({ queryKey: ['inbox-unread-threads'] });
     },
   });
 
@@ -281,6 +301,8 @@ export default function PatientInbox() {
             <div className="p-4 text-center text-muted-foreground">Loading...</div>
           ) : messages && messages.length > 0 ? (
             messages.map((msg: any) => {
+              const threadId = msg.thread_id || msg.id;
+              const isUnread = unreadThreadIds.includes(threadId);
               const initials = `${msg.patient?.first_name?.[0] || ''}${msg.patient?.last_name?.[0] || ''}`.toUpperCase();
               return (
                 <div
@@ -289,7 +311,7 @@ export default function PatientInbox() {
                   className={cn(
                     "flex gap-3 p-4 border-b cursor-pointer transition-colors hover:bg-accent",
                     selectedMessage?.id === msg.id && "bg-accent",
-                    !msg.read_at && "bg-accent/50"
+                    isUnread && "bg-accent/50"
                   )}
                 >
                   <Avatar className="h-10 w-10">
@@ -300,7 +322,7 @@ export default function PatientInbox() {
                     <div className="flex items-start justify-between mb-1">
                       <h4 className={cn(
                         "text-sm truncate flex-1",
-                        !msg.read_at ? "font-semibold" : "font-medium"
+                        isUnread ? "font-semibold" : "font-medium"
                       )}>
                         {msg.subject || "No Subject"}
                       </h4>
@@ -321,7 +343,7 @@ export default function PatientInbox() {
                   </div>
 
                   <div className="flex flex-col items-end gap-1">
-                    {!msg.read_at && (
+                    {isUnread && (
                       <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
                         1
                       </Badge>
