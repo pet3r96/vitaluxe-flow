@@ -117,8 +117,8 @@ const { data: documents = [], isLoading } = useQuery({
     try {
       const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
         body: {
-          bucketName: 'patient-documents',
-          filePath: doc.storage_path,
+          bucket: 'patient-documents',
+          path: doc.storage_path,
           expiresIn: 300
         }
       });
