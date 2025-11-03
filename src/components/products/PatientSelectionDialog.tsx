@@ -118,7 +118,7 @@ export const PatientSelectionDialog = ({
         
         return (data?.providers || []).map((p: any) => {
           // Priority 1: prescriber_name (if not empty)
-          let displayName = p.profiles?.prescriber_name?.trim();
+          let displayName = p.prescriber_name?.trim();
           
           // Priority 2: full_name (if not empty)
           if (!displayName) {
@@ -199,7 +199,7 @@ export const PatientSelectionDialog = ({
       if (error) throw error;
       return data;
     },
-    enabled: !!effectivePracticeId && currentStep === 'prescription' && prescriptionMethod === 'written'
+    enabled: !!effectivePracticeId && currentStep === 'prescription'
   });
 
   useEffect(() => {
@@ -816,7 +816,7 @@ export const PatientSelectionDialog = ({
                         variant="outline" 
                         onClick={() => setShowPrescriptionWriter(true)}
                         className="w-full"
-                        disabled={!selectedProviderData || !practiceData}
+                        disabled={!selectedProviderData}
                       >
                         <FileText className="mr-2 h-4 w-4" />
                         Open Prescription Writer
