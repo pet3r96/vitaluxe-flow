@@ -46,22 +46,25 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
     staleTime: 10000,
   });
 
-  // Fetch provider documents assigned to this patient using RPC function
+  // Fetch provider documents assigned to this patient using unified RPC function
   const { data: providerDocs, isLoading: loadingProviderDocs, error: providerDocsError } = useQuery({
     queryKey: ['shared-provider-documents', patientAccountId],
     queryFn: async () => {
       console.log('[SharedDocumentsGrid] Fetching provider documents for patient:', patientAccountId);
       
       const { data, error } = await supabase
-        .rpc('get_patient_provider_documents', { p_patient_id: patientAccountId });
+        .rpc('get_patient_unified_documents', { p_patient_id: patientAccountId });
       
       if (error) {
         console.error('[SharedDocumentsGrid] Provider docs error:', error);
         throw error;
       }
       
-      console.log('[SharedDocumentsGrid] Provider docs loaded:', data?.length || 0);
-      return data || [];
+      // Filter to only show provider-assigned documents
+      const providerAssignedDocs = (data || []).filter(doc => doc.source === 'provider_assigned');
+      
+      console.log('[SharedDocumentsGrid] Provider docs loaded:', providerAssignedDocs.length);
+      return providerAssignedDocs;
     },
     staleTime: 10000,
   });
