@@ -89,7 +89,79 @@ export function OrdersBreakdown() {
         });
 
         return counts;
-      } else if (effectiveRole === 'doctor' || effectiveRole === 'provider' || effectiveRole === 'staff') {
+      } else if (effectiveRole === 'provider') {
+        // For providers: get only their prescribed order lines
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .maybeSingle();
+        
+        if (!providerData) {
+          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
+        }
+
+        // Get order lines for this provider with parent order status
+        const { data: orderLines, error } = await supabase
+          .from('order_lines')
+          .select(`
+            order_id,
+            status,
+            orders!inner(status, payment_status)
+          `)
+          .eq('provider_id', providerData.id);
+
+        if (error) throw error;
+
+        if (!orderLines || orderLines.length === 0) {
+          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
+        }
+
+        // Filter out cancelled parent orders and payment failures
+        const filtered = orderLines.filter((ol: any) => 
+          ol.orders?.status?.toLowerCase() !== 'cancelled' &&
+          ol.orders?.payment_status !== 'payment_failed'
+        );
+
+        if (filtered.length === 0) {
+          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
+        }
+
+        // Group by unique order and determine status (same logic as pharmacy)
+        const byOrder = new Map<string, string[]>();
+        for (const ol of filtered as any[]) {
+          const arr = byOrder.get(ol.order_id) || [];
+          if (ol.status) arr.push(String(ol.status).toLowerCase());
+          byOrder.set(ol.order_id, arr);
+        }
+
+        // Determine final status per order (same precedence as pharmacy)
+        const counts = { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 } as any;
+        for (const [orderId, statuses] of byOrder) {
+          const has = (s: string) => statuses.includes(s);
+          if (has('denied')) {
+            counts.declined++;
+          } else if (has('delivered') || has('completed')) {
+            counts.completed++;
+          } else if (has('shipped')) {
+            counts.shipped++;
+          } else if (has('processing')) {
+            counts.processing++;
+          } else if (has('on_hold')) {
+            counts.on_hold++;
+          } else {
+            counts.pending++;
+          }
+        }
+
+        console.log('[OrdersBreakdown] Provider counts:', { 
+          uniqueOrders: byOrder.size,
+          counts,
+          totalCalculated: Object.values(counts).reduce((a: any, b: any) => a + b, 0)
+        });
+
+        return counts;
+      } else if (effectiveRole === 'doctor' || effectiveRole === 'staff') {
         // For practices: get their own orders
         let doctorId = effectiveUserId;
         

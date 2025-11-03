@@ -217,32 +217,87 @@ export const OrdersDataTable = () => {
         query = query.eq("doctor_id", effectiveUserId);
       }
 
-      // Filter by provider if role is provider
+      // Filter by provider if role is provider - fetch only their order_lines
       if (effectiveRole === "provider") {
-        // Get provider id first
         const { data: providerData } = await supabase
           .from("providers")
           .select("id")
           .eq("user_id", effectiveUserId)
           .maybeSingle();
         
-        if (providerData) {
-          // Get all order IDs that have at least one line by this provider
-          const { data: providerOrderLines } = await supabase
-            .from("order_lines")
-            .select("order_id")
-            .eq("provider_id", providerData.id);
-          
-          const orderIds = providerOrderLines?.map(ol => ol.order_id) || [];
-          
-          if (orderIds.length === 0) {
-            return []; // No orders for this provider
-          }
-          
-          query = query.in("id", orderIds);
-        } else {
+        if (!providerData) {
           return []; // Provider not found
         }
+
+        // Fetch ONLY order lines prescribed by this provider (mirroring pharmacy pattern)
+        const { data: providerOrderLines, error: linesError } = await supabase
+          .from("order_lines")
+          .select(`
+            id,
+            order_id,
+            product_id,
+            provider_id,
+            patient_id,
+            quantity,
+            price,
+            status,
+            tracking_number,
+            assigned_pharmacy_id,
+            created_at,
+            updated_at,
+            shipping_speed,
+            shipping_carrier,
+            shipping_cost,
+            destination_state,
+            order_notes,
+            processing_at,
+            shipped_at,
+            delivered_at,
+            price_before_discount,
+            discount_amount,
+            discount_percentage,
+            original_order_line_id,
+            is_refill,
+            refill_number,
+            prescription_method,
+            patient_name,
+            patient_email,
+            patient_phone,
+            patient_address,
+            prescription_url,
+            custom_dosage,
+            custom_sig,
+            products(name, product_types(name)),
+            pharmacies:assigned_pharmacy_id(name),
+            providers!order_lines_provider_id_fkey(id, practice_id),
+            patient_accounts!order_lines_patient_id_fkey(id, allergies),
+            orders!inner(*, profiles:doctor_id(name))
+          `)
+          .eq("provider_id", providerData.id)
+          .order("created_at", { ascending: false });
+
+        if (linesError) {
+          logger.error('Provider order lines query error', linesError);
+          throw linesError;
+        }
+
+        // Transform data to match expected format - group order_lines by order
+        const ordersMap = new Map();
+        (providerOrderLines as any)?.forEach((line: any) => {
+          const orderId = line.orders.id;
+          if (!ordersMap.has(orderId)) {
+            ordersMap.set(orderId, {
+              ...line.orders,
+              order_lines: []
+            });
+          }
+          // Remove the nested orders object from the line before adding to array
+          const { orders: _, ...lineWithoutOrders } = line;
+          ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
+        });
+        
+        // Filter out orders with failed payments
+        return Array.from(ordersMap.values()).filter(order => order.payment_status !== 'payment_failed');
       }
 
       // Filter by staff practice if role is staff
