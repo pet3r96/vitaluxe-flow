@@ -192,14 +192,15 @@ const App = () => <QueryClientProvider client={queryClient}>
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
                   <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />
                   <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
-                  <Route path="/*" element={<ProtectedRoute>
+                   <Route path="/*" element={<ProtectedRoute>
                         <SidebarProvider>
                           <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                             <AppSidebar />
                             <main className="flex-1 flex flex-col overflow-y-auto">
-                              <PatientMobileHeader />
                               <Topbar />
                               <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
+                                {/* Patient-only mobile header */}
+                                <PatientMobileHeader />
                                 <div className="relative z-10">
                                 <Suspense fallback={<PageLoader />}>
                                   <AnimatePresence mode="wait">

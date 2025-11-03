@@ -3,10 +3,16 @@ import { MessageBell } from "@/components/messages/MessageBell";
 import { UserDropdown } from "@/components/layout/UserDropdown";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Heart } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function PatientMobileHeader() {
+  const { effectiveRole } = useAuth();
+  
+  // Only show for patient users on mobile
+  if (effectiveRole !== 'patient') return null;
+  
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden touch-auto">
       <div className="flex h-14 items-center justify-between px-4">
         {/* Logo */}
         <div className="flex items-center gap-2">

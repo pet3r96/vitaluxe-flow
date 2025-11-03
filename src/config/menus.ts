@@ -25,6 +25,7 @@ import {
   UserSquare2,
   FileSignature,
   LifeBuoy,
+  LogOut,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -242,6 +243,13 @@ export const menus: MenuConfig = {
         { label: "Documents", href: "/documents", icon: FileText },
         { label: "Messages", href: "/patient-messages", icon: MessageSquare },
         { label: "My Profile", href: "/profile", icon: UserSquare2 },
+      ],
+    },
+    {
+      title: "Settings",
+      items: [
+        { label: "Settings", href: "/settings", icon: Settings },
+        { label: "Sign Out", href: "/auth", icon: LogOut },
       ],
     },
   ],

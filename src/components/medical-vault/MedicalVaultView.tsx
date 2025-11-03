@@ -26,6 +26,7 @@ import { EmergencyContactsSection } from "@/components/medical-vault/EmergencyCo
 import { BasicDemographicsCard } from "@/components/patient/BasicDemographicsCard";
 import { PDFViewer } from "@/components/documents/PDFViewer";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { DocumentsSection } from "@/components/medical-vault/DocumentsSection";
 
 interface MedicalVaultViewProps {
   patientAccountId: string;
@@ -585,6 +586,12 @@ export function MedicalVaultView({
         
         <EmergencyContactsSection 
           patientAccountId={patientAccountId}
+        />
+        
+        <DocumentsSection 
+          patientAccountId={patientAccountId}
+          mode={mode}
+          canEdit={canEdit}
         />
       </div>
     </div>
