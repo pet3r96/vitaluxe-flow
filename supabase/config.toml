@@ -285,6 +285,15 @@ verify_jwt = true
 [functions.get-dashboard-data]
 verify_jwt = true
 
+[functions.list-providers]
+verify_jwt = true
+
+[functions.list-staff]
+verify_jwt = true
+
+[functions.upload-to-s3]
+verify_jwt = true
+
 [functions.generate-terms-pdf]
 verify_jwt = false
 
@@ -310,6 +319,9 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.generate-practice-development-invoice]
+verify_jwt = true
+
+[functions.validate-appointment-time]
 verify_jwt = true
 
 [functions.validate-share-link]
