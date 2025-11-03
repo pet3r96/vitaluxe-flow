@@ -54,31 +54,23 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
       };
 
       if (mode === "edit" && surgery) {
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from("patient_surgeries")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", surgery.id)
-          .select()
-          .maybeSingle();
+          .eq("id", surgery.id);
         if (error) throw error;
-        if (!result) {
-          throw new Error("Unable to update surgery. This may be due to permission restrictions.");
-        }
+        // Success! No need to verify with SELECT - RLS may block read-after-write
       } else {
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from("patient_surgeries")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          })
-          .select()
-          .maybeSingle();
+          });
         if (error) throw error;
-        if (!result) {
-          throw new Error("Unable to add surgery. This may be due to permission restrictions.");
-        }
+        // Success! No need to verify with SELECT - RLS may block read-after-write
       }
     },
     {

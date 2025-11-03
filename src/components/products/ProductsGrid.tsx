@@ -657,6 +657,15 @@ export const ProductsGrid = () => {
         const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);
 
         // Route to pharmacy - BLOCK if no pharmacy available
+        console.log('[ProductsGrid] 🔍 Calling route-order-to-pharmacy with:', {
+          product_id: productForCart.id,
+          product_name: productForCart.name,
+          destination_state: destinationState,
+          user_topline_rep_id: userToplineRepId,
+          patient_id: patientId,
+          practice_id: resolvedDoctorId
+        });
+
         const { data: routingResult, error: routingError } = await supabase.functions.invoke(
           'route-order-to-pharmacy',
           {
@@ -668,17 +677,32 @@ export const ProductsGrid = () => {
           }
         );
 
+        console.log('[ProductsGrid] 📦 Routing result:', {
+          pharmacy_id: routingResult?.pharmacy_id,
+          reason: routingResult?.reason,
+          error: routingError
+        });
+
         if (routingError) {
-          console.error("Routing error:", routingError);
-          toast.error("Unable to verify pharmacy availability. Please try again.");
+          console.error("[ProductsGrid] ❌ Routing error details:", {
+            error: routingError,
+            message: routingError.message,
+            status: routingError.status,
+            productId: productForCart.id,
+            productName: productForCart.name,
+            state: destinationState,
+            userToplineRepId
+          });
+          toast.error(`Unable to verify pharmacy availability: ${routingError.message || 'Unknown error'}`);
           return;
         }
 
         if (!routingResult?.pharmacy_id) {
-          console.error('[ProductsGrid] Pharmacy routing failed (patient order)', { 
+          console.error('[ProductsGrid] ❌ Pharmacy routing failed (patient order)', { 
             product: productForCart.name, 
             destinationState, 
-            reason: routingResult?.reason 
+            reason: routingResult?.reason,
+            fullResponse: routingResult
           });
           toast.error(
             `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" for delivery to ${destinationState}. Reason: ${routingResult?.reason || 'Unknown error'}`,
@@ -688,7 +712,12 @@ export const ProductsGrid = () => {
         }
 
         // Success - pharmacy found, proceed with insertion
-        console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
+        console.log(`✅ [ProductsGrid] Pharmacy routed successfully:`, {
+          pharmacy_id: routingResult.pharmacy_id,
+          reason: routingResult.reason,
+          product: productForCart.name,
+          state: destinationState
+        });
 
         // Validate patient address completeness - all 4 fields required
         const hasCompleteAddress = !!(

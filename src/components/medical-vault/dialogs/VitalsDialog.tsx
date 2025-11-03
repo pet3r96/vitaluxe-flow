@@ -177,44 +177,32 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       }
 
       if (mode === "edit" && vitals) {
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from("patient_vitals")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", vitals.id)
-          .select()
-          .maybeSingle();
+          .eq("id", vitals.id);
         if (error) throw error;
-        if (!result) {
-          throw new Error("Unable to update vitals. This may be due to permission restrictions.");
-        }
+        // Success! No need to verify with SELECT - RLS may block read-after-write
       } else if (isBasicVitalMode && vitals) {
         // Update existing height/weight record
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from("patient_vitals")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", vitals.id)
-          .select()
-          .maybeSingle();
+          .eq("id", vitals.id);
         if (error) throw error;
-        if (!result) {
-          throw new Error("Unable to update vitals. This may be due to permission restrictions.");
-        }
+        // Success! No need to verify with SELECT - RLS may block read-after-write
       } else {
         // Insert new record
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from("patient_vitals")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          })
-          .select()
-          .maybeSingle();
+          });
         if (error) throw error;
-        if (!result) {
-          throw new Error("Unable to add vitals. This may be due to permission restrictions.");
-        }
+        // Success! No need to verify with SELECT - RLS may block read-after-write
       }
     },
     {

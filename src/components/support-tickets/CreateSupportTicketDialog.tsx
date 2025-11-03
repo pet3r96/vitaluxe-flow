@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 const ticketSchema = z.object({
   ticketType: z.enum([
@@ -47,7 +49,18 @@ const ticketSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   orderId: z.string().optional(),
   practiceId: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    if (data.ticketType === "pharmacy_order_issue" && !data.orderId) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "Order selection is required for pharmacy order issues",
+    path: ["orderId"],
+  }
+);
 
 type TicketFormData = z.infer<typeof ticketSchema>;
 
@@ -67,6 +80,48 @@ export function CreateSupportTicketDialog() {
   });
 
   const ticketType = form.watch("ticketType");
+
+  // Fetch recent orders for dropdown
+  const { data: userOrders, isLoading: ordersLoading } = useQuery({
+    queryKey: ["user-orders-for-tickets", user?.id, effectiveRole],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      let query = supabase
+        .from("orders")
+        .select(`
+          id,
+          created_at,
+          doctor_id,
+          total_amount,
+          status,
+          profiles:doctor_id(full_name)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      
+      // Filter based on role
+      if (effectiveRole === "doctor") {
+        query = query.eq("doctor_id", user.id);
+      } else if (effectiveRole === "staff") {
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("practice_id")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (providerData?.practice_id) {
+          query = query.eq("doctor_id", providerData.practice_id);
+        }
+      }
+      // Admin sees all orders (no filter)
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id && ticketType === "pharmacy_order_issue",
+  });
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: TicketFormData) => {
@@ -209,10 +264,33 @@ export function CreateSupportTicketDialog() {
                 name="orderId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Order ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter order ID" {...field} />
-                    </FormControl>
+                    <FormLabel>Order *</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={ordersLoading}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            ordersLoading 
+                              ? "Loading orders..." 
+                              : userOrders?.length 
+                                ? "Select an order" 
+                                : "No orders found"
+                          } />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {userOrders?.map((order) => (
+                          <SelectItem key={order.id} value={order.id}>
+                            {format(new Date(order.created_at), "MMM dd, yyyy")} - 
+                            ${order.total_amount?.toFixed(2)} ({order.status})
+                            {order.profiles?.full_name && ` - ${order.profiles.full_name}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -328,7 +406,7 @@ function getDefaultTicketType(role: string): any {
 function getAvailableTicketTypes(role: string) {
   const allTypes = [
     { value: "pharmacy_order_issue", label: "Pharmacy Order Issue" },
-    { value: "practice_to_admin", label: "Contact Admin" },
+    { value: "practice_to_admin", label: "General Support (Admin)" },
     { value: "rep_to_admin", label: "Contact Admin" },
     { value: "pharmacy_to_admin", label: "Contact Admin" },
     { value: "pharmacy_to_practice", label: "Contact Practice" },

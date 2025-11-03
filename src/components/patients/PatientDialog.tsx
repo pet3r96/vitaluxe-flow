@@ -346,7 +346,7 @@ export const PatientDialog = ({
           // Consider this a success - the update query didn't error
         }
         
-        console.log('[PatientDialog] Update success:', { id: updated.id });
+        console.log('[PatientDialog] Update success:', { id: updated?.id || patient.id });
         queryClient.invalidateQueries({ queryKey: ["patients"] });
         queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
         queryClient.invalidateQueries({ queryKey: ["patient-portal-status", patient.id] });
