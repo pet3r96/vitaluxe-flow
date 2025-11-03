@@ -95,6 +95,8 @@ export function CreateSupportTicketDialog() {
           doctor_id,
           total_amount,
           status,
+          patient_account_id,
+          patient_accounts!inner(first_name, last_name),
           profiles:doctor_id(full_name)
         `)
         .order("created_at", { ascending: false })
@@ -282,11 +284,11 @@ export function CreateSupportTicketDialog() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {userOrders?.map((order) => (
+                        {userOrders?.map((order: any) => (
                           <SelectItem key={order.id} value={order.id}>
                             {format(new Date(order.created_at), "MMM dd, yyyy")} - 
                             ${order.total_amount?.toFixed(2)} ({order.status})
-                            {order.profiles?.full_name && ` - ${order.profiles.full_name}`}
+                            {order.patient_accounts && ` - ${order.patient_accounts.first_name} ${order.patient_accounts.last_name}`}
                           </SelectItem>
                         ))}
                       </SelectContent>

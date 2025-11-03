@@ -324,29 +324,17 @@ export const PatientDialog = ({
           email: patientData.email 
         });
 
-        const { data: updated, error } = await supabase
+        const { error } = await supabase
           .from("patient_accounts")
           .update(patientData)
-          .eq("id", patient.id)
-          .select("*")
-          .maybeSingle();
+          .eq("id", patient.id);
 
         if (error) {
           console.error('[PatientDialog] Update error:', error);
           throw error;
         }
         
-        // Log the update result but don't fail if null (RLS might allow update but block SELECT)
-        if (!updated) {
-          console.warn('[PatientDialog] Update completed but no data returned (RLS may prevent read-after-write):', {
-            patientId: patient.id,
-            effectiveRole,
-            effectivePracticeId
-          });
-          // Consider this a success - the update query didn't error
-        }
-        
-        console.log('[PatientDialog] Update success:', { id: updated?.id || patient.id });
+        console.log('[PatientDialog] Update success - RLS allows update:', { id: patient.id });
         queryClient.invalidateQueries({ queryKey: ["patients"] });
         queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
         queryClient.invalidateQueries({ queryKey: ["patient-portal-status", patient.id] });
