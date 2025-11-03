@@ -108,9 +108,17 @@ export function DocumentsTab() {
         console.log('[DocumentsTab] has uploader_profile?', !!documents[0]?.uploader_profile);
       }
       
+      if (effectiveRole === 'provider') {
+        console.log('[DocumentsTab] Provider context:', {
+          effectivePracticeId,
+          effectiveUserId,
+          documentCount: documents?.length
+        });
+      }
+      
       return documents;
     },
-    enabled: !!effectivePracticeId && (effectiveRole === 'admin' || effectiveRole === 'doctor' || effectiveRole === 'staff'),
+    enabled: !!effectivePracticeId && (effectiveRole === 'admin' || effectiveRole === 'doctor' || effectiveRole === 'staff' || effectiveRole === 'provider'),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
