@@ -265,7 +265,7 @@ serve(async (req) => {
     doc.rect(0.5, 0.5, 7.5, 10, 'S');
 
     // Top section: Prescriber name and credentials (two-line compact layout)
-    doc.setFontSize(10);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     
     // Line 1: Prescriber Name (left) + NPI (right)
@@ -275,7 +275,7 @@ serve(async (req) => {
     doc.text(npiText, 7.75 - npiWidth, 0.75);
     
     // Line 2: DEA (left) + License (right)
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     const deaText = provider_dea ? `DEA: ${provider_dea}` : '';
     const licenseText = provider_license ? `License: ${provider_license}` : '';
     doc.text(deaText, 0.75, 0.95);
@@ -283,7 +283,7 @@ serve(async (req) => {
     doc.text(licenseText, 7.75 - licenseWidth, 0.95);
     
     // Line below credentials
-    doc.line(0.5, 1.05, 8, 1.05);
+    doc.line(0.5, 1.1, 8, 1.1);
 
     // Helper to check if string is an email
     const isEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str || '');
@@ -308,19 +308,19 @@ serve(async (req) => {
     // Provider/Practice info (centered) - moved down after header credentials
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(displayName, 4.25, 1.4, { align: 'center' });
-    doc.setFontSize(10);
+    doc.text(displayName, 4.25, 1.45, { align: 'center' });
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text(displayAddress, 4.25, 1.7, { align: 'center' });
+    doc.text(displayAddress, 4.25, 1.75, { align: 'center' });
 
     // Patient information section
-    doc.setFontSize(12);
+    doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
-    doc.text('PATIENT INFORMATION:', 0.75, 2.1);
+    doc.text('PATIENT INFORMATION:', 0.75, 2.15);
     
     doc.setFontSize(11);
-    const startY = 2.3;
-    const rowHeight = 0.35; // Increased spacing for better readability
+    const startY = 2.4;
+    const rowHeight = 0.4; // Enhanced spacing for better readability
 
     if (is_office_dispensing) {
       // Show "DISPENSING IN OFFICE ONLY" message
@@ -414,37 +414,42 @@ serve(async (req) => {
     doc.setTextColor(139, 69, 19); // Brown color
     doc.text('Rx', 0.8, rxY);
 
-    // Medication information (in bordered box)
+    // Medication information (in bordered box with enhanced visibility)
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(20);
+    doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
     const medBoxY = rxY - 0.3;
     doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.02);
-    doc.rect(3, medBoxY, 4.5, 0.5, 'S'); // Medication box
+    doc.setLineWidth(0.03);
+    doc.rect(3, medBoxY, 4.5, 0.6, 'S'); // Medication box with more height
     // Extract medication name without base dosage to avoid duplication
     const baseName = product_name.replace(/\s+\d+(\.\d+)?(mg|ml|g|mcg).*$/i, '').trim();
-    doc.text(`${baseName} ${dosage || ''}`, 5.25, medBoxY + 0.35, { align: 'center' });
+    doc.text(`${baseName} ${dosage || ''}`, 5.25, medBoxY + 0.42, { align: 'center' });
 
-    // Medication details
+    // Medication details with improved readability
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    const detailsY = medBoxY + 0.8;
+    const detailsY = medBoxY + 0.95;
     doc.setFont('helvetica', 'bold');
     doc.text('Sig:', 3, detailsY);
     doc.setFont('helvetica', 'normal');
-    doc.text(sig || 'As directed by prescriber', 3.5, detailsY, { maxWidth: 4 });
+    // Split long SIG into multiple lines for better readability
+    const sigLines = doc.splitTextToSize(sig || 'As directed by prescriber', 4.2);
+    doc.text(sigLines, 3.6, detailsY);
 
+    const qtyY = detailsY + (sigLines.length * 0.18) + 0.15;
     doc.setFont('helvetica', 'bold');
-    doc.text('Quantity:', 3, detailsY + 0.3);
+    doc.text('Quantity:', 3, qtyY);
     doc.setFont('helvetica', 'normal');
-    doc.text(quantity?.toString() || '1', 3.8, detailsY + 0.3);
+    doc.text(quantity?.toString() || '1', 3.9, qtyY);
 
     if (notes) {
+      const notesY = qtyY + 0.3;
       doc.setFont('helvetica', 'bold');
-      doc.text('Notes:', 3, detailsY + 0.6);
+      doc.text('Notes:', 3, notesY);
       doc.setFont('helvetica', 'normal');
-      doc.text(notes, 3.5, detailsY + 0.6, { maxWidth: 4 });
+      const notesLines = doc.splitTextToSize(notes, 4.2);
+      doc.text(notesLines, 3.6, notesY);
     }
 
     // Signature section
@@ -485,11 +490,13 @@ serve(async (req) => {
     doc.rect(4, bottomY + 0.5, 0.15, 0.15, dispensing_option === 'may_substitute' ? 'F' : 'S');
     doc.text('May Substitute', 4.25, bottomY + 0.65);
 
-    // Footer note
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
+    // Footer note with enhanced visibility
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
     doc.line(0.5, bottomY + 0.95, 8, bottomY + 0.95);
     doc.text('This prescription was generated electronically on ' + date + '.', 4.25, bottomY + 1.15, { align: 'center' });
+    doc.setTextColor(50, 50, 50);
+    doc.setFont('helvetica', 'bold');
     doc.text('For pharmacy use only. Verify prescriber credentials before dispensing.', 4.25, bottomY + 1.35, { align: 'center' });
 
     // Get PDF as array buffer
