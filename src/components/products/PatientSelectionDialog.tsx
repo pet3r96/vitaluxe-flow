@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check, ChevronsUpDown, AlertCircle, Info, Upload, X, FileText, Loader2, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -107,14 +108,21 @@ export const PatientSelectionDialog = ({
   const { data: providers } = useQuery({
     queryKey: ["practice-providers", effectivePracticeId],
     queryFn: async () => {
-      if (!effectivePracticeId) return [];
+      if (!effectivePracticeId) {
+        console.log('[PatientSelectionDialog] ⚠️ No practice ID, skipping provider fetch');
+        return [];
+      }
       
       try {
+        console.log('[PatientSelectionDialog] 🔄 Fetching providers for practice:', effectivePracticeId);
         const { data, error } = await supabase.functions.invoke('list-providers', {
           body: { practice_id: effectivePracticeId }
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error('[PatientSelectionDialog] ❌ Error fetching providers:', error);
+          throw error;
+        }
         
         console.log('[PatientSelectionDialog] 🔍 Raw providers from list-providers:', data?.providers);
         
@@ -207,15 +215,24 @@ export const PatientSelectionDialog = ({
   const { data: practiceData } = useQuery({
     queryKey: ["practice-details", effectivePracticeId],
     queryFn: async () => {
-      if (!effectivePracticeId) return null;
+      if (!effectivePracticeId) {
+        console.log('[PatientSelectionDialog] ⚠️ No practice ID for practice data fetch');
+        return null;
+      }
       
+      console.log('[PatientSelectionDialog] 🔄 Fetching practice data for:', effectivePracticeId);
       const { data, error } = await supabase
         .from("profiles")
         .select("name, address_formatted, address, address_street, address_city, address_state, address_zip")
         .eq("id", effectivePracticeId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('[PatientSelectionDialog] ❌ Error fetching practice data:', error);
+        throw error;
+      }
+      
+      console.log('[PatientSelectionDialog] ✅ Practice data fetched:', data);
       return data;
     },
     enabled: !!effectivePracticeId && open
@@ -482,8 +499,18 @@ export const PatientSelectionDialog = ({
             <>
               {/* Provider Selection */}
               {providers && providers.length > 0 && (
-                <div className="grid gap-3 pb-4 border-b">
-                  <Label className="text-base font-semibold">Select Provider *</Label>
+                <div className={cn(
+                  "grid gap-3 pb-4 border-b",
+                  product?.requires_prescription && !selectedProviderId && providers.length > 1 && "border-amber-500/50 bg-amber-500/5 p-4 rounded-lg"
+                )}>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-base font-semibold">Select Provider *</Label>
+                    {product?.requires_prescription && !selectedProviderId && providers.length > 1 && (
+                      <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30">
+                        Required for Prescription
+                      </Badge>
+                    )}
+                  </div>
                   
                   {/* Show read-only if provider is logged in OR only one provider exists */}
                   {(providers.length === 1 || 
@@ -831,15 +858,50 @@ export const PatientSelectionDialog = ({
                 {/* Show prescription writer button if write method selected - Only for RX Required */}
                 {product?.requires_prescription && prescriptionMethod === 'written' && (
                     <div className="space-y-3">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setShowPrescriptionWriter(true)}
-                        className="w-full"
-                        disabled={!selectedProviderData}
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Open Prescription Writer
-                      </Button>
+                      {!selectedProviderData && (
+                        <Alert className="border-amber-500/30 bg-amber-500/10">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertDescription>
+                            Please select a prescribing provider on the previous page to generate a prescription. Click "Back" to select a provider.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      {!practiceData && selectedProviderData && (
+                        <Alert className="border-amber-500/30 bg-amber-500/10">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertDescription>
+                            Practice information is loading. Please wait a moment before generating the prescription.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="w-full">
+                              <Button 
+                                variant="outline" 
+                                onClick={() => setShowPrescriptionWriter(true)}
+                                className="w-full"
+                                disabled={!selectedProviderData || !practiceData}
+                              >
+                                <FileText className="mr-2 h-4 w-4" />
+                                Open Prescription Writer
+                              </Button>
+                            </div>
+                          </TooltipTrigger>
+                          {(!selectedProviderData || !practiceData) && (
+                            <TooltipContent>
+                              <p>
+                                {!selectedProviderData 
+                                  ? "Please select a provider first" 
+                                  : "Waiting for practice information to load"}
+                              </p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
 
                       {/* Prescription Summary after generation */}
                       {prescriptionPreview && (
