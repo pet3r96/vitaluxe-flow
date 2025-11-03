@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Plus, Edit, Eye, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 import { useState } from "react";
 import { AllergyDialog } from "./dialogs/AllergyDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+
+const formatTimestamp = (dateString: string) => {
+  return format(new Date(dateString), 'MMM dd, yyyy h:mm a');
+};
 
 interface Allergy {
   id: string;

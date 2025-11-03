@@ -118,6 +118,7 @@ export default function ChangePassword() {
     try {
       // TOKEN MODE: Use edge function with token (unauthenticated)
       if (tokenMode && tokenFromUrl) {
+        console.log('[ChangePassword] Resetting password with token...');
         const { data, error } = await supabase.functions.invoke('reset-password-with-token', {
           body: {
             token: tokenFromUrl,
@@ -125,42 +126,61 @@ export default function ChangePassword() {
           }
         });
 
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
+        if (error) {
+          console.error('[ChangePassword] Token reset error:', error);
+          throw error;
+        }
+        if (data?.error) {
+          console.error('[ChangePassword] Token reset failed:', data);
+          throw new Error(data.error);
+        }
+
+        console.log('[ChangePassword] Password reset successful, data:', data);
 
         toast.success("Password set successfully! Logging you in...");
         
+        // Get user email from response or URL parameter
+        const userEmail = data.email || emailFromUrl;
+        console.log('[ChangePassword] Attempting auto-login with email:', userEmail);
+
         // Auto-login the user with their new password
-        if (data?.email) {
+        if (userEmail) {
           try {
             const { error: signInError } = await supabase.auth.signInWithPassword({
-              email: data.email,
+              email: userEmail,
               password: formData.newPassword
             });
             
             if (signInError) {
-              console.error('Auto-login failed:', signInError);
-              // Fallback to redirect to login page
+              console.error('[ChangePassword] Auto-login failed:', signInError);
+              // If auto-login fails, redirect to login page with email pre-filled
+              const redirectUrl = `/auth?email=${encodeURIComponent(userEmail)}&message=password_reset_success`;
+              console.log('[ChangePassword] Redirecting to:', redirectUrl);
               setTimeout(() => {
-                navigate("/auth");
+                navigate(redirectUrl);
               }, 2000);
             } else {
-              // Successfully logged in, redirect to dashboard
+              console.log('[ChangePassword] Auto-login successful, redirecting to home');
+              // Successfully logged in, redirect to home
               setTimeout(() => {
-                navigate("/dashboard");
+                navigate("/");
               }, 1000);
             }
           } catch (loginError) {
-            console.error('Auto-login error:', loginError);
-            // Fallback to redirect to login page
+            console.error('[ChangePassword] Auto-login error:', loginError);
+            // Fallback to redirect to login page with email
+            const redirectUrl = userEmail 
+              ? `/auth?email=${encodeURIComponent(userEmail)}&message=password_reset_success`
+              : '/auth?message=password_reset_success';
             setTimeout(() => {
-              navigate("/auth");
+              navigate(redirectUrl);
             }, 2000);
           }
         } else {
-          // No email returned, redirect to login
+          // No email available, redirect to login without pre-fill
+          console.log('[ChangePassword] No email available, redirecting to login');
           setTimeout(() => {
-            navigate("/auth");
+            navigate("/auth?message=password_reset_success");
           }, 2000);
         }
         return;

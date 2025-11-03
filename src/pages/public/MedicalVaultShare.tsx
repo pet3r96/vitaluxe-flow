@@ -39,11 +39,32 @@ export default function MedicalVaultShare() {
       // Handle edge function errors (410, 404, etc.)
       if (functionError) {
         console.error('[MedicalVaultShare] Edge function error:', functionError);
-        // Try to extract error type from response body
-        const errorBody = functionError.context?.body;
-        const errorType = errorBody?.error || 'internal_error';
-        console.log('[MedicalVaultShare] Setting error state:', errorType);
-        setError(errorType as ErrorType);
+        
+        // Try multiple ways to extract error type from response
+        let errorType: ErrorType = 'internal_error';
+        
+        // Method 1: Check context.body
+        if (functionError.context?.body?.error) {
+          errorType = functionError.context.body.error as ErrorType;
+        }
+        // Method 2: Check if error message is JSON string
+        else if (functionError.message) {
+          try {
+            const parsed = JSON.parse(functionError.message);
+            if (parsed.error) {
+              errorType = parsed.error as ErrorType;
+            }
+          } catch {
+            // Not JSON, continue
+          }
+        }
+        // Method 3: Check direct error property
+        else if ((functionError as any).error) {
+          errorType = (functionError as any).error as ErrorType;
+        }
+        
+        console.log('[MedicalVaultShare] Extracted error type:', errorType);
+        setError(errorType);
         setLoading(false);
         return;
       }

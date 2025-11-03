@@ -10,10 +10,15 @@ import { formatPhoneNumber } from "@/lib/validators";
 import { toast } from "@/hooks/use-toast";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
 
 interface EmergencyContactsSectionProps {
   patientAccountId?: string;
 }
+
+const formatTimestamp = (dateString: string) => {
+  return format(new Date(dateString), 'MMM dd, yyyy h:mm a');
+};
 
 export function EmergencyContactsSection({ patientAccountId }: EmergencyContactsSectionProps) {
   const queryClient = useQueryClient();
@@ -109,16 +114,21 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
             {visibleContacts.map((contact) => (
               <div key={contact.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium">{contact.name}</p>
-                    <Badge variant="outline" className="text-xs">
-                      {contact.relationship}
-                    </Badge>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{contact.name}</p>
+                      <Badge variant="outline" className="text-xs">
+                        {contact.relationship}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{formatPhoneNumber(contact.phone)}</p>
+                    {contact.email && (
+                      <p className="text-sm text-muted-foreground">{contact.email}</p>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      Recorded: {formatTimestamp(contact.created_at)}
+                    </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{formatPhoneNumber(contact.phone)}</p>
-                  {contact.email && (
-                    <p className="text-sm text-muted-foreground">{contact.email}</p>
-                  )}
                 </div>
                 <div className="flex gap-1">
                   <Button 

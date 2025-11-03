@@ -168,11 +168,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Password reset completed successfully for user:", resetToken.user_id);
 
+    // Get user email for frontend auto-login
+    const userEmail = userData?.user?.email;
+    console.log('[reset-password-with-token] Returning success with email:', userEmail);
+    
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Password reset successfully.",
-        email: userData?.user?.email || null,
+        email: userEmail, // Include email for auto-login
         userId: resetToken.user_id
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -14,6 +14,10 @@ interface SurgeriesSectionProps {
   patientAccountId?: string;
 }
 
+const formatTimestamp = (dateString: string) => {
+  return format(new Date(dateString), 'MMM dd, yyyy h:mm a');
+};
+
 export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
@@ -108,15 +112,20 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
             {visibleSurgeries.map((surgery) => (
               <div key={surgery.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
-                  <p className="font-medium">{surgery.surgery_type}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(surgery.surgery_date), 'MMM dd, yyyy')}
-                  </p>
-                  {surgery.surgeon_name && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Surgeon: {surgery.surgeon_name}
+                  <div className="flex flex-col gap-1">
+                    <p className="font-medium">{surgery.surgery_type}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(surgery.surgery_date), 'MMM dd, yyyy')}
                     </p>
-                  )}
+                    {surgery.surgeon_name && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Surgeon: {surgery.surgeon_name}
+                      </p>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      Recorded: {formatTimestamp(surgery.created_at)}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <Button 

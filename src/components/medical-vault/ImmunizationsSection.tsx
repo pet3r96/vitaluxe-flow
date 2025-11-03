@@ -14,6 +14,10 @@ interface ImmunizationsSectionProps {
   patientAccountId?: string;
 }
 
+const formatTimestamp = (dateString: string) => {
+  return format(new Date(dateString), 'MMM dd, yyyy h:mm a');
+};
+
 export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionProps) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
@@ -108,10 +112,15 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
             {visibleImmunizations.map((immunization) => (
               <div key={immunization.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
-                  <p className="font-medium">{immunization.vaccine_name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(immunization.date_administered), 'MMM dd, yyyy')}
-                  </p>
+                  <div className="flex flex-col gap-1">
+                    <p className="font-medium">{immunization.vaccine_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(immunization.date_administered), 'MMM dd, yyyy')}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      Recorded: {formatTimestamp(immunization.created_at)}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <Button 

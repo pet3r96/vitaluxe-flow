@@ -11,17 +11,21 @@ Deno.serve(async (req) => {
     const { token } = await req.json();
 
     if (!token) {
+      console.log('[validate-share-link] Missing token in request');
       return new Response(
         JSON.stringify({ error: 'Token is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('[validate-share-link] Validating token:', token.substring(0, 8) + '...');
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const clientIP = getClientIP(req);
+    console.log('[validate-share-link] Client IP:', clientIP);
 
     // Validate token and get share link data
     const { data: shareLink, error: linkError } = await supabase
@@ -44,15 +48,23 @@ Deno.serve(async (req) => {
       .single();
 
     if (linkError || !shareLink) {
-      console.error('Token not found:', linkError);
+      console.error('[validate-share-link] Token not found:', linkError);
       return new Response(
         JSON.stringify({ error: 'invalid_token', message: 'Invalid share link' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('[validate-share-link] Share link found:', {
+      id: shareLink.id,
+      used_at: shareLink.used_at,
+      expires_at: shareLink.expires_at,
+      is_revoked: shareLink.is_revoked
+    });
+
     // Check if already used
     if (shareLink.used_at) {
+      console.log('[validate-share-link] Link already used at:', shareLink.used_at);
       await supabase.from('audit_logs').insert({
         user_id: null,
         user_email: 'public',
@@ -73,6 +85,7 @@ Deno.serve(async (req) => {
     const now = new Date();
     const expiresAt = new Date(shareLink.expires_at);
     if (now > expiresAt) {
+      console.log('[validate-share-link] Link expired:', { now, expiresAt });
       await supabase.from('audit_logs').insert({
         user_id: null,
         user_email: 'public',
@@ -91,6 +104,7 @@ Deno.serve(async (req) => {
 
     // Check if revoked
     if (shareLink.is_revoked) {
+      console.log('[validate-share-link] Link has been revoked');
       return new Response(
         JSON.stringify({ error: 'revoked', message: 'This link has been revoked' }),
         { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -121,10 +135,18 @@ Deno.serve(async (req) => {
     ]);
 
     // Mark as used IMMEDIATELY before returning data
-    await supabase
+    console.log('[validate-share-link] Marking link as used...');
+    const usedAt = new Date().toISOString();
+    const { error: updateError } = await supabase
       .from('medical_vault_share_links')
-      .update({ used_at: new Date().toISOString(), accessed_by_ip: clientIP })
+      .update({ used_at: usedAt, accessed_by_ip: clientIP })
       .eq('id', shareLink.id);
+    
+    if (updateError) {
+      console.error('[validate-share-link] Failed to mark link as used:', updateError);
+    } else {
+      console.log('[validate-share-link] Link marked as used at:', usedAt);
+    }
 
     // Log successful access
     await supabase.from('audit_logs').insert({
@@ -139,9 +161,11 @@ Deno.serve(async (req) => {
         patient_account_id: patientAccountId,
         patient_name: `${shareLink.patient_accounts.first_name} ${shareLink.patient_accounts.last_name}`,
         ip_address: clientIP,
-        accessed_at: new Date().toISOString()
+        accessed_at: usedAt
       }
     });
+
+    console.log('[validate-share-link] Successfully validated and marked link as used');
 
     // Return data for PDF generation on frontend
     return new Response(
