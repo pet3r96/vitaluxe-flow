@@ -433,23 +433,18 @@ serve(async (req) => {
     doc.setFont('helvetica', 'bold');
     doc.text('Sig:', 3, detailsY);
     doc.setFont('helvetica', 'normal');
-    // Split long SIG into multiple lines for better readability
-    const sigLines = doc.splitTextToSize(sig || 'As directed by prescriber', 4.2);
-    doc.text(sigLines, 3.6, detailsY);
+    doc.text(sig || 'As directed by prescriber', 3.6, detailsY, { maxWidth: 4.2 });
 
-    const qtyY = detailsY + (sigLines.length * 0.18) + 0.15;
     doc.setFont('helvetica', 'bold');
-    doc.text('Quantity:', 3, qtyY);
+    doc.text('Quantity:', 3, detailsY + 0.35);
     doc.setFont('helvetica', 'normal');
-    doc.text(quantity?.toString() || '1', 3.9, qtyY);
+    doc.text(quantity?.toString() || '1', 3.9, detailsY + 0.35);
 
     if (notes) {
-      const notesY = qtyY + 0.3;
       doc.setFont('helvetica', 'bold');
-      doc.text('Notes:', 3, notesY);
+      doc.text('Notes:', 3, detailsY + 0.7);
       doc.setFont('helvetica', 'normal');
-      const notesLines = doc.splitTextToSize(notes, 4.2);
-      doc.text(notesLines, 3.6, notesY);
+      doc.text(notes, 3.6, detailsY + 0.7, { maxWidth: 4.2 });
     }
 
     // Signature section
