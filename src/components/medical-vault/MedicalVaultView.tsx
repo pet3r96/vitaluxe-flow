@@ -55,7 +55,7 @@ export function MedicalVaultView({
   const { effectiveRole, user } = useAuth();
 
   // Fetch audit logs
-  const { data: auditLogs = [], isLoading: isLoadingAuditLogs } = useAuditLogs(patientAccountId);
+  const { data: auditLogs = [], isLoading: isLoadingAuditLogs, refetch: refetchAuditLogs } = useAuditLogs(patientAccountId);
 
   // Debug audit logs state
   useEffect(() => {
@@ -524,7 +524,11 @@ export function MedicalVaultView({
                 <Button 
                   variant="vault" 
                   size="sm"
-                  onClick={() => setAuditDialogOpen(true)}
+                  onClick={() => {
+                    console.log('[MedicalVault] Opening audit dialog, refetching logs');
+                    refetchAuditLogs();
+                    setAuditDialogOpen(true);
+                  }}
                 >
                   <ClipboardList className="h-3 w-3" />
                   Audit

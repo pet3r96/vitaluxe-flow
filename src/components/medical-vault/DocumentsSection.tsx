@@ -37,7 +37,18 @@ export function DocumentsSection({ patientAccountId, mode, canEdit }: DocumentsS
         console.error('[DocumentsSection] Error fetching documents:', error);
         throw error;
       }
-      console.log('[DocumentsSection] Found documents:', data?.length || 0);
+      
+      console.log('[DocumentsSection] Found documents:', {
+        count: data?.length || 0,
+        patientAccountId,
+        mode,
+        documents: data?.map(d => ({
+          id: d.id,
+          name: d.document_name,
+          shared: d.share_with_practice
+        }))
+      });
+      
       return (data || []) as PatientDocument[];
     },
     enabled: !!patientAccountId,

@@ -13,7 +13,10 @@ import { useAuth } from "@/contexts/AuthContext";
 export function Topbar() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
+  
+  // Hide topbar on mobile for patient users (PatientMobileHeader replaces it)
+  const isPatientMobile = effectiveRole === 'patient';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,7 +27,7 @@ export function Topbar() {
   }, []);
 
   return (
-    <div className={`sticky top-0 z-10 flex items-center justify-between gap-1.5 sm:gap-2 md:gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-3 md:px-4 lg:px-6 py-1.5 sm:py-2 md:py-3 transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_12px_rgba(190,155,75,0.15)]' : ''}`}>
+    <div className={`${isPatientMobile ? 'hidden md:flex' : 'flex'} sticky top-0 z-10 items-center justify-between gap-1.5 sm:gap-2 md:gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-3 md:px-4 lg:px-6 py-1.5 sm:py-2 md:py-3 transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_12px_rgba(190,155,75,0.15)]' : ''}`}>
       <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 flex-1 min-w-0">
         <SidebarTrigger className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 flex-shrink-0" />
         <div className="flex-1 min-w-0 max-w-full">

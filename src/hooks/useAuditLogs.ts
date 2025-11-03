@@ -38,18 +38,29 @@ export const useAuditLogs = (patientAccountId?: string) => {
   return useQuery({
     queryKey: ["medical-vault-audit-logs", patientAccountId],
     queryFn: async () => {
-      if (!patientAccountId) return [];
+      if (!patientAccountId) {
+        console.log('[useAuditLogs] No patientAccountId provided');
+        return [];
+      }
 
+      console.log('[useAuditLogs] Fetching audit logs for:', patientAccountId);
+      
       const { data, error } = await supabase
         .from("medical_vault_audit_logs")
         .select("*")
         .eq("patient_account_id", patientAccountId)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useAuditLogs] Query error:', error);
+        throw error;
+      }
+      
+      console.log('[useAuditLogs] Found entries:', data?.length || 0, 'entries');
       return data as AuditLog[];
     },
     enabled: !!patientAccountId,
+    refetchOnMount: 'always',
   });
 };
 
