@@ -117,14 +117,22 @@ export const PatientSelectionDialog = ({
         if (error) throw error;
         
         return (data?.providers || []).map((p: any) => {
-          // Derive display name with robust fallbacks
-          let displayName = p.profiles?.prescriber_name || 
-                           p.profiles?.full_name || 
-                           p.profiles?.name;
+          // Priority 1: prescriber_name (if not empty)
+          let displayName = p.profiles?.prescriber_name?.trim();
           
-          // If displayName is an email, derive a readable name from it
-          if (displayName?.includes('@')) {
-            displayName = deriveNameFromEmail(displayName);
+          // Priority 2: full_name (if not empty)
+          if (!displayName) {
+            displayName = p.profiles?.full_name?.trim();
+          }
+          
+          // Priority 3: name field (but only if it's NOT an email)
+          if (!displayName && p.profiles?.name && !p.profiles.name.includes('@')) {
+            displayName = p.profiles.name.trim();
+          }
+          
+          // Priority 4: Derive from email (last resort)
+          if (!displayName && p.profiles?.name?.includes('@')) {
+            displayName = deriveNameFromEmail(p.profiles.name);
           }
           
           // Final fallback
