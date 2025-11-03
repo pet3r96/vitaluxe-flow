@@ -169,7 +169,7 @@ export default function PatientDashboard() {
         .select('id, start_time, end_time, visit_type, status, practice_id, provider_id')
         .eq("patient_id", patientAccount.id)
         .gte("start_time", new Date().toISOString())
-        .in('status', ['scheduled', 'pending'])
+        .in('status', ['scheduled', 'pending', 'confirmed'])
         .order("start_time", { ascending: true })
         .limit(1)
         .maybeSingle();
