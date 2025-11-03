@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     // Fetch patients for the practice
     const { data: patients, error: patientsError } = await supabase
       .from('patient_accounts')
-      .select('id, user_id, first_name, last_name, email, phone, address')
+      .select('id, user_id, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted')
       .eq('practice_id', practiceId)
       .order('last_name', { ascending: true });
 
