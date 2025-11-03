@@ -5,7 +5,7 @@ export interface AuditLog {
   id: string;
   patient_account_id: string;
   action_type: 'created' | 'updated' | 'deleted' | 'pre_intake_completed';
-  entity_type: 'medication' | 'condition' | 'allergy' | 'vital' | 'immunization' | 'surgery' | 'pharmacy' | 'emergency_contact' | 'demographics' | 'pre_intake_form';
+  entity_type: 'medication' | 'condition' | 'allergy' | 'vital' | 'immunization' | 'surgery' | 'pharmacy' | 'emergency_contact' | 'demographics' | 'pre_intake_form' | 'document';
   entity_id?: string;
   entity_name?: string;
   changed_by_user_id?: string;
@@ -79,7 +79,7 @@ export const logMedicalVaultChange = async ({
 }: {
   patientAccountId: string;
   actionType: 'created' | 'updated' | 'deleted' | 'pre_intake_completed';
-  entityType: 'medication' | 'condition' | 'allergy' | 'vital' | 'immunization' | 'surgery' | 'pharmacy' | 'emergency_contact' | 'demographics' | 'pre_intake_form';
+  entityType: 'medication' | 'condition' | 'allergy' | 'vital' | 'immunization' | 'surgery' | 'pharmacy' | 'emergency_contact' | 'demographics' | 'pre_intake_form' | 'document';
   entityId?: string;
   entityName?: string;
   changedByUserId?: string;

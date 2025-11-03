@@ -23,36 +23,90 @@ export function DocumentsSection({ patientAccountId, mode, canEdit }: DocumentsS
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<PatientDocument | null>(null);
 
-  const { data: documents = [], isLoading } = useQuery({
-    queryKey: ["patient-documents-vault", patientAccountId],
-    queryFn: async () => {
-      console.log('[DocumentsSection] Fetching documents for patient_account:', patientAccountId);
-      const { data, error } = await supabase
-        .from("patient_documents")
-        .select("*")
-        .eq("patient_id", patientAccountId)
-        .order("created_at", { ascending: false });
+const { data: documents = [], isLoading } = useQuery({
+  queryKey: ["patient-documents-vault", patientAccountId, mode],
+  queryFn: async () => {
+    console.log('[DocumentsSection] Fetching documents for patient_account:', patientAccountId, 'mode:', mode);
 
-      if (error) {
-        console.error('[DocumentsSection] Error fetching documents:', error);
-        throw error;
-      }
-      
-      console.log('[DocumentsSection] Found documents:', {
-        count: data?.length || 0,
-        patientAccountId,
-        mode,
-        documents: data?.map(d => ({
+    // In practice mode, mirror Document Center behavior by using the unified RPC
+    if (mode === 'practice') {
+      try {
+        const { data, error } = await supabase.rpc('get_patient_unified_documents', {
+          p_patient_id: patientAccountId,
+        });
+        if (error) throw error;
+
+        const unified = (data || []) as Array<{
+          id: string; source: string; share_with_practice: boolean; patient_id: string; document_name: string; document_type: string; storage_path: string; file_size: number | null; notes: string | null; uploaded_at: string;
+        }>;
+
+        // Only show patient uploads that are explicitly shared with practice
+        const sharedPatientUploads = unified.filter((d) => d.source === 'patient_uploaded' && d.share_with_practice === true);
+
+        if (sharedPatientUploads.length === 0) return [] as PatientDocument[];
+
+        // Fetch missing details (mime_type, created_at) from patient_documents
+        const ids = sharedPatientUploads.map((d) => d.id);
+        const { data: details, error: detailsError } = await supabase
+          .from('patient_documents')
+          .select('id, mime_type, created_at, file_size, notes')
+          .in('id', ids);
+        if (detailsError) throw detailsError;
+        const map = new Map((details || []).map((d: any) => [d.id, d]));
+
+        const mapped = sharedPatientUploads.map((d) => ({
           id: d.id,
-          name: d.document_name,
-          shared: d.share_with_practice
-        }))
-      });
-      
-      return (data || []) as PatientDocument[];
-    },
-    enabled: !!patientAccountId,
-  });
+          patient_id: d.patient_id,
+          document_name: d.document_name,
+          document_type: d.document_type,
+          storage_path: d.storage_path,
+          file_size: (map.get(d.id)?.file_size ?? d.file_size) as number | null,
+          notes: (map.get(d.id)?.notes ?? d.notes) as string | null,
+          share_with_practice: d.share_with_practice,
+          mime_type: (map.get(d.id)?.mime_type ?? null) as string | null,
+          created_at: (map.get(d.id)?.created_at ?? d.uploaded_at) as string,
+          updated_at: (map.get(d.id)?.created_at ?? d.uploaded_at) as string,
+          custom_title: null,
+          hidden_by_patient: null,
+          uploaded_by: null,
+        })) as PatientDocument[];
+
+        console.log('[DocumentsSection] Unified shared docs for practice:', mapped.length);
+        return mapped;
+      } catch (err) {
+        console.warn('[DocumentsSection] Unified RPC failed, falling back to direct table with share filter', err);
+        // Fall through to filtered table query
+      }
+    }
+
+    // Default: direct table query (patient mode) or fallback for practice
+    const query = supabase
+      .from("patient_documents")
+      .select("*")
+      .eq("patient_id", patientAccountId)
+      .order("created_at", { ascending: false });
+
+    if (mode === 'practice') {
+      query.eq('share_with_practice', true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('[DocumentsSection] Error fetching documents:', error);
+      throw error;
+    }
+
+    console.log('[DocumentsSection] Found documents:', {
+      count: data?.length || 0,
+      patientAccountId,
+      mode,
+    });
+
+    return (data || []) as PatientDocument[];
+  },
+  enabled: !!patientAccountId,
+});
 
   const handlePreview = (doc: PatientDocument) => {
     setSelectedDocument(doc);

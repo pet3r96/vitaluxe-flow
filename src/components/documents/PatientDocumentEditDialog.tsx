@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
 
 interface PatientDocumentEditDialogProps {
   open: boolean;
@@ -34,36 +35,62 @@ export function PatientDocumentEditDialog({
   const [shareWithPractice, setShareWithPractice] = useState(document.share_with_practice ?? true);
   const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("patient_documents")
-        .update({
-          notes,
-          share_with_practice: shareWithPractice,
-        } as any)
-        .eq("id", document.id);
+const handleSave = async () => {
+  setSaving(true);
+  try {
+    const prevNotes = document.notes || null;
+    const prevShare = document.share_with_practice ?? true;
 
-      if (error) throw error;
+    const { error } = await supabase
+      .from("patient_documents")
+      .update({
+        notes,
+        share_with_practice: shareWithPractice,
+      } as any)
+      .eq("id", document.id);
 
-      toast({
-        title: "Document Updated",
-        description: "Your document has been updated successfully.",
+    if (error) throw error;
+
+    // Fetch patient_id for audit logging
+    const { data: pd, error: pdError } = await supabase
+      .from('patient_documents')
+      .select('patient_id')
+      .eq('id', document.id)
+      .maybeSingle();
+
+    if (!pdError && pd?.patient_id) {
+      const { data: userRes } = await supabase.auth.getUser();
+      await logMedicalVaultChange({
+        patientAccountId: pd.patient_id,
+        actionType: 'updated',
+        entityType: 'document',
+        entityId: document.id,
+        entityName: document.document_name,
+        changedByUserId: userRes?.user?.id,
+        changedByRole: 'patient',
+        oldData: { notes: prevNotes, share_with_practice: prevShare },
+        newData: { notes, share_with_practice: shareWithPractice },
+        changeSummary: 'Updated document notes/sharing',
       });
-
-      onSuccess();
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: "Update Failed",
-        description: error.message || "Could not update document",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
     }
-  };
+
+    toast({
+      title: "Document Updated",
+      description: "Your document has been updated successfully.",
+    });
+
+    onSuccess();
+    onOpenChange(false);
+  } catch (error: any) {
+    toast({
+      title: "Update Failed",
+      description: error.message || "Could not update document",
+      variant: "destructive",
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (document.source === 'provider_assigned') {
     return (
