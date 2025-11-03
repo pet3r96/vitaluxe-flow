@@ -192,16 +192,38 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
         if (error) throw error;
         // Success! No need to verify with SELECT - RLS may block read-after-write
       } else {
+        // Get the authenticated user ID for RLS compliance
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) throw new Error("Not authenticated");
+        
+        console.log('[VitalsDialog] Adding vitals:', {
+          authUserId: authUser.id,
+          patientAccountId,
+          vitalType,
+          effectiveRole
+        });
+        
         // Insert new record
         const { error } = await supabase
           .from("patient_vitals")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: user?.id,
+            added_by_user_id: authUser.id,  // Use authUser.id instead of user?.id
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
-        if (error) throw error;
+        
+        if (error) {
+          console.error('[VitalsDialog] Insert error:', {
+            error,
+            code: error.code,
+            message: error.message,
+            details: error.details
+          });
+          throw error;
+        }
+        
+        console.log('[VitalsDialog] Insert successful');
         // Success! No need to verify with SELECT - RLS may block read-after-write
       }
     },
