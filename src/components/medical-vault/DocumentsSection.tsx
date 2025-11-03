@@ -40,38 +40,57 @@ const { data: documents = [], isLoading } = useQuery({
           id: string; source: string; share_with_practice: boolean; patient_id: string; document_name: string; document_type: string; storage_path: string; file_size: number | null; notes: string | null; uploaded_at: string;
         }>;
 
-        // Only show patient uploads that are explicitly shared with practice
-        const sharedPatientUploads = unified.filter((d) => d.source === 'patient_uploaded' && d.share_with_practice === true);
+        // Show BOTH patient uploads shared with practice AND provider documents assigned to patient
+        const relevantDocs = unified.filter((d) => {
+          // Include patient uploads that are shared with practice
+          if (d.source === 'patient_uploaded' && d.share_with_practice === true) {
+            return true;
+          }
+          // Include provider documents assigned to this patient
+          if (d.source === 'provider_assigned') {
+            return true;
+          }
+          return false;
+        });
 
-        if (sharedPatientUploads.length === 0) return [] as PatientDocument[];
+        if (relevantDocs.length === 0) return [] as PatientDocument[];
 
-        // Fetch missing details (mime_type, created_at) from patient_documents
-        const ids = sharedPatientUploads.map((d) => d.id);
-        const { data: details, error: detailsError } = await supabase
-          .from('patient_documents')
-          .select('id, mime_type, created_at, file_size, notes')
-          .in('id', ids);
-        if (detailsError) throw detailsError;
-        const map = new Map((details || []).map((d: any) => [d.id, d]));
+        // Fetch missing details for patient documents only
+        const patientDocIds = relevantDocs
+          .filter(d => d.source === 'patient_uploaded')
+          .map(d => d.id);
 
-        const mapped = sharedPatientUploads.map((d) => ({
-          id: d.id,
-          patient_id: d.patient_id,
-          document_name: d.document_name,
-          document_type: d.document_type,
-          storage_path: d.storage_path,
-          file_size: (map.get(d.id)?.file_size ?? d.file_size) as number | null,
-          notes: (map.get(d.id)?.notes ?? d.notes) as string | null,
-          share_with_practice: d.share_with_practice,
-          mime_type: (map.get(d.id)?.mime_type ?? null) as string | null,
-          created_at: (map.get(d.id)?.created_at ?? d.uploaded_at) as string,
-          updated_at: (map.get(d.id)?.created_at ?? d.uploaded_at) as string,
-          custom_title: null,
-          hidden_by_patient: null,
-          uploaded_by: null,
-        })) as PatientDocument[];
+        let patientDocDetails = new Map();
+        if (patientDocIds.length > 0) {
+          const { data: details, error: detailsError } = await supabase
+            .from('patient_documents')
+            .select('id, mime_type, created_at, file_size, notes')
+            .in('id', patientDocIds);
+          if (detailsError) throw detailsError;
+          patientDocDetails = new Map((details || []).map((d: any) => [d.id, d]));
+        }
 
-        console.log('[DocumentsSection] Unified shared docs for practice:', mapped.length);
+        const mapped = relevantDocs.map((d) => {
+          const detail = patientDocDetails.get(d.id);
+          return {
+            id: d.id,
+            patient_id: d.patient_id,
+            document_name: d.document_name,
+            document_type: d.document_type,
+            storage_path: d.storage_path,
+            file_size: (detail?.file_size ?? d.file_size) as number | null,
+            notes: (detail?.notes ?? d.notes) as string | null,
+            share_with_practice: d.share_with_practice,
+            mime_type: (detail?.mime_type ?? null) as string | null,
+            created_at: (detail?.created_at ?? d.uploaded_at) as string,
+            updated_at: (detail?.created_at ?? d.uploaded_at) as string,
+            custom_title: null,
+            hidden_by_patient: null,
+            uploaded_by: null,
+          };
+        }) as PatientDocument[];
+
+        console.log('[DocumentsSection] Unified docs for practice (patient uploads + provider docs):', mapped.length);
         return mapped;
       } catch (err) {
         console.warn('[DocumentsSection] Unified RPC failed, falling back to direct table with share filter', err);
@@ -115,9 +134,22 @@ const { data: documents = [], isLoading } = useQuery({
 
   const handleDownload = async (doc: PatientDocument) => {
     try {
+      // Determine bucket based on storage path
+      // Provider documents have practice_id in path: "2feb9460-.../documents/..."
+      // Patient documents have user_id in path: "a1ba2c12-..."
+      const isProviderDoc = doc.storage_path.includes('/documents/');
+      const bucket = isProviderDoc ? 'provider-documents' : 'patient-documents';
+      
+      console.log('[DocumentsSection] Downloading:', {
+        name: doc.document_name,
+        path: doc.storage_path,
+        bucket,
+        isProviderDoc
+      });
+
       const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
         body: {
-          bucket: 'patient-documents',
+          bucket,
           path: doc.storage_path,
           expiresIn: 300
         }
@@ -272,7 +304,7 @@ const { data: documents = [], isLoading } = useQuery({
           onOpenChange={setPreviewOpen}
           documentName={selectedDocument.document_name}
           storagePath={selectedDocument.storage_path}
-          bucketName="patient-documents"
+          bucketName={selectedDocument.storage_path.includes('/documents/') ? 'provider-documents' : 'patient-documents'}
           mimeType={selectedDocument.mime_type}
         />
       )}
