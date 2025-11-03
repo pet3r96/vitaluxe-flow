@@ -59,7 +59,7 @@ serve(async (req) => {
         ),
         providers (
           id,
-          profiles (
+          profiles!providers_user_id_fkey (
             full_name,
             name,
             email,
