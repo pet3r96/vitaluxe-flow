@@ -116,6 +116,8 @@ export const PatientSelectionDialog = ({
         
         if (error) throw error;
         
+        console.log('[PatientSelectionDialog] 🔍 Raw providers from list-providers:', data?.providers);
+        
         return (data?.providers || []).map((p: any) => {
           // Priority 1: prescriber_name (if not empty)
           let displayName = p.profiles?.prescriber_name?.trim();
@@ -162,9 +164,20 @@ export const PatientSelectionDialog = ({
   useEffect(() => {
     if (!open || !providers || providers.length === 0) return;
     
+    console.log('[PatientSelectionDialog] 🎯 Auto-select logic:', {
+      role: effectiveRole,
+      userId: effectiveUserId,
+      providersCount: providers.length,
+      providers: providers
+    });
+    
     // For providers: find their own provider record
     if (effectiveRole === "provider" && effectiveUserId) {
       const matchingProvider = providers.find((p: any) => p.user_id === effectiveUserId);
+      console.log('[PatientSelectionDialog] 🔎 Provider role matching:', {
+        matchingProvider,
+        selectedId: matchingProvider?.id
+      });
       if (matchingProvider) {
         setSelectedProviderId(matchingProvider.id);
       }
@@ -183,6 +196,12 @@ export const PatientSelectionDialog = ({
   const selectedProviderData = selectedProviderId 
     ? providers?.find((p: any) => p.id === selectedProviderId)
     : null;
+  
+  console.log('[PatientSelectionDialog] 📊 Selected provider data:', {
+    selectedProviderId,
+    selectedProviderData,
+    providersAvailable: providers?.length
+  });
 
   // Fetch practice details for prescription writer
   const { data: practiceData } = useQuery({
