@@ -59,7 +59,8 @@ export const PatientSelectionDialog = ({
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [prescriptionPreview, setPrescriptionPreview] = useState<string>("");
   const [uploadingPrescription, setUploadingPrescription] = useState(false);
-  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [providerComboboxOpen, setProviderComboboxOpen] = useState(false);
+  const [patientComboboxOpen, setPatientComboboxOpen] = useState(false);
   const [prescriptionMethod, setPrescriptionMethod] = useState<'upload' | 'written' | null>(null);
   const [showPrescriptionWriter, setShowPrescriptionWriter] = useState(false);
   const [customSig, setCustomSig] = useState("");
@@ -485,12 +486,12 @@ export const PatientSelectionDialog = ({
                   ) : (
                     // Multiple providers - use searchable combobox
                     <div className="grid gap-2">
-                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
+                      <Popover open={providerComboboxOpen} onOpenChange={setProviderComboboxOpen} modal={true}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             role="combobox"
-                            aria-expanded={comboboxOpen}
+                            aria-expanded={providerComboboxOpen}
                             className="justify-between w-full"
                             type="button"
                           >
@@ -517,7 +518,7 @@ export const PatientSelectionDialog = ({
                                     onSelect={() => {
                                       console.log('[PatientSelectionDialog] Provider selected:', provider.id);
                                       setSelectedProviderId(provider.id);
-                                      setComboboxOpen(false);
+                                      setProviderComboboxOpen(false);
                                     }}
                                     className="cursor-pointer"
                                   >
@@ -579,13 +580,14 @@ export const PatientSelectionDialog = ({
                 {shipTo === 'patient' ? (
                   <div className="grid gap-2">
                     <Label>Patient</Label>
-                    <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <Popover open={patientComboboxOpen} onOpenChange={setPatientComboboxOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
-                          aria-expanded={comboboxOpen}
-                          className="justify-between"
+                          aria-expanded={patientComboboxOpen}
+                          className="justify-between w-full"
+                          type="button"
                         >
                           {selectedPatient
                             ? `${selectedPatient.name} ${selectedPatient.birth_date ? `(DOB: ${format(new Date(selectedPatient.birth_date), "MM/dd/yyyy")})` : ""}`
@@ -593,20 +595,25 @@ export const PatientSelectionDialog = ({
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0">
+                      <PopoverContent 
+                        className="w-[400px] p-0 z-[100]" 
+                        align="start"
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                      >
                         <Command>
-                          <CommandInput placeholder="Search patients..." />
+                          <CommandInput placeholder="Search patients..." className="h-9" />
                           <CommandList>
                             <CommandEmpty>No patient found.</CommandEmpty>
                             <CommandGroup>
                               {patients?.map((patient) => (
                                 <CommandItem
                                   key={patient.id}
-                                  value={patient.name}
+                                  value={`${patient.name}-${patient.id}`}
                                   onSelect={() => {
                                     setSelectedPatientId(patient.id);
-                                    setComboboxOpen(false);
+                                    setPatientComboboxOpen(false);
                                   }}
+                                  className="cursor-pointer"
                                 >
                                   <Check
                                     className={cn(
