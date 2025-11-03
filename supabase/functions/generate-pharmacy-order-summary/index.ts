@@ -6,6 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function formatShippingSpeed(speed: string): string {
+  const speedMap: Record<string, string> = {
+    'ground': 'Ground Shipping (5-7 business days)',
+    '2day': '2-Day Shipping (2 business days)',
+    'overnight': 'Overnight Shipping (Next business day)',
+    'Standard': 'Standard Shipping (5-7 business days)',
+    'Multiple speeds': 'Multiple Speeds (Varies by item)'
+  };
+  
+  return speedMap[speed] || `${speed} (5-7 business days)`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -74,10 +86,12 @@ serve(async (req) => {
     // Determine shipping speed from order lines
     const shippingSpeeds = lines?.map(l => l.shipping_speed).filter(Boolean) || [];
     const uniqueSpeeds = [...new Set(shippingSpeeds)];
-    const displayShippingSpeed = 
+    const rawSpeed = 
       uniqueSpeeds.length === 0 ? 'Standard' :
       uniqueSpeeds.length === 1 ? uniqueSpeeds[0] :
       'Multiple speeds';
+    
+    const displayShippingSpeed = formatShippingSpeed(rawSpeed);
 
     // Fetch patient addresses if shipping to patient
     const patientAddresses = new Map();
