@@ -89,6 +89,17 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
 
   const mutation = useOptimisticMutation(
     async (data: ConditionFormData) => {
+      // Get authenticated user directly from Supabase auth (matches RLS auth.uid())
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Not authenticated");
+      
+      console.log('[ConditionDialog] Auth check:', {
+        authUserId: authUser.id,
+        authEmail: authUser.email,
+        patientAccountId,
+        mode,
+      });
+      
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullDate = data.date_diagnosed + "-01";
       
@@ -107,8 +118,16 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
           .from("patient_conditions")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
           .eq("id", condition.id);
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[ConditionDialog] UPDATE failed:', {
+            error: error.message,
+            code: error.code,
+            conditionId: condition.id,
+          });
+          throw error;
+        }
+        console.log('[ConditionDialog] UPDATE success');
       } else {
         const { error } = await supabase
           .from("patient_conditions")
@@ -116,11 +135,22 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
             ...formattedData,
             patient_account_id: patientAccountId,
             is_active: true,
-            added_by_user_id: user?.id,
+            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[ConditionDialog] INSERT failed:', {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            authUserId: authUser.id,
+            patientAccountId,
+          });
+          throw error;
+        }
+        console.log('[ConditionDialog] INSERT success');
       }
     },
     {

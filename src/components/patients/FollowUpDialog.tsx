@@ -92,6 +92,29 @@ export function FollowUpDialog({
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error("Not authenticated");
 
+      // Verify user belongs to patient's practice before attempting mutation
+      const { data: practiceCheck, error: rpcError } = await supabase.rpc('user_belongs_to_patient_practice', {
+        _user_id: user.id,
+        _patient_account_id: patientId
+      });
+
+      console.log('[FollowUpDialog] Practice membership check:', {
+        userId: user.id,
+        userEmail: user.email,
+        patientId,
+        belongsToPractice: practiceCheck,
+        rpcError: rpcError?.message,
+      });
+
+      if (rpcError) {
+        console.error('[FollowUpDialog] RPC check failed:', rpcError);
+        throw new Error(`Practice access check failed: ${rpcError.message}`);
+      }
+
+      if (!practiceCheck) {
+        throw new Error("You do not have access to this patient's practice");
+      }
+
       const payload = {
         patient_id: patientId,
         created_by: user.id,

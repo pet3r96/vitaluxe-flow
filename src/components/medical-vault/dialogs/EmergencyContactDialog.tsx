@@ -54,6 +54,16 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
 
   const mutation = useOptimisticMutation(
     async (data: EmergencyContactFormData) => {
+      // Get authenticated user directly from Supabase auth (matches RLS auth.uid())
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Not authenticated");
+      
+      console.log('[EmergencyContactDialog] Auth check:', {
+        authUserId: authUser.id,
+        patientAccountId,
+        mode,
+      });
+      
       const formattedData = {
         name: data.name,
         relationship: data.relationship,
@@ -68,19 +78,31 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
           .from("patient_emergency_contacts")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
           .eq("id", contact.id);
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[EmergencyContactDialog] UPDATE failed:', error.message);
+          throw error;
+        }
+        console.log('[EmergencyContactDialog] UPDATE success');
       } else {
         const { error } = await supabase
           .from("patient_emergency_contacts")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: user?.id,
+            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[EmergencyContactDialog] INSERT failed:', {
+            error: error.message,
+            authUserId: authUser.id,
+            patientAccountId,
+          });
+          throw error;
+        }
+        console.log('[EmergencyContactDialog] INSERT success');
       }
     },
     {

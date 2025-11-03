@@ -72,6 +72,16 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
 
   const mutation = useOptimisticMutation(
     async (data: PharmacyFormData) => {
+      // Get authenticated user directly from Supabase auth (matches RLS auth.uid())
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Not authenticated");
+      
+      console.log('[PharmacyDialog] Auth check:', {
+        authUserId: authUser.id,
+        patientAccountId,
+        mode,
+      });
+      
       const formattedData = {
         pharmacy_name: data.pharmacy_name || null,
         address: data.address,
@@ -95,19 +105,31 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
           .from("patient_pharmacies")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
           .eq("id", pharmacy.id);
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[PharmacyDialog] UPDATE failed:', error.message);
+          throw error;
+        }
+        console.log('[PharmacyDialog] UPDATE success');
       } else {
         const { error } = await supabase
           .from("patient_pharmacies")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: user?.id,
+            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[PharmacyDialog] INSERT failed:', {
+            error: error.message,
+            authUserId: authUser.id,
+            patientAccountId,
+          });
+          throw error;
+        }
+        console.log('[PharmacyDialog] INSERT success');
       }
     },
     {

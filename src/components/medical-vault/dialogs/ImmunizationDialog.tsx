@@ -45,6 +45,16 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
 
   const mutation = useOptimisticMutation(
     async (data: ImmunizationFormData) => {
+      // Get authenticated user directly from Supabase auth (matches RLS auth.uid())
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Not authenticated");
+      
+      console.log('[ImmunizationDialog] Auth check:', {
+        authUserId: authUser.id,
+        patientAccountId,
+        mode,
+      });
+      
       const formattedData = {
         vaccine_name: data.vaccine_name,
         date_administered: `${data.date_administered}-01`, // Convert YYYY-MM to YYYY-MM-01
@@ -58,19 +68,31 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           .from("patient_immunizations")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
           .eq("id", immunization.id);
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[ImmunizationDialog] UPDATE failed:', error.message);
+          throw error;
+        }
+        console.log('[ImmunizationDialog] UPDATE success');
       } else {
         const { error } = await supabase
           .from("patient_immunizations")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: user?.id,
+            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[ImmunizationDialog] INSERT failed:', {
+            error: error.message,
+            authUserId: authUser.id,
+            patientAccountId,
+          });
+          throw error;
+        }
+        console.log('[ImmunizationDialog] INSERT success');
       }
     },
     {

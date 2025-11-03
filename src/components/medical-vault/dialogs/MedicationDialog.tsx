@@ -123,6 +123,17 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
 
   const mutation = useOptimisticMutation(
     async (data: MedicationFormData) => {
+      // Get authenticated user directly from Supabase auth (matches RLS auth.uid())
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Not authenticated");
+      
+      console.log('[MedicationDialog] Auth check:', {
+        authUserId: authUser.id,
+        authEmail: authUser.email,
+        patientAccountId,
+        mode,
+      });
+      
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullStartDate = data.start_date + "-01";
       
@@ -143,8 +154,16 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
           .from("patient_medications")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
           .eq("id", medication.id);
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[MedicationDialog] UPDATE failed:', {
+            error: error.message,
+            code: error.code,
+            medicationId: medication.id,
+          });
+          throw error;
+        }
+        console.log('[MedicationDialog] UPDATE success');
       } else {
         const { error } = await supabase
           .from("patient_medications")
@@ -152,11 +171,22 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
             ...formattedData,
             patient_account_id: patientAccountId,
             is_active: true,
-            added_by_user_id: user?.id,
+            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
-        if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
+        
+        if (error) {
+          console.error('[MedicationDialog] INSERT failed:', {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            authUserId: authUser.id,
+            patientAccountId,
+          });
+          throw error;
+        }
+        console.log('[MedicationDialog] INSERT success');
       }
     },
     {
