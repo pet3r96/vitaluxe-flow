@@ -215,24 +215,30 @@ export const ProductCard = memo(({
               <p className="text-sm text-muted-foreground line-clamp-1">{product.dosage}</p>
             )}
             {product.description && (
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p className="text-sm text-muted-foreground line-clamp-1 cursor-help hover:text-foreground transition-colors">
-                      {product.description}
-                    </p>
-                  </TooltipTrigger>
-                  <TooltipContent 
-                    className="max-w-xs sm:max-w-sm md:max-w-md" 
-                    side="top"
-                    align="start"
-                  >
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {product.description}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-muted-foreground">Description:</span>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-sm text-muted-foreground line-clamp-2 cursor-help hover:text-foreground transition-colors">
+                        {product.description}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      className="max-w-xs sm:max-w-sm md:max-w-md p-3" 
+                      side="top"
+                      align="start"
+                    >
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold">Full Description:</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {product.description}
+                        </p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             )}
           </div>
 

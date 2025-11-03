@@ -498,11 +498,13 @@ export const ProductsGrid = () => {
         if (!routingResult?.pharmacy_id) {
           console.error('[ProductsGrid] Pharmacy routing failed', { 
             product: productForCart.name, 
-            destinationState, 
+            destinationState,
+            destinationStateType: typeof destinationState,
+            destinationStateLength: destinationState?.length,
             reason: routingResult?.reason 
           });
           toast.error(
-            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" for delivery to ${destinationState}. Reason: ${routingResult?.reason || 'Unknown error'}`,
+            `Cannot add to cart: No pharmacy can fulfill "${productForCart.name}" for ${destinationState}. ${routingResult?.reason || 'Please verify the shipping address has a valid 2-letter state code (e.g., FL, CA, NY).'}`,
             { duration: 10000 }
           );
           return;

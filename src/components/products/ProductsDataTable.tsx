@@ -426,8 +426,15 @@ export const ProductsDataTable = () => {
         }
 
         if (!routingResult?.pharmacy_id) {
+          console.error('[ProductsDataTable] Routing failed', {
+            product: productForCart.name,
+            destinationState,
+            destinationStateType: typeof destinationState,
+            destinationStateLength: destinationState?.length,
+            reason: routingResult?.reason
+          });
           toast.error(
-            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please contact support.'}`
+            `Cannot add to cart: No pharmacy available for "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please verify address has valid 2-letter state code.'}`
           );
           return;
         }
