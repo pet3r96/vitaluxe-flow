@@ -54,7 +54,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
   const isReadOnly = mode === "view";
   const isBasicVitalMode = mode === "add-basic";
   const isTimeSeriesMode = mode === "add-timeseries";
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, user } = useAuth();
   
   // Helper to format height for display in input (convert stored inches to feet-inches)
   const formatHeightForInput = (height: number | undefined, unit: string | undefined): string => {
@@ -198,7 +198,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: effectiveUserId,
+            added_by_user_id: user?.id,
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;

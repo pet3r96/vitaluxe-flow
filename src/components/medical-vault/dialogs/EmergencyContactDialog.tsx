@@ -36,7 +36,7 @@ interface EmergencyContactDialogProps {
 
 export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, contact, mode }: EmergencyContactDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, user } = useAuth();
   
   const { register, handleSubmit, control, formState: { errors, isSubmitting }, reset, watch } = useForm<EmergencyContactFormData>({
     resolver: zodResolver(emergencyContactSchema),
@@ -76,7 +76,7 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: effectiveUserId,
+            added_by_user_id: user?.id,
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;

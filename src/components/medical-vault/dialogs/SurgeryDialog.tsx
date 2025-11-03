@@ -31,7 +31,7 @@ interface SurgeryDialogProps {
 
 export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, mode }: SurgeryDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, user } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<SurgeryFormData>({
     resolver: zodResolver(surgerySchema),
@@ -66,7 +66,7 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: effectiveUserId,
+            added_by_user_id: user?.id,
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;

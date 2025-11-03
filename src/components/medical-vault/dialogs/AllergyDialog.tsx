@@ -48,7 +48,7 @@ interface AllergyDialogProps {
 
 export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, mode }: AllergyDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, user } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<AllergyFormData>({
     resolver: zodResolver(allergySchema),
@@ -154,7 +154,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
             ...formattedData,
             patient_account_id: patientAccountId,
             is_active: true,
-            added_by_user_id: effectiveUserId,
+            added_by_user_id: user?.id,
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;

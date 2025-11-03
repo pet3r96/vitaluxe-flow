@@ -49,7 +49,7 @@ interface MedicationDialogProps {
 
 export function MedicationDialog({ open, onOpenChange, patientAccountId, medication, mode }: MedicationDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, user } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<MedicationFormData>({
     resolver: zodResolver(medicationSchema),
@@ -152,7 +152,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
             ...formattedData,
             patient_account_id: patientAccountId,
             is_active: true,
-            added_by_user_id: effectiveUserId,
+            added_by_user_id: user?.id,
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;

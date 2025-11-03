@@ -31,7 +31,7 @@ interface ImmunizationDialogProps {
 
 export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immunization, mode }: ImmunizationDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, user } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<ImmunizationFormData>({
     resolver: zodResolver(immunizationSchema),
@@ -66,7 +66,7 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: effectiveUserId,
+            added_by_user_id: user?.id,
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;

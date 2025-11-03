@@ -42,7 +42,7 @@ interface ConditionDialogProps {
 
 export function ConditionDialog({ open, onOpenChange, patientAccountId, condition, mode }: ConditionDialogProps) {
   const isReadOnly = mode === "view";
-  const { effectiveUserId, effectiveRole } = useAuth();
+  const { effectiveUserId, effectiveRole, user } = useAuth();
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<ConditionFormData>({
     resolver: zodResolver(conditionSchema),
@@ -116,7 +116,7 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
             ...formattedData,
             patient_account_id: patientAccountId,
             is_active: true,
-            added_by_user_id: effectiveUserId,
+            added_by_user_id: user?.id,
             added_by_role: mapRoleToAuditRole(effectiveRole),
           });
         if (error) throw error;
