@@ -790,7 +790,7 @@ export const PatientSelectionDialog = ({
             provider={{
               id: selectedProviderData.id,
               name: selectedProviderData.prescriber_name || 'Unknown',
-              email: 'N/A',
+              email: selectedProviderData.profiles?.email || 'N/A',
               npi: selectedProviderData.npi || 'N/A',
               dea: selectedProviderData.dea || 'N/A',
               license: selectedProviderData.profiles?.license_number || 'N/A'
