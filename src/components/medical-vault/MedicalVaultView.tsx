@@ -484,23 +484,24 @@ export function MedicalVaultView({
                 <ShieldCheck className="h-16 w-16 text-gold1 relative z-10 drop-shadow-2xl" strokeWidth={1.5} />
               </div>
               
-              <div className="text-center space-y-1">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-gold1 via-gold1 to-gold2 bg-clip-text text-transparent">
+              <div className="text-center space-y-1 px-4">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-gold1 via-gold1 to-gold2 bg-clip-text text-transparent break-words">
                   {mode === 'patient' ? 'My Medical Vault' : `${displayName} - Medical Vault`}
                 </h1>
-                <p className="text-muted-foreground dark:text-gray-300 text-xs md:text-sm font-light tracking-wide">
+                <p className="text-muted-foreground dark:text-gray-300 text-xs sm:text-sm font-light tracking-wide">
                   powered by VitaLuxe Services
                 </p>
               </div>
               
-              <div className="flex flex-wrap gap-1.5 justify-center pt-2">
+              <div className="flex flex-wrap gap-2 sm:gap-2.5 justify-center pt-2 px-4">
                 <Button 
                   variant="vault" 
                   size="sm"
                   onClick={handleViewPDF}
                   disabled={isGeneratingPdf}
+                  className="min-w-[70px]"
                 >
-                  <Eye className="h-3 w-3" />
+                  <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   {isGeneratingPdf ? 'Generating...' : 'View'}
                 </Button>
                 <Button 
@@ -508,8 +509,9 @@ export function MedicalVaultView({
                   size="sm"
                   onClick={handleViewPDF}
                   disabled={isGeneratingPdf}
+                  className="min-w-[70px]"
                 >
-                  <Printer className="h-3 w-3" />
+                  <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Print
                 </Button>
                 <Button 
@@ -517,8 +519,9 @@ export function MedicalVaultView({
                   size="sm"
                   onClick={handleDownloadPDF}
                   disabled={isGeneratingPdf}
+                  className="min-w-[80px]"
                 >
-                  <Download className="h-3 w-3" />
+                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Download
                 </Button>
                 <Button 
@@ -529,8 +532,9 @@ export function MedicalVaultView({
                     refetchAuditLogs();
                     setAuditDialogOpen(true);
                   }}
+                  className="min-w-[70px]"
                 >
-                  <ClipboardList className="h-3 w-3" />
+                  <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Audit
                 </Button>
                 {mode === 'patient' && (
@@ -538,9 +542,10 @@ export function MedicalVaultView({
                     variant="vault" 
                     size="sm"
                     onClick={handleSharePDF}
+                    className="min-w-[70px]"
                     disabled={isGeneratingPdf}
                   >
-                    <Share2 className="h-3 w-3" />
+                    <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Share
                   </Button>
                 )}
@@ -555,7 +560,7 @@ export function MedicalVaultView({
         effectiveUserId={patientAccount?.user_id || ''}
       />
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
         <MedicationsSection 
           patientAccountId={patientAccountId}
           medications={medications || []}

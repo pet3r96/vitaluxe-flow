@@ -6,13 +6,16 @@ import { Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function PatientMobileHeader() {
-  const { effectiveRole } = useAuth();
+  const { effectiveRole, isImpersonating } = useAuth();
   
   // Only show for patient users on mobile
   if (effectiveRole !== 'patient') return null;
   
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden"
+    <header 
+      className={`sticky z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden ${
+        isImpersonating ? 'top-[48px]' : 'top-0'
+      }`}
       style={{ touchAction: 'auto' }}>
       <div className="flex h-14 items-center justify-between px-4">
         {/* Logo */}
