@@ -320,7 +320,7 @@ serve(async (req) => {
     
     doc.setFontSize(11);
     const startY = 2.4;
-    const rowHeight = 0.4; // Enhanced spacing for better readability
+    const rowHeight = 0.25; // Compact spacing for professional appearance
 
     if (is_office_dispensing) {
       // Show "DISPENSING IN OFFICE ONLY" message

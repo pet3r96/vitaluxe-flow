@@ -181,7 +181,8 @@ serve(async (req) => {
       doc.text(practice.name || 'N/A', 20, yPos);
       yPos += 5;
 
-      if (practice.company) {
+      // Only show company if it's different from name
+      if (practice.company && practice.company !== practice.name) {
         doc.text(practice.company, 20, yPos);
         yPos += 5;
       }
