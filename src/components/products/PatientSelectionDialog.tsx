@@ -485,13 +485,14 @@ export const PatientSelectionDialog = ({
                   ) : (
                     // Multiple providers - use searchable combobox
                     <div className="grid gap-2">
-                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             role="combobox"
                             aria-expanded={comboboxOpen}
-                            className="justify-between"
+                            className="justify-between w-full"
+                            type="button"
                           >
                             {selectedProviderId
                               ? providers.find(p => p.id === selectedProviderId)?.prescriber_name || "Select provider..."
@@ -499,21 +500,26 @@ export const PatientSelectionDialog = ({
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[400px] p-0">
+                        <PopoverContent 
+                          className="w-[400px] p-0 z-[100]" 
+                          align="start"
+                          onOpenAutoFocus={(e) => e.preventDefault()}
+                        >
                           <Command>
-                            <CommandInput placeholder="Search providers..." />
+                            <CommandInput placeholder="Search providers..." className="h-9" />
                             <CommandList>
                               <CommandEmpty>No provider found.</CommandEmpty>
                               <CommandGroup>
                                 {providers.map((provider: any) => (
                                   <CommandItem
                                     key={provider.id}
-                                    value={provider.prescriber_name}
+                                    value={`${provider.prescriber_name}-${provider.id}`}
                                     onSelect={() => {
                                       console.log('[PatientSelectionDialog] Provider selected:', provider.id);
                                       setSelectedProviderId(provider.id);
                                       setComboboxOpen(false);
                                     }}
+                                    className="cursor-pointer"
                                   >
                                     <Check
                                       className={cn(
@@ -521,12 +527,15 @@ export const PatientSelectionDialog = ({
                                         selectedProviderId === provider.id ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    <div className="flex flex-col">
-                                      <span>{provider.prescriber_name}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {provider.specialty && `${provider.specialty} • `}
-                                        {provider.npi && `NPI: ${provider.npi}`}
-                                      </span>
+                                    <div className="flex flex-col flex-1">
+                                      <span className="font-medium">{provider.prescriber_name}</span>
+                                      {(provider.specialty || provider.npi) && (
+                                        <span className="text-xs text-muted-foreground">
+                                          {provider.specialty && `${provider.specialty}`}
+                                          {provider.specialty && provider.npi && ` • `}
+                                          {provider.npi && `NPI: ${provider.npi}`}
+                                        </span>
+                                      )}
                                     </div>
                                   </CommandItem>
                                 ))}
