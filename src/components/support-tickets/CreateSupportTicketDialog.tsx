@@ -95,9 +95,7 @@ export function CreateSupportTicketDialog() {
           doctor_id,
           total_amount,
           status,
-          patient_account_id,
-          patient_accounts!inner(first_name, last_name),
-          profiles:doctor_id(full_name)
+          order_lines!inner(patient_name, patient_id)
         `)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -284,13 +282,16 @@ export function CreateSupportTicketDialog() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {userOrders?.map((order: any) => (
-                          <SelectItem key={order.id} value={order.id}>
-                            {format(new Date(order.created_at), "MMM dd, yyyy")} - 
-                            ${order.total_amount?.toFixed(2)} ({order.status})
-                            {order.patient_accounts && ` - ${order.patient_accounts.first_name} ${order.patient_accounts.last_name}`}
-                          </SelectItem>
-                        ))}
+                        {userOrders?.map((order: any) => {
+                          const patientName = order.order_lines?.[0]?.patient_name || 'Unknown Patient';
+                          return (
+                            <SelectItem key={order.id} value={order.id}>
+                              {format(new Date(order.created_at), "MMM dd, yyyy")} - 
+                              ${order.total_amount?.toFixed(2)} ({order.status})
+                              {` - ${patientName}`}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />
