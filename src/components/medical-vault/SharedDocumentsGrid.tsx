@@ -63,6 +63,10 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
       console.log('[SharedDocumentsGrid] Provider docs loaded:', data?.length || 0);
       return data || [];
     },
+    onError: (error) => {
+      console.error('[SharedDocumentsGrid] Failed to load provider documents:', error);
+      toast.error('Failed to load practice documents. Please refresh the page.');
+    },
     staleTime: 10000,
   });
 
