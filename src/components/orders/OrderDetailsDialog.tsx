@@ -709,14 +709,6 @@ export const OrderDetailsDialog = ({
                               : "Loading..."}
                           </p>
                         </div>
-                        <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground">Address</p>
-                          <p className="text-sm">
-                            {decryptedContactInfo.has(line.id) 
-                              ? (decryptedContactInfo.get(line.id)?.patient_address || "N/A")
-                              : "Loading..."}
-                          </p>
-                        </div>
                         {canViewPHI && line.patient_id && (
                           <div className="col-span-2 pt-2 border-t border-primary/30">
                             <p className="text-xs font-semibold text-primary flex items-center gap-1">

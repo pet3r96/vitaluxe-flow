@@ -33,6 +33,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
   const [documentTypeFilter, setDocumentTypeFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | "my_uploads" | "practice_shared" | "patient_shared">("all");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedBucket, setSelectedBucket] = useState<string>('provider-documents');
   const [showAssign, setShowAssign] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
@@ -63,16 +64,34 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
     },
   });
 
+  // Determine the correct bucket for a document
+  const getBucketName = (doc: any): string => {
+    // Patient-shared documents are in patient-documents bucket
+    if (doc.source_type === 'patient_shared') {
+      return 'patient-documents';
+    }
+    // Everything else is in provider-documents bucket
+    return 'provider-documents';
+  };
+
   // Download handler
   const downloadDocument = async (doc: any) => {
     if (!doc?.storage_path) return;
 
     try {
-      const { data, error } = await supabase.storage
-        .from('provider-documents')
-        .createSignedUrl(doc.storage_path, 60);
+      const bucketName = getBucketName(doc);
+      
+      // Use the get-s3-signed-url edge function for proper bucket routing
+      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+        body: {
+          bucket: bucketName,
+          path: doc.storage_path,
+          expiresIn: 3600
+        }
+      });
 
       if (error) throw error;
+      if (!data?.signedUrl) throw new Error('No signed URL returned');
 
       // Fetch as blob and download (HIPAA compliant - no new tabs)
       const response = await fetch(data.signedUrl);
@@ -386,6 +405,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
                         <DropdownMenuItem
                           onClick={() => {
                             setSelectedDocument(doc);
+                            setSelectedBucket(getBucketName(doc));
                             setShowViewer(true);
                           }}
                         >
@@ -462,6 +482,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
             open={showViewer}
             onOpenChange={setShowViewer}
             document={selectedDocument}
+            bucketName={selectedBucket}
           />
         </>
       )}

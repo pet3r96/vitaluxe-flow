@@ -9,9 +9,10 @@ interface DocumentViewerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   document: any;
+  bucketName?: string;
 }
 
-export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerProps) {
+export function DocumentViewer({ open, onOpenChange, document, bucketName = 'provider-documents' }: DocumentViewerProps) {
   const [fileUrl, setFileUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
@@ -26,11 +27,18 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
     
     setLoading(true);
     try {
-      const { data, error } = await supabase.storage
-        .from('provider-documents')
-        .createSignedUrl(document.storage_path, 60);
+      // Use the get-s3-signed-url edge function for proper bucket routing
+      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+        body: {
+          bucket: bucketName,
+          path: document.storage_path,
+          expiresIn: 3600
+        }
+      });
 
       if (error) throw error;
+      if (!data?.signedUrl) throw new Error('No signed URL returned');
+      
       setFileUrl(data.signedUrl);
     } catch (error: any) {
       console.error('[DocumentViewer] Failed to load:', error);
@@ -44,11 +52,17 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
     if (!document?.storage_path) return;
 
     try {
-      const { data, error } = await supabase.storage
-        .from('provider-documents')
-        .createSignedUrl(document.storage_path, 60);
+      // Use the get-s3-signed-url edge function for proper bucket routing
+      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+        body: {
+          bucket: bucketName,
+          path: document.storage_path,
+          expiresIn: 3600
+        }
+      });
 
       if (error) throw error;
+      if (!data?.signedUrl) throw new Error('No signed URL returned');
 
       // Fetch as blob and download (HIPAA compliant - no new tabs)
       const response = await fetch(data.signedUrl);
