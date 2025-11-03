@@ -118,7 +118,7 @@ export const PatientSelectionDialog = ({
         
         return (data?.providers || []).map((p: any) => {
           // Priority 1: prescriber_name (if not empty)
-          let displayName = p.prescriber_name?.trim();
+          let displayName = p.profiles?.prescriber_name?.trim();
           
           // Priority 2: full_name (if not empty)
           if (!displayName) {
