@@ -8227,6 +8227,10 @@ export type Database = {
         Args: { p_document_id: string }
         Returns: boolean
       }
+      pharmacy_can_view_order: {
+        Args: { order_uuid: string; pharmacy_user_id: string }
+        Returns: boolean
+      }
       recompute_order_profits: {
         Args: { p_order_ids?: string[]; p_status_filter?: string[] }
         Returns: {
