@@ -132,7 +132,7 @@ serve(async (req) => {
     yPos += 6;
     doc.text(`Order Date: ${new Date(order.created_at).toLocaleDateString()}`, 20, yPos);
     yPos += 6;
-    doc.text(`Shipping Speed: ${order.shipping_speed}`, 20, yPos);
+    doc.text(`Shipping Speed: ${order.shipping_speed || 'Standard'}`, 20, yPos);
     yPos += 6;
     doc.text(`Ship To: ${order.ship_to === 'practice' ? 'Practice' : 'Patient'}`, 20, yPos);
     yPos += 12;
