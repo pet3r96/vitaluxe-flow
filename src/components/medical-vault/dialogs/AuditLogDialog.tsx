@@ -25,9 +25,17 @@ export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName, pat
       const logsToExport = auditLogs || [];
       
       if (logsToExport.length === 0) {
+        console.error('[AuditLog] No logs available for export:', {
+          auditLogsLength: auditLogs.length,
+          isLoading,
+          patientAccountId
+        });
+        
         toast({ 
           title: "No Data", 
-          description: "No audit logs found to export", 
+          description: isLoading 
+            ? "Audit logs are still loading. Please wait a moment and try again."
+            : "No audit logs found to export. If this patient has recent activity, please refresh the page.", 
           variant: "destructive" 
         });
         return;

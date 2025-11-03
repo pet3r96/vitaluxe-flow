@@ -56,6 +56,16 @@ export function MedicalVaultView({
   // Fetch audit logs
   const { data: auditLogs = [], isLoading: isLoadingAuditLogs } = useAuditLogs(patientAccountId);
 
+  // Debug audit logs state
+  useEffect(() => {
+    console.log('[MedicalVault] Audit logs state:', {
+      patientAccountId,
+      auditLogsCount: auditLogs.length,
+      isLoading: isLoadingAuditLogs,
+      auditLogs: auditLogs.slice(0, 2) // Log first 2 for brevity
+    });
+  }, [auditLogs, isLoadingAuditLogs, patientAccountId]);
+
   // Real-time subscriptions for automatic updates
   useEffect(() => {
     if (patientAccountId) {
@@ -425,7 +435,14 @@ export function MedicalVaultView({
       {/* Audit Log Dialog */}
       <AuditLogDialog
         open={auditDialogOpen}
-        onOpenChange={setAuditDialogOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            // Force refetch audit logs when opening dialog
+            console.log('[MedicalVault] Opening audit dialog, invalidating queries');
+            queryClient.invalidateQueries({ queryKey: ["medical-vault-audit-logs", patientAccountId] });
+          }
+          setAuditDialogOpen(open);
+        }}
         auditLogs={auditLogs}
         patientName={displayName}
         patientAccountId={patientAccountId}

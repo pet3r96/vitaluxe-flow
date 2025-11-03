@@ -56,6 +56,13 @@ export function DocumentsTab() {
       // Parse JSONB response
       let documents = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
       
+      console.log('[DocumentsTab] Raw documents from RPC:', {
+        count: documents?.length,
+        practiceId: effectivePracticeId,
+        patientSharedCount: documents.filter((d: any) => d.source_type === 'patient_shared').length,
+        sampleDoc: documents.length > 0 ? documents[0] : null
+      });
+      
       // CLIENT-SIDE SECURITY: Validate all documents belong to the correct practice
       if (effectivePracticeId && (effectiveRole === 'doctor' || effectiveRole === 'staff')) {
         const invalidDocuments = documents.filter((doc: any) => 
@@ -88,6 +95,12 @@ export function DocumentsTab() {
           );
         }
       }
+      
+      console.log('[DocumentsTab] After security filter:', {
+        originalCount: data?.length || 0,
+        filteredCount: documents.length,
+        hiddenCount: (data?.length || 0) - documents.length
+      });
       
       if (import.meta.env.DEV && documents?.length > 0) {
         console.log('[DocumentsTab] Sample document:', documents[0]);
@@ -179,6 +192,8 @@ export function DocumentsTab() {
           <div>Practice ID: {effectivePracticeId || 'None'}</div>
           <div>All Documents: {allDocuments?.length || 0}</div>
           <div>Filtered Documents: {documents?.length || 0}</div>
+          <div>Patient-shared Documents: {allDocuments?.filter(d => d.source_type === 'patient_shared').length || 0}</div>
+          <div>Current Filter Source: {filters.source}</div>
           {queryError && <div className="text-destructive">Error: {queryError.message}</div>}
         </div>
       )}
