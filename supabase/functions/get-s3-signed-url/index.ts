@@ -33,25 +33,27 @@ serve(async (req) => {
 
     console.log('[get-s3-signed-url] 🔐 Authenticated user:', user.id);
 
-    // Parse request body - accept both old and new formats
+    // Parse request body - accept all parameter formats
     const body = await req.json();
     const { 
       s3_key,           // Old format
-      bucketName,       // New format
-      filePath,         // New format
+      bucketName,       // Old new format
+      bucket,           // Current format
+      filePath,         // Old new format
+      path,             // Current format
       expires_in,       // Old format
       expiresIn         // New format
     } = body;
 
-    // Normalize inputs
-    const bucket = bucketName || 'patient-documents';
-    const path = filePath || s3_key;
+    // Normalize inputs - accept all formats
+    const normalizedBucket = bucket || bucketName || 'patient-documents';
+    const normalizedPath = path || filePath || s3_key;
     const expires = expiresIn || expires_in || 300;
     // S3 key should just be the path (not bucket/path) when using new format
-    const s3Key = s3_key || path;
+    const s3Key = s3_key || normalizedPath;
 
-    if (!path) {
-      throw new Error('Missing required field: filePath or s3_key');
+    if (!normalizedPath) {
+      throw new Error('Missing required field: path, filePath, or s3_key');
     }
 
     // Determine effective user (check for impersonation)
@@ -87,7 +89,7 @@ serve(async (req) => {
       userRole = profile?.role || null;
     }
 
-    console.log('[get-s3-signed-url] 👤 Role:', userRole, '| Request:', { bucket, path });
+    console.log('[get-s3-signed-url] 👤 Role:', userRole, '| Request:', { bucket: normalizedBucket, path: normalizedPath });
 
     // Compute effective practice ID for authorization
     let effectivePracticeId: string | null = null;
@@ -125,16 +127,16 @@ serve(async (req) => {
     console.log('[get-s3-signed-url] 🏥 Effective practice ID:', effectivePracticeId);
 
     // Authorization checks based on bucket
-    if (bucket === 'patient-documents') {
+    if (normalizedBucket === 'patient-documents') {
       // For patient documents bucket
       const { data: document } = await supabase
         .from('patient_documents')
         .select('id, patient_id, share_with_practice')
-        .eq('storage_path', path)
+        .eq('storage_path', normalizedPath)
         .maybeSingle();
 
       if (!document) {
-        console.error('[get-s3-signed-url] Document not found in patient_documents:', path);
+        console.error('[get-s3-signed-url] Document not found in patient_documents:', normalizedPath);
         throw new Error('Document not found');
       }
 
@@ -182,16 +184,16 @@ serve(async (req) => {
         throw new Error(`Access denied: ${authResult.reason}`);
       }
 
-    } else if (bucket === 'provider-documents') {
+    } else if (normalizedBucket === 'provider-documents') {
       // For provider documents bucket
       const { data: providerDoc } = await supabase
         .from('provider_documents')
         .select('id, practice_id')
-        .eq('storage_path', path)
+        .eq('storage_path', normalizedPath)
         .maybeSingle();
 
       if (!providerDoc) {
-        console.error('[get-s3-signed-url] Document not found in provider_documents:', path);
+        console.error('[get-s3-signed-url] Document not found in provider_documents:', normalizedPath);
         throw new Error('Document not found');
       }
 
@@ -265,8 +267,8 @@ serve(async (req) => {
       hasAwsSecret: !!awsSecretAccessKey,
       region: awsRegion,
       s3Bucket: s3BucketName,
-      requestedBucket: bucket,
-      requestedPath: path
+      requestedBucket: normalizedBucket,
+      requestedPath: normalizedPath
     });
     
     if (awsAccessKeyId && awsSecretAccessKey && s3BucketName) {
@@ -301,14 +303,14 @@ serve(async (req) => {
         // Fallback to Supabase Storage
         console.log('[get-s3-signed-url] 🔄 Falling back to Supabase Storage');
         const { data: storageData, error: storageError } = await supabase.storage
-          .from(bucket)
-          .createSignedUrl(path, expires);
+          .from(normalizedBucket)
+          .createSignedUrl(normalizedPath, expires);
 
         if (storageError) {
           console.error('[get-s3-signed-url] ❌ Storage fallback error:', {
             message: storageError.message,
-            bucket,
-            path
+            bucket: normalizedBucket,
+            path: normalizedPath
           });
           throw new Error(`Storage access failed: ${storageError.message}`);
         }
@@ -324,15 +326,15 @@ serve(async (req) => {
       // No S3 configured - use Supabase Storage directly
       console.log('[get-s3-signed-url] 📦 AWS not configured, using Supabase Storage');
       const { data: storageData, error: storageError } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(path, expires);
+        .from(normalizedBucket)
+        .createSignedUrl(normalizedPath, expires);
 
       if (storageError) {
         console.error('[get-s3-signed-url] ❌ Storage error details:', {
           message: storageError.message,
           code: storageError.code,
-          bucket,
-          path,
+          bucket: normalizedBucket,
+          path: normalizedPath,
           hint: storageError.hint
         });
         throw new Error(`Storage access failed: ${storageError.message}`);
@@ -352,8 +354,8 @@ serve(async (req) => {
       entity_type: 'document',
       entity_id: null,
       details: {
-        bucket,
-        path,
+        bucket: normalizedBucket,
+        path: normalizedPath,
         storage_method: storageMethod,
         access_type: 'download',
         expires
