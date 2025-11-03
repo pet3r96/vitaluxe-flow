@@ -295,12 +295,17 @@ export default function DeliveryConfirmation() {
         
         console.log(`[DeliveryConfirmation] Routing successful for line ${meta.id}, pharmacy ${routing.pharmacy_id}`);
         
-        // Update cart line with routing results
+        // Format the address string for storage
+        const formattedAddress = address.formatted || 
+          `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
+        
+        // Update cart line with routing results and formatted address
         const { error: updateError } = await supabase
           .from("cart_lines")
           .update({
             destination_state: address.state.toUpperCase(),
             assigned_pharmacy_id: routing.pharmacy_id,
+            patient_address: formattedAddress,
             patient_address_validated: address.status === 'verified',
             patient_address_validation_source: address.source || 'manual',
           })
