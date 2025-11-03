@@ -104,14 +104,15 @@ export function CreateSupportTicketDialog() {
       if (effectiveRole === "doctor") {
         query = query.eq("doctor_id", user.id);
       } else if (effectiveRole === "staff") {
-        const { data: providerData } = await supabase
-          .from("providers")
+        const { data: staffData } = await supabase
+          .from("practice_staff")
           .select("practice_id")
           .eq("user_id", user.id)
+          .eq("active", true)
           .single();
         
-        if (providerData?.practice_id) {
-          query = query.eq("doctor_id", providerData.practice_id);
+        if (staffData?.practice_id) {
+          query = query.eq("doctor_id", staffData.practice_id);
         }
       }
       // Admin sees all orders (no filter)

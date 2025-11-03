@@ -338,6 +338,8 @@ export const PatientDialog = ({
         queryClient.invalidateQueries({ queryKey: ["patients"] });
         queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
         queryClient.invalidateQueries({ queryKey: ["patient-portal-status", patient.id] });
+        queryClient.invalidateQueries({ queryKey: ["patient-accounts"] });
+        queryClient.refetchQueries({ queryKey: ["patients"], type: 'active' });
         toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient
