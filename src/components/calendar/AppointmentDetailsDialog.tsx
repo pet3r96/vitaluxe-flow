@@ -95,6 +95,11 @@ export function AppointmentDetailsDialog({
       } else if (newStatus === "being_treated") {
         updateData.treatment_started_at = new Date().toISOString();
       }
+      
+      // Update confirmation_type when confirming an appointment
+      if (newStatus === "confirmed") {
+        updateData.confirmation_type = "confirmed";
+      }
 
       const { error } = await supabase
         .from('patient_appointments')
