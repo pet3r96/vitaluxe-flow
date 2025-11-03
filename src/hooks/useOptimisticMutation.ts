@@ -46,6 +46,9 @@ export const useOptimisticMutation = <TData, TVariables>(
         queryClient.setQueryData(queryKey, context.previousData);
       }
       
+      // Log full error for debugging
+      console.error('Mutation error:', error);
+      
       // Extract error message from Supabase error
       const errorDetails = error instanceof Error ? error.message : String(error);
       
