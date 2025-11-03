@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +33,6 @@ export const PatientDialog = ({
   onSuccess,
 }: PatientDialogProps) => {
   const { user, effectivePracticeId, effectiveRole } = useAuth();
-  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({
     phone: "",
@@ -319,11 +317,6 @@ export const PatientDialog = ({
         if (error) throw error;
         
         console.log('[PatientDialog] Update affected rows:', count);
-        
-        // Invalidate both patients list and patient vault caches to ensure fresh data
-        queryClient.invalidateQueries({ queryKey: ["patients-list"] });
-        queryClient.invalidateQueries({ queryKey: ["patient-vault"] });
-        
         toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient

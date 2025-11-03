@@ -1,7 +1,6 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { usePatients } from "@/hooks/usePatients";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,12 +33,6 @@ export default function Checkout() {
   const [prescriptionFiles, setPrescriptionFiles] = useState<Record<string, File>>({});
   const [prescriptionPreviews, setPrescriptionPreviews] = useState<Record<string, string>>({});
   const { canOrder, isLoading: checkingPrivileges } = useStaffOrderingPrivileges();
-  
-  // Fetch all patients for the practice once (cached, used throughout checkout)
-  const { data: allPatients } = usePatients(effectivePracticeId);
-  const patientsMap = useMemo(() => {
-    return new Map((allPatients || []).map((p: any) => [p.id, p]));
-  }, [allPatients]);
   
   // Calculate the correct practice ID for shipping address
   // Providers and staff use effectivePracticeId, practice owners use effectiveUserId
@@ -141,12 +134,23 @@ export default function Checkout() {
 
       const lines = (linesRaw || []) as any[];
 
-      // Hydrate patient data from cached patients map
-      for (const line of lines) {
-        if (line.patient_id) {
-          const patient = patientsMap.get(line.patient_id) as any || null;
-          line.patient = patient;
-          line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
+      // Manually hydrate patient data from patient_accounts table
+      const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
+      if (patientIds.length > 0) {
+        const { data: patients, error: patientsError } = await supabase
+          .from('patient_accounts')
+          .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
+          .in('id', patientIds);
+        
+        if (!patientsError && patients) {
+          const patientMap = new Map(patients.map((p: any) => [p.id, p]));
+          for (const line of lines) {
+            if (line.patient_id) {
+              const patient = patientMap.get(line.patient_id) || null;
+              line.patient = patient;
+              line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
+            }
+          }
         }
       }
 
@@ -205,12 +209,23 @@ export default function Checkout() {
     
     const lines = (linesRaw || []) as any[];
 
-    // Hydrate patient data from cached patients map
-    for (const line of lines) {
-      if (line.patient_id) {
-        const patient = patientsMap.get(line.patient_id) as any || null;
-        line.patient = patient;
-        line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
+    // Manually hydrate patient data from patient_accounts table
+    const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
+    if (patientIds.length > 0) {
+      const { data: patients, error: patientsError } = await supabase
+        .from('patient_accounts')
+        .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
+        .in('id', patientIds);
+      
+      if (!patientsError && patients) {
+        const patientMap = new Map(patients.map((p: any) => [p.id, p]));
+        for (const line of lines) {
+          if (line.patient_id) {
+            const patient = patientMap.get(line.patient_id) || null;
+            line.patient = patient;
+            line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
+          }
+        }
       }
     }
     

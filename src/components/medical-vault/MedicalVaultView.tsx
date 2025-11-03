@@ -88,18 +88,14 @@ export function MedicalVaultView({
   const { data: patientAccount, isLoading: isLoadingAccount } = useQuery({
     queryKey: ["patient-account-vault", patientAccountId],
     queryFn: async () => {
-      console.log("Fetching patient vault data via backend function for patient:", patientAccountId);
+      const { data, error } = await supabase
+        .from("patient_accounts")
+        .select("id, first_name, last_name, practice_id, date_of_birth, address, city, state, zip_code, gender_at_birth, user_id, birth_date, address_street, address_city, address_state, address_zip, address_formatted, email, phone")
+        .eq("id", patientAccountId)
+        .single();
       
-      const { data, error } = await supabase.functions.invoke('get-patient-vault-data', {
-        body: { patient_account_id: patientAccountId }
-      });
-      
-      if (error) {
-        console.error("Error fetching patient vault data:", error);
-        throw error;
-      }
-      
-      return data?.patient;
+      if (error) throw error;
+      return data;
     },
     enabled: !!patientAccountId,
   });

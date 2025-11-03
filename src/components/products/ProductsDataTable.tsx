@@ -1,9 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProviders } from "@/hooks/useProviders";
-import { usePatients } from "@/hooks/usePatients";
 import {
   Table,
   TableBody,
@@ -35,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsDataTable = () => {
-  const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
+  const { effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -52,19 +50,6 @@ export const ProductsDataTable = () => {
   const isToplineRep = effectiveRole === "topline";
   const isDownlineRep = effectiveRole === "downline";
   const isRep = isToplineRep || isDownlineRep;
-
-  // Centralized data fetching with edge functions
-  const { data: providersData } = useProviders(effectivePracticeId);
-  const { data: patientsData } = usePatients(effectivePracticeId);
-  
-  // Create Maps for fast lookups
-  const providersMap = useMemo(() => {
-    return new Map((providersData || []).map((p: any) => [p.user_id, p]));
-  }, [providersData]);
-  
-  const patientsMap = useMemo(() => {
-    return new Map((patientsData || []).map((p: any) => [p.id, p]));
-  }, [patientsData]);
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -161,16 +146,37 @@ export const ProductsDataTable = () => {
 
   const paginatedProducts = filteredProducts?.slice(startIndex, endIndex);
 
-  // Helper to convert user_id to provider.id (uses cached data)
+  // Helper to convert user_id to provider.id
   const getProviderIdFromUserId = async (userId: string): Promise<string | null> => {
-    const provider = providersMap.get(userId) as any;
-    return provider?.id || null;
+    try {
+      const { data: provider } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      
+      return provider?.id || null;
+    } catch (error) {
+      console.error("Error getting provider ID:", error);
+      return null;
+    }
   };
 
-  // Helper: Get practice_id for a provider user (uses cached data)
+  // Helper: Get practice_id for a provider user
   const getPracticeIdFromProviderUserId = async (userId: string): Promise<string | null> => {
-    const provider = providersMap.get(userId) as any;
-    return (provider?.active && provider?.practice_id) || null;
+    try {
+      const { data: provider } = await supabase
+        .from("providers")
+        .select("practice_id")
+        .eq("user_id", userId)
+        .eq("active", true)
+        .single();
+      
+      return provider?.practice_id || null;
+    } catch (error) {
+      console.error("Error getting practice ID from provider:", error);
+      return null;
+    }
   };
 
   // Helper to get user's topline rep ID for pharmacy scoping
@@ -362,11 +368,15 @@ export const ProductsDataTable = () => {
 
         if (error) throw error;
       } else {
-        // Patient order - use cached patient data
-        const patientRecord = patientsMap.get(patientId!) as any;
+        // Patient order - fetch from patient_accounts table (patientId is patient_accounts.id from dialog)
+        const { data: patientRecord, error: patientError } = await supabase
+          .from("patient_accounts")
+          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id")
+          .eq("id", patientId!)
+          .single();
         
-        if (!patientRecord) {
-          console.error("Failed to find patient in cached data");
+        if (patientError || !patientRecord) {
+          console.error("Failed to fetch patient:", patientError);
           toast.error("Unable to find patient information. Please refresh and try again.");
           return;
         }
