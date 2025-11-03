@@ -197,6 +197,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                           <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                             <AppSidebar />
                             <main className="flex-1 flex flex-col overflow-y-auto">
+                              <PatientMobileHeader />
                               <Topbar />
                               <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
                                 <div className="relative z-10">

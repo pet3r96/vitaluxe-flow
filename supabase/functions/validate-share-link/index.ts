@@ -35,6 +35,7 @@ Deno.serve(async (req) => {
         patient_id,
         expires_at,
         used_at,
+        access_count,
         is_revoked,
         patient_accounts!inner(
           id,
@@ -58,13 +59,15 @@ Deno.serve(async (req) => {
     console.log('[validate-share-link] Share link found:', {
       id: shareLink.id,
       used_at: shareLink.used_at,
+      access_count: shareLink.access_count || 0,
       expires_at: shareLink.expires_at,
       is_revoked: shareLink.is_revoked
     });
 
-    // Check if already used
-    if (shareLink.used_at) {
-      console.log('[validate-share-link] Link already used at:', shareLink.used_at);
+    // Check if already used (2 attempts allowed)
+    const currentAccessCount = shareLink.access_count || 0;
+    if (currentAccessCount >= 2) {
+      console.log('[validate-share-link] Link already used maximum times (2):', currentAccessCount);
       await supabase.from('audit_logs').insert({
         user_id: null,
         user_email: 'public',
@@ -72,11 +75,11 @@ Deno.serve(async (req) => {
         action_type: 'medical_vault_share_link_already_used',
         entity_type: 'medical_vault_share_links',
         entity_id: shareLink.id,
-        details: { token, ip_address: clientIP, attempted_at: new Date().toISOString() }
+        details: { token, ip_address: clientIP, attempted_at: new Date().toISOString(), access_count: currentAccessCount }
       });
 
       return new Response(
-        JSON.stringify({ error: 'already_used', message: 'This link has already been used' }),
+        JSON.stringify({ error: 'already_used', message: 'This link has been accessed the maximum number of times (2 attempts)' }),
         { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -134,18 +137,30 @@ Deno.serve(async (req) => {
       supabase.from('patient_emergency_contacts').select('*').eq('patient_account_id', patientAccountId)
     ]);
 
-    // Mark as used IMMEDIATELY before returning data
-    console.log('[validate-share-link] Marking link as used...');
-    const usedAt = new Date().toISOString();
+    // Increment access count - allow 2 attempts before fully marking as used
+    const newAccessCount = currentAccessCount + 1;
+    console.log('[validate-share-link] Incrementing access count to:', newAccessCount);
+    
+    const updateData: any = { 
+      access_count: newAccessCount,
+      accessed_by_ip: clientIP 
+    };
+    
+    // Mark as used_at only on second access
+    if (newAccessCount >= 2) {
+      updateData.used_at = new Date().toISOString();
+      console.log('[validate-share-link] Marking link as fully used (reached 2 attempts)');
+    }
+    
     const { error: updateError } = await supabase
       .from('medical_vault_share_links')
-      .update({ used_at: usedAt, accessed_by_ip: clientIP })
+      .update(updateData)
       .eq('id', shareLink.id);
     
     if (updateError) {
-      console.error('[validate-share-link] Failed to mark link as used:', updateError);
+      console.error('[validate-share-link] Failed to update link:', updateError);
     } else {
-      console.log('[validate-share-link] Link marked as used at:', usedAt);
+      console.log('[validate-share-link] Link updated. Access count:', newAccessCount);
     }
 
     // Log successful access
@@ -161,11 +176,12 @@ Deno.serve(async (req) => {
         patient_account_id: patientAccountId,
         patient_name: `${shareLink.patient_accounts.first_name} ${shareLink.patient_accounts.last_name}`,
         ip_address: clientIP,
-        accessed_at: usedAt
+        access_count: newAccessCount,
+        accessed_at: new Date().toISOString()
       }
     });
 
-    console.log('[validate-share-link] Successfully validated and marked link as used');
+    console.log('[validate-share-link] Successfully validated. Access count:', newAccessCount);
 
     // Return data for PDF generation on frontend
     return new Response(

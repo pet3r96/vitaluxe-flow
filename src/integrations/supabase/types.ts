@@ -1551,6 +1551,7 @@ export type Database = {
       }
       medical_vault_share_links: {
         Row: {
+          access_count: number | null
           accessed_by_ip: string | null
           consent_agreed_at: string
           consent_ip: string | null
@@ -1565,6 +1566,7 @@ export type Database = {
           used_at: string | null
         }
         Insert: {
+          access_count?: number | null
           accessed_by_ip?: string | null
           consent_agreed_at: string
           consent_ip?: string | null
@@ -1579,6 +1581,7 @@ export type Database = {
           used_at?: string | null
         }
         Update: {
+          access_count?: number | null
           accessed_by_ip?: string | null
           consent_agreed_at?: string
           consent_ip?: string | null

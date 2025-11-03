@@ -138,7 +138,7 @@ export default function MedicalVaultShare() {
               {error === 'internal_error' && "Error Loading Vault"}
             </h1>
             <p className="text-muted-foreground">
-              {error === 'already_used' && "Sorry, this link has already been used. For security reasons, one-time access links can only be viewed once."}
+              {error === 'already_used' && "Sorry, this link has been accessed the maximum number of times (2 attempts). For security reasons, each share link can only be viewed twice."}
               {error === 'expired' && "Sorry, this link has expired after 60 minutes. For security reasons, access links are only valid for 1 hour."}
               {error === 'invalid_token' && "This share link is not valid. Please check the link and try again."}
               {error === 'revoked' && "This link has been revoked by the patient."}

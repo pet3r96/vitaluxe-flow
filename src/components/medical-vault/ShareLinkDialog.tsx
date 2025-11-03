@@ -81,8 +81,8 @@ export function ShareLinkDialog({
                   Security Notice
                 </p>
                 <p className="text-amber-700 dark:text-amber-300">
-                  This link expires in <strong>1 hour</strong> and can only be used <strong>ONCE</strong>. 
-                  After the recipient views it, the link becomes permanently invalid.
+                  This link expires in <strong>1 hour</strong> and can be accessed up to <strong>2 times</strong>. 
+                  After 2 views, the link becomes permanently invalid.
                 </p>
               </div>
             </div>
@@ -121,7 +121,7 @@ export function ShareLinkDialog({
             <ul className="list-disc list-inside space-y-1">
               <li>Copy the link above</li>
               <li>Send it securely to your intended recipient (email, text, etc.)</li>
-              <li>The link will work only once, then become invalid</li>
+              <li>The link can be accessed twice (allows for one refresh)</li>
               <li>Make sure they open it within 1 hour</li>
             </ul>
           </div>
