@@ -50,6 +50,8 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const { data: providerDocs, isLoading: loadingProviderDocs } = useQuery({
     queryKey: ['shared-provider-documents', patientAccountId],
     queryFn: async () => {
+      console.log('[SharedDocumentsGrid] Fetching provider documents for patient:', patientAccountId);
+      
       const { data, error } = await supabase
         .from('provider_documents')
         .select(`
@@ -59,7 +61,12 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
         .eq('provider_document_patients.patient_id', patientAccountId)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('[SharedDocumentsGrid] Provider docs error:', error);
+        throw error;
+      }
+      
+      console.log('[SharedDocumentsGrid] Provider docs loaded:', data?.length || 0);
       return data || [];
     },
     staleTime: 10000,
