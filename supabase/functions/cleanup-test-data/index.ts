@@ -217,55 +217,84 @@ serve(async (req) => {
           cleanupDetails.patients_deleted = patientIds.length;
         }
 
-        // STEP 6: Delete provider dependencies
-        const { data: providers } = await supabaseAdmin
-          .from('providers')
-          .select('id')
-          .eq('user_id', userId);
-
-        if (providers && providers.length > 0) {
-          const providerIds = providers.map(p => p.id);
-          
-          await supabaseAdmin.from('provider_documents').delete().in('provider_id', providerIds);
-          await supabaseAdmin.from('providers').delete().eq('user_id', userId);
-          
-          cleanupDetails.providers_deleted = providerIds.length;
-        }
-
-        // Also delete if user is a provider under another practice
-        await supabaseAdmin.from('providers').delete().eq('user_id', userId);
-
-        // Delete practice staff
-        await supabaseAdmin.from('practice_staff').delete().eq('user_id', userId);
-        await supabaseAdmin.from('practice_staff').delete().eq('practice_id', userId);
-
-        // STEP 7: Delete rep dependencies
-        const { data: reps } = await supabaseAdmin
-          .from('reps')
-          .select('id')
-          .eq('user_id', userId);
-
-        if (reps && reps.length > 0) {
-          const repIds = reps.map(r => r.id);
-          
-          await supabaseAdmin
-            .from('rep_practice_links')
-            .delete()
-            .in('rep_id', repIds);
-          
-          await supabaseAdmin
-            .from('reps')
-            .delete()
+        // STEP 6: Delete provider dependencies (optional - may not exist)
+        try {
+          const { data: providers } = await supabaseAdmin
+            .from('providers')
+            .select('id')
             .eq('user_id', userId);
-          
-          cleanupDetails.reps_deleted = repIds.length;
+
+          if (providers && providers.length > 0) {
+            const providerIds = providers.map(p => p.id);
+            
+            await supabaseAdmin.from('provider_documents').delete().in('provider_id', providerIds);
+            await supabaseAdmin.from('providers').delete().eq('user_id', userId);
+            
+            cleanupDetails.providers_deleted = providerIds.length;
+            console.log(`✓ Deleted ${providers.length} provider records`);
+          } else {
+            console.log('ℹ No provider records found (this is OK)');
+            cleanupDetails.providers_deleted = 0;
+          }
+
+          // Also delete if user is a provider under another practice
+          await supabaseAdmin.from('providers').delete().eq('user_id', userId);
+        } catch (error: any) {
+          console.warn(`Warning deleting provider data for ${targetEmail}:`, error.message);
+          cleanupDetails.provider_deletion_warning = error.message;
         }
 
-        // STEP 8: Delete user metadata
-        await supabaseAdmin.from('active_sessions').delete().eq('user_id', userId);
-        await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
-        await supabaseAdmin.from('user_password_status').delete().eq('user_id', userId);
-        await supabaseAdmin.from('pending_reps').delete().eq('created_by_user_id', userId);
+        // Delete practice staff (optional)
+        try {
+          await supabaseAdmin.from('practice_staff').delete().eq('user_id', userId);
+          await supabaseAdmin.from('practice_staff').delete().eq('practice_id', userId);
+          console.log('✓ Deleted practice staff records');
+        } catch (error: any) {
+          console.warn(`Warning deleting practice staff for ${targetEmail}:`, error.message);
+        }
+
+        // STEP 7: Delete rep dependencies (optional - may not exist)
+        try {
+          const { data: reps } = await supabaseAdmin
+            .from('reps')
+            .select('id')
+            .eq('user_id', userId);
+
+          if (reps && reps.length > 0) {
+            const repIds = reps.map(r => r.id);
+            
+            await supabaseAdmin
+              .from('rep_practice_links')
+              .delete()
+              .in('rep_id', repIds);
+            
+            await supabaseAdmin
+              .from('reps')
+              .delete()
+              .eq('user_id', userId);
+            
+            cleanupDetails.reps_deleted = repIds.length;
+            console.log(`✓ Deleted ${reps.length} rep records`);
+          } else {
+            console.log('ℹ No rep records found (this is OK)');
+            cleanupDetails.reps_deleted = 0;
+          }
+        } catch (error: any) {
+          console.warn(`Warning deleting rep data for ${targetEmail}:`, error.message);
+          cleanupDetails.rep_deletion_warning = error.message;
+        }
+
+        // STEP 8: Delete user metadata (CRITICAL - must succeed)
+        try {
+          await supabaseAdmin.from('active_sessions').delete().eq('user_id', userId);
+          await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
+          await supabaseAdmin.from('user_password_status').delete().eq('user_id', userId);
+          await supabaseAdmin.from('pending_reps').delete().eq('created_by_user_id', userId);
+          console.log('✓ Deleted user metadata (sessions, roles, password status)');
+        } catch (error: any) {
+          console.error(`❌ CRITICAL: Failed to delete user metadata for ${targetEmail}:`, error.message);
+          throw new Error(`Failed to delete critical user metadata: ${error.message}`);
+        }
 
         // Nullify references in profiles
         await supabaseAdmin

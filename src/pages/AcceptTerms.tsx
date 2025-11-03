@@ -39,11 +39,14 @@ export default function AcceptTerms() {
     if (!user || !effectiveRole || (effectiveRole === 'admin' && !isImpersonating)) return;
 
     const fetchTerms = async () => {
+      console.log('[AcceptTerms] Fetching terms for role:', effectiveRole, 'User:', user?.id, 'Effective:', effectiveUserId);
+      
       let data: any = null;
       let error: any = null;
 
       // Special handling for patients - they use a separate table
       if (effectiveRole === 'patient') {
+        console.log('[AcceptTerms] Querying patient_portal_terms...');
         const res = await supabase
           .from('patient_portal_terms')
           .select('*')
@@ -52,7 +55,13 @@ export default function AcceptTerms() {
           .maybeSingle();
         data = res.data;
         error = res.error;
+        console.log('[AcceptTerms] Patient terms query result:', { 
+          found: !!data, 
+          error: error?.message,
+          dataPreview: data ? { id: data.id, version: data.version, title: data.title } : null 
+        });
       } else {
+        console.log('[AcceptTerms] Querying terms_and_conditions for role:', effectiveRole);
         const res = await supabase
           .from('terms_and_conditions')
           .select('*')
@@ -62,16 +71,29 @@ export default function AcceptTerms() {
           .maybeSingle();
         data = res.data;
         error = res.error;
+        console.log('[AcceptTerms] Role terms query result:', { 
+          found: !!data, 
+          error: error?.message,
+          dataPreview: data ? { id: data.id, version: data.version, role: data.role } : null 
+        });
       }
 
       if (error) {
+        console.error('[AcceptTerms] Error fetching terms:', error);
         import('@/lib/logger').then(({ logger }) => {
-          logger.error('Error fetching terms', error);
+          logger.error('Error fetching terms', error, { effectiveRole, userId: user?.id });
         });
-        toast.error("Failed to load terms and conditions");
+        toast.error(`Failed to load terms: ${error.message}`);
         setTerms(null);
         setLoading(false);
         return;
+      }
+
+      if (!data) {
+        console.warn('[AcceptTerms] No terms found for role:', effectiveRole);
+        toast.error(`No terms found for role: ${effectiveRole}. Please contact support.`);
+      } else {
+        console.log('[AcceptTerms] Terms loaded successfully:', data.id);
       }
 
       setTerms(data);
@@ -79,7 +101,7 @@ export default function AcceptTerms() {
     };
 
     fetchTerms();
-  }, [user, effectiveRole, isImpersonating, navigate]);
+  }, [user, effectiveRole, isImpersonating, navigate, effectiveUserId]);
 
   useEffect(() => {
     const scrollAreaRoot = scrollRef.current;
@@ -201,7 +223,12 @@ export default function AcceptTerms() {
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Terms and conditions not found for your role. Please contact support.
+            <div className="space-y-2">
+              <p>Terms and conditions not found for your role: <strong>{effectiveRole}</strong></p>
+              <p className="text-sm">User ID: {user?.id}</p>
+              <p className="text-sm">Effective ID: {effectiveUserId}</p>
+              <p className="text-sm mt-2">Please contact support with this information.</p>
+            </div>
           </AlertDescription>
         </Alert>
       </div>
