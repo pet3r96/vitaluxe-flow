@@ -47,7 +47,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   });
 
   // Fetch provider documents assigned to this patient using RPC function
-  const { data: providerDocs, isLoading: loadingProviderDocs } = useQuery({
+  const { data: providerDocs, isLoading: loadingProviderDocs, error: providerDocsError } = useQuery({
     queryKey: ['shared-provider-documents', patientAccountId],
     queryFn: async () => {
       console.log('[SharedDocumentsGrid] Fetching provider documents for patient:', patientAccountId);
@@ -63,12 +63,19 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
       console.log('[SharedDocumentsGrid] Provider docs loaded:', data?.length || 0);
       return data || [];
     },
-    onError: (error) => {
-      console.error('[SharedDocumentsGrid] Failed to load provider documents:', error);
-      toast.error('Failed to load practice documents. Please refresh the page.');
-    },
     staleTime: 10000,
   });
+
+  // Show toast if provider docs fail to load
+  useEffect(() => {
+    if (providerDocsError) {
+      toast({
+        title: "Error",
+        description: "Failed to load practice documents. Please refresh the page.",
+        variant: "destructive",
+      });
+    }
+  }, [providerDocsError]);
 
   // Realtime subscriptions for immediate updates
   useEffect(() => {
@@ -146,8 +153,8 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
   // All hooks MUST be called before any conditional returns
   const allDocs = useMemo(() => [
-    ...(patientDocs || []).map(d => ({ ...d, docType: 'patient' as const })),
-    ...(providerDocs || []).map(d => ({ ...d, docType: 'provider' as const })),
+    ...((patientDocs as any[]) || []).map(d => ({ ...d, docType: 'patient' as const })),
+    ...((providerDocs as any[]) || []).map(d => ({ ...d, docType: 'provider' as const })),
   ], [patientDocs, providerDocs]);
 
   // Get unique document types for filter

@@ -47,7 +47,7 @@ export default function SupportTickets() {
       if (error) throw error;
       return data as SupportTicket[];
     },
-    enabled: ["admin", "doctor", "staff", "topline", "downline", "pharmacy"].includes(
+    enabled: ["admin", "doctor", "staff", "provider", "topline", "downline", "pharmacy"].includes(
       effectiveRole
     ),
   });
@@ -69,7 +69,7 @@ export default function SupportTickets() {
   const openCount = tickets.filter((t) => !t.resolved).length;
   const resolvedCount = tickets.filter((t) => t.resolved).length;
 
-  if (!["admin", "doctor", "staff", "topline", "downline", "pharmacy"].includes(effectiveRole)) {
+  if (!["admin", "doctor", "staff", "provider", "topline", "downline", "pharmacy"].includes(effectiveRole)) {
     return (
       <div className="container mx-auto p-6">
         <Card>
