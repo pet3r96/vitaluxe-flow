@@ -336,12 +336,60 @@ export const PatientDialog = ({
         
         console.log('[PatientDialog] Update success - RLS allows update:', { id: patient.id });
         
-        // Enhanced cache invalidation with await for immediate UI updates
-        await queryClient.invalidateQueries({ queryKey: ["patients"] });
-        await queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
-        await queryClient.invalidateQueries({ queryKey: ["patient-portal-status", patient.id] });
-        await queryClient.invalidateQueries({ queryKey: ["patient-accounts"] });
-        await queryClient.refetchQueries({ queryKey: ["patients"], type: 'active' });
+        // Build the exact query key that PatientsDataTable uses
+        const patientsKey = ["patients", effectiveRole, effectivePracticeId];
+        
+        console.log('[PatientDialog] Invalidating cache:', {
+          patientsKey,
+          effectiveRole,
+          effectivePracticeId,
+          patientId: patient.id
+        });
+        
+        // Optimistic update: immediately update the patients list cache
+        queryClient.setQueryData(patientsKey, (oldData: any[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map(p => 
+            p.id === patient.id 
+              ? { ...p, ...patientData } 
+              : p
+          );
+        });
+        
+        // Optimistic update: immediately update individual patient cache
+        queryClient.setQueryData(["patient", patient.id], (oldData: any) => ({
+          ...(oldData || {}),
+          ...patientData
+        }));
+        
+        // Invalidate with the EXACT key that PatientsDataTable uses
+        await queryClient.invalidateQueries({ 
+          queryKey: patientsKey, 
+          exact: true 
+        });
+        
+        // Also invalidate the individual patient cache
+        await queryClient.invalidateQueries({ 
+          queryKey: ["patient", patient.id] 
+        });
+        
+        // Invalidate portal status
+        await queryClient.invalidateQueries({ 
+          queryKey: ["patient-portal-status", effectivePracticeId] 
+        });
+        
+        // Invalidate any other patients queries (admin view, etc.)
+        await queryClient.invalidateQueries({ 
+          queryKey: ["patients"], 
+          exact: false 
+        });
+        
+        // Force immediate refetch of the active patients query
+        await queryClient.refetchQueries({ 
+          queryKey: patientsKey, 
+          type: 'active',
+          exact: true 
+        });
         
         toast.success("✅ Patient updated successfully");
       } else {
