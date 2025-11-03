@@ -210,7 +210,7 @@ export default function PatientDetail() {
         .from("patient_vitals")
         .select("*")
         .eq("patient_account_id", actualPatientId)
-        .order("recorded_at", { ascending: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -238,7 +238,7 @@ export default function PatientDetail() {
         .from("patient_surgeries")
         .select("*")
         .eq("patient_account_id", actualPatientId)
-        .order("date", { ascending: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },

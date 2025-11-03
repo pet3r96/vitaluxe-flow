@@ -40,7 +40,7 @@ export const PatientsDataTable = () => {
     staleTime: 300000, // 5 minutes - patient data changes infrequently
     queryFn: async () => {
       logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
-      const columns = "id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at";
+      const columns = "id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, city, state, zip_code, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at";
 
       let patientsData: any[] = [];
 
@@ -415,11 +415,20 @@ export const PatientsDataTable = () => {
                   <TableCell className="text-muted-foreground">{formatPatientEmail(patient.email)}</TableCell>
                   <TableCell>{formatPhoneNumber(patient.phone)}</TableCell>
                   <TableCell className="max-w-xs truncate">
-                    {patient.address_formatted || 
-                     (patient.address_street ? 
-                       `${patient.address_street}${patient.address_city ? ', ' + patient.address_city : ''}${patient.address_state ? ', ' + patient.address_state : ''} ${patient.address_zip || ''}`.trim() 
-                       : patient.address || 
-                       <span className="text-muted-foreground italic">No address on file</span>)}
+                    {(() => {
+                      if (patient.address_formatted) return patient.address_formatted;
+                      
+                      const street = patient.address_street || patient.address || '';
+                      const city = patient.address_city || patient.city || '';
+                      const state = patient.address_state || patient.state || '';
+                      const zip = patient.address_zip || patient.zip_code || '';
+                      
+                      if (!street && !city && !state && !zip) {
+                        return <span className="text-muted-foreground italic">No address on file</span>;
+                      }
+                      
+                      return `${street}${city ? ', ' + city : ''}${state ? ', ' + state : ''}${zip ? ' ' + zip : ''}`.trim();
+                    })()}
                   </TableCell>
                   {isAdmin && (
                     <TableCell>

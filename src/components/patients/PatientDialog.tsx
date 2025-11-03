@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export const PatientDialog = ({
   onSuccess,
 }: PatientDialogProps) => {
   const { user, effectivePracticeId, effectiveRole } = useAuth();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({
     phone: "",
@@ -317,6 +319,8 @@ export const PatientDialog = ({
         if (error) throw error;
         
         console.log('[PatientDialog] Update affected rows:', count);
+        queryClient.invalidateQueries({ queryKey: ["patients"] });
+        queryClient.invalidateQueries({ queryKey: ["patient-portal-status"] });
         toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient
@@ -333,6 +337,8 @@ export const PatientDialog = ({
           }]);
 
         if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ["patients"] });
+        queryClient.invalidateQueries({ queryKey: ["patient-portal-status"] });
         toast.success("✅ Patient added successfully");
       }
 
