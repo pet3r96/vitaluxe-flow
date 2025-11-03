@@ -115,45 +115,131 @@ serve(async (req) => {
         const userId = profile.id;
         console.log(`Found user ${userId} for ${targetEmail}`);
 
-        // Safety check: verify no orders or patients
-        const { count: orderCount } = await supabaseAdmin
-          .from('orders')
-          .select('id', { count: 'exact', head: true })
-          .eq('doctor_id', userId);
+        // Start comprehensive cleanup process
+        const cleanupDetails: any = {};
+        
+        console.log(`Starting cascade deletion for user ${userId}`);
 
-        const { count: patientCount } = await supabaseAdmin
+        // STEP 1: Delete medical vault data (for patient_accounts linked to this practice)
+        const { data: patientAccounts } = await supabaseAdmin
           .from('patient_accounts')
-          .select('id', { count: 'exact', head: true })
+          .select('id')
           .eq('practice_id', userId);
 
-        if ((orderCount ?? 0) > 0 || (patientCount ?? 0) > 0) {
-          console.log(`User ${targetEmail} has data - orders: ${orderCount}, patients: ${patientCount}`);
-          results.push({
-            email: targetEmail,
-            success: false,
-            message: `User has ${orderCount} orders and ${patientCount} patients. Manual review required to avoid data loss.`
-          });
-          errorCount++;
-          continue;
+        if (patientAccounts && patientAccounts.length > 0) {
+          const patientAccountIds = patientAccounts.map(p => p.id);
+          console.log(`Deleting medical vault data for ${patientAccountIds.length} patient accounts`);
+
+          await supabaseAdmin.from('patient_medications').delete().in('patient_account_id', patientAccountIds);
+          await supabaseAdmin.from('patient_conditions').delete().in('patient_account_id', patientAccountIds);
+          await supabaseAdmin.from('patient_allergies').delete().in('patient_account_id', patientAccountIds);
+          await supabaseAdmin.from('patient_vitals').delete().in('patient_account_id', patientAccountIds);
+          await supabaseAdmin.from('patient_immunizations').delete().in('patient_account_id', patientAccountIds);
+          await supabaseAdmin.from('patient_surgeries').delete().in('patient_account_id', patientAccountIds);
+          await supabaseAdmin.from('patient_pharmacies').delete().in('patient_account_id', patientAccountIds);
+          await supabaseAdmin.from('patient_emergency_contacts').delete().in('patient_account_id', patientAccountIds);
+          
+          cleanupDetails.medical_vault_deleted = patientAccountIds.length;
         }
 
-        // Start cleanup process
-        const cleanupDetails: any = {};
+        // STEP 2: Delete appointments and blocked times
+        const { data: appointments } = await supabaseAdmin
+          .from('patient_appointments')
+          .select('id')
+          .eq('practice_id', userId);
+        
+        if (appointments && appointments.length > 0) {
+          await supabaseAdmin
+            .from('patient_appointments')
+            .delete()
+            .eq('practice_id', userId);
+          cleanupDetails.appointments_deleted = appointments.length;
+        }
 
-        // 1. Nullify references in profiles
-        const { error: parentRefError } = await supabaseAdmin
-          .from('profiles')
-          .update({ parent_id: null })
-          .eq('parent_id', userId);
-        if (parentRefError) console.log('Error nullifying parent_id:', parentRefError);
+        await supabaseAdmin
+          .from('patient_blocked_times')
+          .delete()
+          .eq('practice_id', userId);
 
-        const { error: toplineRefError } = await supabaseAdmin
-          .from('profiles')
-          .update({ linked_topline_id: null })
-          .eq('linked_topline_id', userId);
-        if (toplineRefError) console.log('Error nullifying linked_topline_id:', toplineRefError);
+        // STEP 3: Delete order dependencies
+        const { data: orders } = await supabaseAdmin
+          .from('orders')
+          .select('id')
+          .eq('doctor_id', userId);
 
-        // 2. Find and delete reps
+        if (orders && orders.length > 0) {
+          const orderIds = orders.map(o => o.id);
+          console.log(`Deleting ${orderIds.length} orders and their dependencies`);
+
+          await supabaseAdmin.from('order_profits').delete().in('order_id', orderIds);
+          await supabaseAdmin.from('order_lines').delete().in('order_id', orderIds);
+          await supabaseAdmin.from('order_status_history').delete().in('order_id', orderIds);
+          await supabaseAdmin.from('shipping_audit_logs').delete().in('order_id', orderIds);
+          await supabaseAdmin.from('orders').delete().in('id', orderIds);
+          
+          cleanupDetails.orders_deleted = orderIds.length;
+        }
+
+        // STEP 4: Delete cart dependencies (fix: use cart_id, not doctor_id)
+        const { data: carts } = await supabaseAdmin
+          .from('cart')
+          .select('id')
+          .eq('doctor_id', userId);
+
+        if (carts && carts.length > 0) {
+          const cartIds = carts.map(c => c.id);
+          await supabaseAdmin
+            .from('cart_lines')
+            .delete()
+            .in('cart_id', cartIds);
+          
+          await supabaseAdmin
+            .from('cart')
+            .delete()
+            .eq('doctor_id', userId);
+          
+          cleanupDetails.carts_deleted = carts.length;
+        }
+
+        // STEP 5: Delete patient data
+        const { data: patients } = await supabaseAdmin
+          .from('patients')
+          .select('id')
+          .eq('practice_id', userId);
+
+        if (patients && patients.length > 0) {
+          const patientIds = patients.map(p => p.id);
+          
+          await supabaseAdmin.from('patient_follow_ups').delete().in('patient_id', patientIds);
+          await supabaseAdmin.from('patient_accounts').delete().eq('practice_id', userId);
+          await supabaseAdmin.from('patients').delete().eq('practice_id', userId);
+          
+          cleanupDetails.patients_deleted = patientIds.length;
+        }
+
+        // STEP 6: Delete provider dependencies
+        const { data: providers } = await supabaseAdmin
+          .from('providers')
+          .select('id')
+          .eq('user_id', userId);
+
+        if (providers && providers.length > 0) {
+          const providerIds = providers.map(p => p.id);
+          
+          await supabaseAdmin.from('provider_documents').delete().in('provider_id', providerIds);
+          await supabaseAdmin.from('providers').delete().eq('user_id', userId);
+          
+          cleanupDetails.providers_deleted = providerIds.length;
+        }
+
+        // Also delete if user is a provider under another practice
+        await supabaseAdmin.from('providers').delete().eq('user_id', userId);
+
+        // Delete practice staff
+        await supabaseAdmin.from('practice_staff').delete().eq('user_id', userId);
+        await supabaseAdmin.from('practice_staff').delete().eq('practice_id', userId);
+
+        // STEP 7: Delete rep dependencies
         const { data: reps } = await supabaseAdmin
           .from('reps')
           .select('id')
@@ -161,59 +247,38 @@ serve(async (req) => {
 
         if (reps && reps.length > 0) {
           const repIds = reps.map(r => r.id);
-          cleanupDetails.reps_deleted = repIds.length;
-
-          // Delete rep practice links
-          const { error: linkError } = await supabaseAdmin
+          
+          await supabaseAdmin
             .from('rep_practice_links')
             .delete()
             .in('rep_id', repIds);
-          if (linkError) console.log('Error deleting rep links:', linkError);
-
-          // Delete reps
-          const { error: repsError } = await supabaseAdmin
+          
+          await supabaseAdmin
             .from('reps')
             .delete()
             .eq('user_id', userId);
-          if (repsError) console.log('Error deleting reps:', repsError);
+          
+          cleanupDetails.reps_deleted = repIds.length;
         }
 
-        // 3. Delete providers
-        const { error: providersError } = await supabaseAdmin
-          .from('providers')
-          .delete()
-          .eq('user_id', userId);
-        if (providersError) console.log('Error deleting providers:', providersError);
+        // STEP 8: Delete user metadata
+        await supabaseAdmin.from('active_sessions').delete().eq('user_id', userId);
+        await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
+        await supabaseAdmin.from('user_password_status').delete().eq('user_id', userId);
+        await supabaseAdmin.from('pending_reps').delete().eq('created_by_user_id', userId);
 
-        // 4. Delete user roles
-        const { error: rolesError } = await supabaseAdmin
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId);
-        if (rolesError) console.log('Error deleting user_roles:', rolesError);
+        // Nullify references in profiles
+        await supabaseAdmin
+          .from('profiles')
+          .update({ parent_id: null })
+          .eq('parent_id', userId);
 
-        // 5. Delete carts
-        const { error: cartError } = await supabaseAdmin
-          .from('cart')
-          .delete()
-          .eq('doctor_id', userId);
-        if (cartError) console.log('Error deleting cart:', cartError);
+        await supabaseAdmin
+          .from('profiles')
+          .update({ linked_topline_id: null })
+          .eq('linked_topline_id', userId);
 
-        // 6. Delete cart lines
-        const { error: cartLinesError } = await supabaseAdmin
-          .from('cart_lines')
-          .delete()
-          .eq('doctor_id', userId);
-        if (cartLinesError) console.log('Error deleting cart_lines:', cartLinesError);
-
-        // 7. Delete pending reps created by this user
-        const { error: pendingRepsError } = await supabaseAdmin
-          .from('pending_reps')
-          .delete()
-          .eq('created_by_user_id', userId);
-        if (pendingRepsError) console.log('Error deleting pending_reps:', pendingRepsError);
-
-        // 8. Delete auth user (will cascade to profiles)
+        // STEP 9: Delete auth user (will cascade to profiles)
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
         if (deleteError) {
           console.error(`Failed to delete auth user ${userId}:`, deleteError);
