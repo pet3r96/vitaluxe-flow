@@ -58,31 +58,14 @@ Deno.serve(async (req) => {
 
     console.log('[validate-share-link] Share link found:', {
       id: shareLink.id,
+      token_prefix: token.substring(0, 8),
       used_at: shareLink.used_at,
       access_count: shareLink.access_count || 0,
       expires_at: shareLink.expires_at,
       is_revoked: shareLink.is_revoked
     });
 
-    // Check if already used (2 attempts allowed)
     const currentAccessCount = shareLink.access_count || 0;
-    if (currentAccessCount >= 2) {
-      console.log('[validate-share-link] Link already used maximum times (2):', currentAccessCount);
-      await supabase.from('audit_logs').insert({
-        user_id: null,
-        user_email: 'public',
-        user_role: 'public',
-        action_type: 'medical_vault_share_link_already_used',
-        entity_type: 'medical_vault_share_links',
-        entity_id: shareLink.id,
-        details: { token, ip_address: clientIP, attempted_at: new Date().toISOString(), access_count: currentAccessCount }
-      });
-
-      return new Response(
-        JSON.stringify({ error: 'already_used', message: 'This link has been accessed the maximum number of times (2 attempts)' }),
-        { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Check if expired
     const now = new Date();
@@ -137,19 +120,19 @@ Deno.serve(async (req) => {
       supabase.from('patient_emergency_contacts').select('*').eq('patient_account_id', patientAccountId)
     ]);
 
-    // Increment access count - allow 2 attempts before fully marking as used
+    // Increment access count for auditing (unlimited views within 60 minutes)
     const newAccessCount = currentAccessCount + 1;
-    console.log('[validate-share-link] Incrementing access count to:', newAccessCount);
+    console.log('[validate-share-link] Incrementing access count to:', newAccessCount, '(unlimited within 60 min)');
     
     const updateData: any = { 
       access_count: newAccessCount,
       accessed_by_ip: clientIP 
     };
     
-    // Mark as used_at only on second access
-    if (newAccessCount >= 2) {
+    // Mark as used_at on first access (for auditing only, does not restrict further access)
+    if (newAccessCount === 1) {
       updateData.used_at = new Date().toISOString();
-      console.log('[validate-share-link] Marking link as fully used (reached 2 attempts)');
+      console.log('[validate-share-link] Marking link as first accessed');
     }
     
     const { error: updateError } = await supabase

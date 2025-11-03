@@ -567,84 +567,17 @@ export const ProductsGrid = () => {
             : patientRecord.address_street || null;
 
 
+        console.debug('[ProductsGrid] Patient shipping state resolved', { 
+          destinationState, 
+          patientId: patientRecord.id,
+          hasAddressState: !!patientRecord.address_state
+        });
+
         if (!isValidStateCode(destinationState)) {
-          // If destination state is invalid/missing, allow adding to cart without routing.
-          // Use placeholder state "XX" to satisfy NOT NULL constraint, will be corrected on Delivery Confirmation
-          console.warn('[ProductsGrid] Missing/invalid patient state. Skipping routing and inserting unassigned line with placeholder state.');
-          const actualProviderId = await getProviderIdFromUserId(providerId);
-          if (!actualProviderId) {
-            toast.error("Unable to find provider record. Please contact support.");
-            return;
-          }
-
-          const { error: insertError } = await supabase
-            .from("cart_lines" as any)
-            .insert({
-              cart_id: cart.id,
-              product_id: productForCart.id,
-              patient_id: patientRecord.id, // Use patient_accounts.id for foreign key
-              provider_id: actualProviderId,
-              patient_name: patientRecord.name || "Unknown",
-              patient_email: patientRecord.email,
-              patient_phone: patientRecord.phone,
-              patient_address: null,
-              patient_address_street: patientRecord.address_street || null,
-              patient_address_city: patientRecord.address_city || null,
-              patient_address_state: patientRecord.address_state || null,
-              patient_address_zip: patientRecord.address_zip || null,
-              patient_address_validated: false,
-              patient_address_validation_source: null,
-              quantity: quantity,
-              price_snapshot: correctPrice,
-              destination_state: 'XX', // Placeholder for missing/invalid state
-              assigned_pharmacy_id: null,
-              prescription_url: prescriptionUrl,
-              custom_sig: customSig,
-              custom_dosage: customDosage,
-              order_notes: orderNotes,
-              prescription_method: prescriptionMethod,
-            });
-
-          if (insertError) throw insertError;
-
-          toast.message("Added to cart", { description: "Please complete patient address on Delivery Confirmation." });
-          // Optimistic update: increment count immediately
-          queryClient.setQueryData(
-            ["cart-count", effectiveUserId],
-            (old: number | undefined) => (old || 0) + quantity
+          toast.error(
+            `Invalid or missing patient shipping address${destinationState ? ` (got: "${destinationState}")` : ''}. Please update the patient's address with a valid 2-letter US state code.`,
+            { duration: 8000 }
           );
-          queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
-          // Optimistically push item into cart cache so CartSheet updates instantly
-          queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
-            const productMeta = {
-              id: productForCart.id,
-              name: productForCart.name,
-              dosage: (productForCart as any).dosage,
-              image_url: (productForCart as any).image_url,
-            };
-            const optimisticItem = {
-              id: `temp_${Date.now()}`,
-              cart_id: cart.id,
-              product_id: productForCart.id,
-              product: productMeta,
-              patient_name: patientRecord.name || 'Unknown',
-              quantity,
-              price_snapshot: correctPrice,
-              destination_state: 'XX',
-              created_at: new Date().toISOString(),
-            };
-            if (!old) {
-              return { cartId: cart.id, items: [optimisticItem] };
-            }
-            if (old.items) {
-              return { ...old, items: [...old.items, optimisticItem] };
-            }
-            if (old.lines) {
-              return { ...old, lines: [...old.lines, optimisticItem] };
-            }
-            return old;
-          });
-          queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
           return;
         }
 
