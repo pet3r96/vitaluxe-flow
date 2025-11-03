@@ -185,7 +185,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in reset-password-with-token function:", error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false, 
         error: "Failed to reset password. Please try again." 
       }),
