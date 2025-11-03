@@ -335,11 +335,14 @@ export const PatientDialog = ({
         }
         
         console.log('[PatientDialog] Update success - RLS allows update:', { id: patient.id });
-        queryClient.invalidateQueries({ queryKey: ["patients"] });
-        queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
-        queryClient.invalidateQueries({ queryKey: ["patient-portal-status", patient.id] });
-        queryClient.invalidateQueries({ queryKey: ["patient-accounts"] });
-        queryClient.refetchQueries({ queryKey: ["patients"], type: 'active' });
+        
+        // Enhanced cache invalidation with await for immediate UI updates
+        await queryClient.invalidateQueries({ queryKey: ["patients"] });
+        await queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
+        await queryClient.invalidateQueries({ queryKey: ["patient-portal-status", patient.id] });
+        await queryClient.invalidateQueries({ queryKey: ["patient-accounts"] });
+        await queryClient.refetchQueries({ queryKey: ["patients"], type: 'active' });
+        
         toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient

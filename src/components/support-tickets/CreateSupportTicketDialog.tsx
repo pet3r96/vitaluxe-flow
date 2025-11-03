@@ -284,12 +284,23 @@ export function CreateSupportTicketDialog() {
                       </FormControl>
                       <SelectContent>
                         {userOrders?.map((order: any) => {
-                          const patientName = order.order_lines?.[0]?.patient_name || 'Unknown Patient';
+                          const rawPatientName = order.order_lines?.[0]?.patient_name;
+                          const patientId = order.order_lines?.[0]?.patient_id;
+                          
+                          // Handle legacy orders: show "N/A - Legacy Order" if generic name or missing patient_id
+                          const isLegacyOrder = !patientId || 
+                            rawPatientName?.toLowerCase().includes('practice order') || 
+                            rawPatientName === 'Unknown Patient';
+                          
+                          const displayPatientName = isLegacyOrder 
+                            ? 'N/A - Legacy Order' 
+                            : (rawPatientName || 'Unknown Patient');
+                          
                           return (
                             <SelectItem key={order.id} value={order.id}>
                               {format(new Date(order.created_at), "MMM dd, yyyy")} - 
                               ${order.total_amount?.toFixed(2)} ({order.status})
-                              {` - ${patientName}`}
+                              {` - ${displayPatientName}`}
                             </SelectItem>
                           );
                         })}

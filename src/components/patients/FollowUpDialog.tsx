@@ -104,17 +104,57 @@ export function FollowUpDialog({
         status: "pending",
       };
 
+      console.log('[FollowUpDialog] Attempting follow-up operation:', {
+        operation: followUp ? 'UPDATE' : 'INSERT',
+        patientId,
+        patientName,
+        userId: user.id,
+        userEmail: user.email,
+        payload,
+        followUpId: followUp?.id,
+      });
+
       if (followUp) {
-        const { error } = await supabase
+        const { error, data: result } = await supabase
           .from("patient_follow_ups" as any)
           .update(payload)
           .eq("id", followUp.id);
-        if (error) throw error;
+        
+        if (error) {
+          console.error('[FollowUpDialog] UPDATE failed - RLS policy blocked:', {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            followUpId: followUp.id,
+            patientId,
+          });
+          throw error;
+        }
+        
+        console.log('[FollowUpDialog] UPDATE success:', { followUpId: followUp.id });
       } else {
-        const { error } = await supabase
+        const { error, data: result } = await supabase
           .from("patient_follow_ups" as any)
-          .insert(payload);
-        if (error) throw error;
+          .insert(payload)
+          .select();
+        
+        if (error) {
+          console.error('[FollowUpDialog] INSERT failed - RLS policy blocked:', {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            patientId,
+            userId: user.id,
+          });
+          throw error;
+        }
+        
+        console.log('[FollowUpDialog] INSERT success:', { 
+          patientId,
+          resultCount: result?.length || 0,
+        });
       }
     },
     onSuccess: () => {
@@ -125,6 +165,7 @@ export function FollowUpDialog({
       reset();
     },
     onError: (error: any) => {
+      console.error('[FollowUpDialog] Mutation error:', error);
       toast.error(error.message || "Failed to save follow-up");
     },
   });
