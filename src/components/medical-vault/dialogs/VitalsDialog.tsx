@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
 
 const vitalsSchema = z.object({
   vital_type: z.string().optional(),
@@ -83,7 +84,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       oxygen_saturation: vitals.oxygen_saturation?.toString() || "",
       cholesterol: vitals.cholesterol?.toString() || "",
       blood_sugar: vitals.blood_sugar?.toString() || "",
-      date_recorded: vitals.date_recorded?.substring(0, 7) || new Date().toISOString().substring(0, 7),
+      date_recorded: vitals.date_recorded?.split('T')[0] || new Date().toISOString().split('T')[0],
     } : {
       vital_type: isBasicVitalMode ? basicVitalType || "" : "",
       height: "",
@@ -98,7 +99,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       oxygen_saturation: "",
       cholesterol: "",
       blood_sugar: "",
-      date_recorded: new Date().toISOString().substring(0, 7),
+      date_recorded: new Date().toISOString().split('T')[0],
     },
   });
 
@@ -119,8 +120,8 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
     async (data: VitalsFormData) => {
       const vitalType = data.vital_type || vitals?.vital_type;
       
-      // Convert YYYY-MM to YYYY-MM-01 for database storage
-      const fullDate = data.date_recorded ? data.date_recorded + "-01" : new Date().toISOString().substring(0, 7) + "-01";
+      // Use the full date as-is (YYYY-MM-DD)
+      const fullDate = data.date_recorded || new Date().toISOString().split('T')[0];
 
       // Helper function to parse height formats
       const parseHeight = (heightStr: string, unit: string): number | null => {
@@ -316,20 +317,31 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
             </div>
           )}
 
-          {/* Date Input - Month/Year for time-series, hidden for basic vitals */}
+          {/* Date Input - Full date for time-series, hidden for basic vitals */}
           {!isBasicVitalMode && (
             <div className="space-y-2">
-              <Label htmlFor="date_recorded">Date Recorded (Month / Year) *</Label>
+              <Label htmlFor="date_recorded">Date Recorded *</Label>
               <Input
                 id="date_recorded"
-                type="month"
+                type="date"
                 {...register("date_recorded")}
                 disabled={isReadOnly}
+                max={new Date().toISOString().split('T')[0]}
                 className={errors.date_recorded ? "border-red-500" : ""}
               />
               {errors.date_recorded && (
                 <p className="text-sm text-red-500">{errors.date_recorded.message}</p>
               )}
+            </div>
+          )}
+
+          {/* Show insertion timestamp in view mode */}
+          {isReadOnly && vitals?.created_at && !isBasicVitalMode && (
+            <div className="space-y-2 p-4 bg-muted/30 rounded-lg">
+              <Label className="text-muted-foreground">Record Created</Label>
+              <p className="text-sm font-medium">
+                {format(new Date(vitals.created_at), 'MMM dd, yyyy h:mm a')}
+              </p>
             </div>
           )}
 

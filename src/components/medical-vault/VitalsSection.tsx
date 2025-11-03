@@ -124,7 +124,17 @@ export function VitalsSection({ patientAccountId, vitals = [] }: VitalsSectionPr
     if (!dateString) return "";
     try {
       const date = new Date(dateString);
-      return format(date, 'MMM yyyy');
+      return format(date, 'MMM dd, yyyy');
+    } catch {
+      return "";
+    }
+  };
+
+  const formatTimestamp = (dateString?: string) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      return format(date, 'MMM dd, yyyy h:mm a');
     } catch {
       return "";
     }
@@ -305,10 +315,15 @@ export function VitalsSection({ patientAccountId, vitals = [] }: VitalsSectionPr
                             key={record.id}
                             className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
                           >
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium">{formatVitalValue(record, type)}</span>
-                              <span className="text-sm text-muted-foreground">•</span>
-                              <span className="text-sm text-muted-foreground">{formatDate(record.date_recorded)}</span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-3">
+                                <span className="font-medium">{formatVitalValue(record, type)}</span>
+                                <span className="text-sm text-muted-foreground">•</span>
+                                <span className="text-sm text-muted-foreground">{formatDate(record.date_recorded)}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                Recorded: {formatTimestamp(record.created_at)}
+                              </span>
                             </div>
                             <div className="flex gap-1">
                               <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openDialog("view", record)}>
