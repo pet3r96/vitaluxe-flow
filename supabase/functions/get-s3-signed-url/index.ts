@@ -202,22 +202,42 @@ serve(async (req) => {
       
       if (userRole === 'patient') {
         // Patient can only access provider docs assigned to them
-        const { data: patientAccount } = await supabase
+        console.log('[get-s3-signed-url] 🔍 Patient authorization check:', {
+          effectiveUserId,
+          documentId: providerDoc.id,
+          storagePath: normalizedPath
+        });
+
+        const { data: patientAccount, error: patientError } = await supabase
           .from('patient_accounts')
           .select('id')
           .eq('user_id', effectiveUserId)
           .maybeSingle();
 
+        console.log('[get-s3-signed-url] 👤 Patient account lookup:', {
+          found: !!patientAccount,
+          patientId: patientAccount?.id,
+          error: patientError?.message
+        });
+
         if (!patientAccount) {
           authResult = { allowed: false, reason: 'patient account not found' };
         } else {
           // Check for assignment
-          const { data: assignment } = await supabase
+          const { data: assignment, error: assignmentError } = await supabase
             .from('provider_document_patients')
             .select('id, hidden, is_hidden')
             .eq('document_id', providerDoc.id)
             .eq('patient_id', patientAccount.id)
             .maybeSingle();
+
+          console.log('[get-s3-signed-url] 📄 Assignment lookup:', {
+            found: !!assignment,
+            assignmentId: assignment?.id,
+            hidden: assignment?.hidden,
+            is_hidden: assignment?.is_hidden,
+            error: assignmentError?.message
+          });
 
           if (!assignment) {
             authResult = { allowed: false, reason: 'document not assigned to patient' };
@@ -227,6 +247,8 @@ serve(async (req) => {
             authResult = { allowed: true, reason: 'patient has assignment' };
           }
         }
+        
+        console.log('[get-s3-signed-url] ✅ Patient authorization result:', authResult);
       } else if (userRole === 'doctor' || userRole === 'provider' || userRole === 'staff') {
         // Practice users can access documents from their practice
         if (!effectivePracticeId) {
