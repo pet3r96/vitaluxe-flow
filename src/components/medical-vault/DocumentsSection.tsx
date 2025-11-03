@@ -23,17 +23,21 @@ export function DocumentsSection({ patientAccountId, mode, canEdit }: DocumentsS
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<PatientDocument | null>(null);
 
-  // Fetch patient documents
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["patient-documents-vault", patientAccountId],
     queryFn: async () => {
+      console.log('[DocumentsSection] Fetching documents for patient_account:', patientAccountId);
       const { data, error } = await supabase
         .from("patient_documents")
         .select("*")
         .eq("patient_id", patientAccountId)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[DocumentsSection] Error fetching documents:', error);
+        throw error;
+      }
+      console.log('[DocumentsSection] Found documents:', data?.length || 0);
       return (data || []) as PatientDocument[];
     },
     enabled: !!patientAccountId,

@@ -20,6 +20,16 @@ interface AuditLogDialogProps {
 
 export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName, patientAccountId, isLoading }: AuditLogDialogProps) {
   const handleDownload = async () => {
+    // Prevent download if still loading
+    if (isLoading) {
+      toast({ 
+        title: "Please Wait", 
+        description: "Audit logs are still loading. Please try again in a moment.", 
+        variant: "default" 
+      });
+      return;
+    }
+
     try {
       // For now, use the provided auditLogs, but in future we might want to re-fetch
       const logsToExport = auditLogs || [];
@@ -33,9 +43,7 @@ export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName, pat
         
         toast({ 
           title: "No Data", 
-          description: isLoading 
-            ? "Audit logs are still loading. Please wait a moment and try again."
-            : "No audit logs found to export. If this patient has recent activity, please refresh the page.", 
+          description: "No audit logs found to export. If this patient has recent activity, please refresh the page.", 
           variant: "destructive" 
         });
         return;
@@ -101,7 +109,12 @@ export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName, pat
               Medical Vault Audit Log
               {patientName && <span className="text-muted-foreground">- {patientName}</span>}
             </DialogTitle>
-            <Button onClick={handleDownload} size="sm" variant="outline">
+            <Button 
+              onClick={handleDownload} 
+              size="sm" 
+              variant="outline"
+              disabled={isLoading || auditLogs.length === 0}
+            >
               <Download className="h-4 w-4 mr-2" />
               Download Report
             </Button>

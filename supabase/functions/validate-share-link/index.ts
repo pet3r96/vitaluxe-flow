@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch all medical data for PDF generation
-    const patientId = shareLink.patient_id;
+    const patientAccountId = shareLink.patient_id;
     
     const [
       { data: medications },
@@ -110,14 +110,14 @@ Deno.serve(async (req) => {
       { data: pharmacies },
       { data: emergencyContacts }
     ] = await Promise.all([
-      supabase.from('patient_medications').select('*').eq('patient_id', patientId),
-      supabase.from('patient_conditions').select('*').eq('patient_id', patientId),
-      supabase.from('patient_allergies').select('*').eq('patient_id', patientId),
-      supabase.from('patient_vitals').select('*').eq('patient_id', patientId).order('recorded_date', { ascending: false }).limit(1),
-      supabase.from('patient_immunizations').select('*').eq('patient_id', patientId),
-      supabase.from('patient_surgeries').select('*').eq('patient_id', patientId),
-      supabase.from('patient_pharmacies').select('*').eq('patient_id', patientId),
-      supabase.from('patient_emergency_contacts').select('*').eq('patient_id', patientId)
+      supabase.from('patient_medications').select('*').eq('patient_account_id', patientAccountId),
+      supabase.from('patient_conditions').select('*').eq('patient_account_id', patientAccountId),
+      supabase.from('patient_allergies').select('*').eq('patient_account_id', patientAccountId),
+      supabase.from('patient_vitals').select('*').eq('patient_account_id', patientAccountId).order('recorded_date', { ascending: false }).limit(1),
+      supabase.from('patient_immunizations').select('*').eq('patient_account_id', patientAccountId),
+      supabase.from('patient_surgeries').select('*').eq('patient_account_id', patientAccountId),
+      supabase.from('patient_pharmacies').select('*').eq('patient_account_id', patientAccountId),
+      supabase.from('patient_emergency_contacts').select('*').eq('patient_account_id', patientAccountId)
     ]);
 
     // Mark as used IMMEDIATELY before returning data
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
       entity_id: shareLink.id,
       details: {
         token,
-        patient_id: patientId,
+        patient_account_id: patientAccountId,
         patient_name: `${shareLink.patient_accounts.first_name} ${shareLink.patient_accounts.last_name}`,
         ip_address: clientIP,
         accessed_at: new Date().toISOString()

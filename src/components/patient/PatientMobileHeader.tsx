@@ -12,7 +12,8 @@ export function PatientMobileHeader() {
   if (effectiveRole !== 'patient') return null;
   
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden touch-auto">
+    <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden"
+      style={{ touchAction: 'auto' }}>
       <div className="flex h-14 items-center justify-between px-4">
         {/* Logo */}
         <div className="flex items-center gap-2">
