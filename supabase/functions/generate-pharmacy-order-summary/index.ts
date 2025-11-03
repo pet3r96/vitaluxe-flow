@@ -37,7 +37,11 @@ serve(async (req) => {
           name,
           company,
           npi,
-          practice_npi
+          practice_npi,
+          address_street,
+          address_city,
+          address_state,
+          address_zip
         )
       `)
       .eq('id', order_id)
@@ -45,18 +49,56 @@ serve(async (req) => {
 
     if (orderError) throw orderError;
 
-    // Fetch order lines
+    // Fetch order lines with provider info
     const { data: lines, error: linesError } = await supabase
       .from('order_lines')
       .select(`
         *,
         products (
           name
+        ),
+        providers (
+          id,
+          profiles (
+            name,
+            npi
+          )
         )
       `)
       .eq('order_id', order_id);
 
     if (linesError) throw linesError;
+
+    // Fetch patient addresses if shipping to patient
+    const patientAddresses = new Map();
+    if (order.ship_to === 'patient' && lines && lines.length > 0) {
+      const patientIds = [...new Set(lines.map(l => l.patient_id).filter(Boolean))];
+      
+      for (const patientId of patientIds) {
+        try {
+          const { data: contactData } = await supabase.rpc('get_decrypted_patient_phi', {
+            p_patient_id: patientId
+          });
+          
+          if (contactData && contactData.length > 0 && contactData[0].address) {
+            patientAddresses.set(patientId, contactData[0].address);
+          } else {
+            // Fallback to plain text
+            const { data: patientData } = await supabase
+              .from('patient_accounts')
+              .select('address')
+              .eq('id', patientId)
+              .single();
+            
+            if (patientData?.address && patientData.address !== '[ENCRYPTED]') {
+              patientAddresses.set(patientId, patientData.address);
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch address for patient ${patientId}:`, error);
+        }
+      }
+    }
 
     // Import jsPDF dynamically
     const { default: jsPDF } = await import('https://esm.sh/jspdf@2.5.2');
@@ -111,7 +153,95 @@ serve(async (req) => {
       doc.text(`Practice NPI: ${order.profiles.practice_npi}`, 20, yPos);
       yPos += 6;
     }
+    
+    // Practice Address
+    if (order.profiles?.address_street && order.profiles?.address_city) {
+      const addressLine = `Address: ${order.profiles.address_street}, ${order.profiles.address_city}, ${order.profiles.address_state || ''} ${order.profiles.address_zip || ''}`;
+      const addressLines = doc.splitTextToSize(addressLine, pageWidth - 40);
+      doc.text(addressLines, 20, yPos);
+      yPos += (addressLines.length * 6);
+    }
     yPos += 8;
+
+    // Shipping Address
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Shipping Address', 20, yPos);
+    yPos += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    if (order.ship_to === 'practice') {
+      if (order.profiles?.address_street && order.profiles?.address_city) {
+        const addressLine = `${order.profiles.address_street}, ${order.profiles.address_city}, ${order.profiles.address_state || ''} ${order.profiles.address_zip || ''}`;
+        const addressLines = doc.splitTextToSize(addressLine, pageWidth - 40);
+        doc.text(addressLines, 20, yPos);
+        yPos += (addressLines.length * 6);
+      } else {
+        doc.text('Practice address not available', 20, yPos);
+        yPos += 6;
+      }
+    } else {
+      // Patient addresses
+      const uniquePatientIds = [...new Set(lines.map(l => l.patient_id).filter(Boolean))];
+      if (uniquePatientIds.length > 0) {
+        uniquePatientIds.forEach((patientId, idx) => {
+          const line = lines.find(l => l.patient_id === patientId);
+          const address = patientAddresses.get(patientId);
+          
+          if (line) {
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Patient: ${line.patient_name}`, 20, yPos);
+            yPos += 6;
+            
+            doc.setFont('helvetica', 'normal');
+            if (address) {
+              const addressLines = doc.splitTextToSize(address, pageWidth - 40);
+              doc.text(addressLines, 20, yPos);
+              yPos += (addressLines.length * 6);
+            } else {
+              doc.text('Address not available', 20, yPos);
+              yPos += 6;
+            }
+            yPos += 4;
+          }
+        });
+      } else {
+        doc.text('Patient address not available', 20, yPos);
+        yPos += 6;
+      }
+    }
+    yPos += 8;
+
+    // Prescriber Information
+    const uniqueProviders = new Map();
+    lines.forEach(line => {
+      if (line.providers && line.providers.id) {
+        uniqueProviders.set(line.providers.id, line.providers);
+      }
+    });
+
+    if (uniqueProviders.size > 0) {
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Prescriber Information', 20, yPos);
+      yPos += 8;
+
+      doc.setFontSize(10);
+      uniqueProviders.forEach((provider) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Prescriber: ${provider.profiles?.name || 'Provider'}`, 20, yPos);
+        yPos += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        if (provider.profiles?.npi) {
+          doc.text(`NPI: ${provider.profiles.npi}`, 20, yPos);
+          yPos += 6;
+        }
+        yPos += 4;
+      });
+      yPos += 8;
+    }
 
     // Order Lines
     doc.setFontSize(12);

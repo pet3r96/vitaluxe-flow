@@ -153,14 +153,14 @@ export const PharmacyShippingManager = () => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-1 space-y-4">
           {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-32 w-full" />
+            <Skeleton key={i} className="h-24 sm:h-32 w-full" />
           ))}
         </div>
         <div className="lg:col-span-2">
-          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-64 sm:h-96 w-full" />
         </div>
       </div>
     );
@@ -168,37 +168,45 @@ export const PharmacyShippingManager = () => {
 
   return (
     <div>
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OrderStatus)} className="mb-6">
-        <TabsList>
-          <TabsTrigger value="pending" className="gap-2">
-            <Package className="h-4 w-4" />
-            Pending {counts.pending > 0 && `(${counts.pending})`}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OrderStatus)} className="mb-4 sm:mb-6">
+        <TabsList className="flex-wrap h-auto gap-1 sm:gap-0">
+          <TabsTrigger value="pending" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+            <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Pending</span>
+            <span className="sm:hidden">Pend.</span>
+            {counts.pending > 0 && `(${counts.pending})`}
           </TabsTrigger>
-          <TabsTrigger value="on_hold" className="gap-2">
-            <Clock className="h-4 w-4" />
-            On Hold {counts.on_hold > 0 && `(${counts.on_hold})`}
+          <TabsTrigger value="on_hold" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">On Hold</span>
+            <span className="sm:hidden">Hold</span>
+            {counts.on_hold > 0 && `(${counts.on_hold})`}
           </TabsTrigger>
-          <TabsTrigger value="shipped" className="gap-2">
-            <CheckCircle className="h-4 w-4" />
-            Shipped {counts.shipped > 0 && `(${counts.shipped})`}
+          <TabsTrigger value="shipped" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Shipped</span>
+            <span className="sm:hidden">Ship.</span>
+            {counts.shipped > 0 && `(${counts.shipped})`}
           </TabsTrigger>
-          <TabsTrigger value="denied" className="gap-2">
-            <XCircle className="h-4 w-4" />
-            Declined {counts.denied > 0 && `(${counts.denied})`}
+          <TabsTrigger value="denied" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+            <XCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Declined</span>
+            <span className="sm:hidden">Decl.</span>
+            {counts.denied > 0 && `(${counts.denied})`}
           </TabsTrigger>
-          <TabsTrigger value="all" className="gap-2">
-            <List className="h-4 w-4" />
+          <TabsTrigger value="all" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+            <List className="h-3 w-3 sm:h-4 sm:w-4" />
             All
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left Sidebar - Order List */}
         <div className="lg:col-span-1 space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
           {!filteredOrders || filteredOrders.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground">
+            <Card className="p-6 sm:p-8 text-center">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 {activeTab === 'pending' && 'No pending orders'}
                 {activeTab === 'on_hold' && 'No orders on hold'}
                 {activeTab === 'shipped' && 'No shipped orders'}
@@ -210,24 +218,24 @@ export const PharmacyShippingManager = () => {
             filteredOrders.map((orderLine) => (
               <Card
                 key={orderLine.id}
-                className={`p-4 cursor-pointer transition-all hover:shadow-md ${
+                className={`p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
                   selectedOrderId === orderLine.order_id ? 'ring-2 ring-primary' : ''
                 }`}
                 onClick={() => setSelectedOrderId(orderLine.order_id)}
               >
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-xs sm:text-sm truncate">
                       Order #{orderLine.order_id.slice(0, 8)}
                     </p>
                     {getStatusBadge(orderLine.status)}
                   </div>
                   
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
                     Patient: {orderLine.patient_name}
                   </p>
                   
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
                     Practice: {orderLine.orders?.profiles?.company || orderLine.orders?.profiles?.name}
                   </p>
                   
@@ -236,7 +244,7 @@ export const PharmacyShippingManager = () => {
                   </p>
 
                   {orderLine.tracking_number && (
-                    <p className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                    <p className="text-xs font-mono bg-muted px-2 py-1 rounded truncate">
                       {orderLine.tracking_number}
                     </p>
                   )}
@@ -255,10 +263,10 @@ export const PharmacyShippingManager = () => {
               onClose={() => setSelectedOrderId(null)}
             />
           ) : (
-            <Card className="p-12 text-center">
-              <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-lg font-medium">Select an order to begin</p>
-              <p className="text-sm text-muted-foreground mt-2">
+            <Card className="p-8 sm:p-12 text-center">
+              <Package className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
+              <p className="text-base sm:text-lg font-medium">Select an order to begin</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
                 Click on an order from the list to view details and process shipment
               </p>
             </Card>

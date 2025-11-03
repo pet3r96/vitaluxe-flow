@@ -49,7 +49,9 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
             address_street,
             address_city,
             address_state,
-            address_zip
+            address_zip,
+            npi,
+            practice_npi
           )
         `)
         .eq('id', orderId)
@@ -64,13 +66,67 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
           products (
             name,
             requires_prescription
+          ),
+          providers!order_lines_provider_id_fkey (
+            id,
+            user_id
           )
         `)
         .eq('order_id', orderId);
 
       if (linesError) throw linesError;
 
-      return { ...orderData, lines };
+      // Get provider profiles separately to avoid ambiguous relationship
+      const providerIds = [...new Set(lines?.map(l => l.provider_id).filter(Boolean))];
+      const providerProfiles = new Map();
+      
+      if (providerIds.length > 0) {
+        const { data: providers } = await supabase
+          .from('providers')
+          .select(`
+            id,
+            profiles!providers_user_id_fkey (
+              name,
+              npi
+            )
+          `)
+          .in('id', providerIds);
+        
+        providers?.forEach(p => {
+          providerProfiles.set(p.id, p);
+        });
+      }
+
+      // Attach provider profiles to lines
+      const linesWithProviders = lines?.map(line => ({
+        ...line,
+        providers: line.provider_id ? providerProfiles.get(line.provider_id) : null
+      }));
+
+      // If ship_to is patient, fetch patient addresses
+      let patientAddresses: Map<string, string> = new Map();
+      if (orderData.ship_to === 'patient' && linesWithProviders && linesWithProviders.length > 0) {
+        const patientIds = [...new Set(linesWithProviders.map(l => l.patient_id).filter(Boolean))];
+        
+        for (const patientId of patientIds) {
+          try {
+            // Fetch from patient_accounts directly
+            const { data: patientData } = await supabase
+              .from('patient_accounts')
+              .select('address')
+              .eq('id', patientId)
+              .single();
+            
+            if (patientData?.address && patientData.address !== '[ENCRYPTED]') {
+              patientAddresses.set(patientId, patientData.address);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch address for patient ${patientId}:`, error);
+          }
+        }
+      }
+
+      return { ...orderData, lines: linesWithProviders, patientAddresses };
     },
   });
 
@@ -390,7 +446,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Practice</p>
               <p className="font-medium">{order.profiles?.company || order.profiles?.name}</p>
@@ -428,6 +484,52 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
                 )}
               </p>
             </div>
+            
+            {/* Practice Address */}
+            {order.ship_to === 'practice' && (
+              <div className="col-span-full pt-3 border-t">
+                <p className="text-muted-foreground mb-2">Practice Shipping Address</p>
+                <p className="font-medium text-sm">
+                  {order.profiles?.address_street && order.profiles?.address_city && order.profiles?.address_state && order.profiles?.address_zip
+                    ? `${order.profiles.address_street}, ${order.profiles.address_city}, ${order.profiles.address_state} ${order.profiles.address_zip}`
+                    : 'Address not available'}
+                </p>
+              </div>
+            )}
+            
+            {/* Patient Addresses */}
+            {order.ship_to === 'patient' && order.lines && order.lines.length > 0 && (
+              <div className="col-span-full pt-3 border-t space-y-3">
+                <p className="text-muted-foreground font-semibold">Patient Shipping Address(es)</p>
+                {order.lines.map((line: any, idx: number) => (
+                  <div key={line.id} className="pl-3 border-l-2 border-primary/30">
+                    <p className="text-xs text-muted-foreground font-medium">{line.patient_name}</p>
+                    <p className="font-medium text-sm mt-1">
+                      {order.patientAddresses?.get(line.patient_id) || 'Address not available'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Prescriber Information */}
+            {hasRxRequiredProducts && order.lines && order.lines.length > 0 && (
+              <div className="col-span-full pt-3 border-t space-y-2">
+                <p className="text-muted-foreground font-semibold">Prescriber Information</p>
+                {[...new Set(order.lines.filter((l: any) => l.providers).map((l: any) => l.providers.id))].map((providerId: string) => {
+                  const line = order.lines.find((l: any) => l.providers?.id === providerId);
+                  const provider = line?.providers;
+                  return provider ? (
+                    <div key={providerId} className="pl-3 border-l-2 border-primary/30">
+                      <p className="font-medium text-sm">{provider.profiles?.name || 'Provider'}</p>
+                      {provider.profiles?.npi && (
+                        <p className="text-xs text-muted-foreground">NPI: {provider.profiles.npi}</p>
+                      )}
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
