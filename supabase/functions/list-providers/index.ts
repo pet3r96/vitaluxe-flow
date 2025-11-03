@@ -94,9 +94,14 @@ Deno.serve(async (req) => {
           profiles!providers_user_id_fkey!inner(
             id,
             name,
+            full_name,
+            prescriber_name,
             email,
             phone,
-            address
+            address,
+            npi,
+            dea,
+            license_number
           )
         `)
         .eq('user_id', user.id)
