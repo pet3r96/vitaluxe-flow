@@ -48,6 +48,23 @@ export function CreateAppointmentDialog({
   const { effectiveUserId } = useAuth();
   const [selectedPatientId, setSelectedPatientId] = useState(defaultPatientId || "");
   const [createFollowUp, setCreateFollowUp] = useState(false);
+
+  // Debug logging for providers
+  useEffect(() => {
+    if (open) {
+      console.log('[CreateAppointmentDialog] Providers received:', providers);
+      console.log('[CreateAppointmentDialog] Number of providers:', providers?.length);
+      providers?.forEach((p, idx) => {
+        console.log(`[CreateAppointmentDialog] Provider ${idx}:`, {
+          id: p.id,
+          full_name: p.full_name,
+          first_name: p.first_name,
+          last_name: p.last_name,
+          raw: p
+        });
+      });
+    }
+  }, [open, providers]);
   
   // Sync selectedPatientId when dialog opens with a defaultPatientId
   useEffect(() => {

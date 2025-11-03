@@ -154,11 +154,19 @@ Deno.serve(async (req) => {
             .eq('active', true);
           
           if (providerRecords && providerRecords.length > 0) {
+            console.log('[get-calendar-data] Raw provider records:', JSON.stringify(providerRecords, null, 2));
             return providerRecords.map((p: any) => {
               const profile = p.profiles;
+              console.log('[get-calendar-data] Processing provider:', {
+                provider_id: p.id,
+                user_id: p.user_id,
+                profile_exists: !!profile,
+                profile_name: profile?.name,
+                profile_full_name: profile?.full_name
+              });
               const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
               const nameParts = displayName.trim().split(' ');
-              return {
+              const result = {
                 id: p.id,
                 user_id: p.user_id,
                 active: p.active,
@@ -167,6 +175,8 @@ Deno.serve(async (req) => {
                 full_name: displayName,
                 specialty: null
               };
+              console.log('[get-calendar-data] Transformed provider:', result);
+              return result;
             });
           }
           return [];
