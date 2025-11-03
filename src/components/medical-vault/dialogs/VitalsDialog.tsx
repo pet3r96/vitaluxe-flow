@@ -177,29 +177,44 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       }
 
       if (mode === "edit" && vitals) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_vitals")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", vitals.id);
+          .eq("id", vitals.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to update vitals. This may be due to permission restrictions.");
+        }
       } else if (isBasicVitalMode && vitals) {
         // Update existing height/weight record
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_vitals")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", vitals.id);
+          .eq("id", vitals.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to update vitals. This may be due to permission restrictions.");
+        }
       } else {
         // Insert new record
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_vitals")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+          })
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to add vitals. This may be due to permission restrictions.");
+        }
       }
     },
     {

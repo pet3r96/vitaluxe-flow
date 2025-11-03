@@ -8111,6 +8111,10 @@ export type Database = {
         Args: { p_practice_id: string }
         Returns: undefined
       }
+      user_belongs_to_patient_practice: {
+        Args: { _patient_account_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_can_access_practice_documents: {
         Args: { p_practice_id: string }
         Returns: boolean

@@ -139,13 +139,18 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
       };
 
       if (mode === "edit" && medication) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_medications")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", medication.id);
+          .eq("id", medication.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to update medication. This may be due to permission restrictions.");
+        }
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_medications")
           .insert({
             ...formattedData,
@@ -153,8 +158,13 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
             is_active: true,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+          })
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to add medication. This may be due to permission restrictions.");
+        }
       }
     },
     {

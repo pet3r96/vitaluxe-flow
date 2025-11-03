@@ -91,21 +91,31 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
       }
 
       if (mode === "edit" && pharmacy) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_pharmacies")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", pharmacy.id);
+          .eq("id", pharmacy.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to update pharmacy. This may be due to permission restrictions.");
+        }
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_pharmacies")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+          })
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to add pharmacy. This may be due to permission restrictions.");
+        }
       }
     },
     {

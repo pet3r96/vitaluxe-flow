@@ -64,21 +64,31 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       };
 
       if (mode === "edit" && contact) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_emergency_contacts")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", contact.id);
+          .eq("id", contact.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to update emergency contact. This may be due to permission restrictions.");
+        }
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_emergency_contacts")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+          })
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to add emergency contact. This may be due to permission restrictions.");
+        }
       }
     },
     {

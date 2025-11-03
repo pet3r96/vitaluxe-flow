@@ -141,13 +141,18 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
       };
 
       if (mode === "edit" && allergy) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_allergies")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", allergy.id);
+          .eq("id", allergy.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to update allergy. This may be due to permission restrictions.");
+        }
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_allergies")
           .insert({
             ...formattedData,
@@ -155,8 +160,13 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
             is_active: true,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+          })
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to add allergy. This may be due to permission restrictions.");
+        }
       }
     },
     {

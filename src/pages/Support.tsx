@@ -49,7 +49,7 @@ const Support = () => {
       
       return tickets;
     },
-    enabled: effectiveRole === "admin",
+    enabled: ["admin", "doctor", "staff", "provider"].includes(effectiveRole || ""),
   });
 
   // Calculate stats

@@ -54,21 +54,31 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
       };
 
       if (mode === "edit" && immunization) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_immunizations")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", immunization.id);
+          .eq("id", immunization.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to update immunization. This may be due to permission restrictions.");
+        }
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_immunizations")
           .insert({
             ...formattedData,
             patient_account_id: patientAccountId,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+          })
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to add immunization. This may be due to permission restrictions.");
+        }
       }
     },
     {

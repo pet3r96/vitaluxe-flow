@@ -103,13 +103,18 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
       };
 
       if (mode === "edit" && condition) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_conditions")
           .update({ ...formattedData, updated_at: new Date().toISOString() })
-          .eq("id", condition.id);
+          .eq("id", condition.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to update condition. This may be due to permission restrictions.");
+        }
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("patient_conditions")
           .insert({
             ...formattedData,
@@ -117,8 +122,13 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
             is_active: true,
             added_by_user_id: effectiveUserId,
             added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+          })
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!result) {
+          throw new Error("Unable to add condition. This may be due to permission restrictions.");
+        }
       }
     },
     {
