@@ -100,9 +100,11 @@ async function routeOrderToPharmacy(
   }
 
   console.log(`Product pharmacies query result: ${assignments?.length || 0} assignments found`);
+  console.log(`[DIAGNOSTIC] Product: ${product_id}, State: ${trimmedState}, Assignments found: ${assignments?.length || 0}`);
   
   if (!assignments || assignments.length === 0) {
     console.log("No pharmacies assigned to product");
+    console.log(`[DIAGNOSTIC] Zero assignments - product_id: ${product_id} has no pharmacies in product_pharmacies table`);
     return { 
       pharmacy_id: null, 
       reason: "No pharmacies assigned to product" 
@@ -142,8 +144,19 @@ async function routeOrderToPharmacy(
   }
 
   console.log(`Found ${eligiblePharmacies.length} eligible pharmacies for state ${trimmedState}`);
+  console.log(`[DIAGNOSTIC] Eligible count: ${eligiblePharmacies.length}, State: ${trimmedState}, User topline: ${user_topline_rep_id || 'none'}`);
 
   if (eligiblePharmacies.length === 0) {
+    const diagnostics = {
+      total_assignments: assignments.length,
+      active_pharmacies: assignments.filter((a: any) => a.pharmacy?.active).length,
+      pharmacies_serving_state: assignments.filter((a: any) => 
+        a.pharmacy?.active && a.pharmacy?.states_serviced?.includes(trimmedState)
+      ).length,
+      filtered_by_topline: user_topline_rep_id ? true : false
+    };
+    console.log(`[DIAGNOSTIC] No eligible pharmacies - breakdown:`, diagnostics);
+    
     await supabase.from("order_routing_log").insert({
       product_id,
       destination_state: trimmedState,
@@ -151,7 +164,7 @@ async function routeOrderToPharmacy(
       eligible_pharmacies: [],
       selected_pharmacy_id: null,
       selected_pharmacy_name: null,
-      selection_reason: `No active pharmacies serve state: ${trimmedState}`,
+      selection_reason: `No active pharmacies serve state: ${trimmedState}. Diagnostics: ${JSON.stringify(diagnostics)}`,
       priority_used: null
     });
     
@@ -225,6 +238,7 @@ async function routeOrderToPharmacy(
 
   console.log(`Priority routing selected: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority})`);
   console.log(`Selected from ${topPriorityPharmacies.length} pharmacies with same priority`);
+  console.log(`[DIAGNOSTIC] SUCCESS - Pharmacy: ${selectedPharmacy.id} (${selectedPharmacy.name}), Priority: ${selectedPharmacy.priority}, Candidates: ${topPriorityPharmacies.length}`);
 
   // 7. Audit logging
   await supabase.from("order_routing_log").insert({

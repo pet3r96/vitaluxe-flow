@@ -81,9 +81,18 @@ export default function PatientDetail() {
         .from('patient_accounts')
         .select('*')
         .eq('id', actualPatientId)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PatientDetail] Error fetching patient:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        console.warn('[PatientDetail] Patient not found or no access:', { actualPatientId, effectivePracticeId });
+        return null;
+      }
+      
       return {
         ...data,
         name: data ? `${data.first_name} ${data.last_name}` : "",
@@ -398,8 +407,14 @@ export default function PatientDetail() {
   if (!patient) {
     return (
       <div className="patient-container">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Patient not found</h2>
+        <div className="text-center py-12">
+          <div className="mx-auto w-16 h-16 mb-4 rounded-full bg-muted flex items-center justify-center">
+            <User className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Patient Not Found</h2>
+          <p className="text-muted-foreground mb-6">
+            This patient does not exist or you don't have permission to view their information.
+          </p>
           <Button onClick={() => navigate("/patients")} className="touch-target">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Patients

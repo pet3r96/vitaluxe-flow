@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { validatePhone, validateEmail } from "@/lib/validators";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
+import { logger } from "@/lib/logger";
 
 interface PatientDialogProps {
   open: boolean;
@@ -77,15 +78,28 @@ export const PatientDialog = ({
             .from("patient_accounts")
             .select("id, name, first_name, last_name, email, phone, birth_date, date_of_birth, allergies, notes, address_street, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
             .eq("id", patient.id)
-            .single();
+            .maybeSingle();
 
-          if (error) throw error;
+          if (error) {
+            logger.error("Failed to fetch patient data", error, { patientId: patient.id });
+            throw error;
+          }
+          
+          if (!fetchedPatient) {
+            logger.warn("Patient not found or no access", { patientId: patient.id });
+            toast.error('Patient not found or you do not have permission to view this patient');
+            onOpenChange(false);
+            return;
+          }
+          
           if (fetchedPatient) {
             fullPatient = fetchedPatient;
           }
         } catch (error) {
           console.error('[PatientDialog] Failed to fetch full patient data:', error);
           toast.error('Failed to load complete patient information');
+          onOpenChange(false);
+          return;
         }
       }
 

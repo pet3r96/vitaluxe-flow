@@ -40,9 +40,10 @@ export function PatientQuickAccessButton({
         .from("patient_accounts")
         .select("*")
         .eq("id", patientId)
-        .single();
+        .maybeSingle();
       
       if (accountError) throw accountError;
+      if (!account) throw new Error("Patient not found or you don't have access");
 
       const [medications, conditions, allergies, vitals, immunizations, surgeries, pharmacies, emergencyContacts] = await Promise.all([
         supabase.from("patient_medications").select("*").eq("patient_account_id", patientId).order("created_at", { ascending: false }),
@@ -88,13 +89,14 @@ export function PatientQuickAccessButton({
       // Fetch data if not already loaded
       let data = patientData;
       if (!data) {
-        const { data: account } = await supabase
+        const { data: account, error: accountError } = await supabase
           .from("patient_accounts")
           .select("*")
           .eq("id", patientId)
-          .single();
+          .maybeSingle();
         
-        if (!account) throw new Error("Patient not found");
+        if (accountError) throw accountError;
+        if (!account) throw new Error("Patient not found or you don't have access");
 
         const [medications, conditions, allergies, vitals, immunizations, surgeries, pharmacies, emergencyContacts] = await Promise.all([
           supabase.from("patient_medications").select("*").eq("patient_account_id", patientId).order("created_at", { ascending: false }),

@@ -33,7 +33,6 @@ const Support = () => {
       const result = await supabase
         .from("patient_messages")
         .select("*")
-        .eq("sender_type", "patient")
         .order("created_at", { ascending: false});
 
       if (result.error) throw result.error;

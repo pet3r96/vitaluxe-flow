@@ -231,11 +231,21 @@ export const PatientsDataTable = () => {
       }
 
       // Fetch patient details for email
-      const { data: patient } = await supabase
+      const { data: patient, error: patientError } = await supabase
         .from('patient_accounts')
         .select('id, email, name, first_name, last_name, practice_id')
         .eq('id', patientId)
-        .single();
+        .maybeSingle();
+
+      if (patientError) {
+        logger.error("Failed to fetch patient for portal invite", patientError, { patientId });
+        throw new Error('Failed to load patient data');
+      }
+
+      if (!patient) {
+        logger.warn("Patient not found for portal invite", { patientId });
+        throw new Error('Patient not found or you do not have access');
+      }
 
       if (!patient?.email) {
         throw new Error('Patient email not found');
