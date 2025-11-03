@@ -199,7 +199,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                             <main className="flex-1 flex flex-col overflow-y-auto">
                               <PatientMobileHeader />
                               <Topbar />
-                              <div className="flex-1 p-4 sm:p-6 lg:p-8 pt-14 md:pt-4 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
+                              <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-14 md:pt-4 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
                                 <div className="relative z-10">
                                 <Suspense fallback={<PageLoader />}>
                                   <AnimatePresence mode="wait">
