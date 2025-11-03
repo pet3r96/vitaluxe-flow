@@ -218,7 +218,7 @@ export const PatientSelectionDialog = ({
       if (error) throw error;
       return data;
     },
-    enabled: !!effectivePracticeId && currentStep === 'prescription'
+    enabled: !!effectivePracticeId && open
   });
 
   useEffect(() => {

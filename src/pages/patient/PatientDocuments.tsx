@@ -375,13 +375,16 @@ export default function PatientDocuments() {
       
       const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
         body: {
-          bucketName: bucket,
-          filePath: doc.storage_path,
+          bucket: bucket,
+          path: doc.storage_path,
           expiresIn: 60
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PatientDocuments] Download error:', error);
+        throw new Error(error.details || error.message || 'Failed to generate download link');
+      }
 
       const response = await fetch(data.signedUrl || data.signed_url);
       const blob = await response.blob();

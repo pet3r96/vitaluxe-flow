@@ -451,7 +451,8 @@ export const ProductsGrid = () => {
           .single();
 
         // Use shipping address state with fallback to billing address state
-        const destinationState = practiceProfile?.shipping_address_state || practiceProfile?.address_state || '';
+        const rawState = practiceProfile?.shipping_address_state || practiceProfile?.address_state || '';
+        const destinationState = rawState.trim().toUpperCase();
         
         console.debug('[ProductsGrid] Practice shipping state resolved', { 
           destinationState, 

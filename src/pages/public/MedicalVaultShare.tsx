@@ -94,6 +94,15 @@ export default function MedicalVaultShare() {
 
       console.log('[MedicalVaultShare] PDF generated successfully');
       const url = URL.createObjectURL(pdfBlob);
+      
+      // Force immediate download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `medical-vault-${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
       setPdfUrl(url);
       setLoading(false);
 
