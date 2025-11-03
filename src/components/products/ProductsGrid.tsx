@@ -59,7 +59,9 @@ export const ProductsGrid = () => {
   // Only real non-impersonating admins bypass visibility filtering
   const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
 
-  const { canOrder, isStaffAccount } = useStaffOrderingPrivileges();
+  const { canOrder: staffCanOrder, isStaffAccount } = useStaffOrderingPrivileges();
+  // Providers and doctors always have ordering privileges
+  const canOrder = isProvider || staffCanOrder;
   const { data: cartCount } = useCartCount(effectiveUserId);
 
   const { data: products, isLoading, refetch } = useQuery({
