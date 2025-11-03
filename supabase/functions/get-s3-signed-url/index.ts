@@ -260,10 +260,19 @@ serve(async (req) => {
 
     let storageMethod: 's3' | 'supabase' = 'supabase';
     
+    console.log('[get-s3-signed-url] 🔧 Storage configuration:', {
+      hasAwsKey: !!awsAccessKeyId,
+      hasAwsSecret: !!awsSecretAccessKey,
+      region: awsRegion,
+      s3Bucket: s3BucketName,
+      requestedBucket: bucket,
+      requestedPath: path
+    });
+    
     if (awsAccessKeyId && awsSecretAccessKey && s3BucketName) {
       // Try S3 first
       try {
-        console.log('[get-s3-signed-url] 📦 Attempting S3 signed URL');
+        console.log('[get-s3-signed-url] 📦 Attempting S3 signed URL generation');
         const s3Client = new S3Client({
           region: awsRegion,
           credentials: {
@@ -279,22 +288,33 @@ serve(async (req) => {
 
         signedUrl = await getSignedUrl(s3Client, command, { expiresIn: expires });
         storageMethod = 's3';
-        console.log('[get-s3-signed-url] ✅ S3 signed URL generated');
+        console.log('[get-s3-signed-url] ✅ S3 signed URL generated successfully');
       } catch (s3Error: any) {
-        console.warn('[get-s3-signed-url] ⚠️ S3 failed, falling back to Supabase Storage:', s3Error.message);
+        console.error('[get-s3-signed-url] ⚠️ S3 error details:', {
+          message: s3Error.message,
+          code: s3Error.code,
+          name: s3Error.name,
+          bucket: s3BucketName,
+          key: s3Key
+        });
         
         // Fallback to Supabase Storage
+        console.log('[get-s3-signed-url] 🔄 Falling back to Supabase Storage');
         const { data: storageData, error: storageError } = await supabase.storage
           .from(bucket)
           .createSignedUrl(path, expires);
 
         if (storageError) {
-          console.error('[get-s3-signed-url] ❌ Storage fallback also failed:', storageError);
-          throw storageError;
+          console.error('[get-s3-signed-url] ❌ Storage fallback error:', {
+            message: storageError.message,
+            bucket,
+            path
+          });
+          throw new Error(`Storage access failed: ${storageError.message}`);
         }
 
         if (!storageData?.signedUrl) {
-          throw new Error('Failed to generate signed URL from storage');
+          throw new Error('Failed to generate signed URL from storage - no URL returned');
         }
 
         signedUrl = storageData.signedUrl;
@@ -308,15 +328,22 @@ serve(async (req) => {
         .createSignedUrl(path, expires);
 
       if (storageError) {
-        console.error('[get-s3-signed-url] ❌ Storage error:', storageError);
-        throw storageError;
+        console.error('[get-s3-signed-url] ❌ Storage error details:', {
+          message: storageError.message,
+          code: storageError.code,
+          bucket,
+          path,
+          hint: storageError.hint
+        });
+        throw new Error(`Storage access failed: ${storageError.message}`);
       }
 
       if (!storageData?.signedUrl) {
-        throw new Error('Failed to generate signed URL from storage');
+        throw new Error('Failed to generate signed URL from storage - no URL returned');
       }
 
       signedUrl = storageData.signedUrl;
+      console.log('[get-s3-signed-url] ✅ Supabase Storage signed URL generated');
     }
 
     // Log access for HIPAA compliance

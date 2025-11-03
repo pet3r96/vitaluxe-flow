@@ -40,6 +40,12 @@ export function PatientDocumentPreview({
   const loadPreview = async () => {
     setLoading(true);
     try {
+      console.log('[PatientDocumentPreview] Loading preview:', {
+        bucketName,
+        storagePath,
+        documentName
+      });
+
       const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
         body: {
           bucketName,
@@ -48,13 +54,36 @@ export function PatientDocumentPreview({
         }
       });
 
-      if (error) throw error;
-      setPreviewUrl(data.signedUrl || data.signed_url);
+      if (error) {
+        console.error('[PatientDocumentPreview] Edge function error:', error);
+        throw new Error(error.message || 'Failed to generate preview URL');
+      }
+
+      if (!data) {
+        throw new Error('No response data from server');
+      }
+
+      const signedUrl = data.signedUrl || data.signed_url;
+      if (!signedUrl) {
+        console.error('[PatientDocumentPreview] No signed URL in response:', data);
+        throw new Error('Server did not return a signed URL');
+      }
+
+      console.log('[PatientDocumentPreview] Preview URL generated successfully');
+      setPreviewUrl(signedUrl);
     } catch (error: any) {
-      console.error("Preview error:", error);
+      console.error("[PatientDocumentPreview] Error loading preview:", {
+        message: error.message,
+        bucketName,
+        storagePath,
+        documentName
+      });
+      
+      // Show detailed error to user
+      const errorMessage = error.message || "Could not load preview. Try downloading instead.";
       toast({
         title: "Preview Error",
-        description: "Could not load preview. Try downloading instead.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

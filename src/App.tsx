@@ -121,6 +121,7 @@ const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
 const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
 const MedicalVaultShare = lazy(() => import("./pages/public/MedicalVaultShare"));
+const PatientMobileHeader = lazy(() => import("./components/patient/PatientMobileHeader").then(m => ({ default: m.PatientMobileHeader })));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
@@ -196,6 +197,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                           <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                             <AppSidebar />
                             <main className="flex-1 flex flex-col overflow-y-auto">
+                              <PatientMobileHeader />
                               <Topbar />
                               <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
                                 <div className="relative z-10">

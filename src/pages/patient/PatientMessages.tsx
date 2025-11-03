@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageThread } from "@/components/patient/MessageThread";
@@ -81,6 +81,34 @@ export default function PatientMessages() {
     },
     enabled: !!patientAccount?.id,
   });
+
+  // Mutation to mark messages as read
+  const markAsReadMutation = useMutation({
+    mutationFn: async (threadId: string) => {
+      if (!patientAccount?.id) return;
+      
+      const { error } = await supabase
+        .from('patient_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', threadId)
+        .eq('patient_id', patientAccount.id)
+        .is('read_at', null);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      // Refetch threads and unread count
+      queryClient.invalidateQueries({ queryKey: ['patient-message-threads'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] });
+    }
+  });
+
+  // Mark message as read when thread is selected
+  useEffect(() => {
+    if (selectedThread && patientAccount?.id) {
+      markAsReadMutation.mutate(selectedThread);
+    }
+  }, [selectedThread, patientAccount?.id]);
 
   // Real-time subscription for instant updates using centralized manager
   useEffect(() => {
