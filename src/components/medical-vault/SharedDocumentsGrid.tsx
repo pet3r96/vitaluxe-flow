@@ -360,9 +360,11 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
                   </p>
                 )}
                 
-                <p className="text-xs text-muted-foreground mb-3">
-                  Uploaded: {format(new Date(doc.created_at), 'MMM d, yyyy')}
-                </p>
+                {(doc.created_at || doc.uploaded_at) && (
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Uploaded: {format(new Date(doc.created_at || doc.uploaded_at), 'MMM d, yyyy')}
+                  </p>
+                )}
 
                 {doc.notes && (
                   <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
