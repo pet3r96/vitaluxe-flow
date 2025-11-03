@@ -15,10 +15,13 @@ export const SESSION_CONFIG = {
   
   // Activity refresh settings
   REFRESH_ON_ACTIVITY: true,
-  REFRESH_THRESHOLD_MINUTES: 5,
-  ACTIVITY_CHECK_INTERVAL_MS: 30000,
-  ACTIVITY_EVENTS: ['mousedown', 'keydown', 'scroll', 'touchstart'] as const,
+  REFRESH_THRESHOLD_MINUTES: 2, // Aggressive threshold for faster timeout detection
+  ACTIVITY_CHECK_INTERVAL_MS: 10000, // Check every 10 seconds
+  ACTIVITY_EVENTS: ['mousedown', 'keydown', 'scroll', 'touchstart'] as const, // Intentional actions only
   
   // Maximum session duration (2 hours) regardless of activity
   MAX_SESSION_MINUTES: 120,
+  
+  // Hard inactivity timeout (30 minutes with NO activity = force logout)
+  INACTIVITY_TIMEOUT_MINUTES: 30,
 } as const;

@@ -83,8 +83,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Hard 30-minute session timeout with activity refresh
   const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-  const REFRESH_THRESHOLD_MS = 15 * 60 * 1000; // Refresh if < 15 minutes remaining (more user-friendly)
+  const REFRESH_THRESHOLD_MS = 2 * 60 * 1000; // Refresh if < 2 minutes remaining (aggressive timeout detection)
   const MAX_SESSION_MS = 120 * 60 * 1000; // 2 hours maximum
+  const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes of inactivity triggers logout
   const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
   const getSessionStartKey = (userId: string) => `vitaluxe_session_start_${userId}`;
   const hardTimerRef = useRef<number | null>(null);
@@ -313,16 +314,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Attach activity listeners once
+    // Attach activity listeners once (excluding oversensitive events)
     if (user?.id && !activityListenersAttached.current) {
-      const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'mousemove'];
+      const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
       events.forEach(event => {
         document.addEventListener(event, handleActivity, { passive: true });
       });
       activityListenersAttached.current = true;
       
       console.log('[Session] 🎧 Activity listeners attached:', events);
-      logger.info('Activity listeners attached with click and mousemove');
+      logger.info('Activity listeners attached for intentional user actions only');
     }
 
     // Event handlers for tab visibility and focus
@@ -388,10 +389,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             void doHardSignOut();
           }, HARD_SESSION_TIMEOUT_MS);
           
-          // Schedule failsafe interval check (every 30 seconds)
+          // Schedule failsafe interval check (every 10 seconds) with hard inactivity check
           checkIntervalRef.current = window.setInterval(() => {
+            // Check for 30 minutes of inactivity (hard rule)
+            const timeSinceActivity = Date.now() - lastActivityRef.current;
+            if (timeSinceActivity >= INACTIVITY_TIMEOUT_MS) {
+              console.log('[Session] 🛑 30-minute inactivity detected - forcing logout', {
+                minutesInactive: Math.round(timeSinceActivity / 60000)
+              });
+              logger.info('30-minute inactivity timeout - forcing logout');
+              void doHardSignOut();
+              return;
+            }
+            
+            // Also check normal expiration
             maybeSignOutIfExpired();
-          }, 30000);
+          }, 10000); // Check every 10 seconds for faster response
           
           logger.info('Session timer started', { 
             expiresAt: new Date(expireAt).toISOString(),
