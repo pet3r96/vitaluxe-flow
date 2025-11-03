@@ -8044,6 +8044,28 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      get_patient_provider_documents: {
+        Args: { p_patient_id: string }
+        Returns: {
+          assigned_patient_id: string
+          created_at: string
+          document_name: string
+          document_type: string
+          file_size: number
+          id: string
+          is_internal: boolean
+          mime_type: string
+          notes: string
+          practice_id: string
+          reviewed_at: string
+          reviewed_by: string
+          status: string
+          storage_path: string
+          tags: string[]
+          updated_at: string
+          uploaded_by: string
+        }[]
+      }
       get_patient_unified_documents: {
         Args: { p_patient_id: string }
         Returns: {
