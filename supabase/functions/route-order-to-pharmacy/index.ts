@@ -105,9 +105,74 @@ async function routeOrderToPharmacy(
   if (!assignments || assignments.length === 0) {
     console.log("No pharmacies assigned to product");
     console.log(`[DIAGNOSTIC] Zero assignments - product_id: ${product_id} has no pharmacies in product_pharmacies table`);
-    return { 
-      pharmacy_id: null, 
-      reason: "No pharmacies assigned to product" 
+
+    // Fallback: use all active pharmacies that serve the destination state
+    const { data: allActive, error: activeErr } = await supabase
+      .from("pharmacies")
+      .select("id, name, states_serviced, priority_map, active")
+      .eq("active", true);
+
+    if (activeErr) {
+      console.error("Error fetching active pharmacies:", activeErr);
+      return { 
+        pharmacy_id: null, 
+        reason: `Database error (fallback): ${activeErr.message}`
+      };
+    }
+
+    const fallbackEligible = (allActive || []).filter((p: any) => p.states_serviced?.includes(trimmedState));
+
+    if (!fallbackEligible.length) {
+      await supabase.from("order_routing_log").insert({
+        product_id,
+        destination_state: trimmedState,
+        user_topline_rep_id,
+        eligible_pharmacies: [],
+        selected_pharmacy_id: null,
+        selected_pharmacy_name: null,
+        selection_reason: `No pharmacies assigned to product and no active pharmacies serve state: ${trimmedState}`,
+        priority_used: null
+      });
+
+      return { 
+        pharmacy_id: null, 
+        reason: "No pharmacies assigned to product" 
+      };
+    }
+
+    console.log(`[FALLBACK] Using ${fallbackEligible.length} active pharmacies serving ${trimmedState}`);
+
+    // Apply priority logic on fallback set
+    const pharmaciesWithPriority = fallbackEligible.map((pharmacy: any) => ({
+      ...pharmacy,
+      priority: getPriority(pharmacy, trimmedState)
+    }));
+
+    pharmaciesWithPriority.sort((a: any, b: any) => {
+      const priorityDiff = a.priority - b.priority;
+      if (priorityDiff !== 0) return priorityDiff;
+      return a.name.localeCompare(b.name);
+    });
+
+    const highestPriority = pharmaciesWithPriority[0].priority;
+    const topPriorityPharmacies = pharmaciesWithPriority.filter((p: any) => p.priority === highestPriority);
+
+    const selectedPharmacy = topPriorityPharmacies[Math.floor(Math.random() * topPriorityPharmacies.length)];
+
+    await supabase.from("order_routing_log").insert({
+      product_id,
+      destination_state: trimmedState,
+      user_topline_rep_id,
+      eligible_pharmacies: pharmaciesWithPriority.map((p: any) => ({ id: p.id, name: p.name, priority: p.priority })),
+      selected_pharmacy_id: selectedPharmacy.id,
+      selected_pharmacy_name: selectedPharmacy.name,
+      selection_reason: `FALLBACK routing (no product assignments): ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority} for ${trimmedState})`,
+      priority_used: selectedPharmacy.priority
+    });
+
+    return {
+      pharmacy_id: selectedPharmacy.id,
+      reason: `FALLBACK routing: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority} for ${trimmedState})`
     };
   }
 

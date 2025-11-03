@@ -22,7 +22,7 @@ interface PatientMessage {
 }
 
 const Support = () => {
-  const { userRole } = useAuth();
+  const { effectiveRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch all support threads (admin only)
@@ -49,7 +49,7 @@ const Support = () => {
       
       return tickets;
     },
-    enabled: userRole === "admin",
+    enabled: effectiveRole === "admin",
   });
 
   // Calculate stats
@@ -82,7 +82,7 @@ const Support = () => {
 
   // Allow admin, doctor, staff, and provider roles to access support
   const allowedRoles = ["admin", "doctor", "staff", "provider"];
-  if (!userRole || !allowedRoles.includes(userRole)) {
+  if (!effectiveRole || !allowedRoles.includes(effectiveRole)) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">You do not have access to this page.</p>
