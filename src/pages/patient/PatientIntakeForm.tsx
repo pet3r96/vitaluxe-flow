@@ -348,58 +348,110 @@ export default function PatientIntakeForm() {
 
       // Insert medications
       if (medications.length > 0) {
-        const medEntries = medications.map(med => ({
-          patient_account_id: patientAccount.id,
-          medication_name: med.name,
-          dosage: med.dosage,
-          frequency: med.frequency,
-          start_date: new Date().toISOString(),
-          is_active: true,
-          added_by_user_id: effectiveUserId,
-          added_by_role: 'patient',
-        }));
-        await supabase.from('patient_medications').insert(medEntries);
+        const medEntries = medications
+          .filter(m => m.name && m.dosage && m.frequency)
+          .map(med => ({
+            patient_account_id: patientAccount.id,
+            medication_name: med.name,
+            dosage: med.dosage,
+            frequency: med.frequency === 'other' ? (med.customFrequency || med.frequency) : med.frequency,
+            start_date: new Date().toISOString(),
+            is_active: true,
+            added_by_user_id: effectiveUserId,
+            added_by_role: 'patient',
+          }));
+        
+        if (medEntries.length > 0) {
+          const { error: medError } = await supabase
+            .from('patient_medications')
+            .insert(medEntries);
+          
+          if (medError) {
+            console.error('Medication insert error:', medError);
+            throw new Error(`Failed to save medications: ${medError.message}`);
+          }
+          console.log(`✅ Saved ${medEntries.length} medication(s)`);
+        }
       }
 
       // Insert allergies
       if (allergies.length > 0) {
-        const allergyEntries = allergies.map(allergy => ({
-          patient_account_id: patientAccount.id,
-          allergen_name: allergy.name,
-          reaction_type: allergy.reaction,
-          severity: allergy.severity,
-          date_recorded: new Date().toISOString(),
-          is_active: true,
-          added_by_user_id: effectiveUserId,
-          added_by_role: 'patient',
-        }));
-        await supabase.from('patient_allergies').insert(allergyEntries);
+        const allergyEntries = allergies
+          .filter(a => a.name && a.reaction)
+          .map(allergy => ({
+            patient_account_id: patientAccount.id,
+            allergen_name: allergy.name,
+            reaction_type: allergy.reaction,
+            severity: allergy.severity,
+            date_recorded: new Date().toISOString(),
+            is_active: true,
+            added_by_user_id: effectiveUserId,
+            added_by_role: 'patient',
+          }));
+        
+        if (allergyEntries.length > 0) {
+          const { error: allergyError } = await supabase
+            .from('patient_allergies')
+            .insert(allergyEntries);
+          
+          if (allergyError) {
+            console.error('Allergy insert error:', allergyError);
+            throw new Error(`Failed to save allergies: ${allergyError.message}`);
+          }
+          console.log(`✅ Saved ${allergyEntries.length} allergy/allergies`);
+        }
       }
 
       // Insert conditions
       if (conditions.length > 0) {
-        const conditionEntries = conditions.map(condition => ({
-          patient_account_id: patientAccount.id,
-          condition_name: condition.name,
-          date_diagnosed: condition.diagnosed_date,
-          is_active: true,
-          added_by_user_id: effectiveUserId,
-          added_by_role: 'patient',
-        }));
-        await supabase.from('patient_conditions').insert(conditionEntries);
+        const conditionEntries = conditions
+          .filter(c => c.name && c.diagnosed_date)
+          .map(condition => ({
+            patient_account_id: patientAccount.id,
+            condition_name: condition.name,
+            date_diagnosed: condition.diagnosed_date + '-01',
+            is_active: true,
+            added_by_user_id: effectiveUserId,
+            added_by_role: 'patient',
+          }));
+        
+        if (conditionEntries.length > 0) {
+          const { error: conditionError } = await supabase
+            .from('patient_conditions')
+            .insert(conditionEntries);
+          
+          if (conditionError) {
+            console.error('Condition insert error:', conditionError);
+            throw new Error(`Failed to save conditions: ${conditionError.message}`);
+          }
+          console.log(`✅ Saved ${conditionEntries.length} condition(s)`);
+        }
       }
 
       // Insert surgeries
       if (surgeries.length > 0) {
-        const surgeryEntries = surgeries.map(surgery => ({
-          patient_account_id: patientAccount.id,
-          surgery_type: surgery.type,
-          surgery_date: surgery.date,
-          notes: surgery.notes,
-          added_by_user_id: effectiveUserId,
-          added_by_role: 'patient',
-        }));
-        await supabase.from('patient_surgeries').insert(surgeryEntries);
+        const surgeryEntries = surgeries
+          .filter(s => s.type && s.date)
+          .map(surgery => ({
+            patient_account_id: patientAccount.id,
+            surgery_type: surgery.type,
+            surgery_date: surgery.date + '-01',
+            notes: surgery.notes || null,
+            added_by_user_id: effectiveUserId,
+            added_by_role: 'patient',
+          }));
+        
+        if (surgeryEntries.length > 0) {
+          const { error: surgeryError } = await supabase
+            .from('patient_surgeries')
+            .insert(surgeryEntries);
+          
+          if (surgeryError) {
+            console.error('Surgery insert error:', surgeryError);
+            throw new Error(`Failed to save surgeries: ${surgeryError.message}`);
+          }
+          console.log(`✅ Saved ${surgeryEntries.length} surgery/surgeries`);
+        }
       }
 
       // Insert or update pharmacy
