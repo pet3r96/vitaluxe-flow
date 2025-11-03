@@ -57,7 +57,7 @@ serve(async (req) => {
         products (
           name
         ),
-        providers (
+        providers!order_lines_provider_id_fkey (
           id,
           profiles!providers_user_id_fkey (
             full_name,
