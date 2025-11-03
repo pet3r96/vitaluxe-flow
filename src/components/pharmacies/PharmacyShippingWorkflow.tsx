@@ -86,8 +86,11 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
           .select(`
             id,
             profiles!providers_user_id_fkey (
+              full_name,
               name,
-              npi
+              email,
+              npi,
+              practice_npi
             )
           `)
           .in('id', providerIds);
@@ -488,8 +491,11 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
             {/* Practice Address */}
             {order.ship_to === 'practice' && (
               <div className="col-span-full pt-3 border-t">
-                <p className="text-muted-foreground mb-2">Practice Shipping Address</p>
-                <p className="font-medium text-sm">
+                <p className="text-muted-foreground font-semibold mb-2">Practice Shipping Information</p>
+                <p className="font-medium text-sm mb-1">
+                  {order.profiles?.company || order.profiles?.name || 'Practice Name Not Available'}
+                </p>
+                <p className="text-sm text-muted-foreground">
                   {order.profiles?.address_street && order.profiles?.address_city && order.profiles?.address_state && order.profiles?.address_zip
                     ? `${order.profiles.address_street}, ${order.profiles.address_city}, ${order.profiles.address_state} ${order.profiles.address_zip}`
                     : 'Address not available'}
@@ -513,17 +519,23 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
             )}
 
             {/* Prescriber Information */}
-            {hasRxRequiredProducts && order.lines && order.lines.length > 0 && (
+            {order.lines && order.lines.some((l: any) => l.providers) && (
               <div className="col-span-full pt-3 border-t space-y-2">
                 <p className="text-muted-foreground font-semibold">Prescriber Information</p>
                 {[...new Set(order.lines.filter((l: any) => l.providers).map((l: any) => l.providers.id))].map((providerId: string) => {
                   const line = order.lines.find((l: any) => l.providers?.id === providerId);
                   const provider = line?.providers;
+                  const providerProfile = provider?.profiles;
                   return provider ? (
-                    <div key={providerId} className="pl-3 border-l-2 border-primary/30">
-                      <p className="font-medium text-sm">{provider.profiles?.name || 'Provider'}</p>
-                      {provider.profiles?.npi && (
-                        <p className="text-xs text-muted-foreground">NPI: {provider.profiles.npi}</p>
+                    <div key={providerId} className="pl-3 border-l-2 border-primary/30 space-y-1">
+                      <p className="font-medium text-sm">
+                        {providerProfile?.full_name || providerProfile?.name || 'Provider'}
+                      </p>
+                      {providerProfile?.npi && (
+                        <p className="text-xs text-muted-foreground">NPI: {providerProfile.npi}</p>
+                      )}
+                      {providerProfile?.email && (
+                        <p className="text-xs text-muted-foreground">Email: {providerProfile.email}</p>
                       )}
                     </div>
                   ) : null;

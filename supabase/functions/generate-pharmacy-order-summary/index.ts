@@ -60,7 +60,9 @@ serve(async (req) => {
         providers (
           id,
           profiles (
+            full_name,
             name,
+            email,
             npi
           )
         )
@@ -229,13 +231,18 @@ serve(async (req) => {
 
       doc.setFontSize(10);
       uniqueProviders.forEach((provider) => {
+        const profile = provider.profiles;
         doc.setFont('helvetica', 'bold');
-        doc.text(`Prescriber: ${provider.profiles?.name || 'Provider'}`, 20, yPos);
+        doc.text(`Prescriber: ${profile?.full_name || profile?.name || 'Provider'}`, 20, yPos);
         yPos += 6;
         
         doc.setFont('helvetica', 'normal');
-        if (provider.profiles?.npi) {
-          doc.text(`NPI: ${provider.profiles.npi}`, 20, yPos);
+        if (profile?.npi) {
+          doc.text(`NPI: ${profile.npi}`, 20, yPos);
+          yPos += 6;
+        }
+        if (profile?.email) {
+          doc.text(`Email: ${profile.email}`, 20, yPos);
           yPos += 6;
         }
         yPos += 4;
