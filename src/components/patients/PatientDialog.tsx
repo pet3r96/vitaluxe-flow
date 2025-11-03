@@ -354,12 +354,14 @@ export const PatientDialog = ({
 
         try {
           // 4. Execute the mutation and get the updated data back
-          const { data: updatedPatient, error } = await supabase
+          const { data: updatedPatients, error } = await supabase
             .from("patient_accounts")
             .update(patientData)
             .eq("id", patient.id)
-            .select()
-            .single();
+            .select();
+
+          // Extract single patient from array (should always be length 1)
+          const updatedPatient = updatedPatients?.[0];
 
           if (error) {
             console.error('[PatientDialog] Update error:', error);
