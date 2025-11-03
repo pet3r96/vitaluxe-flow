@@ -215,8 +215,8 @@ export const ProductCard = memo(({
               <p className="text-sm text-muted-foreground line-clamp-1">{product.dosage}</p>
             )}
             {product.description && (
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground">Description:</span>
+              <div className="flex items-start gap-1">
+                <span className="text-xs font-semibold text-muted-foreground shrink-0">Description:</span>
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild>
