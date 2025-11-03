@@ -6677,6 +6677,134 @@ export type Database = {
           },
         ]
       }
+      support_ticket_replies: {
+        Row: {
+          created_at: string
+          id: string
+          is_internal_note: boolean | null
+          message: string
+          replied_by: string
+          replied_by_email: string
+          replied_by_name: string | null
+          replied_by_role: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_internal_note?: boolean | null
+          message: string
+          replied_by: string
+          replied_by_email: string
+          replied_by_name?: string | null
+          replied_by_role: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_internal_note?: boolean | null
+          message?: string
+          replied_by?: string
+          replied_by_email?: string
+          replied_by_name?: string | null
+          replied_by_role?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_replies_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_at: string | null
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          created_by_email: string
+          created_by_name: string | null
+          created_by_role: string
+          description: string
+          id: string
+          last_reply_at: string | null
+          order_id: string | null
+          order_line_id: string | null
+          patient_id: string | null
+          pharmacy_id: string | null
+          practice_id: string | null
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolution_notes: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_number: string
+          ticket_type: Database["public"]["Enums"]["ticket_type"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          created_by_email: string
+          created_by_name?: string | null
+          created_by_role: string
+          description: string
+          id?: string
+          last_reply_at?: string | null
+          order_id?: string | null
+          order_line_id?: string | null
+          patient_id?: string | null
+          pharmacy_id?: string | null
+          practice_id?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_number: string
+          ticket_type: Database["public"]["Enums"]["ticket_type"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          created_by_email?: string
+          created_by_name?: string | null
+          created_by_role?: string
+          description?: string
+          id?: string
+          last_reply_at?: string | null
+          order_id?: string | null
+          order_line_id?: string | null
+          patient_id?: string | null
+          pharmacy_id?: string | null
+          practice_id?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          ticket_number?: string
+          ticket_type?: Database["public"]["Enums"]["ticket_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sync_logs: {
         Row: {
           added_profiles: number
@@ -7823,6 +7951,7 @@ export type Database = {
         Returns: string
       }
       encrypt_plaid_token: { Args: { p_token: string }; Returns: string }
+      generate_ticket_number: { Args: never; Returns: string }
       get_appointments_during_blocked_time: {
         Args: {
           p_end_time: string
@@ -8174,6 +8303,19 @@ export type Database = {
       payment_status: "pending" | "completed"
       shipping_carrier: "fedex" | "ups" | "usps" | "amazon"
       shipping_speed: "ground" | "2day" | "overnight"
+      ticket_priority: "low" | "medium" | "high" | "urgent"
+      ticket_status:
+        | "open"
+        | "in_progress"
+        | "waiting_response"
+        | "resolved"
+        | "closed"
+      ticket_type:
+        | "pharmacy_order_issue"
+        | "practice_to_admin"
+        | "rep_to_admin"
+        | "pharmacy_to_admin"
+        | "pharmacy_to_practice"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -8349,6 +8491,21 @@ export const Constants = {
       payment_status: ["pending", "completed"],
       shipping_carrier: ["fedex", "ups", "usps", "amazon"],
       shipping_speed: ["ground", "2day", "overnight"],
+      ticket_priority: ["low", "medium", "high", "urgent"],
+      ticket_status: [
+        "open",
+        "in_progress",
+        "waiting_response",
+        "resolved",
+        "closed",
+      ],
+      ticket_type: [
+        "pharmacy_order_issue",
+        "practice_to_admin",
+        "rep_to_admin",
+        "pharmacy_to_admin",
+        "pharmacy_to_practice",
+      ],
     },
   },
 } as const

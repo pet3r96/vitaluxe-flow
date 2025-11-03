@@ -130,6 +130,8 @@ const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
 const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"), "PatientDetail");
 const PracticePatientMedicalVault = lazyWithRetry(() => import("./pages/practice/PatientMedicalVault"), "PracticePatientMedicalVault");
 const Support = lazy(() => import("./pages/Support"));
+const SupportTickets = lazy(() => import("./pages/SupportTickets"));
+const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 
 // Loading fallback component
 const PageLoader = () => <div className="flex items-center justify-center min-h-screen">
@@ -226,6 +228,8 @@ const App = () => <QueryClientProvider client={queryClient}>
                                       <Route path="/subscriptions" element={<Subscriptions />} />
                       <Route path="/security" element={<Security />} />
                       <Route path="/support" element={<Support />} />
+                      <Route path="/support-tickets" element={<SupportTickets />} />
+                      <Route path="/support-tickets/:ticketId" element={<SupportTicketThread />} />
                       <Route path="/admin/terms" element={<AdminTermsManagement />} />
                                       <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
                                       <Route path="/rep-reports" element={<RepProfitReports />} />

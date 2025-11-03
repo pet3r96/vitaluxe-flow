@@ -73,7 +73,8 @@ export const menus: MenuConfig = {
       icon: BarChart3,
       items: [
         { label: "Orders", href: "/orders", icon: ShoppingCart },
-        { label: "Support", href: "/support", icon: LifeBuoy },
+        { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
+        { label: "Patient Chat", href: "/support", icon: MessageSquare },
         { label: "Reports", href: "/reports", icon: FileText },
         { label: "Rep Productivity", href: "/rep-productivity", icon: BarChart3 },
         { label: "Product Catalog", href: "/products", icon: Package },
@@ -125,7 +126,8 @@ export const menus: MenuConfig = {
       isParent: true,
       icon: MessageSquare,
       items: [
-        { label: "Support", href: "/support", icon: LifeBuoy },
+        { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
+        { label: "Patient Chat", href: "/support", icon: MessageSquare },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare, isPro: true },
         { label: "Document Center", href: "/document-center", icon: FileCheck, isPro: true },
       ],
@@ -175,7 +177,8 @@ export const menus: MenuConfig = {
       isParent: true,
       icon: MessageSquare,
       items: [
-        { label: "Support", href: "/support", icon: LifeBuoy },
+        { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
+        { label: "Patient Chat", href: "/support", icon: MessageSquare },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare, isPro: true },
         { label: "Document Center", href: "/document-center", icon: FileCheck, isPro: true },
       ],
@@ -278,7 +281,8 @@ export const menus: MenuConfig = {
       isParent: true,
       icon: MessageSquare,
       items: [
-        { label: "Support", href: "/support", icon: LifeBuoy },
+        { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
+        { label: "Patient Chat", href: "/support", icon: MessageSquare },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare },
         { label: "Document Center", href: "/document-center", icon: FileCheck },
       ],
