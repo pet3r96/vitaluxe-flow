@@ -96,10 +96,13 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Update user password
+    // Update user password and confirm email (user proved email access via reset link)
     const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
       resetToken.user_id,
-      { password: newPassword }
+      { 
+        password: newPassword,
+        email_confirm: true  // Auto-confirm email since they clicked the reset link
+      }
     );
 
     if (passwordError) {
