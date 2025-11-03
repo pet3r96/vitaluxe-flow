@@ -315,11 +315,19 @@ export const PatientDialog = ({
           .update(patientData)
           .eq("id", patient.id)
           .select("*")
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
+        
+        // Explicit check for missing row (RLS blocked or patient doesn't exist)
         if (!updated) {
-          throw new Error("Update failed (no row returned)");
+          console.error('[PatientDialog] Update returned no rows:', {
+            patientId: patient.id,
+            effectiveRole,
+            effectivePracticeId,
+            userEmail: user?.email
+          });
+          throw new Error("No matching patient found or you do not have permission to update this record. Please refresh and try again.");
         }
         
         console.log('[PatientDialog] Update success:', { id: updated.id });

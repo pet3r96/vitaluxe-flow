@@ -23,7 +23,7 @@ import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";
 
 // Helper function to retry dynamic imports on failure
-const lazyWithRetry = (componentImport: () => Promise<any>) => lazy(async () => {
+const lazyWithRetry = (componentImport: () => Promise<any>, componentName: string = 'Component') => lazy(async () => {
   const retryKey = 'vitaluxe-chunk-retry';
   const hasRetried = window.sessionStorage.getItem(retryKey) === 'true';
   try {
@@ -32,32 +32,46 @@ const lazyWithRetry = (componentImport: () => Promise<any>) => lazy(async () => 
     window.sessionStorage.removeItem(retryKey);
     return component;
   } catch (error: any) {
-    // Detect chunk load errors more reliably
-    const isChunkError =
-      error?.name === 'ChunkLoadError' ||
-      error?.name === 'SyntaxError' ||
-      /Unexpected token/.test(error?.message || '') ||
-      (error?.message || '').includes('Failed to fetch') ||
-      (error?.message || '').includes('dynamically imported module') ||
-      (error?.message || '').includes('Loading chunk') ||
-      (error?.message || '').includes("'text/html' is not a valid JavaScript MIME type");
-    console.error('Component load error:', {
-      name: error?.name,
-      message: error?.message,
+    const msg = error?.message || '';
+    const name = error?.name || '';
+    
+    // Comprehensive chunk error detection
+    const isChunkError = 
+      name === 'ChunkLoadError' ||
+      name === 'SyntaxError' ||
+      /Unexpected token/.test(msg) ||
+      /Failed to fetch dynamically imported module/.test(msg) ||
+      /error loading dynamically imported module/.test(msg) ||
+      /Importing a module script failed/.test(msg) ||
+      /'text\/html' is not a valid JavaScript MIME type/.test(msg) ||
+      /Failed to fetch/.test(msg) ||
+      /Loading chunk/.test(msg);
+
+    if (isChunkError) {
+      console.warn(`[App] Chunk load error for ${componentName}, attempting auto-reload...`, {
+        errorName: name,
+        errorMessage: msg,
+        hasRetried,
+        componentName
+      });
+      
+      // Auto-reload once
+      if (!hasRetried) {
+        window.sessionStorage.setItem(retryKey, 'true');
+        setTimeout(() => {
+          window.location.href = window.location.pathname + '?v=' + Date.now();
+        }, 1000);
+        return new Promise(() => {}); // Prevent further execution
+      }
+    }
+    
+    console.error(`[App] Component load failed for ${componentName}:`, {
+      name,
+      message: msg,
       isChunkError,
       hasRetried
     });
-
-    // Only retry once for chunk errors
-    if (isChunkError && !hasRetried) {
-      console.warn('Chunk load failed, reloading page...');
-      window.sessionStorage.setItem(retryKey, 'true');
-      // Small delay to ensure error is logged
-      setTimeout(() => window.location.reload(), 100);
-      return new Promise(() => {}); // Prevent further execution
-    }
-
-    // Either not a chunk error, or already retried
+    
     throw error;
   }
 });
@@ -95,7 +109,7 @@ const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
 const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
-const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"));
+const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"), "DashboardRouter");
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
 const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
@@ -113,8 +127,8 @@ const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"))
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
-const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"));
-const PracticePatientMedicalVault = lazyWithRetry(() => import("./pages/practice/PatientMedicalVault"));
+const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"), "PatientDetail");
+const PracticePatientMedicalVault = lazyWithRetry(() => import("./pages/practice/PatientMedicalVault"), "PracticePatientMedicalVault");
 const Support = lazy(() => import("./pages/Support"));
 
 // Loading fallback component

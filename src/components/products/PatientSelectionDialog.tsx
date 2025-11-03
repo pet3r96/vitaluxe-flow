@@ -483,29 +483,67 @@ export const PatientSelectionDialog = ({
                       )}
                     </div>
                   ) : (
-                    <RadioGroup value={selectedProviderId || ""} onValueChange={(value) => {
-                      console.log('[PatientSelectionDialog] Provider selected:', value);
-                      setSelectedProviderId(value);
-                    }}>
-                      {providers.map((provider: any) => (
-                        <div key={provider.id} className="flex items-center space-x-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer" onClick={() => setSelectedProviderId(provider.id)}>
-                          <RadioGroupItem value={provider.id} id={provider.id} />
-                          <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
-                            <div className="font-medium">
-                              {provider.profiles?.full_name || 
-                               provider.prescriber_name ||
-                               (provider.profiles?.name && !provider.profiles.name.includes('@') ? provider.profiles.name : '') || 
-                               provider.profiles?.email ||
-                               'Unknown Provider'}
-                            </div>
-                            <div className="text-xs text-muted-foreground space-x-2 mt-0.5">
-                              {provider.specialty && <span>• {provider.specialty}</span>}
-                              {provider.npi && <span>• NPI: {provider.npi}</span>}
-                            </div>
-                          </Label>
+                    // Multiple providers - use searchable combobox
+                    <div className="grid gap-2">
+                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={comboboxOpen}
+                            className="justify-between"
+                          >
+                            {selectedProviderId
+                              ? providers.find(p => p.id === selectedProviderId)?.prescriber_name || "Select provider..."
+                              : "Select provider..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search providers..." />
+                            <CommandList>
+                              <CommandEmpty>No provider found.</CommandEmpty>
+                              <CommandGroup>
+                                {providers.map((provider: any) => (
+                                  <CommandItem
+                                    key={provider.id}
+                                    value={provider.prescriber_name}
+                                    onSelect={() => {
+                                      console.log('[PatientSelectionDialog] Provider selected:', provider.id);
+                                      setSelectedProviderId(provider.id);
+                                      setComboboxOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedProviderId === provider.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span>{provider.prescriber_name}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {provider.specialty && `${provider.specialty} • `}
+                                        {provider.npi && `NPI: ${provider.npi}`}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      {selectedProviderId && selectedProviderData && (
+                        <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded">
+                          Selected: {selectedProviderData.prescriber_name}
+                          {selectedProviderData.profiles?.email && (
+                            <> • {selectedProviderData.profiles.email}</>
+                          )}
                         </div>
-                      ))}
-                    </RadioGroup>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

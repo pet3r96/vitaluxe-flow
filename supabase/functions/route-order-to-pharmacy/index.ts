@@ -99,6 +99,8 @@ async function routeOrderToPharmacy(
     };
   }
 
+  console.log(`Product pharmacies query result: ${assignments?.length || 0} assignments found`);
+  
   if (!assignments || assignments.length === 0) {
     console.log("No pharmacies assigned to product");
     return { 
@@ -253,14 +255,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Use service role key to bypass RLS for system tables (product_pharmacies, pharmacy_rep_assignments)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      // No Authorization header needed - service role bypasses RLS
     );
 
     // Parse and validate JSON
