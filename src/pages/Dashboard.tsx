@@ -33,6 +33,23 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Fetch user profile for display name
+  const { data: profileData } = useQuery({
+    queryKey: ["dashboard-profile", effectiveUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("name, full_name")
+        .eq("id", effectiveUserId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!effectiveUserId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
     staleTime: 30000, // 30 seconds - dashboard stats refresh frequently
@@ -589,12 +606,15 @@ const Dashboard = () => {
     },
   ].filter(stat => !stat.hidden);
 
+  // Display name with fallback chain
+  const displayName = profileData?.full_name || profileData?.name || user?.email;
+
   return (
     <div className="patient-container">
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold gold-text-gradient">Dashboard</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          Welcome back, {user?.email}
+          Welcome back, {displayName}
         </p>
         {status === 'trial' && trialDaysRemaining !== null && (
           <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
