@@ -310,17 +310,22 @@ export const PatientDialog = ({
           email: patientData.email 
         });
 
-        const { error, count } = await supabase
+        const { data: updated, error } = await supabase
           .from("patient_accounts")
           .update(patientData)
           .eq("id", patient.id)
-          .select();
+          .select("*")
+          .single();
 
         if (error) throw error;
+        if (!updated) {
+          throw new Error("Update failed (no row returned)");
+        }
         
-        console.log('[PatientDialog] Update affected rows:', count);
+        console.log('[PatientDialog] Update success:', { id: updated.id });
         queryClient.invalidateQueries({ queryKey: ["patients"] });
-        queryClient.invalidateQueries({ queryKey: ["patient-portal-status"] });
+        queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
+        queryClient.invalidateQueries({ queryKey: ["patient-portal-status", patient.id] });
         toast.success("✅ Patient updated successfully");
       } else {
         // Create new patient

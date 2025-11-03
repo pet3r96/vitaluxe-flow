@@ -25,10 +25,18 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Detect dynamic import failures (chunk loading errors)
-    const isChunkLoadError = error.message?.includes('Failed to fetch dynamically imported module') ||
-                            error.message?.includes('error loading dynamically imported module') ||
-                            error.message?.includes('Importing a module script failed') ||
-                            error.message?.includes("'text/html' is not a valid JavaScript MIME type");
+    const msg = (error as any)?.message || '';
+    const name = (error as any)?.name || '';
+    const isChunkLoadError =
+      name === 'ChunkLoadError' ||
+      name === 'SyntaxError' ||
+      /Unexpected token/.test(msg) ||
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('error loading dynamically imported module') ||
+      msg.includes('Importing a module script failed') ||
+      msg.includes("'text/html' is not a valid JavaScript MIME type") ||
+      msg.includes('Failed to fetch') ||
+      msg.includes('Loading chunk');
     
     import('@/lib/logger').then(({ logger }) => {
       if (isChunkLoadError) {
@@ -92,7 +100,8 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
               <CardDescription>
                 {this.state.error?.message?.includes('dynamically imported module') || 
-                 this.state.error?.message?.includes('Importing a module script failed') ? (
+                 this.state.error?.message?.includes('Importing a module script failed') ||
+                 this.state.error?.message?.includes('Unexpected token') ? (
                   <>
                     Failed to load application module. This usually happens after an update.
                     <br />
@@ -112,6 +121,8 @@ export class ErrorBoundary extends Component<Props, State> {
               
               {(this.state.error?.message?.includes('dynamically imported module') || 
                 this.state.error?.message?.includes('Failed to fetch') ||
+                this.state.error?.message?.includes('Importing a module script failed') ||
+                this.state.error?.message?.includes('Unexpected token') ||
                 this.state.error?.message?.includes("'text/html' is not a valid JavaScript MIME type")) && (
                 <div className="mt-4 p-4 bg-muted/30 border border-border rounded-lg">
                   <p className="text-sm font-semibold mb-2">

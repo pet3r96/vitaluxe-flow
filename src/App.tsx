@@ -33,7 +33,14 @@ const lazyWithRetry = (componentImport: () => Promise<any>) => lazy(async () => 
     return component;
   } catch (error: any) {
     // Detect chunk load errors more reliably
-    const isChunkError = error?.name === 'ChunkLoadError' || error?.message?.includes('Failed to fetch') || error?.message?.includes('dynamically imported module') || error?.message?.includes('Loading chunk');
+    const isChunkError =
+      error?.name === 'ChunkLoadError' ||
+      error?.name === 'SyntaxError' ||
+      /Unexpected token/.test(error?.message || '') ||
+      (error?.message || '').includes('Failed to fetch') ||
+      (error?.message || '').includes('dynamically imported module') ||
+      (error?.message || '').includes('Loading chunk') ||
+      (error?.message || '').includes("'text/html' is not a valid JavaScript MIME type");
     console.error('Component load error:', {
       name: error?.name,
       message: error?.message,
@@ -106,8 +113,8 @@ const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"))
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
-const PatientDetail = lazy(() => import("./pages/PatientDetail"));
-const PracticePatientMedicalVault = lazy(() => import("./pages/practice/PatientMedicalVault"));
+const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"));
+const PracticePatientMedicalVault = lazyWithRetry(() => import("./pages/practice/PatientMedicalVault"));
 const Support = lazy(() => import("./pages/Support"));
 
 // Loading fallback component
