@@ -324,29 +324,18 @@ export const PatientDialog = ({
           email: patientData.email 
         });
 
-        const { error } = await supabase
-          .from("patient_accounts")
-          .update(patientData)
-          .eq("id", patient.id);
-
-        if (error) {
-          console.error('[PatientDialog] Update error:', error);
-          throw error;
-        }
-        
-        console.log('[PatientDialog] Update success - RLS allows update:', { id: patient.id });
-        
         // Build the exact query key that PatientsDataTable uses
         const patientsKey = ["patients", effectiveRole, effectivePracticeId];
         
-        console.log('[PatientDialog] Invalidating cache:', {
-          patientsKey,
-          effectiveRole,
-          effectivePracticeId,
-          patientId: patient.id
-        });
+        // 1. Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+        await queryClient.cancelQueries({ queryKey: patientsKey });
+        await queryClient.cancelQueries({ queryKey: ["patient", patient.id] });
         
-        // Optimistic update: immediately update the patients list cache
+        // 2. Snapshot the previous value for rollback
+        const previousPatients = queryClient.getQueryData(patientsKey);
+        const previousPatient = queryClient.getQueryData(["patient", patient.id]);
+        
+        // 3. Optimistically update to the new value BEFORE the mutation
         queryClient.setQueryData(patientsKey, (oldData: any[] | undefined) => {
           if (!oldData) return oldData;
           return oldData.map(p => 
@@ -356,42 +345,63 @@ export const PatientDialog = ({
           );
         });
         
-        // Optimistic update: immediately update individual patient cache
         queryClient.setQueryData(["patient", patient.id], (oldData: any) => ({
           ...(oldData || {}),
           ...patientData
         }));
         
-        // Invalidate with the EXACT key that PatientsDataTable uses
-        await queryClient.invalidateQueries({ 
-          queryKey: patientsKey, 
-          exact: true 
-        });
-        
-        // Also invalidate the individual patient cache
-        await queryClient.invalidateQueries({ 
-          queryKey: ["patient", patient.id] 
-        });
-        
-        // Invalidate portal status
-        await queryClient.invalidateQueries({ 
-          queryKey: ["patient-portal-status", effectivePracticeId] 
-        });
-        
-        // Invalidate any other patients queries (admin view, etc.)
-        await queryClient.invalidateQueries({ 
-          queryKey: ["patients"], 
-          exact: false 
-        });
-        
-        // Force immediate refetch of the active patients query
-        await queryClient.refetchQueries({ 
-          queryKey: patientsKey, 
-          type: 'active',
-          exact: true 
-        });
-        
-        toast.success("✅ Patient updated successfully");
+        console.log('[PatientDialog] Optimistic update applied, now executing DB update');
+
+        try {
+          // 4. Execute the mutation and get the updated data back
+          const { data: updatedPatient, error } = await supabase
+            .from("patient_accounts")
+            .update(patientData)
+            .eq("id", patient.id)
+            .select()
+            .single();
+
+          if (error) {
+            console.error('[PatientDialog] Update error:', error);
+            // Rollback on error
+            if (previousPatients) {
+              queryClient.setQueryData(patientsKey, previousPatients);
+            }
+            if (previousPatient) {
+              queryClient.setQueryData(["patient", patient.id], previousPatient);
+            }
+            throw error;
+          }
+          
+          console.log('[PatientDialog] Update success, got data back:', updatedPatient);
+          
+          // 5. Update cache with the actual returned data (confirms the update)
+          if (updatedPatient) {
+            queryClient.setQueryData(patientsKey, (oldData: any[] | undefined) => {
+              if (!oldData) return oldData;
+              return oldData.map(p => 
+                p.id === patient.id 
+                  ? updatedPatient 
+                  : p
+              );
+            });
+            
+            queryClient.setQueryData(["patient", patient.id], updatedPatient);
+          }
+          
+          console.log('[PatientDialog] Cache updated with server data');
+          
+          // 6. Invalidate to trigger background refetch (but don't await it)
+          queryClient.invalidateQueries({ queryKey: patientsKey });
+          queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
+          queryClient.invalidateQueries({ queryKey: ["patient-portal-status", effectivePracticeId] });
+          queryClient.invalidateQueries({ queryKey: ["patients"], exact: false });
+          
+          toast.success("✅ Patient updated successfully");
+        } catch (error) {
+          console.error('[PatientDialog] Mutation failed:', error);
+          throw error;
+        }
       } else {
         // Create new patient
         if (!effectivePracticeId) {
