@@ -71,6 +71,14 @@ serve(async (req) => {
 
     if (linesError) throw linesError;
 
+    // Determine shipping speed from order lines
+    const shippingSpeeds = lines?.map(l => l.shipping_speed).filter(Boolean) || [];
+    const uniqueSpeeds = [...new Set(shippingSpeeds)];
+    const displayShippingSpeed = 
+      uniqueSpeeds.length === 0 ? 'Standard' :
+      uniqueSpeeds.length === 1 ? uniqueSpeeds[0] :
+      'Multiple speeds';
+
     // Fetch patient addresses if shipping to patient
     const patientAddresses = new Map();
     if (order.ship_to === 'patient' && lines && lines.length > 0) {
@@ -132,7 +140,7 @@ serve(async (req) => {
     yPos += 6;
     doc.text(`Order Date: ${new Date(order.created_at).toLocaleDateString()}`, 20, yPos);
     yPos += 6;
-    doc.text(`Shipping Speed: ${order.shipping_speed || 'Standard'}`, 20, yPos);
+    doc.text(`Shipping Speed: ${displayShippingSpeed}`, 20, yPos);
     yPos += 6;
     doc.text(`Ship To: ${order.ship_to === 'practice' ? 'Practice' : 'Patient'}`, 20, yPos);
     yPos += 12;
