@@ -59,6 +59,7 @@ interface MedicationEntry {
   name: string;
   dosage: string;
   frequency: string;
+  customFrequency?: string;
 }
 
 interface AllergyEntry {
@@ -792,56 +793,74 @@ export default function PatientIntakeForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               {medications.map((med, index) => (
-                <div key={index} className="flex gap-2 items-start">
-                  <div className="flex-1">
-                    <AutocompleteInput
-                      placeholder="Search medication name"
-                      value={med.name}
-                      onChange={(value) => {
+                <div key={index} className="space-y-2">
+                  <div className="flex flex-col md:flex-row gap-2 items-start">
+                    <div className="flex-1 w-full">
+                      <AutocompleteInput
+                        placeholder="Search medication name"
+                        value={med.name}
+                        onChange={(value) => {
+                          const newMeds = [...medications];
+                          newMeds[index].name = value;
+                          setMedications(newMeds);
+                        }}
+                        onSearch={searchMedications}
+                      />
+                    </div>
+                    <Input
+                      className="flex-1 w-full"
+                      placeholder="Dosage"
+                      value={med.dosage}
+                      onChange={(e) => {
                         const newMeds = [...medications];
-                        newMeds[index].name = value;
+                        newMeds[index].dosage = e.target.value;
                         setMedications(newMeds);
                       }}
-                      onSearch={searchMedications}
                     />
+                    <Select
+                      value={med.frequency}
+                      onValueChange={(value) => {
+                        const newMeds = [...medications];
+                        newMeds[index].frequency = value;
+                        if (value !== 'Other') {
+                          newMeds[index].customFrequency = '';
+                        }
+                        setMedications(newMeds);
+                      }}
+                    >
+                      <SelectTrigger className="w-full md:w-[200px]">
+                        <SelectValue placeholder="Frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Once daily">Once daily</SelectItem>
+                        <SelectItem value="Twice daily">Twice daily</SelectItem>
+                        <SelectItem value="Three times daily">Three times daily</SelectItem>
+                        <SelectItem value="As needed">As needed</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={() => setMedications(medications.filter((_, i) => i !== index))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Input
-                    className="flex-1"
-                    placeholder="Dosage"
-                    value={med.dosage}
-                    onChange={(e) => {
-                      const newMeds = [...medications];
-                      newMeds[index].dosage = e.target.value;
-                      setMedications(newMeds);
-                    }}
-                  />
-                  <Select
-                    value={med.frequency}
-                    onValueChange={(value) => {
-                      const newMeds = [...medications];
-                      newMeds[index].frequency = value;
-                      setMedications(newMeds);
-                    }}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Frequency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Once daily">Once daily</SelectItem>
-                      <SelectItem value="Twice daily">Twice daily</SelectItem>
-                      <SelectItem value="Three times daily">Three times daily</SelectItem>
-                      <SelectItem value="As needed">As needed</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setMedications(medications.filter((_, i) => i !== index))}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  {med.frequency === 'Other' && (
+                    <Input
+                      placeholder="Specify custom frequency (optional)"
+                      value={med.customFrequency || ''}
+                      onChange={(e) => {
+                        const newMeds = [...medications];
+                        newMeds[index].customFrequency = e.target.value;
+                        setMedications(newMeds);
+                      }}
+                      className="w-full"
+                    />
+                  )}
                 </div>
               ))}
               <Button
@@ -862,8 +881,8 @@ export default function PatientIntakeForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               {allergies.map((allergy, index) => (
-                <div key={index} className="flex gap-2 items-start">
-                  <div className="flex-1">
+                <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
+                  <div className="flex-1 w-full">
                     <AutocompleteInput
                       placeholder="Search allergen name"
                       value={allergy.name}
@@ -876,7 +895,7 @@ export default function PatientIntakeForm() {
                     />
                   </div>
                   <Input
-                    className="flex-1"
+                    className="flex-1 w-full"
                     placeholder="Reaction"
                     value={allergy.reaction}
                     onChange={(e) => {
@@ -893,7 +912,7 @@ export default function PatientIntakeForm() {
                       setAllergies(newAllergies);
                     }}
                   >
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-full md:w-[200px]">
                       <SelectValue placeholder="Severity" />
                     </SelectTrigger>
                     <SelectContent>
@@ -907,6 +926,7 @@ export default function PatientIntakeForm() {
                     type="button"
                     variant="ghost"
                     size="icon"
+                    className="shrink-0"
                     onClick={() => setAllergies(allergies.filter((_, i) => i !== index))}
                   >
                     <X className="h-4 w-4" />
@@ -931,8 +951,8 @@ export default function PatientIntakeForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               {conditions.map((condition, index) => (
-                <div key={index} className="flex gap-2 items-start">
-                  <div className="flex-1">
+                <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
+                  <div className="flex-1 w-full">
                     <AutocompleteInput
                       placeholder="Search condition name"
                       value={condition.name}
@@ -945,7 +965,7 @@ export default function PatientIntakeForm() {
                     />
                   </div>
                   <Input
-                    className="flex-1"
+                    className="flex-1 w-full"
                     type="month"
                     placeholder="Diagnosed date"
                     value={condition.diagnosed_date}
@@ -963,7 +983,7 @@ export default function PatientIntakeForm() {
                       setConditions(newConditions);
                     }}
                   >
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-full md:w-[200px]">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -977,6 +997,7 @@ export default function PatientIntakeForm() {
                     type="button"
                     variant="ghost"
                     size="icon"
+                    className="shrink-0"
                     onClick={() => setConditions(conditions.filter((_, i) => i !== index))}
                   >
                     <X className="h-4 w-4" />
@@ -1002,8 +1023,8 @@ export default function PatientIntakeForm() {
             <CardContent className="space-y-4">
               {surgeries.map((surgery, index) => (
                 <div key={index} className="space-y-2">
-                  <div className="flex gap-2 items-start">
-                    <div className="flex-1">
+                  <div className="flex flex-col md:flex-row gap-2 items-start">
+                    <div className="flex-1 w-full">
                       <AutocompleteInput
                         placeholder="Search surgery type"
                         value={surgery.type}
@@ -1016,7 +1037,7 @@ export default function PatientIntakeForm() {
                       />
                     </div>
                     <Input
-                      className="flex-1"
+                      className="flex-1 w-full"
                       type="month"
                       value={surgery.date}
                       onChange={(e) => {
@@ -1029,6 +1050,7 @@ export default function PatientIntakeForm() {
                       type="button"
                       variant="ghost"
                       size="icon"
+                      className="shrink-0"
                       onClick={() => setSurgeries(surgeries.filter((_, i) => i !== index))}
                     >
                       <X className="h-4 w-4" />
@@ -1042,6 +1064,7 @@ export default function PatientIntakeForm() {
                       newSurgeries[index].notes = e.target.value;
                       setSurgeries(newSurgeries);
                     }}
+                    className="w-full"
                   />
                 </div>
               ))}

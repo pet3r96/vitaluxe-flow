@@ -314,6 +314,10 @@ serve(async (req) => {
     doc.text(displayAddress, 4.25, 1.7, { align: 'center' });
 
     // Patient information section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PATIENT INFORMATION:', 0.75, 2.1);
+    
     doc.setFontSize(11);
     const startY = 2.3;
     const rowHeight = 0.35; // Increased spacing for better readability
@@ -455,7 +459,7 @@ serve(async (req) => {
     doc.line(1.5, sigY + 0.2, 6.5, sigY + 0.2); // Signature line
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('Prescriber Signature', 4, sigY + 0.45, { align: 'center' });
+    doc.text(`Prescriber: ${prescriberDisplayName}`, 4, sigY + 0.45, { align: 'center' });
 
     // Bottom section
     const bottomY = 8.3;
