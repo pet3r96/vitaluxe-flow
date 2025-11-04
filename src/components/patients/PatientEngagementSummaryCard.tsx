@@ -99,32 +99,35 @@ export function PatientEngagementSummaryCard({
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Engagement Summary</CardTitle>
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-xl">Engagement Summary</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
+              <Skeleton key={i} className="h-32" />
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {tiles.map((tile) => (
-              <Button
+              <Card
                 key={tile.tab}
-                variant="outline"
-                className="h-auto flex flex-col items-center justify-center p-4 hover:bg-accent/50 transition-colors"
+                className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105 border-2"
                 onClick={() => onNavigate?.(tile.tab)}
               >
-                <tile.icon className={`h-8 w-8 mb-2 ${tile.color}`} />
-                <div className="text-3xl font-bold mb-1">{tile.count}</div>
-                <div className="text-xs text-muted-foreground text-center">
-                  {tile.label}
-                </div>
-              </Button>
+                <CardContent className="flex flex-col items-center justify-center p-6 space-y-2">
+                  <div className={`p-3 rounded-full bg-accent/20`}>
+                    <tile.icon className={`h-6 w-6 ${tile.color}`} />
+                  </div>
+                  <div className="text-4xl font-bold">{tile.count}</div>
+                  <div className="text-sm font-medium text-center text-muted-foreground">
+                    {tile.label}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

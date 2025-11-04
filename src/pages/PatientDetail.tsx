@@ -555,17 +555,15 @@ export default function PatientDetail() {
             </Button>
           </div>
           
-          <div className="mt-6">
-            <PatientEngagementSummaryCard
-              patientAccountId={actualPatientId!}
-              practiceId={practiceId}
-              onNavigate={setActiveTab}
-            />
-          </div>
-          
           <MedicalVaultSummaryCard 
             patientAccountId={actualPatientId!} 
             onViewVault={() => setActiveTab('medical-vault')}
+          />
+          
+          <PatientEngagementSummaryCard
+            patientAccountId={actualPatientId!}
+            practiceId={practiceId}
+            onNavigate={setActiveTab}
           />
         </TabsContent>
 
