@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye } from "lucide-react";
+import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PatientDialog } from "./PatientDialog";
@@ -355,6 +355,26 @@ export const PatientsDataTable = () => {
     },
   });
 
+  // Delete patient mutation (admin-only edge function)
+  const deletePatientMutation = useMutation({
+    mutationFn: async (email: string) => {
+      if (!email) throw new Error('Patient email missing');
+      const { data, error } = await supabase.functions.invoke('cleanup-test-data', {
+        body: { email }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: 'Patient deleted', description: 'All patient records were removed.' });
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Delete failed', description: err?.message || 'Could not delete patient', variant: 'destructive' });
+    }
+  });
+
   const handleGrantPortalAccess = useCallback((patientId: string) => {
     if (!isSubscribed) {
       toast({
@@ -461,6 +481,32 @@ export const PatientsDataTable = () => {
                           <TooltipContent>View Patient File</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                      
+                      {isAdmin && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (!patient?.email) {
+                                    toast({ title: 'Missing email', description: 'Cannot delete patient without email', variant: 'destructive' });
+                                    return;
+                                  }
+                                  if (confirm(`Delete ${patient.name || patient.email}? This will remove all related data.`)) {
+                                    deletePatientMutation.mutate((patient.email as string).toLowerCase());
+                                  }
+                                }}
+                                disabled={deletePatientMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete Patient</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       
                       {!isAdmin && (
                         <>
