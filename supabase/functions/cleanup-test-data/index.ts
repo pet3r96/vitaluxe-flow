@@ -131,18 +131,18 @@ serve(async (req) => {
           console.log(`🩺 Detected PATIENT account: ${targetEmail}`);
           
           // Delete patient-specific medical vault data
-          await supabaseAdmin.from('patient_medications').delete().eq('patient_id', patientAccount.id);
-          await supabaseAdmin.from('patient_conditions').delete().eq('patient_id', patientAccount.id);
-          await supabaseAdmin.from('patient_allergies').delete().eq('patient_id', patientAccount.id);
-          await supabaseAdmin.from('patient_vitals').delete().eq('patient_id', patientAccount.id);
-          await supabaseAdmin.from('patient_immunizations').delete().eq('patient_id', patientAccount.id);
-          await supabaseAdmin.from('patient_surgeries').delete().eq('patient_id', patientAccount.id);
-          await supabaseAdmin.from('patient_pharmacies').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_medications').delete().eq('patient_account_id', patientAccount.id);
+          await supabaseAdmin.from('patient_conditions').delete().eq('patient_account_id', patientAccount.id);
+          await supabaseAdmin.from('patient_allergies').delete().eq('patient_account_id', patientAccount.id);
+          await supabaseAdmin.from('patient_vitals').delete().eq('patient_account_id', patientAccount.id);
+          await supabaseAdmin.from('patient_immunizations').delete().eq('patient_account_id', patientAccount.id);
+          await supabaseAdmin.from('patient_surgeries').delete().eq('patient_account_id', patientAccount.id);
+          await supabaseAdmin.from('patient_pharmacies').delete().eq('patient_account_id', patientAccount.id);
           await supabaseAdmin.from('patient_emergency_contacts').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_documents').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_documents').delete().eq('patient_account_id', patientAccount.id);
           
           // Delete patient appointments
-          await supabaseAdmin.from('patient_appointments').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_appointments').delete().eq('patient_account_id', patientAccount.id);
           
           // Delete the patient_accounts record itself
           await supabaseAdmin.from('patient_accounts').delete().eq('id', patientAccount.id);
