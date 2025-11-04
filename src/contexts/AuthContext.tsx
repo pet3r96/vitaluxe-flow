@@ -425,18 +425,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 // Check if user needs to complete intake (patient-only feature)
                 const { data: patientData } = await supabase
                   .from('patient_accounts')
-                  .select('intake_completed_at')
+                  .select('intake_completed_at, intake_reminder_dismissed_at')
                   .eq('user_id', session.user.id)
                   .maybeSingle();
                 
-                // If patient account exists and intake is incomplete, show dialog
-                if (patientData && !patientData.intake_completed_at) {
+                // Show dialog if patient exists, hasn't completed intake, and hasn't dismissed reminder
+                if (patientData && !patientData.intake_completed_at && !patientData.intake_reminder_dismissed_at) {
                   console.log('[AuthContext] Patient needs to complete intake, showing dialog');
                   setShowIntakeDialog(true);
                 } else {
                   console.log('[AuthContext] No intake required', { 
                     hasPatientAccount: !!patientData, 
-                    intakeComplete: patientData?.intake_completed_at 
+                    intakeComplete: patientData?.intake_completed_at,
+                    reminderDismissed: patientData?.intake_reminder_dismissed_at
                   });
                 }
                 

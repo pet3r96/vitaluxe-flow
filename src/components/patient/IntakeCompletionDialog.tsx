@@ -7,19 +7,34 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ClipboardList, Clock, Shield, Zap } from "lucide-react";
+import { useState } from "react";
 
 interface IntakeCompletionDialogProps {
   open: boolean;
   onComplete: () => void;
+  onDismiss: (dontAskAgain: boolean) => void;
 }
 
 export function IntakeCompletionDialog({
   open,
   onComplete,
+  onDismiss,
 }: IntakeCompletionDialogProps) {
+  const [dontAskAgain, setDontAskAgain] = useState(false);
+
+  const handleDismiss = () => {
+    onDismiss(dontAskAgain);
+    setDontAskAgain(false); // Reset for next time dialog opens
+  };
+
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        handleDismiss();
+      }
+    }}>
       <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="text-2xl">Complete Your Medical Intake</DialogTitle>
@@ -78,8 +93,32 @@ export function IntakeCompletionDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button onClick={onComplete} className="w-full">
+        <div className="flex items-center space-x-2 pt-2">
+          <Checkbox 
+            id="dont-ask-again" 
+            checked={dontAskAgain}
+            onCheckedChange={(checked) => setDontAskAgain(checked === true)}
+          />
+          <label
+            htmlFor="dont-ask-again"
+            className="text-sm text-muted-foreground cursor-pointer select-none"
+          >
+            Don't ask me again
+          </label>
+        </div>
+
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button 
+            variant="ghost" 
+            onClick={handleDismiss}
+            className="w-full sm:w-auto"
+          >
+            Remind Me Later
+          </Button>
+          <Button 
+            onClick={onComplete} 
+            className="w-full sm:w-auto"
+          >
             Complete Intake Form
           </Button>
         </DialogFooter>

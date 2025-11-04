@@ -1,7 +1,8 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { IntakeCompletionDialog } from "@/components/patient/IntakeCompletionDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * Global Intake Dialog Manager
@@ -9,6 +10,7 @@ import { IntakeCompletionDialog } from "@/components/patient/IntakeCompletionDia
  */
 export const GlobalIntakeDialog = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const {
     userRole,
     effectiveUserId,
@@ -44,10 +46,42 @@ export const GlobalIntakeDialog = () => {
     navigate('/intake');
   };
 
+  const handleDismiss = async (dontAskAgain: boolean) => {
+    console.log('[GlobalIntakeDialog] Dismissing dialog', { dontAskAgain });
+    setShowIntakeDialog(false);
+
+    if (dontAskAgain && effectiveUserId) {
+      try {
+        const { error } = await supabase.functions.invoke('dismiss-intake-reminder', {
+          body: { userId: effectiveUserId }
+        });
+
+        if (error) {
+          console.error('[GlobalIntakeDialog] Error dismissing reminder:', error);
+          toast({
+            title: "Error",
+            description: "Failed to save preference. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('[GlobalIntakeDialog] Intake reminder permanently dismissed');
+        toast({
+          title: "Preference Saved",
+          description: "You won't see this reminder again.",
+        });
+      } catch (err) {
+        console.error('[GlobalIntakeDialog] Exception dismissing reminder:', err);
+      }
+    }
+  };
+
   return (
     <IntakeCompletionDialog 
       open={showIntakeDialog} 
-      onComplete={handleComplete} 
+      onComplete={handleComplete}
+      onDismiss={handleDismiss}
     />
   );
 };

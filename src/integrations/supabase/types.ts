@@ -2605,6 +2605,7 @@ export type Database = {
           gender_at_birth: string | null
           id: string
           intake_completed_at: string | null
+          intake_reminder_dismissed_at: string | null
           invitation_sent_at: string | null
           last_login_at: string | null
           last_name: string
@@ -2642,6 +2643,7 @@ export type Database = {
           gender_at_birth?: string | null
           id?: string
           intake_completed_at?: string | null
+          intake_reminder_dismissed_at?: string | null
           invitation_sent_at?: string | null
           last_login_at?: string | null
           last_name: string
@@ -2679,6 +2681,7 @@ export type Database = {
           gender_at_birth?: string | null
           id?: string
           intake_completed_at?: string | null
+          intake_reminder_dismissed_at?: string | null
           invitation_sent_at?: string | null
           last_login_at?: string | null
           last_name?: string
