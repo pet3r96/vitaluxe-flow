@@ -134,9 +134,12 @@ const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 
 // Loading fallback component
-const PageLoader = () => <div className="flex items-center justify-center min-h-screen">
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-  </div>;
+  </div>
+);
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
