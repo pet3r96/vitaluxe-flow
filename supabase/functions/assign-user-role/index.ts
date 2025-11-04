@@ -823,9 +823,10 @@ serve(async (req) => {
       }
     }
 
+    // Declare token variable for staff members (used in return statement)
+    let generatedToken: string | null = null;
 
     // Generate token for staff members (will be sent by frontend)
-    let generatedToken: string | null = null;
     if (signupData.role === 'staff') {
       console.log(`Staff account created: generating activation token for ${signupData.email}`);
       

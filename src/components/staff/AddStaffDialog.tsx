@@ -150,17 +150,15 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
         throw new Error((data as any)?.error || error.message);
       }
 
-      // Send staff welcome email with activation link
-      if (data?.userId && data?.token) {
+      // Send staff welcome email with activation link using existing temp-password function
+      if (data?.userId) {
         try {
-          const { error: emailError } = await supabase.functions.invoke('send-staff-welcome-email', {
+          const { error: emailError } = await supabase.functions.invoke('send-temp-password-email', {
             body: {
               userId: data.userId,
               email: formData.email,
               name: formData.fullName,
-              token: data.token,
-              practiceId: targetPracticeId,
-              roleType: formData.roleType
+              role: 'staff'
             }
           });
 
