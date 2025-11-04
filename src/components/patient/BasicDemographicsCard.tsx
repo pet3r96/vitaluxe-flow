@@ -146,12 +146,19 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
 
   // Use new column first, fallback to old
   const dobValue = patientAccount?.birth_date || patientAccount?.date_of_birth;
+  
+  // Parse date as local timezone to prevent off-by-one errors
+  const parseLocalDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  
   const formattedDOB = dobValue
-    ? format(new Date(dobValue), "MMM dd, yyyy")
+    ? format(parseLocalDate(dobValue), "MMM dd, yyyy")
     : "Not provided";
 
   const age = dobValue
-    ? differenceInYears(new Date(), new Date(dobValue))
+    ? differenceInYears(new Date(), parseLocalDate(dobValue))
     : null;
 
   // Use new columns first, fallback to old

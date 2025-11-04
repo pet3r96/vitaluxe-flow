@@ -405,17 +405,22 @@ export default function PatientIntakeForm() {
         }
         
         const medEntries = medications
-          .filter(m => m.name && m.dosage && m.frequency)
+          .filter(m => m.name.trim())
           .map(med => ({
             patient_account_id: patientAccount.id,
-            medication_name: med.name,
-            dosage: med.dosage,
-            frequency: med.frequency === 'other' ? (med.customFrequency || med.frequency) : med.frequency,
+            medication_name: med.name.trim(),
+            dosage: med.dosage?.trim() || null,
+            frequency: med.frequency === 'other' ? (med.customFrequency || med.frequency) : (med.frequency || null),
             start_date: new Date().toISOString(),
             is_active: true,
             added_by_user_id: effectiveUserId,
             added_by_role: 'patient',
           }));
+        
+        // 🔍 DIAGNOSTIC LOG: Before saving medications
+        console.log(`[PatientIntakeForm] 📊 Saving ${medEntries.length} medications:`, 
+          medEntries.map(m => ({ name: m.medication_name, dosage: m.dosage, frequency: m.frequency }))
+        );
         
         if (medEntries.length > 0) {
           const { error: medError } = await supabase
@@ -453,17 +458,22 @@ export default function PatientIntakeForm() {
         }
         
         const allergyEntries = allergies
-          .filter(a => a.name && a.reaction)
+          .filter(a => a.name.trim())
           .map(allergy => ({
             patient_account_id: patientAccount.id,
-            allergen_name: allergy.name,
-            reaction_type: allergy.reaction,
-            severity: allergy.severity,
+            allergen_name: allergy.name.trim(),
+            reaction_type: allergy.reaction?.trim() || null,
+            severity: allergy.severity || null,
             date_recorded: new Date().toISOString(),
             is_active: true,
             added_by_user_id: effectiveUserId,
             added_by_role: 'patient',
           }));
+        
+        // 🔍 DIAGNOSTIC LOG: Before saving allergies
+        console.log(`[PatientIntakeForm] 📊 Saving ${allergyEntries.length} allergies:`,
+          allergyEntries.map(a => ({ name: a.allergen_name, reaction: a.reaction_type }))
+        );
         
         if (allergyEntries.length > 0) {
           const { error: allergyError } = await supabase
@@ -501,17 +511,24 @@ export default function PatientIntakeForm() {
         }
         
         const conditionEntries = conditions
-          .filter(c => c.name && c.diagnosed_date)
+          .filter(c => c.name.trim())
           .map(condition => ({
             patient_account_id: patientAccount.id,
-            condition_name: condition.name,
-            date_diagnosed: condition.diagnosed_date.length === 7 
-              ? condition.diagnosed_date + '-01'
-              : condition.diagnosed_date,
+            condition_name: condition.name.trim(),
+            date_diagnosed: condition.diagnosed_date 
+              ? (condition.diagnosed_date.length === 7 
+                  ? condition.diagnosed_date + '-01'
+                  : condition.diagnosed_date)
+              : null,
             is_active: true,
             added_by_user_id: effectiveUserId,
             added_by_role: 'patient',
           }));
+        
+        // 🔍 DIAGNOSTIC LOG: Before saving conditions
+        console.log(`[PatientIntakeForm] 📊 Saving ${conditionEntries.length} conditions:`,
+          conditionEntries.map(c => ({ name: c.condition_name, date: c.date_diagnosed }))
+        );
         
         if (conditionEntries.length > 0) {
           const { error: conditionError } = await supabase
@@ -549,13 +566,15 @@ export default function PatientIntakeForm() {
         }
         
         const surgeryEntries = surgeries
-          .filter(s => s.type && s.date)
+          .filter(s => s.type.trim())
           .map(surgery => ({
             patient_account_id: patientAccount.id,
             surgery_type: surgery.type,
-            surgery_date: surgery.date.length === 7 
-              ? surgery.date + '-01'
-              : surgery.date,
+            surgery_date: surgery.date 
+              ? (surgery.date.length === 7 
+                  ? surgery.date + '-01'
+                  : surgery.date)
+              : null,
             notes: surgery.notes || null,
             added_by_user_id: effectiveUserId,
             added_by_role: 'patient',
@@ -597,11 +616,11 @@ export default function PatientIntakeForm() {
         }
         
         const immEntries = immunizations
-          .filter(i => i.vaccine_name && i.date_administered)
+          .filter(i => i.vaccine_name.trim())
           .map(imm => ({
             patient_account_id: patientAccount.id,
             vaccine_name: imm.vaccine_name,
-            date_administered: imm.date_administered,
+            date_administered: imm.date_administered || null,
             added_by_user_id: effectiveUserId,
             added_by_role: 'patient',
           }));
@@ -729,7 +748,7 @@ export default function PatientIntakeForm() {
       });
 
       toast.success("Intake form completed successfully!");
-      navigate('/dashboard');
+      navigate('/patient/medical-vault');
     } catch (error) {
       console.error('Intake submission error:', error);
       toast.error("Failed to submit intake form. Please try again.");
