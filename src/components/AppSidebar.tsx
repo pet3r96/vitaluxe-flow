@@ -100,8 +100,8 @@ export function AppSidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Patients use PatientMobileHeader exclusively - no sidebar needed
-  if (effectiveRole === 'patient') {
+  // Patients use PatientMobileHeader on mobile only - sidebar shown on desktop
+  if (effectiveRole === 'patient' && isMobile) {
     return null;
   }
 
