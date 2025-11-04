@@ -457,6 +457,16 @@ export const ProductsGrid = () => {
         });
       }
 
+      // 🔍 DIAGNOSTIC LOG 1: After resolvedDoctorId calculation
+      console.log('[ProductsGrid] 🔍 PRACTICE ORDER DIAGNOSTIC', {
+        effectiveUserId,
+        providerId,
+        resolvedDoctorId,
+        userRole: userRoleData?.role,
+        shipToPractice,
+        effectivePracticeId
+      });
+
       if (shipToPractice) {
         console.debug('[ProductsGrid] Practice order - fetching practice shipping address', { effectiveUserId });
         
@@ -467,11 +477,31 @@ export const ProductsGrid = () => {
           .eq("id", resolvedDoctorId)
           .single();
 
+        // 🔍 DIAGNOSTIC LOG 2: After practice profile fetch
+        console.log('[ProductsGrid] 🔍 PRACTICE PROFILE FETCH', {
+          resolvedDoctorId,
+          practiceProfileFound: !!practiceProfile,
+          practiceProfile: practiceProfile ? {
+            shipping_address_state: practiceProfile.shipping_address_state,
+            shipping_address_street: practiceProfile.shipping_address_street,
+            shipping_address_city: practiceProfile.shipping_address_city,
+            shipping_address_zip: practiceProfile.shipping_address_zip,
+            address_state: practiceProfile.address_state
+          } : null
+        });
+
         // Use shipping address state only (Google-validated 2-letter code)
         const destinationState = practiceProfile?.shipping_address_state || '';
         
-        console.debug('[ProductsGrid] Practice shipping state resolved', { 
-          destinationState, 
+        // 🔍 DIAGNOSTIC LOG 3: Before state validation
+        console.log('[ProductsGrid] 🔍 STATE VALIDATION CHECK', {
+          destinationState,
+          destinationStateType: typeof destinationState,
+          destinationStateLength: destinationState.length,
+          destinationStateCharCodes: destinationState ? 
+            [...destinationState].map(c => `${c}:${c.charCodeAt(0)}`).join(', ') : [],
+          isValidResult: isValidStateCode(destinationState),
+          practiceProfileExists: !!practiceProfile,
           hasShippingState: !!practiceProfile?.shipping_address_state,
           hasBillingState: !!practiceProfile?.address_state
         });
@@ -495,6 +525,14 @@ export const ProductsGrid = () => {
 
         // Get user's topline rep ID for scoping - use resolvedDoctorId (practice_id) to get topline rep
         const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);
+
+        // 🔍 DIAGNOSTIC LOG 4: Before routing call
+        console.log('[ProductsGrid] 🔍 ROUTING REQUEST', {
+          product_id: productForCart.id,
+          destination_state: destinationState,
+          user_topline_rep_id: userToplineRepId,
+          resolvedDoctorId
+        });
 
         // Route to pharmacy - BLOCK if no pharmacy available
         const { data: routingResult, error: routingError } = await supabase.functions.invoke(
