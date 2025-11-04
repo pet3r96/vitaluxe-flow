@@ -145,12 +145,17 @@ export default function PatientDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("providers")
-        .select("id, user_id, profiles!inner(full_name, prescriber_name)")
-        .eq("practice_id", practiceId)
-        .order('prescriber_name', { ascending: true, foreignTable: 'profiles' });
+        .select("id, user_id, profiles!providers_user_id_fkey(full_name, prescriber_name)")
+        .eq("practice_id", practiceId);
       
       if (error) throw error;
-      return data;
+      
+      // Sort locally to avoid database ordering issues
+      return (data || []).sort((a: any, b: any) => {
+        const nameA = a.profiles?.prescriber_name || a.profiles?.full_name || 'Unknown';
+        const nameB = b.profiles?.prescriber_name || b.profiles?.full_name || 'Unknown';
+        return nameA.localeCompare(nameB);
+      });
     },
     enabled: !!practiceId,
   });
