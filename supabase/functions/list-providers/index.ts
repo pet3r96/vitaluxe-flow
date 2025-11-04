@@ -79,7 +79,22 @@ Deno.serve(async (req) => {
         .select('practice_id')
         .eq('user_id', user.id)
         .single();
-      practiceId = staffData?.practice_id || null;
+      
+      console.log('[list-providers] Staff lookup:', {
+        userId: user.id,
+        staffData,
+        practiceId: staffData?.practice_id
+      });
+      
+      if (!staffData || !staffData.practice_id) {
+        console.warn('[list-providers] ⚠️ Staff has no active practice_staff record');
+        return new Response(
+          JSON.stringify({ providers: [], error: 'Staff membership not found' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      
+      practiceId = staffData.practice_id;
       practiceIdSource = 'computed-staff';
     } else if (roles.includes('provider')) {
       // Provider: can only see themselves

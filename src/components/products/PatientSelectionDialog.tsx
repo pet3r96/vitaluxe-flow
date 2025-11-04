@@ -125,7 +125,13 @@ export const PatientSelectionDialog = ({
         
         if (error) {
           console.error('[PatientSelectionDialog] ❌ Error fetching providers:', error);
+          toast.error(`Failed to load providers: ${error.message}`);
           throw error;
+        }
+        
+        if (!data?.providers || data.providers.length === 0) {
+          console.warn('[PatientSelectionDialog] ⚠️ No providers returned from list-providers');
+          toast.error("No providers found for your practice. Please contact support.");
         }
         
         console.log('[PatientSelectionDialog] 🔍 Raw providers from list-providers:', data?.providers);

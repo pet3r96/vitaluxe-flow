@@ -46,17 +46,28 @@ export default function SupportTickets() {
 
       // Filter by practice_id for staff and doctors
       if (effectiveRole === "staff") {
-        // Get staff's practice_id
-        const { data: staffData } = await supabase
+        // Get staff's practice_id with better error handling
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        const { data: staffData, error: staffError } = await supabase
           .from("practice_staff")
           .select("practice_id")
-          .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
+          .eq("user_id", user?.id)
           .eq("active", true)
           .maybeSingle();
 
-        if (staffData?.practice_id) {
-          query = query.eq("practice_id", staffData.practice_id);
+        if (staffError) {
+          console.error('[SupportTickets] Error fetching staff practice:', staffError);
+          throw staffError;
         }
+
+        if (!staffData?.practice_id) {
+          console.warn('[SupportTickets] ⚠️ Staff has no active practice');
+          return [];
+        }
+
+        console.log('[SupportTickets] Staff viewing tickets for practice:', staffData.practice_id);
+        query = query.eq("practice_id", staffData.practice_id);
       } else if (effectiveRole === "doctor") {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
