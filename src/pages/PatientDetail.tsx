@@ -146,7 +146,8 @@ export default function PatientDetail() {
       const { data, error } = await supabase
         .from("providers")
         .select("id, user_id, profiles!inner(full_name, prescriber_name)")
-        .eq("practice_id", practiceId);
+        .eq("practice_id", practiceId)
+        .order("profiles(prescriber_name)", { ascending: true });
       
       if (error) throw error;
       return data;
