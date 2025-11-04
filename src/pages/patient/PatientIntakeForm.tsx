@@ -319,12 +319,16 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
   useEffect(() => {
     if (existingImmunizations && existingImmunizations.length > 0) {
+      console.log('[Immunizations] Loading existing data:', existingImmunizations);
       const immunizationList = existingImmunizations.map(imm => ({
         vaccine_name: imm.vaccine_name || '',
         date_administered: imm.date_administered || '',
       }));
+      console.log('[Immunizations] Mapped list:', immunizationList);
       setImmunizations(immunizationList);
       setHasNoImmunizations(false);
+    } else {
+      console.log('[Immunizations] No existing data found, existingImmunizations:', existingImmunizations);
     }
   }, [existingImmunizations]);
 
