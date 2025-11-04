@@ -50,22 +50,59 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user is admin
-    const { data: roles } = await supabaseAdmin
+    // Check user roles
+    const { data: userRoles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
+      .eq('user_id', user.id);
 
-    if (!roles) {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const isAdmin = userRoles?.some(r => r.role === 'admin');
+    const isDoctor = userRoles?.some(r => r.role === 'doctor');
+    const isStaff = userRoles?.some(r => r.role === 'staff');
 
+    // Get the request body first to check userId for practice validation
     const { email, name, temporaryPassword: providedPassword, role, userId }: TempPasswordEmailRequest = await req.json();
+
+    // If not admin, verify practice access
+    if (!isAdmin) {
+      if (!isDoctor && !isStaff) {
+        return new Response(
+          JSON.stringify({ error: 'Insufficient permissions' }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // For practice users, verify they can only send emails to staff in their practice
+      if (userId) {
+        // Get the requester's practice
+        const { data: requesterPractice } = await supabaseAdmin
+          .from('practice_staff')
+          .select('practice_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!requesterPractice) {
+          return new Response(
+            JSON.stringify({ error: 'Practice not found' }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get the target staff member's practice
+        const { data: targetStaff } = await supabaseAdmin
+          .from('practice_staff')
+          .select('practice_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (!targetStaff || targetStaff.practice_id !== requesterPractice.practice_id) {
+          return new Response(
+            JSON.stringify({ error: 'Cannot send emails to staff outside your practice' }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
 
     // Validate required fields
     if (!email || !name || !role) {
