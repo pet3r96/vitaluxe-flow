@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreatePatientNote } from "@/hooks/usePatientNotes";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreatePatientNoteDialogProps {
   open: boolean;
@@ -37,7 +38,20 @@ export function CreatePatientNoteDialog({
       return;
     }
 
-    const userName = user.email || 'Unknown User';
+    // Fetch user's full name from profiles table
+    let userName = 'Unknown User';
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      
+      userName = profile?.full_name || user.email || 'Unknown User';
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      userName = user.email || 'Unknown User';
+    }
 
     await createNote.mutateAsync({
       patient_account_id: patientAccountId,

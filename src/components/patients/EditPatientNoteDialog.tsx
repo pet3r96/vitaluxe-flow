@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUpdatePatientNote, PatientNote } from "@/hooks/usePatientNotes";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EditPatientNoteDialogProps {
   open: boolean;
@@ -63,7 +64,20 @@ export function EditPatientNoteDialog({
       return;
     }
 
-    const userName = user.email || 'Unknown User';
+    // Fetch user's full name from profiles table
+    let userName = 'Unknown User';
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      
+      userName = profile?.full_name || user.email || 'Unknown User';
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      userName = user.email || 'Unknown User';
+    }
 
     await updateNote.mutateAsync({
       id: note.id,
