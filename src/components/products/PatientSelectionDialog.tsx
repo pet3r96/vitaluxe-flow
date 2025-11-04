@@ -563,30 +563,53 @@ export const PatientSelectionDialog = ({
                     )}
                   </div>
                   
-                  {/* Show read-only if provider is logged in OR only one provider exists */}
+                  {/* Show radio button if provider is logged in OR only one provider exists */}
                   {(providers.length === 1 || 
                     (effectiveRole === 'provider' && selectedProviderId && 
                      providers.find(p => p.id === selectedProviderId))) ? (
-                    <div className="p-3 border rounded-md bg-muted">
-                      <p className="text-sm font-medium">
-                        {providers.find(p => p.id === selectedProviderId)?.prescriber_name || providers[0].prescriber_name}
-                      </p>
-                      <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
-                        {(() => {
-                          const provider = providers.find(p => p.id === selectedProviderId) || providers[0];
-                          return (
-                            <>
-                              {provider.specialty && <p>Specialty: {provider.specialty}</p>}
-                              {provider.npi && <p>NPI: {provider.npi}</p>}
-                            </>
-                          );
-                        })()}
+                    <div className="grid gap-2">
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            id="single-provider-radio"
+                            checked={selectedProviderId === (providers.find(p => p.id === selectedProviderId)?.id || providers[0].id)}
+                            onChange={() => setSelectedProviderId(providers[0].id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <Label 
+                              htmlFor="single-provider-radio" 
+                              className="font-semibold cursor-pointer block"
+                            >
+                              {providers.find(p => p.id === selectedProviderId)?.prescriber_name || providers[0].prescriber_name}
+                            </Label>
+                            {(() => {
+                              const provider = providers.find(p => p.id === selectedProviderId) || providers[0];
+                              return (
+                                <>
+                                  {provider.profiles?.email && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {provider.profiles.email}
+                                    </p>
+                                  )}
+                                  {provider.npi && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      NPI: {provider.npi}
+                                    </p>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                          <Badge variant="secondary" className="shrink-0">
+                            Your Account
+                          </Badge>
+                        </div>
                       </div>
-                      {effectiveRole === 'provider' && (
-                        <p className="text-xs text-muted-foreground italic mt-2">
-                          Automatically set to your provider account
-                        </p>
-                      )}
+                      <p className="text-xs text-muted-foreground">
+                        This provider will be associated with the order
+                      </p>
                     </div>
                   ) : (
                     // Multiple providers - use searchable combobox
@@ -935,21 +958,32 @@ export const PatientSelectionDialog = ({
                             <div className="w-full">
                               <Button 
                                 variant="outline" 
-                                onClick={() => setShowPrescriptionWriter(true)}
+                                onClick={() => {
+                                  console.log('[PatientSelectionDialog] 🔍 Prescription Writer Button State:', {
+                                    selectedProviderData: !!selectedProviderData,
+                                    practiceData: !!practiceData,
+                                    isResolvingPractice,
+                                    selectedProviderId,
+                                    finalPracticeId
+                                  });
+                                  setShowPrescriptionWriter(true);
+                                }}
                                 className="w-full"
-                                disabled={!selectedProviderData || !practiceData}
+                                disabled={!selectedProviderData || !practiceData || isResolvingPractice}
                               >
                                 <FileText className="mr-2 h-4 w-4" />
                                 Open Prescription Writer
                               </Button>
                             </div>
                           </TooltipTrigger>
-                          {(!selectedProviderData || !practiceData) && (
+                          {(!selectedProviderData || !practiceData || isResolvingPractice) && (
                             <TooltipContent>
                               <p>
-                                {!selectedProviderData 
-                                  ? "Please select a provider first" 
-                                  : "Waiting for practice information to load"}
+                                {isResolvingPractice 
+                                  ? "Resolving practice information..." 
+                                  : !selectedProviderData 
+                                    ? "Please select a provider first" 
+                                    : "Waiting for practice information to load"}
                               </p>
                             </TooltipContent>
                           )}

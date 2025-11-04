@@ -490,8 +490,8 @@ export const ProductsGrid = () => {
           } : null
         });
 
-        // Use shipping address state only (Google-validated 2-letter code)
-        const destinationState = practiceProfile?.shipping_address_state || '';
+        // Use shipping address state with fallback to billing address state
+        const destinationState = practiceProfile?.shipping_address_state || practiceProfile?.address_state || '';
         
         // 🔍 DIAGNOSTIC LOG 3: Before state validation
         console.log('[ProductsGrid] 🔍 STATE VALIDATION CHECK', {
@@ -503,13 +503,14 @@ export const ProductsGrid = () => {
           isValidResult: isValidStateCode(destinationState),
           practiceProfileExists: !!practiceProfile,
           hasShippingState: !!practiceProfile?.shipping_address_state,
-          hasBillingState: !!practiceProfile?.address_state
+          hasBillingState: !!practiceProfile?.address_state,
+          usingFallback: !practiceProfile?.shipping_address_state && !!practiceProfile?.address_state
         });
 
         if (!isValidStateCode(destinationState)) {
           toast.error(
-            `Invalid or missing practice shipping address${destinationState ? ` (got: "${destinationState}")` : ''}. Please update your practice shipping address in Profile with a valid 2-letter US state code.`,
-            { duration: 8000 }
+            `Invalid or missing practice address${destinationState ? ` (got: "${destinationState}")` : ''}. Please update your practice profile with a valid shipping address (Settings → Profile → Shipping Address).`,
+            { duration: 10000 }
           );
           return;
         }
