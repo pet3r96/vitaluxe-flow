@@ -100,8 +100,13 @@ export function AppSidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Mobile view - use hamburger menu (but NOT for patients - they have PatientMobileHeader)
-  if (isMobile && effectiveRole !== 'patient') {
+  // Patients use PatientMobileHeader exclusively - no sidebar needed
+  if (effectiveRole === 'patient') {
+    return null;
+  }
+
+  // Mobile view - use hamburger menu for non-patient roles
+  if (isMobile) {
     // Transform sections to match MobileMenuNav expected format
     const mobileSections = filteredMenus.map(section => ({
       title: section.title,
