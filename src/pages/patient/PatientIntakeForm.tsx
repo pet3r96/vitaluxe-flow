@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
+import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
 
 const intakeSchema = z.object({
   date_of_birth: z.string().min(1, "Date of birth is required"),
@@ -305,6 +306,22 @@ export default function PatientIntakeForm() {
 
       if (accountError) throw accountError;
 
+      // Log demographics update
+      await logMedicalVaultChange({
+        patientAccountId: patientAccount.id,
+        actionType: 'updated',
+        entityType: 'demographics',
+        changedByUserId: effectiveUserId,
+        changedByRole: 'patient',
+        newData: { 
+          date_of_birth: data.date_of_birth, 
+          gender_at_birth: data.gender_at_birth,
+          phone: data.phone,
+          address: `${data.address}, ${data.city}, ${data.state} ${data.zip_code}`,
+        },
+        changeSummary: `Updated patient demographics`,
+      });
+
       // Insert vitals if provided
       if (data.height || data.weight) {
         let heightInches = null;
@@ -348,6 +365,11 @@ export default function PatientIntakeForm() {
 
       // Insert medications
       if (medications.length > 0) {
+        const incompleteCount = medications.filter(m => !m.name || !m.dosage || !m.frequency).length;
+        if (incompleteCount > 0) {
+          console.warn(`⚠️ ${incompleteCount} medication(s) skipped due to missing required fields`);
+        }
+        
         const medEntries = medications
           .filter(m => m.name && m.dosage && m.frequency)
           .map(med => ({
@@ -370,12 +392,32 @@ export default function PatientIntakeForm() {
             console.error('Medication insert error:', medError);
             throw new Error(`Failed to save medications: ${medError.message}`);
           }
+          
+          // Log each medication individually
+          for (const med of medEntries) {
+            await logMedicalVaultChange({
+              patientAccountId: patientAccount.id,
+              actionType: 'created',
+              entityType: 'medication',
+              entityName: med.medication_name,
+              changedByUserId: effectiveUserId,
+              changedByRole: 'patient',
+              newData: med,
+              changeSummary: `Added medication: ${med.medication_name} (${med.dosage}, ${med.frequency})`,
+            });
+          }
+          
           console.log(`✅ Saved ${medEntries.length} medication(s)`);
         }
       }
 
       // Insert allergies
       if (allergies.length > 0) {
+        const incompleteCount = allergies.filter(a => !a.name || !a.reaction).length;
+        if (incompleteCount > 0) {
+          console.warn(`⚠️ ${incompleteCount} allergy/allergies skipped due to missing required fields`);
+        }
+        
         const allergyEntries = allergies
           .filter(a => a.name && a.reaction)
           .map(allergy => ({
@@ -398,18 +440,40 @@ export default function PatientIntakeForm() {
             console.error('Allergy insert error:', allergyError);
             throw new Error(`Failed to save allergies: ${allergyError.message}`);
           }
+          
+          // Log each allergy individually
+          for (const allergy of allergyEntries) {
+            await logMedicalVaultChange({
+              patientAccountId: patientAccount.id,
+              actionType: 'created',
+              entityType: 'allergy',
+              entityName: allergy.allergen_name,
+              changedByUserId: effectiveUserId,
+              changedByRole: 'patient',
+              newData: allergy,
+              changeSummary: `Added allergy: ${allergy.allergen_name} (${allergy.reaction_type}, ${allergy.severity})`,
+            });
+          }
+          
           console.log(`✅ Saved ${allergyEntries.length} allergy/allergies`);
         }
       }
 
       // Insert conditions
       if (conditions.length > 0) {
+        const incompleteCount = conditions.filter(c => !c.name || !c.diagnosed_date).length;
+        if (incompleteCount > 0) {
+          console.warn(`⚠️ ${incompleteCount} condition(s) skipped due to missing required fields`);
+        }
+        
         const conditionEntries = conditions
           .filter(c => c.name && c.diagnosed_date)
           .map(condition => ({
             patient_account_id: patientAccount.id,
             condition_name: condition.name,
-            date_diagnosed: condition.diagnosed_date + '-01',
+            date_diagnosed: condition.diagnosed_date.length === 7 
+              ? condition.diagnosed_date + '-01'
+              : condition.diagnosed_date,
             is_active: true,
             added_by_user_id: effectiveUserId,
             added_by_role: 'patient',
@@ -424,18 +488,40 @@ export default function PatientIntakeForm() {
             console.error('Condition insert error:', conditionError);
             throw new Error(`Failed to save conditions: ${conditionError.message}`);
           }
+          
+          // Log each condition individually
+          for (const condition of conditionEntries) {
+            await logMedicalVaultChange({
+              patientAccountId: patientAccount.id,
+              actionType: 'created',
+              entityType: 'condition',
+              entityName: condition.condition_name,
+              changedByUserId: effectiveUserId,
+              changedByRole: 'patient',
+              newData: condition,
+              changeSummary: `Added condition: ${condition.condition_name} (diagnosed ${condition.date_diagnosed})`,
+            });
+          }
+          
           console.log(`✅ Saved ${conditionEntries.length} condition(s)`);
         }
       }
 
       // Insert surgeries
       if (surgeries.length > 0) {
+        const incompleteCount = surgeries.filter(s => !s.type || !s.date).length;
+        if (incompleteCount > 0) {
+          console.warn(`⚠️ ${incompleteCount} surgery/surgeries skipped due to missing required fields`);
+        }
+        
         const surgeryEntries = surgeries
           .filter(s => s.type && s.date)
           .map(surgery => ({
             patient_account_id: patientAccount.id,
             surgery_type: surgery.type,
-            surgery_date: surgery.date + '-01',
+            surgery_date: surgery.date.length === 7 
+              ? surgery.date + '-01'
+              : surgery.date,
             notes: surgery.notes || null,
             added_by_user_id: effectiveUserId,
             added_by_role: 'patient',
@@ -450,6 +536,21 @@ export default function PatientIntakeForm() {
             console.error('Surgery insert error:', surgeryError);
             throw new Error(`Failed to save surgeries: ${surgeryError.message}`);
           }
+          
+          // Log each surgery individually
+          for (const surgery of surgeryEntries) {
+            await logMedicalVaultChange({
+              patientAccountId: patientAccount.id,
+              actionType: 'created',
+              entityType: 'surgery',
+              entityName: surgery.surgery_type,
+              changedByUserId: effectiveUserId,
+              changedByRole: 'patient',
+              newData: surgery,
+              changeSummary: `Added surgery: ${surgery.surgery_type} (${surgery.surgery_date})`,
+            });
+          }
+          
           console.log(`✅ Saved ${surgeryEntries.length} surgery/surgeries`);
         }
       }
@@ -485,6 +586,18 @@ export default function PatientIntakeForm() {
           phone: data.pharmacy_phone,
           is_preferred: true,
         });
+        
+        // Log pharmacy creation
+        await logMedicalVaultChange({
+          patientAccountId: patientAccount.id,
+          actionType: 'created',
+          entityType: 'pharmacy',
+          entityName: data.pharmacy_name,
+          changedByUserId: effectiveUserId,
+          changedByRole: 'patient',
+          newData: { pharmacy_name: data.pharmacy_name, address: data.pharmacy_address },
+          changeSummary: `Added preferred pharmacy: ${data.pharmacy_name}`,
+        });
       }
 
       // Insert or update emergency contact
@@ -512,7 +625,29 @@ export default function PatientIntakeForm() {
           phone: data.emergency_contact_phone,
           email: data.emergency_contact_email || null,
         });
+        
+        // Log emergency contact creation
+        await logMedicalVaultChange({
+          patientAccountId: patientAccount.id,
+          actionType: 'created',
+          entityType: 'emergency_contact',
+          entityName: data.emergency_contact_name,
+          changedByUserId: effectiveUserId,
+          changedByRole: 'patient',
+          newData: { name: data.emergency_contact_name, phone: data.emergency_contact_phone },
+          changeSummary: `Added emergency contact: ${data.emergency_contact_name}`,
+        });
       }
+
+      // Log intake completion
+      await logMedicalVaultChange({
+        patientAccountId: patientAccount.id,
+        actionType: 'pre_intake_completed',
+        entityType: 'pre_intake_form',
+        changedByUserId: effectiveUserId,
+        changedByRole: 'patient',
+        changeSummary: `Patient completed pre-intake form`,
+      });
 
       toast.success("Intake form completed successfully!");
       navigate('/dashboard');
