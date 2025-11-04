@@ -89,9 +89,13 @@ interface ImmunizationEntry {
   date_administered: string;
 }
 
-export default function PatientIntakeForm() {
+interface PatientIntakeFormProps {
+  targetPatientAccountId?: string; // When provided, use this instead of effectiveUserId (for practice users)
+}
+
+export default function PatientIntakeForm({ targetPatientAccountId }: PatientIntakeFormProps = {}) {
   const navigate = useNavigate();
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [medications, setMedications] = useState<MedicationEntry[]>([{ name: "", dosage: "", frequency: "" }]);
   const [allergies, setAllergies] = useState<AllergyEntry[]>([{ name: "", reaction: "", severity: "" }]);
@@ -109,8 +113,21 @@ export default function PatientIntakeForm() {
 
   // Fetch existing patient account data
   const { data: patientAccount, isLoading } = useQuery({
-    queryKey: ['patient-account', effectiveUserId],
+    queryKey: ['patient-account', targetPatientAccountId || effectiveUserId],
     queryFn: async () => {
+      // Practice mode: Fetch by patient_account_id directly
+      if (targetPatientAccountId) {
+        const { data, error } = await supabase
+          .from('patient_accounts')
+          .select('*')
+          .eq('id', targetPatientAccountId)
+          .single();
+        
+        if (error) throw error;
+        return data;
+      }
+      
+      // Patient mode: Fetch by user_id (original behavior)
       const { data, error } = await supabase
         .from('patient_accounts')
         .select('*')
@@ -120,7 +137,7 @@ export default function PatientIntakeForm() {
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!(targetPatientAccountId || effectiveUserId),
   });
 
   // Fetch existing medical vault data (may be added by practice)
@@ -366,12 +383,13 @@ export default function PatientIntakeForm() {
       if (accountError) throw accountError;
 
       // Log demographics update
+      const auditRole = targetPatientAccountId ? (effectiveRole || 'staff') : 'patient';
       await logMedicalVaultChange({
         patientAccountId: patientAccount.id,
         actionType: 'updated',
         entityType: 'demographics',
         changedByUserId: effectiveUserId,
-        changedByRole: 'patient',
+        changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
         newData: { 
           date_of_birth: data.date_of_birth, 
           gender_at_birth: data.gender_at_birth,
@@ -455,7 +473,7 @@ export default function PatientIntakeForm() {
             start_date: new Date().toISOString(),
             is_active: true,
             added_by_user_id: effectiveUserId,
-            added_by_role: 'patient',
+            added_by_role: auditRole,
           }));
         
         // 🔍 DIAGNOSTIC LOG: Before saving medications
@@ -481,7 +499,7 @@ export default function PatientIntakeForm() {
               entityType: 'medication',
               entityName: med.medication_name,
               changedByUserId: effectiveUserId,
-              changedByRole: 'patient',
+              changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
               newData: med,
               changeSummary: `Added medication: ${med.medication_name} (${med.dosage}, ${med.frequency})`,
             });
@@ -517,7 +535,7 @@ export default function PatientIntakeForm() {
           entityType: 'allergy',
           entityName: 'No Known Allergies (NKA)',
           changedByUserId: effectiveUserId,
-          changedByRole: 'patient',
+          changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
           newData: { nka: true },
           changeSummary: `Patient indicated: No Known Allergies (NKA)`,
         });
@@ -539,7 +557,7 @@ export default function PatientIntakeForm() {
             date_recorded: new Date().toISOString(),
             is_active: true,
             added_by_user_id: effectiveUserId,
-            added_by_role: 'patient',
+            added_by_role: auditRole,
           }));
         
         // 🔍 DIAGNOSTIC LOG: Before saving allergies
@@ -565,7 +583,7 @@ export default function PatientIntakeForm() {
               entityType: 'allergy',
               entityName: allergy.allergen_name,
               changedByUserId: effectiveUserId,
-              changedByRole: 'patient',
+              changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
               newData: allergy,
               changeSummary: `Added allergy: ${allergy.allergen_name} (${allergy.reaction_type}, ${allergy.severity})`,
             });
@@ -594,7 +612,7 @@ export default function PatientIntakeForm() {
               : null,
             is_active: true,
             added_by_user_id: effectiveUserId,
-            added_by_role: 'patient',
+            added_by_role: auditRole,
           }));
         
         // 🔍 DIAGNOSTIC LOG: Before saving conditions
@@ -620,7 +638,7 @@ export default function PatientIntakeForm() {
               entityType: 'condition',
               entityName: condition.condition_name,
               changedByUserId: effectiveUserId,
-              changedByRole: 'patient',
+              changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
               newData: condition,
               changeSummary: `Added condition: ${condition.condition_name} (diagnosed ${condition.date_diagnosed})`,
             });
@@ -649,7 +667,7 @@ export default function PatientIntakeForm() {
               : null,
             notes: surgery.notes || null,
             added_by_user_id: effectiveUserId,
-            added_by_role: 'patient',
+            added_by_role: auditRole,
           }));
         
         if (surgeryEntries.length > 0) {
@@ -670,7 +688,7 @@ export default function PatientIntakeForm() {
               entityType: 'surgery',
               entityName: surgery.surgery_type,
               changedByUserId: effectiveUserId,
-              changedByRole: 'patient',
+              changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
               newData: surgery,
               changeSummary: `Added surgery: ${surgery.surgery_type} (${surgery.surgery_date})`,
             });
@@ -694,7 +712,7 @@ export default function PatientIntakeForm() {
             vaccine_name: imm.vaccine_name,
             date_administered: imm.date_administered || null,
             added_by_user_id: effectiveUserId,
-            added_by_role: 'patient',
+            added_by_role: auditRole,
           }));
         
         if (immEntries.length > 0) {
@@ -715,7 +733,7 @@ export default function PatientIntakeForm() {
               entityType: 'immunization',
               entityName: imm.vaccine_name,
               changedByUserId: effectiveUserId,
-              changedByRole: 'patient',
+              changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
               newData: imm,
               changeSummary: `Added immunization: ${imm.vaccine_name} (${imm.date_administered})`,
             });
@@ -764,7 +782,7 @@ export default function PatientIntakeForm() {
           entityType: 'pharmacy',
           entityName: data.pharmacy_name,
           changedByUserId: effectiveUserId,
-          changedByRole: 'patient',
+          changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
           newData: { pharmacy_name: data.pharmacy_name, address: data.pharmacy_address },
           changeSummary: `Added preferred pharmacy: ${data.pharmacy_name}`,
         });
@@ -803,7 +821,7 @@ export default function PatientIntakeForm() {
           entityType: 'emergency_contact',
           entityName: data.emergency_contact_name,
           changedByUserId: effectiveUserId,
-          changedByRole: 'patient',
+          changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
           newData: { name: data.emergency_contact_name, phone: data.emergency_contact_phone },
           changeSummary: `Added emergency contact: ${data.emergency_contact_name}`,
         });
@@ -815,12 +833,22 @@ export default function PatientIntakeForm() {
         actionType: 'pre_intake_completed',
         entityType: 'pre_intake_form',
         changedByUserId: effectiveUserId,
-        changedByRole: 'patient',
-        changeSummary: `Patient completed pre-intake form`,
+        changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
+        changeSummary: targetPatientAccountId 
+          ? `${effectiveRole} completed pre-intake form on behalf of patient`
+          : `Patient completed pre-intake form`,
       });
 
       toast.success("Intake form completed successfully!");
-      navigate('/medical-vault');
+      
+      // Navigate appropriately based on user type
+      if (targetPatientAccountId) {
+        // Practice mode: Navigate back to patient detail page
+        navigate(`/patients/${targetPatientAccountId}`);
+      } else {
+        // Patient mode: Navigate to medical vault
+        navigate('/medical-vault');
+      }
     } catch (error) {
       console.error('Intake submission error:', error);
       toast.error("Failed to submit intake form. Please try again.");

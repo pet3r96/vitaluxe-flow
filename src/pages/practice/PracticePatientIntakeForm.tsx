@@ -148,12 +148,7 @@ export default function PracticePatientIntakeForm() {
         </p>
       </div>
       
-      {/* 
-        Note: The PatientIntakeForm component will need to be modified to accept 
-        an optional targetPatientId prop that overrides effectiveUserId 
-        This allows practice users to fill out intake for any patient in their practice
-      */}
-      <PatientIntakeForm />
+      <PatientIntakeForm targetPatientAccountId={patientId} />
       
       <div className="mt-6 text-center text-sm text-muted-foreground">
         <p>After completing the form, you'll be redirected back to the patient detail page.</p>
