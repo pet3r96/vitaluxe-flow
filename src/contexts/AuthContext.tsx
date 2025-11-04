@@ -103,8 +103,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const actualRole = userRole;
   const isImpersonating = impersonatedRole !== null;
-  const effectiveRole = impersonatedRole || userRole;
-  const effectiveUserId = impersonatedUserId || user?.id || null;
+  
+  // Handle provider pass-through: providers act as their practice
+  const effectiveRole = impersonatedRole || (userRole === 'provider' && originalUserId ? 'doctor' : userRole);
+  const effectiveUserId = impersonatedUserId || (userRole === 'provider' && practiceParentId ? practiceParentId : user?.id) || null;
   const canImpersonate = userRole === 'admin' && canImpersonateDb;
 
   // Function to fetch 2FA enforcement setting
@@ -1031,15 +1033,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             actingAsPracticeId: practiceId
           });
           
-          // PASS-THROUGH: Make provider act as their practice
+          // PASS-THROUGH: Store practice ID and original user ID
+          // The computed effectiveRole and effectiveUserId will handle the pass-through
           setPracticeParentId(practiceId);
           setOriginalUserId(userId); // Preserve actual provider ID for audit
           setEffectivePracticeId(practiceId);
-          
-          // Override effectiveUserId and effectiveRole to make provider act as practice
-          // Note: This happens after setUserRole, so we need to update computed values
-          setImpersonatedRole('doctor'); // Make provider act as doctor/practice admin
-          setImpersonatedUserId(practiceId); // Make effectiveUserId be the practice ID
           
           logger.info('Provider pass-through activated', {
             providerId: userId,
