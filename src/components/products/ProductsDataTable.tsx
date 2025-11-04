@@ -217,26 +217,8 @@ export const ProductsDataTable = () => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
-      // Resolve practice context for providers and staff
-      let resolvedDoctorId = effectiveUserId;
-      
-      // For providers: resolve practice ID from their provider record
-      if (effectiveRole === 'provider' && effectiveUserId) {
-        try {
-          const { data: providerData } = await supabase
-            .from('providers')
-            .select('practice_id')
-            .eq('user_id', effectiveUserId)
-            .single();
-          
-          if (providerData?.practice_id) {
-            resolvedDoctorId = providerData.practice_id;
-            console.log('[ProductsDataTable] ✅ Resolved provider practice:', resolvedDoctorId);
-          }
-        } catch (error) {
-          console.error('[ProductsDataTable] ❌ Error resolving provider practice:', error);
-        }
-      }
+      // Determine doctor/practice ID (provider pass-through already handled in AuthContext)
+      let resolvedDoctorId = effectiveUserId; // For providers, this is already their practice ID
       
       // For staff: use effective practice ID
       if (effectiveRole === 'staff' && effectivePracticeId) {

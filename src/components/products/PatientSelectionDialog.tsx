@@ -53,41 +53,12 @@ export const PatientSelectionDialog = ({
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
   
-  // Resolve practice ID from provider record if needed
-  const { data: resolvedPracticeId, isLoading: isResolvingPractice } = useQuery({
-    queryKey: ["provider-practice-id", effectiveUserId, effectiveRole],
-    queryFn: async () => {
-      if (effectiveRole !== 'provider' || !effectiveUserId) return effectivePracticeId;
-      
-      console.log('[PatientSelectionDialog] 🔄 Resolving practice ID for provider:', effectiveUserId);
-      
-      // For direct provider login, fetch their practice_id from providers table
-      const { data, error } = await supabase
-        .from("providers")
-        .select("practice_id")
-        .eq("user_id", effectiveUserId)
-        .single();
-      
-      if (error) {
-        console.error('[PatientSelectionDialog] ❌ Error fetching provider practice:', error);
-        return effectivePracticeId;
-      }
-      
-      console.log('[PatientSelectionDialog] ✅ Resolved practice ID:', data?.practice_id);
-      return data?.practice_id || effectivePracticeId;
-    },
-    enabled: open && effectiveRole === 'provider',
-    staleTime: 5 * 60 * 1000
-  });
-  
-  const finalPracticeId = effectiveRole === 'provider' 
-    ? (resolvedPracticeId || effectivePracticeId)
-    : effectivePracticeId;
+  // Use effectivePracticeId directly (provider pass-through already handled in AuthContext)
+  const finalPracticeId = effectivePracticeId;
   
   console.log('[PatientSelectionDialog] 🎯 Practice context:', {
     effectiveRole,
     effectivePracticeId,
-    resolvedPracticeId,
     finalPracticeId
   });
   
@@ -931,13 +902,11 @@ export const PatientSelectionDialog = ({
                         </Alert>
                       )}
                       
-                      {(isResolvingPractice || (!practiceData && selectedProviderData)) && (
+                      {(!practiceData && selectedProviderData) && (
                         <Alert className="border-blue-500/30 bg-blue-500/10">
                           <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                           <AlertDescription>
-                            {isResolvingPractice 
-                              ? "Resolving provider information..." 
-                              : "Practice information is loading. Please wait a moment before generating the prescription."}
+                            Practice information is loading. Please wait a moment before generating the prescription.
                           </AlertDescription>
                         </Alert>
                       )}
