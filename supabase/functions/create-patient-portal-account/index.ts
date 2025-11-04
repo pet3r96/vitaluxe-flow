@@ -55,18 +55,18 @@ Deno.serve(async (req) => {
       effectiveUserId = impersonation.impersonated_user_id;
     }
 
-    // Check if effective user is a practice owner, admin, or provider
+    // Check if effective user is a practice owner, admin, provider, or staff
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', effectiveUserId)
-      .in('role', ['doctor', 'admin', 'provider']);
+      .in('role', ['doctor', 'admin', 'provider', 'staff']);
 
     if (!roles || roles.length === 0) {
       return new Response(
         JSON.stringify({ 
           code: 'unauthorized_role',
-          error: 'Only practice owners, providers, or admins can create portal accounts' 
+          error: 'Only practice owners, providers, staff, or admins can create portal accounts' 
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -95,6 +95,7 @@ Deno.serve(async (req) => {
     const isAdminRole = roles.some(r => r.role === 'admin');
     const isDoctorRole = roles.some(r => r.role === 'doctor');
     const isProviderRole = roles.some(r => r.role === 'provider');
+    const isStaffRole = roles.some(r => r.role === 'staff');
 
     // CRITICAL: For admins not impersonating, immediately fetch patient's practice
     if (isAdminRole && !isImpersonating) {
@@ -147,7 +148,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // If admin already got practice context above, skip doctor/provider checks
+    // If admin already got practice context above, skip doctor/provider/staff checks
     if (!effectivePracticeId) {
       // First, check if effective user is a doctor (practice owner)
       const { data: doctorProfile } = await supabaseAdmin
@@ -159,6 +160,18 @@ Deno.serve(async (req) => {
       if (doctorProfile && isDoctorRole) {
         // Doctor/practice owner - practice_id is their own user_id
         effectivePracticeId = doctorProfile.id;
+      } else if (isStaffRole) {
+        // Check if they're staff
+        const { data: staffProfile } = await supabaseAdmin
+          .from('practice_staff')
+          .select('practice_id')
+          .eq('user_id', effectiveUserId)
+          .eq('active', true)
+          .maybeSingle();
+        
+        if (staffProfile && staffProfile.practice_id) {
+          effectivePracticeId = staffProfile.practice_id;
+        }
       } else {
         // Check if they're a provider
         const { data: providerProfile } = await supabaseAdmin
@@ -195,7 +208,7 @@ Deno.serve(async (req) => {
       isImpersonating,
       effectiveUserId,
       effectivePracticeId,
-      resolvedAs: isDoctorRole ? 'doctor' : isAdminRole ? 'admin' : 'provider'
+      resolvedAs: isDoctorRole ? 'doctor' : isAdminRole ? 'admin' : isStaffRole ? 'staff' : 'provider'
     });
 
     // Check if practice has active subscription (using effective practice)
