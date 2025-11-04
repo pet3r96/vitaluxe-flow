@@ -32,11 +32,9 @@ const intakeSchema = z.object({
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
   zip_code: z.string().min(5, "Zip code is required"),
-  emergency_contact_name: z.string().min(1, "Emergency contact name is required"),
-  emergency_contact_relationship: z.string().min(1, "Relationship is required"),
-  emergency_contact_phone: z.string()
-    .transform(val => val.replace(/\D/g, ''))
-    .refine(val => val.length === 10, "Phone must be exactly 10 digits"),
+  emergency_contact_name: z.string().optional().or(z.literal("")),
+  emergency_contact_relationship: z.string().optional().or(z.literal("")),
+  emergency_contact_phone: z.string().optional().or(z.literal("")),
   emergency_contact_email: z.string().email().optional().or(z.literal("")),
   height: z.string()
     .optional()
@@ -47,14 +45,12 @@ const intakeSchema = z.object({
     }, "Height must be in format like 5-5, 5-11, or 6-0 (feet-inches)"),
   weight: z.string().optional(),
   blood_type: z.string().optional(),
-  pharmacy_name: z.string().min(1, "Pharmacy name is required"),
-  pharmacy_address: z.string().min(1, "Pharmacy address is required"),
-  pharmacy_city: z.string().min(1, "Pharmacy city is required"),
-  pharmacy_state: z.string().min(1, "Pharmacy state is required"),
-  pharmacy_zip: z.string().min(5, "Pharmacy zip is required"),
-  pharmacy_phone: z.string()
-    .transform(val => val.replace(/\D/g, ''))
-    .refine(val => val.length === 10, "Phone must be exactly 10 digits"),
+  pharmacy_name: z.string().optional().or(z.literal("")),
+  pharmacy_address: z.string().optional().or(z.literal("")),
+  pharmacy_city: z.string().optional().or(z.literal("")),
+  pharmacy_state: z.string().optional().or(z.literal("")),
+  pharmacy_zip: z.string().optional().or(z.literal("")),
+  pharmacy_phone: z.string().optional().or(z.literal("")),
 });
 
 type IntakeFormData = z.infer<typeof intakeSchema>;
@@ -109,6 +105,8 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   const [hasNoConditions, setHasNoConditions] = useState(false);
   const [hasNoSurgeries, setHasNoSurgeries] = useState(false);
   const [hasNoImmunizations, setHasNoImmunizations] = useState(false);
+  const [hasNoPharmacy, setHasNoPharmacy] = useState(false);
+  const [hasNoEmergencyContact, setHasNoEmergencyContact] = useState(false);
   const [showMedicalHistoryWarning, setShowMedicalHistoryWarning] = useState(false);
 
   // Fetch existing patient account data
@@ -405,6 +403,8 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
       // Insert vitals if provided
       if (data.height || data.weight) {
+        console.log('[Vitals] Saving height/weight:', { height: data.height, weight: data.weight });
+        
         let heightInches = null;
         if (data.height) {
           const [feet, inches] = data.height.split('-').map(Number);
@@ -413,24 +413,40 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         
         // Insert height record with vital_type
         if (heightInches) {
-          await supabase.from('patient_vitals').insert({
+          const { error: heightError } = await supabase.from('patient_vitals').insert({
             patient_account_id: patientAccount.id,
             vital_type: 'height',
             height: heightInches,
             height_unit: 'in',
             date_recorded: new Date().toISOString(),
+            added_by_user_id: effectiveUserId,
+            added_by_role: auditRole,
           });
+          
+          if (heightError) {
+            console.error('Height insert error:', heightError);
+            throw new Error(`Failed to save height: ${heightError.message}`);
+          }
+          console.log('✅ Saved height');
         }
         
         // Insert weight record with vital_type
         if (data.weight) {
-          await supabase.from('patient_vitals').insert({
+          const { error: weightError } = await supabase.from('patient_vitals').insert({
             patient_account_id: patientAccount.id,
             vital_type: 'weight',
             weight: parseFloat(data.weight),
             weight_unit: 'lbs',
             date_recorded: new Date().toISOString(),
+            added_by_user_id: effectiveUserId,
+            added_by_role: auditRole,
           });
+          
+          if (weightError) {
+            console.error('Weight insert error:', weightError);
+            throw new Error(`Failed to save weight: ${weightError.message}`);
+          }
+          console.log('✅ Saved weight');
         }
       }
 
@@ -747,88 +763,102 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         }
       }
 
-      // Insert or update pharmacy
-      const { data: existingPharmacy } = await supabase
-        .from('patient_pharmacies')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id)
-        .eq('is_preferred', true)
-        .maybeSingle();
-
-      if (existingPharmacy) {
-        await supabase
+      // Insert or update pharmacy (only if not skipped and has data)
+      if (!hasNoPharmacy && data.pharmacy_name && data.pharmacy_name.trim()) {
+        const { data: existingPharmacy } = await supabase
           .from('patient_pharmacies')
-          .update({
+          .select('id')
+          .eq('patient_account_id', patientAccount.id)
+          .eq('is_preferred', true)
+          .maybeSingle();
+
+        if (existingPharmacy) {
+          await supabase
+            .from('patient_pharmacies')
+            .update({
+              pharmacy_name: data.pharmacy_name,
+              address: data.pharmacy_address,
+              city: data.pharmacy_city,
+              state: data.pharmacy_state,
+              zip_code: data.pharmacy_zip,
+              phone: data.pharmacy_phone,
+            })
+            .eq('id', existingPharmacy.id);
+        } else {
+          await supabase.from('patient_pharmacies').insert({
+            patient_account_id: patientAccount.id,
             pharmacy_name: data.pharmacy_name,
             address: data.pharmacy_address,
             city: data.pharmacy_city,
             state: data.pharmacy_state,
             zip_code: data.pharmacy_zip,
             phone: data.pharmacy_phone,
-          })
-          .eq('id', existingPharmacy.id);
+            is_preferred: true,
+            added_by_user_id: effectiveUserId,
+            added_by_role: auditRole,
+          });
+          
+          // Log pharmacy creation
+          await logMedicalVaultChange({
+            patientAccountId: patientAccount.id,
+            actionType: 'created',
+            entityType: 'pharmacy',
+            entityName: data.pharmacy_name,
+            changedByUserId: effectiveUserId,
+            changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
+            newData: { pharmacy_name: data.pharmacy_name, address: data.pharmacy_address },
+            changeSummary: `Added preferred pharmacy: ${data.pharmacy_name}`,
+          });
+        }
+        console.log(`✅ Saved pharmacy information`);
       } else {
-        await supabase.from('patient_pharmacies').insert({
-          patient_account_id: patientAccount.id,
-          pharmacy_name: data.pharmacy_name,
-          address: data.pharmacy_address,
-          city: data.pharmacy_city,
-          state: data.pharmacy_state,
-          zip_code: data.pharmacy_zip,
-          phone: data.pharmacy_phone,
-          is_preferred: true,
-        });
-        
-        // Log pharmacy creation
-        await logMedicalVaultChange({
-          patientAccountId: patientAccount.id,
-          actionType: 'created',
-          entityType: 'pharmacy',
-          entityName: data.pharmacy_name,
-          changedByUserId: effectiveUserId,
-          changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
-          newData: { pharmacy_name: data.pharmacy_name, address: data.pharmacy_address },
-          changeSummary: `Added preferred pharmacy: ${data.pharmacy_name}`,
-        });
+        console.log(`⏭️ Skipped pharmacy (user indicated no pharmacy or no data provided)`);
       }
 
-      // Insert or update emergency contact
-      const { data: existingContact } = await supabase
-        .from('patient_emergency_contacts')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id)
-        .maybeSingle();
-
-      if (existingContact) {
-        await supabase
+      // Insert or update emergency contact (only if not skipped and has data)
+      if (!hasNoEmergencyContact && data.emergency_contact_name && data.emergency_contact_name.trim()) {
+        const { data: existingContact } = await supabase
           .from('patient_emergency_contacts')
-          .update({
+          .select('id')
+          .eq('patient_account_id', patientAccount.id)
+          .maybeSingle();
+
+        if (existingContact) {
+          await supabase
+            .from('patient_emergency_contacts')
+            .update({
+              name: data.emergency_contact_name,
+              relationship: data.emergency_contact_relationship,
+              phone: data.emergency_contact_phone,
+              email: data.emergency_contact_email || null,
+            })
+            .eq('id', existingContact.id);
+        } else {
+          await supabase.from('patient_emergency_contacts').insert({
+            patient_account_id: patientAccount.id,
             name: data.emergency_contact_name,
             relationship: data.emergency_contact_relationship,
             phone: data.emergency_contact_phone,
             email: data.emergency_contact_email || null,
-          })
-          .eq('id', existingContact.id);
+            added_by_user_id: effectiveUserId,
+            added_by_role: auditRole,
+          });
+          
+          // Log emergency contact creation
+          await logMedicalVaultChange({
+            patientAccountId: patientAccount.id,
+            actionType: 'created',
+            entityType: 'emergency_contact',
+            entityName: data.emergency_contact_name,
+            changedByUserId: effectiveUserId,
+            changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
+            newData: { name: data.emergency_contact_name, phone: data.emergency_contact_phone },
+            changeSummary: `Added emergency contact: ${data.emergency_contact_name}`,
+          });
+        }
+        console.log(`✅ Saved emergency contact information`);
       } else {
-        await supabase.from('patient_emergency_contacts').insert({
-          patient_account_id: patientAccount.id,
-          name: data.emergency_contact_name,
-          relationship: data.emergency_contact_relationship,
-          phone: data.emergency_contact_phone,
-          email: data.emergency_contact_email || null,
-        });
-        
-        // Log emergency contact creation
-        await logMedicalVaultChange({
-          patientAccountId: patientAccount.id,
-          actionType: 'created',
-          entityType: 'emergency_contact',
-          entityName: data.emergency_contact_name,
-          changedByUserId: effectiveUserId,
-          changedByRole: auditRole as 'patient' | 'doctor' | 'staff' | 'provider',
-          newData: { name: data.emergency_contact_name, phone: data.emergency_contact_phone },
-          changeSummary: `Added emergency contact: ${data.emergency_contact_name}`,
-        });
+        console.log(`⏭️ Skipped emergency contact (user indicated no contact or no data provided)`);
       }
 
       // Log intake completion
@@ -1026,17 +1056,50 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
           {/* Emergency Contact */}
           <Card className="patient-card">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Emergency Contact</CardTitle>
-              <CardDescription>Someone we can contact in case of emergency</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-lg md:text-xl">Emergency Contact</CardTitle>
+                <CardDescription>Someone we can contact in case of emergency</CardDescription>
+              </div>
+              <Badge variant={!hasNoEmergencyContact && form.getValues("emergency_contact_name") ? "default" : "secondary"}>
+                {hasNoEmergencyContact ? "Skipped" : form.getValues("emergency_contact_name") ? "Added" : "Not completed"}
+              </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="no-emergency-contact"
+                    checked={hasNoEmergencyContact}
+                    onCheckedChange={(checked) => {
+                      setHasNoEmergencyContact(checked as boolean);
+                      if (checked) {
+                        form.setValue("emergency_contact_name", "");
+                        form.setValue("emergency_contact_relationship", "");
+                        form.setValue("emergency_contact_phone", "");
+                        form.setValue("emergency_contact_email", "");
+                      }
+                    }}
+                  />
+                  <label htmlFor="no-emergency-contact" className="text-sm text-muted-foreground cursor-pointer">
+                    Skip emergency contact / Don't know (uncheck to add)
+                  </label>
+                </div>
+                {hasNoEmergencyContact && (
+                  <p className="text-xs text-muted-foreground ml-6">
+                    ✓ Uncheck this box if you need to add emergency contact information
+                  </p>
+                )}
+              </div>
+              
+              {!hasNoEmergencyContact && (
+                <>
               <FormField
                 control={form.control}
                 name="emergency_contact_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name *</FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -1050,7 +1113,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                 name="emergency_contact_relationship"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Relationship *</FormLabel>
+                    <FormLabel>Relationship</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -1076,7 +1139,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                 name="emergency_contact_phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number *</FormLabel>
+                    <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <PhoneInput
                         value={field.value}
@@ -1102,6 +1165,8 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   </FormItem>
                 )}
               />
+              </>
+              )}
             </CardContent>
           </Card>
 
@@ -1695,17 +1760,52 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
           {/* Pharmacy Information */}
           <Card className="patient-card">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Preferred Pharmacy</CardTitle>
-              <CardDescription>Where you'd like prescriptions sent</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-lg md:text-xl">Preferred Pharmacy</CardTitle>
+                <CardDescription>Where you'd like prescriptions sent</CardDescription>
+              </div>
+              <Badge variant={!hasNoPharmacy && form.getValues("pharmacy_name") ? "default" : "secondary"}>
+                {hasNoPharmacy ? "Unknown" : form.getValues("pharmacy_name") ? "Added" : "Not completed"}
+              </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="no-pharmacy"
+                    checked={hasNoPharmacy}
+                    onCheckedChange={(checked) => {
+                      setHasNoPharmacy(checked as boolean);
+                      if (checked) {
+                        form.setValue("pharmacy_name", "");
+                        form.setValue("pharmacy_address", "");
+                        form.setValue("pharmacy_city", "");
+                        form.setValue("pharmacy_state", "");
+                        form.setValue("pharmacy_zip", "");
+                        form.setValue("pharmacy_phone", "");
+                      }
+                    }}
+                  />
+                  <label htmlFor="no-pharmacy" className="text-sm text-muted-foreground cursor-pointer">
+                    I don't know the pharmacy information (uncheck to add)
+                  </label>
+                </div>
+                {hasNoPharmacy && (
+                  <p className="text-xs text-muted-foreground ml-6">
+                    ✓ Uncheck this box if you need to add pharmacy information
+                  </p>
+                )}
+              </div>
+              
+              {!hasNoPharmacy && (
+                <>
               <FormField
                 control={form.control}
                 name="pharmacy_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pharmacy Name *</FormLabel>
+                    <FormLabel>Pharmacy Name</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="e.g., CVS Pharmacy" />
                     </FormControl>
@@ -1715,7 +1815,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
               />
 
               <GoogleAddressAutocomplete
-                label="Pharmacy Address *"
+                label="Pharmacy Address"
                 value={{
                   street: form.watch("pharmacy_address"),
                   city: form.watch("pharmacy_city"),
@@ -1725,7 +1825,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   source: "user_input",
                 }}
                 onChange={handlePharmacyAddressChange}
-                required
+                required={false}
               />
 
               <div className="grid grid-cols-3 gap-4">
@@ -1734,7 +1834,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   name="pharmacy_city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>City *</FormLabel>
+                      <FormLabel>City</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -1747,7 +1847,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   name="pharmacy_state"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State *</FormLabel>
+                      <FormLabel>State</FormLabel>
                       <FormControl>
                         <Input {...field} maxLength={2} />
                       </FormControl>
@@ -1760,7 +1860,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   name="pharmacy_zip"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Zip Code *</FormLabel>
+                      <FormLabel>Zip Code</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -1775,7 +1875,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                 name="pharmacy_phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pharmacy Phone *</FormLabel>
+                    <FormLabel>Pharmacy Phone</FormLabel>
                     <FormControl>
                       <PhoneInput
                         value={field.value}
@@ -1787,6 +1887,8 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   </FormItem>
                 )}
               />
+              </>
+              )}
             </CardContent>
           </Card>
 
