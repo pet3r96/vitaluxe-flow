@@ -150,7 +150,34 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
         throw new Error((data as any)?.error || error.message);
       }
 
-      toast.success(`Staff member added! Welcome email with login credentials sent to ${formData.email}`);
+      // Send staff welcome email with activation link
+      if (data?.userId && data?.token) {
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-staff-welcome-email', {
+            body: {
+              userId: data.userId,
+              email: formData.email,
+              name: formData.fullName,
+              token: data.token,
+              practiceId: targetPracticeId,
+              roleType: formData.roleType
+            }
+          });
+
+          if (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            toast.warning(`Staff member added but welcome email failed to send. You can resend it from the staff details.`);
+          } else {
+            toast.success(`Staff member added! Welcome email with activation link sent to ${formData.email}`);
+          }
+        } catch (emailErr) {
+          console.error('Error sending welcome email:', emailErr);
+          toast.warning(`Staff member added but welcome email failed to send. You can resend it from the staff details.`);
+        }
+      } else {
+        toast.success(`Staff member added successfully`);
+      }
+
       resetForm();
       onSuccess();
       onOpenChange(false);

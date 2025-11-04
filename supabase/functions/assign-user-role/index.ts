@@ -824,6 +824,33 @@ serve(async (req) => {
     }
 
 
+    // Generate token for staff members (will be sent by frontend)
+    let generatedToken: string | null = null;
+    if (signupData.role === 'staff') {
+      console.log(`Staff account created: generating activation token for ${signupData.email}`);
+      
+      // Generate secure token
+      generatedToken = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 day expiration
+      
+      // Store token in temp_password_tokens table
+      const { error: tokenError } = await supabaseAdmin
+        .from('temp_password_tokens')
+        .insert({
+          user_id: userId,
+          token: generatedToken,
+          expires_at: expiresAt.toISOString()
+        });
+      
+      if (tokenError) {
+        console.error('Error creating password token for staff:', tokenError);
+        generatedToken = null; // Clear token on error
+      } else {
+        console.log('✅ Activation token generated for staff member');
+      }
+    }
+
     // Handle email sending based on flow type
     if (isSelfSignup) {
       // Self-signup: Send verification email
@@ -844,8 +871,9 @@ serve(async (req) => {
       } catch (emailErr) {
         console.error('Failed to invoke send-verification-email function:', emailErr);
       }
-    } else if (isAdminCreated && signupData.role !== 'admin') {
-      // Admin-created: Send temp password email and set password status
+    } else if (isAdminCreated && signupData.role !== 'admin' && signupData.role !== 'staff') {
+      // Admin-created (but NOT staff): Send temp password email and set password status
+      // Note: Staff welcome emails are handled by frontend calling send-staff-welcome-email
       console.log(`Admin-created account: sending temp password email to ${signupData.email}`);
       
       // Insert password status record for forced password change
@@ -898,7 +926,8 @@ serve(async (req) => {
           : isAdminCreated
           ? 'Account created successfully! A welcome email with login credentials has been sent.'
           : 'Account created successfully! You can now sign in.',
-        userId: userId
+        userId: userId,
+        token: generatedToken // Include token for staff members (null for other roles)
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -5,10 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PhoneInput } from "@/components/ui/phone-input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Edit2, Save, X } from "lucide-react";
+import { Edit2, Save, X, Mail } from "lucide-react";
 
 interface StaffDetailsDialogProps {
   open: boolean;
@@ -26,6 +36,8 @@ export const StaffDetailsDialog = ({
   const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [showResendDialog, setShowResendDialog] = useState(false);
   const [formData, setFormData] = useState({
     fullName: staff.profiles?.full_name || staff.profiles?.name || "",
     phone: staff.profiles?.phone ? staff.profiles.phone.replace(/\D/g, "") : "",
@@ -66,28 +78,62 @@ export const StaffDetailsDialog = ({
     }
   };
 
+  const handleResendWelcomeEmail = async () => {
+    setResendingEmail(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-temp-password-email', {
+        body: {
+          email: staff.profiles?.email,
+          name: staff.profiles?.full_name || staff.profiles?.name || '',
+          role: 'staff',
+          userId: staff.user_id
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Welcome email sent successfully');
+      setShowResendDialog(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send welcome email');
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Staff Details</DialogTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant={staff.active ? "default" : "secondary"}>
-                {staff.active ? "Active" : "Inactive"}
-              </Badge>
-              {!isEditing && (isPractice || isAdmin) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-              )}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Staff Details</DialogTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant={staff.active ? "default" : "secondary"}>
+                  {staff.active ? "Active" : "Inactive"}
+                </Badge>
+                {!isEditing && (isPractice || isAdmin) && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowResendDialog(true)}
+                      title="Resend Welcome Email"
+                    >
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
@@ -193,5 +239,27 @@ export const StaffDetailsDialog = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={showResendDialog} onOpenChange={setShowResendDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Resend Welcome Email</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will send a new welcome email with a password reset link to{' '}
+            <strong>{staff.profiles?.email}</strong>. The staff member will be able to set a new password using this link.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={resendingEmail}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleResendWelcomeEmail}
+            disabled={resendingEmail}
+          >
+            {resendingEmail ? "Sending..." : "Send Email"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
