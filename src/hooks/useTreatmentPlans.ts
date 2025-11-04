@@ -90,7 +90,7 @@ export function useTreatmentPlans(patientAccountId?: string) {
     queryFn: async () => {
       if (!patientAccountId) return [];
       
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('treatment_plans')
         .select('*')
         .eq('patient_account_id', patientAccountId)
@@ -112,10 +112,10 @@ export function useTreatmentPlan(planId?: string) {
       if (!planId) return null;
 
       const [planResult, goalsResult, updatesResult, attachmentsResult] = await Promise.all([
-        (supabase as any).from('treatment_plans').select('*').eq('id', planId).single(),
-        (supabase as any).from('treatment_plan_goals').select('*').eq('treatment_plan_id', planId).eq('is_active', true).order('goal_order'),
-        (supabase as any).from('treatment_plan_updates').select('*').eq('treatment_plan_id', planId).order('created_at', { ascending: false }),
-        (supabase as any).from('treatment_plan_attachments').select('*').eq('treatment_plan_id', planId).eq('is_active', true).order('uploaded_at', { ascending: false }),
+        supabase.from('treatment_plans').select('*').eq('id', planId).single(),
+        supabase.from('treatment_plan_goals').select('*').eq('treatment_plan_id', planId).eq('is_active', true).order('goal_order'),
+        supabase.from('treatment_plan_updates').select('*').eq('treatment_plan_id', planId).order('created_at', { ascending: false }),
+        supabase.from('treatment_plan_attachments').select('*').eq('treatment_plan_id', planId).eq('is_active', true).order('uploaded_at', { ascending: false }),
       ]);
 
       if (planResult.error) throw planResult.error;
@@ -141,9 +141,9 @@ export function useCreateTreatmentPlan() {
       goals: Array<{ description: string; smartFlags?: Partial<TreatmentPlanGoal> }>;
     }) => {
       // Insert plan
-      const { data: planData, error: planError } = await (supabase as any)
+      const { data: planData, error: planError } = await supabase
         .from('treatment_plans')
-        .insert(data.plan)
+        .insert([data.plan] as any)
         .select()
         .single();
 
@@ -164,7 +164,7 @@ export function useCreateTreatmentPlan() {
           created_by_name: data.plan.created_by_name,
         }));
 
-        const { error: goalsError } = await (supabase as any)
+        const { error: goalsError } = await supabase
           .from('treatment_plan_goals')
           .insert(goalsToInsert);
 
@@ -172,7 +172,7 @@ export function useCreateTreatmentPlan() {
       }
 
       // Add creation update
-      await (supabase as any).from('treatment_plan_updates').insert({
+      await supabase.from('treatment_plan_updates').insert({
         treatment_plan_id: planData.id,
         update_type: 'progress_note',
         update_content: 'Treatment plan created',
@@ -200,7 +200,7 @@ export function useUpdateTreatmentPlan() {
 
   return useMutation({
     mutationFn: async (data: { planId: string; updates: Partial<TreatmentPlan> }) => {
-      const { data: result, error } = await (supabase as any)
+      const { data: result, error } = await supabase
         .from('treatment_plans')
         .update(data.updates)
         .eq('id', data.planId)
@@ -228,7 +228,7 @@ export function useDeleteTreatmentPlan() {
 
   return useMutation({
     mutationFn: async (planId: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('treatment_plans')
         .update({ is_active: false })
         .eq('id', planId);
@@ -252,9 +252,9 @@ export function useAddGoal() {
 
   return useMutation({
     mutationFn: async (data: Partial<TreatmentPlanGoal>) => {
-      const { data: result, error } = await (supabase as any)
+      const { data: result, error } = await supabase
         .from('treatment_plan_goals')
-        .insert(data)
+        .insert([data] as any)
         .select()
         .single();
 
@@ -278,7 +278,7 @@ export function useUpdateGoal() {
 
   return useMutation({
     mutationFn: async (data: { goalId: string; updates: Partial<TreatmentPlanGoal> }) => {
-      const { data: result, error } = await (supabase as any)
+      const { data: result, error } = await supabase
         .from('treatment_plan_goals')
         .update(data.updates)
         .eq('id', data.goalId)
@@ -305,9 +305,9 @@ export function useAddPlanUpdate() {
 
   return useMutation({
     mutationFn: async (data: Partial<TreatmentPlanUpdate>) => {
-      const { data: result, error } = await (supabase as any)
+      const { data: result, error } = await supabase
         .from('treatment_plan_updates')
-        .insert(data)
+        .insert([data] as any)
         .select()
         .single();
 
@@ -345,9 +345,9 @@ export function useLockPlan() {
             locked_by_name: undefined,
           };
 
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('treatment_plans')
-        .update(updates as any)
+        .update(updates)
         .eq('id', data.planId);
 
       if (error) throw error;
@@ -388,7 +388,7 @@ export function useUploadAttachment() {
       if (uploadError) throw uploadError;
 
       // Insert attachment record
-      const { data: result, error: dbError } = await (supabase as any)
+      const { data: result, error: dbError } = await supabase
         .from('treatment_plan_attachments')
         .insert({
           treatment_plan_id: data.planId,
@@ -433,7 +433,7 @@ export function useDeleteAttachment() {
       if (storageError) console.error('Storage delete error:', storageError);
 
       // Soft delete from database
-      const { error: dbError } = await (supabase as any)
+      const { error: dbError } = await supabase
         .from('treatment_plan_attachments')
         .update({ is_active: false })
         .eq('id', data.attachmentId);

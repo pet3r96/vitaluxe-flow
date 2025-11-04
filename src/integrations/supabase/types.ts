@@ -3659,6 +3659,80 @@ export type Database = {
           },
         ]
       }
+      patient_notes: {
+        Row: {
+          created_at: string
+          created_by_name: string
+          created_by_role: string
+          created_by_user_id: string
+          id: string
+          is_active: boolean
+          last_edited_by_name: string | null
+          last_edited_by_user_id: string | null
+          note_content: string
+          patient_account_id: string
+          share_with_patient: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_name: string
+          created_by_role: string
+          created_by_user_id: string
+          id?: string
+          is_active?: boolean
+          last_edited_by_name?: string | null
+          last_edited_by_user_id?: string | null
+          note_content: string
+          patient_account_id: string
+          share_with_patient?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_name?: string
+          created_by_role?: string
+          created_by_user_id?: string
+          id?: string
+          is_active?: boolean
+          last_edited_by_name?: string | null
+          last_edited_by_user_id?: string | null
+          note_content?: string
+          patient_account_id?: string
+          share_with_patient?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_notes_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_notes_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_notes_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_notes_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       patient_pharmacies: {
         Row: {
           added_by_role: string | null
@@ -7013,6 +7087,302 @@ export type Database = {
           },
         ]
       }
+      treatment_plan_attachments: {
+        Row: {
+          attachment_type: Database["public"]["Enums"]["plan_attachment_type"]
+          description: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          is_active: boolean
+          mime_type: string | null
+          storage_path: string
+          taken_date: string | null
+          treatment_plan_id: string
+          uploaded_at: string
+          uploaded_by_name: string
+          uploaded_by_user_id: string
+        }
+        Insert: {
+          attachment_type: Database["public"]["Enums"]["plan_attachment_type"]
+          description?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          mime_type?: string | null
+          storage_path: string
+          taken_date?: string | null
+          treatment_plan_id: string
+          uploaded_at?: string
+          uploaded_by_name: string
+          uploaded_by_user_id: string
+        }
+        Update: {
+          attachment_type?: Database["public"]["Enums"]["plan_attachment_type"]
+          description?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          mime_type?: string | null
+          storage_path?: string
+          taken_date?: string | null
+          treatment_plan_id?: string
+          uploaded_at?: string
+          uploaded_by_name?: string
+          uploaded_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_attachments_treatment_plan_id_fkey"
+            columns: ["treatment_plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treatment_plan_goals: {
+        Row: {
+          achievement_notes: string | null
+          created_at: string
+          created_by_name: string
+          created_by_user_id: string
+          date_achieved: string | null
+          date_modified: string | null
+          goal_description: string
+          goal_order: number
+          id: string
+          is_achievable: boolean
+          is_active: boolean
+          is_measurable: boolean
+          is_relevant: boolean
+          is_specific: boolean
+          is_time_bound: boolean
+          last_updated_by_name: string | null
+          last_updated_by_user_id: string | null
+          modification_reason: string | null
+          previous_description: string | null
+          status: Database["public"]["Enums"]["treatment_goal_status"]
+          treatment_plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          achievement_notes?: string | null
+          created_at?: string
+          created_by_name: string
+          created_by_user_id: string
+          date_achieved?: string | null
+          date_modified?: string | null
+          goal_description: string
+          goal_order?: number
+          id?: string
+          is_achievable?: boolean
+          is_active?: boolean
+          is_measurable?: boolean
+          is_relevant?: boolean
+          is_specific?: boolean
+          is_time_bound?: boolean
+          last_updated_by_name?: string | null
+          last_updated_by_user_id?: string | null
+          modification_reason?: string | null
+          previous_description?: string | null
+          status?: Database["public"]["Enums"]["treatment_goal_status"]
+          treatment_plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          achievement_notes?: string | null
+          created_at?: string
+          created_by_name?: string
+          created_by_user_id?: string
+          date_achieved?: string | null
+          date_modified?: string | null
+          goal_description?: string
+          goal_order?: number
+          id?: string
+          is_achievable?: boolean
+          is_active?: boolean
+          is_measurable?: boolean
+          is_relevant?: boolean
+          is_specific?: boolean
+          is_time_bound?: boolean
+          last_updated_by_name?: string | null
+          last_updated_by_user_id?: string | null
+          modification_reason?: string | null
+          previous_description?: string | null
+          status?: Database["public"]["Enums"]["treatment_goal_status"]
+          treatment_plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_goals_treatment_plan_id_fkey"
+            columns: ["treatment_plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treatment_plan_updates: {
+        Row: {
+          created_at: string
+          created_by_name: string
+          created_by_role: string
+          created_by_user_id: string
+          id: string
+          new_status: string | null
+          previous_status: string | null
+          related_appointment_id: string | null
+          treatment_plan_id: string
+          update_content: string
+          update_type: Database["public"]["Enums"]["treatment_update_type"]
+        }
+        Insert: {
+          created_at?: string
+          created_by_name: string
+          created_by_role: string
+          created_by_user_id: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          related_appointment_id?: string | null
+          treatment_plan_id: string
+          update_content: string
+          update_type: Database["public"]["Enums"]["treatment_update_type"]
+        }
+        Update: {
+          created_at?: string
+          created_by_name?: string
+          created_by_role?: string
+          created_by_user_id?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          related_appointment_id?: string | null
+          treatment_plan_id?: string
+          update_content?: string
+          update_type?: Database["public"]["Enums"]["treatment_update_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_updates_treatment_plan_id_fkey"
+            columns: ["treatment_plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treatment_plans: {
+        Row: {
+          actual_completion_date: string | null
+          created_at: string
+          created_by_name: string
+          created_by_role: string
+          created_by_user_id: string
+          diagnosis_condition: string | null
+          id: string
+          is_active: boolean
+          is_locked: boolean
+          last_updated_by_name: string | null
+          last_updated_by_user_id: string | null
+          locked_at: string | null
+          locked_by_name: string | null
+          locked_by_user_id: string | null
+          notes: string | null
+          patient_account_id: string
+          plan_title: string
+          responsible_provider_id: string | null
+          responsible_provider_name: string | null
+          status: Database["public"]["Enums"]["treatment_plan_status"]
+          target_completion_date: string | null
+          treatment_protocols: string
+          updated_at: string
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          created_at?: string
+          created_by_name: string
+          created_by_role: string
+          created_by_user_id: string
+          diagnosis_condition?: string | null
+          id?: string
+          is_active?: boolean
+          is_locked?: boolean
+          last_updated_by_name?: string | null
+          last_updated_by_user_id?: string | null
+          locked_at?: string | null
+          locked_by_name?: string | null
+          locked_by_user_id?: string | null
+          notes?: string | null
+          patient_account_id: string
+          plan_title: string
+          responsible_provider_id?: string | null
+          responsible_provider_name?: string | null
+          status?: Database["public"]["Enums"]["treatment_plan_status"]
+          target_completion_date?: string | null
+          treatment_protocols: string
+          updated_at?: string
+        }
+        Update: {
+          actual_completion_date?: string | null
+          created_at?: string
+          created_by_name?: string
+          created_by_role?: string
+          created_by_user_id?: string
+          diagnosis_condition?: string | null
+          id?: string
+          is_active?: boolean
+          is_locked?: boolean
+          last_updated_by_name?: string | null
+          last_updated_by_user_id?: string | null
+          locked_at?: string | null
+          locked_by_name?: string | null
+          locked_by_user_id?: string | null
+          notes?: string | null
+          patient_account_id?: string
+          plan_title?: string
+          responsible_provider_id?: string | null
+          responsible_provider_name?: string | null
+          status?: Database["public"]["Enums"]["treatment_plan_status"]
+          target_completion_date?: string | null
+          treatment_protocols?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plans_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plans_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plans_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "treatment_plans_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       trial_payment_reminders: {
         Row: {
           created_at: string | null
@@ -8337,6 +8707,14 @@ export type Database = {
         | "declined"
         | "on_hold"
       payment_status: "pending" | "completed"
+      plan_attachment_type:
+        | "before_photo"
+        | "after_photo"
+        | "progress_photo"
+        | "consent_form"
+        | "treatment_protocol"
+        | "lab_result"
+        | "other_document"
       shipping_carrier: "fedex" | "ups" | "usps" | "amazon"
       shipping_speed: "ground" | "2day" | "overnight"
       ticket_priority: "low" | "medium" | "high" | "urgent"
@@ -8352,6 +8730,21 @@ export type Database = {
         | "rep_to_admin"
         | "pharmacy_to_admin"
         | "pharmacy_to_practice"
+      treatment_goal_status: "ongoing" | "achieved" | "modified" | "abandoned"
+      treatment_plan_status:
+        | "planned"
+        | "in_progress"
+        | "on_hold"
+        | "completed"
+        | "cancelled"
+      treatment_update_type:
+        | "progress_note"
+        | "status_change"
+        | "goal_update"
+        | "treatment_completed"
+        | "complication"
+        | "patient_feedback"
+        | "provider_note"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -8525,6 +8918,15 @@ export const Constants = {
         "on_hold",
       ],
       payment_status: ["pending", "completed"],
+      plan_attachment_type: [
+        "before_photo",
+        "after_photo",
+        "progress_photo",
+        "consent_form",
+        "treatment_protocol",
+        "lab_result",
+        "other_document",
+      ],
       shipping_carrier: ["fedex", "ups", "usps", "amazon"],
       shipping_speed: ["ground", "2day", "overnight"],
       ticket_priority: ["low", "medium", "high", "urgent"],
@@ -8541,6 +8943,23 @@ export const Constants = {
         "rep_to_admin",
         "pharmacy_to_admin",
         "pharmacy_to_practice",
+      ],
+      treatment_goal_status: ["ongoing", "achieved", "modified", "abandoned"],
+      treatment_plan_status: [
+        "planned",
+        "in_progress",
+        "on_hold",
+        "completed",
+        "cancelled",
+      ],
+      treatment_update_type: [
+        "progress_note",
+        "status_change",
+        "goal_update",
+        "treatment_completed",
+        "complication",
+        "patient_feedback",
+        "provider_note",
       ],
     },
   },
