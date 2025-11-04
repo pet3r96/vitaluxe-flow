@@ -3279,7 +3279,7 @@ export type Database = {
           added_by_user_id: string | null
           administering_provider: string | null
           created_at: string
-          date_administered: string
+          date_administered: string | null
           id: string
           lot_number: string | null
           notes: string | null
@@ -3292,7 +3292,7 @@ export type Database = {
           added_by_user_id?: string | null
           administering_provider?: string | null
           created_at?: string
-          date_administered: string
+          date_administered?: string | null
           id?: string
           lot_number?: string | null
           notes?: string | null
@@ -3305,7 +3305,7 @@ export type Database = {
           added_by_user_id?: string | null
           administering_provider?: string | null
           created_at?: string
-          date_administered?: string
+          date_administered?: string | null
           id?: string
           lot_number?: string | null
           notes?: string | null

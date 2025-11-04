@@ -734,15 +734,15 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           console.warn(`⚠️ ${incompleteCount} immunization(s) skipped due to missing required fields`);
         }
         
-        const immEntries = immunizations
-          .filter(i => i.vaccine_name.trim())
-          .map(imm => ({
-            patient_account_id: patientAccount.id,
-            vaccine_name: imm.vaccine_name,
-            date_administered: imm.date_administered || null,
-            added_by_user_id: effectiveUserId,
-            added_by_role: auditRole,
-          }));
+      const immEntries = immunizations
+        .filter(i => i.vaccine_name.trim() && i.date_administered)
+        .map(imm => ({
+          patient_account_id: patientAccount.id,
+          vaccine_name: imm.vaccine_name,
+          date_administered: imm.date_administered,
+          added_by_user_id: effectiveUserId,
+          added_by_role: auditRole,
+        }));
         
         if (immEntries.length > 0) {
           const { error: immError } = await supabase
