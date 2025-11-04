@@ -34,8 +34,6 @@ const formSchema = z.object({
   plan_title: z.string().min(1, "Plan title is required").max(200),
   diagnosis_condition: z.string().max(300).optional(),
   treatment_protocols: z.string().min(1, "Treatment protocols are required").max(2000),
-  responsible_provider_id: z.string().optional(),
-  responsible_provider_name: z.string().optional(),
   target_completion_date: z.string().optional(),
   notes: z.string().optional(),
   status: z.enum(['planned', 'in_progress', 'on_hold', 'completed', 'cancelled']),
@@ -64,8 +62,6 @@ export function EditTreatmentPlanDialog({
       plan_title: plan.plan_title,
       diagnosis_condition: plan.diagnosis_condition || "",
       treatment_protocols: plan.treatment_protocols,
-      responsible_provider_id: plan.responsible_provider_id || "",
-      responsible_provider_name: plan.responsible_provider_name || "",
       target_completion_date: plan.target_completion_date || "",
       notes: plan.notes || "",
       status: plan.status,
@@ -78,8 +74,6 @@ export function EditTreatmentPlanDialog({
         plan_title: plan.plan_title,
         diagnosis_condition: plan.diagnosis_condition || "",
         treatment_protocols: plan.treatment_protocols,
-        responsible_provider_id: plan.responsible_provider_id || "",
-        responsible_provider_name: plan.responsible_provider_name || "",
         target_completion_date: plan.target_completion_date || "",
         notes: plan.notes || "",
         status: plan.status,
@@ -88,16 +82,12 @@ export function EditTreatmentPlanDialog({
   }, [open, plan, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const selectedProvider = providers.find(p => p.id === values.responsible_provider_id);
-
     await updatePlan.mutateAsync({
       planId: plan.id,
       updates: {
         plan_title: values.plan_title,
         diagnosis_condition: values.diagnosis_condition,
         treatment_protocols: values.treatment_protocols,
-        responsible_provider_id: values.responsible_provider_id,
-        responsible_provider_name: selectedProvider?.name || values.responsible_provider_name,
         target_completion_date: values.target_completion_date,
         notes: values.notes,
         status: values.status,
@@ -170,47 +160,20 @@ export function EditTreatmentPlanDialog({
               )}
             />
 
-            {/* Provider & Date Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="responsible_provider_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Responsible Provider</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select provider" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {providers.map((provider) => (
-                          <SelectItem key={provider.id} value={provider.id}>
-                            {provider.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="target_completion_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Target Completion Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Target Completion Date */}
+            <FormField
+              control={form.control}
+              name="target_completion_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Target Completion Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Status */}
             <FormField
