@@ -129,6 +129,7 @@ const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
 const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"), "PatientDetail");
 const PracticePatientMedicalVault = lazyWithRetry(() => import("./pages/practice/PatientMedicalVault"), "PracticePatientMedicalVault");
+const PracticePatientIntakeForm = lazy(() => import("./pages/practice/PracticePatientIntakeForm"));
 const Support = lazy(() => import("./pages/Support"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
@@ -212,6 +213,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                                       <Route path="/representatives" element={<Representatives />} />
                                       <Route path="/patients" element={<Patients />} />
                                       <Route path="/patients/:patientId" element={<PatientDetail />} />
+                                      <Route path="/patients/:patientId/intake" element={<PracticePatientIntakeForm />} />
                                       <Route path="/practice/patients/:patientId/medical-vault" element={<PracticePatientMedicalVault />} />
                                       <Route path="/providers" element={<Providers />} />
                                       <Route path="/staff" element={<SubscriptionProtectedRoute><ProGate><Staff /></ProGate></SubscriptionProtectedRoute>} />

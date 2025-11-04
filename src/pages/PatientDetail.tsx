@@ -19,6 +19,7 @@ import { SharedDocumentsGrid } from "@/components/medical-vault/SharedDocumentsG
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { PatientAppointmentsList } from "@/components/patients/PatientAppointmentsList";
 import { PatientPortalStatusBadge } from "@/components/patients/PatientPortalStatusBadge";
+import { PatientNotesSection } from "@/components/patients/PatientNotesSection";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
 import { PDFViewer } from "@/components/documents/PDFViewer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -494,12 +495,35 @@ export default function PatientDetail() {
         <TabsList className="w-full overflow-x-auto flex-nowrap justify-start">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="medical-vault">Medical Vault</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="follow-ups">Follow-Ups</TabsTrigger>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          {!patient.intake_completed_at && (
+            <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Patient Intake Form</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Complete the medical intake form on behalf of this patient to populate their medical vault.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => navigate(`/patients/${patientId}/intake`)}
+                    className="touch-target"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Complete Intake Form
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex gap-2 mb-4 flex-wrap">
             <Button 
               variant="outline" 
@@ -535,6 +559,13 @@ export default function PatientDetail() {
             mode="practice"
             canEdit={true}
             showHeader={true}
+            patientName={patient.name}
+          />
+        </TabsContent>
+
+        <TabsContent value="notes">
+          <PatientNotesSection 
+            patientAccountId={actualPatientId!}
             patientName={patient.name}
           />
         </TabsContent>

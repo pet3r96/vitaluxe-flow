@@ -24,6 +24,7 @@ import { SurgeriesSection } from "@/components/medical-vault/SurgeriesSection";
 import { PharmaciesSection } from "@/components/medical-vault/PharmaciesSection";
 import { EmergencyContactsSection } from "@/components/medical-vault/EmergencyContactsSection";
 import { BasicDemographicsCard } from "@/components/patient/BasicDemographicsCard";
+import { SharedNotesSection } from "@/components/medical-vault/SharedNotesSection";
 import { PDFViewer } from "@/components/documents/PDFViewer";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { DocumentsSection } from "@/components/medical-vault/DocumentsSection";
@@ -602,6 +603,10 @@ export function MedicalVaultView({
           mode={mode}
           canEdit={canEdit}
         />
+
+        {mode === 'patient' && (
+          <SharedNotesSection patientAccountId={patientAccountId} />
+        )}
       </div>
     </div>
   );
