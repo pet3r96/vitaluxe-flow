@@ -147,7 +147,7 @@ export default function PatientDetail() {
         .from("providers")
         .select("id, user_id, profiles!inner(full_name, prescriber_name)")
         .eq("practice_id", practiceId)
-        .order("profiles(prescriber_name)", { ascending: true });
+        .order('prescriber_name', { ascending: true, foreignTable: 'profiles' });
       
       if (error) throw error;
       return data;
