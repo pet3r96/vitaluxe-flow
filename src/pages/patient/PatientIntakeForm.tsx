@@ -14,6 +14,9 @@ import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-
 import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { searchMedications, searchAllergens, searchConditions, searchSurgeries } from "@/lib/medical-api-service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
@@ -81,14 +84,28 @@ interface SurgeryEntry {
   notes: string;
 }
 
+interface ImmunizationEntry {
+  vaccine_name: string;
+  date_administered: string;
+}
+
 export default function PatientIntakeForm() {
   const navigate = useNavigate();
   const { effectiveUserId } = useAuth();
   const [submitting, setSubmitting] = useState(false);
-  const [medications, setMedications] = useState<MedicationEntry[]>([]);
-  const [allergies, setAllergies] = useState<AllergyEntry[]>([]);
-  const [conditions, setConditions] = useState<ConditionEntry[]>([]);
-  const [surgeries, setSurgeries] = useState<SurgeryEntry[]>([]);
+  const [medications, setMedications] = useState<MedicationEntry[]>([{ name: "", dosage: "", frequency: "" }]);
+  const [allergies, setAllergies] = useState<AllergyEntry[]>([{ name: "", reaction: "", severity: "" }]);
+  const [conditions, setConditions] = useState<ConditionEntry[]>([{ name: "", diagnosed_date: "", status: "active" }]);
+  const [surgeries, setSurgeries] = useState<SurgeryEntry[]>([{ type: "", date: "", notes: "" }]);
+  const [immunizations, setImmunizations] = useState<ImmunizationEntry[]>([{ vaccine_name: "", date_administered: "" }]);
+  
+  // "None" checkboxes for medical history sections
+  const [hasNoMedications, setHasNoMedications] = useState(false);
+  const [hasNoAllergies, setHasNoAllergies] = useState(false);
+  const [hasNoConditions, setHasNoConditions] = useState(false);
+  const [hasNoSurgeries, setHasNoSurgeries] = useState(false);
+  const [hasNoImmunizations, setHasNoImmunizations] = useState(false);
+  const [showMedicalHistoryWarning, setShowMedicalHistoryWarning] = useState(false);
 
   // Fetch existing patient account data
   const { data: patientAccount, isLoading } = useQuery({
@@ -222,46 +239,50 @@ export default function PatientIntakeForm() {
 
   // Pre-populate medical vault data added by practice
   useEffect(() => {
-    if (existingMedications && existingMedications.length > 0 && medications.length === 0) {
+    if (existingMedications && existingMedications.length > 0) {
       const medList = existingMedications.map(med => ({
         name: med.medication_name || '',
         dosage: med.dosage || '',
         frequency: med.frequency || '',
       }));
       setMedications(medList);
+      setHasNoMedications(false);
     }
   }, [existingMedications]);
 
   useEffect(() => {
-    if (existingAllergies && existingAllergies.length > 0 && allergies.length === 0) {
+    if (existingAllergies && existingAllergies.length > 0) {
       const allergyList = existingAllergies.map(allergy => ({
         name: allergy.allergen_name || '',
         reaction: allergy.reaction_type || '',
         severity: allergy.severity || '',
       }));
       setAllergies(allergyList);
+      setHasNoAllergies(false);
     }
   }, [existingAllergies]);
 
   useEffect(() => {
-    if (existingConditions && existingConditions.length > 0 && conditions.length === 0) {
+    if (existingConditions && existingConditions.length > 0) {
       const conditionList = existingConditions.map(condition => ({
         name: condition.condition_name || '',
         diagnosed_date: condition.date_diagnosed || '',
         status: 'active', // Default status for intake form
       }));
       setConditions(conditionList);
+      setHasNoConditions(false);
     }
   }, [existingConditions]);
 
   useEffect(() => {
-    if (existingSurgeries && existingSurgeries.length > 0 && surgeries.length === 0) {
+    if (existingSurgeries && existingSurgeries.length > 0) {
       const surgeryList = existingSurgeries.map(surgery => ({
         type: surgery.surgery_type || '',
         date: surgery.surgery_date || '',
         notes: surgery.notes || '',
       }));
       setSurgeries(surgeryList);
+      setHasNoSurgeries(false);
     }
   }, [existingSurgeries]);
 
@@ -282,6 +303,19 @@ export default function PatientIntakeForm() {
   const onSubmit = async (data: IntakeFormData) => {
     if (!patientAccount?.id) {
       toast.error("Patient account not found");
+      return;
+    }
+
+    // Check if medical history is complete
+    const hasMedicalData = 
+      medications.some(m => m.name) || hasNoMedications ||
+      allergies.some(a => a.name) || hasNoAllergies ||
+      conditions.some(c => c.name) || hasNoConditions ||
+      surgeries.some(s => s.type) || hasNoSurgeries ||
+      immunizations.some(i => i.vaccine_name) || hasNoImmunizations;
+
+    if (!hasMedicalData) {
+      setShowMedicalHistoryWarning(true);
       return;
     }
 
@@ -363,8 +397,8 @@ export default function PatientIntakeForm() {
         }
       }
 
-      // Insert medications
-      if (medications.length > 0) {
+      // Insert medications (only if not marked as "none")
+      if (medications.length > 0 && !hasNoMedications) {
         const incompleteCount = medications.filter(m => !m.name || !m.dosage || !m.frequency).length;
         if (incompleteCount > 0) {
           console.warn(`⚠️ ${incompleteCount} medication(s) skipped due to missing required fields`);
@@ -411,8 +445,8 @@ export default function PatientIntakeForm() {
         }
       }
 
-      // Insert allergies
-      if (allergies.length > 0) {
+      // Insert allergies (only if not marked as "none")
+      if (allergies.length > 0 && !hasNoAllergies) {
         const incompleteCount = allergies.filter(a => !a.name || !a.reaction).length;
         if (incompleteCount > 0) {
           console.warn(`⚠️ ${incompleteCount} allergy/allergies skipped due to missing required fields`);
@@ -459,8 +493,8 @@ export default function PatientIntakeForm() {
         }
       }
 
-      // Insert conditions
-      if (conditions.length > 0) {
+      // Insert conditions (only if not marked as "none")
+      if (conditions.length > 0 && !hasNoConditions) {
         const incompleteCount = conditions.filter(c => !c.name || !c.diagnosed_date).length;
         if (incompleteCount > 0) {
           console.warn(`⚠️ ${incompleteCount} condition(s) skipped due to missing required fields`);
@@ -507,8 +541,8 @@ export default function PatientIntakeForm() {
         }
       }
 
-      // Insert surgeries
-      if (surgeries.length > 0) {
+      // Insert surgeries (only if not marked as "none")
+      if (surgeries.length > 0 && !hasNoSurgeries) {
         const incompleteCount = surgeries.filter(s => !s.type || !s.date).length;
         if (incompleteCount > 0) {
           console.warn(`⚠️ ${incompleteCount} surgery/surgeries skipped due to missing required fields`);
@@ -552,6 +586,51 @@ export default function PatientIntakeForm() {
           }
           
           console.log(`✅ Saved ${surgeryEntries.length} surgery/surgeries`);
+        }
+      }
+
+      // Insert immunizations (only if not marked as "none")
+      if (immunizations.length > 0 && !hasNoImmunizations) {
+        const incompleteCount = immunizations.filter(i => !i.vaccine_name || !i.date_administered).length;
+        if (incompleteCount > 0) {
+          console.warn(`⚠️ ${incompleteCount} immunization(s) skipped due to missing required fields`);
+        }
+        
+        const immEntries = immunizations
+          .filter(i => i.vaccine_name && i.date_administered)
+          .map(imm => ({
+            patient_account_id: patientAccount.id,
+            vaccine_name: imm.vaccine_name,
+            date_administered: imm.date_administered,
+            added_by_user_id: effectiveUserId,
+            added_by_role: 'patient',
+          }));
+        
+        if (immEntries.length > 0) {
+          const { error: immError } = await supabase
+            .from('patient_immunizations')
+            .insert(immEntries);
+          
+          if (immError) {
+            console.error('Immunization insert error:', immError);
+            throw new Error(`Failed to save immunizations: ${immError.message}`);
+          }
+          
+          // Log each immunization individually
+          for (const imm of immEntries) {
+            await logMedicalVaultChange({
+              patientAccountId: patientAccount.id,
+              actionType: 'created',
+              entityType: 'immunization',
+              entityName: imm.vaccine_name,
+              changedByUserId: effectiveUserId,
+              changedByRole: 'patient',
+              newData: imm,
+              changeSummary: `Added immunization: ${imm.vaccine_name} (${imm.date_administered})`,
+            });
+          }
+          
+          console.log(`✅ Saved ${immEntries.length} immunization(s)`);
         }
       }
 
@@ -974,11 +1053,37 @@ export default function PatientIntakeForm() {
 
           {/* Medical History - Medications */}
           <Card className="patient-card">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Current Medications</CardTitle>
-              <CardDescription>List any medications you're currently taking</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-lg md:text-xl">Current Medications</CardTitle>
+                <CardDescription>List any medications you're currently taking</CardDescription>
+              </div>
+              <Badge variant={medications.some(m => m.name) || hasNoMedications ? "default" : "secondary"}>
+                {hasNoMedications ? "None" : medications.filter(m => m.name).length > 0 ? 
+                  `${medications.filter(m => m.name).length} added` : "Not completed"}
+              </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="no-medications"
+                  checked={hasNoMedications}
+                  onCheckedChange={(checked) => {
+                    setHasNoMedications(checked as boolean);
+                    if (checked) {
+                      setMedications([]);
+                    } else {
+                      setMedications([{ name: "", dosage: "", frequency: "" }]);
+                    }
+                  }}
+                />
+                <label htmlFor="no-medications" className="text-sm text-muted-foreground cursor-pointer">
+                  I am not currently taking any medications
+                </label>
+              </div>
+              
+              {!hasNoMedications && (
+                <>
               {medications.map((med, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex flex-col md:flex-row gap-2 items-start">
@@ -1050,23 +1155,51 @@ export default function PatientIntakeForm() {
                   )}
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setMedications([...medications, { name: "", dosage: "", frequency: "" }])}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Medication
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMedications([...medications, { name: "", dosage: "", frequency: "" }])}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Medication
+                </Button>
+              </>
+              )}
             </CardContent>
           </Card>
 
           {/* Allergies */}
           <Card className="patient-card">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Allergies</CardTitle>
-              <CardDescription>List any known allergies</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-lg md:text-xl">Allergies</CardTitle>
+                <CardDescription>List any known allergies</CardDescription>
+              </div>
+              <Badge variant={allergies.some(a => a.name) || hasNoAllergies ? "default" : "secondary"}>
+                {hasNoAllergies ? "None" : allergies.filter(a => a.name).length > 0 ? 
+                  `${allergies.filter(a => a.name).length} added` : "Not completed"}
+              </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="no-allergies"
+                  checked={hasNoAllergies}
+                  onCheckedChange={(checked) => {
+                    setHasNoAllergies(checked as boolean);
+                    if (checked) {
+                      setAllergies([]);
+                    } else {
+                      setAllergies([{ name: "", reaction: "", severity: "" }]);
+                    }
+                  }}
+                />
+                <label htmlFor="no-allergies" className="text-sm text-muted-foreground cursor-pointer">
+                  I have no known allergies
+                </label>
+              </div>
+              
+              {!hasNoAllergies && (
+                <>
               {allergies.map((allergy, index) => (
                 <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
                   <div className="flex-1 w-full">
@@ -1120,23 +1253,51 @@ export default function PatientIntakeForm() {
                   </Button>
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setAllergies([...allergies, { name: "", reaction: "", severity: "" }])}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Allergy
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAllergies([...allergies, { name: "", reaction: "", severity: "" }])}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Allergy
+                </Button>
+              </>
+              )}
             </CardContent>
           </Card>
 
           {/* Medical Conditions */}
           <Card className="patient-card">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Medical Conditions</CardTitle>
-              <CardDescription>List any current or past medical conditions</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-lg md:text-xl">Medical Conditions</CardTitle>
+                <CardDescription>List any current or past medical conditions</CardDescription>
+              </div>
+              <Badge variant={conditions.some(c => c.name) || hasNoConditions ? "default" : "secondary"}>
+                {hasNoConditions ? "None" : conditions.filter(c => c.name).length > 0 ? 
+                  `${conditions.filter(c => c.name).length} added` : "Not completed"}
+              </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="no-conditions"
+                  checked={hasNoConditions}
+                  onCheckedChange={(checked) => {
+                    setHasNoConditions(checked as boolean);
+                    if (checked) {
+                      setConditions([]);
+                    } else {
+                      setConditions([{ name: "", diagnosed_date: "", status: "active" }]);
+                    }
+                  }}
+                />
+                <label htmlFor="no-conditions" className="text-sm text-muted-foreground cursor-pointer">
+                  I have no medical conditions
+                </label>
+              </div>
+              
+              {!hasNoConditions && (
+                <>
               {conditions.map((condition, index) => (
                 <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
                   <div className="flex-1 w-full">
@@ -1191,23 +1352,51 @@ export default function PatientIntakeForm() {
                   </Button>
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setConditions([...conditions, { name: "", diagnosed_date: "", status: "" }])}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Condition
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConditions([...conditions, { name: "", diagnosed_date: "", status: "" }])}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Condition
+                </Button>
+              </>
+              )}
             </CardContent>
           </Card>
 
           {/* Past Surgeries */}
           <Card className="patient-card">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Past Surgeries</CardTitle>
-              <CardDescription>List any surgical procedures you've had</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-lg md:text-xl">Past Surgeries</CardTitle>
+                <CardDescription>List any surgical procedures you've had</CardDescription>
+              </div>
+              <Badge variant={surgeries.some(s => s.type) || hasNoSurgeries ? "default" : "secondary"}>
+                {hasNoSurgeries ? "None" : surgeries.filter(s => s.type).length > 0 ? 
+                  `${surgeries.filter(s => s.type).length} added` : "Not completed"}
+              </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="no-surgeries"
+                  checked={hasNoSurgeries}
+                  onCheckedChange={(checked) => {
+                    setHasNoSurgeries(checked as boolean);
+                    if (checked) {
+                      setSurgeries([]);
+                    } else {
+                      setSurgeries([{ type: "", date: "", notes: "" }]);
+                    }
+                  }}
+                />
+                <label htmlFor="no-surgeries" className="text-sm text-muted-foreground cursor-pointer">
+                  I have not had any surgeries
+                </label>
+              </div>
+              
+              {!hasNoSurgeries && (
+                <>
               {surgeries.map((surgery, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex flex-col md:flex-row gap-2 items-start">
@@ -1255,13 +1444,94 @@ export default function PatientIntakeForm() {
                   />
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSurgeries([...surgeries, { type: "", date: "", notes: "" }])}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Surgery
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSurgeries([...surgeries, { type: "", date: "", notes: "" }])}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Surgery
+                </Button>
+              </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Immunizations */}
+          <Card className="patient-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-lg md:text-xl">Immunizations</CardTitle>
+                <CardDescription>List any recent vaccinations you've received</CardDescription>
+              </div>
+              <Badge variant={immunizations.some(i => i.vaccine_name) || hasNoImmunizations ? "default" : "secondary"}>
+                {hasNoImmunizations ? "None" : immunizations.filter(i => i.vaccine_name).length > 0 ? 
+                  `${immunizations.filter(i => i.vaccine_name).length} added` : "Not completed"}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="no-immunizations"
+                  checked={hasNoImmunizations}
+                  onCheckedChange={(checked) => {
+                    setHasNoImmunizations(checked as boolean);
+                    if (checked) {
+                      setImmunizations([]);
+                    } else {
+                      setImmunizations([{ vaccine_name: "", date_administered: "" }]);
+                    }
+                  }}
+                />
+                <label htmlFor="no-immunizations" className="text-sm text-muted-foreground cursor-pointer">
+                  No recent immunizations to report
+                </label>
+              </div>
+              
+              {!hasNoImmunizations && (
+                <>
+                  {immunizations.map((imm, index) => (
+                    <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
+                      <Input
+                        className="flex-1 w-full"
+                        placeholder="Vaccine name (e.g., COVID-19, Flu, Tdap)"
+                        value={imm.vaccine_name}
+                        onChange={(e) => {
+                          const newImms = [...immunizations];
+                          newImms[index].vaccine_name = e.target.value;
+                          setImmunizations(newImms);
+                        }}
+                      />
+                      <Input
+                        type="date"
+                        className="flex-1 w-full"
+                        placeholder="Date administered"
+                        value={imm.date_administered}
+                        onChange={(e) => {
+                          const newImms = [...immunizations];
+                          newImms[index].date_administered = e.target.value;
+                          setImmunizations(newImms);
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => setImmunizations(immunizations.filter((_, i) => i !== index))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setImmunizations([...immunizations, { vaccine_name: "", date_administered: "" }])}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Add Immunization
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -1385,6 +1655,36 @@ export default function PatientIntakeForm() {
           </div>
         </form>
       </Form>
+
+      {/* Medical History Warning Dialog */}
+      <AlertDialog open={showMedicalHistoryWarning} onOpenChange={setShowMedicalHistoryWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Medical History?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You haven't added any medical information (medications, allergies, conditions, surgeries, or immunizations) 
+              and haven't marked any sections as "None". 
+              <br/><br/>
+              Would you like to go back and add this information, or continue without it?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Go Back and Add Information</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowMedicalHistoryWarning(false);
+              setHasNoMedications(true);
+              setHasNoAllergies(true);
+              setHasNoConditions(true);
+              setHasNoSurgeries(true);
+              setHasNoImmunizations(true);
+              // Re-trigger form submission by calling onSubmit directly
+              form.handleSubmit(onSubmit)();
+            }}>
+              Continue Without Medical History
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
