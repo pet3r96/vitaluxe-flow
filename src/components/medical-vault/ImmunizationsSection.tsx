@@ -114,9 +114,11 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
                 <div className="flex-1">
                   <div className="flex flex-col gap-1">
                     <p className="font-medium">{immunization.vaccine_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(immunization.date_administered), 'MMM dd, yyyy')}
-                    </p>
+                    {immunization.date_administered && (
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(immunization.date_administered), 'MMM dd, yyyy')}
+                      </p>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       Recorded: {formatTimestamp(immunization.created_at)}
                     </span>

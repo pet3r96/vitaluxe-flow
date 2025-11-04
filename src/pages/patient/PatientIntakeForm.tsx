@@ -321,9 +321,13 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       const immunizationList = existingImmunizations.map(imm => {
         // Handle date formatting - ensure it's in YYYY-MM-DD format
         let dateFormatted = '';
-        if (imm.date_administered) {
+        if (imm.date_administered && imm.date_administered !== 'null' && imm.date_administered !== 'undefined') {
           // Split on 'T' to remove any time component and ensure YYYY-MM-DD format
-          dateFormatted = String(imm.date_administered).split('T')[0];
+          const dateStr = String(imm.date_administered).split('T')[0];
+          // Only set if it's a valid date string
+          if (dateStr && dateStr !== 'null' && dateStr !== 'undefined' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            dateFormatted = dateStr;
+          }
         }
         
         return {

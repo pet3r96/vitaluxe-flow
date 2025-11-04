@@ -114,9 +114,11 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
                 <div className="flex-1">
                   <div className="flex flex-col gap-1">
                     <p className="font-medium">{surgery.surgery_type}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(surgery.surgery_date), 'MMM dd, yyyy')}
-                    </p>
+                    {surgery.surgery_date && (
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(surgery.surgery_date), 'MMM dd, yyyy')}
+                      </p>
+                    )}
                     {surgery.surgeon_name && (
                       <p className="text-xs text-muted-foreground mt-1">
                         Surgeon: {surgery.surgeon_name}
