@@ -61,13 +61,26 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
         return;
       }
 
+      // Fetch the PDF as a blob
+      const response = await fetch(result.signed_url);
+      if (!response.ok) {
+        throw new Error('Failed to fetch PDF');
+      }
+      const blob = await response.blob();
+
+      // Create object URL from blob (same-origin)
+      const blobUrl = URL.createObjectURL(blob);
+      
       // Trigger download
       const link = document.createElement('a');
-      link.href = result.signed_url;
+      link.href = blobUrl;
       link.download = `Terms_Agreement_${format(new Date(termsData.accepted_at), 'yyyy-MM-dd')}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Clean up the object URL
+      URL.revokeObjectURL(blobUrl);
       
       toast.success("Agreement downloaded successfully");
     } catch (error) {
