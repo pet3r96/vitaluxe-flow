@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsDataTable = () => {
-  const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId, isProviderAccount } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -356,12 +356,11 @@ export const ProductsDataTable = () => {
           return;
         }
 
-        // Convert user_id to provider.id for database insertion
-        const actualProviderId = await getProviderIdFromUserId(providerId);
-        if (!actualProviderId) {
-          toast.error("Unable to find provider record. Please contact support.");
-          return;
-        }
+        // Only look up provider ID if this is actually a provider account
+        // Staff and practice owners don't have provider records
+        const actualProviderId = isProviderAccount 
+          ? await getProviderIdFromUserId(providerId)
+          : null;
         
         console.debug('[ProductsDataTable] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
 
@@ -448,12 +447,11 @@ export const ProductsDataTable = () => {
           return;
         }
 
-        // Convert user_id to provider.id for database insertion
-        const actualProviderId = await getProviderIdFromUserId(providerId);
-        if (!actualProviderId) {
-          toast.error("Unable to find provider record. Please contact support.");
-          return;
-        }
+        // Only look up provider ID if this is actually a provider account
+        // Staff and practice owners don't have provider records
+        const actualProviderId = isProviderAccount 
+          ? await getProviderIdFromUserId(providerId)
+          : null;
 
         // Get user's topline rep ID for scoping
         const userToplineRepId = await getUserToplineRepId(effectiveUserId);

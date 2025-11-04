@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsGrid = () => {
-  const { effectiveRole, effectiveUserId, effectivePracticeId, isImpersonating } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId, isImpersonating, isProviderAccount } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
@@ -515,12 +515,11 @@ export const ProductsGrid = () => {
           return;
         }
 
-        // Convert user_id to provider.id for database insertion
-        const actualProviderId = await getProviderIdFromUserId(providerId);
-        if (!actualProviderId) {
-          toast.error("Unable to find provider record. Please contact support.");
-          return;
-        }
+        // Only look up provider ID if this is actually a provider account
+        // Staff and practice owners don't have provider records
+        const actualProviderId = isProviderAccount 
+          ? await getProviderIdFromUserId(providerId)
+          : null;
         
         console.debug('[ProductsGrid] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
 
@@ -637,12 +636,11 @@ export const ProductsGrid = () => {
           return;
         }
 
-        // Convert user_id to provider.id for database insertion
-        const actualProviderId = await getProviderIdFromUserId(providerId);
-        if (!actualProviderId) {
-          toast.error("Unable to find provider record. Please contact support.");
-          return;
-        }
+        // Only look up provider ID if this is actually a provider account
+        // Staff and practice owners don't have provider records
+        const actualProviderId = isProviderAccount 
+          ? await getProviderIdFromUserId(providerId)
+          : null;
 
         // Get user's topline rep ID for scoping - use resolvedDoctorId (practice_id) to get topline rep
         const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);
