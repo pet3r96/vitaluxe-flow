@@ -52,6 +52,45 @@ export const PatientSelectionDialog = ({
 }: PatientSelectionDialogProps) => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
+  
+  // Resolve practice ID from provider record if needed
+  const { data: resolvedPracticeId, isLoading: isResolvingPractice } = useQuery({
+    queryKey: ["provider-practice-id", effectiveUserId, effectiveRole],
+    queryFn: async () => {
+      if (effectiveRole !== 'provider' || !effectiveUserId) return effectivePracticeId;
+      
+      console.log('[PatientSelectionDialog] 🔄 Resolving practice ID for provider:', effectiveUserId);
+      
+      // For direct provider login, fetch their practice_id from providers table
+      const { data, error } = await supabase
+        .from("providers")
+        .select("practice_id")
+        .eq("user_id", effectiveUserId)
+        .single();
+      
+      if (error) {
+        console.error('[PatientSelectionDialog] ❌ Error fetching provider practice:', error);
+        return effectivePracticeId;
+      }
+      
+      console.log('[PatientSelectionDialog] ✅ Resolved practice ID:', data?.practice_id);
+      return data?.practice_id || effectivePracticeId;
+    },
+    enabled: open && effectiveRole === 'provider',
+    staleTime: 5 * 60 * 1000
+  });
+  
+  const finalPracticeId = effectiveRole === 'provider' 
+    ? (resolvedPracticeId || effectivePracticeId)
+    : effectivePracticeId;
+  
+  console.log('[PatientSelectionDialog] 🎯 Practice context:', {
+    effectiveRole,
+    effectivePracticeId,
+    resolvedPracticeId,
+    finalPracticeId
+  });
+  
   const [currentStep, setCurrentStep] = useState<'details' | 'prescription'>('details');
   const [shipTo, setShipTo] = useState<'patient' | 'practice'>(effectiveRole === 'staff' ? 'practice' : 'patient');
   const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -70,14 +109,14 @@ export const PatientSelectionDialog = ({
   const [providerSignature, setProviderSignature] = useState("");
 
   const { data: patients, isLoading } = useQuery({
-    queryKey: ["patients", effectivePracticeId],
+    queryKey: ["patients", finalPracticeId],
     queryFn: async () => {
-      if (!effectivePracticeId) return [];
+      if (!finalPracticeId) return [];
       
       const { data, error } = await supabase
         .from("patient_accounts" as any)
         .select("*")
-        .eq("practice_id", effectivePracticeId)
+        .eq("practice_id", finalPracticeId)
         .order("name");
 
       if (error) throw error;
@@ -91,7 +130,7 @@ export const PatientSelectionDialog = ({
       
       return validPatients;
     },
-    enabled: open && !!effectivePracticeId,
+    enabled: open && !!finalPracticeId,
   });
 
   // Helper to derive readable name from email
@@ -106,17 +145,17 @@ export const PatientSelectionDialog = ({
 
   // Fetch active providers for practice using backend function to avoid RLS issues
   const { data: providers } = useQuery({
-    queryKey: ["practice-providers", effectivePracticeId],
+    queryKey: ["practice-providers", finalPracticeId],
     queryFn: async () => {
-      if (!effectivePracticeId) {
+      if (!finalPracticeId) {
         console.log('[PatientSelectionDialog] ⚠️ No practice ID, skipping provider fetch');
         return [];
       }
       
       try {
-        console.log('[PatientSelectionDialog] 🔄 Fetching providers for practice:', effectivePracticeId);
+        console.log('[PatientSelectionDialog] 🔄 Fetching providers for practice:', finalPracticeId);
         const { data, error } = await supabase.functions.invoke('list-providers', {
-          body: { practice_id: effectivePracticeId }
+          body: { practice_id: finalPracticeId }
         });
         
         if (error) {
@@ -165,7 +204,7 @@ export const PatientSelectionDialog = ({
         return [];
       }
     },
-    enabled: open && !!effectivePracticeId
+    enabled: open && !!finalPracticeId
   });
 
   // Auto-select provider based on role and available providers
@@ -213,14 +252,14 @@ export const PatientSelectionDialog = ({
 
   // Fetch practice details for prescription writer
   const { data: practiceData } = useQuery({
-    queryKey: ["practice-details", effectivePracticeId],
+    queryKey: ["practice-details", finalPracticeId],
     queryFn: async () => {
-      if (!effectivePracticeId) {
+      if (!finalPracticeId) {
         console.log('[PatientSelectionDialog] ⚠️ No practice ID for practice data fetch');
         return null;
       }
       
-      console.log('[PatientSelectionDialog] 🔄 Fetching practice data for:', effectivePracticeId);
+      console.log('[PatientSelectionDialog] 🔄 Fetching practice data for:', finalPracticeId);
       const { data, error } = await supabase
         .from("profiles")
         .select(`
@@ -236,7 +275,7 @@ export const PatientSelectionDialog = ({
           shipping_address_state,
           shipping_address_zip
         `)
-        .eq("id", effectivePracticeId)
+        .eq("id", finalPracticeId)
         .single();
       
       if (error) {
@@ -247,7 +286,7 @@ export const PatientSelectionDialog = ({
       console.log('[PatientSelectionDialog] ✅ Practice data fetched:', data);
       return data;
     },
-    enabled: !!effectivePracticeId && open
+    enabled: !!finalPracticeId && open
   });
 
   useEffect(() => {
@@ -879,11 +918,13 @@ export const PatientSelectionDialog = ({
                         </Alert>
                       )}
                       
-                      {!practiceData && selectedProviderData && (
-                        <Alert className="border-amber-500/30 bg-amber-500/10">
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                      {(isResolvingPractice || (!practiceData && selectedProviderData)) && (
+                        <Alert className="border-blue-500/30 bg-blue-500/10">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                           <AlertDescription>
-                            Practice information is loading. Please wait a moment before generating the prescription.
+                            {isResolvingPractice 
+                              ? "Resolving provider information..." 
+                              : "Practice information is loading. Please wait a moment before generating the prescription."}
                           </AlertDescription>
                         </Alert>
                       )}

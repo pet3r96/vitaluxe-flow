@@ -246,59 +246,46 @@ serve(async (req) => {
           });
         }
 
+        // For provider-assigned documents, verify assignment exists
         if (!patientAccount) {
           authResult = { allowed: false, reason: 'patient account not found' };
-        } else {
-          // Check for assignment - try is_hidden first, fallback to hidden for backward compatibility
-          let assignment: any = null;
-          let assignmentError: any = null;
-          let columnUsed = 'is_hidden';
+        } else if (providerDoc) {
+          console.log(`[get-s3-signed-url] Checking provider document assignment for patient: ${patientAccount?.id}, document: ${providerDoc.id}`);
           
-          // First attempt: try is_hidden (current schema)
-          const { data: assignmentData1, error: error1 } = await supabase
+          // Simple existence check - just verify assignment exists
+          const { data: assignment, error: assignmentError } = await supabase
             .from('provider_document_patients')
-            .select('id, is_hidden')
+            .select('id')
             .eq('document_id', providerDoc.id)
             .eq('patient_id', patientAccount.id)
             .maybeSingle();
           
-          // Check if error is due to missing column
-          if (error1 && error1.message?.includes('column')) {
-            // Fallback: try hidden column (legacy schema)
-            console.log('[get-s3-signed-url] 🔄 Column fallback: trying "hidden" instead of "is_hidden"');
-            const { data: assignmentData2, error: error2 } = await supabase
-              .from('provider_document_patients')
-              .select('id, hidden')
-              .eq('document_id', providerDoc.id)
-              .eq('patient_id', patientAccount.id)
-              .maybeSingle();
-            
-            assignment = assignmentData2;
-            assignmentError = error2;
-            columnUsed = 'hidden';
-          } else {
-            assignment = assignmentData1;
-            assignmentError = error1;
+          if (assignmentError) {
+            console.error('[get-s3-signed-url] Error checking assignment:', assignmentError);
+            return new Response(
+              JSON.stringify({ 
+                error: 'Database error checking document assignment',
+                details: assignmentError.message 
+              }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
           }
-
-          // Compute hidden status from either column
-          const isHidden = assignment?.is_hidden ?? assignment?.hidden ?? false;
-
-          console.log('[get-s3-signed-url] 📄 Assignment lookup:', {
-            found: !!assignment,
-            assignmentId: assignment?.id,
-            columnUsed,
-            isHidden,
-            error: assignmentError?.message
-          });
-
+          
           if (!assignment) {
+            console.log('[get-s3-signed-url] ❌ Document not assigned to patient');
             authResult = { allowed: false, reason: 'document not assigned to patient' };
-          } else if (isHidden) {
-            authResult = { allowed: false, reason: 'document hidden from patient' };
           } else {
+            console.log('[get-s3-signed-url] ✅ Assignment verified:', {
+              assignmentId: assignment.id,
+              patientAccountId: patientAccount.id,
+              documentId: providerDoc.id
+            });
             authResult = { allowed: true, reason: 'patient has assignment' };
           }
+          
+          // Use provider document's file path
+          normalizedFilePath = providerDoc.file_path;
+          normalizedBucket = providerDoc.bucket || 'patient-documents';
         }
         
         console.log('[get-s3-signed-url] ✅ Patient authorization result:', authResult);

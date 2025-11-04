@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsDataTable = () => {
-  const { effectiveRole, effectiveUserId } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -217,8 +217,43 @@ export const ProductsDataTable = () => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
+      // Resolve practice context for providers and staff
+      let resolvedDoctorId = effectiveUserId;
+      
+      // For providers: resolve practice ID from their provider record
+      if (effectiveRole === 'provider' && effectiveUserId) {
+        try {
+          const { data: providerData } = await supabase
+            .from('providers')
+            .select('practice_id')
+            .eq('user_id', effectiveUserId)
+            .single();
+          
+          if (providerData?.practice_id) {
+            resolvedDoctorId = providerData.practice_id;
+            console.log('[ProductsDataTable] ✅ Resolved provider practice:', resolvedDoctorId);
+          }
+        } catch (error) {
+          console.error('[ProductsDataTable] ❌ Error resolving provider practice:', error);
+        }
+      }
+      
+      // For staff: use effective practice ID
+      if (effectiveRole === 'staff' && effectivePracticeId) {
+        resolvedDoctorId = effectivePracticeId;
+      }
+      
+      console.log('[ProductsDataTable] 🎯 Cart context:', {
+        effectiveRole,
+        effectiveUserId,
+        effectivePracticeId,
+        resolvedDoctorId,
+        selectedProviderId: providerId,
+        shipToPractice
+      });
+      
       // First, resolve practice ID for correct pricing lookup
-      let practiceIdForPricing = effectiveUserId;  // Default to logged-in user
+      let practiceIdForPricing = resolvedDoctorId;  // Use resolved doctor ID
       
       // Check if the selected provider is actually a provider
       const { data: providerRoleCheck } = await supabase
@@ -278,9 +313,8 @@ export const ProductsDataTable = () => {
         cart = newCart;
       }
 
-      // ORDER CONTEXT: For providers, resolve practice_id for shipping/routing/profits
-      // (but cart stays linked to provider's user_id above)
-      let resolvedDoctorId = effectiveUserId;
+      // ORDER CONTEXT: For providers, use resolved practice ID for shipping/routing
+      // (cart stays linked to provider's user_id above)
       const { data: userRoleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -331,8 +365,8 @@ export const ProductsDataTable = () => {
         
         console.debug('[ProductsDataTable] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
 
-        // Get user's topline rep ID for scoping (use practice's effectiveUserId, not provider)
-        const userToplineRepId = await getUserToplineRepId(effectiveUserId);
+        // Get user's topline rep ID for scoping (use resolved practice ID)
+        const userToplineRepId = await getUserToplineRepId(resolvedDoctorId || effectiveUserId);
 
         // Route to pharmacy - BLOCK if no pharmacy available
         const { data: routingResult, error: routingError } = await supabase.functions.invoke(
