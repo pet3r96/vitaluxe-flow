@@ -16,6 +16,7 @@ import { FollowUpManager } from "@/components/patients/FollowUpManager";
 import { MedicalVaultView } from "@/components/medical-vault/MedicalVaultView";
 import { MedicalVaultSummaryCard } from "@/components/medical-vault/MedicalVaultSummaryCard";
 import { SharedDocumentsGrid } from "@/components/medical-vault/SharedDocumentsGrid";
+import { PatientEngagementSummaryCard } from "@/components/patients/PatientEngagementSummaryCard";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { PatientAppointmentsList } from "@/components/patients/PatientAppointmentsList";
 import { PatientPortalStatusBadge } from "@/components/patients/PatientPortalStatusBadge";
@@ -553,6 +554,12 @@ export default function PatientDetail() {
               Schedule Appointment
             </Button>
           </div>
+          
+          <PatientEngagementSummaryCard
+            patientAccountId={actualPatientId!}
+            practiceId={practiceId}
+            onNavigate={setActiveTab}
+          />
           
           <MedicalVaultSummaryCard 
             patientAccountId={actualPatientId!} 
