@@ -318,11 +318,20 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   useEffect(() => {
     if (existingImmunizations && existingImmunizations.length > 0) {
       console.log('[Immunizations] Loading existing data:', existingImmunizations);
-      const immunizationList = existingImmunizations.map(imm => ({
-        vaccine_name: imm.vaccine_name || '',
-        date_administered: imm.date_administered || '',
-      }));
-      console.log('[Immunizations] Mapped list:', immunizationList);
+      const immunizationList = existingImmunizations.map(imm => {
+        // Handle date formatting - ensure it's in YYYY-MM-DD format
+        let dateFormatted = '';
+        if (imm.date_administered) {
+          // Split on 'T' to remove any time component and ensure YYYY-MM-DD format
+          dateFormatted = String(imm.date_administered).split('T')[0];
+        }
+        
+        return {
+          vaccine_name: imm.vaccine_name || '',
+          date_administered: dateFormatted,
+        };
+      });
+      console.log('[Immunizations] Mapped list with formatted dates:', immunizationList);
       setImmunizations(immunizationList);
       setHasNoImmunizations(false);
     } else {
@@ -1712,8 +1721,10 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
               
               {!hasNoImmunizations && (
                 <>
-                  {immunizations.map((imm, index) => (
-                    <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
+                  {immunizations.map((imm, index) => {
+                    console.log(`[Immunization ${index}] Rendering:`, imm);
+                    return (
+                      <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
                       <Input
                         className="flex-1 w-full"
                         placeholder="Vaccine name (e.g., COVID-19, Flu, Tdap)"
@@ -1728,7 +1739,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                         type="date"
                         className="flex-1 w-full"
                         placeholder="Date administered"
-                        value={imm.date_administered}
+                        value={imm.date_administered || ''}
                         onChange={(e) => {
                           const newImms = [...immunizations];
                           newImms[index].date_administered = e.target.value;
@@ -1745,7 +1756,8 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                  ))}
+                    );
+                  })}
                   <Button
                     type="button"
                     variant="outline"
