@@ -14,8 +14,15 @@ interface ImmunizationsSectionProps {
   patientAccountId?: string;
 }
 
-const formatTimestamp = (dateString: string) => {
-  return format(new Date(dateString), 'MMM dd, yyyy h:mm a');
+const formatTimestamp = (dateString?: string | null) => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return format(date, 'MMM dd, yyyy h:mm a');
+  } catch {
+    return '';
+  }
 };
 
 export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionProps) {

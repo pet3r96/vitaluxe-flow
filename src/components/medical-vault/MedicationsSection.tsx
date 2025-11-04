@@ -11,8 +11,15 @@ import { toast } from "@/hooks/use-toast";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 
-const formatTimestamp = (dateString: string) => {
-  return format(new Date(dateString), 'MMM dd, yyyy h:mm a');
+const formatTimestamp = (dateString?: string | null) => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return format(date, 'MMM dd, yyyy h:mm a');
+  } catch {
+    return '';
+  }
 };
 
 interface Medication {
