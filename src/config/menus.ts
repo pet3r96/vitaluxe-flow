@@ -245,12 +245,6 @@ export const menus: MenuConfig = {
         { label: "My Profile", href: "/profile", icon: UserSquare2 },
       ],
     },
-    {
-      title: "Settings",
-      items: [
-        { label: "Sign Out", href: "/auth", icon: LogOut },
-      ],
-    },
   ],
 
   staff: [
