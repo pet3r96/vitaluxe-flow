@@ -394,56 +394,11 @@ export default function Checkout() {
         );
       }
 
-      // ORDER CREATION: For providers, link orders to practice (not provider)
-      // This ensures rep commissions calculate correctly via practice's linked_topline_id
-      let doctorIdForOrder = effectiveUserId && effectiveUserId !== user?.id ? effectiveUserId : user?.id;
-      
-      // Check if current user is a provider and resolve to their practice
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", doctorIdForOrder)
-        .single();
-      
-      if (userRole?.role === 'provider') {
-        const { data: provider, error: providerError } = await supabase
-          .from("providers")
-          .select("practice_id")
-          .eq("user_id", doctorIdForOrder)
-          .eq("active", true)
-          .single();
-        
-        if (providerError || !provider?.practice_id) {
-          throw new Error("Provider not associated with a practice. Please contact support.");
-        }
-        
-        console.debug('[OrderConfirmation] Provider order - linking to practice', {
-          provider_user_id: doctorIdForOrder,
-          practice_id: provider.practice_id
-        });
-        
-        doctorIdForOrder = provider.practice_id;
-      }
-      
-      // Also check if current user is staff and resolve to their practice
-      if (userRole?.role === 'staff') {
-        const { data: staffMember, error: staffError } = await supabase
-          .from("practice_staff")
-          .select("practice_id")
-          .eq("user_id", doctorIdForOrder)
-          .eq("active", true)
-          .single();
-        
-        if (staffError || !staffMember?.practice_id) {
-          throw new Error("Staff member not associated with a practice. Please contact support.");
-        }
-        
-        console.debug('[OrderConfirmation] Staff order - linking to practice', {
-          staff_user_id: doctorIdForOrder,
-          practice_id: staffMember.practice_id
-        });
-        
-        doctorIdForOrder = staffMember.practice_id;
+      // Determine the correct practice/account for this order based on AuthContext
+      // Providers and staff place orders on behalf of their practice; others use their own account
+      const doctorIdForOrder = (isProviderAccount || isStaffAccount) ? effectivePracticeId : effectiveUserId;
+      if (!doctorIdForOrder) {
+        throw new Error("Unable to resolve practice for order. Please refresh and try again.");
       }
       const createdOrders = [];
       
