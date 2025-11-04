@@ -141,9 +141,22 @@ export function useCreateTreatmentPlan() {
       goals: Array<{ description: string; smartFlags?: Partial<TreatmentPlanGoal> }>;
     }) => {
       // Insert plan
+      // Normalize optional provider fields (empty string -> null)
+      const planToInsert = {
+        ...data.plan,
+        responsible_provider_id:
+          (data.plan.responsible_provider_id as any) === ''
+            ? null
+            : data.plan.responsible_provider_id,
+        responsible_provider_name:
+          (data.plan.responsible_provider_name as any) === ''
+            ? null
+            : data.plan.responsible_provider_name,
+      } as Partial<TreatmentPlan>;
+
       const { data: planData, error: planError } = await supabase
         .from('treatment_plans')
-        .insert([data.plan] as any)
+        .insert([planToInsert] as any)
         .select()
         .single();
 
@@ -200,9 +213,22 @@ export function useUpdateTreatmentPlan() {
 
   return useMutation({
     mutationFn: async (data: { planId: string; updates: Partial<TreatmentPlan> }) => {
+      // Normalize optional provider fields (empty string -> null)
+      const updates = {
+        ...data.updates,
+        responsible_provider_id:
+          (data.updates.responsible_provider_id as any) === ''
+            ? null
+            : data.updates.responsible_provider_id,
+        responsible_provider_name:
+          (data.updates.responsible_provider_name as any) === ''
+            ? null
+            : data.updates.responsible_provider_name,
+      } as Partial<TreatmentPlan>;
+
       const { data: result, error } = await supabase
         .from('treatment_plans')
-        .update(data.updates)
+        .update(updates)
         .eq('id', data.planId)
         .select()
         .single();
