@@ -5,13 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Activity, AlertCircle, Pill, Heart, Syringe, Scissors, Building2, Phone, ShieldCheck, Share2, Download, FileText, Eye, Printer, ClipboardList } from "lucide-react";
+import { Activity, AlertCircle, Pill, Heart, Syringe, Scissors, Building2, Phone, ShieldCheck, Download, FileText, Eye, Printer, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
-import { ShareConsentDialog } from "@/components/medical-vault/ShareConsentDialog";
-import { ShareLinkDialog } from "@/components/medical-vault/ShareLinkDialog";
 import { MedicationsSection } from "@/components/medical-vault/MedicationsSection";
 import { ConditionsSection } from "@/components/medical-vault/ConditionsSection";
 import { AllergiesSection } from "@/components/medical-vault/AllergiesSection";
@@ -30,10 +28,6 @@ export default function PatientMedicalVault() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
-  const [showConsentDialog, setShowConsentDialog] = useState(false);
-  const [showShareLinkDialog, setShowShareLinkDialog] = useState(false);
-  const [shareUrl, setShareUrl] = useState('');
-  const [shareExpiresAt, setShareExpiresAt] = useState<Date>(new Date());
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   
   const queryClient = useQueryClient();
@@ -327,99 +321,9 @@ export default function PatientMedicalVault() {
     }
   };
 
-  const handleSharePDF = async () => {
-    // Step 1: Show consent dialog
-    setShowConsentDialog(true);
-  };
-
-  const handleConsentGiven = async () => {
-    if (!patientAccount) {
-      toast({ title: "Error", description: "Patient account not loaded", variant: "destructive" });
-      return;
-    }
-
-    setShowConsentDialog(false);
-    setIsGeneratingPdf(true);
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ title: "Error", description: "Please log in to share your medical vault", variant: "destructive" });
-        return;
-      }
-
-      // Generate secure token
-      const token = crypto.randomUUID();
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
-
-      // Create share link in database
-      const { error: insertError } = await supabase
-        .from('medical_vault_share_links')
-        .insert({
-          patient_id: patientAccount.id,
-          token,
-          expires_at: expiresAt.toISOString(),
-          consent_agreed_at: now.toISOString(),
-          consent_ip: 'client-side',
-        });
-
-      if (insertError) {
-        console.error('Error creating share link:', insertError);
-        toast({ title: "Error", description: "Failed to create share link", variant: "destructive" });
-        return;
-      }
-
-      // Log consent given
-      await supabase.from('audit_logs').insert({
-        user_id: user.id,
-        user_email: user.email,
-        user_role: 'patient',
-        action_type: 'medical_vault_share_consent_given',
-        entity_type: 'medical_vault_share_links',
-        entity_id: patientAccount.id,
-        details: {
-          patient_id: patientAccount.id,
-          patient_name: `${patientAccount.first_name} ${patientAccount.last_name}`,
-          token,
-          expires_at: expiresAt.toISOString(),
-        },
-      });
-
-      // Generate share URL
-      const baseUrl = window.location.origin;
-      const url = `${baseUrl}/share/${token}`;
-
-      setShareUrl(url);
-      setShareExpiresAt(expiresAt);
-      setShowShareLinkDialog(true);
-
-      toast({ title: "Success", description: "Share link created successfully" });
-    } catch (error) {
-      console.error('Error creating share link:', error);
-      toast({ title: "Error", description: "Failed to create share link", variant: "destructive" });
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
 
   return (
     <div className="patient-container">
-      {/* Consent Dialog */}
-      <ShareConsentDialog
-        open={showConsentDialog}
-        onOpenChange={setShowConsentDialog}
-        onConsent={handleConsentGiven}
-      />
-
-      {/* Share Link Dialog */}
-      <ShareLinkDialog
-        open={showShareLinkDialog}
-        onOpenChange={setShowShareLinkDialog}
-        shareUrl={shareUrl}
-        expiresAt={shareExpiresAt}
-      />
-
       {/* Audit Log Dialog */}
       <AuditLogDialog
         open={auditDialogOpen}
@@ -529,16 +433,6 @@ export default function PatientMedicalVault() {
               >
                 <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Audit
-              </Button>
-              <Button 
-                variant="vault" 
-                size="sm"
-                onClick={handleSharePDF}
-                disabled={isGeneratingPdf}
-                className="min-w-[70px]"
-              >
-                <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Share
               </Button>
             </div>
           </div>
