@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { generateTreatmentPlanPDF } from "@/lib/treatmentPlanPdfGenerator";
 
 interface TreatmentPlanDetailsDialogProps {
   open: boolean;
@@ -67,6 +68,7 @@ interface TreatmentPlanDetailsDialogProps {
   attachments: TreatmentPlanAttachment[];
   onEdit: () => void;
   onAddUpdate: () => void;
+  patientName: string;
 }
 
 const statusConfig = {
@@ -96,6 +98,7 @@ export function TreatmentPlanDetailsDialog({
   attachments,
   onEdit,
   onAddUpdate,
+  patientName,
 }: TreatmentPlanDetailsDialogProps) {
   const { user, effectiveRole } = useAuth();
   const updateGoal = useUpdateGoal();
@@ -107,6 +110,7 @@ export function TreatmentPlanDetailsDialog({
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
   const [achievementNotes, setAchievementNotes] = useState("");
   const [deleteAttachmentId, setDeleteAttachmentId] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const canEdit = !plan.is_locked && user?.id;
   const isAdmin = effectiveRole === 'admin';
@@ -201,6 +205,33 @@ export function TreatmentPlanDetailsDialog({
     setDeleteAttachmentId(null);
   };
 
+  const handleDownloadPDF = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const pdfBlob = await generateTreatmentPlanPDF({
+        plan,
+        goals,
+        updates,
+        attachments,
+        patientName,
+      });
+
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `TreatmentPlan_${plan.plan_title.replace(/[^a-z0-9]/gi, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Treatment plan downloaded successfully");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const statusInfo = statusConfig[plan.status];
 
   return (
@@ -216,6 +247,24 @@ export function TreatmentPlanDetailsDialog({
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handleDownloadPDF} 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isGeneratingPdf}
+                >
+                  {isGeneratingPdf ? (
+                    <>
+                      <Download className="h-4 w-4 mr-1 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-1" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
                 {canEdit && (
                   <>
                     <Button onClick={onEdit} variant="outline" size="sm">

@@ -22,9 +22,10 @@ import {
 interface TreatmentPlansTabProps {
   patientAccountId: string;
   providers?: Array<{ id: string; name: string }>;
+  patientName?: string;
 }
 
-export function TreatmentPlansTab({ patientAccountId, providers }: TreatmentPlansTabProps) {
+export function TreatmentPlansTab({ patientAccountId, providers, patientName = 'Patient' }: TreatmentPlansTabProps) {
   const { data: plans = [], isLoading } = useTreatmentPlans(patientAccountId);
   const deletePlan = useDeleteTreatmentPlan();
 
@@ -136,6 +137,7 @@ export function TreatmentPlansTab({ patientAccountId, providers }: TreatmentPlan
             goals={selectedPlanData.goals}
             updates={selectedPlanData.updates}
             attachments={selectedPlanData.attachments}
+            patientName={patientName}
             onEdit={() => {
               setDetailsDialogOpen(false);
               setEditDialogOpen(true);

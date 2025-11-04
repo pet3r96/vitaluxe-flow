@@ -608,6 +608,7 @@ export default function PatientDetail() {
           <TreatmentPlansTab 
             patientAccountId={actualPatientId!} 
             providers={providers?.map((p: any) => ({ id: p.id, name: p.profiles?.prescriber_name || p.profiles?.full_name || 'Unknown' })) || []}
+            patientName={patient?.name || 'Patient'}
           />
         </TabsContent>
 
