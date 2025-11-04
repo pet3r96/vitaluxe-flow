@@ -127,6 +127,15 @@ export default function PracticeCalendar() {
   const providers = calendarData?.providers || [];
   const rooms = calendarData?.rooms || [];
 
+  // Initialize selected providers with all provider IDs on first load
+  // IMPORTANT: Auto-select all providers for both practice owners AND staff
+  useEffect(() => {
+    if (providers.length > 0 && selectedProviders.length === 0) {
+      console.log(`🔧 Auto-selecting all ${providers.length} providers for ${effectiveRole}`);
+      setSelectedProviders(providers.map((p: any) => p.id));
+    }
+  }, [providers, effectiveRole]);
+
   const handleProviderToggle = (providerId: string) => {
     setSelectedProviders((prev) =>
       prev.includes(providerId)

@@ -133,6 +133,17 @@ Deno.serve(async (req) => {
 
     if (!staffRows || staffRows.length === 0) {
       console.log('[list-staff] No staff found for practice', practiceId);
+      
+      // Defensive logging: Check for orphaned staff users
+      const { data: orphanedStaff } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'staff');
+      
+      if (orphanedStaff && orphanedStaff.length > 0) {
+        console.warn(`⚠️ Found ${orphanedStaff.length} staff users in user_roles without practice_staff records!`);
+      }
+      
       return new Response(JSON.stringify({ staff: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

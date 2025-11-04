@@ -174,14 +174,16 @@ export function CreateSupportTicketDialog() {
         if (effectiveRole === "doctor") {
           ticketData.practice_id = user.id;
         } else {
-          const { data: providerData } = await supabase
-            .from("providers")
+          // FIXED: Staff users should use practice_staff table, not providers
+          const { data: staffData } = await supabase
+            .from("practice_staff")
             .select("practice_id")
             .eq("user_id", user.id)
+            .eq("active", true)
             .single();
 
-          if (providerData) {
-            ticketData.practice_id = providerData.practice_id;
+          if (staffData) {
+            ticketData.practice_id = staffData.practice_id;
           }
         }
       } else if (effectiveRole === "pharmacy") {

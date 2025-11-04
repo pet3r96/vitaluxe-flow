@@ -172,6 +172,24 @@ Deno.serve(async (req) => {
     const userIds = providersRows.map(p => p.user_id);
     const practiceIds = [...new Set(providersRows.map(p => p.practice_id))];
 
+    // Defensive logging: Verify caller's practice_staff membership for staff users
+    if (userRole === 'staff' && practiceId) {
+      const { data: staffMembership } = await supabase
+        .from('practice_staff')
+        .select('id, active')
+        .eq('user_id', userId)
+        .eq('practice_id', practiceId)
+        .maybeSingle();
+      
+      if (!staffMembership) {
+        console.error(`❌ CRITICAL: Staff user ${userId} has no practice_staff record for practice ${practiceId}!`);
+      } else if (!staffMembership.active) {
+        console.warn(`⚠️ Staff user ${userId} has inactive practice_staff membership for practice ${practiceId}`);
+      } else {
+        console.log(`✅ Staff user ${userId} has valid practice_staff membership`);
+      }
+    }
+
     const { data: userProfiles, error: userProfilesError } = await supabase
       .from('profiles')
       .select('id, name, full_name, prescriber_name, email, phone, address, npi, dea, license_number')

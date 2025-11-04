@@ -830,6 +830,30 @@ serve(async (req) => {
     if (signupData.role === 'staff') {
       console.log(`Staff account created: generating activation token for ${signupData.email}`);
       
+      // CRITICAL FIX: Ensure practice_staff record exists for staff membership
+      const staffPracticeId = signupData.roleData.practiceId;
+      if (staffPracticeId) {
+        console.log(`✅ Creating practice_staff record for staff user ${userId} in practice ${staffPracticeId}`);
+        const { error: staffError } = await supabaseAdmin
+          .from('practice_staff')
+          .upsert({
+            user_id: userId,
+            practice_id: staffPracticeId,
+            role_type: signupData.roleData.roleType || 'staff',
+            active: true,
+          }, { onConflict: 'user_id' });
+        
+        if (staffError) {
+          console.error('❌ Failed to create practice_staff record:', staffError);
+          // Don't fail the whole operation, but log it prominently
+          console.error('⚠️ CRITICAL: Staff user created but practice membership failed! User may not have proper access.');
+        } else {
+          console.log('✅ practice_staff record created successfully');
+        }
+      } else {
+        console.error('❌ CRITICAL: Staff user created without practiceId! No practice_staff record created.');
+      }
+      
       // Generate secure token
       generatedToken = crypto.randomUUID();
       const expiresAt = new Date();

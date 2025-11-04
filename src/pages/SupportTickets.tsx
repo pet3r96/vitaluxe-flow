@@ -34,9 +34,9 @@ export default function SupportTickets() {
   const [activeTab, setActiveTab] = useState<"all" | "open" | "resolved">("all");
 
   const { data: tickets = [], isLoading } = useQuery({
-    queryKey: ["support-tickets"],
+    queryKey: ["support-tickets", effectiveRole],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("support_tickets")
         .select(`
           *,
@@ -44,6 +44,28 @@ export default function SupportTickets() {
         `)
         .order("created_at", { ascending: false });
 
+      // Filter by practice_id for staff and doctors
+      if (effectiveRole === "staff") {
+        // Get staff's practice_id
+        const { data: staffData } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
+          .eq("active", true)
+          .maybeSingle();
+
+        if (staffData?.practice_id) {
+          query = query.eq("practice_id", staffData.practice_id);
+        }
+      } else if (effectiveRole === "doctor") {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          query = query.eq("practice_id", user.id);
+        }
+      }
+      // Admin sees all tickets (no filter)
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as SupportTicket[];
     },
