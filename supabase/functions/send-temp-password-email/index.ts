@@ -74,14 +74,24 @@ const handler = async (req: Request): Promise<Response> => {
 
       // For practice users, verify they can only send emails to staff in their practice
       if (userId) {
-        // Get the requester's practice
-        const { data: requesterPractice } = await supabaseAdmin
-          .from('practice_staff')
-          .select('practice_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // Get the requester's practice_id based on their role
+        let requesterPracticeId: string | null = null;
+        
+        if (isDoctor) {
+          // For doctors: their user_id IS the practice_id
+          requesterPracticeId = user.id;
+        } else if (isStaff) {
+          // For staff: look up their practice_id from practice_staff table
+          const { data: requesterPractice } = await supabaseAdmin
+            .from('practice_staff')
+            .select('practice_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          requesterPracticeId = requesterPractice?.practice_id || null;
+        }
 
-        if (!requesterPractice) {
+        if (!requesterPracticeId) {
           return new Response(
             JSON.stringify({ error: 'Practice not found' }),
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -95,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
           .eq('user_id', userId)
           .maybeSingle();
 
-        if (!targetStaff || targetStaff.practice_id !== requesterPractice.practice_id) {
+        if (!targetStaff || targetStaff.practice_id !== requesterPracticeId) {
           return new Response(
             JSON.stringify({ error: 'Cannot send emails to staff outside your practice' }),
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
