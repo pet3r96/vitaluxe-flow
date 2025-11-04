@@ -1083,22 +1083,29 @@ export default function PatientIntakeForm() {
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="no-medications"
-                  checked={hasNoMedications}
-                  onCheckedChange={(checked) => {
-                    setHasNoMedications(checked as boolean);
-                    if (checked) {
-                      setMedications([]);
-                    } else {
-                      setMedications([{ name: "", dosage: "", frequency: "" }]);
-                    }
-                  }}
-                />
-                <label htmlFor="no-medications" className="text-sm text-muted-foreground cursor-pointer">
-                  I am not currently taking any medications
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="no-medications"
+                    checked={hasNoMedications}
+                    onCheckedChange={(checked) => {
+                      setHasNoMedications(checked as boolean);
+                      if (checked) {
+                        setMedications([]);
+                      } else {
+                        setMedications([{ name: "", dosage: "", frequency: "" }]);
+                      }
+                    }}
+                  />
+                  <label htmlFor="no-medications" className="text-sm text-muted-foreground cursor-pointer">
+                    I do not take any medications (uncheck to add)
+                  </label>
+                </div>
+                {hasNoMedications && (
+                  <p className="text-xs text-muted-foreground ml-6">
+                    ✓ Uncheck this box if you need to add medications
+                  </p>
+                )}
               </div>
               
               {!hasNoMedications && (
@@ -1179,7 +1186,7 @@ export default function PatientIntakeForm() {
                   variant="outline"
                   onClick={() => setMedications([...medications, { name: "", dosage: "", frequency: "" }])}
                 >
-                  <Plus className="h-4 w-4 mr-2" /> Add Medication
+                  <Plus className="h-4 w-4 mr-2" /> Add Another Medication
                 </Button>
               </>
               )}
@@ -1199,22 +1206,29 @@ export default function PatientIntakeForm() {
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="no-allergies"
-                  checked={hasNoAllergies}
-                  onCheckedChange={(checked) => {
-                    setHasNoAllergies(checked as boolean);
-                    if (checked) {
-                      setAllergies([]);
-                    } else {
-                      setAllergies([{ name: "", reaction: "", severity: "" }]);
-                    }
-                  }}
-                />
-                <label htmlFor="no-allergies" className="text-sm text-muted-foreground cursor-pointer">
-                  I have no known allergies
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="no-allergies"
+                    checked={hasNoAllergies}
+                    onCheckedChange={(checked) => {
+                      setHasNoAllergies(checked as boolean);
+                      if (checked) {
+                        setAllergies([]);
+                      } else {
+                        setAllergies([{ name: "", reaction: "", severity: "" }]);
+                      }
+                    }}
+                  />
+                  <label htmlFor="no-allergies" className="text-sm text-muted-foreground cursor-pointer">
+                    I have no known allergies (uncheck to add)
+                  </label>
+                </div>
+                {hasNoAllergies && (
+                  <p className="text-xs text-muted-foreground ml-6">
+                    ✓ Uncheck this box if you need to add allergies
+                  </p>
+                )}
               </div>
               
               {!hasNoAllergies && (
@@ -1277,7 +1291,7 @@ export default function PatientIntakeForm() {
                   variant="outline"
                   onClick={() => setAllergies([...allergies, { name: "", reaction: "", severity: "" }])}
                 >
-                  <Plus className="h-4 w-4 mr-2" /> Add Allergy
+                  <Plus className="h-4 w-4 mr-2" /> Add Another Allergy
                 </Button>
               </>
               )}
@@ -1297,22 +1311,29 @@ export default function PatientIntakeForm() {
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="no-conditions"
-                  checked={hasNoConditions}
-                  onCheckedChange={(checked) => {
-                    setHasNoConditions(checked as boolean);
-                    if (checked) {
-                      setConditions([]);
-                    } else {
-                      setConditions([{ name: "", diagnosed_date: "", status: "active" }]);
-                    }
-                  }}
-                />
-                <label htmlFor="no-conditions" className="text-sm text-muted-foreground cursor-pointer">
-                  I have no medical conditions
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="no-conditions"
+                    checked={hasNoConditions}
+                    onCheckedChange={(checked) => {
+                      setHasNoConditions(checked as boolean);
+                      if (checked) {
+                        setConditions([]);
+                      } else {
+                        setConditions([{ name: "", diagnosed_date: "", status: "active" }]);
+                      }
+                    }}
+                  />
+                  <label htmlFor="no-conditions" className="text-sm text-muted-foreground cursor-pointer">
+                    I have no medical conditions (uncheck to add)
+                  </label>
+                </div>
+                {hasNoConditions && (
+                  <p className="text-xs text-muted-foreground ml-6">
+                    ✓ Uncheck this box if you need to add conditions
+                  </p>
+                )}
               </div>
               
               {!hasNoConditions && (
@@ -1376,7 +1397,7 @@ export default function PatientIntakeForm() {
                   variant="outline"
                   onClick={() => setConditions([...conditions, { name: "", diagnosed_date: "", status: "" }])}
                 >
-                  <Plus className="h-4 w-4 mr-2" /> Add Condition
+                  <Plus className="h-4 w-4 mr-2" /> Add Another Condition
                 </Button>
               </>
               )}
@@ -1396,22 +1417,29 @@ export default function PatientIntakeForm() {
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="no-surgeries"
-                  checked={hasNoSurgeries}
-                  onCheckedChange={(checked) => {
-                    setHasNoSurgeries(checked as boolean);
-                    if (checked) {
-                      setSurgeries([]);
-                    } else {
-                      setSurgeries([{ type: "", date: "", notes: "" }]);
-                    }
-                  }}
-                />
-                <label htmlFor="no-surgeries" className="text-sm text-muted-foreground cursor-pointer">
-                  I have not had any surgeries
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="no-surgeries"
+                    checked={hasNoSurgeries}
+                    onCheckedChange={(checked) => {
+                      setHasNoSurgeries(checked as boolean);
+                      if (checked) {
+                        setSurgeries([]);
+                      } else {
+                        setSurgeries([{ type: "", date: "", notes: "" }]);
+                      }
+                    }}
+                  />
+                  <label htmlFor="no-surgeries" className="text-sm text-muted-foreground cursor-pointer">
+                    I have not had any surgeries (uncheck to add)
+                  </label>
+                </div>
+                {hasNoSurgeries && (
+                  <p className="text-xs text-muted-foreground ml-6">
+                    ✓ Uncheck this box if you need to add surgeries
+                  </p>
+                )}
               </div>
               
               {!hasNoSurgeries && (
@@ -1468,7 +1496,7 @@ export default function PatientIntakeForm() {
                   variant="outline"
                   onClick={() => setSurgeries([...surgeries, { type: "", date: "", notes: "" }])}
                 >
-                  <Plus className="h-4 w-4 mr-2" /> Add Surgery
+                  <Plus className="h-4 w-4 mr-2" /> Add Another Surgery
                 </Button>
               </>
               )}
@@ -1488,22 +1516,29 @@ export default function PatientIntakeForm() {
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="no-immunizations"
-                  checked={hasNoImmunizations}
-                  onCheckedChange={(checked) => {
-                    setHasNoImmunizations(checked as boolean);
-                    if (checked) {
-                      setImmunizations([]);
-                    } else {
-                      setImmunizations([{ vaccine_name: "", date_administered: "" }]);
-                    }
-                  }}
-                />
-                <label htmlFor="no-immunizations" className="text-sm text-muted-foreground cursor-pointer">
-                  No recent immunizations to report
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="no-immunizations"
+                    checked={hasNoImmunizations}
+                    onCheckedChange={(checked) => {
+                      setHasNoImmunizations(checked as boolean);
+                      if (checked) {
+                        setImmunizations([]);
+                      } else {
+                        setImmunizations([{ vaccine_name: "", date_administered: "" }]);
+                      }
+                    }}
+                  />
+                  <label htmlFor="no-immunizations" className="text-sm text-muted-foreground cursor-pointer">
+                    No recent immunizations to report (uncheck to add)
+                  </label>
+                </div>
+                {hasNoImmunizations && (
+                  <p className="text-xs text-muted-foreground ml-6">
+                    ✓ Uncheck this box if you need to add immunizations
+                  </p>
+                )}
               </div>
               
               {!hasNoImmunizations && (
@@ -1547,7 +1582,7 @@ export default function PatientIntakeForm() {
                     variant="outline"
                     onClick={() => setImmunizations([...immunizations, { vaccine_name: "", date_administered: "" }])}
                   >
-                    <Plus className="h-4 w-4 mr-2" /> Add Immunization
+                    <Plus className="h-4 w-4 mr-2" /> Add Another Immunization
                   </Button>
                 </>
               )}

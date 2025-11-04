@@ -15,6 +15,7 @@ export const GlobalIntakeDialog = () => {
     showIntakeDialog,
     setShowIntakeDialog,
     mustChangePassword,
+    termsAccepted,
     requires2FASetup,
     requires2FAVerify,
   } = useAuth();
@@ -23,12 +24,14 @@ export const GlobalIntakeDialog = () => {
   // - Not a patient
   // - User must change password first
   // - User needs 2FA setup/verify first
+  // - User hasn't accepted terms yet
   // - Dialog is not set to show
   if (
     userRole !== 'patient' ||
     mustChangePassword ||
     requires2FASetup ||
     requires2FAVerify ||
+    !termsAccepted ||
     !showIntakeDialog ||
     !effectiveUserId
   ) {
