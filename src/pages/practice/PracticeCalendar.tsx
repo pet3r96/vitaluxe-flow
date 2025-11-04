@@ -83,7 +83,7 @@ export default function PracticeCalendar() {
 
   // Fetch calendar data with realtime updates
   const { data: calendarData, isLoading, refetch } = useRealtimeQuery(
-    ['calendar-data', practiceId, view, currentDate.toISOString(), JSON.stringify(selectedProviders), JSON.stringify(selectedRooms), JSON.stringify(selectedStatuses), String(isProviderView)],
+    ['patient_appointments', practiceId, view, currentDate.toISOString(), JSON.stringify(selectedProviders), JSON.stringify(selectedRooms), JSON.stringify(selectedStatuses), String(isProviderView)],
     async () => {
       const { startDate, endDate } = getDateRange();
       
@@ -108,7 +108,7 @@ export default function PracticeCalendar() {
     },
     {
       enabled: !!practiceId,
-      staleTime: 30000, // 30 seconds
+      staleTime: 0, // Instant updates - no cache delay
       gcTime: 300000, // 5 minutes
     }
   );

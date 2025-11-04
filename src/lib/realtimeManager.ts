@@ -13,7 +13,19 @@ class RealtimeManager {
   private channels = new Map<string, any>();
   private queryClient: QueryClient | null = null;
   private pendingInvalidations = new Map<string, NodeJS.Timeout>();
-  private readonly DEBOUNCE_MS = 50; // Reduced from 100ms for faster updates
+  private readonly DEBOUNCE_MS = 10; // Ultra-fast updates for instant sync
+  
+  // Cross-table dependencies - when table A changes, also invalidate queries for B, C
+  private tableDependencies: Record<string, string[]> = {
+    'patient_appointments': ['calendar-data', 'waiting-room-dashboard', 'today-appointments', 'being-treated-appointments'],
+    'practice_rooms': ['calendar-data'],
+    'practice_staff': ['calendar-data'],
+    'providers': ['calendar-data'],
+    'practice_blocked_time': ['calendar-data'],
+    'patient_notes': ['engagement-summary'],
+    'treatment_plans': ['engagement-summary'],
+    'patient_follow_ups': ['engagement-summary', 'follow-up-reminders'],
+  };
 
   /**
    * Initialize with React Query client for automatic cache invalidation
@@ -113,7 +125,8 @@ class RealtimeManager {
   }
 
   /**
-   * Debounced cache invalidation to avoid excessive refetches
+   * Debounced cache invalidation with cross-table dependencies
+   * Invalidates both the changed table and any dependent queries
    */
   private debouncedInvalidate(table: string) {
     // Clear existing timeout if any
@@ -126,9 +139,21 @@ class RealtimeManager {
     const timeout = setTimeout(() => {
       if (this.queryClient) {
         logger.info(`Invalidating React Query cache for ${table}`);
+        
+        // Invalidate the main table
         this.queryClient.invalidateQueries({ 
           queryKey: [table],
           refetchType: 'active' // Only refetch active queries
+        });
+        
+        // Invalidate dependent queries for cross-component updates
+        const dependencies = this.tableDependencies[table] || [];
+        dependencies.forEach(depKey => {
+          logger.info(`Invalidating dependent query: ${depKey}`);
+          this.queryClient.invalidateQueries({
+            queryKey: [depKey],
+            refetchType: 'active'
+          });
         });
       }
       this.pendingInvalidations.delete(table);
