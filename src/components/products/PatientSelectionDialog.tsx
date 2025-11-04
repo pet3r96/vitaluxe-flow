@@ -53,43 +53,8 @@ export const PatientSelectionDialog = ({
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
   
-  // Resolve practice ID from provider record if needed
-  const { data: resolvedPracticeId, isLoading: isResolvingPractice } = useQuery({
-    queryKey: ["provider-practice-id", effectiveUserId, effectiveRole],
-    queryFn: async () => {
-      if (effectiveRole !== 'provider' || !effectiveUserId) return effectivePracticeId;
-      
-      console.log('[PatientSelectionDialog] 🔄 Resolving practice ID for provider:', effectiveUserId);
-      
-      // For direct provider login, fetch their practice_id from providers table
-      const { data, error } = await supabase
-        .from("providers")
-        .select("practice_id")
-        .eq("user_id", effectiveUserId)
-        .single();
-      
-      if (error) {
-        console.error('[PatientSelectionDialog] ❌ Error fetching provider practice:', error);
-        return effectivePracticeId;
-      }
-      
-      console.log('[PatientSelectionDialog] ✅ Resolved practice ID:', data?.practice_id);
-      return data?.practice_id || effectivePracticeId;
-    },
-    enabled: open && effectiveRole === 'provider',
-    staleTime: 5 * 60 * 1000
-  });
-  
-  const finalPracticeId = effectiveRole === 'provider' 
-    ? (resolvedPracticeId || effectivePracticeId)
-    : effectivePracticeId;
-  
-  console.log('[PatientSelectionDialog] 🎯 Practice context:', {
-    effectiveRole,
-    effectivePracticeId,
-    resolvedPracticeId,
-    finalPracticeId
-  });
+  // Practice ID is already resolved in AuthContext, no need for additional query
+  const finalPracticeId = effectivePracticeId;
   
   const [currentStep, setCurrentStep] = useState<'details' | 'prescription'>('details');
   const [shipTo, setShipTo] = useState<'patient' | 'practice'>(effectiveRole === 'staff' ? 'practice' : 'patient');
@@ -251,7 +216,7 @@ export const PatientSelectionDialog = ({
   });
 
   // Fetch practice details for prescription writer
-  const { data: practiceData } = useQuery({
+  const { data: practiceData, isLoading: isPracticeLoading } = useQuery({
     queryKey: ["practice-details", finalPracticeId],
     queryFn: async () => {
       if (!finalPracticeId) {
@@ -286,7 +251,9 @@ export const PatientSelectionDialog = ({
       console.log('[PatientSelectionDialog] ✅ Practice data fetched:', data);
       return data;
     },
-    enabled: !!finalPracticeId && open
+    enabled: !!finalPracticeId && open,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnWindowFocus: false // Don't refetch on tab focus
   });
 
   useEffect(() => {
@@ -941,15 +908,12 @@ export const PatientSelectionDialog = ({
                         </Alert>
                       )}
                       
-                      {(isResolvingPractice || (!practiceData && selectedProviderData)) && (
-                        <Alert className="border-blue-500/30 bg-blue-500/10">
-                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                          <AlertDescription>
-                            {isResolvingPractice 
-                              ? "Resolving provider information..." 
-                              : "Practice information is loading. Please wait a moment before generating the prescription."}
-                          </AlertDescription>
-                        </Alert>
+                      {/* Only show loading during initial practice data fetch */}
+                      {isPracticeLoading && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Loading practice information...</span>
+                        </div>
                       )}
                       
                       <TooltipProvider>
@@ -962,28 +926,28 @@ export const PatientSelectionDialog = ({
                                   console.log('[PatientSelectionDialog] 🔍 Prescription Writer Button State:', {
                                     selectedProviderData: !!selectedProviderData,
                                     practiceData: !!practiceData,
-                                    isResolvingPractice,
+                                    isPracticeLoading,
                                     selectedProviderId,
                                     finalPracticeId
                                   });
                                   setShowPrescriptionWriter(true);
                                 }}
                                 className="w-full"
-                                disabled={!selectedProviderData || !practiceData || isResolvingPractice}
+                                disabled={!selectedProviderData || !practiceData || isPracticeLoading}
                               >
                                 <FileText className="mr-2 h-4 w-4" />
                                 Open Prescription Writer
                               </Button>
                             </div>
                           </TooltipTrigger>
-                          {(!selectedProviderData || !practiceData || isResolvingPractice) && (
+                          {(!selectedProviderData || !practiceData || isPracticeLoading) && (
                             <TooltipContent>
                               <p>
-                                {isResolvingPractice 
-                                  ? "Resolving practice information..." 
+                                {isPracticeLoading 
+                                  ? "Loading practice information..." 
                                   : !selectedProviderData 
                                     ? "Please select a provider first" 
-                                    : "Waiting for practice information to load"}
+                                    : "Practice information required"}
                               </p>
                             </TooltipContent>
                           )}
