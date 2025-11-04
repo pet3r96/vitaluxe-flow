@@ -28,6 +28,7 @@ import { SharedNotesSection } from "@/components/medical-vault/SharedNotesSectio
 import { PDFViewer } from "@/components/documents/PDFViewer";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { DocumentsSection } from "@/components/medical-vault/DocumentsSection";
+import { PatientNotesSection } from "@/components/patients/PatientNotesSection";
 
 interface MedicalVaultViewProps {
   patientAccountId: string;
@@ -608,6 +609,16 @@ export function MedicalVaultView({
           <SharedNotesSection patientAccountId={patientAccountId} />
         )}
       </div>
+
+      {/* Notes Section - Full Width for Practice Mode */}
+      {mode === 'practice' && (
+        <div className="mt-6">
+          <PatientNotesSection 
+            patientAccountId={patientAccountId}
+            patientName={displayName}
+          />
+        </div>
+      )}
     </div>
   );
 }
