@@ -223,7 +223,19 @@ export const PatientSelectionDialog = ({
       console.log('[PatientSelectionDialog] 🔄 Fetching practice data for:', effectivePracticeId);
       const { data, error } = await supabase
         .from("profiles")
-        .select("name, address_formatted, address, address_street, address_city, address_state, address_zip")
+        .select(`
+          name, 
+          address_formatted, 
+          address_street, 
+          address_city, 
+          address_state, 
+          address_zip,
+          shipping_address_formatted,
+          shipping_address_street,
+          shipping_address_city,
+          shipping_address_state,
+          shipping_address_zip
+        `)
         .eq("id", effectivePracticeId)
         .single();
       
@@ -940,7 +952,7 @@ export const PatientSelectionDialog = ({
             }}
             practice={{
               name: practiceData.name || 'Unknown Practice',
-              address: practiceData.address_formatted || practiceData.address || 'N/A'
+              address: practiceData.address_formatted || 'N/A'
             }}
             quantity={quantity}
             initialSig={customSig}

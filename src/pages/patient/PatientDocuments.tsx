@@ -371,12 +371,19 @@ export default function PatientDocuments() {
   const handleDownload = async (doc: UnifiedDocument) => {
     try {
       // Determine bucket based on source
-      const bucket = doc.source === "provider_assigned" ? "provider-documents" : "patient-documents";
+      const bucketName = doc.source === "provider_assigned" ? "provider-documents" : "patient-documents";
+      
+      console.log('[PatientDocuments] Download request:', {
+        source: doc.source,
+        bucketName,
+        storagePath: doc.storage_path,
+        documentName: doc.document_name
+      });
       
       const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
         body: {
-          bucket: bucket,
-          path: doc.storage_path,
+          bucketName: bucketName,
+          filePath: doc.storage_path,
           expiresIn: 60
         }
       });
@@ -386,7 +393,20 @@ export default function PatientDocuments() {
         throw new Error(error.details || error.message || 'Failed to generate download link');
       }
 
-      const response = await fetch(data.signedUrl || data.signed_url);
+      if (!data || (!data.signedUrl && !data.signed_url)) {
+        console.error('[PatientDocuments] No signed URL in response:', data);
+        throw new Error('No signed URL received from server');
+      }
+
+      const signedUrl = data.signedUrl || data.signed_url;
+      
+      console.log('[PatientDocuments] Signed URL received, initiating download');
+
+      const response = await fetch(signedUrl);
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+      
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -402,6 +422,12 @@ export default function PatientDocuments() {
         description: "Your document is being downloaded.",
       });
     } catch (error: any) {
+      console.error('[PatientDocuments] Download failed:', {
+        error: error.message,
+        source: doc.source,
+        storagePath: doc.storage_path
+      });
+      
       toast({
         title: "Download Failed",
         description: error.message || "Could not download document",
