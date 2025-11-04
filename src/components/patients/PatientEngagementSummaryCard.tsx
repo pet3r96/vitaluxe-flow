@@ -48,13 +48,19 @@ export function PatientEngagementSummaryCard({
         supabase.rpc("get_patient_unified_documents", { p_patient_id: patientAccountId }),
       ]);
 
-      return {
+      console.log('[PatientEngagementSummary] Follow-ups query result:', followups);
+
+      const result = {
         notes: notes.count || 0,
         plans: plans.count || 0,
         upcoming: practiceId ? (upcoming.count || 0) : 0,
         followups: followups.count || 0,
         documents: Array.isArray(docs.data) ? docs.data.length : 0,
       };
+
+      console.log('[PatientEngagementSummary] All counts:', result);
+
+      return result;
     },
     enabled: !!patientAccountId,
     staleTime: 10000,
