@@ -241,6 +241,17 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   // Pre-fill form with existing data
   useEffect(() => {
     if (patientAccount) {
+      console.log('[PatientIntakeForm] Pre-populating form with patient data:', {
+        date_of_birth: patientAccount.date_of_birth,
+        gender_at_birth: patientAccount.gender_at_birth,
+        phone: patientAccount.phone,
+        address: patientAccount.address,
+        city: patientAccount.city,
+        state: patientAccount.state,
+        zip_code: patientAccount.zip_code,
+        intake_completed_at: patientAccount.intake_completed_at,
+      });
+      
       form.reset({
         date_of_birth: patientAccount.date_of_birth || "",
         gender_at_birth: patientAccount.gender_at_birth || "",
@@ -262,6 +273,14 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         pharmacy_state: "",
         pharmacy_zip: "",
         pharmacy_phone: "",
+      });
+      
+      console.log('[PatientIntakeForm] Form reset complete. Current form values:', {
+        date_of_birth: form.getValues('date_of_birth'),
+        address: form.getValues('address'),
+        city: form.getValues('city'),
+        state: form.getValues('state'),
+        zip_code: form.getValues('zip_code'),
       });
     }
   }, [patientAccount, form]);
@@ -1010,6 +1029,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             </CardHeader>
             <CardContent className="space-y-4">
               <GoogleAddressAutocomplete
+                key={`address-${patientAccount?.id}-${patientAccount?.address || 'empty'}`}
                 label="Street Address *"
                 value={{
                   street: form.watch("address"),
