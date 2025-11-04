@@ -216,7 +216,8 @@ export const MessagesView = () => {
         }
         
         // For other roles (practices, pharmacies): show support tickets and order issues
-        // Fetch support tickets created by user
+        // Fetch support tickets created by user or by practice owner if staff
+        const createdByFilter = (effectiveRole === 'staff' && effectivePracticeId) ? effectivePracticeId : effectiveUserId;
         let supportQuery = supabase
           .from("message_threads")
           .select(`
@@ -225,7 +226,7 @@ export const MessagesView = () => {
             orders(id, status, created_at, total_amount)
           `)
           .eq("thread_type", "support")
-          .eq("created_by", effectiveUserId)
+          .eq("created_by", createdByFilter)
           .order("updated_at", { ascending: false });
 
         // Fetch order issues where user is a participant

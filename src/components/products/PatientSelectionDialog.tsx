@@ -229,9 +229,9 @@ export const PatientSelectionDialog = ({
     else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length === 1) {
       setSelectedProviderId(providers[0].id);
     }
-    // For doctors/staff with multiple providers: don't auto-select, let them choose
-    else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length > 1 && !selectedProviderId) {
-      setSelectedProviderId(null);
+    // For doctors and staff: if multiple providers, preselect first to reduce friction (user can change)
+    else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length > 0 && !selectedProviderId) {
+      setSelectedProviderId(providers[0].id);
     }
   }, [open, providers, effectiveRole, effectiveUserId]);
 
