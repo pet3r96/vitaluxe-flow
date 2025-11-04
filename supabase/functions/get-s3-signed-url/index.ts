@@ -208,17 +208,43 @@ serve(async (req) => {
           storagePath: normalizedPath
         });
 
-        const { data: patientAccount, error: patientError } = await supabase
+        // CRITICAL: Patient can have multiple patient_accounts (one per practice)
+        // Must match by BOTH user_id AND the document's practice_id
+        let patientAccount = null;
+        let patientError = null;
+
+        // Step 1: Try practice-scoped lookup (correct for multi-practice patients)
+        const { data: patientAccountScoped, error: scopedErr } = await supabase
           .from('patient_accounts')
           .select('id')
           .eq('user_id', effectiveUserId)
+          .eq('practice_id', providerDoc.practice_id)  // ✅ Match document's practice
           .maybeSingle();
 
-        console.log('[get-s3-signed-url] 👤 Patient account lookup:', {
-          found: !!patientAccount,
-          patientId: patientAccount?.id,
-          error: patientError?.message
-        });
+        if (patientAccountScoped) {
+          patientAccount = patientAccountScoped;
+          console.log('[get-s3-signed-url] 👤 Patient account resolved (practice-scoped):', {
+            userId: effectiveUserId,
+            practiceId: providerDoc.practice_id,
+            patientAccountId: patientAccount.id
+          });
+        } else {
+          // Step 2: Fallback for single-practice patients (backward compatibility)
+          const { data: patientAccountByUser, error: byUserErr } = await supabase
+            .from('patient_accounts')
+            .select('id')
+            .eq('user_id', effectiveUserId)
+            .maybeSingle();
+
+          patientAccount = patientAccountByUser;
+          patientError = scopedErr || byUserErr;
+          
+          console.log('[get-s3-signed-url] 👤 Patient account resolved (fallback):', {
+            userId: effectiveUserId,
+            patientAccountId: patientAccount?.id,
+            usedFallback: true
+          });
+        }
 
         if (!patientAccount) {
           authResult = { allowed: false, reason: 'patient account not found' };

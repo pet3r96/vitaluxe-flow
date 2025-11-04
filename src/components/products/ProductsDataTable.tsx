@@ -217,11 +217,28 @@ export const ProductsDataTable = () => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
+      // First, resolve practice ID for correct pricing lookup
+      let practiceIdForPricing = effectiveUserId;  // Default to logged-in user
+      
+      // Check if the selected provider is actually a provider
+      const { data: providerRoleCheck } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", providerId)  // ✅ Check selected provider
+        .single();
+
+      if (providerRoleCheck?.role === 'provider') {
+        const resolvedPracticeId = await getPracticeIdFromProviderUserId(providerId);
+        if (resolvedPracticeId) {
+          practiceIdForPricing = resolvedPracticeId;
+        }
+      }
+
       // Determine correct price tier based on practice's rep hierarchy
       const { data: practiceProfile } = await supabase
         .from("profiles")
         .select("linked_topline_id")
-        .eq("id", effectiveUserId)
+        .eq("id", practiceIdForPricing)  // ✅ Use practice ID for providers
         .single();
 
       let correctPrice = productForCart.retail_price || productForCart.base_price;
@@ -267,18 +284,18 @@ export const ProductsDataTable = () => {
       const { data: userRoleData } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", effectiveUserId)
+        .eq("user_id", providerId)  // ✅ Check the selected provider, not logged-in user
         .single();
 
       if (userRoleData?.role === 'provider') {
-        const practiceId = await getPracticeIdFromProviderUserId(effectiveUserId);
+        const practiceId = await getPracticeIdFromProviderUserId(providerId);  // ✅ Use providerId
         if (!practiceId) {
           toast.error("Unable to find practice association. Please contact support.");
           return;
         }
         resolvedDoctorId = practiceId;
         console.debug('[ProductsDataTable] Provider detected - using practice context for orders', { 
-          provider_user_id: effectiveUserId, 
+          provider_user_id: providerId,  // ✅ Log correct provider ID
           practice_id: practiceId 
         });
       }
