@@ -116,37 +116,23 @@ const Dashboard = () => {
           count = 0; // No pharmacy found for this user
         }
       } else if (effectiveRole === "staff") {
-        // Get user's practice via providers table
-        const { data: staffProvider } = await supabase
-          .from("providers")
+        // Get user's practice via practice_staff table
+        const { data: staffData } = await supabase
+          .from("practice_staff")
           .select("practice_id")
           .eq("user_id", effectiveUserId)
+          .eq("active", true)
           .maybeSingle();
         
-        if (staffProvider?.practice_id) {
-          // Get all provider IDs in this practice
-          const { data: practiceProviders } = await supabase
-            .from("providers")
-            .select("id")
-            .eq("practice_id", staffProvider.practice_id);
-          
-          const providerIds = practiceProviders?.map(p => p.id) || [];
-          
-          if (providerIds.length > 0) {
-            // Count orders with order_lines from these providers
-            const { data: orderLines } = await supabase
-              .from("order_lines")
-              .select(`
-                order_id,
-                orders!inner(payment_status, status)
-              `)
-              .in("provider_id", providerIds)
-              .neq("orders.payment_status", "payment_failed")
-              .neq("orders.status", "cancelled");
-            
-            const uniqueOrderIds = [...new Set(orderLines?.map(ol => ol.order_id) || [])];
-            count = uniqueOrderIds.length;
-          }
+        if (staffData?.practice_id) {
+          // Count all orders for this practice (same as doctor would see)
+          const result: any = await (supabase as any)
+            .from("orders")
+            .select("*", { count: "exact", head: true })
+            .neq("status", "cancelled")
+            .neq("payment_status", "payment_failed")
+            .eq("doctor_id", staffData.practice_id);
+          count = result.count || 0;
         }
       } else if (effectiveRole === "admin") {
         // Admin can see all orders
@@ -336,6 +322,25 @@ const Dashboard = () => {
           return total;
         }
         return 0;
+      } else if (effectiveRole === "staff") {
+        // Get user's practice via practice_staff table
+        const { data: staffData } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", effectiveUserId)
+          .eq("active", true)
+          .maybeSingle();
+        
+        if (staffData?.practice_id) {
+          const result: any = await (supabase as any)
+            .from("orders")
+            .select("total_amount")
+            .neq("status", "cancelled")
+            .neq("payment_status", "payment_failed")
+            .eq("doctor_id", staffData.practice_id)
+            .eq("status", "pending");
+          data = result.data;
+        }
       } else {
         const result: any = await (supabase as any)
           .from("orders")
@@ -422,6 +427,25 @@ const Dashboard = () => {
           return total;
         }
         return 0;
+      } else if (effectiveRole === "staff") {
+        // Get user's practice via practice_staff table
+        const { data: staffData } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", effectiveUserId)
+          .eq("active", true)
+          .maybeSingle();
+        
+        if (staffData?.practice_id) {
+          const result: any = await (supabase as any)
+            .from("orders")
+            .select("total_amount")
+            .neq("status", "cancelled")
+            .neq("payment_status", "payment_failed")
+            .eq("doctor_id", staffData.practice_id)
+            .eq("payment_status", "paid");
+          data = result.data;
+        }
       } else {
         const result: any = await (supabase as any)
           .from("orders")
