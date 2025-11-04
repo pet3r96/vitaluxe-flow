@@ -509,7 +509,7 @@ export default function PatientDetail() {
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-6">
           {!patient.intake_completed_at && (
             <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
               <CardContent className="pt-6">
@@ -555,11 +555,13 @@ export default function PatientDetail() {
             </Button>
           </div>
           
-          <PatientEngagementSummaryCard
-            patientAccountId={actualPatientId!}
-            practiceId={practiceId}
-            onNavigate={setActiveTab}
-          />
+          <div className="mt-6">
+            <PatientEngagementSummaryCard
+              patientAccountId={actualPatientId!}
+              practiceId={practiceId}
+              onNavigate={setActiveTab}
+            />
+          </div>
           
           <MedicalVaultSummaryCard 
             patientAccountId={actualPatientId!} 

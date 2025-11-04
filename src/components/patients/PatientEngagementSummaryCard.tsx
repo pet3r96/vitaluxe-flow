@@ -44,9 +44,7 @@ export function PatientEngagementSummaryCard({
         supabase
           .from("patient_follow_ups")
           .select("id", { count: "exact", head: true })
-          .eq("patient_id", patientAccountId)
-          .neq("status", "completed")
-          .neq("status", "cancelled"),
+          .eq("patient_id", patientAccountId),
         supabase.rpc("get_patient_unified_documents", { p_patient_id: patientAccountId }),
       ]);
 
