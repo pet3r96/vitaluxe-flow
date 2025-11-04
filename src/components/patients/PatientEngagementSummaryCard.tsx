@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,105 @@ export function PatientEngagementSummaryCard({
   practiceId,
   onNavigate,
 }: PatientEngagementSummaryCardProps) {
+  const queryClient = useQueryClient();
+  const queryKey = ["patient-overview-counts", patientAccountId, practiceId];
+
+  // Set up real-time subscriptions for all relevant tables
+  useEffect(() => {
+    if (!patientAccountId) return;
+
+    const channels = [
+      supabase
+        .channel('engagement-patient-notes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'patient_notes',
+            filter: `patient_account_id=eq.${patientAccountId}`,
+          },
+          () => {
+            console.log('[PatientEngagement] Notes changed, invalidating...');
+            queryClient.invalidateQueries({ queryKey });
+          }
+        )
+        .subscribe(),
+      
+      supabase
+        .channel('engagement-treatment-plans')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'treatment_plans',
+            filter: `patient_account_id=eq.${patientAccountId}`,
+          },
+          () => {
+            console.log('[PatientEngagement] Treatment plans changed, invalidating...');
+            queryClient.invalidateQueries({ queryKey });
+          }
+        )
+        .subscribe(),
+      
+      supabase
+        .channel('engagement-appointments')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'patient_appointments',
+            filter: `patient_id=eq.${patientAccountId}`,
+          },
+          () => {
+            console.log('[PatientEngagement] Appointments changed, invalidating...');
+            queryClient.invalidateQueries({ queryKey });
+          }
+        )
+        .subscribe(),
+      
+      supabase
+        .channel('engagement-follow-ups')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'patient_follow_ups',
+            filter: `patient_id=eq.${patientAccountId}`,
+          },
+          () => {
+            console.log('[PatientEngagement] Follow-ups changed, invalidating...');
+            queryClient.invalidateQueries({ queryKey });
+          }
+        )
+        .subscribe(),
+      
+      supabase
+        .channel('engagement-documents')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'patient_documents',
+            filter: `patient_account_id=eq.${patientAccountId}`,
+          },
+          () => {
+            console.log('[PatientEngagement] Documents changed, invalidating...');
+            queryClient.invalidateQueries({ queryKey });
+          }
+        )
+        .subscribe(),
+    ];
+
+    return () => {
+      channels.forEach(channel => supabase.removeChannel(channel));
+    };
+  }, [patientAccountId, practiceId, queryClient, queryKey]);
+
   const { data: counts, isLoading } = useQuery({
     queryKey: ["patient-overview-counts", patientAccountId, practiceId],
     queryFn: async () => {
