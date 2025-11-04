@@ -335,19 +335,45 @@ export const ProductsDataTable = () => {
       }
 
       if (shipToPractice) {
-        console.debug('[ProductsDataTable] Practice order - fetching practice shipping address', { effectiveUserId });
+        console.debug('[ProductsDataTable] Practice order - fetching practice shipping address', { 
+          resolvedDoctorId,
+          effectiveUserId,
+          providerId
+        });
         
-        // Get practice's shipping address
-        const { data: practiceProfile } = await supabase
+        // Get practice's shipping address using the resolved doctor ID
+        const { data: practiceProfile, error: practiceProfileError } = await supabase
           .from("profiles")
-          .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
+          .select("id, name, shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
           .eq("id", resolvedDoctorId)
-          .single();
+          .maybeSingle();
+
+        if (practiceProfileError) {
+          console.error('[ProductsDataTable] ❌ Error fetching practice profile:', practiceProfileError);
+          toast.error("Unable to fetch practice information. Please try again.");
+          return;
+        }
+
+        if (!practiceProfile) {
+          console.error('[ProductsDataTable] ❌ No practice profile found for ID:', resolvedDoctorId);
+          toast.error("Practice profile not found. Please ensure your practice is properly set up.");
+          return;
+        }
 
         // Use direct state field from Google Address (no parsing needed)
         const destinationState = practiceProfile?.shipping_address_state || '';
         
-        console.debug('[ProductsDataTable] Practice shipping state resolved', { destinationState });
+        console.debug('[ProductsDataTable] Practice shipping state resolved', { 
+          practiceId: practiceProfile.id,
+          practiceName: practiceProfile.name,
+          destinationState,
+          fullShippingAddress: {
+            street: practiceProfile.shipping_address_street,
+            city: practiceProfile.shipping_address_city,
+            state: practiceProfile.shipping_address_state,
+            zip: practiceProfile.shipping_address_zip
+          }
+        });
 
         if (!isValidStateCode(destinationState)) {
           toast.error(

@@ -251,7 +251,7 @@ export const PatientSelectionDialog = ({
   });
 
   // Fetch practice details for prescription writer
-  const { data: practiceData } = useQuery({
+  const { data: practiceData, isLoading: isPracticeDataLoading } = useQuery({
     queryKey: ["practice-details", finalPracticeId],
     queryFn: async () => {
       if (!finalPracticeId) {
@@ -263,7 +263,9 @@ export const PatientSelectionDialog = ({
       const { data, error } = await supabase
         .from("profiles")
         .select(`
+          id,
           name, 
+          full_name,
           address_formatted, 
           address_street, 
           address_city, 
@@ -276,17 +278,28 @@ export const PatientSelectionDialog = ({
           shipping_address_zip
         `)
         .eq("id", finalPracticeId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('[PatientSelectionDialog] ❌ Error fetching practice data:', error);
-        throw error;
+        return null;
       }
       
-      console.log('[PatientSelectionDialog] ✅ Practice data fetched:', data);
+      if (!data) {
+        console.warn('[PatientSelectionDialog] ⚠️ No practice profile found for ID:', finalPracticeId);
+        return null;
+      }
+      
+      console.log('[PatientSelectionDialog] ✅ Practice data fetched:', {
+        practiceId: data.id,
+        practiceName: data.name || data.full_name,
+        hasAddress: !!data.address_state,
+        hasShippingAddress: !!data.shipping_address_state
+      });
       return data;
     },
-    enabled: !!finalPracticeId && open
+    enabled: !!finalPracticeId && open,
+    staleTime: 5 * 60 * 1000
   });
 
   useEffect(() => {
