@@ -248,7 +248,6 @@ export const menus: MenuConfig = {
     {
       title: "Settings",
       items: [
-        { label: "Settings", href: "/settings", icon: Settings },
         { label: "Sign Out", href: "/auth", icon: LogOut },
       ],
     },
