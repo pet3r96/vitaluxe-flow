@@ -120,6 +120,37 @@ serve(async (req) => {
         
         console.log(`Starting cascade deletion for user ${userId}`);
 
+        // STEP 0: Check if this is a PATIENT user (has patient_accounts with user_id)
+        const { data: patientAccount } = await supabaseAdmin
+          .from('patient_accounts')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (patientAccount) {
+          console.log(`🩺 Detected PATIENT account: ${targetEmail}`);
+          
+          // Delete patient-specific medical vault data
+          await supabaseAdmin.from('patient_medications').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_conditions').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_allergies').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_vitals').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_immunizations').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_surgeries').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_pharmacies').delete().eq('patient_id', patientAccount.id);
+          await supabaseAdmin.from('patient_emergency_contacts').delete().eq('patient_account_id', patientAccount.id);
+          await supabaseAdmin.from('patient_documents').delete().eq('patient_id', patientAccount.id);
+          
+          // Delete patient appointments
+          await supabaseAdmin.from('patient_appointments').delete().eq('patient_id', patientAccount.id);
+          
+          // Delete the patient_accounts record itself
+          await supabaseAdmin.from('patient_accounts').delete().eq('id', patientAccount.id);
+          
+          cleanupDetails.patient_account_deleted = true;
+          console.log(`✓ Deleted patient account and medical vault data`);
+        }
+
         // STEP 1: Delete medical vault data (for patient_accounts linked to this practice)
         const { data: patientAccounts } = await supabaseAdmin
           .from('patient_accounts')
