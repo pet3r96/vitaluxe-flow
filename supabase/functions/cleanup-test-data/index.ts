@@ -141,8 +141,8 @@ serve(async (req) => {
           await supabaseAdmin.from('patient_emergency_contacts').delete().eq('patient_account_id', patientAccount.id);
           await supabaseAdmin.from('patient_documents').delete().eq('patient_account_id', patientAccount.id);
           
-          // Delete patient appointments
-          await supabaseAdmin.from('patient_appointments').delete().eq('patient_account_id', patientAccount.id);
+          // Delete patient appointments (uses patient_id, not patient_account_id)
+          await supabaseAdmin.from('patient_appointments').delete().eq('patient_id', patientAccount.id);
           
           // Delete the patient_accounts record itself
           await supabaseAdmin.from('patient_accounts').delete().eq('id', patientAccount.id);
