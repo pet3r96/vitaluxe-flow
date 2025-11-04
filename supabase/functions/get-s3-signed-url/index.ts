@@ -284,7 +284,7 @@ serve(async (req) => {
           }
           
           // Use provider document's file path
-          normalizedPath = providerDoc.file_path;
+          normalizedFilePath = providerDoc.file_path;
           normalizedBucket = providerDoc.bucket || 'patient-documents';
         }
         

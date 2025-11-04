@@ -217,8 +217,26 @@ export const ProductsDataTable = () => {
     if (!effectiveUserId || !productForCart) return;
 
     try {
-      // Determine doctor/practice ID (provider pass-through already handled in AuthContext)
-      let resolvedDoctorId = effectiveUserId; // For providers, this is already their practice ID
+      // Resolve practice context for providers and staff
+      let resolvedDoctorId = effectiveUserId;
+      
+      // For providers: resolve practice ID from their provider record
+      if (effectiveRole === 'provider' && effectiveUserId) {
+        try {
+          const { data: providerData } = await supabase
+            .from('providers')
+            .select('practice_id')
+            .eq('user_id', effectiveUserId)
+            .single();
+          
+          if (providerData?.practice_id) {
+            resolvedDoctorId = providerData.practice_id;
+            console.log('[ProductsDataTable] ✅ Resolved provider practice:', resolvedDoctorId);
+          }
+        } catch (error) {
+          console.error('[ProductsDataTable] ❌ Error resolving provider practice:', error);
+        }
+      }
       
       // For staff: use effective practice ID
       if (effectiveRole === 'staff' && effectivePracticeId) {
@@ -317,45 +335,19 @@ export const ProductsDataTable = () => {
       }
 
       if (shipToPractice) {
-        console.debug('[ProductsDataTable] Practice order - fetching practice shipping address', { 
-          resolvedDoctorId,
-          effectiveUserId,
-          providerId
-        });
+        console.debug('[ProductsDataTable] Practice order - fetching practice shipping address', { effectiveUserId });
         
-        // Get practice's shipping address using the resolved doctor ID
-        const { data: practiceProfile, error: practiceProfileError } = await supabase
+        // Get practice's shipping address
+        const { data: practiceProfile } = await supabase
           .from("profiles")
-          .select("id, name, shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
+          .select("shipping_address_formatted, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip")
           .eq("id", resolvedDoctorId)
-          .maybeSingle();
-
-        if (practiceProfileError) {
-          console.error('[ProductsDataTable] ❌ Error fetching practice profile:', practiceProfileError);
-          toast.error("Unable to fetch practice information. Please try again.");
-          return;
-        }
-
-        if (!practiceProfile) {
-          console.error('[ProductsDataTable] ❌ No practice profile found for ID:', resolvedDoctorId);
-          toast.error("Practice profile not found. Please ensure your practice is properly set up.");
-          return;
-        }
+          .single();
 
         // Use direct state field from Google Address (no parsing needed)
         const destinationState = practiceProfile?.shipping_address_state || '';
         
-        console.debug('[ProductsDataTable] Practice shipping state resolved', { 
-          practiceId: practiceProfile.id,
-          practiceName: practiceProfile.name,
-          destinationState,
-          fullShippingAddress: {
-            street: practiceProfile.shipping_address_street,
-            city: practiceProfile.shipping_address_city,
-            state: practiceProfile.shipping_address_state,
-            zip: practiceProfile.shipping_address_zip
-          }
-        });
+        console.debug('[ProductsDataTable] Practice shipping state resolved', { destinationState });
 
         if (!isValidStateCode(destinationState)) {
           toast.error(

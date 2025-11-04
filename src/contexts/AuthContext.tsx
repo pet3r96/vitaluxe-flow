@@ -23,7 +23,6 @@ interface AuthContextType {
   effectiveRole: string | null;
   effectiveUserId: string | null;
   effectivePracticeId: string | null;
-  originalUserId: string | null;
   canImpersonate: boolean;
   isProviderAccount: boolean;
   isStaffAccount: boolean;
@@ -70,7 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isProviderAccount, setIsProviderAccount] = useState(false);
   const [isStaffAccount, setIsStaffAccount] = useState(false);
   const [effectivePracticeId, setEffectivePracticeId] = useState<string | null>(null);
-  const [originalUserId, setOriginalUserId] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [passwordStatusChecked, setPasswordStatusChecked] = useState(false);
@@ -103,10 +101,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const actualRole = userRole;
   const isImpersonating = impersonatedRole !== null;
-  
-  // Handle provider pass-through: providers act as their practice
-  const effectiveRole = impersonatedRole || (userRole === 'provider' && originalUserId ? 'doctor' : userRole);
-  const effectiveUserId = impersonatedUserId || (userRole === 'provider' && practiceParentId ? practiceParentId : user?.id) || null;
+  const effectiveRole = impersonatedRole || userRole;
+  const effectiveUserId = impersonatedUserId || user?.id || null;
   const canImpersonate = userRole === 'admin' && canImpersonateDb;
 
   // Function to fetch 2FA enforcement setting
@@ -1024,25 +1020,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logger.info('User role fetched (parallel)', { role });
       setUserRole(role);
 
-      // Process provider data with pass-through (only if provider role)
+      // Process provider data (only if provider role)
       if (role === 'provider' && providerResult.status === 'fulfilled') {
         const practiceId = providerResult.value.data?.practice_id;
         if (practiceId) {
-          console.log('[AuthContext] 🔄 Provider pass-through activated:', {
-            originalProviderId: userId,
-            actingAsPracticeId: practiceId
-          });
-          
-          // PASS-THROUGH: Store practice ID and original user ID
-          // The computed effectiveRole and effectiveUserId will handle the pass-through
           setPracticeParentId(practiceId);
-          setOriginalUserId(userId); // Preserve actual provider ID for audit
-          setEffectivePracticeId(practiceId);
-          
-          logger.info('Provider pass-through activated', {
-            providerId: userId,
-            actingAsPracticeId: practiceId
-          });
         }
       }
 
@@ -1674,7 +1656,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       effectiveRole,
       effectiveUserId,
       effectivePracticeId,
-      originalUserId,
       canImpersonate,
       isProviderAccount,
       isStaffAccount,
