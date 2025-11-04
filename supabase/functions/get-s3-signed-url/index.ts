@@ -282,10 +282,6 @@ serve(async (req) => {
             });
             authResult = { allowed: true, reason: 'patient has assignment' };
           }
-          
-          // Use provider document's file path
-          normalizedFilePath = providerDoc.file_path;
-          normalizedBucket = providerDoc.bucket || 'patient-documents';
         }
         
         console.log('[get-s3-signed-url] ✅ Patient authorization result:', authResult);

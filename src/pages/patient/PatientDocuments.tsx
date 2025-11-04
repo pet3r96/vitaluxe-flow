@@ -382,8 +382,8 @@ export default function PatientDocuments() {
       
       const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
         body: {
-          bucketName: bucketName,
-          filePath: doc.storage_path,
+          bucket: bucketName,
+          path: doc.storage_path,
           expiresIn: 60
         }
       });
