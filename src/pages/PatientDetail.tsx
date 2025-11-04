@@ -20,6 +20,7 @@ import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointment
 import { PatientAppointmentsList } from "@/components/patients/PatientAppointmentsList";
 import { PatientPortalStatusBadge } from "@/components/patients/PatientPortalStatusBadge";
 import { PatientNotesSection } from "@/components/patients/PatientNotesSection";
+import { TreatmentPlansTab } from "@/components/treatment-plans/TreatmentPlansTab";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
 import { PDFViewer } from "@/components/documents/PDFViewer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -594,7 +595,7 @@ export default function PatientDetail() {
         <TabsContent value="treatment-plans">
           <TreatmentPlansTab 
             patientAccountId={actualPatientId!} 
-            providers={providers?.map(p => ({ id: p.id, name: p.name })) || []}
+            providers={providers?.map((p: any) => ({ id: p.id, name: p.name })) || []}
           />
         </TabsContent>
 
