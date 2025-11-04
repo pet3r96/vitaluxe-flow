@@ -496,6 +496,7 @@ export default function PatientDetail() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="medical-vault">Medical Vault</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="treatment-plans">Treatment Plans</TabsTrigger>
           <TabsTrigger value="follow-ups">Follow-Ups</TabsTrigger>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -588,6 +589,13 @@ export default function PatientDetail() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="treatment-plans">
+          <TreatmentPlansTab 
+            patientAccountId={actualPatientId!} 
+            providers={providers?.map(p => ({ id: p.id, name: p.name })) || []}
+          />
         </TabsContent>
 
         <TabsContent value="documents">
