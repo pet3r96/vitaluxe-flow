@@ -188,20 +188,20 @@ Deno.serve(async (req) => {
     const practiceIds = [...new Set(providersRows.map(p => p.practice_id))];
 
     // Defensive logging: Verify caller's practice_staff membership for staff users
-    if (userRole === 'staff' && practiceId) {
+    if (roles.includes('staff') && practiceId) {
       const { data: staffMembership } = await supabase
         .from('practice_staff')
         .select('id, active')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .eq('practice_id', practiceId)
         .maybeSingle();
       
       if (!staffMembership) {
-        console.error(`❌ CRITICAL: Staff user ${userId} has no practice_staff record for practice ${practiceId}!`);
+        console.error(`❌ CRITICAL: Staff user ${user.id} has no practice_staff record for practice ${practiceId}!`);
       } else if (!staffMembership.active) {
-        console.warn(`⚠️ Staff user ${userId} has inactive practice_staff membership for practice ${practiceId}`);
+        console.warn(`⚠️ Staff user ${user.id} has inactive practice_staff membership for practice ${practiceId}`);
       } else {
-        console.log(`✅ Staff user ${userId} has valid practice_staff membership`);
+        console.log(`✅ Staff user ${user.id} has valid practice_staff membership`);
       }
     }
 

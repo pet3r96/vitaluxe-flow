@@ -108,7 +108,7 @@ export const PatientSelectionDialog = ({
       .join(' ');
   };
 
-  // Fetch active providers for practice using backend function to avoid RLS issues
+  // Fetch active providers for practice using backend function with fallback to direct query
   const { data: providers } = useQuery({
     queryKey: ["practice-providers", finalPracticeId],
     queryFn: async () => {
@@ -116,64 +116,89 @@ export const PatientSelectionDialog = ({
         console.log('[PatientSelectionDialog] ⚠️ No practice ID, skipping provider fetch');
         return [];
       }
-      
-      try {
-        console.log('[PatientSelectionDialog] 🔄 Fetching providers for practice:', finalPracticeId);
-        const { data, error } = await supabase.functions.invoke('list-providers', {
-          body: { practice_id: finalPracticeId }
-        });
-        
-        if (error) {
-          console.error('[PatientSelectionDialog] ❌ Error fetching providers:', error);
-          toast.error(`Failed to load providers: ${error.message}`);
-          throw error;
+
+      // Try Edge function first (bypasses RLS complexities and returns rich profiles)
+      const fetchViaEdge = async () => {
+        try {
+          console.log('[PatientSelectionDialog] 🔄 Fetching providers via edge for practice:', finalPracticeId);
+          const { data, error } = await supabase.functions.invoke('list-providers', {
+            body: { practice_id: finalPracticeId }
+          });
+          if (error) throw error;
+          const rows = data?.providers || [];
+          console.log('[PatientSelectionDialog] 🔍 Providers from edge:', rows);
+          return rows.map((p: any) => {
+            let displayName = p.profiles?.prescriber_name?.trim() || '';
+            if (!displayName) displayName = p.profiles?.full_name?.trim() || '';
+            if (!displayName && p.profiles?.name && !p.profiles.name.includes('@')) displayName = p.profiles.name.trim();
+            if (!displayName && p.profiles?.name?.includes('@')) displayName = deriveNameFromEmail(p.profiles.name);
+            if (!displayName) displayName = 'Provider';
+            return {
+              id: p.id,
+              user_id: p.user_id,
+              prescriber_name: displayName,
+              specialty: '',
+              npi: p.profiles?.npi || '',
+              dea: p.profiles?.dea || '',
+              profiles: p.profiles,
+            };
+          });
+        } catch (err: any) {
+          console.error('[PatientSelectionDialog] ❌ Edge providers failed:', err);
+          return null;
         }
-        
-        if (!data?.providers || data.providers.length === 0) {
-          console.warn('[PatientSelectionDialog] ⚠️ No providers returned from list-providers');
-          toast.error("No providers found for your practice. Please contact support.");
+      };
+
+      // Fallback: direct DB query (works for doctors/practice; used if edge fails)
+      const fetchViaDirect = async () => {
+        try {
+          console.log('[PatientSelectionDialog] 🔁 Fallback: fetching providers directly for practice:', finalPracticeId);
+          const { data, error } = await supabase
+            .from('providers')
+            .select(`
+              id,
+              user_id,
+              practice_id,
+              active,
+              profiles:profiles!providers_user_id_fkey(
+                id, name, full_name, prescriber_name, npi, dea
+              )
+            `)
+            .eq('practice_id', finalPracticeId)
+            .eq('active', true)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          const rows = data || [];
+          return rows.map((p: any) => {
+            let displayName = p.profiles?.prescriber_name?.trim() || '';
+            if (!displayName) displayName = p.profiles?.full_name?.trim() || '';
+            if (!displayName && p.profiles?.name && !p.profiles.name.includes('@')) displayName = p.profiles.name.trim();
+            if (!displayName && p.profiles?.name?.includes('@')) displayName = deriveNameFromEmail(p.profiles.name);
+            if (!displayName) displayName = 'Provider';
+            return {
+              id: p.id,
+              user_id: p.user_id,
+              prescriber_name: displayName,
+              specialty: '',
+              npi: p.profiles?.npi || '',
+              dea: p.profiles?.dea || '',
+              profiles: p.profiles,
+            };
+          });
+        } catch (err) {
+          console.error('[PatientSelectionDialog] ❌ Direct providers failed:', err);
+          return null;
         }
-        
-        console.log('[PatientSelectionDialog] 🔍 Raw providers from list-providers:', data?.providers);
-        
-        return (data?.providers || []).map((p: any) => {
-          // Priority 1: prescriber_name (if not empty)
-          let displayName = p.profiles?.prescriber_name?.trim();
-          
-          // Priority 2: full_name (if not empty)
-          if (!displayName) {
-            displayName = p.profiles?.full_name?.trim();
-          }
-          
-          // Priority 3: name field (but only if it's NOT an email)
-          if (!displayName && p.profiles?.name && !p.profiles.name.includes('@')) {
-            displayName = p.profiles.name.trim();
-          }
-          
-          // Priority 4: Derive from email (last resort)
-          if (!displayName && p.profiles?.name?.includes('@')) {
-            displayName = deriveNameFromEmail(p.profiles.name);
-          }
-          
-          // Final fallback
-          if (!displayName) {
-            displayName = 'Provider';
-          }
-          
-          return {
-            id: p.id,
-            user_id: p.user_id,
-            prescriber_name: displayName,
-            specialty: '',
-            npi: p.profiles?.npi || '',
-            dea: p.profiles?.dea || '',
-            profiles: p.profiles
-          };
-        });
-      } catch (error) {
-        console.error('Error fetching providers:', error);
-        return [];
-      }
+      };
+
+      const edgeList = await fetchViaEdge();
+      if (edgeList && edgeList.length > 0) return edgeList;
+
+      const directList = await fetchViaDirect();
+      if (directList && directList.length > 0) return directList;
+
+      toast.error('No providers found for your practice.');
+      return [];
     },
     enabled: open && !!finalPracticeId
   });
