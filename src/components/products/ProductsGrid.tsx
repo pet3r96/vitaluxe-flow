@@ -434,7 +434,7 @@ export const ProductsGrid = () => {
       const { data: userRoleData } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", providerId)  // ✅ Check the selected provider, not logged-in user
+        .eq("user_id", effectiveUserId)  // ✅ Check the logged-in user to detect staff role
         .single();
 
       if (userRoleData?.role === 'provider') {
