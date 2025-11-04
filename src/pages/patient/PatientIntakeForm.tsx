@@ -183,6 +183,20 @@ export default function PatientIntakeForm() {
     enabled: !!patientAccount?.id,
   });
 
+  const { data: existingImmunizations } = useQuery({
+    queryKey: ['existing-immunizations', patientAccount?.id],
+    queryFn: async () => {
+      if (!patientAccount?.id) return [];
+      const { data, error } = await supabase
+        .from('patient_immunizations')
+        .select('*')
+        .eq('patient_account_id', patientAccount.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!patientAccount?.id,
+  });
+
   const form = useForm<IntakeFormData>({
     resolver: zodResolver(intakeSchema),
     defaultValues: {
@@ -286,6 +300,17 @@ export default function PatientIntakeForm() {
     }
   }, [existingSurgeries]);
 
+  useEffect(() => {
+    if (existingImmunizations && existingImmunizations.length > 0) {
+      const immunizationList = existingImmunizations.map(imm => ({
+        vaccine_name: imm.vaccine_name || '',
+        date_administered: imm.date_administered || '',
+      }));
+      setImmunizations(immunizationList);
+      setHasNoImmunizations(false);
+    }
+  }, [existingImmunizations]);
+
   const handleAddressChange = (value: AddressValue) => {
     form.setValue("address", value.street || "");
     form.setValue("city", value.city || "");
@@ -363,12 +388,28 @@ export default function PatientIntakeForm() {
           const [feet, inches] = data.height.split('-').map(Number);
           heightInches = (feet * 12) + inches;
         }
-        await supabase.from('patient_vitals').upsert({
-          patient_account_id: patientAccount.id,
-          height: heightInches,
-          weight: data.weight ? parseFloat(data.weight) : null,
-          date_recorded: new Date().toISOString(),
-        });
+        
+        // Insert height record with vital_type
+        if (heightInches) {
+          await supabase.from('patient_vitals').insert({
+            patient_account_id: patientAccount.id,
+            vital_type: 'height',
+            height: heightInches,
+            height_unit: 'in',
+            date_recorded: new Date().toISOString(),
+          });
+        }
+        
+        // Insert weight record with vital_type
+        if (data.weight) {
+          await supabase.from('patient_vitals').insert({
+            patient_account_id: patientAccount.id,
+            vital_type: 'weight',
+            weight: parseFloat(data.weight),
+            weight_unit: 'lbs',
+            date_recorded: new Date().toISOString(),
+          });
+        }
       }
 
       // Update medical vault with blood type
@@ -450,8 +491,39 @@ export default function PatientIntakeForm() {
         }
       }
 
-      // Insert allergies (only if not marked as "none")
-      if (allergies.length > 0 && !hasNoAllergies) {
+      // Insert allergies or NKA record
+      if (hasNoAllergies) {
+        // Insert NKA (No Known Allergies) record
+        const { error: nkaError } = await supabase
+          .from('patient_allergies')
+          .insert({
+            patient_account_id: patientAccount.id,
+            nka: true,
+            is_active: true,
+            added_by_user_id: effectiveUserId,
+            added_by_role: 'patient',
+            date_recorded: new Date().toISOString(),
+          });
+        
+        if (nkaError) {
+          console.error('NKA insert error:', nkaError);
+          throw new Error(`Failed to save NKA status: ${nkaError.message}`);
+        }
+        
+        // Log NKA creation
+        await logMedicalVaultChange({
+          patientAccountId: patientAccount.id,
+          actionType: 'created',
+          entityType: 'allergy',
+          entityName: 'No Known Allergies (NKA)',
+          changedByUserId: effectiveUserId,
+          changedByRole: 'patient',
+          newData: { nka: true },
+          changeSummary: `Patient indicated: No Known Allergies (NKA)`,
+        });
+        
+        console.log(`✅ Saved NKA status`);
+      } else if (allergies.length > 0) {
         const incompleteCount = allergies.filter(a => !a.name || !a.reaction).length;
         if (incompleteCount > 0) {
           console.warn(`⚠️ ${incompleteCount} allergy/allergies skipped due to missing required fields`);
@@ -748,7 +820,7 @@ export default function PatientIntakeForm() {
       });
 
       toast.success("Intake form completed successfully!");
-      navigate('/patient/medical-vault');
+      navigate('/medical-vault');
     } catch (error) {
       console.error('Intake submission error:', error);
       toast.error("Failed to submit intake form. Please try again.");
