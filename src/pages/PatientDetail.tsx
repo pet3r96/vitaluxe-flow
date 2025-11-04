@@ -145,9 +145,8 @@ export default function PatientDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("providers")
-        .select("*")
-        .eq("practice_id", practiceId)
-        .order("name");
+        .select("id, user_id, profiles!inner(full_name, prescriber_name)")
+        .eq("practice_id", practiceId);
       
       if (error) throw error;
       return data;
@@ -595,7 +594,7 @@ export default function PatientDetail() {
         <TabsContent value="treatment-plans">
           <TreatmentPlansTab 
             patientAccountId={actualPatientId!} 
-            providers={providers?.map((p: any) => ({ id: p.id, name: p.name })) || []}
+            providers={providers?.map((p: any) => ({ id: p.id, name: p.profiles?.prescriber_name || p.profiles?.full_name || 'Unknown' })) || []}
           />
         </TabsContent>
 
