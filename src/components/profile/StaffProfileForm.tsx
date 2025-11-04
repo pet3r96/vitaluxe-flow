@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Save, KeyRound } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { phoneSchema } from "@/lib/validators";
+import { SignedAgreementSection } from "./SignedAgreementSection";
 
 const staffFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -271,6 +272,8 @@ export const StaffProfileForm = () => {
           </Button>
         </CardContent>
       </Card>
+
+      <SignedAgreementSection userId={effectiveUserId} />
     </div>
   );
 };

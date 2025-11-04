@@ -15,6 +15,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
 import { validatePhone } from "@/lib/validators";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
+import { SignedAgreementSection } from "@/components/profile/SignedAgreementSection";
 
 export default function PatientProfile() {
   const { effectiveUserId } = useAuth();
@@ -442,6 +443,9 @@ export default function PatientProfile() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Signed Agreement Section */}
+      <SignedAgreementSection userId={effectiveUserId} />
 
       {/* Account Activity Section */}
       <ActivityLogSection />

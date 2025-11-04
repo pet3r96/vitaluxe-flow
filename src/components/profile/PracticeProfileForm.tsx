@@ -33,6 +33,7 @@ import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/go
 import { PhoneInput } from "@/components/ui/phone-input";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
+import { SignedAgreementSection } from "./SignedAgreementSection";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Practice name is required").max(100),
@@ -585,6 +586,8 @@ export const PracticeProfileForm = () => {
         </Button>
       </CardContent>
     </Card>
+    
+    <SignedAgreementSection userId={effectiveUserId} />
     </div>
   );
 };

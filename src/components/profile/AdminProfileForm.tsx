@@ -9,9 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { validatePasswordStrength } from "@/lib/passwordStrength";
+import { SignedAgreementSection } from "./SignedAgreementSection";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AdminProfileForm() {
   const { toast } = useToast();
+  const { effectiveUserId } = useAuth();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   
@@ -292,6 +295,8 @@ export function AdminProfileForm() {
           </div>
         </CardContent>
       </Card>
+
+      <SignedAgreementSection userId={effectiveUserId} />
     </div>
   );
 }

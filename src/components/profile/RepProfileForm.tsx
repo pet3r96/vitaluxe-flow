@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, KeyRound } from "lucide-react";
 import { phoneSchema } from "@/lib/validators";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { SignedAgreementSection } from "./SignedAgreementSection";
 
 const repFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -238,6 +239,8 @@ export function RepProfileForm() {
           </Button>
         </CardContent>
       </Card>
+      
+      <SignedAgreementSection userId={effectiveUserId} />
     </div>
   );
 }
