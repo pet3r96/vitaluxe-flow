@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardList } from "lucide-react";
 import { useTreatmentPlans, useTreatmentPlan, useDeleteTreatmentPlan } from "@/hooks/useTreatmentPlans";
-import { TreatmentPlanCard } from "./TreatmentPlanCard";
 import { CreateTreatmentPlanDialog } from "./CreateTreatmentPlanDialog";
 import { TreatmentPlanDetailsDialog } from "./TreatmentPlanDetailsDialog";
 import { AddPlanUpdateDialog } from "./AddPlanUpdateDialog";
 import { EditTreatmentPlanDialog } from "./EditTreatmentPlanDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TreatmentPlanListItem } from "./TreatmentPlanListItem";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,24 +106,16 @@ export function TreatmentPlansTab({ patientAccountId, providers }: TreatmentPlan
         </div>
       ) : (
         <div className="grid gap-4">
-          {plans.map((plan) => {
-            // Fetch goals and updates for each plan
-            const { data: planData } = useTreatmentPlan(plan.id);
-            
-            return (
-              <TreatmentPlanCard
-                key={plan.id}
-                plan={plan}
-                goals={planData?.goals || []}
-                updateCount={planData?.updates?.length || 0}
-                attachmentCount={planData?.attachments?.length || 0}
-                onViewDetails={() => handleViewDetails(plan.id)}
-                onAddUpdate={() => handleAddUpdate(plan.id)}
-                onEdit={() => handleEdit(plan.id)}
-                onDelete={() => handleDeleteClick(plan.id)}
-              />
-            );
-          })}
+          {plans.map((plan) => (
+            <TreatmentPlanListItem
+              key={plan.id}
+              plan={plan}
+              onViewDetails={() => handleViewDetails(plan.id)}
+              onAddUpdate={() => handleAddUpdate(plan.id)}
+              onEdit={() => handleEdit(plan.id)}
+              onDelete={() => handleDeleteClick(plan.id)}
+            />
+          ))}
         </div>
       )}
 
