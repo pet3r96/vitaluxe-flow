@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
       throw appointmentsError;
     }
 
-    // Fetch provider information separately to get emails
+    // Fetch provider information separately
     const providerIds = [...new Set(appointments?.map(apt => apt.provider_id).filter(Boolean) || [])];
     let providerMap = new Map();
     
@@ -144,6 +144,28 @@ Deno.serve(async (req) => {
         for (const provider of providers) {
           const displayName = `${provider.first_name || ''} ${provider.last_name || ''}`.trim() || 'Provider';
           providerMap.set(provider.id, displayName);
+        }
+      }
+    }
+
+    // Fetch practice information to get addresses
+    const practiceIds = [...new Set(appointments?.map(apt => apt.practice_id).filter(Boolean) || [])];
+    let practiceMap = new Map();
+    
+    if (practiceIds.length > 0) {
+      const { data: practices } = await supabaseClient
+        .from('practices')
+        .select('id, address_line1, address_line2, city, state, zip_code')
+        .in('id', practiceIds);
+      
+      if (practices) {
+        for (const practice of practices) {
+          let address = practice.address_line1 || '';
+          if (practice.address_line2) address += `, ${practice.address_line2}`;
+          if (practice.city) address += `, ${practice.city}`;
+          if (practice.state) address += `, ${practice.state}`;
+          if (practice.zip_code) address += ` ${practice.zip_code}`;
+          practiceMap.set(practice.id, address.trim());
         }
       }
     }
@@ -169,6 +191,9 @@ X-WR-TIMEZONE:America/New_York
       const room = Array.isArray(apt.practice_rooms) ? apt.practice_rooms[0] : apt.practice_rooms;
       const roomName = room?.name || 'No room';
       
+      const practiceAddress = apt.practice_id ? practiceMap.get(apt.practice_id) || '' : '';
+      const location = practiceAddress ? `${roomName}, ${practiceAddress}` : roomName;
+      
       let description = `Type: ${apt.service_type || 'Appointment'}\\nProvider: ${providerName}\\nRoom: ${roomName}`;
       if (apt.notes) {
         description += `\\nNotes: ${escapeICSText(apt.notes)}`;
@@ -180,7 +205,7 @@ DTSTART:${formatDateToICS(apt.start_time)}
 DTEND:${formatDateToICS(apt.end_time)}
 SUMMARY:${escapeICSText(`Patient: ${patientName}`)}
 DESCRIPTION:${description}
-LOCATION:${escapeICSText(roomName)}
+LOCATION:${escapeICSText(location)}
 STATUS:${apt.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
 SEQUENCE:0
 END:VEVENT
