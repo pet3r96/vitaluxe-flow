@@ -48,13 +48,37 @@ Deno.serve(async (req) => {
     
     const practiceTimezone = appointmentSettings?.timezone || 'America/New_York';
     
+    // Helpers for time and timezone-safe comparisons
+    const parseTimeToMinutes = (time: string) => {
+      const parts = time.split(':');
+      const h = parseInt(parts[0] || '0', 10);
+      const m = parseInt(parts[1] || '0', 10);
+      return h * 60 + m;
+    };
+    const minutesToHHMM = (mins: number) => {
+      const h = Math.floor(mins / 60) % 24;
+      const m = mins % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+    const toUTCISOInTZ = (dateYMD: string, timeHM: string, tz: string) => {
+      const [y, mo, d] = dateYMD.split('-').map(Number);
+      const [hh, mm] = timeHM.split(':').map(Number);
+      const utcBase = new Date(Date.UTC(y, (mo - 1), d, hh, mm, 0));
+      const inv = new Date(utcBase.toLocaleString('en-US', { timeZone: tz }));
+      const diff = utcBase.getTime() - inv.getTime();
+      return new Date(utcBase.getTime() + diff).toISOString();
+    };
+
     // Get current time in practice timezone
     const nowInPracticeTime = new Date(new Date().toLocaleString('en-US', { timeZone: practiceTimezone }));
-    
-    // Start searching from today in practice timezone
+    const todayYMD = nowInPracticeTime.toLocaleDateString('en-CA', { timeZone: practiceTimezone });
+    const nowMinutes = nowInPracticeTime.getHours() * 60 + nowInPracticeTime.getMinutes();
+
+    const endOfDayBufferMin = 60; // Last appointment must end at least 60 minutes before closing
+
+    // Start searching from today in practice timezone (midnight)
     const searchStart = new Date(nowInPracticeTime);
     searchStart.setHours(0, 0, 0, 0);
-    
     // Search up to 30 days ahead
     const maxDays = 30;
     
@@ -79,7 +103,7 @@ Deno.serve(async (req) => {
       // Skip if closed or no hours defined
       if (!practiceHours || practiceHours.is_closed) continue;
 
-      // Generate 30-minute time slots
+      // Generate time slots within practice hours
       const startTimeStr = practiceHours.start_time.toString();
       const endTimeStr = practiceHours.end_time.toString();
       const startHour = parseInt(startTimeStr.split(':')[0]);
@@ -90,51 +114,52 @@ Deno.serve(async (req) => {
       
       const startMinutes = startHour * 60 + startMin;
       const endMinutes = endHour * 60 + endMin;
-      
-      for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
+
+      // Determine starting minute for scanning
+      let firstMinute = startMinutes;
+      if (dayOffset === 0) {
+        const nextSlot = Math.ceil((nowMinutes + 1) / 30) * 30; // next 30-min boundary after now
+        firstMinute = Math.max(startMinutes, nextSlot);
+      }
+
+      // Ensure we don't start beyond the latest permissible start (respect buffer and duration)
+      const latestStart = endMinutes - endOfDayBufferMin - duration;
+      if (firstMinute > latestStart) continue;
+
+      const dateStr = new Date(checkDate).toLocaleDateString('en-CA', { timeZone: practiceTimezone }); // YYYY-MM-DD in practice TZ
+
+      for (let minutes = firstMinute; minutes <= latestStart; minutes += 30) {
         const slotHour = Math.floor(minutes / 60);
         const slotMin = minutes % 60;
-        
-        // Calculate end time for this slot
-        const slotEndMinutes = minutes + duration;
-        
-        // Skip if appointment would extend past practice closing time
-        if (slotEndMinutes > endMinutes) continue;
-        
         const timeSlot = `${String(slotHour).padStart(2, '0')}:${String(slotMin).padStart(2, '0')}`;
-        
-        const slotDateTime = new Date(checkDate);
-        slotDateTime.setHours(slotHour, slotMin, 0, 0);
-        
-        // Skip slots in the past for today (compare in practice timezone)
-        if (slotDateTime <= nowInPracticeTime) continue;
-        
-        const endSlotDateTime = new Date(slotDateTime);
-        endSlotDateTime.setMinutes(endSlotDateTime.getMinutes() + duration);
-        
-        // Check if this slot is blocked
+        const slotEndMinutes = minutes + duration;
+        const endTimeHM = minutesToHHMM(slotEndMinutes);
+
+        const startIso = toUTCISOInTZ(dateStr, timeSlot, practiceTimezone);
+        const endIso = toUTCISOInTZ(dateStr, endTimeHM, practiceTimezone);
+
+        // Check if this slot is blocked (overlap)
         const { data: blocked, error: blockedError } = await supabaseClient
           .from('practice_blocked_time')
           .select('id')
           .eq('practice_id', practiceId)
-          .lte('start_time', slotDateTime.toISOString())
-          .gte('end_time', slotDateTime.toISOString())
-          .maybeSingle();
+          .lt('start_time', endIso)
+          .gt('end_time', startIso);
 
         if (blockedError) {
           console.error('Error checking blocked time:', blockedError);
           continue;
         }
-        if (blocked) continue;
+        if (blocked && blocked.length > 0) continue;
         
-        // Check if there's an appointment conflict
+        // Check if there's an appointment conflict (overlap)
         const { data: conflicts, error: conflictError } = await supabaseClient
           .from('patient_appointments')
           .select('id')
           .eq('practice_id', practiceId)
           .not('status', 'in', '(cancelled,no_show)')
-          .lt('start_time', endSlotDateTime.toISOString())
-          .gt('end_time', slotDateTime.toISOString());
+          .lt('start_time', endIso)
+          .gt('end_time', startIso);
 
         if (conflictError) {
           console.error('Error checking conflicts:', conflictError);
@@ -143,7 +168,6 @@ Deno.serve(async (req) => {
         if (conflicts && conflicts.length > 0) continue;
         
         // Found an available slot!
-        const dateStr = checkDate.toISOString().split('T')[0];
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = dayNames[checkDate.getDay()];
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
