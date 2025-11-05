@@ -93,12 +93,6 @@ Deno.serve(async (req) => {
           first_name,
           last_name
         ),
-        providers!patient_appointments_provider_id_fkey (
-          user_id,
-          users!providers_user_id_fkey (
-            email
-          )
-        ),
         practice_rooms (
           name
         )
@@ -136,6 +130,24 @@ Deno.serve(async (req) => {
       throw appointmentsError;
     }
 
+    // Fetch provider information separately to get emails
+    const providerIds = [...new Set(appointments?.map(apt => apt.provider_id).filter(Boolean) || [])];
+    let providerMap = new Map();
+    
+    if (providerIds.length > 0) {
+      const { data: providers } = await supabaseClient
+        .from('providers')
+        .select('id, user_id, first_name, last_name')
+        .in('id', providerIds);
+      
+      if (providers) {
+        for (const provider of providers) {
+          const displayName = `${provider.first_name || ''} ${provider.last_name || ''}`.trim() || 'Provider';
+          providerMap.set(provider.id, displayName);
+        }
+      }
+    }
+
     // Generate iCal content
     let icalContent = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -152,14 +164,12 @@ X-WR-TIMEZONE:America/New_York
         ? `${patient.first_name} ${patient.last_name}`
         : 'Patient';
       
-      const provider = Array.isArray(apt.providers) ? apt.providers[0] : apt.providers;
-      const users = provider?.users ? (Array.isArray(provider.users) ? provider.users[0] : provider.users) : null;
-      const providerEmail = users?.email || 'Provider';
+      const providerName = apt.provider_id ? providerMap.get(apt.provider_id) || 'Provider' : 'Provider';
       
       const room = Array.isArray(apt.practice_rooms) ? apt.practice_rooms[0] : apt.practice_rooms;
       const roomName = room?.name || 'No room';
       
-      let description = `Type: ${apt.service_type || 'Appointment'}\\nProvider: ${providerEmail}\\nRoom: ${roomName}`;
+      let description = `Type: ${apt.service_type || 'Appointment'}\\nProvider: ${providerName}\\nRoom: ${roomName}`;
       if (apt.notes) {
         description += `\\nNotes: ${escapeICSText(apt.notes)}`;
       }
