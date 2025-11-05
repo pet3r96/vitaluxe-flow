@@ -86,6 +86,7 @@ Deno.serve(async (req) => {
         patient_id,
         provider_id,
         room_id,
+        practice_id,
         service_type,
         status,
         notes,
@@ -152,20 +153,31 @@ Deno.serve(async (req) => {
     const practiceIds = [...new Set(appointments?.map(apt => apt.practice_id).filter(Boolean) || [])];
     let practiceMap = new Map();
     
+    console.log(`Found ${practiceIds.length} unique practice IDs to fetch addresses for`);
+    
     if (practiceIds.length > 0) {
-      const { data: practices } = await supabaseClient
+      const { data: practices, error: practiceError } = await supabaseClient
         .from('practices')
         .select('id, address_line1, address_line2, city, state, zip_code')
         .in('id', practiceIds);
       
+      if (practiceError) {
+        console.error('Error fetching practice addresses:', practiceError);
+      }
+      
       if (practices) {
+        console.log(`Successfully fetched ${practices.length} practice addresses`);
         for (const practice of practices) {
-          let address = practice.address_line1 || '';
-          if (practice.address_line2) address += `, ${practice.address_line2}`;
-          if (practice.city) address += `, ${practice.city}`;
-          if (practice.state) address += `, ${practice.state}`;
-          if (practice.zip_code) address += ` ${practice.zip_code}`;
-          practiceMap.set(practice.id, address.trim());
+          const addressParts = [];
+          if (practice.address_line1) addressParts.push(practice.address_line1);
+          if (practice.address_line2) addressParts.push(practice.address_line2);
+          if (practice.city) addressParts.push(practice.city);
+          if (practice.state) addressParts.push(practice.state);
+          if (practice.zip_code) addressParts.push(practice.zip_code);
+          
+          const fullAddress = addressParts.join(', ');
+          practiceMap.set(practice.id, fullAddress);
+          console.log(`Practice ${practice.id} address: ${fullAddress}`);
         }
       }
     }
@@ -191,7 +203,17 @@ X-WR-TIMEZONE:America/New_York
       const room = Array.isArray(apt.practice_rooms) ? apt.practice_rooms[0] : apt.practice_rooms;
       const roomName = room?.name || 'No room';
       
-      const practiceAddress = apt.practice_id ? practiceMap.get(apt.practice_id) || '' : '';
+      // Get practice address with validation
+      let practiceAddress = '';
+      if (apt.practice_id) {
+        practiceAddress = practiceMap.get(apt.practice_id) || '';
+        if (!practiceAddress) {
+          console.warn(`Appointment ${apt.id}: practice_id ${apt.practice_id} found but no address in map`);
+        }
+      } else {
+        console.warn(`Appointment ${apt.id}: Missing practice_id`);
+      }
+      
       const location = practiceAddress ? `${roomName}, ${practiceAddress}` : roomName;
       
       let description = `Type: ${apt.service_type || 'Appointment'}\\nProvider: ${providerName}\\nRoom: ${roomName}`;
