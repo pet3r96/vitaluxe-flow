@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
     searchStart.setHours(0, 0, 0, 0);
     // Search up to 30 days ahead
     const maxDays = 30;
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
     for (let dayOffset = 0; dayOffset < maxDays; dayOffset++) {
       const checkDate = new Date(searchStart);
@@ -199,7 +200,6 @@ Deno.serve(async (req) => {
         }
         
         // Found an available slot!
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = dayNames[checkDate.getDay()];
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const monthName = monthNames[checkDate.getMonth()];
