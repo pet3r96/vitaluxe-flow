@@ -14,7 +14,18 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye, Trash2, Ban } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { PatientPortalStatusBadge } from "./PatientPortalStatusBadge";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PatientDialog } from "./PatientDialog";
@@ -34,13 +45,15 @@ export const PatientsDataTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [disableDialogOpen, setDisableDialogOpen] = useState(false);
+  const [patientToToggle, setPatientToToggle] = useState<any>(null);
 
   const { data: patients, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["patients", effectiveRole, effectivePracticeId],
     staleTime: 300000, // 5 minutes - patient data changes infrequently
     queryFn: async () => {
       logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
-      const columns = "id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, city, state, zip_code, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at";
+      const columns = "id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, city, state, zip_code, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at, user_id, last_login_at, status";
 
       let patientsData: any[] = [];
 
@@ -355,6 +368,39 @@ export const PatientsDataTable = () => {
     },
   });
 
+  // Toggle patient account status mutation
+  const togglePatientStatusMutation = useMutation({
+    mutationFn: async ({ patientId, currentStatus }: { patientId: string; currentStatus: string }) => {
+      const newStatus = currentStatus === 'disabled' ? 'active' : 'disabled';
+      
+      const { data, error } = await supabase
+        .from('patient_accounts')
+        .update({ status: newStatus })
+        .eq('id', patientId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return { data, newStatus };
+    },
+    onSuccess: (result, variables) => {
+      const action = result.newStatus === 'disabled' ? 'disabled' : 'enabled';
+      toast({
+        title: `Account ${action}`,
+        description: `Patient account has been ${action} successfully.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-portal-status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update account status',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Delete patient mutation (admin-only edge function)
   const deletePatientMutation = useMutation({
     mutationFn: async (email: string) => {
@@ -387,6 +433,22 @@ export const PatientsDataTable = () => {
     invitePatientMutation.mutate(patientId);
   }, [isSubscribed, invitePatientMutation, toast]);
 
+  const handleToggleAccountStatus = useCallback((patient: any) => {
+    setPatientToToggle(patient);
+    setDisableDialogOpen(true);
+  }, []);
+
+  const confirmToggleStatus = useCallback(() => {
+    if (patientToToggle) {
+      togglePatientStatusMutation.mutate({
+        patientId: patientToToggle.id,
+        currentStatus: patientToToggle.status || 'active',
+      });
+      setDisableDialogOpen(false);
+      setPatientToToggle(null);
+    }
+  }, [patientToToggle, togglePatientStatusMutation]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -416,6 +478,7 @@ export const PatientsDataTable = () => {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Address</TableHead>
+              <TableHead>Portal Status</TableHead>
               {isAdmin && <TableHead>Practice</TableHead>}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -423,13 +486,13 @@ export const PatientsDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 6 : 5} className="text-center">
+                <TableCell colSpan={isAdmin ? 7 : 6} className="text-center">
                   Loading patients...
                 </TableCell>
               </TableRow>
             ) : filteredPatients.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 6 : 5} className="text-center text-muted-foreground">
+                <TableCell colSpan={isAdmin ? 7 : 6} className="text-center text-muted-foreground">
                   {searchQuery ? "No patients found matching your search." : "No patients found. Add your first patient to get started."}
                 </TableCell>
               </TableRow>
@@ -459,6 +522,13 @@ export const PatientsDataTable = () => {
                       
                       return `${street}${city ? ', ' + city : ''}${state ? ', ' + state : ''}${zip ? ' ' + zip : ''}`.trim();
                     })()}
+                  </TableCell>
+                  <TableCell>
+                    <PatientPortalStatusBadge
+                      userId={patient.user_id}
+                      lastLoginAt={patient.last_login_at}
+                      status={patient.status}
+                    />
                   </TableCell>
                   {isAdmin && (
                     <TableCell>
@@ -560,6 +630,31 @@ export const PatientsDataTable = () => {
                               </Tooltip>
                             ) : null}
                           </TooltipProvider>
+
+                          {/* Disable/Enable Account Button */}
+                          {patient.user_id && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleToggleAccountStatus(patient)}
+                                    disabled={togglePatientStatusMutation.isPending}
+                                  >
+                                    {patient.status === 'disabled' ? (
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                    ) : (
+                                      <Ban className="h-4 w-4 text-destructive" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {patient.status === 'disabled' ? 'Enable Account' : 'Disable Account'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </>
                       )}
                     </div>
@@ -600,6 +695,52 @@ export const PatientsDataTable = () => {
           setDialogOpen(false);
         }}
       />
+
+      {/* Disable/Enable Account Confirmation Dialog */}
+      <AlertDialog open={disableDialogOpen} onOpenChange={setDisableDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {patientToToggle?.status === 'disabled' ? 'Enable' : 'Disable'} Patient Account?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {patientToToggle?.status === 'disabled' ? (
+                <>
+                  This will re-enable portal access for{' '}
+                  <span className="font-semibold">
+                    {patientToToggle?.name || patientToToggle?.email}
+                  </span>
+                  . They will be able to log in to the portal again.
+                </>
+              ) : (
+                <>
+                  This patient will not be able to log in to the portal. You can re-enable their account at any time.
+                  <br /><br />
+                  Are you sure you want to disable portal access for{' '}
+                  <span className="font-semibold">
+                    {patientToToggle?.name || patientToToggle?.email}
+                  </span>
+                  ?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDisableDialogOpen(false);
+              setPatientToToggle(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmToggleStatus}
+              className={patientToToggle?.status === 'disabled' ? '' : 'bg-destructive hover:bg-destructive/90'}
+            >
+              {patientToToggle?.status === 'disabled' ? 'Enable Account' : 'Disable Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

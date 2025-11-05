@@ -204,6 +204,23 @@ export const authService = {
         };
       }
 
+      // Check if this is a patient account and if it's disabled
+      const { data: patientAccount } = await supabase
+        .from('patient_accounts')
+        .select('status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (patientAccount && patientAccount.status === 'disabled') {
+        await supabase.auth.signOut();
+        return {
+          error: {
+            code: 'account_disabled',
+            message: "Your account has been disabled. Please contact your practice for assistance."
+          }
+        };
+      }
+
     // Check if account is verified
     if (profile?.status === 'pending_verification') {
       await supabase.auth.signOut();

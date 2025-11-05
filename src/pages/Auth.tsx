@@ -165,6 +165,16 @@ const Auth = () => {
             return;
           }
 
+          // Check if this is a disabled account error
+          if ((error as any).code === 'account_disabled') {
+            showError(
+              "Account Disabled",
+              (error as any).message || "Your account has been disabled. Please contact your practice for assistance."
+            );
+            setLoading(false);
+            return;
+          }
+
           // Track failed login attempt
           try {
             await supabase.functions.invoke("track-failed-login", {
