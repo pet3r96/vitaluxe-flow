@@ -8326,6 +8326,7 @@ export type Database = {
         Args: { p_encrypted_data: string; p_field_type: string }
         Returns: string
       }
+      disable_auth_user: { Args: { p_user_id: string }; Returns: undefined }
       encrypt_plaid_token: { Args: { p_token: string }; Returns: string }
       generate_ticket_number: { Args: never; Returns: string }
       get_appointments_during_blocked_time: {
