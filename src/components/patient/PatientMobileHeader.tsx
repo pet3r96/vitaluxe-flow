@@ -20,7 +20,7 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Appointments", url: "/appointments", icon: Calendar },
-  { title: "Messages", url: "/messages", icon: MessageSquare },
+  { title: "Messages", url: "/patient-messages", icon: MessageSquare },
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Medical Vault", url: "/medical-vault", icon: FileText },
   { title: "Profile", url: "/profile", icon: User },
