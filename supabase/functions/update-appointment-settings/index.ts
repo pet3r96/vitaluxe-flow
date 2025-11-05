@@ -29,7 +29,9 @@ serve(async (req) => {
       endHour, 
       workingDays, 
       bufferTime, 
-      allowOverlap 
+      allowOverlap,
+      daySettings,
+      timezone
     } = await req.json();
 
     console.log('Updating appointment settings for practice:', practiceId);
@@ -56,18 +58,24 @@ serve(async (req) => {
     }
 
     // Upsert appointment settings
+    const updateData: any = {
+      practice_id: practiceId,
+      slot_duration: slotDuration || 15,
+      start_hour: startHour ?? 8,
+      end_hour: endHour ?? 18,
+      working_days: workingDays || [1, 2, 3, 4, 5],
+      buffer_time: bufferTime ?? 0,
+      allow_overlap: allowOverlap ?? false,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (timezone) {
+      updateData.timezone = timezone;
+    }
+
     const { data, error } = await supabaseClient
       .from('appointment_settings')
-      .upsert({
-        practice_id: practiceId,
-        slot_duration: slotDuration || 15,
-        start_hour: startHour ?? 8,
-        end_hour: endHour ?? 18,
-        working_days: workingDays || [1, 2, 3, 4, 5],
-        buffer_time: bufferTime ?? 0,
-        allow_overlap: allowOverlap ?? false,
-        updated_at: new Date().toISOString(),
-      }, {
+      .upsert(updateData, {
         onConflict: 'practice_id'
       })
       .select()
@@ -79,6 +87,32 @@ serve(async (req) => {
     }
 
     console.log('Appointment settings updated successfully:', data);
+
+    // If daySettings provided, upsert per-day hours into practice_calendar_hours
+    if (daySettings && Array.isArray(daySettings)) {
+      for (const daySetting of daySettings) {
+        const { dayOfWeek, enabled, startTime, endTime } = daySetting;
+        
+        if (typeof dayOfWeek !== 'number') continue;
+
+        const { error: calendarError } = await supabaseClient
+          .from('practice_calendar_hours')
+          .upsert({
+            practice_id: practiceId,
+            day_of_week: dayOfWeek,
+            start_time: startTime || '09:00:00',
+            end_time: endTime || '17:00:00',
+            is_closed: !enabled,
+          }, {
+            onConflict: 'practice_id,day_of_week'
+          });
+
+        if (calendarError) {
+          console.error(`Error upserting calendar hours for day ${dayOfWeek}:`, calendarError);
+        }
+      }
+      console.log('Per-day calendar hours updated successfully');
+    }
 
     return new Response(
       JSON.stringify({ success: true, data }),

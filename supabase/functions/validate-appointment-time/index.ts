@@ -152,9 +152,6 @@ Deno.serve(async (req) => {
     const apptStartMin = parseTimeToMinutes(appointmentTimeNorm);
     const apptEndMin = parseTimeToMinutes(appointmentEndTimeNorm);
 
-    // Enforce end-of-day buffer (last appointment must end at least 60 minutes before closing)
-    const endOfDayBufferMin = 60;
-
     if (apptStartMin < practiceStartMin) {
       return new Response(
         JSON.stringify({
@@ -166,11 +163,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (apptStartMin + duration > (practiceEndMin - endOfDayBufferMin)) {
+    if (apptEndMin > practiceEndMin) {
       return new Response(
         JSON.stringify({
           valid: false,
-          error: `Last appointment must end at least 60 minutes before closing (${formatTime(endTimeNorm)})`,
+          error: `Appointment would end after closing time (${formatTime(endTimeNorm)})`,
           alternatives: []
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

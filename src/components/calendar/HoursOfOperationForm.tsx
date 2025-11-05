@@ -100,6 +100,14 @@ export function HoursOfOperationForm({ practiceId, currentSettings, onSuccess }:
       const avgStart = Math.round(enabledDays.reduce((sum, d) => sum + d.start, 0) / enabledDays.length);
       const avgEnd = Math.round(enabledDays.reduce((sum, d) => sum + d.end, 0) / enabledDays.length);
 
+      // Prepare per-day settings for practice_calendar_hours
+      const daySettingsPayload = DAYS.map((day) => ({
+        dayOfWeek: day.value,
+        enabled: daySettings[day.value].enabled,
+        startTime: `${String(daySettings[day.value].start).padStart(2, '0')}:00:00`,
+        endTime: `${String(daySettings[day.value].end).padStart(2, '0')}:00:00`,
+      }));
+
       const { error } = await supabase.functions.invoke("update-appointment-settings", {
         body: {
           practiceId,
@@ -109,6 +117,7 @@ export function HoursOfOperationForm({ practiceId, currentSettings, onSuccess }:
           workingDays,
           bufferTime,
           allowOverlap: false,
+          daySettings: daySettingsPayload,
         },
       });
 

@@ -74,8 +74,6 @@ Deno.serve(async (req) => {
     const todayYMD = nowInPracticeTime.toLocaleDateString('en-CA', { timeZone: practiceTimezone });
     const nowMinutes = nowInPracticeTime.getHours() * 60 + nowInPracticeTime.getMinutes();
 
-    const endOfDayBufferMin = 60; // Last appointment must end at least 60 minutes before closing
-
     // Start searching from today in practice timezone (midnight)
     const searchStart = new Date(nowInPracticeTime);
     searchStart.setHours(0, 0, 0, 0);
@@ -122,8 +120,8 @@ Deno.serve(async (req) => {
         firstMinute = Math.max(startMinutes, nextSlot);
       }
 
-      // Ensure we don't start beyond the latest permissible start (respect buffer and duration)
-      const latestStart = endMinutes - endOfDayBufferMin - duration;
+      // Latest start time (appointment can end exactly at closing)
+      const latestStart = endMinutes - duration;
       if (firstMinute > latestStart) continue;
 
       const dateStr = new Date(checkDate).toLocaleDateString('en-CA', { timeZone: practiceTimezone }); // YYYY-MM-DD in practice TZ
