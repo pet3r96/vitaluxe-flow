@@ -60,8 +60,8 @@ export const ProductsGrid = () => {
   const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
 
   const { canOrder: staffCanOrder, isStaffAccount } = useStaffOrderingPrivileges();
-  // Providers and doctors always have ordering privileges
-  const canOrder = isProvider || staffCanOrder;
+  // Providers and doctors always have ordering privileges, but reps can only view
+  const canOrder = (isProvider || staffCanOrder) && !isRep;
   const { data: cartCount } = useCartCount(effectiveUserId);
 
   const { data: products, isLoading, refetch } = useQuery({
