@@ -74,6 +74,22 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
     enabled: effectiveRole === "admin" && !practiceId
   });
 
+  // Fetch staff member's practice_id if they're a staff member
+  const { data: staffPractice } = useQuery({
+    queryKey: ["staff-practice", effectiveUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_staff")
+        .select("practice_id")
+        .eq("user_id", effectiveUserId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: effectiveRole === "staff" && !practiceId
+  });
+
   const resetForm = () => {
     setFormData({
       fullName: "",
@@ -132,9 +148,17 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
       return;
     }
     
-    const targetPracticeId = practiceId || selectedPractice || effectiveUserId;
+    // Determine target practice ID based on role
+    const targetPracticeId = practiceId || 
+      selectedPractice || 
+      (effectiveRole === "staff" ? staffPractice?.practice_id : effectiveUserId);
+    
     if (!targetPracticeId) {
-      toast.error("Please select a practice");
+      if (effectiveRole === "staff") {
+        toast.error("Staff membership not found. Please contact your administrator.");
+      } else {
+        toast.error("Please select a practice");
+      }
       return;
     }
 
