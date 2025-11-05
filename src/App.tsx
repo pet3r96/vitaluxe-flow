@@ -98,6 +98,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const Security = lazy(() => import("./pages/Security"));
+const AppointmentDebugLogs = lazy(() => import("./pages/AppointmentDebugLogs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const MyDownlines = lazy(() => import("./pages/MyDownlines"));
 const RepProfitReports = lazy(() => import("./pages/RepProfitReports"));
@@ -232,6 +233,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                                       <Route path="/admin-settings" element={<AdminSettings />} />
                                       <Route path="/subscriptions" element={<Subscriptions />} />
                       <Route path="/security" element={<Security />} />
+                      <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
                       <Route path="/support" element={<Support />} />
                       <Route path="/support-tickets" element={<SupportTickets />} />
                       <Route path="/support-tickets/:ticketId" element={<SupportTicketThread />} />

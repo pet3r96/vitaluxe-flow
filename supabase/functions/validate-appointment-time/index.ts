@@ -113,6 +113,25 @@ Deno.serve(async (req) => {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = dayNames[dayOfWeek];
 
+    console.log('[validate-appointment-time] DEBUG:', JSON.stringify({
+      appointmentDate,
+      appointmentTime,
+      duration,
+      practiceTimezone,
+      dayOfWeek,
+      dayName,
+      practiceHours: practiceHours ? {
+        start: practiceHours.start_time,
+        end: practiceHours.end_time,
+        isClosed: practiceHours.is_closed
+      } : null,
+      nowInPractice: nowInPracticeTime.toISOString(),
+      todayYMD,
+      nowMinutes,
+      startIso,
+      endIso
+    }));
+
     if (!practiceHours || practiceHours.is_closed) {
       return new Response(
         JSON.stringify({
@@ -152,7 +171,19 @@ Deno.serve(async (req) => {
     const apptStartMin = parseTimeToMinutes(appointmentTimeNorm);
     const apptEndMin = parseTimeToMinutes(appointmentEndTimeNorm);
 
+    console.log('[validate-appointment-time] Hours check:', JSON.stringify({
+      practiceStartMin,
+      practiceEndMin,
+      apptStartMin,
+      apptEndMin,
+      practiceStart: startTimeNorm,
+      practiceEnd: endTimeNorm,
+      apptStart: appointmentTimeNorm,
+      apptEnd: appointmentEndTimeNorm
+    }));
+
     if (apptStartMin < practiceStartMin) {
+      console.log('[validate-appointment-time] REJECTED: Before opening hours');
       return new Response(
         JSON.stringify({
           valid: false,
@@ -164,6 +195,7 @@ Deno.serve(async (req) => {
     }
 
     if (apptEndMin > practiceEndMin) {
+      console.log('[validate-appointment-time] REJECTED: After closing hours');
       return new Response(
         JSON.stringify({
           valid: false,
@@ -185,6 +217,7 @@ Deno.serve(async (req) => {
     if (blockedError) throw blockedError;
 
     if (blocked && blocked.length > 0) {
+      console.log('[validate-appointment-time] REJECTED: Blocked time conflict', { count: blocked.length });
       return new Response(
         JSON.stringify({
           valid: false,
@@ -207,6 +240,7 @@ Deno.serve(async (req) => {
     if (conflictError) throw conflictError;
 
     if (conflicts && conflicts.length > 0) {
+      console.log('[validate-appointment-time] REJECTED: Appointment conflict', { count: conflicts.length });
       return new Response(
         JSON.stringify({
           valid: false,
@@ -218,6 +252,7 @@ Deno.serve(async (req) => {
     }
 
     // Time is valid!
+    console.log('[validate-appointment-time] APPROVED: Time slot is valid');
     return new Response(
       JSON.stringify({
         valid: true

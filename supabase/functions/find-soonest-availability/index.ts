@@ -74,6 +74,14 @@ Deno.serve(async (req) => {
     const todayYMD = nowInPracticeTime.toLocaleDateString('en-CA', { timeZone: practiceTimezone });
     const nowMinutes = nowInPracticeTime.getHours() * 60 + nowInPracticeTime.getMinutes();
 
+    console.log('[find-soonest-availability] Starting search:', JSON.stringify({
+      practiceTimezone,
+      todayYMD,
+      nowMinutes,
+      nowInPractice: nowInPracticeTime.toISOString(),
+      duration
+    }));
+
     // Start searching from today in practice timezone (midnight)
     const searchStart = new Date(nowInPracticeTime);
     searchStart.setHours(0, 0, 0, 0);
@@ -98,8 +106,21 @@ Deno.serve(async (req) => {
       }
 
       const practiceHours = hours?.[0];
+      
+      console.log(`[find-soonest-availability] Day ${dayOfWeek} (${dayNames[dayOfWeek]})`, JSON.stringify({
+        dateStr: new Date(checkDate).toLocaleDateString('en-CA', { timeZone: practiceTimezone }),
+        practiceHours: practiceHours ? {
+          start: practiceHours.start_time,
+          end: practiceHours.end_time,
+          isClosed: practiceHours.is_closed
+        } : null
+      }));
+
       // Skip if closed or no hours defined
-      if (!practiceHours || practiceHours.is_closed) continue;
+      if (!practiceHours || practiceHours.is_closed) {
+        console.log(`[find-soonest-availability] Day ${dayOfWeek} SKIPPED: Closed`);
+        continue;
+      }
 
       // Generate time slots within practice hours
       const startTimeStr = practiceHours.start_time.toString();
@@ -118,11 +139,17 @@ Deno.serve(async (req) => {
       if (dayOffset === 0) {
         const nextSlot = Math.ceil((nowMinutes + 1) / 30) * 30; // next 30-min boundary after now
         firstMinute = Math.max(startMinutes, nextSlot);
+        console.log(`[find-soonest-availability] Today: Starting from ${minutesToHHMM(firstMinute)} (now=${minutesToHHMM(nowMinutes)})`);
       }
 
       // Latest start time (appointment can end exactly at closing)
       const latestStart = endMinutes - duration;
-      if (firstMinute > latestStart) continue;
+      console.log(`[find-soonest-availability] Scan range: ${minutesToHHMM(firstMinute)} to ${minutesToHHMM(latestStart)}`);
+      
+      if (firstMinute > latestStart) {
+        console.log(`[find-soonest-availability] Day ${dayOfWeek} SKIPPED: No valid time slots`);
+        continue;
+      }
 
       const dateStr = new Date(checkDate).toLocaleDateString('en-CA', { timeZone: practiceTimezone }); // YYYY-MM-DD in practice TZ
 
@@ -148,7 +175,10 @@ Deno.serve(async (req) => {
           console.error('Error checking blocked time:', blockedError);
           continue;
         }
-        if (blocked && blocked.length > 0) continue;
+        if (blocked && blocked.length > 0) {
+          console.log(`[find-soonest-availability] Slot ${timeSlot} BLOCKED (${blocked.length} conflicts)`);
+          continue;
+        }
         
         // Check if there's an appointment conflict (overlap)
         const { data: conflicts, error: conflictError } = await supabaseClient
@@ -163,7 +193,10 @@ Deno.serve(async (req) => {
           console.error('Error checking conflicts:', conflictError);
           continue;
         }
-        if (conflicts && conflicts.length > 0) continue;
+        if (conflicts && conflicts.length > 0) {
+          console.log(`[find-soonest-availability] Slot ${timeSlot} CONFLICT (${conflicts.length} appointments)`);
+          continue;
+        }
         
         // Found an available slot!
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
