@@ -133,10 +133,11 @@ Deno.serve(async (req) => {
     }));
 
     if (!practiceHours || practiceHours.is_closed) {
+      const closedMessage = `Practice is closed on ${dayName}s`;
       return new Response(
         JSON.stringify({
           valid: false,
-          error: `Practice is closed on ${dayName}s`,
+          error: closedMessage,
           alternatives: []
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
