@@ -38,10 +38,21 @@ Deno.serve(async (req) => {
     }
 
     const practiceId = patientAccount.practice_id;
-    const now = new Date();
     
-    // Start searching from today
-    const searchStart = new Date(now);
+    // Get practice timezone from appointment_settings
+    const { data: appointmentSettings } = await supabaseClient
+      .from('appointment_settings')
+      .select('timezone')
+      .eq('practice_id', practiceId)
+      .single();
+    
+    const practiceTimezone = appointmentSettings?.timezone || 'America/New_York';
+    
+    // Get current time in practice timezone
+    const nowInPracticeTime = new Date(new Date().toLocaleString('en-US', { timeZone: practiceTimezone }));
+    
+    // Start searching from today in practice timezone
+    const searchStart = new Date(nowInPracticeTime);
     searchStart.setHours(0, 0, 0, 0);
     
     // Search up to 30 days ahead
@@ -95,8 +106,8 @@ Deno.serve(async (req) => {
         const slotDateTime = new Date(checkDate);
         slotDateTime.setHours(slotHour, slotMin, 0, 0);
         
-        // Skip slots in the past for today
-        if (slotDateTime <= now) continue;
+        // Skip slots in the past for today (compare in practice timezone)
+        if (slotDateTime <= nowInPracticeTime) continue;
         
         const endSlotDateTime = new Date(slotDateTime);
         endSlotDateTime.setMinutes(endSlotDateTime.getMinutes() + duration);

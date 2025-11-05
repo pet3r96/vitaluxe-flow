@@ -42,13 +42,26 @@ Deno.serve(async (req) => {
     }
 
     const practiceId = patientAccount.practice_id;
-    // Use clientDateTimeIso if provided (client-side timezone), otherwise fallback to server-side construction
+    
+    // Get practice timezone from appointment_settings
+    const { data: appointmentSettings } = await supabaseClient
+      .from('appointment_settings')
+      .select('timezone')
+      .eq('practice_id', practiceId)
+      .single();
+    
+    const practiceTimezone = appointmentSettings?.timezone || 'America/New_York';
+    
+    // Parse requested time - it's already in practice timezone from client
     const requestedDateTime = clientDateTimeIso ? new Date(clientDateTimeIso) : new Date(`${appointmentDate}T${appointmentTime}`);
     const endDateTime = new Date(requestedDateTime.getTime() + duration * 60 * 1000);
     const appointmentEndTime = `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`;
 
-    // 1. Check if date is in the past
-    if (requestedDateTime <= new Date()) {
+    // Get current time in practice timezone for comparison
+    const nowInPracticeTime = new Date(new Date().toLocaleString('en-US', { timeZone: practiceTimezone }));
+    
+    // 1. Check if date is in the past (compare in practice timezone)
+    if (requestedDateTime <= nowInPracticeTime) {
       return new Response(
         JSON.stringify({
           valid: false,

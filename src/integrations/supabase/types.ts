@@ -420,6 +420,7 @@ export type Database = {
           practice_id: string
           slot_duration: number
           start_hour: number
+          timezone: string | null
           updated_at: string
           working_days: number[]
         }
@@ -432,6 +433,7 @@ export type Database = {
           practice_id: string
           slot_duration?: number
           start_hour?: number
+          timezone?: string | null
           updated_at?: string
           working_days?: number[]
         }
@@ -444,6 +446,7 @@ export type Database = {
           practice_id?: string
           slot_duration?: number
           start_hour?: number
+          timezone?: string | null
           updated_at?: string
           working_days?: number[]
         }
