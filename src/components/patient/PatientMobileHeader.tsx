@@ -3,7 +3,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { MessageBell } from "@/components/messages/MessageBell";
 import { UserDropdown } from "@/components/layout/UserDropdown";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
-import { Menu, Home, Calendar, MessageSquare, ShoppingBag, FileText, Pill, User, LogOut } from "lucide-react";
+import { Menu, Home, Calendar, MessageSquare, FileText, User, LogOut } from "lucide-react";
 import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
 import logoLight from "@/assets/vitaluxe-logo-light.png";
 import { useTheme } from "next-themes";
@@ -22,9 +22,7 @@ const navItems = [
   { title: "Appointments", url: "/appointments", icon: Calendar },
   { title: "Messages", url: "/messages", icon: MessageSquare },
   { title: "Documents", url: "/documents", icon: FileText },
-  { title: "Products", url: "/products", icon: ShoppingBag },
   { title: "Medical Vault", url: "/medical-vault", icon: FileText },
-  { title: "Prescriptions", url: "/prescriptions", icon: Pill },
   { title: "Profile", url: "/profile", icon: User },
 ];
 
