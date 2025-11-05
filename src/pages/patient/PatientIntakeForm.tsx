@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
 import { AutocompleteInput } from "@/components/ui/autocomplete-input";
-import { searchMedications, searchAllergens, searchConditions, searchSurgeries } from "@/lib/medical-api-service";
+import { searchMedications, searchAllergens, searchConditions, searchSurgeries, searchVaccines } from "@/lib/medical-api-service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -1234,7 +1234,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   <FormItem>
                     <FormLabel>Weight (lbs)</FormLabel>
                     <FormControl>
-                      <Input type="number" min="0" {...field} />
+                      <Input type="number" min="0" {...field} placeholder="e.g., 150" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1329,7 +1329,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                     </div>
                     <Input
                       className="flex-1 w-full"
-                      placeholder="Dosage"
+                      placeholder="e.g., 10mg, 500mcg"
                       value={med.dosage}
                       onChange={(e) => {
                         const newMeds = [...medications];
@@ -1451,7 +1451,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   </div>
                   <Input
                     className="flex-1 w-full"
-                    placeholder="Reaction"
+                    placeholder="e.g., hives, rash, swelling"
                     value={allergy.reaction}
                     onChange={(e) => {
                       const newAllergies = [...allergies];
@@ -1557,7 +1557,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   <Input
                     className="flex-1 w-full"
                     type="month"
-                    placeholder="Diagnosed date"
+                    placeholder="MM/YYYY"
                     value={condition.diagnosed_date}
                     onChange={(e) => {
                       const newConditions = [...conditions];
@@ -1664,6 +1664,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                     <Input
                       className="flex-1 w-full"
                       type="month"
+                      placeholder="MM/YYYY"
                       value={surgery.date}
                       onChange={(e) => {
                         const newSurgeries = [...surgeries];
@@ -1749,20 +1750,22 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                     console.log(`[Immunization ${index}] Rendering:`, imm);
                     return (
                       <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
-                      <Input
-                        className="flex-1 w-full"
-                        placeholder="Vaccine name (e.g., COVID-19, Flu, Tdap)"
-                        value={imm.vaccine_name}
-                        onChange={(e) => {
-                          const newImms = [...immunizations];
-                          newImms[index].vaccine_name = e.target.value;
-                          setImmunizations(newImms);
-                        }}
-                      />
+                      <div className="flex-1 w-full">
+                        <AutocompleteInput
+                          placeholder="Search vaccine name"
+                          value={imm.vaccine_name}
+                          onChange={(value) => {
+                            const newImms = [...immunizations];
+                            newImms[index].vaccine_name = value;
+                            setImmunizations(newImms);
+                          }}
+                          onSearch={searchVaccines}
+                        />
+                      </div>
                       <Input
                         type="date"
                         className="flex-1 w-full"
-                        placeholder="Date administered"
+                        placeholder="MM/DD/YYYY"
                         value={imm.date_administered || ''}
                         onChange={(e) => {
                           const newImms = [...immunizations];
@@ -1872,7 +1875,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                     <FormItem>
                       <FormLabel>City</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} placeholder="e.g., Los Angeles" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1885,7 +1888,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                     <FormItem>
                       <FormLabel>State</FormLabel>
                       <FormControl>
-                        <Input {...field} maxLength={2} />
+                        <Input {...field} maxLength={2} placeholder="e.g., CA" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1898,7 +1901,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                     <FormItem>
                       <FormLabel>Zip Code</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} placeholder="e.g., 90210" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

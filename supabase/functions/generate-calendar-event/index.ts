@@ -60,21 +60,37 @@ Deno.serve(async (req) => {
         ? addressParts.join(', ') 
         : 'Address TBD - Please contact practice for location details';
 
+    // Enhanced description for better mobile display
+    const description = [
+      appointment.reason_for_visit || 'Healthcare appointment',
+      `Provider: ${providerName}`,
+      `Visit Type: ${appointment.visit_type || 'In-Person'}`,
+      `Practice: ${practiceName}`
+    ].join('\\n');
+
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Healthcare App//Appointment//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
+X-WR-CALNAME:Healthcare Appointments
+X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 UID:${appointmentId}@healthcareapp.com
 DTSTAMP:${formatDate(new Date())}
 DTSTART:${formatDate(startDate)}
 DTEND:${formatDate(endDate)}
 SUMMARY:Appointment with ${practiceName}
-DESCRIPTION:${appointment.reason_for_visit || 'Healthcare appointment'} with ${providerName}
+DESCRIPTION:${description}
 LOCATION:${location}
+ORGANIZER;CN=${practiceName}:MAILTO:noreply@healthcareapp.com
 STATUS:CONFIRMED
 SEQUENCE:0
+BEGIN:VALARM
+TRIGGER:-PT15M
+ACTION:DISPLAY
+DESCRIPTION:Appointment reminder: ${practiceName}
+END:VALARM
 END:VEVENT
 END:VCALENDAR`;
 

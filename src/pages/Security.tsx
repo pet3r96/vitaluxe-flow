@@ -47,7 +47,6 @@ const Security = () => {
     { value: "security-events", label: "Security Events", icon: FileText, group: "Overview" },
     { value: "errors", label: "Errors", icon: AlertTriangle, group: "Overview" },
     { value: "phi-access", label: "PHI Access", icon: Eye, group: "Compliance" },
-    { value: "prescriptions", label: "Prescriptions", icon: FileText, group: "Compliance" },
     { value: "banking", label: "Banking", icon: CreditCard, group: "Compliance" },
     { value: "vault-activity", label: "Vault Activity", icon: History, group: "Compliance" },
     { value: "audit", label: "Audit Logs", icon: Activity, group: "Compliance" },
@@ -133,10 +132,6 @@ const Security = () => {
                 <Eye className="h-4 w-4" />
                 <span>PHI Access</span>
               </TabsTrigger>
-              <TabsTrigger value="prescriptions" className="gap-2">
-                <FileText className="h-4 w-4" />
-                <span>Prescriptions</span>
-              </TabsTrigger>
               <TabsTrigger value="banking" className="gap-2">
                 <CreditCard className="h-4 w-4" />
                 <span>Banking</span>
@@ -203,10 +198,6 @@ const Security = () => {
 
         <TabsContent value="encryption">
           <EncryptionStatusManager />
-        </TabsContent>
-
-        <TabsContent value="prescriptions">
-          <PrescriptionAccessAudit />
         </TabsContent>
 
         <TabsContent value="banking">
