@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
         service_type,
         status,
         notes,
-        patients!patient_appointments_patient_id_fkey (
+        patient_accounts!patient_appointments_patient_id_fkey (
           first_name,
           last_name
         ),
@@ -147,7 +147,7 @@ X-WR-TIMEZONE:America/New_York
 `;
 
     for (const apt of appointments || []) {
-      const patient = Array.isArray(apt.patients) ? apt.patients[0] : apt.patients;
+      const patient = Array.isArray(apt.patient_accounts) ? apt.patient_accounts[0] : apt.patient_accounts;
       const patientName = patient 
         ? `${patient.first_name} ${patient.last_name}`
         : 'Patient';
