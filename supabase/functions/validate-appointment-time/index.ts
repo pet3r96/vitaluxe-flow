@@ -114,8 +114,6 @@ Deno.serve(async (req) => {
     if (hoursError) throw hoursError;
 
     const practiceHours = hours?.[0];
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const dayName = dayNames[dayOfWeek];
 
     console.log('[validate-appointment-time] DEBUG:', JSON.stringify({
       appointmentDate,
@@ -142,7 +140,19 @@ Deno.serve(async (req) => {
         JSON.stringify({
           valid: false,
           error: closedMessage,
-          alternatives: []
+          alternatives: [],
+          debug: {
+            practiceTimezone,
+            resolvedWeekday: dayName,
+            dayOfWeek,
+            practiceHours: {
+              start_time: practiceHours?.start_time || null,
+              end_time: practiceHours?.end_time || null,
+              is_closed: true
+            },
+            requestedDate: appointmentDate,
+            requestedTime: appointmentTime
+          }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -193,7 +203,21 @@ Deno.serve(async (req) => {
         JSON.stringify({
           valid: false,
           error: `Practice hours start at ${formatTime(startTimeNorm)}`,
-          alternatives: []
+          alternatives: [],
+          debug: {
+            practiceTimezone,
+            resolvedWeekday: dayName,
+            dayOfWeek,
+            practiceHours: {
+              start_time: practiceHours.start_time,
+              end_time: practiceHours.end_time,
+              is_closed: false
+            },
+            appointmentStart: startIso,
+            appointmentEnd: endIso,
+            requestedDate: appointmentDate,
+            requestedTime: appointmentTime
+          }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -205,7 +229,21 @@ Deno.serve(async (req) => {
         JSON.stringify({
           valid: false,
           error: `Appointment would end after closing time (${formatTime(endTimeNorm)})`,
-          alternatives: []
+          alternatives: [],
+          debug: {
+            practiceTimezone,
+            resolvedWeekday: dayName,
+            dayOfWeek,
+            practiceHours: {
+              start_time: practiceHours.start_time,
+              end_time: practiceHours.end_time,
+              is_closed: false
+            },
+            appointmentStart: startIso,
+            appointmentEnd: endIso,
+            requestedDate: appointmentDate,
+            requestedTime: appointmentTime
+          }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -260,7 +298,21 @@ Deno.serve(async (req) => {
     console.log('[validate-appointment-time] APPROVED: Time slot is valid');
     return new Response(
       JSON.stringify({
-        valid: true
+        valid: true,
+        debug: {
+          practiceTimezone,
+          resolvedWeekday: dayName,
+          dayOfWeek,
+          practiceHours: {
+            start_time: hours[0]?.start_time || null,
+            end_time: hours[0]?.end_time || null,
+            is_closed: hours[0]?.is_closed || false
+          },
+          appointmentStart: startIso,
+          appointmentEnd: endIso,
+          requestedDate: appointmentDate,
+          requestedTime: appointmentTime
+        }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

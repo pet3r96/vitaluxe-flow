@@ -7,10 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Calendar, Building, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown } from "lucide-react";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 
 interface AppointmentBookingDialogProps {
@@ -28,6 +29,8 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
   const [validationMessage, setValidationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [validating, setValidating] = useState(false);
   const [practiceSubscription, setPracticeSubscription] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugOpen, setDebugOpen] = useState(false);
 
   // Fetch patient's assigned practice
   const { data: patientAccount } = useQuery({
@@ -158,6 +161,12 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       });
       
       if (error) throw error;
+      
+      // Store debug info
+      if (data?.debug) {
+        setDebugInfo(data.debug);
+        setDebugOpen(true); // Auto-expand on validation
+      }
       
       if (data?.valid) {
         setValidationMessage({ type: 'success', text: 'This time slot is available!' });
@@ -384,6 +393,54 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
               )}
               <AlertDescription>{validationMessage.text}</AlertDescription>
             </Alert>
+          )}
+
+          {debugInfo && (
+            <Collapsible open={debugOpen} onOpenChange={setDebugOpen} className="border border-dashed rounded-lg bg-muted/30">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Debug Information</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${debugOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="p-3 pt-0 space-y-2 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-muted-foreground">Practice Timezone:</span>
+                    <p className="font-mono font-medium">{debugInfo.practiceTimezone}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Resolved Weekday:</span>
+                    <p className="font-mono font-medium">{debugInfo.resolvedWeekday} (Day {debugInfo.dayOfWeek})</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Practice Hours:</span>
+                    <p className="font-mono font-medium">
+                      {debugInfo.practiceHours?.is_closed 
+                        ? 'CLOSED' 
+                        : `${debugInfo.practiceHours?.start_time || 'N/A'} - ${debugInfo.practiceHours?.end_time || 'N/A'}`}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Requested Date:</span>
+                    <p className="font-mono font-medium">{debugInfo.requestedDate}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Requested Time:</span>
+                    <p className="font-mono font-medium">{debugInfo.requestedTime}</p>
+                  </div>
+                  {debugInfo.appointmentStart && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Appointment Window (UTC):</span>
+                      <p className="font-mono font-medium text-xs">
+                        {new Date(debugInfo.appointmentStart).toISOString()} - {new Date(debugInfo.appointmentEnd).toISOString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           <div className="space-y-2">
