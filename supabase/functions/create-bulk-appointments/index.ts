@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { bulkAppointmentsSchema, validateInput } from '../_shared/zodSchemas.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -14,18 +15,15 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const { appointments } = await req.json();
-
-    if (!appointments || !Array.isArray(appointments) || appointments.length === 0) {
-      throw new Error('appointments array is required and must not be empty');
+    // Validate input with Zod schema
+    const body = await req.json();
+    const validation = validateInput(bulkAppointmentsSchema, body);
+    
+    if (!validation.success) {
+      throw new Error(`Invalid input: ${validation.errors.join(', ')}`);
     }
 
-    // Validate all appointments have required fields
-    for (const appt of appointments) {
-      if (!appt.patient_id || !appt.practice_id || !appt.provider_id || !appt.start_time || !appt.end_time) {
-        throw new Error('Each appointment must have patient_id, practice_id, provider_id, start_time, and end_time');
-      }
-    }
+    const { appointments } = validation.data;
 
     // Add created_by to all appointments
     const appointmentsWithCreator = appointments.map(appt => ({

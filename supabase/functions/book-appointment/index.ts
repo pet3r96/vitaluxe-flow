@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { bookAppointmentSchema, validateInput } from '../_shared/zodSchemas.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -24,7 +25,15 @@ Deno.serve(async (req) => {
 
     const effectiveUserId = impersonationSession?.impersonated_user_id || user.id;
 
-    const { providerId, appointmentDate, appointmentTime, clientDateTimeIso, timezoneOffsetMinutes, reasonForVisit, visitType, notes } = await req.json();
+    // Validate input with Zod schema
+    const body = await req.json();
+    const validation = validateInput(bookAppointmentSchema, body);
+    
+    if (!validation.success) {
+      throw new Error(`Invalid input: ${validation.errors.join(', ')}`);
+    }
+
+    const { providerId, appointmentDate, appointmentTime, clientDateTimeIso, timezoneOffsetMinutes, reasonForVisit, visitType, notes } = validation.data;
     console.log('[book-appointment] Request data:', { providerId, appointmentDate, appointmentTime, clientDateTimeIso, reasonForVisit, visitType });
 
     // Get patient's assigned practice from patient_accounts using effective user ID

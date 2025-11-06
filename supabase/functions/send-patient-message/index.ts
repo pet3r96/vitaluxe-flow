@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendMessageSchema, validateInput } from '../_shared/zodSchemas.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -36,8 +37,16 @@ Deno.serve(async (req) => {
 
     console.log('[send-patient-message] User authenticated:', user.id);
 
-    // Parse request body
-    const { subject, message, sender_type, patient_id, thread_id, parent_message_id } = await req.json();
+    // Parse and validate request body with Zod schema
+    const body = await req.json();
+    const validation = validateInput(sendMessageSchema, body);
+    
+    if (!validation.success) {
+      throw new Error(`Invalid input: ${validation.errors.join(', ')}`);
+    }
+
+    const { subject, message, sender_type, patient_id, parent_message_id } = validation.data;
+    const thread_id = body.thread_id; // Optional field not in schema
 
     // Detect mode: provider reply or patient message
     const isProviderMode = sender_type === 'provider' && patient_id;
