@@ -18,7 +18,6 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
-import { VideoComingSoonDialog } from "@/components/video/VideoComingSoonDialog";
 
 interface CreateAppointmentDialogProps {
   open: boolean;
@@ -49,8 +48,6 @@ export function CreateAppointmentDialog({
   const { effectiveUserId } = useAuth();
   const [selectedPatientId, setSelectedPatientId] = useState(defaultPatientId || "");
   const [createFollowUp, setCreateFollowUp] = useState(false);
-  const [videoComingSoonOpen, setVideoComingSoonOpen] = useState(false);
-  const [previousVisitType, setPreviousVisitType] = useState("in_person");
 
   // Debug logging for providers
   useEffect(() => {
@@ -357,18 +354,7 @@ export function CreateAppointmentDialog({
 
           <div className="space-y-2">
             <Label htmlFor="visitType">Visit Type *</Label>
-            <Select 
-              value={watch("visitType")} 
-              onValueChange={(value) => {
-                if (value === "video") {
-                  setVideoComingSoonOpen(true);
-                  // Don't change the value, keep previous selection
-                } else {
-                  setPreviousVisitType(value);
-                  setValue("visitType", value);
-                }
-              }}
-            >
+            <Select value={watch("visitType")} onValueChange={(value) => setValue("visitType", value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -461,12 +447,6 @@ export function CreateAppointmentDialog({
           </div>
         </form>
       </DialogContent>
-      
-      <VideoComingSoonDialog 
-        open={videoComingSoonOpen} 
-        onOpenChange={setVideoComingSoonOpen}
-        feature="Video Appointments"
-      />
     </Dialog>
   );
 }

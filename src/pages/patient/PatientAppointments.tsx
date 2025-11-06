@@ -310,12 +310,7 @@ export default function PatientAppointments() {
 
   const getVisitTypeBadge = (visitType: string) => {
     if (visitType === 'video') {
-      return (
-        <Badge variant="outline" className="gap-1 bg-muted">
-          <Video className="h-3 w-3" />
-          Video Call (Coming Soon)
-        </Badge>
-      );
+      return <Badge variant="outline" className="gap-1"><Video className="h-3 w-3" />Video Call</Badge>;
     }
     if (visitType === 'phone') {
       return <Badge variant="outline" className="gap-1"><Phone className="h-3 w-3" />Phone Call</Badge>;
@@ -389,16 +384,6 @@ export default function PatientAppointments() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {appt.visit_type === 'video' && (
-                      <Alert className="border-warning bg-warning/10">
-                        <Video className="h-4 w-4" />
-                        <AlertTitle>Video Call Feature Coming Soon</AlertTitle>
-                        <AlertDescription>
-                          This appointment is scheduled as a video call, but the feature is still in development.
-                          Your provider will contact you with alternative arrangements.
-                        </AlertDescription>
-                      </Alert>
-                    )}
                     {appt.reason_for_visit && (
                       <div>
                         <p className="text-sm font-medium">Reason for Visit</p>

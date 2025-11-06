@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MessageSquare, FileText, Activity, AlertCircle, Clock, Pill, Video, Building, Phone, Heart, Info } from "lucide-react";
+import { Calendar, MessageSquare, FileText, Activity, AlertCircle, Clock, Pill, Video, Building, Phone, Heart } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -461,10 +461,7 @@ export default function PatientDashboard() {
                 </div>
                 <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                   {nextAppointment.visit_type === 'video' ? (
-                    <>
-                      <Video className="h-3 w-3" /> Video Call
-                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 ml-1">Coming Soon</Badge>
-                    </>
+                    <><Video className="h-3 w-3" /> Video Call</>
                   ) : nextAppointment.visit_type === 'phone' ? (
                     <><Phone className="h-3 w-3" /> Phone Call</>
                   ) : (
