@@ -97,8 +97,12 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    const apptDateInTZ = new Date(new Date(`${appointmentDate}T00:00:00`).toLocaleString('en-US', { timeZone: practiceTimezone }));
-    const dayOfWeek = apptDateInTZ.getDay();
+    // Compute day of week in the practice timezone reliably using midday UTC to avoid day shifting
+    const middayUtc = new Date(`${appointmentDate}T12:00:00Z`);
+    const dayNameFmt = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: practiceTimezone });
+    const dayName = dayNameFmt.format(middayUtc);
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayOfWeek = dayNames.indexOf(dayName);
 
     // 2. Check if practice is open on this day (using RPC with defaults)
     const { data: hours, error: hoursError } = await supabaseClient
