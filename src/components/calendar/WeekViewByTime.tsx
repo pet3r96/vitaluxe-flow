@@ -17,7 +17,7 @@ interface WeekViewProps {
   blockedTime?: any[];
 }
 
-export const WeekView = memo(function WeekView({
+export const WeekViewByTime = memo(function WeekViewByTime({
   currentDate,
   appointments,
   startHour,
@@ -29,7 +29,7 @@ export const WeekView = memo(function WeekView({
   selectedProviders,
   blockedTime = [],
 }: WeekViewProps) {
-  const HOUR_HEIGHT = 72;
+  const HOUR_HEIGHT = 88; // Increased from 72px for better visibility
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
   const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour ?? 20));
   const slotPx = (HOUR_HEIGHT * slotDuration) / 60;
@@ -168,11 +168,13 @@ export const WeekView = memo(function WeekView({
                 }}
               />
               
-              {/* Current Time Indicator */}
+              {/* Current Time Indicator - Enhanced */}
               <div 
-                className="absolute inset-x-0 h-0.5 bg-red-500 z-30 opacity-80"
+                className="absolute inset-x-0 h-1 bg-red-500 z-30 opacity-90 shadow-sm"
                 style={getCurrentTimeStyle(day)}
-              />
+              >
+                <div className="absolute left-0 -top-1 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+              </div>
               
               {/* Click Areas */}
               {timeSlots.map(({ hour, minute }) => {

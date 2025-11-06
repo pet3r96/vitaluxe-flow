@@ -12,7 +12,8 @@ import { toast } from "sonner";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { CalendarHeader, CalendarView } from "@/components/calendar/CalendarHeader";
 import { CalendarFilters } from "@/components/calendar/CalendarFilters";
-import { WeekView } from "@/components/calendar/WeekView";
+import { WeekViewByTime } from "@/components/calendar/WeekViewByTime";
+import { WeekViewByProvider } from "@/components/calendar/WeekViewByProvider";
 import { DayView } from "@/components/calendar/DayView";
 import { MonthView } from "@/components/calendar/MonthView";
 import { AgendaView } from "@/components/calendar/AgendaView";
@@ -21,10 +22,12 @@ import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetai
 import { WaitingRoomPanel } from "@/components/calendar/WaitingRoomPanel";
 import { BeingTreatedPanel } from "@/components/calendar/BeingTreatedPanel";
 import { CompleteAppointmentDialog } from "@/components/calendar/CompleteAppointmentDialog";
-
+import { CalendarSidebar } from "@/components/calendar/CalendarSidebar";
+import { CalendarQuickActions } from "@/components/calendar/CalendarQuickActions";
 import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDialog";
 import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
 import { PrintDayDialog } from "@/components/calendar/PrintDayDialog";
+import { Menu } from "lucide-react";
 
 export default function PracticeCalendar() {
   const navigate = useNavigate();
@@ -44,6 +47,7 @@ export default function PracticeCalendar() {
   const [blockTimeOpen, setBlockTimeOpen] = useState(false);
   const [printDayOpen, setPrintDayOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [appointmentToComplete, setAppointmentToComplete] = useState<any>(null);
 
@@ -205,168 +209,178 @@ export default function PracticeCalendar() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="flex-none p-6 border-b">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Practice Calendar</h1>
-            <p className="text-muted-foreground">Manage appointments and schedules</p>
-          </div>
-          <div className="flex flex-col items-end gap-6">
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setBlockTimeOpen(true)}>
-                <Clock className="h-4 w-4 mr-2" />
-                Block Time
-              </Button>
-              <Button variant="secondary" onClick={handleWalkInAppointment}>
-                <Clock className="h-4 w-4 mr-2" />
-                Walk-in Patient
-              </Button>
-              <Button onClick={handleCreateAppointment}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Appointment
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
-                <Download className="h-4 w-4 mr-2" />
-                Print Day
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar */}
+      <CalendarSidebar
+        currentDate={currentDate}
+        onDateChange={setCurrentDate}
+        providers={providers}
+        rooms={rooms}
+        selectedProviders={selectedProviders}
+        selectedRooms={selectedRooms}
+        selectedStatuses={selectedStatuses}
+        onProviderToggle={handleProviderToggle}
+        onRoomToggle={handleRoomToggle}
+        onStatusToggle={handleStatusToggle}
+        appointments={appointments}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Full-width calendar */}
-        <div className="flex-1 p-6 flex flex-col overflow-hidden">
-          <CalendarHeader
-            currentDate={currentDate}
-            view={view}
-            onDateChange={setCurrentDate}
-            onViewChange={setView}
-            filtersOpen={filtersOpen}
-            onFiltersOpenChange={setFiltersOpen}
-            filterCount={selectedProviders.length + selectedRooms.length + selectedStatuses.length}
-          />
-
-          {/* Pending Appointments Alert */}
-          {pendingAppointments.length > 0 && (
-            <div className="mt-4 p-3 bg-gold1/10 border border-gold1/30 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-gold1" />
-                <p className="text-sm font-medium text-gold1">
-                  You have {pendingAppointments.length} appointment request{pendingAppointments.length > 1 ? 's' : ''} awaiting review
-                </p>
-              </div>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex-none p-4 lg:p-6 border-b bg-background">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
               <Button 
-                size="sm" 
-                variant="outline" 
-                className="border-amber-300 dark:border-amber-700"
-                onClick={() => navigate('/dashboard')}
+                variant="ghost" 
+                size="icon"
+                className="lg:hidden"
+                onClick={() => setSidebarOpen(true)}
               >
-                Review Now
+                <Menu className="h-5 w-5" />
               </Button>
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Practice Calendar</h1>
+                <p className="text-sm text-muted-foreground">Manage appointments and schedules</p>
+              </div>
             </div>
-          )}
-
-          <div className="flex-1 mt-4 overflow-hidden">
-            {view === 'week' && (
-              <WeekView
-                currentDate={currentDate}
-                appointments={appointments}
-                blockedTime={blockedTime}
-                startHour={settings.start_hour}
-                endHour={settings.end_hour}
-                slotDuration={settings.slot_duration}
-                onAppointmentClick={handleAppointmentClick}
-                onTimeSlotClick={handleTimeSlotClick}
-                providers={providers}
-                selectedProviders={selectedProviders}
-              />
-            )}
-
-            {view === 'day' && (
-              <DayView
-                currentDate={currentDate}
-                appointments={appointments}
-                blockedTime={blockedTime}
-                startHour={settings.start_hour}
-                endHour={settings.end_hour}
-                slotDuration={settings.slot_duration}
-                onAppointmentClick={handleAppointmentClick}
-                onTimeSlotClick={handleTimeSlotClick}
-                providers={providers}
-                selectedProviders={selectedProviders}
-              />
-            )}
-
-            {view === 'month' && (
-              <MonthView
-                currentDate={currentDate}
-                appointments={appointments}
-                onDateClick={handleDateClick}
-                onAppointmentClick={handleAppointmentClick}
-              />
-            )}
-
-            {view === 'agenda' && (
-              <AgendaView
-                currentDate={currentDate}
-                appointments={appointments}
-                onAppointmentClick={handleAppointmentClick}
-              />
-            )}
+            <div className="flex flex-col items-end gap-3 lg:gap-4">
+              <div className="hidden lg:flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Print Day
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
-      {/* Side-by-Side Panels - Below Calendar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-6 pb-6">
-        {/* Waiting Room Panel - Left Side */}
-        <WaitingRoomPanel
-          practiceId={practiceId}
-          providers={providers}
-          onAppointmentClick={handleAppointmentClick}
-          currentDate={currentDate}
-        />
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Calendar Section */}
+          <div className="flex-1 p-4 lg:p-6 flex flex-col overflow-hidden">
+            <CalendarHeader
+              currentDate={currentDate}
+              view={view}
+              onDateChange={setCurrentDate}
+              onViewChange={setView}
+            />
 
-        {/* Being Treated Panel - Right Side */}
-        <BeingTreatedPanel
-          practiceId={practiceId}
-          providers={providers}
-          rooms={rooms}
-          onCompleteAppointment={handleCompleteAppointment}
-          onAppointmentClick={handleAppointmentClick}
-          currentDate={currentDate}
-        />
-      </div>
-      </div>
+            {/* Pending Appointments Alert */}
+            {pendingAppointments.length > 0 && (
+              <div className="mt-4 p-3 bg-gold1/10 border border-gold1/30 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-gold1" />
+                  <p className="text-sm font-medium text-gold1">
+                    You have {pendingAppointments.length} appointment request{pendingAppointments.length > 1 ? 's' : ''} awaiting review
+                  </p>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-amber-300 dark:border-amber-700"
+                  onClick={() => navigate('/dashboard')}
+                >
+                  Review Now
+                </Button>
+              </div>
+            )}
 
-      {/* Filters Sheet */}
-      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent side="left" className="w-[350px] sm:w-[400px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Calendar Filters</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
-            <CalendarFilters
+            <div className="flex-1 mt-4 overflow-hidden">
+              {view === 'week' && (
+                <WeekViewByTime
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  blockedTime={blockedTime}
+                  startHour={settings.start_hour}
+                  endHour={settings.end_hour}
+                  slotDuration={settings.slot_duration}
+                  onAppointmentClick={handleAppointmentClick}
+                  onTimeSlotClick={handleTimeSlotClick}
+                  providers={providers}
+                  selectedProviders={selectedProviders}
+                />
+              )}
+
+              {view === 'week-provider' && (
+                <WeekViewByProvider
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  providers={providers}
+                  selectedProviders={selectedProviders}
+                  onAppointmentClick={handleAppointmentClick}
+                  onTimeSlotClick={handleTimeSlotClick}
+                />
+              )}
+
+              {view === 'day' && (
+                <DayView
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  blockedTime={blockedTime}
+                  startHour={settings.start_hour}
+                  endHour={settings.end_hour}
+                  slotDuration={settings.slot_duration}
+                  onAppointmentClick={handleAppointmentClick}
+                  onTimeSlotClick={handleTimeSlotClick}
+                  providers={providers}
+                  selectedProviders={selectedProviders}
+                />
+              )}
+
+              {view === 'month' && (
+                <MonthView
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  onDateClick={handleDateClick}
+                  onAppointmentClick={handleAppointmentClick}
+                />
+              )}
+
+              {view === 'agenda' && (
+                <AgendaView
+                  currentDate={currentDate}
+                  appointments={appointments}
+                  onAppointmentClick={handleAppointmentClick}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Side-by-Side Panels - Below Calendar */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 lg:px-6 pb-4 lg:pb-6">
+            {/* Waiting Room Panel - Left Side */}
+            <WaitingRoomPanel
+              practiceId={practiceId}
+              providers={providers}
+              onAppointmentClick={handleAppointmentClick}
+              currentDate={currentDate}
+            />
+
+            {/* Being Treated Panel - Right Side */}
+            <BeingTreatedPanel
+              practiceId={practiceId}
               providers={providers}
               rooms={rooms}
-              selectedProviders={selectedProviders}
-              selectedRooms={selectedRooms}
-              selectedStatuses={selectedStatuses}
-              onProviderToggle={handleProviderToggle}
-              onRoomToggle={handleRoomToggle}
-              onStatusToggle={handleStatusToggle}
-              isProviderView={isProviderView}
+              onCompleteAppointment={handleCompleteAppointment}
+              onAppointmentClick={handleAppointmentClick}
+              currentDate={currentDate}
             />
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </div>
+
+      {/* Quick Actions FAB */}
+      <CalendarQuickActions
+        onNewAppointment={handleCreateAppointment}
+        onWalkIn={handleWalkInAppointment}
+        onBlockTime={() => setBlockTimeOpen(true)}
+      />
 
       <CreateAppointmentDialog
         open={createDialogOpen}

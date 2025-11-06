@@ -3,6 +3,7 @@ import { Clock, User, MapPin, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
+import { ProviderAvatar } from "./ProviderAvatar";
 import {
   Tooltip,
   TooltipContent,
@@ -18,15 +19,16 @@ interface AppointmentCardProps {
   duration?: number;
 }
 
+// ENHANCED: Brighter, more saturated colors for better visibility
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 border-yellow-400 text-yellow-900 dark:bg-yellow-950 dark:border-yellow-600 dark:text-yellow-100',
-  scheduled: 'bg-blue-100 border-blue-300 text-blue-900 dark:bg-blue-950 dark:border-blue-700 dark:text-blue-100',
-  confirmed: 'bg-green-100 border-green-300 text-green-900 dark:bg-green-950 dark:border-green-700 dark:text-green-100',
-  checked_in: 'bg-amber-100 border-amber-400 text-amber-900 dark:bg-amber-950 dark:border-amber-600 dark:text-amber-100',
-  being_treated: 'bg-purple-100 border-purple-400 text-purple-900 dark:bg-purple-950 dark:border-purple-600 dark:text-purple-100',
-  completed: 'bg-gray-100 border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100',
-  cancelled: 'bg-red-100 border-red-300 text-red-900 dark:bg-red-950 dark:border-red-700 dark:text-red-100',
-  no_show: 'bg-orange-100 border-orange-300 text-orange-900 dark:bg-orange-950 dark:border-orange-700 dark:text-orange-100',
+  pending: 'bg-yellow-400 border-yellow-500 text-yellow-950 dark:bg-yellow-500 dark:border-yellow-600 dark:text-white',
+  scheduled: 'bg-sky-400 border-sky-500 text-white dark:bg-sky-500 dark:border-sky-600',
+  confirmed: 'bg-emerald-400 border-emerald-500 text-white dark:bg-emerald-500 dark:border-emerald-600',
+  checked_in: 'bg-amber-400 border-amber-500 text-white dark:bg-amber-500 dark:border-amber-600',
+  being_treated: 'bg-purple-500 border-purple-600 text-white dark:bg-purple-600 dark:border-purple-700',
+  completed: 'bg-gray-400 border-gray-500 text-white dark:bg-gray-500 dark:border-gray-600',
+  cancelled: 'bg-red-400 border-red-500 text-white dark:bg-red-500 dark:border-red-600',
+  no_show: 'bg-orange-400 border-orange-500 text-white dark:bg-orange-500 dark:border-orange-600',
 };
 
 export function AppointmentCard({ appointment, onClick, isDragging, style, duration }: AppointmentCardProps) {
@@ -57,10 +59,11 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
       onClick={onClick}
       style={style}
       className={cn(
-        "rounded-md border-l-4 cursor-pointer transition-all hover:shadow-md overflow-hidden",
-        isCompact ? "p-1.5" : "p-2",
+        "rounded-md border-l-4 cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] overflow-hidden",
+        isCompact ? "p-1.5" : isExtended ? "p-3" : "p-2",
         statusColor,
-        isDragging && "opacity-50 cursor-move"
+        isDragging && "opacity-50 cursor-move",
+        isWalkIn && "border-l-[6px]" // Thicker border for walk-ins
       )}
     >
       {isCompact ? (
