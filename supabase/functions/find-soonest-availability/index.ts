@@ -69,29 +69,12 @@ Deno.serve(async (req) => {
       return new Date(utcBase.getTime() + diff).toISOString();
     };
 
-    // Get current time in practice timezone using Intl API
+    // Get current time in practice timezone (convert UTC to practice TZ)
     const nowUTC = new Date();
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: practiceTimezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-    
-    const parts = formatter.formatToParts(nowUTC);
-    const getPart = (type: string) => parts.find((p: any) => p.type === type)?.value || '0';
-    
-    const todayYear = parseInt(getPart('year'));
-    const todayMonth = parseInt(getPart('month'));
-    const todayDay = parseInt(getPart('day'));
-    const nowHour = parseInt(getPart('hour'));
-    const nowMinute = parseInt(getPart('minute'));
-    const nowMinutes = nowHour * 60 + nowMinute;
-    
-    const todayYMD = `${todayYear}-${String(todayMonth).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
+    // Format current time in practice timezone
+    const nowInPracticeTZ = new Date(nowUTC.toLocaleString('en-US', { timeZone: practiceTimezone }));
+    const todayYMD = nowInPracticeTZ.toISOString().split('T')[0]; // YYYY-MM-DD
+    const nowMinutes = nowInPracticeTZ.getHours() * 60 + nowInPracticeTZ.getMinutes();
 
     console.log('[find-soonest-availability] Starting search:', JSON.stringify({
       practiceTimezone,
@@ -106,9 +89,12 @@ Deno.serve(async (req) => {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
     for (let dayOffset = 0; dayOffset < maxDays; dayOffset++) {
-      // Calculate the date in YYYY-MM-DD format
-      const checkDate = new Date(todayYear, todayMonth - 1, todayDay + dayOffset);
-      const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+      // Create date for checking
+      const checkDate = new Date(nowInPracticeTZ);
+      checkDate.setDate(checkDate.getDate() + dayOffset);
+      checkDate.setHours(0, 0, 0, 0);
+      
+      const dateStr = checkDate.toISOString().split('T')[0]; // YYYY-MM-DD
       const dayOfWeek = checkDate.getDay(); // 0 = Sunday, 6 = Saturday
       
       // Get practice hours for this day (using RPC with defaults)
