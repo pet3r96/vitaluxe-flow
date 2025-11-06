@@ -103,6 +103,7 @@ export const OrdersDataTable = () => {
         }));
 
       // Special handling for pharmacy users - fetch from order_lines
+      // OPTIMIZED: Only fetch fields needed for table display
       if (effectiveRole === "pharmacy") {
         const { data: pharmacyData } = await supabase
           .from("pharmacies")
@@ -119,48 +120,17 @@ export const OrdersDataTable = () => {
           .select(`
             id,
             order_id,
-            product_id,
-            provider_id,
-            patient_id,
-            quantity,
-            price,
             status,
             tracking_number,
-            assigned_pharmacy_id,
             created_at,
-            updated_at,
-            shipping_speed,
-            shipping_carrier,
-            shipping_cost,
-            destination_state,
-            order_notes,
-            processing_at,
-            shipped_at,
-            delivered_at,
-            price_before_discount,
-            discount_amount,
-            discount_percentage,
-            original_order_line_id,
-            is_refill,
-            refill_number,
-            prescription_method,
             patient_name,
-            patient_email,
-            patient_phone,
-            patient_address,
-            prescription_url,
-            custom_dosage,
-            custom_sig,
-            products(name, product_types(name)),
-            pharmacies:assigned_pharmacy_id(name),
-            providers!order_lines_provider_id_fkey(
-              id,
-              practice_id
-            ),
-            patient_accounts!order_lines_patient_id_fkey(id, allergies),
+            products(name),
             orders!inner(
-              *,
-              profiles:doctor_id(name)
+              id,
+              created_at,
+              total_amount,
+              payment_status,
+              profiles:doctor_id(name, company)
             )
           `)
           .eq("assigned_pharmacy_id", pharmacyData.id)
@@ -190,20 +160,23 @@ export const OrdersDataTable = () => {
         return Array.from(ordersMap.values()).filter(order => order.payment_status !== 'payment_failed');
       }
 
+      // OPTIMIZED: Only fetch fields needed for table display
       let query = supabase
         .from("orders")
         .select(`
-          *,
-          order_lines(*,
-            products(name, product_types(name)),
-            pharmacies:assigned_pharmacy_id(name),
-            providers!order_lines_provider_id_fkey(
-              id,
-              practice_id
-            ),
-            patient_accounts!order_lines_patient_id_fkey(id, allergies)
+          id,
+          created_at,
+          total_amount,
+          payment_status,
+          status,
+          doctor_id,
+          order_lines(
+            id,
+            status,
+            patient_name,
+            products(name)
           ),
-          profiles:doctor_id(name)
+          profiles:doctor_id(name, company)
         `);
 
       // Admin role has access to all orders (no filtering needed)
@@ -229,49 +202,25 @@ export const OrdersDataTable = () => {
           return []; // Provider not found
         }
 
-        // Fetch ONLY order lines prescribed by this provider (mirroring pharmacy pattern)
+        // Fetch ONLY order lines prescribed by this provider
+        // OPTIMIZED: Only fetch fields needed for table display
         const { data: providerOrderLines, error: linesError } = await supabase
           .from("order_lines")
           .select(`
             id,
             order_id,
-            product_id,
-            provider_id,
-            patient_id,
-            quantity,
-            price,
             status,
             tracking_number,
-            assigned_pharmacy_id,
             created_at,
-            updated_at,
-            shipping_speed,
-            shipping_carrier,
-            shipping_cost,
-            destination_state,
-            order_notes,
-            processing_at,
-            shipped_at,
-            delivered_at,
-            price_before_discount,
-            discount_amount,
-            discount_percentage,
-            original_order_line_id,
-            is_refill,
-            refill_number,
-            prescription_method,
             patient_name,
-            patient_email,
-            patient_phone,
-            patient_address,
-            prescription_url,
-            custom_dosage,
-            custom_sig,
-            products(name, product_types(name)),
-            pharmacies:assigned_pharmacy_id(name),
-            providers!order_lines_provider_id_fkey(id, practice_id),
-            patient_accounts!order_lines_patient_id_fkey(id, allergies),
-            orders!inner(*, profiles:doctor_id(name))
+            products(name),
+            orders!inner(
+              id,
+              created_at,
+              total_amount,
+              payment_status,
+              profiles:doctor_id(name, company)
+            )
           `)
           .eq("provider_id", providerData.id)
           .order("created_at", { ascending: false });

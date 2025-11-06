@@ -39,6 +39,7 @@ export const PharmacyShippingManager = () => {
     queryFn: async () => {
       if (!pharmacyData?.id) return [];
 
+      // OPTIMIZED: Only fetch fields needed for list display
       const { data, error } = await supabase
         .from('order_lines')
         .select(`
@@ -46,19 +47,13 @@ export const PharmacyShippingManager = () => {
           order_id,
           status,
           tracking_number,
-          shipping_carrier,
-          shipped_at,
           patient_name,
           created_at,
-          order_notes,
           orders (
             id,
             created_at,
-            total_amount,
-            ship_to,
             payment_status,
             profiles (
-              id,
               name,
               company
             )
