@@ -52,7 +52,8 @@ const Dashboard = () => {
 
   const { data: ordersCount, isLoading: ordersLoading } = useQuery({
     queryKey: ["dashboard-orders-count", effectiveRole, effectiveUserId],
-    staleTime: 30000, // 30 seconds - dashboard stats refresh frequently
+    staleTime: 120000, // 2 minutes - reduced refetch frequency
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       let count = 0;
       
@@ -153,7 +154,8 @@ const Dashboard = () => {
 
   const { data: productsCount, isLoading: productsLoading } = useQuery({
     queryKey: ["dashboard-products-count", effectiveRole, effectiveUserId],
-    staleTime: 30000, // 30 seconds
+    staleTime: 120000, // 2 minutes - reduced refetch frequency
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       if (effectiveRole === "pharmacy") {
         const { data: pharmacyData } = await supabase
@@ -203,7 +205,8 @@ const Dashboard = () => {
 
   const { data: pendingOrdersCount, isLoading: pendingOrdersLoading } = useQuery({
     queryKey: ["dashboard-pending-orders-count", effectiveRole, effectiveUserId],
-    staleTime: 30000, // 30 seconds
+    staleTime: 120000, // 2 minutes - reduced refetch frequency
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       if (effectiveRole !== "pharmacy") {
         return 0;
@@ -242,7 +245,8 @@ const Dashboard = () => {
 
   const { data: usersCount, isLoading: usersLoading } = useQuery({
     queryKey: ["dashboard-users-count"],
-    staleTime: 30000, // 30 seconds
+    staleTime: 120000, // 2 minutes - reduced refetch frequency
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       const { count } = await supabase
         .from("profiles")
@@ -255,7 +259,8 @@ const Dashboard = () => {
 
   const { data: pendingRevenue, isLoading: pendingRevenueLoading } = useQuery({
     queryKey: ["dashboard-pending-revenue", effectiveRole, effectiveUserId],
-    staleTime: 30000, // 30 seconds
+    staleTime: 120000, // 2 minutes - reduced refetch frequency
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       let data: any = null;
       
@@ -358,7 +363,8 @@ const Dashboard = () => {
 
   const { data: collectedRevenue, isLoading: collectedRevenueLoading } = useQuery({
     queryKey: ["dashboard-collected-revenue", effectiveRole, effectiveUserId],
-    staleTime: 30000, // 30 seconds
+    staleTime: 120000, // 2 minutes - reduced refetch frequency
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       let data: any = null;
       
@@ -699,7 +705,7 @@ const Dashboard = () => {
                 metricKey="orders"
                 icon={ShoppingCart}
                 description={effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders"}
-                currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
+                currentValue={(ordersLoading || ordersCount === undefined) ? "..." : ordersCount.toString()}
                 role={effectiveRole}
                 userId={effectiveUserId}
               />
@@ -708,7 +714,7 @@ const Dashboard = () => {
                 metricKey="products"
                 icon={Package}
                 description="Active products"
-                currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
+                currentValue={(productsLoading || productsCount === undefined) ? "..." : productsCount.toString()}
                 role={effectiveRole}
                 userId={effectiveUserId}
               />
@@ -749,7 +755,7 @@ const Dashboard = () => {
               metricKey="orders"
               icon={ShoppingCart}
               description="All orders"
-              currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
+              currentValue={(ordersLoading || ordersCount === undefined) ? "..." : ordersCount.toString()}
               role={effectiveRole}
               userId={effectiveUserId}
             />
@@ -758,7 +764,7 @@ const Dashboard = () => {
               metricKey="products"
               icon={Package}
               description="Active products"
-              currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
+              currentValue={(productsLoading || productsCount === undefined) ? "..." : productsCount.toString()}
               role={effectiveRole}
               userId={effectiveUserId}
             />
@@ -768,7 +774,7 @@ const Dashboard = () => {
                 metricKey="pending_orders"
                 icon={Clock}
                 description="Orders awaiting fulfillment"
-                currentValue={pendingOrdersLoading ? "..." : pendingOrdersCount?.toString() || "0"}
+                currentValue={(pendingOrdersLoading || pendingOrdersCount === undefined) ? "..." : pendingOrdersCount.toString()}
                 role={effectiveRole}
                 userId={effectiveUserId}
               />
@@ -780,7 +786,7 @@ const Dashboard = () => {
                   metricKey="users"
                   icon={Users}
                   description="Active accounts"
-                  currentValue={usersLoading ? "..." : usersCount?.toString() || "0"}
+                  currentValue={(usersLoading || usersCount === undefined) ? "..." : usersCount.toString()}
                   role={effectiveRole}
                   userId={effectiveUserId}
                 />
@@ -789,7 +795,7 @@ const Dashboard = () => {
                   metricKey="revenue"
                   icon={DollarSign}
                   description="Paid orders revenue"
-                  currentValue={collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`}
+                  currentValue={(collectedRevenueLoading || collectedRevenue === undefined) ? "..." : `$${collectedRevenue.toFixed(2)}`}
                   role={effectiveRole}
                   userId={effectiveUserId}
                   valueFormatter={(v) => `$${v.toFixed(2)}`}
@@ -831,7 +837,7 @@ const Dashboard = () => {
               metricKey="orders"
               icon={ShoppingCart}
               description="Your practice orders"
-              currentValue={ordersLoading ? "..." : ordersCount?.toString() || "0"}
+              currentValue={(ordersLoading || ordersCount === undefined) ? "..." : ordersCount.toString()}
               role={effectiveRole}
               userId={effectiveUserId}
             />
@@ -840,7 +846,7 @@ const Dashboard = () => {
               metricKey="products"
               icon={Package}
               description="Active products"
-              currentValue={productsLoading ? "..." : productsCount?.toString() || "0"}
+              currentValue={(productsLoading || productsCount === undefined) ? "..." : productsCount.toString()}
               role={effectiveRole}
               userId={effectiveUserId}
             />
