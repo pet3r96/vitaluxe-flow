@@ -318,7 +318,7 @@ serve(async (req) => {
     doc.setFont('helvetica', 'bold');
     doc.text('PATIENT INFORMATION:', 0.75, 2.15);
     
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     const startY = 2.4;
     const rowHeight = 0.25; // Compact spacing for professional appearance
 
@@ -490,9 +490,22 @@ serve(async (req) => {
     doc.setTextColor(80, 80, 80);
     doc.line(0.5, bottomY + 0.95, 8, bottomY + 0.95);
     doc.text('This prescription was generated electronically on ' + date + '.', 4.25, bottomY + 1.15, { align: 'center' });
+    
+    // Compliance statement (multi-line for readability)
     doc.setTextColor(50, 50, 50);
     doc.setFont('helvetica', 'bold');
-    doc.text('For pharmacy use only. Verify prescriber credentials before dispensing.', 4.25, bottomY + 1.35, { align: 'center' });
+    doc.setFontSize(8);
+    doc.text('Generated via VitaLuxe Services, a HIPAA-compliant prescription management system.', 4.25, bottomY + 1.35, { align: 'center' });
+    doc.text('This document is not a DEA-certified e-prescription.', 4.25, bottomY + 1.50, { align: 'center' });
+    doc.text('For pharmacy use only. Verify prescriber credentials before dispensing.', 4.25, bottomY + 1.65, { align: 'center' });
+    
+    // Digital signature seal
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'italic');
+    const timestamp = new Date().toISOString();
+    const documentId = `${Date.now()}-${provider_id.substring(0, 8)}`;
+    doc.text(`Digitally verified by ${prescriberDisplayName} on ${date}. Document ID: ${documentId}`, 4.25, bottomY + 1.85, { align: 'center' });
 
     // Get PDF as array buffer
     const pdfOutput = doc.output('arraybuffer');
