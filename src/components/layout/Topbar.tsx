@@ -6,6 +6,7 @@ import { RoleImpersonationDropdown } from "./RoleImpersonationDropdown";
 import { ThemeToggle } from "./ThemeToggle";
 import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,7 +30,15 @@ export function Topbar() {
   return (
     <div className={`${isPatientMobile ? 'hidden md:flex' : 'flex'} sticky top-0 z-10 items-center justify-between gap-1.5 sm:gap-2 md:gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-3 md:px-4 lg:px-6 py-1.5 sm:py-2 md:py-3 transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_12px_rgba(190,155,75,0.15)]' : ''}`}>
       <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 flex-1 min-w-0">
-        <SidebarTrigger className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 flex-shrink-0" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <SidebarTrigger className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 flex-shrink-0 hover:bg-accent/50 transition-colors" />
+          </TooltipTrigger>
+          <TooltipContent side="right" className="flex flex-col gap-1">
+            <p>Toggle Sidebar</p>
+            <p className="text-xs text-muted-foreground">⌘B</p>
+          </TooltipContent>
+        </Tooltip>
         <div className="flex-1 min-w-0 max-w-full">
           <EnhancedCommandPalette />
         </div>

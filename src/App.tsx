@@ -14,6 +14,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GlobalImpersonationBanner } from "@/components/layout/GlobalImpersonationBanner";
 import { Topbar } from "./components/layout/Topbar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useResponsive } from "@/hooks/use-mobile";
 import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { GlobalIntakeDialog } from "./components/patient/GlobalIntakeDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
@@ -173,6 +174,18 @@ const SessionTimerWrapper = () => {
 // Wrapper removed - subscriptions are now automatic on first login
 // Users are auto-enrolled in 14-day trial when they create a practice account
 
+// Sidebar wrapper to provide responsive default state
+const SidebarLayout = ({ children }: { children: React.ReactNode }) => {
+  const { isMobile } = useResponsive();
+  const defaultOpen = isMobile ? true : false; // Collapsed on desktop, expanded on mobile
+  
+  return (
+    <SidebarProvider defaultOpen={defaultOpen}>
+      {children}
+    </SidebarProvider>
+  );
+};
+
 const App = () => <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <ErrorBoundary>
@@ -197,7 +210,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                   <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />
                   <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
                    <Route path="/*" element={<ProtectedRoute>
-                        <SidebarProvider>
+                        <SidebarLayout>
                           <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                             <AppSidebar />
                             <main className="flex-1 flex flex-col overflow-y-auto">
@@ -266,7 +279,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                               </div>
                             </main>
                           </div>
-                        </SidebarProvider>
+                        </SidebarLayout>
                       </ProtectedRoute>} />
                 </Routes>
               </Suspense>
