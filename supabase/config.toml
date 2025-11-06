@@ -323,3 +323,9 @@ verify_jwt = true
 
 [functions.validate-share-link]
 verify_jwt = false
+
+[functions.get-dashboard-stats]
+verify_jwt = true
+
+[functions.get-rep-dashboard-stats]
+verify_jwt = true
