@@ -46,7 +46,10 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
 
     // Get request body
-    const { role, isImpersonating } = await req.json();
+    const { role, isImpersonating, effectiveUserId } = await req.json();
+
+    // When impersonating, use the effective user's ID for scoping
+    const targetUserId = isImpersonating && effectiveUserId ? effectiveUserId : userId;
 
     const stats: Record<string, number> = {
       ordersCount: 0,
@@ -71,13 +74,13 @@ Deno.serve(async (req) => {
             .select('*', { count: 'exact', head: true })
             .neq('status', 'cancelled')
             .neq('payment_status', 'payment_failed')
-            .eq('doctor_id', userId);
+            .eq('doctor_id', targetUserId);
           count = orderCount || 0;
         } else if (role === 'provider') {
           const { data: providerData } = await supabase
             .from('providers')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .single();
           
           if (providerData) {
@@ -95,7 +98,7 @@ Deno.serve(async (req) => {
           const { data: pharmacyData } = await supabase
             .from('pharmacies')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .maybeSingle();
           
           if (pharmacyData) {
@@ -113,7 +116,7 @@ Deno.serve(async (req) => {
           const { data: staffData } = await supabase
             .from('practice_staff')
             .select('practice_id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .eq('active', true)
             .maybeSingle();
           
@@ -148,7 +151,7 @@ Deno.serve(async (req) => {
           const { data: pharmacyData } = await supabase
             .from('pharmacies')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .maybeSingle();
           
           if (pharmacyData) {
@@ -230,7 +233,7 @@ Deno.serve(async (req) => {
             .select('total_amount')
             .neq('status', 'cancelled')
             .neq('payment_status', 'payment_failed')
-            .eq('doctor_id', userId)
+            .eq('doctor_id', targetUserId)
             .eq('status', 'pending');
           
           revenue = orders?.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
@@ -238,7 +241,7 @@ Deno.serve(async (req) => {
           const { data: providerData } = await supabase
             .from('providers')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .single();
           
           if (providerData) {
@@ -256,7 +259,7 @@ Deno.serve(async (req) => {
           const { data: pharmacyData } = await supabase
             .from('pharmacies')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .maybeSingle();
           
           if (pharmacyData) {
@@ -274,7 +277,7 @@ Deno.serve(async (req) => {
           const { data: staffData } = await supabase
             .from('practice_staff')
             .select('practice_id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .eq('active', true)
             .maybeSingle();
           
@@ -315,7 +318,7 @@ Deno.serve(async (req) => {
             .select('total_amount')
             .neq('status', 'cancelled')
             .neq('payment_status', 'payment_failed')
-            .eq('doctor_id', userId)
+            .eq('doctor_id', targetUserId)
             .eq('payment_status', 'paid');
           
           revenue = orders?.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
@@ -323,7 +326,7 @@ Deno.serve(async (req) => {
           const { data: providerData } = await supabase
             .from('providers')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .single();
           
           if (providerData) {
@@ -342,7 +345,7 @@ Deno.serve(async (req) => {
           const { data: pharmacyData } = await supabase
             .from('pharmacies')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .maybeSingle();
           
           if (pharmacyData) {
@@ -361,7 +364,7 @@ Deno.serve(async (req) => {
           const { data: staffData } = await supabase
             .from('practice_staff')
             .select('practice_id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .eq('active', true)
             .maybeSingle();
           

@@ -55,7 +55,7 @@ const Dashboard = () => {
     queryKey: ["dashboard-stats-batched", effectiveRole, effectiveUserId, isImpersonating],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-dashboard-stats', {
-        body: { role: effectiveRole, isImpersonating }
+        body: { role: effectiveRole, isImpersonating, effectiveUserId }
       });
       
       if (error) throw error;
