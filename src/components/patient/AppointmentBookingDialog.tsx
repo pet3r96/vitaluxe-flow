@@ -418,45 +418,6 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
             </Alert>
           )}
 
-          {debugInfo && (
-            <Collapsible open={debugOpen} onOpenChange={setDebugOpen} className="border border-dashed rounded-lg bg-muted/30">
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-2">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Debug Information</span>
-                </div>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${debugOpen ? 'rotate-180' : ''}`} />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="p-3 pt-0 space-y-2 text-xs">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-muted-foreground">Practice Timezone:</span>
-                    <p className="font-mono font-medium">{debugInfo.practiceTimezone}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Resolved Weekday:</span>
-                    <p className="font-mono font-medium">{debugInfo.resolvedWeekday} (Day {debugInfo.dayOfWeek})</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Practice Hours:</span>
-                    <p className="font-mono font-medium">
-                      {debugInfo.practiceHours?.is_closed 
-                        ? 'CLOSED' 
-                        : `${debugInfo.practiceHours?.start_time || 'N/A'} - ${debugInfo.practiceHours?.end_time || 'N/A'}`}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Requested Date:</span>
-                    <p className="font-mono font-medium">{debugInfo.requestedDate}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Requested Time:</span>
-                    <p className="font-mono font-medium">{debugInfo.requestedTime}</p>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="reason">Reason for Visit *</Label>
