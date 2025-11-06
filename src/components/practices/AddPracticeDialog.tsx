@@ -597,7 +597,7 @@ verifyNPIDebounced(value, (result) => {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || npiVerificationStatus !== "verified"}>
+            <Button type="submit" disabled={loading || (formData.hasPrescriber && npiVerificationStatus !== "verified")}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading ? "Creating..." : "Create Practice"}
             </Button>

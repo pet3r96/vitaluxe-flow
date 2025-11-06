@@ -399,7 +399,7 @@ verifyNPIDebounced(value, (result) => {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || npiVerificationStatus !== "verified"}>
+            <Button type="submit" disabled={loading || (formData.hasPrescriber && npiVerificationStatus !== "verified")}>
               {loading ? "Submitting..." : "Submit Request"}
             </Button>
           </DialogFooter>
