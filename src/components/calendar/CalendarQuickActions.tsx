@@ -22,7 +22,7 @@ export function CalendarQuickActions({
   className
 }: CalendarQuickActionsProps) {
   return (
-    <div className={cn("fixed bottom-6 right-6 z-30 flex flex-col gap-3", className)}>
+    <div className={cn("fixed bottom-40 right-6 z-30 flex flex-col gap-3", className)}>
       {/* Mobile: Dropdown FAB */}
       <div className="lg:hidden">
         <DropdownMenu>
