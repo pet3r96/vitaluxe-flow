@@ -69,29 +69,46 @@ Deno.serve(async (req) => {
       return new Date(utcBase.getTime() + diff).toISOString();
     };
 
-    // Get current time in practice timezone
-    const nowInPracticeTime = new Date(new Date().toLocaleString('en-US', { timeZone: practiceTimezone }));
-    const todayYMD = nowInPracticeTime.toLocaleDateString('en-CA', { timeZone: practiceTimezone });
-    const nowMinutes = nowInPracticeTime.getHours() * 60 + nowInPracticeTime.getMinutes();
+    // Get current time in practice timezone using Intl API
+    const nowUTC = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: practiceTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+    const parts = formatter.formatToParts(nowUTC);
+    const getPart = (type: string) => parts.find((p: any) => p.type === type)?.value || '0';
+    
+    const todayYear = parseInt(getPart('year'));
+    const todayMonth = parseInt(getPart('month'));
+    const todayDay = parseInt(getPart('day'));
+    const nowHour = parseInt(getPart('hour'));
+    const nowMinute = parseInt(getPart('minute'));
+    const nowMinutes = nowHour * 60 + nowMinute;
+    
+    const todayYMD = `${todayYear}-${String(todayMonth).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
 
     console.log('[find-soonest-availability] Starting search:', JSON.stringify({
       practiceTimezone,
       todayYMD,
       nowMinutes,
-      nowInPractice: nowInPracticeTime.toISOString(),
+      nowUTC: nowUTC.toISOString(),
       duration
     }));
 
-    // Start searching from today in practice timezone (midnight)
-    const searchStart = new Date(nowInPracticeTime);
-    searchStart.setHours(0, 0, 0, 0);
     // Search up to 30 days ahead
     const maxDays = 30;
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
     for (let dayOffset = 0; dayOffset < maxDays; dayOffset++) {
-      const checkDate = new Date(searchStart);
-      checkDate.setDate(checkDate.getDate() + dayOffset);
+      // Calculate the date in YYYY-MM-DD format
+      const checkDate = new Date(todayYear, todayMonth - 1, todayDay + dayOffset);
+      const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
       const dayOfWeek = checkDate.getDay(); // 0 = Sunday, 6 = Saturday
       
       // Get practice hours for this day (using RPC with defaults)
@@ -109,7 +126,8 @@ Deno.serve(async (req) => {
       const practiceHours = hours?.[0];
       
       console.log(`[find-soonest-availability] Day ${dayOfWeek} (${dayNames[dayOfWeek]})`, JSON.stringify({
-        dateStr: new Date(checkDate).toLocaleDateString('en-CA', { timeZone: practiceTimezone }),
+        dateStr,
+        dayOffset,
         practiceHours: practiceHours ? {
           start: practiceHours.start_time,
           end: practiceHours.end_time,
@@ -152,8 +170,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const dateStr = new Date(checkDate).toLocaleDateString('en-CA', { timeZone: practiceTimezone }); // YYYY-MM-DD in practice TZ
-
+      // dateStr was already calculated above
       for (let minutes = firstMinute; minutes <= latestStart; minutes += 30) {
         const slotHour = Math.floor(minutes / 60);
         const slotMin = minutes % 60;
@@ -200,7 +217,7 @@ Deno.serve(async (req) => {
         }
         
         // Found an available slot!
-        const dayName = dayNames[checkDate.getDay()];
+        const dayName = dayNames[dayOfWeek];
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const monthName = monthNames[checkDate.getMonth()];
         const day = checkDate.getDate();
