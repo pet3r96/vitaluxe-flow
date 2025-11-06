@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ShoppingCart, Plus } from "lucide-react";
+import { Search, ShoppingCart, Plus, AlertCircle, UserPlus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ProductDialog } from "./ProductDialog";
 import { PatientSelectionDialog } from "./PatientSelectionDialog";
 import { ProductCard } from "./ProductCard";
@@ -125,6 +127,29 @@ export const ProductsGrid = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch practice prescriber status for non-prescriber banner
+  const { data: practiceStatus } = useQuery({
+    queryKey: ['practice-prescriber-status', effectiveUserId],
+    queryFn: async () => {
+      if (!isProvider) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('has_prescriber')
+        .eq('id', effectiveUserId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching practice prescriber status:', error);
+        return null;
+      }
+      
+      return data;
+    },
+    enabled: isProvider,
+    staleTime: 300000, // 5 minutes - relatively static data
   });
 
   // Fetch visibility settings for topline rep to show hidden status
@@ -797,6 +822,29 @@ export const ProductsGrid = () => {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1600px] space-y-4 sm:space-y-6">
+      {/* Non-Prescriber Practice Info Banner */}
+      {isProvider && practiceStatus && practiceStatus.has_prescriber === false && (
+        <Alert className="mb-6 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
+          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+          <AlertTitle className="text-amber-900 dark:text-amber-400 font-semibold">
+            Non-Prescription Products Only
+          </AlertTitle>
+          <AlertDescription className="text-amber-800 dark:text-amber-300">
+            <p className="mb-3">
+              Your practice currently only has access to non-prescription products. 
+              Prescription medications are hidden from your product catalog.
+            </p>
+            <Link 
+              to="/providers" 
+              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md transition-colors font-medium text-sm"
+            >
+              <UserPlus className="h-4 w-4" />
+              Add a Provider to Access Rx Products
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
         <div className="flex flex-1 gap-2 sm:gap-3 flex-col sm:flex-row w-full sm:w-auto">
