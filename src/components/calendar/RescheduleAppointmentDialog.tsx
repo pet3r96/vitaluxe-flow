@@ -19,6 +19,7 @@ import { Calendar } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { VideoComingSoonDialog } from "@/components/video/VideoComingSoonDialog";
 
 interface RescheduleAppointmentDialogProps {
   open: boolean;
@@ -40,6 +41,8 @@ export function RescheduleAppointmentDialog({
   const queryClient = useQueryClient();
   const { effectiveUserId } = useAuth();
   const [createFollowUp, setCreateFollowUp] = useState(false);
+  const [videoComingSoonOpen, setVideoComingSoonOpen] = useState(false);
+  const [previousVisitType, setPreviousVisitType] = useState(appointment.visit_type || "in_person");
   
   const appointmentDate = new Date(appointment.start_time);
   const duration = Math.max(1, Math.round((new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) / 60000));
@@ -52,6 +55,7 @@ export function RescheduleAppointmentDialog({
       startTime: format(appointmentDate, 'HH:mm'),
       duration: duration.toString(),
       appointmentType: appointment.appointment_type || "consultation",
+      visitType: appointment.visit_type || "in_person",
       serviceType: appointment.service_type || "",
       serviceDescription: appointment.service_description || "",
       notes: appointment.notes || "",
@@ -279,6 +283,31 @@ export function RescheduleAppointmentDialog({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="visitType">Visit Type *</Label>
+            <Select 
+              value={watch("visitType")} 
+              onValueChange={(value) => {
+                if (value === "video") {
+                  setVideoComingSoonOpen(true);
+                  // Don't change the value, keep previous selection
+                } else {
+                  setPreviousVisitType(value);
+                  setValue("visitType", value);
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in_person">In-Person</SelectItem>
+                <SelectItem value="video">Video Call</SelectItem>
+                <SelectItem value="phone">Phone Call</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="serviceType">Service Type *</Label>
             <Select 
               value={watch("serviceType")} 
@@ -359,6 +388,12 @@ export function RescheduleAppointmentDialog({
           </div>
         </form>
       </DialogContent>
+      
+      <VideoComingSoonDialog 
+        open={videoComingSoonOpen} 
+        onOpenChange={setVideoComingSoonOpen}
+        feature="Video Appointments"
+      />
     </Dialog>
   );
 }
