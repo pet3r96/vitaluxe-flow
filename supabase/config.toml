@@ -96,9 +96,6 @@ verify_jwt = true
 [functions.sync-user-data]
 verify_jwt = false
 
-[functions.reset-admin-password]
-verify_jwt = true
-
 [functions.clear-storage-files]
 verify_jwt = true
 
