@@ -174,10 +174,10 @@ const SessionTimerWrapper = () => {
 // Wrapper removed - subscriptions are now automatic on first login
 // Users are auto-enrolled in 14-day trial when they create a practice account
 
-// Sidebar wrapper to provide responsive default state
+// Sidebar wrapper - defaults to expanded for best navigation visibility
 const SidebarLayout = ({ children }: { children: React.ReactNode }) => {
   const { isMobile } = useResponsive();
-  const defaultOpen = isMobile ? true : false; // Collapsed on desktop, expanded on mobile
+  const defaultOpen = true; // Always start expanded (full length) by default
   
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
