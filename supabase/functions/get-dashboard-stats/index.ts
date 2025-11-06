@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
           const { data: pharmacyData } = await supabase
             .from('pharmacies')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .maybeSingle();
           
           if (pharmacyData) {
