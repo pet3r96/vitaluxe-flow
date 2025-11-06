@@ -108,8 +108,9 @@ export default function PracticeCalendar() {
     },
     {
       enabled: !!practiceId,
-      staleTime: 0, // Instant updates - no cache delay
+      staleTime: 30 * 1000, // 30 seconds - balance freshness with performance
       gcTime: 300000, // 5 minutes
+      refetchOnWindowFocus: true, // Refetch when user returns to tab
     }
   );
 

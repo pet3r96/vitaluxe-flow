@@ -35,46 +35,50 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch order details
+  // Fetch order details - OPTIMIZED: Single query with all data
   const { data: order, isLoading } = useQuery({
     queryKey: ['order-shipping-details', orderId],
     queryFn: async () => {
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          profiles (
-            name,
-            company,
-            address_street,
-            address_city,
-            address_state,
-            address_zip,
-            npi,
-            practice_npi
-          )
-        `)
-        .eq('id', orderId)
-        .single();
+      // OPTIMIZED: Fetch all data in parallel for better performance
+      const [orderResult, linesResult] = await Promise.all([
+        supabase
+          .from('orders')
+          .select(`
+            *,
+            profiles (
+              name,
+              company,
+              address_street,
+              address_city,
+              address_state,
+              address_zip,
+              npi,
+              practice_npi
+            )
+          `)
+          .eq('id', orderId)
+          .single(),
+        supabase
+          .from('order_lines')
+          .select(`
+            *,
+            products (
+              name,
+              requires_prescription
+            ),
+            providers!order_lines_provider_id_fkey (
+              id,
+              user_id
+            )
+          `)
+          .eq('order_id', orderId)
+      ]);
 
-      if (orderError) throw orderError;
+      if (orderResult.error) throw orderResult.error;
+      if (linesResult.error) throw linesResult.error;
 
-      const { data: lines, error: linesError } = await supabase
-        .from('order_lines')
-        .select(`
-          *,
-          products (
-            name,
-            requires_prescription
-          ),
-          providers!order_lines_provider_id_fkey (
-            id,
-            user_id
-          )
-        `)
-        .eq('order_id', orderId);
-
-      if (linesError) throw linesError;
+      const orderData = orderResult.data;
+      const lines = linesResult.data;
 
       // Get provider profiles separately to avoid ambiguous relationship
       const providerIds = [...new Set(lines?.map(l => l.provider_id).filter(Boolean))];
@@ -111,9 +115,9 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
       if (orderData.ship_to === 'patient' && linesWithProviders && linesWithProviders.length > 0) {
         const patientIds = [...new Set(linesWithProviders.map(l => l.patient_id).filter(Boolean))];
         
-        for (const patientId of patientIds) {
+        // Fetch all patient addresses in parallel
+        const addressPromises = patientIds.map(async (patientId) => {
           try {
-            // Fetch from patient_accounts directly
             const { data: patientData } = await supabase
               .from('patient_accounts')
               .select('address')
@@ -121,16 +125,26 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
               .single();
             
             if (patientData?.address && patientData.address !== '[ENCRYPTED]') {
-              patientAddresses.set(patientId, patientData.address);
+              return { patientId, address: patientData.address };
             }
           } catch (error) {
             console.error(`Failed to fetch address for patient ${patientId}:`, error);
           }
-        }
+          return null;
+        });
+
+        const addresses = await Promise.all(addressPromises);
+        addresses.forEach(result => {
+          if (result) {
+            patientAddresses.set(result.patientId, result.address);
+          }
+        });
       }
 
       return { ...orderData, lines: linesWithProviders, patientAddresses };
     },
+    staleTime: 1 * 60 * 1000, // 1 minute - order details don't change often
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Check if order has Rx required products

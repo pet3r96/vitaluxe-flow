@@ -39,7 +39,7 @@ export const PharmacyShippingManager = () => {
     queryFn: async () => {
       if (!pharmacyData?.id) return [];
 
-      // OPTIMIZED: Only fetch fields needed for list display
+      // OPTIMIZED: Only fetch fields needed for list display + limit to most recent 150
       const { data, error } = await supabase
         .from('order_lines')
         .select(`
@@ -60,7 +60,8 @@ export const PharmacyShippingManager = () => {
           )
         `)
         .eq('assigned_pharmacy_id', pharmacyData.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(150); // Limit to most recent 150 orders for performance
       
       if (error) {
         toast.error('Failed to load orders');
@@ -75,6 +76,8 @@ export const PharmacyShippingManager = () => {
       return filteredData;
     },
     enabled: !!pharmacyData?.id,
+    staleTime: 2 * 60 * 1000, // 2 minutes - orders change frequently
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Filter orders based on active tab (client-side)
