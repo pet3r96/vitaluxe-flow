@@ -343,8 +343,9 @@ export const PatientSelectionDialog = ({
   };
 
   const handleContinue = () => {
-    if (!selectedProviderId) {
-      toast.error("Please select a provider");
+    // Only require provider for RX products
+    if (product.requires_prescription && !selectedProviderId) {
+      toast.error("Please select a provider for prescription products");
       return;
     }
 
@@ -436,11 +437,18 @@ export const PatientSelectionDialog = ({
       }
     }
     
-    // Get the selected provider's user_id (not the provider record ID)
-    const selectedProvider = providers?.find((p: any) => p.id === selectedProviderId);
-    if (!selectedProvider?.user_id) {
-      toast.error("Unable to find provider information. Please try again.");
-      return;
+    // Get the provider's user_id (for RX products) or use practice owner (for non-RX)
+    let providerUserId: string;
+    if (product.requires_prescription) {
+      const selectedProvider = providers?.find((p: any) => p.id === selectedProviderId);
+      if (!selectedProvider?.user_id) {
+        toast.error("Unable to find provider information. Please try again.");
+        return;
+      }
+      providerUserId = selectedProvider.user_id;
+    } else {
+      // For non-RX products, use the effective user (practice owner) as provider
+      providerUserId = effectiveUserId;
     }
     
     // Add to cart - ProductsGrid expects user_id for routing
@@ -448,7 +456,7 @@ export const PatientSelectionDialog = ({
       isPracticeOrder ? null : selectedPatientId, 
       quantity,
       isPracticeOrder,
-      selectedProvider.user_id,
+      providerUserId,
       prescriptionUrl,
       customSig || null,
       customDosage || null,
@@ -460,7 +468,7 @@ export const PatientSelectionDialog = ({
 
   const selectedPatient = patients?.find(p => p.id === selectedPatientId);
   const showNoPatientWarning = shipTo === 'patient' && (!patients || patients.length === 0);
-  const noActiveProviders = effectiveRole === "doctor" && providers && providers.length === 0;
+  const noActiveProviders = effectiveRole === "doctor" && providers && providers.length === 0 && product.requires_prescription;
 
   if (noActiveProviders) {
     return (
