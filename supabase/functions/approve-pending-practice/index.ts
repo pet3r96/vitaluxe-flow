@@ -108,8 +108,14 @@ serve(async (req) => {
     }
 
     if (action === 'approve') {
+      // Merge updatedData with pendingPractice (updatedData takes precedence)
+      const practiceData = {
+        ...pendingPractice,
+        ...(updatedData || {})
+      };
+
       // Read has_prescriber from pending request (default true for backward compatibility)
-      const hasPrescriber = pendingPractice.has_prescriber ?? true;
+      const hasPrescriber = practiceData.has_prescriber ?? true;
 
       // Validate data before creating account
       if (practiceData.phone) {
