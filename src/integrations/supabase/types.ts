@@ -4073,10 +4073,9 @@ export type Database = {
           created_by_user_id: string
           dea: string | null
           email: string
-          has_prescriber: boolean
           id: string
           license_number: string
-          npi: string | null
+          npi: string
           phone: string
           practice_name: string
           prescriber_dea: string | null
@@ -4110,10 +4109,9 @@ export type Database = {
           created_by_user_id: string
           dea?: string | null
           email: string
-          has_prescriber?: boolean
           id?: string
           license_number: string
-          npi?: string | null
+          npi: string
           phone: string
           practice_name: string
           prescriber_dea?: string | null
@@ -4147,10 +4145,9 @@ export type Database = {
           created_by_user_id?: string
           dea?: string | null
           email?: string
-          has_prescriber?: boolean
           id?: string
           license_number?: string
-          npi?: string | null
+          npi?: string
           phone?: string
           practice_name?: string
           prescriber_dea?: string | null
@@ -5515,7 +5512,6 @@ export type Database = {
           email: string
           email_encrypted: string | null
           full_name: string | null
-          has_prescriber: boolean
           id: string
           license_number: string | null
           license_number_encrypted: string | null
@@ -5570,7 +5566,6 @@ export type Database = {
           email: string
           email_encrypted?: string | null
           full_name?: string | null
-          has_prescriber?: boolean
           id: string
           license_number?: string | null
           license_number_encrypted?: string | null
@@ -5625,7 +5620,6 @@ export type Database = {
           email?: string
           email_encrypted?: string | null
           full_name?: string | null
-          has_prescriber?: boolean
           id?: string
           license_number?: string | null
           license_number_encrypted?: string | null

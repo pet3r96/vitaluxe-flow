@@ -38,8 +38,6 @@ interface SignupRequest {
   isAdminCreated?: boolean; // Flag for admin-created user flow
   createdBy?: string; // Admin user ID who created this user
   roleData: {
-    // Prescriber status
-    hasPrescriber?: boolean;
     // Doctor/Practice fields
     licenseNumber?: string;
     npi?: string;
@@ -137,9 +135,6 @@ serve(async (req) => {
       signupData.role = "doctor";
     }
 
-    // Extract has_prescriber from roleData (default true for backward compatibility)
-    const hasPrescriber = signupData.roleData.hasPrescriber ?? true;
-
     // Validate phone numbers, NPI, and DEA
     if (signupData.roleData.phone) {
       const phoneResult = validatePhone(signupData.roleData.phone);
@@ -152,8 +147,7 @@ serve(async (req) => {
       }
     }
 
-    // Only validate NPI if practice has prescriber
-    if (hasPrescriber && signupData.roleData.npi) {
+    if (signupData.roleData.npi) {
       const npiResult = validateNPI(signupData.roleData.npi);
       if (!npiResult.valid) {
         console.error('NPI validation failed:', npiResult.error);
@@ -632,11 +626,10 @@ serve(async (req) => {
     };
 
     if (signupData.role === 'doctor') {
-      profileUpdate.has_prescriber = hasPrescriber;
-      profileUpdate.license_number = hasPrescriber ? signupData.roleData.licenseNumber : null;
-      profileUpdate.npi = hasPrescriber ? signupData.roleData.npi : null;
+      profileUpdate.license_number = signupData.roleData.licenseNumber;
+      profileUpdate.npi = signupData.roleData.npi;
       profileUpdate.practice_npi = signupData.roleData.practiceNpi;
-      profileUpdate.dea = hasPrescriber ? signupData.roleData.dea : null;
+      profileUpdate.dea = signupData.roleData.dea;
       profileUpdate.phone = signupData.roleData.phone;
       profileUpdate.company = signupData.roleData.company;
       profileUpdate.linked_topline_id = signupData.roleData.linkedToplineId;
