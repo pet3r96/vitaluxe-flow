@@ -17,7 +17,7 @@ export function AppointmentSearchInput({
   onChange,
   onSubmit,
   className,
-  placeholder = "Search by patient name, ID, or date..."
+  placeholder = "Search by name, ID, or date..."
 }: AppointmentSearchInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
