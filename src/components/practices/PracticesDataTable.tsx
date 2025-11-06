@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Eye, Power, PowerOff, UserPlus } from "lucide-react";
+import { Search, Eye, Power, PowerOff, UserPlus, FileText, Package } from "lucide-react";
 import { AddPracticeDialog } from "./AddPracticeDialog";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
 import { toast } from "sonner";
@@ -297,8 +297,9 @@ export const PracticesDataTable = () => {
                     <TableHead>License #</TableHead>
                   </>
                 )}
-                <TableHead>Phone</TableHead>
-                <TableHead>Providers</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Prescriber Status</TableHead>
+              <TableHead>Providers</TableHead>
               <TableHead>Assigned Rep</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -307,13 +308,13 @@ export const PracticesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={canViewCredentials ? 9 : 7} className="text-center">
+                <TableCell colSpan={canViewCredentials ? 10 : 8} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPractices?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canViewCredentials ? 9 : 7} className="text-center text-muted-foreground">
+                <TableCell colSpan={canViewCredentials ? 10 : 8} className="text-center text-muted-foreground">
                   No practices found
                 </TableCell>
               </TableRow>
@@ -337,6 +338,19 @@ export const PracticesDataTable = () => {
                     </>
                   )}
                   <TableCell>{formatPhoneNumber(practice.phone)}</TableCell>
+                  <TableCell>
+                    {practice.has_prescriber ? (
+                      <Badge variant="success" size="sm">
+                        <FileText className="h-3 w-3 mr-1" />
+                        Prescriber
+                      </Badge>
+                    ) : (
+                      <Badge variant="warning" size="sm">
+                        <Package className="h-3 w-3 mr-1" />
+                        Non-Rx Only
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{providerCounts?.[practice.id] || 0}</Badge>
                   </TableCell>
