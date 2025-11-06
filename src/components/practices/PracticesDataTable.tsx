@@ -224,12 +224,29 @@ export const PracticesDataTable = () => {
       if (!confirmed) return;
     }
 
+    // Get practice details for audit log
+    const practice = practices?.find(p => p.id === practiceId);
+    const practiceName = practice?.name || "Unknown Practice";
+
     const { error } = await supabase
       .from("profiles")
       .update({ active: !currentStatus })
       .eq("id", practiceId);
 
     if (!error) {
+      // Log to audit_logs
+      await supabase.from("audit_logs").insert({
+        action_type: currentStatus ? "practice_disabled" : "practice_enabled",
+        entity_type: "practice",
+        entity_id: practiceId,
+        user_id: effectiveUserId,
+        details: {
+          practice_name: practiceName,
+          previous_status: currentStatus,
+          new_status: !currentStatus,
+        },
+      });
+
       toast.success(
         currentStatus 
           ? "✅ Practice account disabled successfully"
@@ -239,7 +256,7 @@ export const PracticesDataTable = () => {
     } else {
       toast.error("❌ Failed to update practice status");
     }
-  }, [refetch]);
+  }, [refetch, practices, effectiveUserId]);
 
   const filteredPractices = useMemo(() => practices?.filter((practice) => {
     const matchesSearch = 

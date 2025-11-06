@@ -26,6 +26,7 @@ import {
   FileSignature,
   LifeBuoy,
   LogOut,
+  History,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -89,6 +90,7 @@ export const menus: MenuConfig = {
         { label: "Admin Settings", href: "/admin-settings", icon: Settings },
         { label: "Security", href: "/security", icon: Shield },
         { label: "Terms Management", href: "/admin/terms", icon: FileSignature },
+        { label: "Practice Audit Log", href: "/admin/practice-audit", icon: History },
       ],
     },
   ],
