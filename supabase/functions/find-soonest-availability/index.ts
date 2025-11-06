@@ -92,13 +92,7 @@ Deno.serve(async (req) => {
     for (let dayOffset = 0; dayOffset < maxDays; dayOffset++) {
       const checkDate = new Date(searchStart);
       checkDate.setDate(checkDate.getDate() + dayOffset);
-      
-      // Calculate day of week in practice timezone (not server timezone)
-      const dateStr = new Date(checkDate).toLocaleDateString('en-CA', { timeZone: practiceTimezone });
-      const middayUtc = new Date(`${dateStr}T12:00:00Z`);
-      const dayNameFmt = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: practiceTimezone });
-      const dayNameInTz = dayNameFmt.format(middayUtc);
-      const dayOfWeek = dayNames.indexOf(dayNameInTz); // 0 = Sunday, 6 = Saturday
+      const dayOfWeek = checkDate.getDay(); // 0 = Sunday, 6 = Saturday
       
       // Get practice hours for this day (using RPC with defaults)
       const { data: hours, error: hoursError } = await supabaseClient
@@ -158,8 +152,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // dateStr already calculated above during day-of-week calculation
-      
+      const dateStr = new Date(checkDate).toLocaleDateString('en-CA', { timeZone: practiceTimezone }); // YYYY-MM-DD in practice TZ
+
       for (let minutes = firstMinute; minutes <= latestStart; minutes += 30) {
         const slotHour = Math.floor(minutes / 60);
         const slotMin = minutes % 60;
@@ -206,7 +200,7 @@ Deno.serve(async (req) => {
         }
         
         // Found an available slot!
-        // dayNameInTz already calculated above during day-of-week calculation
+        const dayName = dayNames[checkDate.getDay()];
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const monthName = monthNames[checkDate.getMonth()];
         const day = checkDate.getDate();
@@ -216,13 +210,13 @@ Deno.serve(async (req) => {
         const ampm = slotHour >= 12 ? 'PM' : 'AM';
         const displayTime = `${displayHour}:${String(slotMin).padStart(2, '0')} ${ampm}`;
         
-        console.log('[find-soonest-availability] Found slot', { date: dateStr, time: timeSlot, displayTime, day: dayNameInTz });
+        console.log('[find-soonest-availability] Found slot', { date: dateStr, time: timeSlot, displayTime, day: dayName });
         return new Response(
           JSON.stringify({
             available: true,
             suggestedDate: dateStr,
             suggestedTime: timeSlot,
-            message: `First available: ${dayNameInTz}, ${monthName} ${day} at ${displayTime}`
+            message: `First available: ${dayName}, ${monthName} ${day} at ${displayTime}`
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

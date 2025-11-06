@@ -124,6 +124,11 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         setSelectedTime(data.suggestedTime);
         toast.success(data.message);
         setValidationMessage({ type: 'success', text: data.message });
+        
+        // Trigger validation with the new date/time to force UI update
+        setTimeout(() => {
+          validateDateTime(data.suggestedDate, data.suggestedTime);
+        }, 100);
       } else {
         const message = data?.message || 'No availability found in the next 30 days';
         toast.error(message);
