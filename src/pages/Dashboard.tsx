@@ -98,19 +98,7 @@ const Dashboard = () => {
         { event: '*', schema: 'public', table: 'orders' },
         () => {
           queryClient.invalidateQueries({ 
-            queryKey: ["dashboard-orders-count"],
-            refetchType: 'active'
-          });
-          queryClient.invalidateQueries({ 
-            queryKey: ["dashboard-pending-orders-count"],
-            refetchType: 'active'
-          });
-          queryClient.invalidateQueries({ 
-            queryKey: ["dashboard-pending-revenue"],
-            refetchType: 'active'
-          });
-          queryClient.invalidateQueries({ 
-            queryKey: ["dashboard-collected-revenue"],
+            queryKey: ["dashboard-stats-batched"],
             refetchType: 'active'
           });
         }
@@ -126,15 +114,7 @@ const Dashboard = () => {
         { event: '*', schema: 'public', table: 'order_lines' },
         () => {
           queryClient.invalidateQueries({ 
-            queryKey: ["dashboard-orders-count"],
-            refetchType: 'active'
-          });
-          queryClient.invalidateQueries({ 
-            queryKey: ["dashboard-pending-revenue"],
-            refetchType: 'active'
-          });
-          queryClient.invalidateQueries({ 
-            queryKey: ["dashboard-collected-revenue"],
+            queryKey: ["dashboard-stats-batched"],
             refetchType: 'active'
           });
         }
@@ -150,7 +130,7 @@ const Dashboard = () => {
         { event: '*', schema: 'public', table: 'products' },
         () => {
           queryClient.invalidateQueries({ 
-            queryKey: ["dashboard-products-count"],
+            queryKey: ["dashboard-stats-batched"],
             refetchType: 'active'
           });
         }
@@ -167,7 +147,7 @@ const Dashboard = () => {
           { event: '*', schema: 'public', table: 'profiles' },
           () => {
             queryClient.invalidateQueries({ 
-              queryKey: ["dashboard-users-count"],
+              queryKey: ["dashboard-stats-batched"],
               refetchType: 'active'
             });
           }
