@@ -4075,7 +4075,7 @@ export type Database = {
           email: string
           has_prescriber: boolean
           id: string
-          license_number: string
+          license_number: string | null
           npi: string | null
           phone: string
           practice_name: string
@@ -4112,7 +4112,7 @@ export type Database = {
           email: string
           has_prescriber?: boolean
           id?: string
-          license_number: string
+          license_number?: string | null
           npi?: string | null
           phone: string
           practice_name: string
@@ -4149,7 +4149,7 @@ export type Database = {
           email?: string
           has_prescriber?: boolean
           id?: string
-          license_number?: string
+          license_number?: string | null
           npi?: string | null
           phone?: string
           practice_name?: string
