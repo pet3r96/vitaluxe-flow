@@ -17,6 +17,7 @@ interface AppointmentCardProps {
   isDragging?: boolean;
   style?: React.CSSProperties;
   duration?: number;
+  isHighlighted?: boolean;
 }
 
 // ENHANCED: Brighter, more saturated colors for better visibility
@@ -31,7 +32,7 @@ const statusColors: Record<string, string> = {
   no_show: 'bg-orange-400 border-orange-500 text-white dark:bg-orange-500 dark:border-orange-600',
 };
 
-export function AppointmentCard({ appointment, onClick, isDragging, style, duration }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onClick, isDragging, style, duration, isHighlighted }: AppointmentCardProps) {
   const statusColor = statusColors[appointment.status] || statusColors.scheduled;
   const isWalkIn = appointment.appointment_type === 'walk_in' || appointment.status === 'checked_in';
   const isPending = appointment.status === 'pending' && appointment.confirmation_type === 'pending';
@@ -58,12 +59,14 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
     <div
       onClick={onClick}
       style={style}
+      data-appointment-id={appointment.id}
       className={cn(
         "rounded-md border-l-4 cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] overflow-hidden",
         isCompact ? "p-1.5" : isExtended ? "p-3" : "p-2",
         statusColor,
         isDragging && "opacity-50 cursor-move",
-        isWalkIn && "border-l-[6px]" // Thicker border for walk-ins
+        isWalkIn && "border-l-[6px]",
+        isHighlighted && "ring-4 ring-primary ring-offset-2 animate-pulse"
       )}
     >
       {isCompact ? (

@@ -50,6 +50,7 @@ export default function PracticeCalendar() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [appointmentToComplete, setAppointmentToComplete] = useState<any>(null);
+  const [highlightedAppointmentId, setHighlightedAppointmentId] = useState<string | null>(null);
 
   const practiceId = effectivePracticeId || user?.id;
   const isProviderView = effectiveRole === 'provider';
@@ -200,6 +201,38 @@ export default function PracticeCalendar() {
     setCompleteDialogOpen(true);
   };
 
+  // Handle search result selection - navigate to appointment
+  const handleSearchResultClick = (appointment: any) => {
+    // 1. Navigate to appointment date
+    const appointmentDate = new Date(appointment.start_time);
+    setCurrentDate(appointmentDate);
+    
+    // 2. Switch to appropriate view for better focus
+    if (view === 'month' || view === 'agenda') {
+      setView('day');
+    }
+    
+    // 3. Highlight appointment temporarily
+    setHighlightedAppointmentId(appointment.id);
+    
+    // 4. Scroll to appointment after render
+    setTimeout(() => {
+      const element = document.querySelector(`[data-appointment-id="${appointment.id}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+    
+    // 5. Open details dialog
+    setSelectedAppointment(appointment);
+    setDetailsDialogOpen(true);
+    
+    // 6. Clear highlight after animation
+    setTimeout(() => {
+      setHighlightedAppointmentId(null);
+    }, 3000);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -225,6 +258,7 @@ export default function PracticeCalendar() {
         appointments={appointments}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onAppointmentSelect={handleSearchResultClick}
       />
 
       {/* Main Content */}
@@ -304,6 +338,7 @@ export default function PracticeCalendar() {
                   onTimeSlotClick={handleTimeSlotClick}
                   providers={providers}
                   selectedProviders={selectedProviders}
+                  highlightedAppointmentId={highlightedAppointmentId}
                 />
               )}
 
@@ -315,6 +350,7 @@ export default function PracticeCalendar() {
                   selectedProviders={selectedProviders}
                   onAppointmentClick={handleAppointmentClick}
                   onTimeSlotClick={handleTimeSlotClick}
+                  highlightedAppointmentId={highlightedAppointmentId}
                 />
               )}
 
@@ -330,6 +366,7 @@ export default function PracticeCalendar() {
                   onTimeSlotClick={handleTimeSlotClick}
                   providers={providers}
                   selectedProviders={selectedProviders}
+                  highlightedAppointmentId={highlightedAppointmentId}
                 />
               )}
 

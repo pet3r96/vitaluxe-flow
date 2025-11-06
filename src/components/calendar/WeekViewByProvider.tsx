@@ -12,6 +12,7 @@ interface WeekViewByProviderProps {
   selectedProviders: string[];
   onAppointmentClick: (appointment: any) => void;
   onTimeSlotClick: (date: Date, providerId?: string) => void;
+  highlightedAppointmentId?: string | null;
 }
 
 export function WeekViewByProvider({
@@ -20,7 +21,8 @@ export function WeekViewByProvider({
   providers,
   selectedProviders,
   onAppointmentClick,
-  onTimeSlotClick
+  onTimeSlotClick,
+  highlightedAppointmentId
 }: WeekViewByProviderProps) {
   const weekStart = startOfWeek(currentDate);
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -123,9 +125,11 @@ export function WeekViewByProvider({
                             e.stopPropagation();
                             onAppointmentClick(apt);
                           }}
+                          data-appointment-id={apt.id}
                           className={cn(
                             "rounded p-1.5 text-xs cursor-pointer hover:shadow-md transition-all border-l-2",
-                            getStatusColor(apt.status)
+                            getStatusColor(apt.status),
+                            highlightedAppointmentId === apt.id && "ring-4 ring-primary ring-offset-2 animate-pulse"
                           )}
                         >
                           <div className="font-semibold truncate">

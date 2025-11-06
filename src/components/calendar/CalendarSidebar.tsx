@@ -7,6 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { MiniCalendar } from "./MiniCalendar";
 import { ProviderAvatar } from "./ProviderAvatar";
+import { AppointmentSearchInput } from "./AppointmentSearchInput";
+import { AppointmentSearchResults } from "./AppointmentSearchResults";
+import { useAppointmentSearch } from "@/hooks/useAppointmentSearch";
 import { cn } from "@/lib/utils";
 
 interface CalendarSidebarProps {
@@ -23,6 +26,7 @@ interface CalendarSidebarProps {
   appointments?: any[];
   isOpen: boolean;
   onClose: () => void;
+  onAppointmentSelect?: (appointment: any) => void;
 }
 
 const STATUS_OPTIONS = [
@@ -47,11 +51,35 @@ export function CalendarSidebar({
   onStatusToggle,
   appointments = [],
   isOpen,
-  onClose
+  onClose,
+  onAppointmentSelect
 }: CalendarSidebarProps) {
   const [providersExpanded, setProvidersExpanded] = useState(true);
   const [roomsExpanded, setRoomsExpanded] = useState(false);
   const [statusesExpanded, setStatusesExpanded] = useState(false);
+
+  // Search functionality
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    isSearching,
+    handleSearchSubmit
+  } = useAppointmentSearch({
+    appointments,
+    maxResults: 20,
+    debounceMs: 300
+  });
+
+  const handleSearchResultClick = (appointment: any) => {
+    if (onAppointmentSelect) {
+      onAppointmentSelect(appointment);
+      // On mobile, close sidebar after selection
+      if (window.innerWidth < 1024) {
+        onClose();
+      }
+    }
+  };
 
   const todayAppointments = appointments.filter(apt => {
     const aptDate = new Date(apt.start_time);
@@ -100,18 +128,40 @@ export function CalendarSidebar({
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
-            {/* Mini Calendar */}
+            {/* Search Section */}
             <div>
-              <MiniCalendar
-                currentDate={currentDate}
-                onDateChange={onDateChange}
-                appointments={appointments}
+              <AppointmentSearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSubmit={handleSearchSubmit}
               />
             </div>
 
-            <Separator />
+            {isSearching ? (
+              /* Search Results View */
+              <div className="h-[calc(100vh-250px)] -mx-4 -mb-6">
+                <AppointmentSearchResults
+                  results={searchResults}
+                  onSelect={handleSearchResultClick}
+                  query={searchQuery}
+                  maxInitialResults={8}
+                />
+              </div>
+            ) : (
+              /* Normal Sidebar View */
+              <>
+                {/* Mini Calendar */}
+                <div>
+                  <MiniCalendar
+                    currentDate={currentDate}
+                    onDateChange={onDateChange}
+                    appointments={appointments}
+                  />
+                </div>
 
-            {/* Quick Stats */}
+                <Separator />
+
+                {/* Quick Stats */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Today</span>
@@ -252,6 +302,8 @@ export function CalendarSidebar({
                 </div>
               )}
             </div>
+              </>
+            )}
           </div>
         </ScrollArea>
       </div>

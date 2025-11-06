@@ -15,6 +15,7 @@ interface WeekViewProps {
   providers: any[];
   selectedProviders: string[];
   blockedTime?: any[];
+  highlightedAppointmentId?: string | null;
 }
 
 export const WeekViewByTime = memo(function WeekViewByTime({
@@ -28,6 +29,7 @@ export const WeekViewByTime = memo(function WeekViewByTime({
   providers,
   selectedProviders,
   blockedTime = [],
+  highlightedAppointmentId,
 }: WeekViewProps) {
   const HOUR_HEIGHT = 88; // Increased from 72px for better visibility
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
@@ -214,6 +216,7 @@ export const WeekViewByTime = memo(function WeekViewByTime({
                           appointment={appointment}
                           onClick={() => onAppointmentClick(appointment)}
                           duration={duration}
+                          isHighlighted={highlightedAppointmentId === appointment.id}
                         />
                       </div>
                     </div>

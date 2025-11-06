@@ -15,6 +15,7 @@ interface DayViewProps {
   providers: any[];
   selectedProviders: string[];
   blockedTime?: any[];
+  highlightedAppointmentId?: string | null;
 }
 
 export const DayView = memo(function DayView({
@@ -28,6 +29,7 @@ export const DayView = memo(function DayView({
   providers,
   selectedProviders,
   blockedTime = [],
+  highlightedAppointmentId,
 }: DayViewProps) {
   const HOUR_HEIGHT = 96; // Increased from 88px for even better visibility
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
@@ -274,6 +276,7 @@ export const DayView = memo(function DayView({
                           appointment={appointment}
                           onClick={() => onAppointmentClick(appointment)}
                           duration={duration}
+                          isHighlighted={highlightedAppointmentId === appointment.id}
                         />
                       </div>
                     );
