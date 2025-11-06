@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface AddPracticeRequestDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
     address_verification_status: "unverified",
     address_verified_at: undefined as string | undefined,
     address_verification_source: "",
+    hasPrescriber: true, // Default to yes
   });
 
   const currentNpiRef = useRef(formData.npi);
@@ -51,8 +53,8 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check NPI verification status BEFORE format validation
-    if (npiVerificationStatus !== "verified") {
+    // NPI verification only required if practice has prescriber
+    if (formData.hasPrescriber && npiVerificationStatus !== "verified") {
       if (npiVerificationStatus === "verifying") {
         toast.error("Please wait for NPI verification to complete");
       } else {
@@ -61,19 +63,33 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
       return;
     }
     
-    // Validate all fields
-    const phoneResult = validatePhone(formData.phone);
-    const npiResult = validateNPI(formData.npi);
-    const deaResult = formData.dea ? validateDEA(formData.dea) : { valid: true };
-    
-    if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
-      setValidationErrors({
-        phone: phoneResult.error || "",
-        npi: npiResult.error || "",
-        dea: deaResult.error || "",
-      });
-      toast.error("Please fix validation errors before submitting");
-      return;
+    // Validate fields based on prescriber status
+    if (formData.hasPrescriber) {
+      const phoneResult = validatePhone(formData.phone);
+      const npiResult = validateNPI(formData.npi);
+      const deaResult = formData.dea ? validateDEA(formData.dea) : { valid: true };
+      
+      if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
+        setValidationErrors({
+          phone: phoneResult.error || "",
+          npi: npiResult.error || "",
+          dea: deaResult.error || "",
+        });
+        toast.error("Please fix validation errors before submitting");
+        return;
+      }
+    } else {
+      // For non-prescriber practices, only validate phone
+      const phoneResult = validatePhone(formData.phone);
+      if (!phoneResult.valid) {
+        setValidationErrors({
+          phone: phoneResult.error || "",
+          npi: "",
+          dea: "",
+        });
+        toast.error("Please fix validation errors before submitting");
+        return;
+      }
     }
     
     setLoading(true);
@@ -91,9 +107,10 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
           assigned_rep_user_id: effectiveUserId,
           practice_name: formData.practice_name,
           email: formData.email,
-          npi: formData.npi,
-          license_number: formData.license_number,
-          dea: formData.dea || null,
+          has_prescriber: formData.hasPrescriber,
+          npi: formData.hasPrescriber ? formData.npi : null,
+          license_number: formData.hasPrescriber ? formData.license_number : null,
+          dea: formData.hasPrescriber ? (formData.dea || null) : null,
           company: "",
           phone: formData.phone,
           address_street: formData.address_street,
@@ -133,6 +150,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
         address_verification_status: "unverified",
         address_verified_at: undefined,
         address_verification_source: "",
+        hasPrescriber: true,
       });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
@@ -185,6 +203,50 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                   required
                 />
               </div>
+
+              <div className="space-y-3 col-span-2">
+                <Label>Prescriber Status *</Label>
+                <RadioGroup 
+                  value={formData.hasPrescriber ? "yes" : "no"} 
+                  onValueChange={(value) => {
+                    const hasPrescriber = value === "yes";
+                    setFormData({ 
+                      ...formData, 
+                      hasPrescriber,
+                      npi: hasPrescriber ? formData.npi : "",
+                      license_number: hasPrescriber ? formData.license_number : "",
+                      dea: hasPrescriber ? formData.dea : ""
+                    });
+                    if (!hasPrescriber) {
+                      setNpiVerificationStatus(null);
+                      setValidationErrors({ ...validationErrors, npi: "", dea: "" });
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="yes" id="prescriber-yes-req" />
+                    <Label htmlFor="prescriber-yes-req" className="font-normal cursor-pointer">
+                      This practice has a prescriber (NPI required)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="no" id="prescriber-no-req" />
+                    <Label htmlFor="prescriber-no-req" className="font-normal cursor-pointer">
+                      No prescriber - non-Rx products only
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {!formData.hasPrescriber && (
+                <div className="col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-800">
+                    ℹ️ This practice will only have access to non-prescription products. 
+                    A provider with prescribing privileges can be added later.
+                  </p>
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
                 <PhoneInput
@@ -201,8 +263,14 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                   <p className="text-sm text-destructive">{validationErrors.phone}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="npi">NPI *</Label>
+
+            </div>
+
+            {formData.hasPrescriber && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="npi">NPI *</Label>
                 <Input
                   id="npi"
                   value={formData.npi}
@@ -298,7 +366,9 @@ verifyNPIDebounced(value, (result) => {
                   <p className="text-sm text-destructive">{validationErrors.dea}</p>
                 )}
               </div>
-            </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="space-y-4">
