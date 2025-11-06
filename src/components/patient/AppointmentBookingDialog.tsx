@@ -120,15 +120,33 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       if (error) throw error;
       
       if (data?.available) {
+        // Clear validation message first
+        setValidationMessage(null);
+        
+        // Update date and time
         setSelectedDate(data.suggestedDate);
         setSelectedTime(data.suggestedTime);
-        toast.success(data.message);
-        setValidationMessage({ type: 'success', text: data.message });
         
-        // Trigger validation with the new date/time to force UI update
+        // Format a better message
+        const date = new Date(data.suggestedDate);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+        const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+        const day = date.getDate();
+        
+        // Format time to 12-hour
+        const [hours, minutes] = data.suggestedTime.split(':');
+        const hour = parseInt(hours);
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayTime = `${displayHour}:${minutes} ${ampm}`;
+        
+        const message = `Next available: ${dayName}, ${monthName} ${day} at ${displayTime}`;
+        toast.success(message);
+        
+        // Trigger validation after state updates to confirm availability
         setTimeout(() => {
           validateDateTime(data.suggestedDate, data.suggestedTime);
-        }, 100);
+        }, 150);
       } else {
         const message = data?.message || 'No availability found in the next 30 days';
         toast.error(message);
