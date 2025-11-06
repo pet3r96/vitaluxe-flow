@@ -48,18 +48,20 @@ Deno.serve(async (req) => {
     
     const practiceTimezone = appointmentSettings?.timezone || 'America/New_York';
     
-    // Helpers for time and timezone-safe comparisons
+    // Helper functions for time manipulation and timezone conversion
     const parseTimeToMinutes = (time: string) => {
       const parts = time.split(':');
       const h = parseInt(parts[0] || '0', 10);
       const m = parseInt(parts[1] || '0', 10);
       return h * 60 + m;
     };
+    
     const minutesToHHMM = (mins: number) => {
       const h = Math.floor(mins / 60) % 24;
       const m = mins % 60;
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     };
+    
     const toUTCISOInTZ = (dateYMD: string, timeHM: string, tz: string) => {
       const [y, mo, d] = dateYMD.split('-').map(Number);
       const [hh, mm] = timeHM.split(':').map(Number);
@@ -69,11 +71,10 @@ Deno.serve(async (req) => {
       return new Date(utcBase.getTime() + diff).toISOString();
     };
 
-    // Get current time in practice timezone (convert UTC to practice TZ)
+    // Get current time in practice timezone
     const nowUTC = new Date();
-    // Format current time in practice timezone
     const nowInPracticeTZ = new Date(nowUTC.toLocaleString('en-US', { timeZone: practiceTimezone }));
-    const todayYMD = nowInPracticeTZ.toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayYMD = nowInPracticeTZ.toISOString().split('T')[0];
     const nowMinutes = nowInPracticeTZ.getHours() * 60 + nowInPracticeTZ.getMinutes();
 
     console.log('[find-soonest-availability] Starting search:', JSON.stringify({
