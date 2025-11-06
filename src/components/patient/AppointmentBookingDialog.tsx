@@ -430,14 +430,6 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
                     <span className="text-muted-foreground">Requested Time:</span>
                     <p className="font-mono font-medium">{debugInfo.requestedTime}</p>
                   </div>
-                  {debugInfo.appointmentStart && (
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">Appointment Window (UTC):</span>
-                      <p className="font-mono font-medium text-xs">
-                        {new Date(debugInfo.appointmentStart).toISOString()} - {new Date(debugInfo.appointmentEnd).toISOString()}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </CollapsibleContent>
             </Collapsible>
