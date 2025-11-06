@@ -71,7 +71,7 @@ export function MessagesAndChatWidget() {
       }
     },
     staleTime: 60000, // 1 minute
-    refetchInterval: 30000,
+    // Removed refetchInterval - using realtime instead
   });
 
   // Fetch unread internal chat messages

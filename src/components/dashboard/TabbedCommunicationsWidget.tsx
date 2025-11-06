@@ -69,7 +69,7 @@ export function TabbedCommunicationsWidget() {
       }
     },
     staleTime: 60000,
-    refetchInterval: 30000,
+    // Removed refetchInterval - using realtime instead
   });
 
   // Unread Internal Chat Query
