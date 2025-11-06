@@ -124,12 +124,16 @@ export const OrdersDataTable = () => {
             tracking_number,
             created_at,
             patient_name,
-            products(name),
+            patient_id,
+            shipping_speed,
+            products(name, product_types(name)),
             orders!inner(
               id,
               created_at,
-              total_amount,
               payment_status,
+              ship_to,
+              status,
+              status_manual_override,
               profiles:doctor_id(name, company)
             )
           `)
@@ -169,12 +173,17 @@ export const OrdersDataTable = () => {
           total_amount,
           payment_status,
           status,
+          status_manual_override,
+          ship_to,
           doctor_id,
           order_lines(
             id,
             status,
             patient_name,
-            products(name)
+            patient_id,
+            shipping_speed,
+            tracking_number,
+            products(name, product_types(name))
           ),
           profiles:doctor_id(name, company)
         `);
@@ -213,12 +222,17 @@ export const OrdersDataTable = () => {
             tracking_number,
             created_at,
             patient_name,
-            products(name),
+            patient_id,
+            shipping_speed,
+            products(name, product_types(name)),
             orders!inner(
               id,
               created_at,
               total_amount,
               payment_status,
+              ship_to,
+              status,
+              status_manual_override,
               profiles:doctor_id(name, company)
             )
           `)
