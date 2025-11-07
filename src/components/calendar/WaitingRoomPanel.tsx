@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { differenceInMinutes, format } from "date-fns";
-import { Clock, User, ChevronDown, ChevronUp, Video } from "lucide-react";
+import { Clock, User, ChevronDown, ChevronUp, Video, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +72,41 @@ export function WaitingRoomPanel({
     refetchInterval: 5000, // Poll every 5 seconds for real-time updates
   });
 
+  // Fetch overdue appointments (>15 minutes past scheduled time)
+  const { data: overdueAppointments = [], refetch: refetchOverdue } = useQuery({
+    queryKey: ["overdue-appointments", practiceId, currentDate.toISOString()],
+    queryFn: async () => {
+      const startOfDay = new Date(currentDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(currentDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const fifteenMinutesAgo = new Date();
+      fifteenMinutesAgo.setMinutes(fifteenMinutesAgo.getMinutes() - 15);
+
+      const { data, error } = await supabase
+        .from("patient_appointments")
+        .select(`
+          *,
+          patient:patient_accounts(*),
+          provider:providers!patient_appointments_provider_id_fkey(
+            id,
+            user:profiles!providers_user_id_fkey(full_name)
+          )
+        `)
+        .eq("practice_id", practiceId)
+        .in("status", ["scheduled", "confirmed"])
+        .gte("start_time", startOfDay.toISOString())
+        .lte("start_time", endOfDay.toISOString())
+        .lt("start_time", fifteenMinutesAgo.toISOString())
+        .order("start_time", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!practiceId,
+    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
+  });
+
   // Fetch checked-in appointments
   const { data: waitingPatients = [], refetch } = useQuery({
     queryKey: ["waiting-room", practiceId, currentDate.toISOString()],
@@ -107,12 +142,13 @@ export function WaitingRoomPanel({
   useEffect(() => {
     realtimeManager.subscribe('patient_appointments', () => {
       refetch();
+      refetchOverdue();
     });
 
     return () => {
       // Manager handles cleanup
     };
-  }, [practiceId, refetch]);
+  }, [practiceId, refetch, refetchOverdue]);
 
   // Real-time subscription for video sessions
   useEffect(() => {
@@ -188,6 +224,54 @@ export function WaitingRoomPanel({
     }
   };
 
+  const handleCheckInOverdue = async (appointmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("patient_appointments")
+        .update({
+          status: "checked_in",
+          checked_in_at: new Date().toISOString(),
+        })
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+
+      toast.success("Patient Checked In", {
+        description: "Patient moved to waiting room",
+      });
+
+      refetchOverdue();
+      refetch();
+    } catch (error: any) {
+      toast.error("Error", {
+        description: error.message || "Failed to check in patient",
+      });
+    }
+  };
+
+  const handleMarkNoShow = async (appointmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("patient_appointments")
+        .update({
+          status: "no_show",
+        })
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+
+      toast.success("Marked as No-Show", {
+        description: "Appointment status updated",
+      });
+
+      refetchOverdue();
+    } catch (error: any) {
+      toast.error("Error", {
+        description: error.message || "Failed to update appointment",
+      });
+    }
+  };
+
   // Helper functions for video appointments
   const canStartVideoSession = (scheduledTime: string, status: string) => {
     const now = new Date();
@@ -243,6 +327,15 @@ export function WaitingRoomPanel({
     return `${minutes} min${minutes !== 1 ? "s" : ""}`;
   };
 
+  // Helper functions for overdue appointments
+  const getOverdueMinutes = (startTime: string) => {
+    return differenceInMinutes(new Date(), new Date(startTime));
+  };
+
+  const getOverdueColor = () => {
+    return "bg-card dark:bg-card text-foreground dark:text-white border-l-4 border-l-red-500 hover:bg-muted dark:hover:bg-gray-900 animate-pulse";
+  };
+
   return (
     <Card className="border-t bg-background max-h-[500px] flex flex-col">
       {/* Header */}
@@ -251,16 +344,18 @@ export function WaitingRoomPanel({
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         <div className="flex items-center gap-2">
-          {videoAppointments.length > 0 ? (
+          {overdueAppointments.length > 0 ? (
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+          ) : videoAppointments.length > 0 ? (
             <Video className="h-5 w-5 text-primary" />
           ) : (
             <Clock className="h-5 w-5 text-primary" />
           )}
           <h2 className="text-lg font-semibold">
             Waiting Room
-            {(videoAppointments.length + waitingPatients.length) > 0 && (
+            {(overdueAppointments.length + videoAppointments.length + waitingPatients.length) > 0 && (
               <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({videoAppointments.length + waitingPatients.length})
+                ({overdueAppointments.length + videoAppointments.length + waitingPatients.length})
               </span>
             )}
           </h2>
@@ -275,6 +370,91 @@ export function WaitingRoomPanel({
       {/* Content */}
       {!isCollapsed && (
         <div className="overflow-y-auto flex-1">
+          {/* Overdue Appointments Section */}
+          {overdueAppointments.length > 0 && (
+            <div className="mb-4">
+              <div className="bg-red-500/10 px-4 py-2 flex items-center gap-2 border-l-4 border-l-red-500">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <h3 className="text-sm font-semibold text-red-500">Overdue Appointments</h3>
+                <Badge variant="destructive" className="ml-auto">
+                  {overdueAppointments.length}
+                </Badge>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Patient</TableHead>
+                    <TableHead>Provider</TableHead>
+                    <TableHead>Scheduled Time</TableHead>
+                    <TableHead>Overdue</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {overdueAppointments.map((appointment: any) => {
+                    const overdueMinutes = getOverdueMinutes(appointment.start_time);
+                    
+                    return (
+                      <TableRow
+                        key={appointment.id}
+                        className={cn(
+                          "cursor-pointer",
+                          getOverdueColor()
+                        )}
+                        onClick={() => onAppointmentClick(appointment)}
+                      >
+                        <TableCell className="font-medium">
+                          {appointment.patient?.first_name}{" "}
+                          {appointment.patient?.last_name}
+                        </TableCell>
+                        <TableCell>
+                          {appointment.provider?.user?.full_name || "Unassigned"}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(appointment.start_time), "h:mm a")}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="destructive" className="font-semibold">
+                            OVERDUE: {overdueMinutes} min
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCheckInOverdue(appointment.id);
+                              }}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              Check In Now
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkNoShow(appointment.id);
+                              }}
+                            >
+                              Mark No-Show
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Separator between overdue and video sections */}
+          {overdueAppointments.length > 0 && videoAppointments.length > 0 && (
+            <Separator className="my-4" />
+          )}
+
           {/* Video Appointments Section */}
           {videoAppointments.length > 0 && (
             <div className="mb-4">
@@ -366,8 +546,8 @@ export function WaitingRoomPanel({
             </div>
           )}
 
-          {/* Separator between sections */}
-          {videoAppointments.length > 0 && waitingPatients.length > 0 && (
+          {/* Separator between video and in-person sections */}
+          {(overdueAppointments.length > 0 || videoAppointments.length > 0) && waitingPatients.length > 0 && (
             <Separator className="my-4" />
           )}
 
@@ -450,8 +630,8 @@ export function WaitingRoomPanel({
             </div>
           )}
 
-          {/* Empty state when both sections are empty */}
-          {videoAppointments.length === 0 && waitingPatients.length === 0 && (
+          {/* Empty state when all sections are empty */}
+          {overdueAppointments.length === 0 && videoAppointments.length === 0 && waitingPatients.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <User className="h-12 w-12 mb-2 opacity-20" />
               <p className="text-sm">No patients waiting today</p>
