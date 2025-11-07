@@ -196,30 +196,14 @@ export function useNotifications() {
       console.log('[useNotifications] Deleting notification:', notificationId);
       const notification = notifications.find((n) => n.id === notificationId);
       
-      // Try direct delete first (fastest)
       const { error } = await supabase
         .from("notifications")
         .delete()
         .eq("id", notificationId);
 
       if (error) {
-        console.error('[useNotifications] Direct delete failed:', error);
-        
-        // If RLS policy fails, try edge function fallback
-        console.log('[useNotifications] Attempting edge function fallback...');
-        const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
-          'delete-notification',
-          { body: { notificationId } }
-        );
-        
-        if (edgeError) {
-          console.error('[useNotifications] Edge function also failed:', edgeError);
-          throw edgeError;
-        }
-        
-        console.log('[useNotifications] Edge function delete succeeded:', edgeData);
-      } else {
-        console.log('[useNotifications] Direct delete succeeded');
+        console.error('[useNotifications] Delete failed:', error);
+        throw error;
       }
 
       console.log('[useNotifications] Notification deleted, updating state...');
