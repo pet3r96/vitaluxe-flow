@@ -30,6 +30,7 @@ interface CreateAppointmentDialogProps {
   rooms: any[];
   isWalkIn?: boolean;
   isProviderAccount?: boolean;
+  defaultVisitType?: string;
 }
 
 export function CreateAppointmentDialog({
@@ -43,6 +44,7 @@ export function CreateAppointmentDialog({
   rooms,
   isWalkIn = false,
   isProviderAccount = false,
+  defaultVisitType,
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const { effectiveUserId } = useAuth();
@@ -92,7 +94,7 @@ export function CreateAppointmentDialog({
       startTime: format(walkInDate, 'HH:mm'),
       duration: isWalkIn ? "15" : "30",
       appointmentType: isWalkIn ? "walk_in" : "consultation",
-      visitType: "in_person",
+      visitType: defaultVisitType || "in_person",
       serviceType: "",
       serviceDescription: "",
       notes: "",

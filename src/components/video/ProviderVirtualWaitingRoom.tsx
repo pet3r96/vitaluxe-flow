@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Video, User, Clock, Circle, Plus, Loader2, Check } from "lucide-react";
+import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isToday } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
@@ -26,11 +27,10 @@ export const ProviderVirtualWaitingRoom = ({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [creatingSession, setCreatingSession] = useState(false);
-
-  const { data: videoSessions, isLoading } = useQuery({
     queryKey: ['provider-video-sessions', practiceId],
     queryFn: async () => {
       const today = new Date();
@@ -53,34 +53,58 @@ export const ProviderVirtualWaitingRoom = ({
     refetchInterval: 5000 // Refresh every 5 seconds
   });
 
-  // Fetch patients for instant session creation
+  // Fetch patients for instant session creation and scheduling
   const { data: patients } = useQuery({
     queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patient_accounts')
-        .select('id, user_id, profiles!patient_accounts_user_id_fkey(name, email)')
-        .eq('practice_id', practiceId);
+        .select('id, user_id, first_name, last_name, email')
+        .eq('practice_id', practiceId)
+        .order('last_name');
       
       if (error) throw error;
-      return data;
+      return (data as any[])?.map((p: any) => ({
+        ...p,
+        profiles: {
+          name: `${p.first_name} ${p.last_name}`,
+          email: p.email
+        }
+      })) || [];
     },
-    enabled: showCreateDialog
+    enabled: showCreateDialog || showScheduleDialog
   });
 
-  // Fetch providers for instant session creation
+  // Fetch providers for instant session creation and scheduling
   const { data: providers } = useQuery({
     queryKey: ['practice-providers', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('providers')
-        .select('id, first_name, last_name, profiles!providers_user_id_fkey(name, email)')
-        .eq('practice_id', practiceId);
+        .select('id, user_id, profiles:user_id(name, full_name, email)')
+        .eq('practice_id', practiceId)
+        .eq('active', true);
       
       if (error) throw error;
-      return data;
+      
+      // Transform to match expected format
+      return (data as any[])?.map((p: any) => {
+        const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+        const fullName = profile?.full_name || profile?.name || 'Unknown Provider';
+        const nameParts = fullName.split(' ');
+        
+        return {
+          id: p.id,
+          user_id: p.user_id,
+          first_name: nameParts[0] || 'Provider',
+          last_name: nameParts.slice(1).join(' ') || '',
+          full_name: fullName,
+          email: profile?.email,
+          profiles: profile
+        };
+      }) || [];
     },
-    enabled: showCreateDialog
+    enabled: showCreateDialog || showScheduleDialog
   });
 
   const handleStartSession = async (sessionId: string) => {
@@ -207,13 +231,23 @@ export const ProviderVirtualWaitingRoom = ({
             </span>
           </CardTitle>
 
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Create Instant Session
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowScheduleDialog(true)}
+              size="sm"
+              className="gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              Schedule Video Appointment
+            </Button>
+            
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Instant Session
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create Instant Video Session</DialogTitle>
@@ -355,6 +389,7 @@ export const ProviderVirtualWaitingRoom = ({
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -436,6 +471,21 @@ export const ProviderVirtualWaitingRoom = ({
           );
         })}
       </CardContent>
+
+      {/* Schedule Video Appointment Dialog */}
+      <CreateAppointmentDialog
+        open={showScheduleDialog}
+        onOpenChange={setShowScheduleDialog}
+        practiceId={practiceId}
+        providers={providers?.map(p => ({
+          id: p.id,
+          full_name: p.full_name,
+          first_name: p.first_name,
+          last_name: p.last_name,
+        })) || []}
+        rooms={[]}
+        defaultVisitType="video"
+      />
     </Card>
   );
 };
