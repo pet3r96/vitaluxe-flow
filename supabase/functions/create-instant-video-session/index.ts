@@ -101,7 +101,12 @@ serve(async (req) => {
     if (startError) {
       console.error('Error starting video session:', startError);
       return new Response(
-        JSON.stringify({ error: 'Failed to start video session', details: startError.message }),
+        JSON.stringify({ 
+          error: 'Failed to start video session', 
+          details: typeof startError === 'object' && startError !== null && 'message' in startError 
+            ? (startError as any).message 
+            : 'Unknown error'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -120,7 +125,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in create-instant-video-session:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
