@@ -13,6 +13,8 @@ export function NotificationPanel() {
   const { notifications, loading, isAdmin, markAllAsRead, unreadCount, markAsRead, deleteNotification, refetch } = useNotifications();
   const [showPreferences, setShowPreferences] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
   const { toast } = useToast();
 
   // Admin notification types
@@ -39,7 +41,22 @@ export function NotificationPanel() {
   ).length;
 
   const handleDeleteAllUnread = async () => {
+    if (deletingAll) return;
+    
     try {
+      setDeletingAll(true);
+      
+      // Verify session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        toast({
+          title: "Session Expired",
+          description: "Please refresh the page and try again",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
       
       if (unreadIds.length === 0) {
@@ -50,49 +67,59 @@ export function NotificationPanel() {
         return;
       }
 
-      console.log('[NotificationPanel] Deleting unread notifications:', unreadIds.length);
+      console.log('[NotificationPanel] Deleting', unreadIds.length, 'unread notifications...');
       
       // Delete all notifications in parallel
-      await Promise.all(
+      const results = await Promise.allSettled(
         unreadIds.map(id => 
           supabase.from("notifications").delete().eq("id", id)
         )
       );
       
-      console.log('[NotificationPanel] Batch delete complete, refetching...');
+      // Count successes and failures
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      
+      console.log('[NotificationPanel] Delete results:', { succeeded, failed });
       
       // Refetch to sync UI with database state
       await refetch();
       
-      toast({
-        title: "Deleted",
-        description: `Deleted ${unreadIds.length} unread notification${unreadIds.length > 1 ? 's' : ''}`,
-      });
-      
-      console.log('[NotificationPanel] Refetch complete');
-    } catch (error) {
+      if (failed === 0) {
+        toast({
+          title: "Deleted",
+          description: `Deleted ${succeeded} unread notification${succeeded > 1 ? 's' : ''}`,
+        });
+      } else {
+        toast({
+          title: "Partially Deleted",
+          description: `Deleted ${succeeded} of ${unreadIds.length} notifications. ${failed} failed.`,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
       console.error('[NotificationPanel] Error deleting notifications:', error);
       toast({
         title: "Error",
-        description: "Failed to delete notifications",
+        description: error.message || "Failed to delete notifications. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setDeletingAll(false);
     }
   };
 
   const handleMarkAllAsRead = async () => {
+    if (markingAllRead) return;
+    
     try {
+      setMarkingAllRead(true);
       await markAllAsRead();
-      toast({
-        title: "Marked all as read",
-        description: "All notifications have been marked as read",
-      });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to mark all as read",
-        variant: "destructive",
-      });
+      // Error already handled in markAllAsRead
+      console.error('[NotificationPanel] Mark all as read failed:', error);
+    } finally {
+      setMarkingAllRead(false);
     }
   };
 
@@ -134,18 +161,28 @@ export function NotificationPanel() {
                   variant="ghost"
                   size="sm"
                   onClick={handleMarkAllAsRead}
+                  disabled={markingAllRead}
                   className="text-xs"
                 >
-                  <CheckCheck className="h-4 w-4 mr-1" />
+                  {markingAllRead ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <CheckCheck className="h-4 w-4 mr-1" />
+                  )}
                   Mark all read
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleDeleteAllUnread}
+                  disabled={deletingAll}
                   className="text-xs text-destructive hover:text-destructive"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  {deletingAll ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1" />
+                  )}
                   Delete unread
                 </Button>
               </>

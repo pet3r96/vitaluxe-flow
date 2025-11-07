@@ -29,6 +29,16 @@ export function useNotifications() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Ensure we have a valid session before critical operations
+  const ensureValidSession = async () => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session) {
+      throw new Error('No valid session - please refresh the page and try again');
+    }
+    console.log('[useNotifications] Session validated for user:', session.user.id);
+    return session;
+  };
+
   // Check if current user is an admin
   const checkIsAdmin = async (userId: string): Promise<boolean> => {
     try {
@@ -138,10 +148,18 @@ export function useNotifications() {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
+      // Verify session before operation
+      await ensureValidSession();
+      
+      console.log('[useNotifications] Marking all as read...');
       const { data, error } = await supabase.rpc("mark_all_notifications_read");
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useNotifications] RPC error marking all as read:', error);
+        throw error;
+      }
 
+      console.log('[useNotifications] Marked', data, 'notifications as read');
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, read: true, read_at: new Date().toISOString() }))
       );
@@ -151,13 +169,19 @@ export function useNotifications() {
         title: "Success",
         description: `Marked ${data} notifications as read`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('[useNotifications] Error marking all as read:', error);
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error marking all as read", error);
       });
+      
+      const errorMessage = error.message?.includes('session') 
+        ? error.message 
+        : "Failed to mark all notifications as read. Please try again.";
+      
       toast({
         title: "Error",
-        description: "Failed to mark all notifications as read",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -166,15 +190,37 @@ export function useNotifications() {
   // Delete notification
   const deleteNotification = async (notificationId: string) => {
     try {
+      // Verify session before operation
+      await ensureValidSession();
+      
       console.log('[useNotifications] Deleting notification:', notificationId);
       const notification = notifications.find((n) => n.id === notificationId);
       
+      // Try direct delete first (fastest)
       const { error } = await supabase
         .from("notifications")
         .delete()
         .eq("id", notificationId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useNotifications] Direct delete failed:', error);
+        
+        // If RLS policy fails, try edge function fallback
+        console.log('[useNotifications] Attempting edge function fallback...');
+        const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
+          'delete-notification',
+          { body: { notificationId } }
+        );
+        
+        if (edgeError) {
+          console.error('[useNotifications] Edge function also failed:', edgeError);
+          throw edgeError;
+        }
+        
+        console.log('[useNotifications] Edge function delete succeeded:', edgeData);
+      } else {
+        console.log('[useNotifications] Direct delete succeeded');
+      }
 
       console.log('[useNotifications] Notification deleted, updating state...');
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
@@ -185,13 +231,24 @@ export function useNotifications() {
       // Refresh both count and notifications to ensure sync with database
       console.log('[useNotifications] Refetching after delete...');
       await Promise.all([fetchUnreadCount(), fetchNotifications()]);
-    } catch (error) {
+      
+      toast({
+        title: "Deleted",
+        description: "Notification deleted successfully",
+      });
+    } catch (error: any) {
+      console.error('[useNotifications] Error deleting notification:', error);
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error deleting notification", error);
       });
+      
+      const errorMessage = error.message?.includes('session') 
+        ? error.message 
+        : "Failed to delete notification. Please try refreshing the page.";
+      
       toast({
         title: "Error",
-        description: "Failed to delete notification",
+        description: errorMessage,
         variant: "destructive",
       });
     }
