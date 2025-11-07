@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationItem } from "./NotificationItem";
 import { Button } from "@/components/ui/button";
-import { CheckCheck, Loader2, Bell, Settings } from "lucide-react";
+import { CheckCheck, Loader2, Bell, Settings, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotificationPreferencesDialog } from "./NotificationPreferencesDialog";
@@ -28,6 +28,11 @@ export function NotificationPanel() {
 
   const unreadNotifications = filteredNotifications.filter((n) => !n.read);
   const readNotifications = filteredNotifications.filter((n) => n.read);
+
+  const handleDeleteAllUnread = async () => {
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    await Promise.all(unreadIds.map(id => deleteNotification(id)));
+  };
 
   if (loading) {
     return (
@@ -63,11 +68,11 @@ export function NotificationPanel() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={markAllAsRead}
-              className="text-xs"
+              onClick={handleDeleteAllUnread}
+              className="text-xs text-destructive hover:text-destructive"
             >
-              <CheckCheck className="h-4 w-4 mr-1" />
-              Mark all as read
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete all unread
             </Button>
           )}
         </div>
