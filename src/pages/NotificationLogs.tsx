@@ -22,11 +22,11 @@ export default function NotificationLogs() {
   const { data: logs, isLoading } = useQuery({
     queryKey: ["notification_logs", effectivePracticeId],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("notification_logs")
         .select("*, profiles(first_name, last_name, email)")
         .order("created_at", { ascending: false })
-        .limit(200) as any;
+        .limit(200);
 
       // Filter by practice for non-admins
       if (effectiveRole !== "admin" && effectiveRole !== "super_admin" && effectivePracticeId) {

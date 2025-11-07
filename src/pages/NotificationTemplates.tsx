@@ -41,11 +41,11 @@ export default function NotificationTemplates() {
   const { data: templates, isLoading } = useQuery({
     queryKey: ["notification_templates", effectivePracticeId, selectedEvent],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("notification_templates")
         .select("*")
         .eq("event_type", selectedEvent)
-        .or(`practice_id.eq.${effectivePracticeId},practice_id.is.null`) as any;
+        .or(`practice_id.eq.${effectivePracticeId},practice_id.is.null`);
 
       if (error) throw error;
       return data || [];
@@ -55,12 +55,12 @@ export default function NotificationTemplates() {
 
   const saveMutation = useMutation({
     mutationFn: async (template: any) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("notification_templates")
         .upsert({
           ...template,
           updated_at: new Date().toISOString(),
-        }) as any;
+        });
 
       if (error) throw error;
     },
@@ -86,13 +86,13 @@ export default function NotificationTemplates() {
   };
 
   const handleReset = async (channel: string) => {
-    const { data: defaultTemplate } = await supabase
+    const { data: defaultTemplate } = await (supabase as any)
       .from("notification_templates")
       .select("*")
       .eq("event_type", selectedEvent)
       .eq("channel", channel)
       .is("practice_id", null)
-      .single() as any;
+      .single();
 
     if (defaultTemplate) {
       const practiceTemplate = (templates as any)?.find(
