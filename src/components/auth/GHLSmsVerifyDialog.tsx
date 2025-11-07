@@ -188,10 +188,10 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
         throw new Error('No attempt ID received from server');
       }
 
-      // Set shared cooldown (60 seconds)
-      const cooldownUntil = Date.now() + 60000;
+      // Set shared cooldown (30 seconds)
+      const cooldownUntil = Date.now() + 30000;
       localStorage.setItem(COOLDOWN_KEY(userId), cooldownUntil.toString());
-      setCountdown(60);
+      setCountdown(30);
 
       toast.success(data.queued ? 'Code is being sent...' : 'Verification code sent!');
       setCodeSent(true);
