@@ -329,3 +329,6 @@ verify_jwt = true
 
 [functions.get-rep-dashboard-stats]
 verify_jwt = true
+
+[functions.validate-rx-order]
+verify_jwt = true

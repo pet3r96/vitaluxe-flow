@@ -2,11 +2,12 @@ import { memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ShoppingCart, Edit, Trash2, MoreVertical } from "lucide-react";
+import { ShoppingCart, Edit, Trash2, MoreVertical, Lock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,7 @@ export const ProductCard = memo(({
   onToggleStatus,
 }: ProductCardProps) => {
   const { effectiveUserId, effectiveRole } = useAuth();
+  const { canOrderRx } = usePracticeRxPrivileges();
 
   // Helper to format prices consistently
   const formatPrice = (value: any) => {
@@ -297,10 +299,19 @@ export const ProductCard = memo(({
           <Button
             className="w-full min-h-[44px] text-sm sm:text-base"
             onClick={() => onAddToCart(product)}
-            disabled={!product.active}
+            disabled={!product.active || (product.requires_prescription && !canOrderRx)}
           >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Add to Cart
+            {product.requires_prescription && !canOrderRx ? (
+              <>
+                <Lock className="h-4 w-4 mr-2" />
+                Add Provider with NPI
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Add to Cart
+              </>
+            )}
           </Button>
         )}
 

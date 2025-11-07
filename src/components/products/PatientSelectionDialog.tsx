@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,7 @@ export const PatientSelectionDialog = ({
 }: PatientSelectionDialogProps) => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
+  const { canOrderRx, providerCount, providersWithNpiCount } = usePracticeRxPrivileges();
   
   // Practice ID is already resolved in AuthContext, no need for additional query
   const finalPracticeId = effectivePracticeId;
@@ -72,6 +74,50 @@ export const PatientSelectionDialog = ({
   const [customDosage, setCustomDosage] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [providerSignature, setProviderSignature] = useState("");
+
+  // Block RX orders if practice doesn't have provider with NPI
+  if (product?.requires_prescription && !canOrderRx) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Provider with NPI Required
+            </DialogTitle>
+            <DialogDescription>
+              This product requires a prescription. To order prescription products, your practice must have at least one active provider with a valid NPI.
+            </DialogDescription>
+          </DialogHeader>
+          <Alert className="bg-muted">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              {providerCount === 0 ? (
+                <p className="text-sm">
+                  <strong>No providers found.</strong> Add a provider with a valid NPI to enable RX product ordering.
+                </p>
+              ) : (
+                <p className="text-sm">
+                  <strong>NPI required.</strong> Your practice has {providerCount} provider(s), but none have a valid NPI. Update at least one provider's NPI to continue.
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              onOpenChange(false);
+              navigate('/providers');
+            }}>
+              {providerCount === 0 ? 'Add Provider' : 'Update Provider NPI'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const { data: patients, isLoading } = useQuery({
     queryKey: ["patients", finalPracticeId],

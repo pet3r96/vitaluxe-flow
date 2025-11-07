@@ -21,9 +21,13 @@ import { CartSheet } from "./CartSheet";
 import { usePagination } from "@/hooks/usePagination";
 import { useCartCount } from "@/hooks/useCartCount";
 import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
+import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
 import { extractStateWithFallback, isValidStateCode } from "@/lib/addressUtils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Lock, AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +42,7 @@ import {
 export const ProductsGrid = () => {
   const { effectiveRole, effectiveUserId, effectivePracticeId, isImpersonating, isProviderAccount } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [prescriptionFilter, setPrescriptionFilter] = useState<string>("all");
@@ -63,6 +68,9 @@ export const ProductsGrid = () => {
   // Providers and doctors always have ordering privileges, but reps can only view
   const canOrder = (isProvider || staffCanOrder) && !isRep;
   const { data: cartCount } = useCartCount(effectiveUserId);
+  
+  // Check RX ordering privileges
+  const { canOrderRx, hasProviders, providerCount, providersWithNpiCount, isLoading: isLoadingRxPrivileges } = usePracticeRxPrivileges();
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products", effectiveUserId, effectiveRole],
@@ -234,9 +242,12 @@ export const ProductsGrid = () => {
         (prescriptionFilter === "yes" && product.requires_prescription === true) ||
         (prescriptionFilter === "no" && product.requires_prescription === false);
       
-      return matchesSearch && matchesType && matchesPrescription;
+      // Filter out RX products if practice cannot order them (unless admin viewing)
+      const canSeeProduct = viewingAsAdmin || !product.requires_prescription || canOrderRx;
+      
+      return matchesSearch && matchesType && matchesPrescription && canSeeProduct;
     }), 
-    [products, searchQuery, productTypeFilter, prescriptionFilter]
+    [products, searchQuery, productTypeFilter, prescriptionFilter, canOrderRx, viewingAsAdmin]
   );
 
   const productCounts = useMemo(() => {
@@ -884,6 +895,38 @@ export const ProductsGrid = () => {
           {(isProvider || isRep) && <Badge variant="secondary">Read Only</Badge>}
         </div>
       </div>
+
+      {/* RX Ordering Restriction Alert */}
+      {!viewingAsAdmin && isProvider && !canOrderRx && (
+        <Alert className="bg-warning/10 border-warning">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertDescription className="text-sm">
+            {providerCount === 0 ? (
+              <>
+                <strong>RX products are hidden.</strong> Your practice needs at least one provider with a valid NPI to order prescription products.{' '}
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-warning underline font-semibold"
+                  onClick={() => navigate('/providers')}
+                >
+                  Add a provider with NPI
+                </Button>
+              </>
+            ) : (
+              <>
+                <strong>RX products are hidden.</strong> Your practice has {providerCount} provider(s), but none have a valid NPI. Add an NPI to enable RX ordering.{' '}
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-warning underline font-semibold"
+                  onClick={() => navigate('/providers')}
+                >
+                  Update provider NPIs
+                </Button>
+              </>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Products Grid */}
       {isLoading ? (
