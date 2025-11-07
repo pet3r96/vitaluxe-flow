@@ -19,6 +19,8 @@ export default function NotificationLogs() {
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedLog, setSelectedLog] = useState<any>(null);
+  
+  const isAdmin = effectiveRole === "admin" || effectiveRole === "super_admin";
 
   const { data: logs, isLoading } = useRealtimeQuery(
     ["notification_logs", effectivePracticeId],
@@ -82,7 +84,7 @@ export default function NotificationLogs() {
         </div>
       </div>
 
-      {!isLoading && <NotificationAnalytics logs={logs as any} />}
+      {!isLoading && isAdmin && <NotificationAnalytics logs={logs as any} />}
 
       <Card>
         <CardHeader className="space-y-1 sm:space-y-1.5">

@@ -166,18 +166,20 @@ export default function NotificationTemplates() {
             <h3 className="text-base sm:text-lg font-semibold capitalize">{channel} Template</h3>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setTestChannel(channel);
-                setTestDialogOpen(true);
-              }}
-              className="text-xs sm:text-sm"
-            >
-              <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Send Test
-            </Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setTestChannel(channel);
+                  setTestDialogOpen(true);
+                }}
+                className="text-xs sm:text-sm"
+              >
+                <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Send Test
+              </Button>
+            )}
             {isEditing ? (
               <>
                 <Button
