@@ -213,11 +213,10 @@ export const ProviderVirtualWaitingRoom = ({
                 Virtual Waiting Room
               </CardTitle>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <Button 
                   onClick={() => setShowScheduleDialog(true)}
-                  size="sm"
-                  className="gap-2"
+                  className="gap-2 w-full"
                 >
                   <Calendar className="h-4 w-4" />
                   Schedule Video Appointment
@@ -225,9 +224,8 @@ export const ProviderVirtualWaitingRoom = ({
                 
                 <Button 
                   onClick={() => setShowCreateDialog(true)}
-                  variant="outline" 
-                  size="sm" 
-                  className="gap-2"
+                  variant="secondary"
+                  className="gap-2 w-full"
                 >
                   <Plus className="h-4 w-4" />
                   Create Instant Session
@@ -415,23 +413,22 @@ export const ProviderVirtualWaitingRoom = ({
             </span>
           </CardTitle>
 
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setShowScheduleDialog(true)}
-              size="sm"
-              className="gap-2"
-            >
-              <Calendar className="h-4 w-4" />
-              Schedule Video Appointment
-            </Button>
-            
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create Instant Session
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={() => setShowScheduleDialog(true)}
+                  className="gap-2 w-full"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Schedule Video Appointment
                 </Button>
-              </DialogTrigger>
+                
+                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" className="gap-2 w-full">
+                      <Plus className="h-4 w-4" />
+                      Create Instant Session
+                    </Button>
+                  </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create Instant Video Session</DialogTitle>
