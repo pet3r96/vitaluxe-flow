@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar } from "lucide-react";
+import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar, Link2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isToday } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { VideoSessionStatus } from "./VideoSessionStatus";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
+import { VideoGuestLinkDialog } from "./VideoGuestLinkDialog";
 
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
@@ -31,6 +32,9 @@ export const ProviderVirtualWaitingRoom = ({
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [creatingSession, setCreatingSession] = useState(false);
+  const [guestLinkData, setGuestLinkData] = useState<{ url: string; expiresAt: string } | null>(null);
+  const [showGuestLinkDialog, setShowGuestLinkDialog] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState<string | null>(null);
 
   const { data: videoSessions, isLoading } = useQuery({
     queryKey: ['provider-video-sessions', practiceId],
@@ -135,6 +139,37 @@ export const ProviderVirtualWaitingRoom = ({
 
   const handleJoinSession = (sessionId: string) => {
     navigate(`/practice/video/${sessionId}`);
+  };
+
+  const handleGenerateGuestLink = async (sessionId: string) => {
+    setGeneratingLink(sessionId);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-video-guest-link', {
+        body: { sessionId }
+      });
+
+      if (error) throw error;
+
+      setGuestLinkData({
+        url: data.guestUrl,
+        expiresAt: data.expiresAt
+      });
+      setShowGuestLinkDialog(true);
+
+      toast({
+        title: "Guest Link Generated",
+        description: "Share this link with your patient via SMS"
+      });
+    } catch (error: any) {
+      console.error('Error generating guest link:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate guest link",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingLink(null);
+    }
   };
 
   const handleCreateInstantSession = async () => {
@@ -613,12 +648,29 @@ export const ProviderVirtualWaitingRoom = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <VideoSessionStatus status={session.status as any} />
                 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleGenerateGuestLink(session.id)}
+                  disabled={generatingLink === session.id}
+                  className="gap-2"
+                  title="Generate guest access link"
+                >
+                  {generatingLink === session.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Link2 className="h-3 w-3" />
+                  )}
+                  Guest Link
+                </Button>
+
                 {session.status === 'scheduled' && (
                   <Button
                     onClick={() => handleStartSession(session.id)}
+                    size="sm"
                     className="gap-2"
                   >
                     <Video className="h-4 w-4" />
@@ -629,6 +681,7 @@ export const ProviderVirtualWaitingRoom = ({
                 {session.status === 'waiting' && (
                   <Button
                     variant="default"
+                    size="sm"
                     className="gap-2 animate-pulse"
                     onClick={() => handleJoinSession(session.id)}
                   >
@@ -640,6 +693,7 @@ export const ProviderVirtualWaitingRoom = ({
                 {session.status === 'active' && (
                   <Button
                     variant="default"
+                    size="sm"
                     className="gap-2"
                     onClick={() => handleJoinSession(session.id)}
                   >
@@ -667,6 +721,16 @@ export const ProviderVirtualWaitingRoom = ({
         rooms={[]}
         defaultVisitType="video"
       />
+
+      {/* Guest Link Dialog */}
+      {guestLinkData && (
+        <VideoGuestLinkDialog
+          open={showGuestLinkDialog}
+          onOpenChange={setShowGuestLinkDialog}
+          guestUrl={guestLinkData.url}
+          expiresAt={guestLinkData.expiresAt}
+        />
+      )}
     </Card>
   );
 };

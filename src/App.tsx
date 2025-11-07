@@ -140,6 +140,7 @@ const Support = lazy(() => import("./pages/Support"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
+const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -209,6 +210,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/change-password" element={<ChangePassword />} />
+                  <Route path="/video-guest/:token" element={<VideoGuestJoin />} />
                   <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
                   <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />

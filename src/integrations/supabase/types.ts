@@ -7915,6 +7915,56 @@ export type Database = {
           },
         ]
       }
+      video_session_guest_links: {
+        Row: {
+          access_count: number | null
+          accessed_by_ip: string | null
+          created_at: string | null
+          created_by: string | null
+          expires_at: string
+          id: string
+          is_revoked: boolean | null
+          max_uses: number | null
+          session_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          access_count?: number | null
+          accessed_by_ip?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          is_revoked?: boolean | null
+          max_uses?: number | null
+          session_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          access_count?: number | null
+          accessed_by_ip?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          is_revoked?: boolean | null
+          max_uses?: number | null
+          session_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_session_guest_links_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "video_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       video_session_logs: {
         Row: {
           created_at: string | null
