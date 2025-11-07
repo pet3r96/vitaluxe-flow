@@ -196,7 +196,7 @@ jobs:
           aws ecr get-login-password --region "$ECR_REGION" | docker login --username AWS --password-stdin "$ECR_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com"
 
           echo "🏗️ Tagging Docker image..."
-          COMMIT_SHA=$(echo "${GITHUB_SHA::7}")
+          COMMIT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
           docker tag vitaluxe-app:latest "$ECR_REPOSITORY_URI:$COMMIT_SHA"
           docker tag vitaluxe-app:latest "$ECR_REPOSITORY_URI:latest"
 
@@ -257,19 +257,11 @@ jobs:
           
           echo "🚀 Creating Lightsail container service deployment..."
           
+          # Create deployment with proper JSON formatting
           DEPLOYMENT_RESULT=$(aws lightsail create-container-service-deployment \
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
-            --containers "{
-              \"vitaluxe-app\": {
-                \"image\": \"${ECR_REPOSITORY_URI}:latest\",
-                \"ports\": {\"8080\": \"HTTP\"}
-              }
-            }" \
-            --public-endpoint "{
-              \"containerName\": \"vitaluxe-app\",
-              \"containerPort\": 8080,
-              \"healthCheck\": {\"path\": \"/\", \"intervalSeconds\": 10, \"timeoutSeconds\": 5, \"healthyThreshold\": 2, \"unhealthyThreshold\": 2}
-            }" 2>&1)
+            --containers '{"vitaluxe-app":{"image":"'"$ECR_REPOSITORY_URI"':latest","ports":{"8080":"HTTP"},"environment":{"NODE_ENV":"production"}}}' \
+            --public-endpoint '{"containerName":"vitaluxe-app","containerPort":8080,"healthCheck":{"path":"/","intervalSeconds":10,"timeoutSeconds":5,"healthyThreshold":2,"unhealthyThreshold":2}}' 2>&1)
           
           DEPLOYMENT_EXIT_CODE=$?
           echo "Deployment exit code: $DEPLOYMENT_EXIT_CODE"
@@ -381,11 +373,13 @@ jobs:
           
           echo "\n📝 Recent Container Logs (Lightsail):"
           # Fetch last 200 log events from the container service directly
+          START_TIME=$(($(date +%s) - 900))  # 15 minutes ago
+          END_TIME=$(date +%s)
           aws lightsail get-container-service-logs \
             --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --container-name vitaluxe-app \
-            --start-time $(date -d '15 minutes ago' +%s) \
-            --end-time $(date +%s) \
+            --start-time $START_TIME \
+            --end-time $END_TIME \
             --query "logEvents[-200:].message" \
             --output text 2>/dev/null || echo "No recent log events found"
 
