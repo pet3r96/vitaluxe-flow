@@ -125,6 +125,36 @@ Deno.serve(async (req) => {
 
     console.log('✅ [cancel-appointment] Appointment cancelled successfully');
 
+    // If this is a video appointment, also update the video_session status
+    const { data: videoSession } = await supabaseClient
+      .from('video_sessions')
+      .select('id, status')
+      .eq('appointment_id', appointmentId)
+      .maybeSingle();
+
+    if (videoSession && videoSession.status !== 'ended') {
+      console.log('🎥 [cancel-appointment] Also cancelling associated video session:', videoSession.id);
+      
+      await supabaseClient
+        .from('video_sessions')
+        .update({
+          status: 'ended',
+          actual_end_time: new Date().toISOString()
+        })
+        .eq('id', videoSession.id);
+
+      // Log the cancellation
+      await supabaseClient.from('video_session_logs').insert({
+        session_id: videoSession.id,
+        event_type: 'session_cancelled',
+        user_id: user.id,
+        user_type: 'provider',
+        event_data: { reason: 'appointment_cancelled' }
+      });
+      
+      console.log('✅ [cancel-appointment] Video session also cancelled');
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

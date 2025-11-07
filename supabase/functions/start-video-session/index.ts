@@ -33,46 +33,73 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch session with appointment details
+    // Fetch session first
     const { data: session, error: sessionError } = await supabase
       .from('video_sessions')
-      .select(`
-        *,
-        patient_appointments!inner(
-          id,
-          visit_type,
-          practice_id,
-          providers!inner(
-            first_name,
-            last_name
-          )
-        ),
-        profiles!video_sessions_patient_id_fkey(
-          first_name,
-          last_name,
-          phone
-        )
-      `)
+      .select('*')
       .eq('id', sessionId)
       .single();
 
     if (sessionError || !session) {
+      console.error('[start-video-session] Session not found:', sessionError?.message);
       return new Response(JSON.stringify({ error: 'Session not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Verify provider authorization
-    if (session.provider_id !== user.id) {
+    // Fetch provider to check authorization
+    const { data: provider, error: providerError } = await supabase
+      .from('providers')
+      .select('user_id, first_name, last_name')
+      .eq('id', session.provider_id)
+      .single();
+
+    if (providerError || !provider) {
+      console.error('[start-video-session] Provider not found:', providerError?.message);
+      return new Response(JSON.stringify({ error: 'Provider not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Verify provider authorization - check against provider's user_id
+    if (provider.user_id !== user.id) {
+      console.error('[start-video-session] Authorization failed:', { provider_user_id: provider.user_id, auth_user_id: user.id });
       return new Response(JSON.stringify({ error: 'Only the assigned provider can start the session' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
+    // Fetch appointment details
+    const { data: appointment, error: appointmentError } = await supabase
+      .from('patient_appointments')
+      .select('id, visit_type, practice_id')
+      .eq('id', session.appointment_id)
+      .single();
+
+    if (appointmentError || !appointment) {
+      console.error('[start-video-session] Appointment not found:', appointmentError?.message);
+      return new Response(JSON.stringify({ error: 'Appointment not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Fetch patient profile
+    const { data: patientProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, phone')
+      .eq('id', session.patient_id)
+      .single();
+
+    if (profileError) {
+      console.error('[start-video-session] Patient profile not found:', profileError?.message);
+    }
+
     // Verify appointment is video type
-    if (session.patient_appointments.visit_type !== 'video') {
+    if (appointment.visit_type !== 'video') {
       return new Response(JSON.stringify({ error: 'Appointment is not a video consultation' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -104,9 +131,9 @@ Deno.serve(async (req) => {
     });
 
     // Send SMS to patient (if phone available)
-    const patientPhone = session.profiles?.phone;
+    const patientPhone = patientProfile?.phone;
     if (patientPhone) {
-      const providerName = `Dr. ${session.patient_appointments.providers.first_name} ${session.patient_appointments.providers.last_name}`;
+      const providerName = `Dr. ${provider.first_name} ${provider.last_name}`;
       const portalUrl = `${Deno.env.get('SITE_URL') || 'https://vitaluxe.lovable.app'}/patient/video/${sessionId}`;
       
       // Generate guest link automatically

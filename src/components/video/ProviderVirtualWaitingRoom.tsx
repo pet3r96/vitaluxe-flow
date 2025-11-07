@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar, Link2 } from "lucide-react";
+import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar, Link2, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isToday } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +36,9 @@ export const ProviderVirtualWaitingRoom = ({
   const [guestLinkData, setGuestLinkData] = useState<{ url: string; expiresAt: string } | null>(null);
   const [showGuestLinkDialog, setShowGuestLinkDialog] = useState(false);
   const [generatingLink, setGeneratingLink] = useState<string | null>(null);
+  const [cancellingSession, setCancellingSession] = useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [sessionToCancel, setSessionToCancel] = useState<string | null>(null);
 
   const { data: videoSessions, isLoading } = useQuery({
     queryKey: ['provider-video-sessions', practiceId],
@@ -169,6 +173,36 @@ export const ProviderVirtualWaitingRoom = ({
       });
     } finally {
       setGeneratingLink(null);
+    }
+  };
+
+  const handleCancelAppointment = async (appointmentId: string) => {
+    setCancellingSession(appointmentId);
+    try {
+      const { error } = await supabase.functions.invoke('cancel-appointment', {
+        body: { appointmentId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Appointment Cancelled",
+        description: "The video appointment has been cancelled"
+      });
+
+      // Refresh the sessions list
+      queryClient.invalidateQueries({ queryKey: ['provider-video-sessions', practiceId] });
+    } catch (error: any) {
+      console.error('Error cancelling appointment:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel appointment",
+        variant: "destructive"
+      });
+    } finally {
+      setCancellingSession(null);
+      setShowCancelDialog(false);
+      setSessionToCancel(null);
     }
   };
 
@@ -668,26 +702,64 @@ export const ProviderVirtualWaitingRoom = ({
                 </Button>
 
                 {session.status === 'scheduled' && (
-                  <Button
-                    onClick={() => handleStartSession(session.id)}
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Video className="h-4 w-4" />
-                    Start Session
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => handleStartSession(session.id)}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Video className="h-4 w-4" />
+                      Start Session
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSessionToCancel(session.appointment_id);
+                        setShowCancelDialog(true);
+                      }}
+                      disabled={cancellingSession === session.appointment_id}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      title="Cancel appointment"
+                    >
+                      {cancellingSession === session.appointment_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </>
                 )}
 
                 {session.status === 'waiting' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2 animate-pulse"
-                    onClick={() => handleJoinSession(session.id)}
-                  >
-                    <Video className="h-4 w-4" />
-                    Join Now
-                  </Button>
+                  <>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-2 animate-pulse"
+                      onClick={() => handleJoinSession(session.id)}
+                    >
+                      <Video className="h-4 w-4" />
+                      Join Now
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSessionToCancel(session.appointment_id);
+                        setShowCancelDialog(true);
+                      }}
+                      disabled={cancellingSession === session.appointment_id}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      title="Cancel appointment"
+                    >
+                      {cancellingSession === session.appointment_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </>
                 )}
 
                 {session.status === 'active' && (
@@ -731,6 +803,27 @@ export const ProviderVirtualWaitingRoom = ({
           expiresAt={guestLinkData.expiresAt}
         />
       )}
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this video appointment? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => sessionToCancel && handleCancelAppointment(sessionToCancel)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel Appointment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

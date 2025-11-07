@@ -76,18 +76,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Wait briefly for trigger to create video_session
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    // Wait for trigger to create video_session with retry logic
+    let videoSession = null;
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries && !videoSession) {
+      await new Promise((resolve) => setTimeout(resolve, retries === 0 ? 1500 : 500));
+      
+      console.log(`[create-instant-video-session] Attempt ${retries + 1} to fetch video_session for appointment ${appointment.id}`);
+      
+      const { data, error: sessionError } = await supabase
+        .from('video_sessions')
+        .select('*')
+        .eq('appointment_id', appointment.id)
+        .single();
 
-    const { data: videoSession, error: sessionError } = await supabase
-      .from('video_sessions')
-      .select('*')
-      .eq('appointment_id', appointment.id)
-      .single();
+      if (data) {
+        videoSession = data;
+        console.log('[create-instant-video-session] Video session found:', videoSession.id);
+      } else if (sessionError) {
+        console.log('[create-instant-video-session] Session error:', sessionError.message);
+      }
+      
+      retries++;
+    }
 
-    if (sessionError || !videoSession) {
+    if (!videoSession) {
+      console.error('[create-instant-video-session] Failed to create video session after retries');
       return new Response(
-        JSON.stringify({ error: 'Video session not created', details: sessionError?.message }),
+        JSON.stringify({ error: 'Video session not created after multiple retries' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
