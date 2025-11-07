@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Video, User, Clock, Circle, Plus, Loader2 } from "lucide-react";
+import { Video, User, Clock, Circle, Plus, Loader2, Check } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isToday } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
@@ -223,37 +224,103 @@ export const ProviderVirtualWaitingRoom = ({
 
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="patient">Select Patient *</Label>
-                  <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                    <SelectTrigger id="patient">
-                      <SelectValue placeholder="Choose a patient" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {patients?.map((patient: any) => (
-                        <SelectItem key={patient.id} value={patient.id}>
-                          {patient.profiles?.name || patient.profiles?.email || 'Unknown Patient'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Select Patient *</Label>
+                  <ScrollArea className="h-[200px] rounded-md border">
+                    <div className="p-2 space-y-2">
+                      {patients?.map((patient: any) => {
+                        const isSelected = selectedPatientId === patient.id;
+                        return (
+                          <button
+                            key={patient.id}
+                            onClick={() => setSelectedPatientId(patient.id)}
+                            className={`w-full text-left p-3 rounded-lg border-2 transition-all hover:border-primary/50 ${
+                              isSelected 
+                                ? 'border-primary bg-primary/10' 
+                                : 'border-border bg-background hover:bg-accent/50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                  isSelected ? 'bg-primary/20' : 'bg-muted'
+                                }`}>
+                                  <User className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    {patient.profiles?.name || 'Unknown Patient'}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {patient.profiles?.email}
+                                  </div>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <Check className="h-5 w-5 text-primary" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {(!patients || patients.length === 0) && (
+                        <div className="text-center py-8 text-muted-foreground text-sm">
+                          No patients found
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="provider">Select Provider *</Label>
-                  <Select value={selectedProviderId} onValueChange={setSelectedProviderId}>
-                    <SelectTrigger id="provider">
-                      <SelectValue placeholder="Choose a provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {providers?.map((provider: any) => (
-                        <SelectItem key={provider.id} value={provider.id}>
-                          {provider.first_name && provider.last_name
-                            ? `${provider.first_name} ${provider.last_name}`
-                            : provider.profiles?.name || provider.profiles?.email || 'Unknown Provider'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Select Provider *</Label>
+                  <ScrollArea className="h-[150px] rounded-md border">
+                    <div className="p-2 space-y-2">
+                      {providers?.map((provider: any) => {
+                        const isSelected = selectedProviderId === provider.id;
+                        const providerName = provider.first_name && provider.last_name
+                          ? `${provider.first_name} ${provider.last_name}`
+                          : provider.profiles?.name || provider.profiles?.email || 'Unknown Provider';
+                        
+                        return (
+                          <button
+                            key={provider.id}
+                            onClick={() => setSelectedProviderId(provider.id)}
+                            className={`w-full text-left p-3 rounded-lg border-2 transition-all hover:border-primary/50 ${
+                              isSelected 
+                                ? 'border-primary bg-primary/10' 
+                                : 'border-border bg-background hover:bg-accent/50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                  isSelected ? 'bg-primary/20' : 'bg-muted'
+                                }`}>
+                                  <User className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                                </div>
+                                <div>
+                                  <div className="font-medium">{providerName}</div>
+                                  {provider.profiles?.email && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {provider.profiles.email}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <Check className="h-5 w-5 text-primary" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {(!providers || providers.length === 0) && (
+                        <div className="text-center py-8 text-muted-foreground text-sm">
+                          No providers found
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
               </div>
 
