@@ -1792,13 +1792,20 @@ export type Database = {
           channel: string
           created_at: string | null
           delivered_at: string | null
+          direction: string | null
           error_message: string | null
+          event_type: string | null
           external_id: string | null
           id: string
+          message_body: string | null
+          metadata: Json | null
           notification_id: string | null
-          recipient_email: string | null
-          recipient_phone: string | null
+          practice_id: string | null
+          read_at: string | null
+          recipient: string | null
+          sender: string | null
           status: string
+          subject: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -1806,13 +1813,20 @@ export type Database = {
           channel: string
           created_at?: string | null
           delivered_at?: string | null
+          direction?: string | null
           error_message?: string | null
+          event_type?: string | null
           external_id?: string | null
           id?: string
+          message_body?: string | null
+          metadata?: Json | null
           notification_id?: string | null
-          recipient_email?: string | null
-          recipient_phone?: string | null
+          practice_id?: string | null
+          read_at?: string | null
+          recipient?: string | null
+          sender?: string | null
           status?: string
+          subject?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -1820,13 +1834,20 @@ export type Database = {
           channel?: string
           created_at?: string | null
           delivered_at?: string | null
+          direction?: string | null
           error_message?: string | null
+          event_type?: string | null
           external_id?: string | null
           id?: string
+          message_body?: string | null
+          metadata?: Json | null
           notification_id?: string | null
-          recipient_email?: string | null
-          recipient_phone?: string | null
+          practice_id?: string | null
+          read_at?: string | null
+          recipient?: string | null
+          sender?: string | null
           status?: string
+          subject?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -1838,34 +1859,48 @@ export type Database = {
             referencedRelation: "notifications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notification_logs_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       notification_preferences: {
         Row: {
-          created_at: string
-          email_enabled: boolean
+          created_at: string | null
+          email_enabled: boolean | null
+          event_type: string
           id: string
-          notification_type: string
-          sms_enabled: boolean
-          updated_at: string
+          sms_enabled: boolean | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
-          email_enabled?: boolean
+          created_at?: string | null
+          email_enabled?: boolean | null
+          event_type: string
           id?: string
-          notification_type: string
-          sms_enabled?: boolean
-          updated_at?: string
+          sms_enabled?: boolean | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
-          email_enabled?: boolean
+          created_at?: string | null
+          email_enabled?: boolean | null
+          event_type?: string
           id?: string
-          notification_type?: string
-          sms_enabled?: boolean
-          updated_at?: string
+          sms_enabled?: boolean | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -1873,40 +1908,40 @@ export type Database = {
       notification_templates: {
         Row: {
           active: boolean | null
-          body: string
           channel: string
           created_at: string | null
+          event_type: string
           id: string
           is_default: boolean | null
+          message_template: string
           practice_id: string | null
           subject: string | null
-          type: string
           updated_at: string | null
           variables: Json | null
         }
         Insert: {
           active?: boolean | null
-          body: string
           channel: string
           created_at?: string | null
+          event_type: string
           id?: string
           is_default?: boolean | null
+          message_template: string
           practice_id?: string | null
           subject?: string | null
-          type: string
           updated_at?: string | null
           variables?: Json | null
         }
         Update: {
           active?: boolean | null
-          body?: string
           channel?: string
           created_at?: string | null
+          event_type?: string
           id?: string
           is_default?: boolean | null
+          message_template?: string
           practice_id?: string | null
           subject?: string | null
-          type?: string
           updated_at?: string | null
           variables?: Json | null
         }
