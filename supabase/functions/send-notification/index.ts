@@ -77,7 +77,7 @@ serve(async (req) => {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("email, phone")
+      .select("email, phone, name, full_name")
       .eq("id", notification.user_id)
       .single();
 
@@ -121,9 +121,15 @@ serve(async (req) => {
           console.error("POSTMARK_API_KEY not configured");
           results.errors.push("Email service not configured");
         } else {
-          const actionButton = notification.action_url 
-            ? `<a href="${notification.action_url}" class="button">View Details</a>`
-            : '';
+          // Get recipient name for personalization
+          const recipientName = profile.full_name || profile.name || 'Valued User';
+          
+          // Extract sender context from metadata
+          const senderContext = getSenderContext(notification);
+          
+          // Set portal URLs
+          const portalUrl = 'https://app.vitaluxeservices.com';
+          const actionUrl = notification.action_url || portalUrl;
           
           const postmarkResponse = await fetch("https://api.postmarkapp.com/email", {
             method: "POST",
@@ -148,8 +154,12 @@ serve(async (req) => {
                     .content { background-color: #1A1A1A; padding: 40px 30px; border: 1px solid #292929; }
                     .content h2 { color: #E2C977; margin-top: 0; }
                     .content p { color: #E2C977; }
+                    .greeting { color: #E2C977; font-size: 16px; margin-bottom: 20px; }
+                    .sender-context { color: #C8A64B; font-size: 14px; margin-bottom: 20px; font-style: italic; }
                     .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; transition: background-color 0.3s; }
                     .button:hover { background-color: #E2C977; }
+                    .preferences { border-top: 1px solid #292929; padding-top: 20px; margin-top: 30px; color: #8E6E1E; font-size: 12px; line-height: 1.6; }
+                    .preferences a { color: #C8A64B; text-decoration: none; }
                     .footer { text-align: center; padding: 25px 20px; color: #8E6E1E; font-size: 12px; background-color: #0B0B0B; }
                   </style>
                 </head>
@@ -159,9 +169,17 @@ serve(async (req) => {
                       <h1>VITALUXE</h1>
                     </div>
                     <div class="content">
+                      <p class="greeting">Dear ${recipientName},</p>
+                      ${senderContext.name ? `<p class="sender-context">You have a new notification from <strong>${senderContext.role}${senderContext.name ? ' - ' + senderContext.name : ''}</strong>.</p>` : ''}
                       <h2>${notification.title}</h2>
                       <p>${notification.message}</p>
-                      ${actionButton}
+                      <p>Please log into <a href="${portalUrl}" style="color: #C8A64B; text-decoration: none;">app.vitaluxeservices.com</a> to view this message.</p>
+                      <div style="text-align: center;">
+                        <a href="${actionUrl}" class="button">View in Portal</a>
+                      </div>
+                      <div class="preferences">
+                        <p>To change your notification preferences, please log into your secure portal at <a href="${portalUrl}">https://app.vitaluxeservices.com</a>, and go to Settings &gt; My Profile to edit your preferences.</p>
+                      </div>
                     </div>
                     <div class="footer">
                       <p>&copy; ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.</p>
@@ -170,7 +188,21 @@ serve(async (req) => {
                 </body>
                 </html>
               `,
-              TextBody: `${notification.title}\n\n${notification.message}\n\n${notification.action_url ? `View details: ${notification.action_url}\n\n` : ''}Vitaluxe Services`
+              TextBody: `Dear ${recipientName},
+
+${senderContext.name ? `You have a new notification from ${senderContext.role}${senderContext.name ? ' - ' + senderContext.name : ''}.
+
+` : ''}${notification.title}
+
+${notification.message}
+
+Please log into app.vitaluxeservices.com to view this message.
+View in Portal: ${actionUrl}
+
+---
+To change your notification preferences, please log into your secure portal at https://app.vitaluxeservices.com, and go to Settings > My Profile to edit your preferences.
+
+© ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.`
             }),
           });
 
@@ -245,4 +277,40 @@ function replaceVariables(template: string, variables: any): string {
     }
   }
   return result;
+}
+
+// Helper function to determine sender context based on notification type and metadata
+function getSenderContext(notification: any): { role: string, name: string | null } {
+  const metadata = notification.metadata || {};
+  const notificationType = notification.notification_type || '';
+  
+  // Extract sender name from metadata (various possible fields)
+  const senderName = metadata.from_name || 
+                     metadata.provider_name || 
+                     metadata.practice_name ||
+                     metadata.sender_name ||
+                     metadata.patient_name ||
+                     null;
+  
+  // Determine role based on notification type
+  let senderRole = 'Vitaluxe Team';
+  
+  if (notificationType.startsWith('appointment_')) {
+    senderRole = 'Provider';
+  } else if (notificationType.startsWith('message')) {
+    // Could be from patient or provider - check metadata
+    if (metadata.sender_role) {
+      senderRole = metadata.sender_role === 'patient' ? 'Patient' : 'Provider';
+    } else {
+      senderRole = 'Team Member';
+    }
+  } else if (notificationType.startsWith('order_') || notificationType.startsWith('prescription_')) {
+    senderRole = metadata.pharmacy_name ? 'Pharmacy' : 'Provider';
+  } else if (notificationType.startsWith('system_')) {
+    senderRole = 'Vitaluxe System';
+  } else if (notificationType.includes('shipment') || notificationType.includes('tracking')) {
+    senderRole = 'Shipping';
+  }
+  
+  return { role: senderRole, name: senderName };
 }
