@@ -31,6 +31,8 @@ export const ProviderVirtualWaitingRoom = ({
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [creatingSession, setCreatingSession] = useState(false);
+
+  const { data: videoSessions, isLoading } = useQuery({
     queryKey: ['provider-video-sessions', practiceId],
     queryFn: async () => {
       const today = new Date();
