@@ -84,7 +84,9 @@ serve(async (req) => {
     
     // IDEMPOTENCY: Compute window_key (10s buckets) to prevent duplicate SMS sends
     const windowBucket = Math.floor(Date.now() / 10000);
-    const rawKey = `${user.id}:${windowBucket}`;
+    const phoneSanitized = phoneNumber.replace(/[-\s]/g, '');
+    const phoneHash = await hashCode(phoneSanitized);
+    const rawKey = `${user.id}:${windowBucket}:${phoneHash}:${purpose}`;
     const windowKey = await hashCode(rawKey);
     
     // Store ONLY: attempt_id, code_hash, expiration, window_key (NO PII)
