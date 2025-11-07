@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Cross-tab lock utilities
+const LOCK_KEY = (userId: string) => `twofa_sms_lock_${userId}`;
+const COOLDOWN_KEY = (userId: string) => `twofa_sms_cooldown_until_${userId}`;
+const LOCK_TTL = 45000; // 45 seconds
+
+interface LockData {
+  createdAt: number;
+  phoneHash: string;
+}
 
 interface GHLSmsVerifyDialogProps {
   open: boolean;
@@ -25,19 +35,58 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
+  const [isQueued, setIsQueued] = useState(false);
   
+  // Check and sync shared cooldown across tabs
+  const checkSharedCooldown = useCallback(() => {
+    const cooldownUntil = localStorage.getItem(COOLDOWN_KEY(userId));
+    if (cooldownUntil) {
+      const remaining = Math.ceil((parseInt(cooldownUntil) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setCountdown(remaining);
+        return true;
+      } else {
+        localStorage.removeItem(COOLDOWN_KEY(userId));
+      }
+    }
+    return false;
+  }, [userId]);
 
+  // Countdown timer
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
+    } else if (countdown === 0) {
+      // Clear lock when countdown expires
+      localStorage.removeItem(LOCK_KEY(userId));
     }
-  }, [countdown]);
+  }, [countdown, userId]);
+
+  // Listen to storage events from other tabs
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === COOLDOWN_KEY(userId)) {
+        checkSharedCooldown();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [userId, checkSharedCooldown]);
 
 
 
+  // Initial code send with cross-tab lock
   useEffect(() => {
     if (open && userId && !sentRef.current) {
+      // Check for existing cooldown from another tab
+      const hasCooldown = checkSharedCooldown();
+      if (hasCooldown) {
+        console.log('[GHLSmsVerifyDialog] Active cooldown found, skipping auto-send');
+        setCodeSent(true);
+        return;
+      }
+      
       sentRef.current = true;
       console.log('[GHLSmsVerifyDialog] Dialog opened - sending fresh code');
       void sendCode();
@@ -47,7 +96,7 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
     if (!open) {
       sentRef.current = false;
     }
-  }, [open, userId]);
+  }, [open, userId, checkSharedCooldown]);
 
   const maskPhone = (phoneNum: string) => {
     const cleaned = phoneNum.replace(/\D/g, '');
@@ -66,9 +115,37 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
 
   const sendCode = async () => {
     console.log('[GHLSmsVerifyDialog] sendCode START', { phoneNumber, userId });
+    
+    // Check cross-tab lock
+    const lockData = localStorage.getItem(LOCK_KEY(userId));
+    if (lockData) {
+      try {
+        const lock: LockData = JSON.parse(lockData);
+        const lockAge = Date.now() - lock.createdAt;
+        if (lockAge < LOCK_TTL) {
+          const remainingMs = LOCK_TTL - lockAge;
+          console.log('[GHLSmsVerifyDialog] Send blocked by cross-tab lock', { remainingMs });
+          setCountdown(Math.ceil(remainingMs / 1000));
+          toast.info('Code send in progress from another tab');
+          return;
+        }
+      } catch (e) {
+        // Invalid lock data, clear it
+        localStorage.removeItem(LOCK_KEY(userId));
+      }
+    }
+
+    // Set lock immediately
+    const phoneHash = phoneNumber.slice(-4);
+    localStorage.setItem(LOCK_KEY(userId), JSON.stringify({
+      createdAt: Date.now(),
+      phoneHash
+    }));
+
     setLoading(true);
     setError('');
     setAttemptsRemaining(null);
+    setIsQueued(false);
 
     try {
       // Validate phone number is present
@@ -89,33 +166,42 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
       }
 
       const { data, error } = await supabase.functions.invoke('send-ghl-sms', {
-        body: { phoneNumber: sanitizedPhone, purpose: 'verification' }
+        body: { phoneNumber: sanitizedPhone, purpose: 'verification' },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      // Store attemptId for verification (in component state only, not sessionStorage)
+      // Store attemptId for verification
       if (data.attemptId) {
         console.log('[GHLSmsVerifyDialog] SMS sent successfully - SETTING attemptId', { 
           attemptId: data.attemptId,
-          phoneNumber: sanitizedPhone.substring(0, 5) + '***'
+          phoneNumber: sanitizedPhone.substring(0, 5) + '***',
+          queued: data.queued
         });
         setAttemptId(data.attemptId);
-        // Verify it was set
-        console.log('[GHLSmsVerifyDialog] State after setAttemptId - current value:', data.attemptId);
+        setIsQueued(!!data.queued);
       } else {
         throw new Error('No attempt ID received from server');
       }
 
-      toast.success('Verification code sent!');
+      // Set shared cooldown (60 seconds)
+      const cooldownUntil = Date.now() + 60000;
+      localStorage.setItem(COOLDOWN_KEY(userId), cooldownUntil.toString());
+      setCountdown(60);
+
+      toast.success(data.queued ? 'Code is being sent...' : 'Verification code sent!');
       setCodeSent(true);
-      setCountdown(30); // 30 second resend cooldown
       
     } catch (err: any) {
       console.error('Error sending SMS:', err);
       setError(err.message || 'Failed to send verification code');
       toast.error(err.message || 'Failed to send code');
+      // Remove lock on error to allow retry
+      localStorage.removeItem(LOCK_KEY(userId));
     } finally {
       setLoading(false);
     }
@@ -204,7 +290,13 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
           <DialogTitle>🔒 SMS Verification Required</DialogTitle>
           <DialogDescription>
             Please verify your identity to continue.
-            {codeSent && ` Code sent to ${maskPhone(phoneNumber)}`}
+            {codeSent && (
+              <>
+                <br />
+                Code sent to {maskPhone(phoneNumber)}.
+                {isQueued ? ' Delivery in progress...' : ' Usually arrives within 5–15 seconds.'}
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 

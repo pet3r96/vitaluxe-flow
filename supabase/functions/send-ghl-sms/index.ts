@@ -101,12 +101,12 @@ serve(async (req) => {
 
     const attemptId = attemptData.attempt_id;
 
-    // Send SMS via GHL webhook with 4-second timeout
+    // Send SMS via GHL webhook with 12-second timeout
     console.log('[GHL] Attempt:', attemptId, '| Sending SMS');
     
     const ghlStartTime = Date.now();
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
     
     try {
       const ghlResponse = await fetch(ghlWebhookUrl, {
@@ -126,14 +126,43 @@ serve(async (req) => {
         const errorText = await ghlResponse.text();
         console.error('[GHL] Attempt:', attemptId, '| Webhook failed:', errorText);
         
-        // Log failure (NO PII)
+        // For transient errors (5xx), treat as queued
+        if (ghlResponse.status >= 500 && ghlResponse.status < 600) {
+          await supabase.from('two_fa_audit_log').insert({
+            attempt_id: attemptId,
+            event_type: 'code_queued',
+            code_verified: false,
+            response_time_ms: responseTime,
+            metadata: { 
+              purpose,
+              queued_reason: 'upstream_5xx',
+              status: ghlResponse.status
+            }
+          });
+
+          const totalTime = Date.now() - startTime;
+          console.log('[GHL] Attempt:', attemptId, '| Queued (5xx) | Total:', totalTime, 'ms');
+
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              attemptId: attemptId,
+              message: 'Code is being sent (queued)',
+              queued: true,
+              expiresIn: 300
+            }),
+            { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Log definitive failures
         await supabase.from('two_fa_audit_log').insert({
           attempt_id: attemptId,
           event_type: 'ghl_webhook_failed',
           code_verified: false,
           response_time_ms: responseTime,
           metadata: { 
-            error: errorText.substring(0, 100), // Limit error text
+            error: errorText.substring(0, 100),
             status: ghlResponse.status
           }
         });
@@ -156,9 +185,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true,
-          attemptId: attemptId, // Client needs this for verification
+          attemptId: attemptId,
           message: 'Verification code sent successfully',
-          expiresIn: 300 // 5 minutes in seconds
+          expiresIn: 300
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -167,8 +196,34 @@ serve(async (req) => {
       clearTimeout(timeoutId);
       
       if (fetchError.name === 'AbortError') {
-        console.error('[GHL] Attempt:', attemptId, '| Timeout after 4s');
-        throw new Error('GHL webhook timeout - request took too long');
+        // Treat timeout as queued - code was likely sent but upstream slow
+        const responseTime = Date.now() - ghlStartTime;
+        console.log('[GHL] Attempt:', attemptId, '| Timeout after 12s, treating as queued');
+        
+        await supabase.from('two_fa_audit_log').insert({
+          attempt_id: attemptId,
+          event_type: 'code_queued',
+          code_verified: false,
+          response_time_ms: responseTime,
+          metadata: { 
+            purpose,
+            queued_reason: 'webhook_timeout_12s'
+          }
+        });
+
+        const totalTime = Date.now() - startTime;
+        console.log('[GHL] Attempt:', attemptId, '| Queued (timeout) | Total:', totalTime, 'ms');
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            attemptId: attemptId,
+            message: 'Code is being sent (queued)',
+            queued: true,
+            expiresIn: 300
+          }),
+          { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       throw fetchError;
     }
