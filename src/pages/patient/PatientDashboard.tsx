@@ -12,6 +12,7 @@ import { IntakePromptCard } from "@/components/patient/IntakePromptCard";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { PatientVirtualWaitingRoom } from "@/components/video/PatientVirtualWaitingRoom";
 
 
 export default function PatientDashboard() {
@@ -570,6 +571,16 @@ export default function PatientDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Video Appointments Section */}
+      {patientAccount?.id && (
+        <div className="mt-6">
+          <PatientVirtualWaitingRoom 
+            patientId={patientAccount.id}
+            onJoinSession={(sessionId) => navigate(`/video-room/${sessionId}`)}
+          />
+        </div>
+      )}
 
       {/* Recent Activity Section */}
       <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">

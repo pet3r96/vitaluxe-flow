@@ -63,15 +63,15 @@ export const AgoraVideoRoom = ({
 
   const quality = useNetworkQuality(client, sessionId);
   
-  const chat = useVideoChat({
+  const chat = rtmToken && rtmUid ? useVideoChat({
     appId,
-    rtmToken: rtmToken || "",
-    rtmUid: rtmUid || uid,
+    rtmToken,
+    rtmUid,
     channelName,
     sessionId,
     userName,
     userType: isProvider ? "provider" : "patient",
-  });
+  }) : { messages: [], sendMessage: async () => {}, isConnected: false };
 
   useEffect(() => {
     const initClient = async () => {
@@ -363,15 +363,17 @@ export const AgoraVideoRoom = ({
           <MonitorUp className="h-6 w-6" />
         </Button>
 
-        <Button
-          size="lg"
-          variant={showChat ? "default" : "outline"}
-          className="h-14 w-14 rounded-full p-0"
-          onClick={() => setShowChat(!showChat)}
-          title="Toggle chat"
-        >
-          <MessageSquare className="h-6 w-6" />
-        </Button>
+        {rtmToken && (
+          <Button
+            size="lg"
+            variant={showChat ? "default" : "outline"}
+            className="h-14 w-14 rounded-full p-0"
+            onClick={() => setShowChat(!showChat)}
+            title="Toggle chat"
+          >
+            <MessageSquare className="h-6 w-6" />
+          </Button>
+        )}
 
         {!isProvider && (
           <Button
