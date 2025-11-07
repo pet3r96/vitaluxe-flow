@@ -124,6 +124,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
+  const [userPhone, setUserPhone] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -156,6 +157,15 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
 
       const role = userRoleData?.role || (patientAccount ? 'patient' : 'provider');
       setUserRole(role);
+
+      // Get user's phone number from profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('id', user.id)
+        .single();
+
+      setUserPhone(profileData?.phone || null);
 
       // Fetch this user's notification preferences (scoped to user_id)
       const { data, error } = await supabase
@@ -241,6 +251,16 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
   };
 
   const togglePreference = (type: string, channel: 'email' | 'sms' | 'in_app') => {
+    // Check if trying to enable SMS without a phone number
+    if (channel === 'sms' && !preferences[type]?.sms_enabled && !userPhone) {
+      toast({
+        title: "Phone Number Required",
+        description: "Please add a phone number to your profile to enable SMS notifications.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setPreferences(prev => ({
       ...prev,
       [type]: {
@@ -258,6 +278,16 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
           <DialogDescription>
             Choose how you want to receive notifications
           </DialogDescription>
+          {!userPhone && (
+            <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-sm text-destructive font-medium">
+                ⚠️ No phone number on file
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                SMS notifications are disabled until you add a phone number to your profile.
+              </p>
+            </div>
+          )}
         </DialogHeader>
 
         {loading ? (
