@@ -27,6 +27,7 @@ import {
   LifeBuoy,
   LogOut,
   History,
+  Video,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -131,6 +132,7 @@ export const menus: MenuConfig = {
       items: [
         { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare, isPro: true },
+        { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
         { label: "Document Center", href: "/document-center", icon: FileCheck, isPro: true },
       ],
     },
@@ -181,6 +183,7 @@ export const menus: MenuConfig = {
       items: [
         { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare, isPro: true },
+        { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
         { label: "Document Center", href: "/document-center", icon: FileCheck, isPro: true },
       ],
     },
@@ -284,6 +287,7 @@ export const menus: MenuConfig = {
       items: [
         { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare },
+        { label: "Video Consultations", href: "/video-consultations", icon: Video },
         { label: "Document Center", href: "/document-center", icon: FileCheck },
       ],
     },
