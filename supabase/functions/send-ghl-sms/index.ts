@@ -40,6 +40,35 @@ serve(async (req) => {
 
     const { phoneNumber, purpose = 'verification' } = await req.json();
 
+    // DEDUPLICATION: Check for recent attempts by this user (within last 45 seconds)
+    const fortyFiveSecondsAgo = new Date(Date.now() - 45 * 1000).toISOString();
+    const { data: recentUserAttempts, error: dedupeError } = await supabase
+      .from('sms_verification_attempts')
+      .select('attempt_id, created_at')
+      .gte('created_at', fortyFiveSecondsAgo)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (dedupeError) {
+      console.error('[GHL] Deduplication check failed:', dedupeError);
+    } else if (recentUserAttempts && recentUserAttempts.length > 0) {
+      const recentAttempt = recentUserAttempts[0];
+      const timeSinceLastAttempt = Date.now() - new Date(recentAttempt.created_at).getTime();
+      
+      console.log('[GHL] DUPLICATE PREVENTED | User:', user.id, '| Recent attempt:', recentAttempt.attempt_id, '| Age:', timeSinceLastAttempt, 'ms');
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          attemptId: recentAttempt.attempt_id,
+          message: 'Using recent verification attempt',
+          expiresIn: 300,
+          deduplicated: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!phoneNumber) {
       return new Response(
         JSON.stringify({ success: false, error: 'Phone number is required' }),
