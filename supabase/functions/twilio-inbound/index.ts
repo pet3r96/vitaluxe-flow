@@ -28,11 +28,11 @@ serve(async (req) => {
     // Handle STOP/UNSUBSCRIBE
     if (body === "stop" || body === "unsubscribe" || body === "stopall") {
       // Find user by phone number (check both formats)
-      const phoneFormats = [from, from.replace(/\D/g, '')];
+      const phoneClean = from.replace(/\D/g, '');
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, name")
-        .or(`phone.in.(${phoneFormats.join(',')}),mobile_phone.in.(${phoneFormats.join(',')})`)
+        .or(`phone.eq.${from},phone.eq.${phoneClean},mobile_phone.eq.${from},mobile_phone.eq.${phoneClean}`)
         .limit(1);
 
       const profile = profiles?.[0];
@@ -71,11 +71,11 @@ serve(async (req) => {
 
     // Handle START
     if (body === "start" || body === "subscribe") {
-      const phoneFormats = [from, from.replace(/\D/g, '')];
+      const phoneClean = from.replace(/\D/g, '');
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id")
-        .or(`phone.in.(${phoneFormats.join(',')}),mobile_phone.in.(${phoneFormats.join(',')})`)
+        .or(`phone.eq.${from},phone.eq.${phoneClean},mobile_phone.eq.${from},mobile_phone.eq.${phoneClean}`)
         .limit(1);
 
       const profile = profiles?.[0];
@@ -121,11 +121,11 @@ serve(async (req) => {
     }
 
     // Log other inbound messages
-    const phoneFormats = [from, from.replace(/\D/g, '')];
+    const phoneClean = from.replace(/\D/g, '');
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id")
-      .or(`phone.in.(${phoneFormats.join(',')}),mobile_phone.in.(${phoneFormats.join(',')})`)
+      .or(`phone.eq.${from},phone.eq.${phoneClean},mobile_phone.eq.${from},mobile_phone.eq.${phoneClean}`)
       .limit(1);
     
     const profile = profiles?.[0];
