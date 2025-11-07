@@ -278,13 +278,19 @@ export default function NotificationTemplates() {
       </div>
 
       <Tabs value={selectedEvent} onValueChange={setSelectedEvent}>
-        <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full">
-          {EVENT_TYPES.map((event) => (
-            <TabsTrigger key={event.value} value={event.value}>
-              {event.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground min-w-full">
+            {EVENT_TYPES.map((event) => (
+              <TabsTrigger 
+                key={event.value} 
+                value={event.value}
+                className="whitespace-nowrap px-3"
+              >
+                {event.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         {EVENT_TYPES.map((event) => (
           <TabsContent key={event.value} value={event.value} className="space-y-6">
