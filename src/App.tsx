@@ -296,4 +296,4 @@ const App = () => <QueryClientProvider client={queryClient}>
       </ErrorBoundary>
     </ThemeProvider>
   </QueryClientProvider>;
-export default App;
+export default App; // deploy trigger 2 - 2025-11-07 16:36
