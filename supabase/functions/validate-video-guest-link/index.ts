@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { RtcTokenBuilder, RtcRole, RtmTokenBuilder, RtmRole } from 'https://deno.land/x/agora_access_token@v2.0.4/mod.ts';
+import { RtcTokenBuilder, RtcRole, RtmTokenBuilder, RtmRole } from 'https://esm.sh/agora-access-token@2.0.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
