@@ -71,13 +71,22 @@ class RealtimeManager {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           logger.info(`Successfully subscribed to ${table} realtime updates`);
         } else if (status === 'CHANNEL_ERROR') {
-          logger.error(`Failed to subscribe to ${table} realtime updates`);
+          logger.error(
+            `Failed to subscribe to ${table} realtime updates`, 
+            err,
+            { 
+              table, 
+              status,
+              errorMessage: err?.message,
+              errorDetails: err
+            }
+          );
         } else if (status === 'TIMED_OUT') {
-          logger.warn(`Realtime subscription timed out for ${table}`);
+          logger.warn(`Realtime subscription timed out for ${table}`, { table, status });
         }
       });
 
