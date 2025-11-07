@@ -27,7 +27,8 @@ interface NotificationPreference {
 
 interface AdminNotificationPreference {
   notification_type: string;
-  enabled: boolean;
+  email_enabled: boolean;
+  sms_enabled: boolean;
 }
 
 const PATIENT_NOTIFICATION_TYPES = [
@@ -132,7 +133,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       if (userIsAdmin) {
         const { data: adminData, error: adminError } = await supabase
           .from('admin_notification_preferences')
-          .select('notification_type, enabled')
+          .select('notification_type, email_enabled, sms_enabled')
           .eq('user_id', user.id);
 
         if (adminError) throw adminError;
@@ -141,7 +142,8 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
         adminData?.forEach((pref: any) => {
           adminPrefsMap[pref.notification_type] = {
             notification_type: pref.notification_type,
-            enabled: pref.enabled,
+            email_enabled: pref.email_enabled,
+            sms_enabled: pref.sms_enabled,
           };
         });
 
@@ -150,7 +152,8 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
           if (!adminPrefsMap[type.value]) {
             adminPrefsMap[type.value] = {
               notification_type: type.value,
-              enabled: true,
+              email_enabled: true,
+              sms_enabled: false,
             };
           }
         });
@@ -194,7 +197,8 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
         const adminPrefsArray = Object.values(adminPreferences).map(pref => ({
           user_id: user.id,
           notification_type: pref.notification_type as any,
-          enabled: pref.enabled,
+          email_enabled: pref.email_enabled,
+          sms_enabled: pref.sms_enabled,
         }));
 
         const { error: adminError } = await supabase
@@ -232,12 +236,13 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
     }));
   };
 
-  const toggleAdminPreference = (type: string) => {
+  const toggleAdminPreference = (type: string, channel: 'email' | 'sms') => {
     setAdminPreferences(prev => ({
       ...prev,
       [type]: {
         ...prev[type],
-        enabled: !prev[type]?.enabled,
+        notification_type: type,
+        [`${channel}_enabled`]: !prev[type]?.[`${channel}_enabled`],
       },
     }));
   };
@@ -297,16 +302,27 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
                   {ADMIN_NOTIFICATION_TYPES.map((type, index) => (
                     <div key={type.value}>
                       {index > 0 && <Separator className="my-4" />}
-                      <div className="flex items-start justify-between space-x-4 rounded-lg border p-4">
-                        <div className="flex-1 space-y-1">
+                      <div className="space-y-3">
+                        <div>
                           <h4 className="font-medium">{type.label}</h4>
                           <p className="text-sm text-muted-foreground">{type.description}</p>
                         </div>
-                        <Switch
-                          id={type.value}
-                          checked={adminPreferences[type.value]?.enabled ?? true}
-                          onCheckedChange={() => toggleAdminPreference(type.value)}
-                        />
+                        <div className="flex items-center justify-between pl-4">
+                          <Label htmlFor={`admin-${type.value}-email`} className="text-sm">Email</Label>
+                          <Switch
+                            id={`admin-${type.value}-email`}
+                            checked={adminPreferences[type.value]?.email_enabled || false}
+                            onCheckedChange={() => toggleAdminPreference(type.value, 'email')}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between pl-4">
+                          <Label htmlFor={`admin-${type.value}-sms`} className="text-sm">SMS</Label>
+                          <Switch
+                            id={`admin-${type.value}-sms`}
+                            checked={adminPreferences[type.value]?.sms_enabled || false}
+                            onCheckedChange={() => toggleAdminPreference(type.value, 'sms')}
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}

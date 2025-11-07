@@ -172,25 +172,28 @@ export type Database = {
       admin_notification_preferences: {
         Row: {
           created_at: string | null
-          enabled: boolean
+          email_enabled: boolean
           id: string
           notification_type: Database["public"]["Enums"]["notification_type"]
+          sms_enabled: boolean
           updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
-          enabled?: boolean
+          email_enabled?: boolean
           id?: string
           notification_type: Database["public"]["Enums"]["notification_type"]
+          sms_enabled?: boolean
           updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
-          enabled?: boolean
+          email_enabled?: boolean
           id?: string
           notification_type?: Database["public"]["Enums"]["notification_type"]
+          sms_enabled?: boolean
           updated_at?: string | null
           user_id?: string
         }

@@ -41,12 +41,14 @@ export async function createAdminNotification(params: AdminNotificationParams): 
     // Fetch preferences for all admins for this notification type
     const { data: preferences } = await supabase
       .from('admin_notification_preferences')
-      .select('user_id, enabled')
+      .select('user_id, email_enabled, sms_enabled')
       .eq('notification_type', params.notification_type)
-      .eq('enabled', false); // Only fetch disabled preferences
+      .or('email_enabled.eq.false,sms_enabled.eq.false'); // Fetch those with at least one channel disabled
 
-    // Create a set of user IDs who have disabled this notification type
-    const disabledUserIds = new Set(preferences?.map(p => p.user_id) || []);
+    // Create a set of user IDs who have disabled ALL channels for this notification type
+    const disabledUserIds = new Set(
+      preferences?.filter(p => !p.email_enabled && !p.sms_enabled).map(p => p.user_id) || []
+    );
 
     // Filter admins based on preferences (include if no preference set or if enabled)
     const enabledAdmins = adminRoles.filter(role => !disabledUserIds.has(role.user_id));
