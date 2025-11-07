@@ -22,7 +22,7 @@ export function NotificationBell() {
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              className="absolute -top-1 -right-1 h-5 w-5 min-w-[20px] flex items-center justify-center p-0 text-[10px] font-semibold rounded-full border-2 border-background"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
@@ -31,7 +31,14 @@ export function NotificationBell() {
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md overflow-hidden flex flex-col">
         <SheetHeader>
-          <SheetTitle>Notifications</SheetTitle>
+          <SheetTitle className="flex items-center justify-between">
+            <span>Notifications</span>
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {unreadCount} Unread
+              </Badge>
+            )}
+          </SheetTitle>
         </SheetHeader>
         <NotificationPanel />
       </SheetContent>
