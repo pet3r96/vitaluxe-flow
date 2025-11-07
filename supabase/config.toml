@@ -332,3 +332,24 @@ verify_jwt = true
 
 [functions.validate-rx-order]
 verify_jwt = true
+
+[functions.generate-agora-token]
+verify_jwt = true
+
+[functions.start-video-session]
+verify_jwt = true
+
+[functions.join-video-session]
+verify_jwt = true
+
+[functions.start-video-recording]
+verify_jwt = true
+
+[functions.stop-video-recording]
+verify_jwt = true
+
+[functions.end-video-session]
+verify_jwt = true
+
+[functions.cleanup-expired-video-recordings]
+verify_jwt = false
