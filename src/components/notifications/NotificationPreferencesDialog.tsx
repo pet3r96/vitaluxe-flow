@@ -37,9 +37,69 @@ const PATIENT_NOTIFICATION_TYPES = [
 const PROVIDER_NOTIFICATION_TYPES = [
   { value: 'patient_message_received', label: 'Patient Messages', description: 'When a patient sends you a message' },
   { value: 'appointment_booked', label: 'Appointments Booked', description: 'When a patient books an appointment' },
-  { value: 'appointment_cancelled', label: 'Appointments Cancelled', description: 'When an appointment is cancelled' },
+  { value: 'appointment_cancelled', label: 'Appointment Changes', description: 'When an appointment is cancelled' },
   { value: 'document_uploaded_by_patient', label: 'Documents Uploaded', description: 'When a patient uploads a document' },
+  { value: 'new_patient_forms', label: 'New Patient Forms', description: 'When patients submit forms' },
 ];
+
+const PRACTICE_NOTIFICATION_TYPES = [
+  { value: 'patient_message_received', label: 'Patient Messages', description: 'When a patient sends a message' },
+  { value: 'appointment_booked', label: 'New Appointments', description: 'When appointments are booked' },
+  { value: 'appointment_cancelled', label: 'Appointment Cancellations', description: 'When appointments are cancelled' },
+  { value: 'staff_updates', label: 'Staff Updates', description: 'Updates from your staff members' },
+  { value: 'system_alerts', label: 'System Alerts', description: 'Important system notifications' },
+  { value: 'payment_updates', label: 'Payment Updates', description: 'Payment and billing notifications' },
+];
+
+const STAFF_NOTIFICATION_TYPES = [
+  { value: 'task_assignments', label: 'Task Assignments', description: 'When tasks are assigned to you' },
+  { value: 'appointment_changes', label: 'Appointment Changes', description: 'When appointments are updated' },
+  { value: 'patient_check_ins', label: 'Patient Check-ins', description: 'When patients check in' },
+  { value: 'practice_announcements', label: 'Practice Announcements', description: 'Important practice updates' },
+];
+
+const PHARMACY_NOTIFICATION_TYPES = [
+  { value: 'new_prescriptions', label: 'New Prescriptions', description: 'When new prescriptions are sent' },
+  { value: 'prescription_status', label: 'Prescription Status Updates', description: 'When prescription status changes' },
+  { value: 'patient_message_received', label: 'Patient Messages', description: 'When patients send messages' },
+  { value: 'order_updates', label: 'Order Updates', description: 'Order and fulfillment updates' },
+];
+
+const REP_NOTIFICATION_TYPES = [
+  { value: 'new_referrals', label: 'New Referrals', description: 'When new referrals come in' },
+  { value: 'practice_signups', label: 'Practice Sign-ups', description: 'When practices sign up' },
+  { value: 'commission_updates', label: 'Commission Updates', description: 'Commission and payment updates' },
+  { value: 'team_activity', label: 'Team Activity', description: 'Activity from your team' },
+];
+
+const ADMIN_NOTIFICATION_TYPES = [
+  { value: 'system_alerts', label: 'System Alerts', description: 'Critical system notifications' },
+  { value: 'user_activity', label: 'User Activity', description: 'Important user activity alerts' },
+  { value: 'security_notifications', label: 'Security Notifications', description: 'Security-related alerts' },
+  { value: 'support_requests', label: 'Support Requests', description: 'User support requests' },
+];
+
+const getNotificationTypesForRole = (role: string) => {
+  switch (role) {
+    case 'patient':
+      return PATIENT_NOTIFICATION_TYPES;
+    case 'provider':
+      return PROVIDER_NOTIFICATION_TYPES;
+    case 'doctor':
+      return PRACTICE_NOTIFICATION_TYPES;
+    case 'staff':
+      return STAFF_NOTIFICATION_TYPES;
+    case 'pharmacy':
+      return PHARMACY_NOTIFICATION_TYPES;
+    case 'topline':
+    case 'downline':
+      return REP_NOTIFICATION_TYPES;
+    case 'admin':
+      return ADMIN_NOTIFICATION_TYPES;
+    default:
+      return PROVIDER_NOTIFICATION_TYPES;
+  }
+};
 
 export function NotificationPreferencesDialog({ open, onOpenChange }: NotificationPreferencesDialogProps) {
   const [preferences, setPreferences] = useState<Record<string, NotificationPreference>>({});
@@ -60,17 +120,24 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Check if user is a patient (check patient_accounts table)
+      // Get user's role from user_roles table
       // NOTE: Notification preferences are PER-USER, not per-practice
       // Each user has their own rows in notification_preferences table with unique user_id
+      const { data: userRoleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      // Fallback: check if user is a patient
       const { data: patientAccount } = await supabase
         .from('patient_accounts')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const isPatient = !!patientAccount;
-      setUserRole(isPatient ? 'patient' : 'provider');
+      const role = userRoleData?.role || (patientAccount ? 'patient' : 'provider');
+      setUserRole(role);
 
       // Fetch this user's notification preferences (scoped to user_id)
       const { data, error } = await supabase
@@ -91,7 +158,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       });
 
       // Set defaults for missing types based on user role
-      const notificationTypes = isPatient ? PATIENT_NOTIFICATION_TYPES : PROVIDER_NOTIFICATION_TYPES;
+      const notificationTypes = getNotificationTypesForRole(role);
       notificationTypes.forEach(type => {
         if (!prefsMap[type.value]) {
           prefsMap[type.value] = {
@@ -181,7 +248,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
           </div>
         ) : (
           <div className="space-y-6 py-4">
-            {(userRole === 'patient' ? PATIENT_NOTIFICATION_TYPES : PROVIDER_NOTIFICATION_TYPES).map((type, index) => (
+            {getNotificationTypesForRole(userRole).map((type, index) => (
               <div key={type.value}>
                 {index > 0 && <Separator className="my-4" />}
                 <div className="space-y-3">
