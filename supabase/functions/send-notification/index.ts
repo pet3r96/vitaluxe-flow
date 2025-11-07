@@ -186,6 +186,54 @@ serve(async (req) => {
       }
     }
 
+    // Send SMS via Twilio
+    if (send_sms && preferences?.sms_notifications && profile?.phone) {
+      try {
+        const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
+        const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
+        const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
+
+        if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
+          console.log("Twilio not configured, skipping SMS");
+          results.errors.push("SMS service not configured");
+        } else {
+          // Create Basic Auth header for Twilio API
+          const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+          
+          // Send SMS via Twilio REST API
+          const twilioResponse = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Basic ${auth}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({
+                To: profile.phone,
+                From: TWILIO_PHONE_NUMBER,
+                Body: smsText
+              }).toString()
+            }
+          );
+
+          if (!twilioResponse.ok) {
+            const error = await twilioResponse.json();
+            console.error("Twilio SMS send failed:", error);
+            results.errors.push(`SMS failed: ${error.message || error.code || 'Unknown error'}`);
+          } else {
+            const result = await twilioResponse.json();
+            results.sms_sent = true;
+            console.log("SMS sent successfully via Twilio. SID:", result.sid, "To:", profile.phone);
+          }
+        }
+      } catch (error) {
+        console.error("SMS error:", error);
+        results.errors.push(`SMS error: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    /* ========== GHL SMS CODE (PRESERVED FOR REFERENCE) ==========
     // Send SMS via GHL webhook
     if (send_sms && preferences?.sms_notifications && profile?.phone) {
       try {
@@ -201,7 +249,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               phone: profile.phone,
-              code: smsText // Send full notification text
+              code: smsText
             })
           });
 
@@ -219,6 +267,7 @@ serve(async (req) => {
         results.errors.push(`SMS error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
+    ============================================================= */
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
