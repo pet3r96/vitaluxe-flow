@@ -25,6 +25,9 @@ class RealtimeManager {
     'patient_notes': ['engagement-summary'],
     'treatment_plans': ['engagement-summary'],
     'patient_follow_ups': ['engagement-summary', 'follow-up-reminders'],
+    'notifications': ['user-notifications', 'notification-bell'],
+    'notification_logs': ['notification_logs'],
+    'notification_preferences': ['notification-preferences'],
   };
 
   /**

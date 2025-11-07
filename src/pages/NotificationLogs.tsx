@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,9 +19,9 @@ export default function NotificationLogs() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedLog, setSelectedLog] = useState<any>(null);
 
-  const { data: logs, isLoading } = useQuery({
-    queryKey: ["notification_logs", effectivePracticeId],
-    queryFn: async () => {
+  const { data: logs, isLoading } = useRealtimeQuery(
+    ["notification_logs", effectivePracticeId],
+    async () => {
       let query = (supabase as any)
         .from("notification_logs")
         .select("*, profiles(first_name, last_name, email)")
@@ -37,8 +37,8 @@ export default function NotificationLogs() {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 10000, // Refetch every 10 seconds
-  });
+    { staleTime: 30000 } // Cache for 30 seconds
+  );
 
   const filteredLogs = (logs as any)?.filter((log: any) => {
     const matchesSearch = 

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { realtimeManager } from "@/lib/realtimeManager";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface Notification {
   id: string;
@@ -24,6 +26,7 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch notifications with optional type filter
   const fetchNotifications = async (typeFilter?: string) => {
@@ -161,81 +164,64 @@ export function useNotifications() {
     }
   };
 
-  // Subscribe to real-time updates
+  // Subscribe to real-time updates using centralized realtimeManager
   useEffect(() => {
-    let channel: any;
+    fetchNotifications();
 
-    const setupRealtimeSubscription = async () => {
-      fetchNotifications();
-
+    // Subscribe to notifications table with custom event handler
+    const handleRealtimeEvent = async (payload: any) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      channel = supabase
-        .channel("notifications")
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const newNotification = payload.new as Notification;
-            setNotifications((prev) => [newNotification, ...prev]);
-            setUnreadCount((prev) => prev + 1);
+      // Handle INSERT events
+      if (payload.eventType === 'INSERT') {
+        const newNotification = payload.new as Notification;
+        
+        // Only process notifications for current user
+        if (newNotification.user_id === user.id) {
+          setNotifications((prev) => [newNotification, ...prev]);
+          setUnreadCount((prev) => prev + 1);
 
-            // Show toast for new notification with enhanced styling
-            toast({
-              title: newNotification.title,
-              description: newNotification.message,
-              variant: newNotification.severity === "error" || newNotification.severity === "warning" 
-                ? "destructive" 
-                : "default",
-              duration: newNotification.notification_type.includes('appointment') ? 10000 : 5000,
-            });
-          }
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const updatedNotification = payload.new as Notification;
-            setNotifications((prev) =>
-              prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
-            );
-            fetchUnreadCount();
-          }
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "DELETE",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const deletedId = payload.old.id;
-            setNotifications((prev) => prev.filter((n) => n.id !== deletedId));
-            fetchUnreadCount();
-          }
-        )
-        .subscribe();
+          // Show toast for new notification
+          toast({
+            title: newNotification.title,
+            description: newNotification.message,
+            variant: newNotification.severity === "error" || newNotification.severity === "warning" 
+              ? "destructive" 
+              : "default",
+            duration: newNotification.notification_type.includes('appointment') ? 10000 : 5000,
+          });
+        }
+      }
+      
+      // Handle UPDATE events
+      if (payload.eventType === 'UPDATE') {
+        const updatedNotification = payload.new as Notification;
+        if (updatedNotification.user_id === user.id) {
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
+          );
+          fetchUnreadCount();
+        }
+      }
+      
+      // Handle DELETE events
+      if (payload.eventType === 'DELETE') {
+        const deletedId = payload.old.id;
+        if (payload.old.user_id === user.id) {
+          setNotifications((prev) => prev.filter((n) => n.id !== deletedId));
+          fetchUnreadCount();
+        }
+      }
     };
 
-    setupRealtimeSubscription();
+    // Use realtimeManager for shared subscription pooling
+    realtimeManager.subscribe('notifications', handleRealtimeEvent);
 
+    // No cleanup needed - realtimeManager handles subscription pooling
+    // Multiple components can share the same subscription
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      // Don't unsubscribe - other components might be using it
     };
   }, [toast]);
 

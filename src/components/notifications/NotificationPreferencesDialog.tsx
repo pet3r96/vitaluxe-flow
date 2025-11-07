@@ -20,7 +20,7 @@ interface NotificationPreferencesDialogProps {
 }
 
 interface NotificationPreference {
-  notification_type: string;
+  event_type: string;
   email_enabled: boolean;
   sms_enabled: boolean;
 }
@@ -81,8 +81,8 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
 
       const prefsMap: Record<string, NotificationPreference> = {};
       data?.forEach((pref: any) => {
-        prefsMap[pref.notification_type] = {
-          notification_type: pref.notification_type,
+        prefsMap[pref.event_type] = {
+          event_type: pref.event_type,
           email_enabled: pref.email_enabled,
           sms_enabled: pref.sms_enabled,
         };
@@ -93,7 +93,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       notificationTypes.forEach(type => {
         if (!prefsMap[type.value]) {
           prefsMap[type.value] = {
-            notification_type: type.value,
+            event_type: type.value,
             email_enabled: true,
             sms_enabled: false,
           };
@@ -122,14 +122,14 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
       // Upsert all preferences
       const prefsArray = Object.values(preferences).map(pref => ({
         user_id: user.id,
-        notification_type: pref.notification_type,
+        event_type: pref.event_type,
         email_enabled: pref.email_enabled,
         sms_enabled: pref.sms_enabled,
       }));
 
       const { error } = await supabase
         .from('notification_preferences')
-        .upsert(prefsArray, { onConflict: 'user_id,notification_type' });
+        .upsert(prefsArray, { onConflict: 'user_id,event_type' });
 
       if (error) throw error;
 
