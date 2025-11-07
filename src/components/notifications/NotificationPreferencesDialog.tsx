@@ -182,7 +182,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
           prefsMap[type.value] = {
             event_type: type.value,
             email_enabled: false,
-            sms_enabled: false,
+            sms_enabled: role === 'patient',
             in_app_enabled: true,
           };
         }
