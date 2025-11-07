@@ -6,6 +6,7 @@ import { Video, User, Clock, Circle } from "lucide-react";
 import { format, isToday } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
+import { useNavigate } from "react-router-dom";
 
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
@@ -17,6 +18,7 @@ export const ProviderVirtualWaitingRoom = ({
   onStartSession
 }: ProviderVirtualWaitingRoomProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const { data: videoSessions, isLoading } = useQuery({
     queryKey: ['provider-video-sessions', practiceId],
@@ -63,6 +65,10 @@ export const ProviderVirtualWaitingRoom = ({
         variant: "destructive"
       });
     }
+  };
+
+  const handleJoinSession = (sessionId: string) => {
+    navigate(`/practice/video/${sessionId}`);
   };
 
   if (isLoading) {
@@ -162,7 +168,7 @@ export const ProviderVirtualWaitingRoom = ({
                   <Button
                     variant="default"
                     className="gap-2 animate-pulse"
-                    onClick={() => onStartSession?.(session.id)}
+                    onClick={() => handleJoinSession(session.id)}
                   >
                     <Video className="h-4 w-4" />
                     Join Now
@@ -173,7 +179,7 @@ export const ProviderVirtualWaitingRoom = ({
                   <Button
                     variant="default"
                     className="gap-2"
-                    onClick={() => onStartSession?.(session.id)}
+                    onClick={() => handleJoinSession(session.id)}
                   >
                     <Video className="h-4 w-4" />
                     Rejoin

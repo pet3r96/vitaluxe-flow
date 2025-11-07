@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Bell, Inbox, Calendar as CalendarIcon, Check } from "lucide-react";
+import { MessageSquare, Bell, Inbox, Calendar as CalendarIcon, Check, Video } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,7 @@ import { realtimeManager } from "@/lib/realtimeManager";
 import { format, isPast, isToday } from "date-fns";
 import { toast } from "sonner";
 import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
+import { ProviderVirtualWaitingRoom } from "@/components/video/ProviderVirtualWaitingRoom";
 
 export function TabbedCommunicationsWidget() {
   const navigate = useNavigate();
@@ -232,12 +233,16 @@ export function TabbedCommunicationsWidget() {
       </CardHeader>
       <CardContent className="pt-6">
         <Tabs defaultValue="messages" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="messages" className="flex items-center gap-2">
               Messages
               {(unreadMessages?.count || 0) > 0 && (
                 <Badge variant="secondary" className="ml-1">{unreadMessages?.count}</Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="video" className="flex items-center gap-2">
+              <Video className="h-4 w-4" />
+              Video
             </TabsTrigger>
             <TabsTrigger value="followups" className="flex items-center gap-2">
               Follow-Ups
@@ -310,6 +315,17 @@ export function TabbedCommunicationsWidget() {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="video" className="mt-0">
+            {effectivePracticeId ? (
+              <ProviderVirtualWaitingRoom practiceId={effectivePracticeId} />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No practice ID found</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="followups" className="mt-0">

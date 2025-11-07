@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { AppointmentBookingDialog } from "@/components/patient/AppointmentBookingDialog";
 import { RescheduleRequestDialog } from "@/components/patient/RescheduleRequestDialog";
-import { format } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { Calendar, Clock, MapPin, Download, Video, Building, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function PatientAppointments() {
   const { isSubscribed: practiceHasSubscription, practiceName, loading: subscriptionLoading } = usePatientPracticeSubscription();
@@ -23,11 +25,14 @@ export default function PatientAppointments() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const isMobile = useIsMobile();
   const { effectiveUserId } = useAuth();
+  const navigate = useNavigate();
  
   const queryClient = useQueryClient();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [recordingConsent, setRecordingConsent] = useState(false);
+  const [joiningSession, setJoiningSession] = useState<string | null>(null);
 
   // Cache key includes effectiveUserId to prevent data leakage across impersonations
   const { data: appointments, refetch } = useQuery<any[]>({
@@ -258,6 +263,47 @@ export default function PatientAppointments() {
     }
   };
 
+  const canJoinVideoSession = (appointment: any) => {
+    if (appointment.visit_type !== 'video') return false;
+    if (appointment.status === 'cancelled') return false;
+
+    const now = new Date();
+    const startTime = new Date(appointment.start_time);
+    const minutesUntil = differenceInMinutes(startTime, now);
+
+    // Can join 15 minutes before or anytime after
+    return minutesUntil <= 15;
+  };
+
+  const handleJoinVideoSession = async (appointmentId: string) => {
+    if (!recordingConsent) {
+      toast.error("Please consent to recording before joining");
+      return;
+    }
+
+    try {
+      setJoiningSession(appointmentId);
+
+      // Fetch video session for this appointment
+      const { data: sessions, error: sessionError } = await supabase
+        .from('video_sessions')
+        .select('id')
+        .eq('appointment_id', appointmentId)
+        .single();
+
+      if (sessionError) throw sessionError;
+      if (!sessions) throw new Error("No video session found");
+
+      // Navigate to patient video room
+      navigate(`/patient/video/${sessions.id}`);
+    } catch (error: any) {
+      console.error("Error joining video session:", error);
+      toast.error(error.message || "Failed to join video session");
+    } finally {
+      setJoiningSession(null);
+    }
+  };
+
   const handleAddToCalendar = async (appointmentId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke("export-calendar-ics", {
@@ -393,6 +439,35 @@ export default function PatientAppointments() {
                     {appt.provider && (
                       <p className="text-sm">Provider: {appt.provider.display_name}</p>
                     )}
+
+                    {/* Video Join Section */}
+                    {appt.visit_type === 'video' && canJoinVideoSession(appt) && (
+                      <div className="border-t pt-4 space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`consent-${appt.id}`}
+                            checked={recordingConsent}
+                            onCheckedChange={(checked) => setRecordingConsent(checked as boolean)}
+                          />
+                          <label
+                            htmlFor={`consent-${appt.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            I consent to this session being recorded for quality and compliance purposes
+                          </label>
+                        </div>
+                        <Button
+                          onClick={() => handleJoinVideoSession(appt.id)}
+                          disabled={!recordingConsent || joiningSession === appt.id}
+                          className="w-full gap-2"
+                          size="lg"
+                        >
+                          <Video className="h-5 w-5" />
+                          {joiningSession === appt.id ? "Joining..." : "Join Video Call"}
+                        </Button>
+                      </div>
+                    )}
+
                     {appt.practice && appt.visit_type !== 'video' && appt.visit_type !== 'phone' && (
                       <div className="flex items-start gap-2 text-sm text-muted-foreground">
                         <MapPin className="h-4 w-4 mt-0.5" />

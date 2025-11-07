@@ -124,7 +124,9 @@ const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
 const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
 const PatientMobileHeader = lazy(() => import("./components/patient/PatientMobileHeader").then(m => ({ default: m.PatientMobileHeader })));
+const PatientVideoRoom = lazy(() => import("./pages/patient/PatientVideoRoom"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
+const VideoConsultationRoom = lazy(() => import("./pages/practice/VideoConsultationRoom"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
@@ -258,13 +260,15 @@ const App = () => <QueryClientProvider client={queryClient}>
                                       <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                       <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                       <Route path="/shipping" element={<PharmacyShipping />} />
-                                      <Route path="/appointments" element={<PatientAppointments />} />
-                                      <Route path="/medical-vault" element={<PatientMedicalVault />} />
-                                      <Route path="/documents" element={<PatientDocuments />} />
-                                      <Route path="/patient-messages" element={<PatientMessages />} />
+                                       <Route path="/appointments" element={<PatientAppointments />} />
+                                       <Route path="/patient/video/:sessionId" element={<PatientVideoRoom />} />
+                                       <Route path="/medical-vault" element={<PatientMedicalVault />} />
+                                       <Route path="/documents" element={<PatientDocuments />} />
+                                       <Route path="/patient-messages" element={<PatientMessages />} />
                                       <Route path="/practice/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
-                                      <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
-                                      <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
+                                       <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
+                                       <Route path="/practice/video/:sessionId" element={<SubscriptionProtectedRoute><VideoConsultationRoom /></SubscriptionProtectedRoute>} />
+                                       <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                       <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
                                       <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
                                       <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
