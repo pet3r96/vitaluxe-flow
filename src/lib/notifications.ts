@@ -33,12 +33,13 @@ export async function sendNotification({
       .from("notifications")
       .insert([{
         user_id: userId,
-        notification_type: eventType,
+        notification_type: eventType as any,
         title,
         message,
         metadata,
         action_url: actionUrl,
         read: false,
+        severity: 'info' as any,
       }])
       .select()
       .single();

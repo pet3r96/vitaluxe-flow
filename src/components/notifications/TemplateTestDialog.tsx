@@ -44,10 +44,11 @@ export function TemplateTestDialog({ open, onOpenChange, eventType, channel }: T
         .from("notifications")
         .insert([{
           user_id: user.id,
-          notification_type: eventType,
+          notification_type: eventType as any,
           title: `[TEST] ${eventType.replace(/_/g, " ")}`,
           message: "This is a test notification",
           metadata: testData,
+          severity: 'info' as any,
         }])
         .select()
         .single();
