@@ -18,8 +18,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, KeyRound } from "lucide-react";
+import { Loader2, Save, KeyRound, Bell } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { NotificationPreferencesDialog } from "@/components/notifications/NotificationPreferencesDialog";
 import { phoneSchema } from "@/lib/validators";
 import { SignedAgreementSection } from "./SignedAgreementSection";
 
@@ -36,6 +37,7 @@ export const StaffProfileForm = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
   const { data: staffData, isLoading } = useQuery({
     queryKey: ["staff-profile", effectiveUserId],
@@ -273,7 +275,33 @@ export const StaffProfileForm = () => {
         </CardContent>
       </Card>
 
+      <Card className="p-4 sm:p-6">
+        <CardHeader className="px-0 pt-0">
+          <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Preferences
+          </CardTitle>
+          <CardDescription className="text-sm">
+            Manage your email and SMS notification settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-0">
+          <Button 
+            onClick={() => setShowNotificationsDialog(true)} 
+            variant="outline"
+          >
+            <Bell className="mr-2 h-4 w-4" />
+            Manage Notifications
+          </Button>
+        </CardContent>
+      </Card>
+
       <SignedAgreementSection userId={effectiveUserId} />
+
+      <NotificationPreferencesDialog
+        open={showNotificationsDialog}
+        onOpenChange={setShowNotificationsDialog}
+      />
     </div>
   );
 };

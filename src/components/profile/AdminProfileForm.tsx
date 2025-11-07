@@ -4,8 +4,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, User, Mail, Shield, Key } from "lucide-react";
+import { Eye, EyeOff, User, Mail, Shield, Key, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationPreferencesDialog } from "@/components/notifications/NotificationPreferencesDialog";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { validatePasswordStrength } from "@/lib/passwordStrength";
@@ -26,6 +27,7 @@ export function AdminProfileForm() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
   useEffect(() => {
     fetchAdminProfile();
@@ -296,7 +298,35 @@ export function AdminProfileForm() {
         </CardContent>
       </Card>
 
+      {/* Notification Preferences */}
+      <Card>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Preferences
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <p className="text-sm text-muted-foreground mb-4">
+            Manage your email and SMS notification settings
+          </p>
+          <Button 
+            onClick={() => setShowNotificationsDialog(true)} 
+            variant="outline"
+            className="w-full sm:w-auto"
+          >
+            <Bell className="mr-2 h-4 w-4" />
+            Manage Notifications
+          </Button>
+        </CardContent>
+      </Card>
+
       <SignedAgreementSection userId={effectiveUserId} />
+
+      <NotificationPreferencesDialog
+        open={showNotificationsDialog}
+        onOpenChange={setShowNotificationsDialog}
+      />
     </div>
   );
 }

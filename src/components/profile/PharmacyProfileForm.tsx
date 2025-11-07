@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,8 +23,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { phoneSchema } from "@/lib/validators";
-import { Loader2 } from "lucide-react";
+import { Loader2, Bell } from "lucide-react";
 import { SignedAgreementSection } from "./SignedAgreementSection";
+import { NotificationPreferencesDialog } from "@/components/notifications/NotificationPreferencesDialog";
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -54,6 +55,7 @@ export function PharmacyProfileForm() {
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
   const form = useForm<PharmacyFormValues>({
     resolver: zodResolver(pharmacyFormSchema),
@@ -456,7 +458,34 @@ export function PharmacyProfileForm() {
         </div>
       </div>
 
+      <div className="patient-card">
+        <div className="p-6 border-b border-border">
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Preferences
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your email and SMS notification settings
+          </p>
+        </div>
+        <div className="p-6">
+          <Button 
+            onClick={() => setShowNotificationsDialog(true)} 
+            variant="outline"
+            className="w-full sm:w-auto touch-target"
+          >
+            <Bell className="mr-2 h-4 w-4" />
+            Manage Notifications
+          </Button>
+        </div>
+      </div>
+
       <SignedAgreementSection userId={effectiveUserId} />
+
+      <NotificationPreferencesDialog
+        open={showNotificationsDialog}
+        onOpenChange={setShowNotificationsDialog}
+      />
     </div>
   );
 }

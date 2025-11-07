@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, KeyRound } from "lucide-react";
+import { Loader2, KeyRound, Bell } from "lucide-react";
 import { phoneSchema } from "@/lib/validators";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { SignedAgreementSection } from "./SignedAgreementSection";
+import { NotificationPreferencesDialog } from "@/components/notifications/NotificationPreferencesDialog";
 
 const repFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -29,6 +30,7 @@ export function RepProfileForm() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ["rep-profile", effectiveUserId],
@@ -239,8 +241,34 @@ export function RepProfileForm() {
           </Button>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Preferences
+          </CardTitle>
+          <CardDescription>
+            Manage your email and SMS notification settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={() => setShowNotificationsDialog(true)} 
+            variant="outline"
+          >
+            <Bell className="mr-2 h-4 w-4" />
+            Manage Notifications
+          </Button>
+        </CardContent>
+      </Card>
       
       <SignedAgreementSection userId={effectiveUserId} />
+
+      <NotificationPreferencesDialog
+        open={showNotificationsDialog}
+        onOpenChange={setShowNotificationsDialog}
+      />
     </div>
   );
 }
