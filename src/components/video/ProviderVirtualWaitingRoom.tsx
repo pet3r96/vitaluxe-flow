@@ -132,16 +132,22 @@ export const ProviderVirtualWaitingRoom = ({
 
       if (error) throw error;
 
+      // Start the session so patient gets notified immediately
+      const { error: startError } = await supabase.functions.invoke('start-video-session', {
+        body: { sessionId: (data as any).sessionId }
+      });
+      if (startError) throw startError;
+
       toast({
-        title: "Session Created",
-        description: "Instant video session started successfully"
+        title: "Session Started",
+        description: "Instant video session started and patient notified"
       });
 
       // Refresh the sessions list
       queryClient.invalidateQueries({ queryKey: ['provider-video-sessions', practiceId] });
 
       // Navigate to the video room
-      navigate(`/practice/video/${data.sessionId}`);
+      navigate(`/practice/video/${(data as any).sessionId}`);
 
       // Close dialog and reset
       setShowCreateDialog(false);
