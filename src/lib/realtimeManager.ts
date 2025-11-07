@@ -17,7 +17,7 @@ class RealtimeManager {
   
   // Cross-table dependencies - when table A changes, also invalidate queries for B, C
   private tableDependencies: Record<string, string[]> = {
-    'patient_appointments': ['calendar-data', 'waiting-room-dashboard', 'today-appointments', 'being-treated-appointments'],
+    'patient_appointments': ['calendar-data', 'waiting-room-dashboard', 'today-appointments', 'being-treated-appointments', 'provider-video-sessions'],
     'practice_rooms': ['calendar-data'],
     'practice_staff': ['calendar-data'],
     'providers': ['calendar-data'],
@@ -25,6 +25,7 @@ class RealtimeManager {
     'patient_notes': ['engagement-summary'],
     'treatment_plans': ['engagement-summary'],
     'patient_follow_ups': ['engagement-summary', 'follow-up-reminders'],
+    'video_sessions': ['provider-video-sessions'],
   };
 
   /**

@@ -12,9 +12,10 @@ import { format, isToday } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { VideoGuestLinkDialog } from "./VideoGuestLinkDialog";
+import { realtimeManager } from "@/lib/realtimeManager";
 
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
@@ -40,6 +41,16 @@ export const ProviderVirtualWaitingRoom = ({
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [sessionToCancel, setSessionToCancel] = useState<string | null>(null);
 
+  // Subscribe to realtime updates for instant UI updates
+  useEffect(() => {
+    realtimeManager.subscribe('patient_appointments');
+    realtimeManager.subscribe('video_sessions');
+
+    return () => {
+      // Subscriptions are managed globally, no need to unsubscribe
+    };
+  }, []);
+
   const { data: videoSessions, isLoading } = useQuery({
     queryKey: ['provider-video-sessions', practiceId],
     queryFn: async () => {
@@ -60,7 +71,7 @@ export const ProviderVirtualWaitingRoom = ({
       if (error) throw error;
       return data;
     },
-    refetchInterval: 5000 // Refresh every 5 seconds
+    refetchInterval: 5000 // Refresh every 5 seconds as backup
   });
 
   // Fetch patients for instant session creation and scheduling
