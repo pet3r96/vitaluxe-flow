@@ -98,9 +98,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Prevent double initial load
   const hasBootstrapped = useRef(false);
-  // Prevent duplicate 2FA checks
-  const checking2FARef = useRef<boolean>(false);
-  const lastChecked2FA = useRef<string | null>(null);
 
   const actualRole = userRole;
   const isImpersonating = impersonatedRole !== null;
@@ -133,18 +130,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Function to check GHL 2FA status
   const check2FAStatus = async (userId: string) => {
-    // Skip if already checking or recently checked for this user
-    if (checking2FARef.current) {
-      console.log('[AuthContext] check2FAStatus - SKIPPED (already in progress)');
-      return;
-    }
-    
-    if (lastChecked2FA.current === userId) {
-      console.log('[AuthContext] check2FAStatus - SKIPPED (already checked for this user)');
-      return;
-    }
-    
-    checking2FARef.current = true;
     console.log('[AuthContext] check2FAStatus - START for userId:', userId);
     
     // Check if 2FA enforcement is enabled system-wide
@@ -196,8 +181,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       
-      // Mark as checked for this user
-      lastChecked2FA.current = userId;
       // Mark 2FA check as complete
       setTwoFAStatusChecked(true);
       console.log('[AuthContext] check2FAStatus - END, twoFAStatusChecked=true');
@@ -208,8 +191,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setRequires2FASetup(true);
       setRequires2FAVerify(false);
       setTwoFAStatusChecked(true);
-    } finally {
-      checking2FARef.current = false;
     }
   };
 
@@ -297,13 +278,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const cappedExpireAt = Math.min(newExpireAt, sessionStart + MAX_SESSION_MS);
         
         localStorage.setItem(getSessionExpKey(user.id), String(cappedExpireAt));
-        
-        // Sync 2FA verification expiry with session expiry
-        if (is2FAVerifiedThisSession) {
-          const twoFaKey = `vitaluxe_2fa_verified_until_${user.id}`;
-          localStorage.setItem(twoFaKey, String(cappedExpireAt));
-          console.log('[Session] 2FA verification expiry synced with session extension');
-        }
         
         // Clear and reset timeout
         if (hardTimerRef.current) {
@@ -408,13 +382,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
           localStorage.setItem(getSessionStartKey(session.user.id), String(sessionStart));
           lastActivityRef.current = Date.now();
-          
-          // Initialize 2FA verification expiry with session expiry
-          if (is2FAVerifiedThisSession) {
-            const twoFaKey = `vitaluxe_2fa_verified_until_${session.user.id}`;
-            localStorage.setItem(twoFaKey, String(expireAt));
-            console.log('[Session] Initial 2FA verification expiry set');
-          }
           
           // Schedule primary hard timeout
           hardTimerRef.current = window.setTimeout(() => {

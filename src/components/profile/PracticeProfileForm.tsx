@@ -34,7 +34,6 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
 import { SignedAgreementSection } from "./SignedAgreementSection";
-import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Practice name is required").max(100),
@@ -587,8 +586,6 @@ export const PracticeProfileForm = () => {
         </Button>
       </CardContent>
     </Card>
-    
-    <NotificationPreferencesSection />
     
     <SignedAgreementSection userId={effectiveUserId} />
     </div>

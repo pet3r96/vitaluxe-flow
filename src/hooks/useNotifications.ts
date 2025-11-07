@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { realtimeManager } from "@/lib/realtimeManager";
-import { useQueryClient } from "@tanstack/react-query";
 
 export interface Notification {
   id: string;
@@ -25,43 +23,11 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // Ensure we have a valid session before critical operations
-  const ensureValidSession = async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error || !session) {
-      throw new Error('No valid session - please refresh the page and try again');
-    }
-    console.log('[useNotifications] Session validated for user:', session.user.id);
-    return session;
-  };
-
-  // Check if current user is an admin
-  const checkIsAdmin = async (userId: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
-      
-      return !error && !!data;
-    } catch (error) {
-      import('@/lib/logger').then(({ logger }) => {
-        logger.error("Error checking admin status", error);
-      });
-      return false;
-    }
-  };
 
   // Fetch notifications with optional type filter
   const fetchNotifications = async (typeFilter?: string) => {
     try {
-      console.log('[useNotifications] Fetching notifications...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setNotifications([]);
@@ -70,18 +36,10 @@ export function useNotifications() {
         return;
       }
 
-      // Check admin status and cache it
-      const adminStatus = await checkIsAdmin(user.id);
-      setIsAdmin(adminStatus);
-
       let query = supabase
         .from("notifications")
-        .select("*");
-
-      // Admin users see ALL notifications, regular users only see their own
-      if (!adminStatus) {
-        query = query.eq("user_id", user.id);
-      }
+        .select("*")
+        .eq("user_id", user.id);
 
       if (typeFilter) {
         query = query.eq("notification_type", typeFilter as any);
@@ -93,7 +51,6 @@ export function useNotifications() {
 
       if (error) throw error;
 
-      console.log('[useNotifications] Fetched notifications:', data?.length);
       setNotifications(data || []);
       setUnreadCount(data?.filter((n) => !n.read).length || 0);
     } catch (error) {
@@ -148,18 +105,10 @@ export function useNotifications() {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
-      // Verify session before operation
-      await ensureValidSession();
-      
-      console.log('[useNotifications] Marking all as read...');
       const { data, error } = await supabase.rpc("mark_all_notifications_read");
 
-      if (error) {
-        console.error('[useNotifications] RPC error marking all as read:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('[useNotifications] Marked', data, 'notifications as read');
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, read: true, read_at: new Date().toISOString() }))
       );
@@ -169,19 +118,13 @@ export function useNotifications() {
         title: "Success",
         description: `Marked ${data} notifications as read`,
       });
-    } catch (error: any) {
-      console.error('[useNotifications] Error marking all as read:', error);
+    } catch (error) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error marking all as read", error);
       });
-      
-      const errorMessage = error.message?.includes('session') 
-        ? error.message 
-        : "Failed to mark all notifications as read. Please try again.";
-      
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to mark all notifications as read",
         variant: "destructive",
       });
     }
@@ -190,138 +133,109 @@ export function useNotifications() {
   // Delete notification
   const deleteNotification = async (notificationId: string) => {
     try {
-      // Verify session before operation
-      await ensureValidSession();
-      
-      console.log('[useNotifications] Deleting notification:', notificationId);
-      
-      // Verify ownership before deleting
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to delete notifications",
-          variant: "destructive"
-        });
-        throw new Error("Not authenticated");
-      }
-      
       const notification = notifications.find((n) => n.id === notificationId);
-      if (notification && notification.user_id !== user.id) {
-        console.warn('[useNotifications] Attempted to delete non-owned notification');
-        toast({
-          title: "Permission denied",
-          description: "You can only delete your own notifications",
-          variant: "destructive"
-        });
-        throw new Error("Permission denied: not owner");
-      }
       
       const { error } = await supabase
         .from("notifications")
         .delete()
         .eq("id", notificationId);
 
-      if (error) {
-        console.error('[useNotifications] Delete failed:', error);
-        toast({
-          title: "Delete failed",
-          description: error.message || "Failed to delete notification",
-          variant: "destructive"
-        });
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('[useNotifications] Notification deleted, updating state...');
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       if (notification && !notification.read) {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
       
-      // Refresh both count and notifications to ensure sync with database
-      console.log('[useNotifications] Refetching after delete...');
-      await Promise.all([fetchUnreadCount(), fetchNotifications()]);
-      
-      toast({
-        title: "Deleted",
-        description: "Notification deleted successfully",
-      });
-    } catch (error: any) {
-      console.error('[useNotifications] Error deleting notification:', error);
+      // Refresh count for robustness
+      fetchUnreadCount();
+    } catch (error) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error deleting notification", error);
       });
-      
-      const errorMessage = error.message?.includes('session') 
-        ? error.message 
-        : "Failed to delete notification. Please try refreshing the page.";
-      
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to delete notification",
         variant: "destructive",
       });
     }
   };
 
-  // Subscribe to real-time updates using centralized realtimeManager
+  // Subscribe to real-time updates
   useEffect(() => {
-    fetchNotifications();
+    let channel: any;
 
-    // Subscribe to notifications table with custom event handler
-    const handleRealtimeEvent = async (payload: any) => {
+    const setupRealtimeSubscription = async () => {
+      fetchNotifications();
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Handle INSERT events
-      if (payload.eventType === 'INSERT') {
-        const newNotification = payload.new as Notification;
-        
-        // Only process notifications for current user
-        if (newNotification.user_id === user.id) {
-          setNotifications((prev) => [newNotification, ...prev]);
-          setUnreadCount((prev) => prev + 1);
+      channel = supabase
+        .channel("notifications")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotification = payload.new as Notification;
+            setNotifications((prev) => [newNotification, ...prev]);
+            setUnreadCount((prev) => prev + 1);
 
-          // Show toast for new notification
-          toast({
-            title: newNotification.title,
-            description: newNotification.message,
-            variant: newNotification.severity === "error" || newNotification.severity === "warning" 
-              ? "destructive" 
-              : "default",
-            duration: newNotification.notification_type.includes('appointment') ? 10000 : 5000,
-          });
-        }
-      }
-      
-      // Handle UPDATE events
-      if (payload.eventType === 'UPDATE') {
-        const updatedNotification = payload.new as Notification;
-        if (updatedNotification.user_id === user.id) {
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
-          );
-          fetchUnreadCount();
-        }
-      }
-      
-      // Handle DELETE events
-      if (payload.eventType === 'DELETE') {
-        const deletedId = payload.old.id;
-        if (payload.old.user_id === user.id) {
-          setNotifications((prev) => prev.filter((n) => n.id !== deletedId));
-          fetchUnreadCount();
-        }
-      }
+            // Show toast for new notification with enhanced styling
+            toast({
+              title: newNotification.title,
+              description: newNotification.message,
+              variant: newNotification.severity === "error" || newNotification.severity === "warning" 
+                ? "destructive" 
+                : "default",
+              duration: newNotification.notification_type.includes('appointment') ? 10000 : 5000,
+            });
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const updatedNotification = payload.new as Notification;
+            setNotifications((prev) =>
+              prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
+            );
+            fetchUnreadCount();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "DELETE",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const deletedId = payload.old.id;
+            setNotifications((prev) => prev.filter((n) => n.id !== deletedId));
+            fetchUnreadCount();
+          }
+        )
+        .subscribe();
     };
 
-    // Use realtimeManager for shared subscription pooling
-    realtimeManager.subscribe('notifications', handleRealtimeEvent);
+    setupRealtimeSubscription();
 
-    // No cleanup needed - realtimeManager handles subscription pooling
-    // Multiple components can share the same subscription
     return () => {
-      // Don't unsubscribe - other components might be using it
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [toast]);
 
@@ -329,7 +243,6 @@ export function useNotifications() {
     notifications,
     unreadCount,
     loading,
-    isAdmin,
     markAsRead,
     markAllAsRead,
     deleteNotification,

@@ -2,131 +2,22 @@ import { useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationItem } from "./NotificationItem";
 import { Button } from "@/components/ui/button";
-import { CheckCheck, Loader2, Bell, Settings, Trash2 } from "lucide-react";
+import { CheckCheck, Loader2, Bell, Settings } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotificationPreferencesDialog } from "./NotificationPreferencesDialog";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 export function NotificationPanel() {
-  const { notifications, loading, isAdmin, markAllAsRead, unreadCount, markAsRead, deleteNotification, refetch } = useNotifications();
+  const { notifications, loading, markAllAsRead, unreadCount, markAsRead, deleteNotification } = useNotifications();
   const [showPreferences, setShowPreferences] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
-  const [deletingAll, setDeletingAll] = useState(false);
-  const [markingAllRead, setMarkingAllRead] = useState(false);
-  const { toast } = useToast();
+  const [filterType, setFilterType] = useState<string | null>(null);
 
-  // Admin notification types
-  const adminNotificationTypes = ['new_signup', 'system_error', 'support_message', 'security_alert', 'admin_action_required'];
-  
-  // Filter notifications based on active tab
-  const getFilteredNotifications = () => {
-    if (activeTab === 'admin') {
-      return notifications.filter(n => adminNotificationTypes.includes(n.notification_type));
-    } else if (activeTab === 'all') {
-      return notifications;
-    } else {
-      return notifications.filter(n => n.notification_type === activeTab);
-    }
-  };
+  const filteredNotifications = filterType 
+    ? notifications.filter(n => n.notification_type === filterType)
+    : notifications;
 
-  const filteredNotifications = getFilteredNotifications();
   const unreadNotifications = filteredNotifications.filter((n) => !n.read);
   const readNotifications = filteredNotifications.filter((n) => n.read);
-    
-  // Count admin notifications
-  const adminNotificationCount = notifications.filter(n => 
-    adminNotificationTypes.includes(n.notification_type) && !n.read
-  ).length;
-
-  const handleDeleteAllUnread = async () => {
-    if (deletingAll) return;
-    
-    try {
-      setDeletingAll(true);
-      
-      // Verify session and get current user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        toast({
-          title: "Session Expired",
-          description: "Please refresh the page and try again",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const currentUserId = session.user.id;
-      
-      // Only delete notifications owned by current user to avoid RLS errors
-      const unreadIds = notifications
-        .filter(n => !n.read && n.user_id === currentUserId)
-        .map(n => n.id);
-      
-      if (unreadIds.length === 0) {
-        toast({
-          title: "No unread notifications",
-          description: "There are no unread notifications to delete",
-        });
-        return;
-      }
-
-      console.log('[NotificationPanel] Deleting', unreadIds.length, 'unread notifications...');
-      
-      // Delete all notifications in parallel
-      const results = await Promise.allSettled(
-        unreadIds.map(id => 
-          supabase.from("notifications").delete().eq("id", id)
-        )
-      );
-      
-      // Count successes and failures
-      const succeeded = results.filter(r => r.status === 'fulfilled').length;
-      const failed = results.filter(r => r.status === 'rejected').length;
-      
-      console.log('[NotificationPanel] Delete results:', { succeeded, failed });
-      
-      // Refetch to sync UI with database state
-      await refetch();
-      
-      if (failed === 0) {
-        toast({
-          title: "Deleted",
-          description: `Deleted ${succeeded} unread notification${succeeded > 1 ? 's' : ''}`,
-        });
-      } else {
-        toast({
-          title: "Partially Deleted",
-          description: `Deleted ${succeeded} of ${unreadIds.length} notifications. ${failed} failed.`,
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      console.error('[NotificationPanel] Error deleting notifications:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete notifications. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setDeletingAll(false);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    if (markingAllRead) return;
-    
-    try {
-      setMarkingAllRead(true);
-      await markAllAsRead();
-    } catch (error) {
-      // Error already handled in markAllAsRead
-      console.error('[NotificationPanel] Mark all as read failed:', error);
-    } finally {
-      setMarkingAllRead(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -148,138 +39,90 @@ export function NotificationPanel() {
   return (
     <>
       <div className="flex flex-col h-full">
-        {/* Action buttons */}
-        <div className="flex items-center justify-between mb-3 gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowPreferences(true)}
-            className="text-xs"
-          >
-            <Settings className="h-4 w-4 mr-1" />
-            Preferences
-          </Button>
-          <div className="flex gap-2">
-            {unreadCount > 0 && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleMarkAllAsRead}
-                  disabled={markingAllRead}
-                  className="text-xs"
-                >
-                  {markingAllRead ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : (
-                    <CheckCheck className="h-4 w-4 mr-1" />
-                  )}
-                  Mark all read
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDeleteAllUnread}
-                  disabled={deletingAll}
-                  className="text-xs text-destructive hover:text-destructive"
-                >
-                  {deletingAll ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-1" />
-                  )}
-                  Delete unread
-                </Button>
-              </>
-            )}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPreferences(true)}
+              className="text-xs"
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Preferences
+            </Button>
           </div>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={markAllAsRead}
+              className="text-xs"
+            >
+              <CheckCheck className="h-4 w-4 mr-1" />
+              Mark all as read
+            </Button>
+          )}
         </div>
 
-        {/* Filter tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className={`grid w-full mb-3 ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
-            <TabsTrigger value="all" className="text-xs">
-              All
-              {unreadCount > 0 && (
-                <span className="ml-1 bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[10px]">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="admin" className="text-xs relative">
-                Admin
-                {adminNotificationCount > 0 && (
-                  <span className="ml-1 bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 text-[10px]">
-                    {adminNotificationCount > 9 ? "9+" : adminNotificationCount}
-                  </span>
-                )}
-              </TabsTrigger>
-            )}
+        <Tabs defaultValue="all" className="mb-2" onValueChange={(v) => setFilterType(v === 'all' ? null : v)}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
             <TabsTrigger value="patient_message_received" className="text-xs">Messages</TabsTrigger>
             <TabsTrigger value="appointment_booked" className="text-xs">Appointments</TabsTrigger>
             <TabsTrigger value="form_completed" className="text-xs">Forms</TabsTrigger>
           </TabsList>
-
-          {/* Content area with unread/all split */}
-          <TabsContent value={activeTab} className="flex-1 flex flex-col mt-0" forceMount>
-            <div className="flex-1 flex flex-col">
-              {/* Unread section */}
-              {unreadNotifications.length > 0 && (
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold text-muted-foreground">
-                      Unread ({unreadNotifications.length})
-                    </h3>
-                  </div>
-                  <ScrollArea className="max-h-[300px]">
-                    <div className="space-y-2 pr-4">
-                      {unreadNotifications.map((notification) => (
-                        <NotificationItem
-                          key={notification.id}
-                          notification={notification}
-                          onMarkAsRead={markAsRead}
-                          onDelete={deleteNotification}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* Read section */}
-              {readNotifications.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold text-muted-foreground">
-                      Earlier ({readNotifications.length})
-                    </h3>
-                  </div>
-                  <ScrollArea className="max-h-[300px]">
-                    <div className="space-y-2 pr-4">
-                      {readNotifications.map((notification) => (
-                        <NotificationItem
-                          key={notification.id}
-                          notification={notification}
-                          onMarkAsRead={markAsRead}
-                          onDelete={deleteNotification}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* Empty state */}
-              {filteredNotifications.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
-                  <CheckCheck className="h-12 w-12 mb-4 opacity-50" />
-                  <p className="text-sm">No notifications in this category</p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
         </Tabs>
+
+      <Tabs defaultValue="unread" className="flex-1 flex flex-col">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="unread" className="relative">
+            Unread
+            {unreadCount > 0 && (
+              <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
+                {unreadCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="unread" className="flex-1 mt-2">
+          {unreadNotifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <CheckCheck className="h-12 w-12 mb-4 opacity-50" />
+              <p className="text-sm">All caught up!</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-full">
+              <div className="space-y-2 pr-4">
+                {unreadNotifications.map((notification) => (
+                  <NotificationItem
+                    key={notification.id}
+                    notification={notification}
+                    onMarkAsRead={markAsRead}
+                    onDelete={deleteNotification}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </TabsContent>
+
+        <TabsContent value="all" className="flex-1 mt-2">
+          <ScrollArea className="h-full">
+            <div className="space-y-2 pr-4">
+              {notifications.map((notification) => (
+                <NotificationItem
+                  key={notification.id}
+                  notification={notification}
+                  onMarkAsRead={markAsRead}
+                  onDelete={deleteNotification}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
       </div>
 
       <NotificationPreferencesDialog

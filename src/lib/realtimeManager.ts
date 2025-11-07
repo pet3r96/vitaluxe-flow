@@ -25,9 +25,6 @@ class RealtimeManager {
     'patient_notes': ['engagement-summary'],
     'treatment_plans': ['engagement-summary'],
     'patient_follow_ups': ['engagement-summary', 'follow-up-reminders'],
-    'notifications': ['user-notifications', 'notification-bell'],
-    'notification_logs': ['notification_logs'],
-    'notification_preferences': ['notification-preferences'],
   };
 
   /**
@@ -74,22 +71,13 @@ class RealtimeManager {
           }
         }
       )
-      .subscribe((status, err) => {
+      .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           logger.info(`Successfully subscribed to ${table} realtime updates`);
         } else if (status === 'CHANNEL_ERROR') {
-          logger.error(
-            `Failed to subscribe to ${table} realtime updates`, 
-            err,
-            { 
-              table, 
-              status,
-              errorMessage: err?.message,
-              errorDetails: err
-            }
-          );
+          logger.error(`Failed to subscribe to ${table} realtime updates`);
         } else if (status === 'TIMED_OUT') {
-          logger.warn(`Realtime subscription timed out for ${table}`, { table, status });
+          logger.warn(`Realtime subscription timed out for ${table}`);
         }
       });
 

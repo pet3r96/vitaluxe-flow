@@ -136,10 +136,6 @@ const PracticePatientIntakeForm = lazy(() => import("./pages/practice/PracticePa
 const Support = lazy(() => import("./pages/Support"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
-const NotificationLogs = lazy(() => import("./pages/NotificationLogs"));
-const NotificationTemplates = lazy(() => import("./pages/NotificationTemplates"));
-const BulkNotifications = lazy(() => import("./pages/BulkNotifications"));
-const NotificationDocs = lazy(() => import("./pages/NotificationDocs"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -255,10 +251,6 @@ const App = () => <QueryClientProvider client={queryClient}>
                       <Route path="/support" element={<Support />} />
                       <Route path="/support-tickets" element={<SupportTickets />} />
                       <Route path="/support-tickets/:ticketId" element={<SupportTicketThread />} />
-                      <Route path="/notifications/logs" element={<NotificationLogs />} />
-                      <Route path="/notifications/templates" element={<NotificationTemplates />} />
-                      <Route path="/notifications/bulk" element={<BulkNotifications />} />
-                      <Route path="/notifications/docs" element={<NotificationDocs />} />
                       <Route path="/admin/terms" element={<AdminTermsManagement />} />
                                       <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
                                       <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />

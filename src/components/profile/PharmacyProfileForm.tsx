@@ -25,7 +25,6 @@ import { useToast } from "@/hooks/use-toast";
 import { phoneSchema } from "@/lib/validators";
 import { Loader2 } from "lucide-react";
 import { SignedAgreementSection } from "./SignedAgreementSection";
-import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -456,8 +455,6 @@ export function PharmacyProfileForm() {
           )}
         </div>
       </div>
-
-      <NotificationPreferencesSection />
 
       <SignedAgreementSection userId={effectiveUserId} />
     </div>

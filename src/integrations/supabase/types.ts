@@ -169,36 +169,6 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_notification_preferences: {
-        Row: {
-          created_at: string | null
-          email_enabled: boolean
-          id: string
-          notification_type: Database["public"]["Enums"]["notification_type"]
-          sms_enabled: boolean
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          email_enabled?: boolean
-          id?: string
-          notification_type: Database["public"]["Enums"]["notification_type"]
-          sms_enabled?: boolean
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          email_enabled?: boolean
-          id?: string
-          notification_type?: Database["public"]["Enums"]["notification_type"]
-          sms_enabled?: boolean
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       admin_role_audit: {
         Row: {
           assigned_at: string
@@ -1817,180 +1787,35 @@ export type Database = {
           },
         ]
       }
-      notification_logs: {
-        Row: {
-          channel: string
-          created_at: string | null
-          delivered_at: string | null
-          direction: string | null
-          error_message: string | null
-          event_type: string | null
-          external_id: string | null
-          id: string
-          message_body: string | null
-          metadata: Json | null
-          notification_id: string | null
-          practice_id: string | null
-          read_at: string | null
-          recipient: string | null
-          sender: string | null
-          status: string
-          subject: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          channel: string
-          created_at?: string | null
-          delivered_at?: string | null
-          direction?: string | null
-          error_message?: string | null
-          event_type?: string | null
-          external_id?: string | null
-          id?: string
-          message_body?: string | null
-          metadata?: Json | null
-          notification_id?: string | null
-          practice_id?: string | null
-          read_at?: string | null
-          recipient?: string | null
-          sender?: string | null
-          status?: string
-          subject?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          channel?: string
-          created_at?: string | null
-          delivered_at?: string | null
-          direction?: string | null
-          error_message?: string | null
-          event_type?: string | null
-          external_id?: string | null
-          id?: string
-          message_body?: string | null
-          metadata?: Json | null
-          notification_id?: string | null
-          practice_id?: string | null
-          read_at?: string | null
-          recipient?: string | null
-          sender?: string | null
-          status?: string
-          subject?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_logs_notification_id_fkey"
-            columns: ["notification_id"]
-            isOneToOne: false
-            referencedRelation: "notifications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notification_logs_practice_id_fkey"
-            columns: ["practice_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notification_logs_practice_id_fkey"
-            columns: ["practice_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_masked_for_reps"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notification_preferences: {
         Row: {
-          created_at: string | null
-          email_enabled: boolean | null
-          event_type: string
+          created_at: string
+          email_enabled: boolean
           id: string
-          sms_enabled: boolean | null
-          updated_at: string | null
+          notification_type: string
+          sms_enabled: boolean
+          updated_at: string
           user_id: string
         }
         Insert: {
-          created_at?: string | null
-          email_enabled?: boolean | null
-          event_type: string
+          created_at?: string
+          email_enabled?: boolean
           id?: string
-          sms_enabled?: boolean | null
-          updated_at?: string | null
+          notification_type: string
+          sms_enabled?: boolean
+          updated_at?: string
           user_id: string
         }
         Update: {
-          created_at?: string | null
-          email_enabled?: boolean | null
-          event_type?: string
+          created_at?: string
+          email_enabled?: boolean
           id?: string
-          sms_enabled?: boolean | null
-          updated_at?: string | null
+          notification_type?: string
+          sms_enabled?: boolean
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
-      }
-      notification_templates: {
-        Row: {
-          active: boolean | null
-          channel: string
-          created_at: string | null
-          event_type: string
-          id: string
-          is_default: boolean | null
-          message_template: string
-          practice_id: string | null
-          subject: string | null
-          updated_at: string | null
-          variables: Json | null
-        }
-        Insert: {
-          active?: boolean | null
-          channel: string
-          created_at?: string | null
-          event_type: string
-          id?: string
-          is_default?: boolean | null
-          message_template: string
-          practice_id?: string | null
-          subject?: string | null
-          updated_at?: string | null
-          variables?: Json | null
-        }
-        Update: {
-          active?: boolean | null
-          channel?: string
-          created_at?: string | null
-          event_type?: string
-          id?: string
-          is_default?: boolean | null
-          message_template?: string
-          practice_id?: string | null
-          subject?: string | null
-          updated_at?: string | null
-          variables?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_templates_practice_id_fkey"
-            columns: ["practice_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notification_templates_practice_id_fkey"
-            columns: ["practice_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_masked_for_reps"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       notifications: {
         Row: {
@@ -8882,11 +8707,6 @@ export type Database = {
         | "appointment_rescheduled"
         | "appointment_cancelled"
         | "document_assigned"
-        | "new_signup"
-        | "system_error"
-        | "support_message"
-        | "security_alert"
-        | "admin_action_required"
       order_status:
         | "pending"
         | "filled"
@@ -9096,11 +8916,6 @@ export const Constants = {
         "appointment_rescheduled",
         "appointment_cancelled",
         "document_assigned",
-        "new_signup",
-        "system_error",
-        "support_message",
-        "security_alert",
-        "admin_action_required",
       ],
       order_status: [
         "pending",

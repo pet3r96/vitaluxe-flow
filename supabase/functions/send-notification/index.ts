@@ -69,68 +69,37 @@ serve(async (req) => {
       .from("notification_preferences")
       .select("*")
       .eq("user_id", notification.user_id)
-      .eq("event_type", notification.notification_type)
       .single();
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("email, phone, first_name, last_name, practice_id")
+      .select("email, phone")
       .eq("id", notification.user_id)
       .single();
 
-    // Load notification template from notification_templates table
-    let emailTemplate, smsTemplate;
-    
-    // Try practice-specific template first
-    if (profile?.practice_id) {
-      const { data: practiceTemplates } = await supabase
+    // Get template for email/sms content
+    const templateKey = notification.metadata?.template_key;
+    let emailSubject = notification.title;
+    let emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>${notification.title}</h2>
+      <p>${notification.message}</p>
+      ${notification.action_url ? `<p><a href="${notification.action_url}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">View Details</a></p>` : ''}
+    </div>`;
+    let smsText = `${notification.title}: ${notification.message}`;
+
+    if (templateKey) {
+      const { data: template } = await supabase
         .from("notification_templates")
         .select("*")
-        .eq("practice_id", profile.practice_id)
-        .eq("event_type", notification.notification_type)
-        .eq("is_active", true);
-      
-      emailTemplate = practiceTemplates?.find(t => t.channel === "email");
-      smsTemplate = practiceTemplates?.find(t => t.channel === "sms");
-    }
-    
-    // Fallback to default templates
-    if (!emailTemplate || !smsTemplate) {
-      const { data: defaultTemplates } = await supabase
-        .from("notification_templates")
-        .select("*")
-        .is("practice_id", null)
-        .eq("event_type", notification.notification_type)
-        .eq("is_active", true);
-      
-      if (!emailTemplate) emailTemplate = defaultTemplates?.find(t => t.channel === "email");
-      if (!smsTemplate) smsTemplate = defaultTemplates?.find(t => t.channel === "sms");
-    }
+        .eq("template_key", templateKey)
+        .single();
 
-    // Prepare template variables
-    const templateVars = {
-      first_name: profile?.first_name || "",
-      last_name: profile?.last_name || "",
-      ...notification.metadata
-    };
-
-    // Set email content from template or defaults
-    let emailSubject = emailTemplate?.subject 
-      ? replaceVariables(emailTemplate.subject, templateVars)
-      : notification.title;
-    
-    let emailBody = emailTemplate?.message_template 
-      ? replaceVariables(emailTemplate.message_template, templateVars)
-      : `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>${notification.title}</h2>
-          <p>${notification.message}</p>
-          ${notification.action_url ? `<p><a href="${notification.action_url}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">View Details</a></p>` : ''}
-        </div>`;
-    
-    // Set SMS content from template or defaults
-    let smsText = smsTemplate?.message_template 
-      ? replaceVariables(smsTemplate.message_template, templateVars) + " Reply STOP to opt out."
-      : `${notification.title}: ${notification.message}`;
+      if (template) {
+        emailSubject = replaceVariables(template.email_subject_template || notification.title, notification.metadata);
+        emailBody = replaceVariables(template.email_body_template || emailBody, notification.metadata);
+        smsText = replaceVariables(template.sms_template || smsText, notification.metadata);
+      }
+    }
 
     const results = {
       email_sent: false,
@@ -139,7 +108,7 @@ serve(async (req) => {
     };
 
     // Send Email via Postmark (replaced AWS SES on 2025-10-22)
-    if (send_email && preferences?.email_enabled !== false && profile?.email) {
+    if (send_email && preferences?.email_notifications && profile?.email) {
       try {
         const POSTMARK_API_KEY = Deno.env.get("POSTMARK_API_KEY");
         const POSTMARK_FROM_EMAIL = Deno.env.get("POSTMARK_FROM_EMAIL") || "info@vitaluxeservices.com";
@@ -147,21 +116,6 @@ serve(async (req) => {
         if (!POSTMARK_API_KEY) {
           console.error("POSTMARK_API_KEY not configured");
           results.errors.push("Email service not configured");
-          
-          // Log failed attempt
-          await supabase.from("notification_logs").insert({
-            practice_id: profile?.practice_id,
-            user_id: notification.user_id,
-            notification_id: notification.id,
-            channel: "email",
-            direction: "outbound",
-            event_type: notification.notification_type,
-            recipient: profile?.email,
-            subject: emailSubject,
-            message_body: notification.message,
-            status: "failed",
-            error_message: "Email service not configured"
-          });
         } else {
           const actionButton = notification.action_url 
             ? `<a href="${notification.action_url}" class="button">View Details</a>`
@@ -220,41 +174,10 @@ serve(async (req) => {
             const errorText = await postmarkResponse.text();
             console.error("Postmark API error:", errorText);
             results.errors.push(`Email failed: ${errorText}`);
-            
-            // Log failed email
-            await supabase.from("notification_logs").insert({
-              practice_id: profile?.practice_id,
-              user_id: notification.user_id,
-              notification_id: notification.id,
-              channel: "email",
-              direction: "outbound",
-              event_type: notification.notification_type,
-              recipient: profile.email,
-              subject: emailSubject,
-              message_body: notification.message,
-              status: "failed",
-              error_message: errorText
-            });
           } else {
             const result = await postmarkResponse.json();
             results.email_sent = true;
             console.log("Notification email sent successfully to:", profile.email, "MessageID:", result.MessageID);
-            
-            // Log successful email
-            await supabase.from("notification_logs").insert({
-              practice_id: profile?.practice_id,
-              user_id: notification.user_id,
-              notification_id: notification.id,
-              channel: "email",
-              direction: "outbound",
-              event_type: notification.notification_type,
-              recipient: profile.email,
-              subject: emailSubject,
-              message_body: notification.message,
-              status: "sent",
-              external_id: result.MessageID,
-              metadata: { template_id: emailTemplate?.id }
-            });
           }
         }
       } catch (error) {
@@ -263,116 +186,6 @@ serve(async (req) => {
       }
     }
 
-    // Send SMS via Twilio
-    if (send_sms && preferences?.sms_enabled !== false && profile?.phone) {
-      try {
-        const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
-        const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
-        const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
-        const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
-        const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-
-        if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || (!TWILIO_MESSAGING_SERVICE_SID && !TWILIO_PHONE_NUMBER)) {
-          console.log("Twilio not configured, skipping SMS");
-          results.errors.push("SMS service not configured");
-          
-          // Log failed attempt
-          await supabase.from("notification_logs").insert({
-            practice_id: profile?.practice_id,
-            user_id: notification.user_id,
-            notification_id: notification.id,
-            channel: "sms",
-            direction: "outbound",
-            event_type: notification.notification_type,
-            recipient: profile.phone,
-            message_body: smsText,
-            status: "failed",
-            error_message: "SMS service not configured"
-          });
-        } else {
-          // Create Basic Auth header for Twilio API
-          const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-          
-          // Format phone number for Twilio (add +1 if not present)
-          const formattedPhone = profile.phone.startsWith('+') 
-            ? profile.phone 
-            : `+1${profile.phone.replace(/\D/g, '')}`;
-          
-          // Prepare SMS parameters - use MessagingServiceSid if available, otherwise use From number
-          const smsParams: Record<string, string> = {
-            To: formattedPhone,
-            Body: smsText,
-            StatusCallback: `${SUPABASE_URL}/functions/v1/twilio-status-callback`
-          };
-          
-          // Use Messaging Service (toll-free) if available, otherwise use phone number
-          if (TWILIO_MESSAGING_SERVICE_SID) {
-            smsParams.MessagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
-            console.log("Sending SMS via Twilio Messaging Service (toll-free)");
-          } else if (TWILIO_PHONE_NUMBER) {
-            smsParams.From = TWILIO_PHONE_NUMBER;
-            console.log("Sending SMS via Twilio Phone Number");
-          }
-          
-          // Send SMS via Twilio REST API with StatusCallback
-          const twilioResponse = await fetch(
-            `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
-            {
-              method: "POST",
-              headers: {
-                "Authorization": `Basic ${auth}`,
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: new URLSearchParams(smsParams).toString()
-            }
-          );
-
-          if (!twilioResponse.ok) {
-            const error = await twilioResponse.json();
-            console.error("Twilio SMS send failed:", error);
-            results.errors.push(`SMS failed: ${error.message || error.code || 'Unknown error'}`);
-            
-            // Log failed SMS
-            await supabase.from("notification_logs").insert({
-              practice_id: profile?.practice_id,
-              user_id: notification.user_id,
-              notification_id: notification.id,
-              channel: "sms",
-              direction: "outbound",
-              event_type: notification.notification_type,
-              recipient: profile.phone,
-              message_body: smsText,
-              status: "failed",
-              error_message: error.message || error.code || 'Unknown error'
-            });
-          } else {
-            const result = await twilioResponse.json();
-            results.sms_sent = true;
-            console.log("SMS sent successfully via Twilio. SID:", result.sid, "To:", profile.phone);
-            
-            // Log successful SMS
-            await supabase.from("notification_logs").insert({
-              practice_id: profile?.practice_id,
-              user_id: notification.user_id,
-              notification_id: notification.id,
-              channel: "sms",
-              direction: "outbound",
-              event_type: notification.notification_type,
-              recipient: profile.phone,
-              message_body: smsText,
-              status: "sent",
-              external_id: result.sid,
-              metadata: { template_id: smsTemplate?.id }
-            });
-          }
-        }
-      } catch (error) {
-        console.error("SMS error:", error);
-        results.errors.push(`SMS error: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-
-    /* ========== GHL SMS CODE (PRESERVED FOR REFERENCE) ==========
     // Send SMS via GHL webhook
     if (send_sms && preferences?.sms_notifications && profile?.phone) {
       try {
@@ -388,7 +201,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               phone: profile.phone,
-              code: smsText
+              code: smsText // Send full notification text
             })
           });
 
@@ -406,7 +219,6 @@ serve(async (req) => {
         results.errors.push(`SMS error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    ============================================================= */
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
