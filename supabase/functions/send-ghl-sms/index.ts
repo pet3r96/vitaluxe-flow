@@ -40,12 +40,12 @@ serve(async (req) => {
 
     const { phoneNumber, purpose = 'verification' } = await req.json();
 
-    // DEDUPLICATION: Check for recent attempts by this user (within last 45 seconds)
-    const fortyFiveSecondsAgo = new Date(Date.now() - 45 * 1000).toISOString();
+    // DEDUPLICATION: Check for recent attempts by this user (within last 10 seconds)
+    const tenSecondsAgo = new Date(Date.now() - 10 * 1000).toISOString();
     const { data: recentUserAttempts, error: dedupeError } = await supabase
       .from('sms_verification_attempts')
       .select('attempt_id, created_at')
-      .gte('created_at', fortyFiveSecondsAgo)
+      .gte('created_at', tenSecondsAgo)
       .order('created_at', { ascending: false })
       .limit(1);
 
