@@ -39,36 +39,73 @@ Deno.serve(async (req) => {
 
     console.log('✅ [cancel-appointment] Using effective user ID:', effectiveUserId);
 
-    // First get patient_account for the effective user
-    const { data: patientAccount, error: paError } = await supabaseClient
+    // Check if user is a patient
+    const { data: patientAccount } = await supabaseClient
       .from('patient_accounts')
       .select('id')
       .eq('user_id', effectiveUserId)
       .maybeSingle();
 
-    console.log('👤 [cancel-appointment] Patient account lookup:', { 
-      effectiveUserId, 
-      patientAccountId: patientAccount?.id,
-      hasError: !!paError 
+    // Check if user is a provider
+    const { data: providerAccount } = await supabaseClient
+      .from('providers')
+      .select('id, practice_id')
+      .eq('user_id', effectiveUserId)
+      .maybeSingle();
+
+    // Check if user is staff
+    const { data: staffAccount } = await supabaseClient
+      .from('staff')
+      .select('id, practice_id')
+      .eq('user_id', effectiveUserId)
+      .maybeSingle();
+
+    // Check if user is a practice (impersonation case)
+    const { data: practiceAccount } = await supabaseClient
+      .from('practices')
+      .select('practice_id')
+      .eq('practice_id', effectiveUserId)
+      .maybeSingle();
+
+    console.log('👤 [cancel-appointment] User role lookup:', { 
+      effectiveUserId,
+      isPatient: !!patientAccount,
+      isProvider: !!providerAccount,
+      isStaff: !!staffAccount,
+      isPractice: !!practiceAccount
     });
 
-    if (paError) {
-      console.error('❌ [cancel-appointment] Patient account error:', paError);
-      throw new Error('Patient account lookup failed: ' + paError.message);
-    }
+    let appointment;
+    let fetchError;
 
-    if (!patientAccount) {
-      console.error('❌ [cancel-appointment] No patient account found for user:', effectiveUserId);
-      throw new Error('Patient account not found');
+    if (patientAccount) {
+      // Patient cancelling their own appointment
+      const result = await supabaseClient
+        .from('patient_appointments')
+        .select('id, patient_id, status, practice_id')
+        .eq('id', appointmentId)
+        .eq('patient_id', patientAccount.id)
+        .maybeSingle();
+      
+      appointment = result.data;
+      fetchError = result.error;
+    } else if (providerAccount || staffAccount || practiceAccount) {
+      // Provider/staff/practice cancelling any appointment in their practice
+      const practiceId = providerAccount?.practice_id || staffAccount?.practice_id || practiceAccount?.practice_id;
+      
+      const result = await supabaseClient
+        .from('patient_appointments')
+        .select('id, patient_id, status, practice_id')
+        .eq('id', appointmentId)
+        .eq('practice_id', practiceId)
+        .maybeSingle();
+      
+      appointment = result.data;
+      fetchError = result.error;
+    } else {
+      console.error('❌ [cancel-appointment] User has no valid role (not patient, provider, staff, or practice)');
+      throw new Error('Unauthorized: User does not have permission to cancel appointments');
     }
-
-    // Then verify appointment belongs to this patient
-    const { data: appointment, error: fetchError } = await supabaseClient
-      .from('patient_appointments')
-      .select('id, patient_id, status')
-      .eq('id', appointmentId)
-      .eq('patient_id', patientAccount.id)
-      .maybeSingle();
 
     console.log('📅 [cancel-appointment] Appointment verification:', { 
       appointmentId,
