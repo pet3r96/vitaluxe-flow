@@ -6,11 +6,15 @@ ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY
 ARG VITE_BUILD_ID="dev"
 
+ENV npm_config_yes=true
+ENV npm_config_omit=optional
+
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
 ENV VITE_BUILD_ID=$VITE_BUILD_ID
 
 COPY package*.json ./
+RUN apk add --no-cache python3 make g++ libc6-compat
 RUN npm ci
 
 COPY . .
