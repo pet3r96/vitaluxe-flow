@@ -4694,6 +4694,8 @@ export type Database = {
           auto_followup_messages: boolean | null
           auto_prescription_renewals: boolean | null
           created_at: string
+          enable_email_notifications: boolean | null
+          enable_sms_notifications: boolean | null
           id: string
           practice_id: string
           reminder_hours_before: number | null
@@ -4706,6 +4708,8 @@ export type Database = {
           auto_followup_messages?: boolean | null
           auto_prescription_renewals?: boolean | null
           created_at?: string
+          enable_email_notifications?: boolean | null
+          enable_sms_notifications?: boolean | null
           id?: string
           practice_id: string
           reminder_hours_before?: number | null
@@ -4718,6 +4722,8 @@ export type Database = {
           auto_followup_messages?: boolean | null
           auto_prescription_renewals?: boolean | null
           created_at?: string
+          enable_email_notifications?: boolean | null
+          enable_sms_notifications?: boolean | null
           id?: string
           practice_id?: string
           reminder_hours_before?: number | null

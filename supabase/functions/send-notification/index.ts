@@ -81,6 +81,60 @@ serve(async (req) => {
       .eq("id", notification.user_id)
       .single();
 
+    // Get user's practice_id to check practice-level notification settings
+    let practiceId = null;
+    let practiceEmailEnabled = true; // default to enabled
+    let practiceSmsEnabled = true; // default to enabled
+
+    // Check if user is a patient
+    const { data: patientAccount } = await supabase
+      .from("patient_accounts")
+      .select("practice_id")
+      .eq("user_id", notification.user_id)
+      .single();
+
+    if (patientAccount?.practice_id) {
+      practiceId = patientAccount.practice_id;
+    } else {
+      // Check if user is a provider
+      const { data: provider } = await supabase
+        .from("providers")
+        .select("practice_id")
+        .eq("user_id", notification.user_id)
+        .single();
+      
+      if (provider?.practice_id) {
+        practiceId = provider.practice_id;
+      } else {
+        // Check if user is staff
+        const { data: staff } = await supabase
+          .from("practice_staff")
+          .select("practice_id")
+          .eq("user_id", notification.user_id)
+          .single();
+        
+        if (staff?.practice_id) {
+          practiceId = staff.practice_id;
+        }
+      }
+    }
+
+    // Get practice notification settings if practice_id found
+    if (practiceId) {
+      const { data: practiceSettings } = await supabase
+        .from("practice_automation_settings")
+        .select("enable_email_notifications, enable_sms_notifications")
+        .eq("practice_id", practiceId)
+        .single();
+      
+      if (practiceSettings) {
+        practiceEmailEnabled = practiceSettings.enable_email_notifications ?? true;
+        practiceSmsEnabled = practiceSettings.enable_sms_notifications ?? true;
+        
+        console.log(`Practice ${practiceId} notification settings: email=${practiceEmailEnabled}, sms=${practiceSmsEnabled}`);
+      }
+    }
+
     // Get template for SMS based on event_type and channel
     let smsText = '';
     
@@ -119,7 +173,8 @@ serve(async (req) => {
     };
 
     // Send Email via Postmark (replaced AWS SES on 2025-10-22)
-    if (send_email && preferences?.email_enabled && profile?.email) {
+    // Check BOTH user preference AND practice-level setting
+    if (send_email && preferences?.email_enabled && practiceEmailEnabled && profile?.email) {
       try {
         const POSTMARK_API_KEY = Deno.env.get("POSTMARK_API_KEY");
         const POSTMARK_FROM_EMAIL = Deno.env.get("POSTMARK_FROM_EMAIL") || "info@vitaluxeservices.com";
@@ -227,10 +282,14 @@ To change your notification preferences, please log into your secure portal at h
         console.error("Email error:", error);
         results.errors.push(`Email error: ${error instanceof Error ? error.message : String(error)}`);
       }
+    } else if (send_email && preferences?.email_enabled && !practiceEmailEnabled) {
+      console.log(`Email blocked by practice-level settings for practice ${practiceId}`);
+      results.errors.push("Email disabled at practice level");
     }
 
     // Send SMS via GHL webhook
-    if (send_sms && preferences?.sms_enabled && profile?.phone) {
+    // Check BOTH user preference AND practice-level setting
+    if (send_sms && preferences?.sms_enabled && practiceSmsEnabled && profile?.phone) {
       try {
         const ghlWebhookUrl = Deno.env.get("GHL_WEBHOOK_URL");
 
@@ -261,6 +320,9 @@ To change your notification preferences, please log into your secure portal at h
         console.error("SMS error:", error);
         results.errors.push(`SMS error: ${error instanceof Error ? error.message : String(error)}`);
       }
+    } else if (send_sms && preferences?.sms_enabled && !practiceSmsEnabled) {
+      console.log(`SMS blocked by practice-level settings for practice ${practiceId}`);
+      results.errors.push("SMS disabled at practice level");
     }
 
     return new Response(JSON.stringify(results), {
