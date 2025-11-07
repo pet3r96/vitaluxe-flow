@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock, UserPlus, FolderOpen } from "lucide-react";
+import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock, UserPlus, FolderOpen, Video } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
