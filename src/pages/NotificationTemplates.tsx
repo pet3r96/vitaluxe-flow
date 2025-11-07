@@ -156,13 +156,13 @@ export default function NotificationTemplates() {
     };
 
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
-            {channel === "email" ? <Mail className="h-5 w-5" /> : <MessageSquare className="h-5 w-5" />}
-            <h3 className="text-lg font-semibold capitalize">{channel} Template</h3>
+            {channel === "email" ? <Mail className="h-4 w-4 sm:h-5 sm:w-5" /> : <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />}
+            <h3 className="text-base sm:text-lg font-semibold capitalize">{channel} Template</h3>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {isEditing ? (
               <>
                 <Button
@@ -173,6 +173,7 @@ export default function NotificationTemplates() {
                     setLocalSubject((template as any).subject || "");
                     setEditMode({ ...editMode, [channel]: false });
                   }}
+                  className="text-xs sm:text-sm"
                 >
                   Cancel
                 </Button>
@@ -185,11 +186,12 @@ export default function NotificationTemplates() {
                     subject: channel === "email" ? localSubject : null,
                   })}
                   disabled={saveMutation.isPending}
+                  className="text-xs sm:text-sm"
                 >
                   {saveMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                   ) : (
-                    <><Save className="h-4 w-4 mr-2" /> Save</>
+                    <><Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" /> Save</>
                   )}
                 </Button>
               </>
@@ -200,8 +202,9 @@ export default function NotificationTemplates() {
                   size="sm"
                   onClick={() => handleReset(channel)}
                   disabled={!isAdmin}
+                  className="text-xs sm:text-sm"
                 >
-                  <RotateCcw className="h-4 w-4 mr-2" /> Reset
+                  <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" /> Reset
                 </Button>
                 <Button
                   size="sm"
@@ -211,6 +214,7 @@ export default function NotificationTemplates() {
                     setEditMode({ ...editMode, [channel]: true });
                   }}
                   disabled={!isAdmin}
+                  className="text-xs sm:text-sm"
                 >
                   Edit
                 </Button>
@@ -221,37 +225,38 @@ export default function NotificationTemplates() {
 
         {channel === "email" && (
           <div>
-            <label className="text-sm font-medium mb-2 block">Subject</label>
+            <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block">Subject</label>
             <Input
               value={isEditing ? localSubject : (template as any).subject || ""}
               onChange={(e) => setLocalSubject(e.target.value)}
               disabled={!isEditing}
               placeholder="Email subject..."
+              className="text-sm"
             />
           </div>
         )}
 
         <div>
-          <label className="text-sm font-medium mb-2 block">Message Template</label>
+          <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block">Message Template</label>
           <Textarea
             id={`template-${channel}`}
             value={isEditing ? localTemplate : (template as any).message_template}
             onChange={(e) => setLocalTemplate(e.target.value)}
             disabled={!isEditing}
-            rows={8}
-            className="font-mono text-sm"
+            rows={6}
+            className="font-mono text-xs sm:text-sm"
           />
         </div>
 
         {isEditing && (
           <div>
-            <p className="text-sm font-medium mb-2">Insert Variable</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2">Insert Variable</p>
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {COMMON_VARIABLES.map((variable) => (
                 <Badge
                   key={variable}
                   variant="outline"
-                  className="cursor-pointer hover:bg-accent"
+                  className="cursor-pointer hover:bg-accent text-xs"
                   onClick={() => insertVariable(variable)}
                 >
                   {variable}
@@ -262,7 +267,7 @@ export default function NotificationTemplates() {
         )}
 
         {(template as any).practice_id === null && (
-          <div className="bg-muted p-3 rounded-md text-sm text-muted-foreground">
+          <div className="bg-muted p-2.5 sm:p-3 rounded-md text-xs sm:text-sm text-muted-foreground">
             This is a default system template. Edit to create a practice-specific override.
           </div>
         )}
@@ -271,10 +276,10 @@ export default function NotificationTemplates() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Notification Templates</h1>
-        <p className="text-muted-foreground">Customize notification messages for each event type</p>
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-1 sm:space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold">Notification Templates</h1>
+        <p className="text-sm text-muted-foreground">Customize notification messages for each event type</p>
       </div>
 
       <Tabs value={selectedEvent} onValueChange={setSelectedEvent}>
@@ -293,23 +298,23 @@ export default function NotificationTemplates() {
         </div>
 
         {EVENT_TYPES.map((event) => (
-          <TabsContent key={event.value} value={event.value} className="space-y-6">
+          <TabsContent key={event.value} value={event.value} className="space-y-4 sm:space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>SMS Template</CardTitle>
-                <CardDescription>Customize the SMS message for {event.label}</CardDescription>
+              <CardHeader className="space-y-1 sm:space-y-1.5">
+                <CardTitle className="text-lg sm:text-xl">SMS Template</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Customize the SMS message for {event.label}</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 <TemplateEditor channel="sms" />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Email Template</CardTitle>
-                <CardDescription>Customize the email message for {event.label}</CardDescription>
+              <CardHeader className="space-y-1 sm:space-y-1.5">
+                <CardTitle className="text-lg sm:text-xl">Email Template</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Customize the email message for {event.label}</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 <TemplateEditor channel="email" />
               </CardContent>
             </Card>

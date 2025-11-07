@@ -73,20 +73,20 @@ export default function NotificationLogs() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Notification Logs</h1>
-          <p className="text-muted-foreground">Track all notification delivery and status</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Notification Logs</h1>
+          <p className="text-sm text-muted-foreground">Track all notification delivery and status</p>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="space-y-1 sm:space-y-1.5">
+          <CardTitle className="text-lg sm:text-xl">Filters</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <Input
               placeholder="Search recipient"
               value={search}
@@ -124,69 +124,77 @@ export default function NotificationLogs() {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="space-y-2 p-6">
+            <div className="space-y-2 p-4 sm:p-6">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
           ) : filteredLogs && filteredLogs.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date/Time</TableHead>
-                  <TableHead>Channel</TableHead>
-                  <TableHead>Direction</TableHead>
-                  <TableHead>Recipient</TableHead>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Message</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Date/Time</TableHead>
+                    <TableHead className="whitespace-nowrap">Channel</TableHead>
+                    <TableHead className="whitespace-nowrap">Direction</TableHead>
+                    <TableHead className="whitespace-nowrap">Recipient</TableHead>
+                    <TableHead className="whitespace-nowrap">Event</TableHead>
+                    <TableHead className="whitespace-nowrap">Status</TableHead>
+                    <TableHead className="whitespace-nowrap">Message</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {filteredLogs.map((log: any) => (
                   <TableRow
                     key={log.id}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => setSelectedLog(log)}
                   >
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        {format(new Date(log.created_at), "MMM d, h:mm a")}
+                    <TableCell className="whitespace-nowrap text-xs sm:text-sm">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                        <span className="hidden sm:inline">
+                          {format(new Date(log.created_at), "MMM d, h:mm a")}
+                        </span>
+                        <span className="sm:hidden">
+                          {format(new Date(log.created_at), "MMM d")}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                    <TableCell className="text-xs sm:text-sm">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         {getChannelIcon(log.channel)}
-                        <span className="capitalize">{log.channel}</span>
+                        <span className="capitalize hidden sm:inline">{log.channel}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                    <TableCell className="text-xs sm:text-sm">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         {log.direction === "outbound" ? (
-                          <ArrowUp className="h-4 w-4 text-blue-500" />
+                          <ArrowUp className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
                         ) : (
-                          <ArrowDown className="h-4 w-4 text-green-500" />
+                          <ArrowDown className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                         )}
-                        <span className="capitalize">{log.direction}</span>
+                        <span className="capitalize hidden sm:inline">{log.direction}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">
                       {log.recipient || log.sender || "—"}
                     </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">{log.event_type}</span>
+                    <TableCell className="text-xs sm:text-sm">
+                      <span className="text-muted-foreground hidden sm:inline">{log.event_type}</span>
+                      <span className="sm:hidden">•</span>
                     </TableCell>
-                    <TableCell>{getStatusBadge(log.status)}</TableCell>
-                    <TableCell className="max-w-xs truncate">
+                    <TableCell className="text-xs sm:text-sm">{getStatusBadge(log.status)}</TableCell>
+                    <TableCell className="text-xs sm:text-sm max-w-[150px] sm:max-w-xs truncate">
                       {log.message_body}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-8 sm:py-12 text-sm text-muted-foreground">
               No notification logs found
             </div>
           )}
@@ -194,63 +202,63 @@ export default function NotificationLogs() {
       </Card>
 
       <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-full sm:max-w-2xl mx-4">
           <DialogHeader>
-            <DialogTitle>Notification Details</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Notification Details</DialogTitle>
           </DialogHeader>
           {selectedLog && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3 sm:space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-sm font-medium">Channel</p>
-                  <p className="text-sm text-muted-foreground capitalize">{selectedLog.channel}</p>
+                  <p className="text-xs sm:text-sm font-medium">Channel</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground capitalize">{selectedLog.channel}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Status</p>
+                  <p className="text-xs sm:text-sm font-medium">Status</p>
                   {getStatusBadge(selectedLog.status)}
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Event Type</p>
-                  <p className="text-sm text-muted-foreground">{selectedLog.event_type}</p>
+                  <p className="text-xs sm:text-sm font-medium">Event Type</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{selectedLog.event_type}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Created At</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm font-medium">Created At</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {format(new Date(selectedLog.created_at), "PPpp")}
                   </p>
                 </div>
                 {selectedLog.recipient && (
                   <div>
-                    <p className="text-sm font-medium">Recipient</p>
-                    <p className="text-sm text-muted-foreground">{selectedLog.recipient}</p>
+                    <p className="text-xs sm:text-sm font-medium">Recipient</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground break-all">{selectedLog.recipient}</p>
                   </div>
                 )}
                 {selectedLog.external_id && (
                   <div>
-                    <p className="text-sm font-medium">External ID</p>
-                    <p className="text-sm text-muted-foreground font-mono">{selectedLog.external_id}</p>
+                    <p className="text-xs sm:text-sm font-medium">External ID</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground font-mono break-all">{selectedLog.external_id}</p>
                   </div>
                 )}
               </div>
               
               {selectedLog.subject && (
                 <div>
-                  <p className="text-sm font-medium">Subject</p>
-                  <p className="text-sm text-muted-foreground">{selectedLog.subject}</p>
+                  <p className="text-xs sm:text-sm font-medium">Subject</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{selectedLog.subject}</p>
                 </div>
               )}
               
               <div>
-                <p className="text-sm font-medium mb-2">Message</p>
-                <div className="bg-muted p-4 rounded-md text-sm">
+                <p className="text-xs sm:text-sm font-medium mb-2">Message</p>
+                <div className="bg-muted p-3 sm:p-4 rounded-md text-xs sm:text-sm break-words">
                   {selectedLog.message_body}
                 </div>
               </div>
 
               {selectedLog.error_message && (
                 <div>
-                  <p className="text-sm font-medium text-destructive">Error</p>
-                  <p className="text-sm text-muted-foreground">{selectedLog.error_message}</p>
+                  <p className="text-xs sm:text-sm font-medium text-destructive">Error</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{selectedLog.error_message}</p>
                 </div>
               )}
             </div>
