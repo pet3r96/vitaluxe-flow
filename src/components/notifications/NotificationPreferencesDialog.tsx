@@ -36,25 +36,32 @@ const PATIENT_NOTIFICATION_TYPES = [
 
 const PROVIDER_NOTIFICATION_TYPES = [
   { value: 'patient_message_received', label: 'Patient Messages', description: 'When a patient sends you a message' },
-  { value: 'appointment_booked', label: 'Appointments Booked', description: 'When a patient books an appointment' },
-  { value: 'appointment_cancelled', label: 'Appointment Changes', description: 'When an appointment is cancelled' },
-  { value: 'document_uploaded_by_patient', label: 'Documents Uploaded', description: 'When a patient uploads a document' },
-  { value: 'new_patient_forms', label: 'New Patient Forms', description: 'When patients submit forms' },
+  { value: 'appointment_booked', label: 'New Appointments', description: 'When appointments are booked' },
+  { value: 'appointment_cancelled', label: 'Appointment Cancellations', description: 'When an appointment is cancelled' },
+  { value: 'system_alerts', label: 'System Alerts', description: 'Important system notifications' },
+  { value: 'document_uploaded_by_patient', label: 'Documents Uploaded', description: 'When documents are uploaded' },
+  { value: 'order_updates', label: 'Order Updates', description: 'Order and fulfillment updates' },
+  { value: 'practice_announcements', label: 'Practice Announcements', description: 'Important practice updates' },
 ];
 
 const PRACTICE_NOTIFICATION_TYPES = [
   { value: 'patient_message_received', label: 'Patient Messages', description: 'When a patient sends a message' },
   { value: 'appointment_booked', label: 'New Appointments', description: 'When appointments are booked' },
   { value: 'appointment_cancelled', label: 'Appointment Cancellations', description: 'When appointments are cancelled' },
-  { value: 'staff_updates', label: 'Staff Updates', description: 'Updates from your staff members' },
   { value: 'system_alerts', label: 'System Alerts', description: 'Important system notifications' },
+  { value: 'document_uploaded_by_patient', label: 'Documents Uploaded', description: 'When documents are uploaded' },
+  { value: 'order_updates', label: 'Order Updates', description: 'Order and fulfillment updates' },
   { value: 'payment_updates', label: 'Payment Updates', description: 'Payment and billing notifications' },
+  { value: 'practice_announcements', label: 'Practice Announcements', description: 'Important practice updates' },
 ];
 
 const STAFF_NOTIFICATION_TYPES = [
-  { value: 'task_assignments', label: 'Task Assignments', description: 'When tasks are assigned to you' },
-  { value: 'appointment_changes', label: 'Appointment Changes', description: 'When appointments are updated' },
-  { value: 'patient_check_ins', label: 'Patient Check-ins', description: 'When patients check in' },
+  { value: 'patient_message_received', label: 'Patient Messages', description: 'When a patient sends a message' },
+  { value: 'appointment_booked', label: 'New Appointments', description: 'When appointments are booked' },
+  { value: 'appointment_cancelled', label: 'Appointment Cancellations', description: 'When an appointment is cancelled' },
+  { value: 'system_alerts', label: 'System Alerts', description: 'Important system notifications' },
+  { value: 'document_uploaded_by_patient', label: 'Documents Uploaded', description: 'When documents are uploaded' },
+  { value: 'order_updates', label: 'Order Updates', description: 'Order and fulfillment updates' },
   { value: 'practice_announcements', label: 'Practice Announcements', description: 'Important practice updates' },
 ];
 
@@ -65,11 +72,19 @@ const PHARMACY_NOTIFICATION_TYPES = [
   { value: 'order_updates', label: 'Order Updates', description: 'Order and fulfillment updates' },
 ];
 
-const REP_NOTIFICATION_TYPES = [
-  { value: 'new_referrals', label: 'New Referrals', description: 'When new referrals come in' },
-  { value: 'practice_signups', label: 'Practice Sign-ups', description: 'When practices sign up' },
+const TOPLINE_REP_NOTIFICATION_TYPES = [
+  { value: 'new_practice_added', label: 'New Practice Added', description: 'When a new practice is added' },
+  { value: 'new_downline_added', label: 'New Downline Added', description: 'When a new downline is added' },
   { value: 'commission_updates', label: 'Commission Updates', description: 'Commission and payment updates' },
   { value: 'team_activity', label: 'Team Activity', description: 'Activity from your team' },
+  { value: 'support_tickets', label: 'Support Tickets', description: 'Support ticket notifications' },
+];
+
+const DOWNLINE_REP_NOTIFICATION_TYPES = [
+  { value: 'new_practice_added', label: 'New Practice Added', description: 'When a new practice is added' },
+  { value: 'commission_updates', label: 'Commission Updates', description: 'Commission and payment updates' },
+  { value: 'team_activity', label: 'Team Activity', description: 'Activity from your team' },
+  { value: 'support_tickets', label: 'Support Tickets', description: 'Support ticket notifications' },
 ];
 
 const ADMIN_NOTIFICATION_TYPES = [
@@ -77,6 +92,8 @@ const ADMIN_NOTIFICATION_TYPES = [
   { value: 'user_activity', label: 'User Activity', description: 'Important user activity alerts' },
   { value: 'security_notifications', label: 'Security Notifications', description: 'Security-related alerts' },
   { value: 'support_requests', label: 'Support Requests', description: 'User support requests' },
+  { value: 'new_practice_requested', label: 'New Practice Requested', description: 'When a new practice is requested' },
+  { value: 'new_downline_requested', label: 'New Downline Requested', description: 'When a new downline is requested' },
 ];
 
 const getNotificationTypesForRole = (role: string) => {
@@ -92,8 +109,9 @@ const getNotificationTypesForRole = (role: string) => {
     case 'pharmacy':
       return PHARMACY_NOTIFICATION_TYPES;
     case 'topline':
+      return TOPLINE_REP_NOTIFICATION_TYPES;
     case 'downline':
-      return REP_NOTIFICATION_TYPES;
+      return DOWNLINE_REP_NOTIFICATION_TYPES;
     case 'admin':
       return ADMIN_NOTIFICATION_TYPES;
     default:
