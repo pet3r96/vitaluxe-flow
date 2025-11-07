@@ -14,7 +14,9 @@ ENV VITE_BUILD_ID=$VITE_BUILD_ID
 
 COPY package*.json ./
 RUN apk add --no-cache python3 make g++ libc6-compat
-RUN npm ci
+# Using npm install instead of npm ci since package-lock.json is not committed
+# This will resolve dependencies from package.json and generate a lock file during build
+RUN npm install
 
 COPY . .
 RUN npm run build
