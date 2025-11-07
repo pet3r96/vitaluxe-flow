@@ -55,24 +55,16 @@ Deno.serve(async (req) => {
 
     // Check if user is staff
     const { data: staffAccount } = await supabaseClient
-      .from('staff')
+      .from('practice_staff')
       .select('id, practice_id')
       .eq('user_id', effectiveUserId)
-      .maybeSingle();
-
-    // Check if user is a practice (impersonation case)
-    const { data: practiceAccount } = await supabaseClient
-      .from('practices')
-      .select('practice_id')
-      .eq('practice_id', effectiveUserId)
       .maybeSingle();
 
     console.log('👤 [cancel-appointment] User role lookup:', { 
       effectiveUserId,
       isPatient: !!patientAccount,
       isProvider: !!providerAccount,
-      isStaff: !!staffAccount,
-      isPractice: !!practiceAccount
+      isStaff: !!staffAccount
     });
 
     let appointment;
@@ -89,9 +81,9 @@ Deno.serve(async (req) => {
       
       appointment = result.data;
       fetchError = result.error;
-    } else if (providerAccount || staffAccount || practiceAccount) {
-      // Provider/staff/practice cancelling any appointment in their practice
-      const practiceId = providerAccount?.practice_id || staffAccount?.practice_id || practiceAccount?.practice_id;
+    } else if (providerAccount || staffAccount) {
+      // Provider/staff cancelling any appointment in their practice
+      const practiceId = providerAccount?.practice_id || staffAccount?.practice_id;
       
       const result = await supabaseClient
         .from('patient_appointments')
@@ -103,8 +95,24 @@ Deno.serve(async (req) => {
       appointment = result.data;
       fetchError = result.error;
     } else {
-      console.error('❌ [cancel-appointment] User has no valid role (not patient, provider, staff, or practice)');
-      throw new Error('Unauthorized: User does not have permission to cancel appointments');
+      // Check if effectiveUserId is a practice itself (stored in profiles table)
+      // Practice admins can cancel any appointment in their practice
+      const result = await supabaseClient
+        .from('patient_appointments')
+        .select('id, patient_id, status, practice_id')
+        .eq('id', appointmentId)
+        .eq('practice_id', effectiveUserId)
+        .maybeSingle();
+      
+      appointment = result.data;
+      fetchError = result.error;
+
+      if (!appointment) {
+        console.error('❌ [cancel-appointment] User has no valid role and is not the practice owner');
+        throw new Error('Unauthorized: User does not have permission to cancel appointments');
+      }
+
+      console.log('✅ [cancel-appointment] Practice admin cancelling appointment');
     }
 
     console.log('📅 [cancel-appointment] Appointment verification:', { 
