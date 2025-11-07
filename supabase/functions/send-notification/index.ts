@@ -81,28 +81,35 @@ serve(async (req) => {
       .eq("id", notification.user_id)
       .single();
 
-    // Get template for email/sms content
-    const templateKey = notification.metadata?.template_key;
-    let emailSubject = notification.title;
-    let emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>${notification.title}</h2>
-      <p>${notification.message}</p>
-      ${notification.action_url ? `<p><a href="${notification.action_url}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">View Details</a></p>` : ''}
-    </div>`;
-    let smsText = `${notification.title}: ${notification.message}`;
+    // Get template for SMS based on event_type and channel
+    let smsText = '';
+    
+    // Try to get SMS template from database
+    const { data: smsTemplate } = await supabase
+      .from("notification_templates")
+      .select("message_template")
+      .eq("event_type", notification.notification_type)
+      .eq("channel", "sms")
+      .eq("active", true)
+      .is("practice_id", null) // Get default templates
+      .single();
 
-    if (templateKey) {
-      const { data: template } = await supabase
-        .from("notification_templates")
-        .select("*")
-        .eq("template_key", templateKey)
-        .single();
-
-      if (template) {
-        emailSubject = replaceVariables(template.email_subject_template || notification.title, notification.metadata);
-        emailBody = replaceVariables(template.email_body_template || emailBody, notification.metadata);
-        smsText = replaceVariables(template.sms_template || smsText, notification.metadata);
+    if (smsTemplate?.message_template) {
+      // Use template with variable replacement
+      smsText = replaceVariables(smsTemplate.message_template, notification.metadata);
+    } else {
+      // Fallback: Generate concise SMS with sender context
+      const senderContext = getSenderContext(notification);
+      const senderPrefix = senderContext.name ? `${senderContext.name}: ` : '';
+      
+      // Truncate message to fit in 160 chars with "Reply STOP to opt out"
+      const maxMessageLength = 130 - senderPrefix.length; // Reserve space for opt-out
+      let truncatedMessage = notification.message;
+      if (truncatedMessage.length > maxMessageLength) {
+        truncatedMessage = truncatedMessage.substring(0, maxMessageLength - 3) + '...';
       }
+      
+      smsText = `${senderPrefix}${truncatedMessage} Reply STOP to opt out.`;
     }
 
     const results = {
