@@ -66,6 +66,20 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
 
   const sendCode = async () => {
     console.log('[GHLSmsVerifyDialog] sendCode START', { phoneNumber, userId });
+    
+    // Check if we sent a code very recently (within 10 seconds)
+    const lastSendKey = `vitaluxe_last_sms_${userId}_${phoneNumber.replace(/\D/g, '')}`;
+    const lastSendTime = localStorage.getItem(lastSendKey);
+    if (lastSendTime) {
+      const timeSince = Date.now() - parseInt(lastSendTime);
+      if (timeSince < 10000) { // 10 seconds
+        console.log('[GHLSmsVerifyDialog] BLOCKED - Code sent recently', { secondsAgo: (timeSince/1000).toFixed(1) });
+        setCodeSent(true);
+        setCountdown(Math.ceil((10000 - timeSince) / 1000));
+        return;
+      }
+    }
+    
     setLoading(true);
     setError('');
     setAttemptsRemaining(null);
@@ -97,6 +111,9 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
 
       // Store attemptId for verification (in component state only, not sessionStorage)
       if (data.attemptId) {
+        // Store timestamp of this send
+        localStorage.setItem(lastSendKey, Date.now().toString());
+        
         console.log('[GHLSmsVerifyDialog] SMS sent successfully - SETTING attemptId', { 
           attemptId: data.attemptId,
           phoneNumber: sanitizedPhone.substring(0, 5) + '***'

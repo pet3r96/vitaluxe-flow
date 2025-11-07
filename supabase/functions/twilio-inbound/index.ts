@@ -29,10 +29,12 @@ serve(async (req) => {
     if (body === "stop" || body === "unsubscribe" || body === "stopall") {
       // Find user by phone number (check both formats)
       const phoneClean = from.replace(/\D/g, '');
-      const { data: profiles } = await supabase
+      
+      // Try original format first
+      let { data: profiles } = await supabase
         .from("profiles")
         .select("id, name")
-        .or(`phone.eq.${from},phone.eq.${phoneClean},mobile_phone.eq.${from},mobile_phone.eq.${phoneClean}`)
+        .or(`phone.eq.${phoneClean},mobile_phone.eq.${phoneClean}`)
         .limit(1);
 
       const profile = profiles?.[0];
@@ -72,10 +74,12 @@ serve(async (req) => {
     // Handle START
     if (body === "start" || body === "subscribe") {
       const phoneClean = from.replace(/\D/g, '');
-      const { data: profiles } = await supabase
+      
+      // Try digits-only format
+      let { data: profiles } = await supabase
         .from("profiles")
         .select("id")
-        .or(`phone.eq.${from},phone.eq.${phoneClean},mobile_phone.eq.${from},mobile_phone.eq.${phoneClean}`)
+        .or(`phone.eq.${phoneClean},mobile_phone.eq.${phoneClean}`)
         .limit(1);
 
       const profile = profiles?.[0];
@@ -122,10 +126,12 @@ serve(async (req) => {
 
     // Log other inbound messages
     const phoneClean = from.replace(/\D/g, '');
-    const { data: profiles } = await supabase
+    
+    // Try digits-only format
+    let { data: profiles } = await supabase
       .from("profiles")
       .select("id")
-      .or(`phone.eq.${from},phone.eq.${phoneClean},mobile_phone.eq.${from},mobile_phone.eq.${phoneClean}`)
+      .or(`phone.eq.${phoneClean},mobile_phone.eq.${phoneClean}`)
       .limit(1);
     
     const profile = profiles?.[0];
