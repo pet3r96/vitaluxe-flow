@@ -23,6 +23,7 @@ interface NotificationPreference {
   event_type: string;
   email_enabled: boolean;
   sms_enabled: boolean;
+  in_app_enabled: boolean;
 }
 
 const PATIENT_NOTIFICATION_TYPES = [
@@ -85,6 +86,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
           event_type: pref.event_type,
           email_enabled: pref.email_enabled,
           sms_enabled: pref.sms_enabled,
+          in_app_enabled: pref.in_app_enabled ?? true,
         };
       });
 
@@ -96,6 +98,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
             event_type: type.value,
             email_enabled: true,
             sms_enabled: false,
+            in_app_enabled: true,
           };
         }
       });
@@ -125,6 +128,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
         event_type: pref.event_type,
         email_enabled: pref.email_enabled,
         sms_enabled: pref.sms_enabled,
+        in_app_enabled: pref.in_app_enabled,
       }));
 
       const { error } = await supabase
@@ -151,7 +155,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
     }
   };
 
-  const togglePreference = (type: string, channel: 'email' | 'sms') => {
+  const togglePreference = (type: string, channel: 'email' | 'sms' | 'in_app') => {
     setPreferences(prev => ({
       ...prev,
       [type]: {
@@ -199,6 +203,14 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
                       id={`${type.value}-sms`}
                       checked={preferences[type.value]?.sms_enabled || false}
                       onCheckedChange={() => togglePreference(type.value, 'sms')}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between pl-4">
+                    <Label htmlFor={`${type.value}-in-app`} className="text-sm">In-app</Label>
+                    <Switch
+                      id={`${type.value}-in-app`}
+                      checked={preferences[type.value]?.in_app_enabled ?? true}
+                      onCheckedChange={() => togglePreference(type.value, 'in_app')}
                     />
                   </div>
                 </div>

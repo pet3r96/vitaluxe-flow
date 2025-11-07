@@ -1911,6 +1911,7 @@ export type Database = {
           email_enabled: boolean | null
           event_type: string
           id: string
+          in_app_enabled: boolean | null
           sms_enabled: boolean | null
           updated_at: string | null
           user_id: string
@@ -1920,6 +1921,7 @@ export type Database = {
           email_enabled?: boolean | null
           event_type: string
           id?: string
+          in_app_enabled?: boolean | null
           sms_enabled?: boolean | null
           updated_at?: string | null
           user_id: string
@@ -1929,6 +1931,7 @@ export type Database = {
           email_enabled?: boolean | null
           event_type?: string
           id?: string
+          in_app_enabled?: boolean | null
           sms_enabled?: boolean | null
           updated_at?: string | null
           user_id?: string
