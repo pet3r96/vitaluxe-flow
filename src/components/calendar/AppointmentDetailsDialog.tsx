@@ -374,7 +374,17 @@ export function AppointmentDetailsDialog({
                   </div>
                 )}
 
-                {appointment.practice_rooms && (
+                {appointment.visit_type === 'video' ? (
+                  <div className="flex items-center gap-2">
+                    <Video className="h-4 w-4 text-primary" />
+                    <div className="text-sm">
+                      <Badge variant="outline" className="gap-1.5">
+                        <Video className="h-3 w-3" />
+                        Video Consultation
+                      </Badge>
+                    </div>
+                  </div>
+                ) : appointment.practice_rooms && (
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <div className="text-sm">

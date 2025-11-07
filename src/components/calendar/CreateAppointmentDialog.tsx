@@ -277,7 +277,7 @@ export function CreateAppointmentDialog({
                 )}
 
                 <div className={`space-y-2 ${isProviderAccount ? 'col-span-2' : ''}`}>
-                  <Label htmlFor="roomId">Room</Label>
+                  <Label htmlFor="roomId">Room {watch("visitType") === 'video' && <span className="text-muted-foreground text-xs">(Not required for video)</span>}</Label>
                   <Select value={watch("roomId")} onValueChange={(value) => setValue("roomId", value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select room (optional)" />

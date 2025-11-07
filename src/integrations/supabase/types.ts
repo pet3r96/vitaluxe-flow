@@ -7915,6 +7915,149 @@ export type Database = {
           },
         ]
       }
+      video_session_logs: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          session_id: string
+          user_id: string | null
+          user_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          session_id: string
+          user_id?: string | null
+          user_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          session_id?: string
+          user_id?: string | null
+          user_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_session_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "video_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_sessions: {
+        Row: {
+          actual_start_time: string | null
+          agora_channel_id: string | null
+          appointment_id: string
+          channel_name: string
+          connection_quality: Json | null
+          created_at: string | null
+          duration_seconds: number | null
+          end_time: string | null
+          id: string
+          metadata: Json | null
+          patient_id: string
+          patient_joined_at: string | null
+          patient_left_at: string | null
+          practice_id: string
+          provider_id: string | null
+          provider_joined_at: string | null
+          provider_left_at: string | null
+          recording_enabled: boolean | null
+          recording_expires_at: string | null
+          recording_resource_id: string | null
+          recording_sid: string | null
+          recording_started_at: string | null
+          recording_stopped_at: string | null
+          recording_url: string | null
+          scheduled_start_time: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_start_time?: string | null
+          agora_channel_id?: string | null
+          appointment_id: string
+          channel_name: string
+          connection_quality?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          end_time?: string | null
+          id?: string
+          metadata?: Json | null
+          patient_id: string
+          patient_joined_at?: string | null
+          patient_left_at?: string | null
+          practice_id: string
+          provider_id?: string | null
+          provider_joined_at?: string | null
+          provider_left_at?: string | null
+          recording_enabled?: boolean | null
+          recording_expires_at?: string | null
+          recording_resource_id?: string | null
+          recording_sid?: string | null
+          recording_started_at?: string | null
+          recording_stopped_at?: string | null
+          recording_url?: string | null
+          scheduled_start_time: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_start_time?: string | null
+          agora_channel_id?: string | null
+          appointment_id?: string
+          channel_name?: string
+          connection_quality?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          end_time?: string | null
+          id?: string
+          metadata?: Json | null
+          patient_id?: string
+          patient_joined_at?: string | null
+          patient_left_at?: string | null
+          practice_id?: string
+          provider_id?: string | null
+          provider_joined_at?: string | null
+          provider_left_at?: string | null
+          recording_enabled?: boolean | null
+          recording_expires_at?: string | null
+          recording_resource_id?: string | null
+          recording_sid?: string | null
+          recording_started_at?: string | null
+          recording_stopped_at?: string | null
+          recording_url?: string | null
+          scheduled_start_time?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "patient_appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_sessions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       cart_lines_masked: {
