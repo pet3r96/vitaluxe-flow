@@ -6,10 +6,12 @@ import { CheckCheck, Loader2, Bell, Settings } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotificationPreferencesDialog } from "./NotificationPreferencesDialog";
+import { AdminNotificationPreferences } from "./AdminNotificationPreferences";
 
 export function NotificationPanel() {
   const { notifications, loading, isAdmin, markAllAsRead, unreadCount, markAsRead, deleteNotification } = useNotifications();
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showAdminPreferences, setShowAdminPreferences] = useState(false);
   const [filterType, setFilterType] = useState<string | null>(null);
 
   // Admin notification types
@@ -60,6 +62,17 @@ export function NotificationPanel() {
               <Settings className="h-4 w-4 mr-1" />
               Preferences
             </Button>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAdminPreferences(true)}
+                className="text-xs"
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Admin Alerts
+              </Button>
+            )}
           </div>
           {unreadCount > 0 && (
             <Button
@@ -148,6 +161,11 @@ export function NotificationPanel() {
       <NotificationPreferencesDialog
         open={showPreferences}
         onOpenChange={setShowPreferences}
+      />
+      
+      <AdminNotificationPreferences
+        open={showAdminPreferences}
+        onOpenChange={setShowAdminPreferences}
       />
     </>
   );

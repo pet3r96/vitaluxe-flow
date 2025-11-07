@@ -17,7 +17,7 @@ export interface AdminNotificationParams {
 }
 
 /**
- * Create a notification for all admin users
+ * Create a notification for all admin users (respecting their preferences)
  * Used by edge functions to alert admins of system events
  */
 export async function createAdminNotification(params: AdminNotificationParams): Promise<{ success: boolean; count: number; error?: string }> {
@@ -38,8 +38,26 @@ export async function createAdminNotification(params: AdminNotificationParams): 
       return { success: true, count: 0 };
     }
 
-    // Create notification for each admin
-    const notifications = adminRoles.map(role => ({
+    // Fetch preferences for all admins for this notification type
+    const { data: preferences } = await supabase
+      .from('admin_notification_preferences')
+      .select('user_id, enabled')
+      .eq('notification_type', params.notification_type)
+      .eq('enabled', false); // Only fetch disabled preferences
+
+    // Create a set of user IDs who have disabled this notification type
+    const disabledUserIds = new Set(preferences?.map(p => p.user_id) || []);
+
+    // Filter admins based on preferences (include if no preference set or if enabled)
+    const enabledAdmins = adminRoles.filter(role => !disabledUserIds.has(role.user_id));
+
+    if (enabledAdmins.length === 0) {
+      console.log('[adminNotifications] No admins have this notification type enabled');
+      return { success: true, count: 0 };
+    }
+
+    // Create notification for each admin with notifications enabled
+    const notifications = enabledAdmins.map(role => ({
       user_id: role.user_id,
       title: params.title,
       message: params.message,
@@ -61,7 +79,7 @@ export async function createAdminNotification(params: AdminNotificationParams): 
       return { success: false, count: 0, error: insertError.message };
     }
 
-    console.log(`[adminNotifications] Created ${notifications.length} admin notifications`);
+    console.log(`[adminNotifications] Created ${notifications.length} admin notifications (${adminRoles.length - enabledAdmins.length} admins opted out)`);
     return { success: true, count: notifications.length };
   } catch (error: any) {
     console.error('[adminNotifications] Unexpected error:', error);
