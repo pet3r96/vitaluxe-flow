@@ -139,12 +139,16 @@ export default function PatientVideoRoom() {
 
   return (
     <AgoraVideoRoom
-      channelName={sessionData.channel_name}
+      channelName={sessionData.channelName}
       token={sessionData.token}
       uid={sessionData.uid}
-      appId={sessionData.app_id}
+      appId={sessionData.appId}
       onLeave={handleLeave}
       isProvider={false}
+      sessionId={sessionId!}
+      rtmToken={sessionData.rtmToken}
+      rtmUid={sessionData.rtmUid}
+      userName="Patient"
     />
   );
 }

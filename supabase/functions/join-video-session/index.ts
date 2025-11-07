@@ -124,7 +124,9 @@ Deno.serve(async (req) => {
       token: tokenData.token,
       channelName: tokenData.channelName,
       uid: tokenData.uid,
-      appId: tokenData.appId
+      appId: tokenData.appId,
+      rtmToken: tokenData.rtmToken,
+      rtmUid: tokenData.rtmUid
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

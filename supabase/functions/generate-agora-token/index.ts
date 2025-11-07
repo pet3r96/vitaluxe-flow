@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { RtcTokenBuilder, RtcRole } from 'https://esm.sh/agora-access-token@2.0.4';
+import { RtcTokenBuilder, RtcRole, RtmTokenBuilder, RtmRole } from 'https://esm.sh/agora-access-token@2.0.4';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -78,13 +78,22 @@ Deno.serve(async (req) => {
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-    // Generate token
+    // Generate RTC token
     const rtcToken = RtcTokenBuilder.buildTokenWithUid(
       appId,
       appCertificate,
       channelName,
       uid,
       userRole,
+      privilegeExpiredTs
+    );
+
+    // Generate RTM token
+    const rtmToken = RtmTokenBuilder.buildToken(
+      appId,
+      appCertificate,
+      uid,
+      RtmRole.Rtm_User,
       privilegeExpiredTs
     );
 
@@ -102,7 +111,9 @@ Deno.serve(async (req) => {
       channelName,
       uid,
       appId,
-      expiresAt: privilegeExpiredTs
+      expiresAt: privilegeExpiredTs,
+      rtmToken,
+      rtmUid: uid
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
