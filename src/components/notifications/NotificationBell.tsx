@@ -10,12 +10,21 @@ import {
 } from "@/components/ui/sheet";
 import { NotificationPanel } from "./NotificationPanel";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useState, useEffect } from "react";
 
 export function NotificationBell() {
-  const { unreadCount } = useNotifications();
+  const { unreadCount, refetch } = useNotifications();
+  const [open, setOpen] = useState(false);
+
+  // Refetch notifications when dialog opens
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />

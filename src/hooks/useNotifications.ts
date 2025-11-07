@@ -51,6 +51,7 @@ export function useNotifications() {
   // Fetch notifications with optional type filter
   const fetchNotifications = async (typeFilter?: string) => {
     try {
+      console.log('[useNotifications] Fetching notifications...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setNotifications([]);
@@ -82,6 +83,7 @@ export function useNotifications() {
 
       if (error) throw error;
 
+      console.log('[useNotifications] Fetched notifications:', data?.length);
       setNotifications(data || []);
       setUnreadCount(data?.filter((n) => !n.read).length || 0);
     } catch (error) {
@@ -164,6 +166,7 @@ export function useNotifications() {
   // Delete notification
   const deleteNotification = async (notificationId: string) => {
     try {
+      console.log('[useNotifications] Deleting notification:', notificationId);
       const notification = notifications.find((n) => n.id === notificationId);
       
       const { error } = await supabase
@@ -173,12 +176,14 @@ export function useNotifications() {
 
       if (error) throw error;
 
+      console.log('[useNotifications] Notification deleted, updating state...');
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       if (notification && !notification.read) {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
       
       // Refresh both count and notifications to ensure sync with database
+      console.log('[useNotifications] Refetching after delete...');
       await Promise.all([fetchUnreadCount(), fetchNotifications()]);
     } catch (error) {
       import('@/lib/logger').then(({ logger }) => {

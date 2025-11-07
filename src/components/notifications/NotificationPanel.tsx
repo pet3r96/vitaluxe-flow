@@ -31,17 +31,27 @@ export function NotificationPanel() {
   const readNotifications = filteredNotifications.filter((n) => n.read);
 
   const handleDeleteAllUnread = async () => {
-    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
-    
-    // Delete all notifications in parallel
-    const deletePromises = unreadIds.map(id => 
-      supabase.from("notifications").delete().eq("id", id)
-    );
-    
-    await Promise.all(deletePromises);
-    
-    // Refetch to sync UI with database state
-    await refetch();
+    try {
+      const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+      
+      console.log('[NotificationPanel] Deleting unread notifications:', unreadIds.length);
+      
+      // Delete all notifications in parallel
+      await Promise.all(
+        unreadIds.map(id => 
+          supabase.from("notifications").delete().eq("id", id)
+        )
+      );
+      
+      console.log('[NotificationPanel] Batch delete complete, refetching...');
+      
+      // Refetch to sync UI with database state
+      await refetch();
+      
+      console.log('[NotificationPanel] Refetch complete');
+    } catch (error) {
+      console.error('[NotificationPanel] Error deleting notifications:', error);
+    }
   };
 
   if (loading) {
