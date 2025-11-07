@@ -31,14 +31,7 @@ export function NotificationBell() {
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md overflow-hidden flex flex-col">
         <SheetHeader>
-          <SheetTitle className="flex items-center justify-between">
-            <span>Notifications</span>
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {unreadCount} Unread
-              </Badge>
-            )}
-          </SheetTitle>
+          <SheetTitle>Notifications</SheetTitle>
         </SheetHeader>
         <NotificationPanel />
       </SheetContent>
