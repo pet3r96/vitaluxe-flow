@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, RotateCcw, Mail, MessageSquare } from "lucide-react";
+import { Loader2, Save, RotateCcw, Mail, MessageSquare, Send } from "lucide-react";
+import { TemplateTestDialog } from "@/components/notifications/TemplateTestDialog";
 
 const EVENT_TYPES = [
   { value: "appointment_confirmed", label: "Appointment Confirmed" },
@@ -35,6 +36,8 @@ export default function NotificationTemplates() {
   const queryClient = useQueryClient();
   const [selectedEvent, setSelectedEvent] = useState("appointment_confirmed");
   const [editMode, setEditMode] = useState<{ [key: string]: boolean }>({});
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testChannel, setTestChannel] = useState<"sms" | "email">("sms");
 
   const isAdmin = effectiveRole === "admin" || effectiveRole === "super_admin";
 
@@ -163,6 +166,18 @@ export default function NotificationTemplates() {
             <h3 className="text-base sm:text-lg font-semibold capitalize">{channel} Template</h3>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setTestChannel(channel);
+                setTestDialogOpen(true);
+              }}
+              className="text-xs sm:text-sm"
+            >
+              <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Send Test
+            </Button>
             {isEditing ? (
               <>
                 <Button
@@ -321,6 +336,13 @@ export default function NotificationTemplates() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <TemplateTestDialog
+        open={testDialogOpen}
+        onOpenChange={setTestDialogOpen}
+        eventType={selectedEvent}
+        channel={testChannel}
+      />
     </div>
   );
 }

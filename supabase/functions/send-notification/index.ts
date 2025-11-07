@@ -269,9 +269,10 @@ serve(async (req) => {
         const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
         const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
         const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
+        const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
         const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 
-        if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
+        if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || (!TWILIO_MESSAGING_SERVICE_SID && !TWILIO_PHONE_NUMBER)) {
           console.log("Twilio not configured, skipping SMS");
           results.errors.push("SMS service not configured");
           
@@ -297,6 +298,22 @@ serve(async (req) => {
             ? profile.phone 
             : `+1${profile.phone.replace(/\D/g, '')}`;
           
+          // Prepare SMS parameters - use MessagingServiceSid if available, otherwise use From number
+          const smsParams: Record<string, string> = {
+            To: formattedPhone,
+            Body: smsText,
+            StatusCallback: `${SUPABASE_URL}/functions/v1/twilio-status-callback`
+          };
+          
+          // Use Messaging Service (toll-free) if available, otherwise use phone number
+          if (TWILIO_MESSAGING_SERVICE_SID) {
+            smsParams.MessagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
+            console.log("Sending SMS via Twilio Messaging Service (toll-free)");
+          } else if (TWILIO_PHONE_NUMBER) {
+            smsParams.From = TWILIO_PHONE_NUMBER;
+            console.log("Sending SMS via Twilio Phone Number");
+          }
+          
           // Send SMS via Twilio REST API with StatusCallback
           const twilioResponse = await fetch(
             `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
@@ -306,12 +323,7 @@ serve(async (req) => {
                 "Authorization": `Basic ${auth}`,
                 "Content-Type": "application/x-www-form-urlencoded",
               },
-              body: new URLSearchParams({
-                To: formattedPhone,
-                From: TWILIO_PHONE_NUMBER,
-                Body: smsText,
-                StatusCallback: `${SUPABASE_URL}/functions/v1/twilio-status-callback`
-              }).toString()
+              body: new URLSearchParams(smsParams).toString()
             }
           );
 

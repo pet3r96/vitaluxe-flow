@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Mail, MessageSquare, Bell, ArrowDown, ArrowUp, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { NotificationAnalytics } from "@/components/notifications/NotificationAnalytics";
 
 export default function NotificationLogs() {
   const { effectivePracticeId, effectiveRole } = useAuth();
@@ -80,6 +81,8 @@ export default function NotificationLogs() {
           <p className="text-sm text-muted-foreground">Track all notification delivery and status</p>
         </div>
       </div>
+
+      {!isLoading && <NotificationAnalytics logs={logs as any} />}
 
       <Card>
         <CardHeader className="space-y-1 sm:space-y-1.5">
