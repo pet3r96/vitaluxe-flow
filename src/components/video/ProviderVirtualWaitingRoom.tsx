@@ -204,20 +204,202 @@ export const ProviderVirtualWaitingRoom = ({
 
   if (!videoSessions || videoSessions.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Video className="h-5 w-5 text-primary" />
-            Virtual Waiting Room
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Video className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No video appointments scheduled for today</p>
-          </div>
-        </CardContent>
-      </Card>
+      <>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Video className="h-5 w-5 text-primary" />
+                Virtual Waiting Room
+              </CardTitle>
+
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => setShowScheduleDialog(true)}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Schedule Video Appointment
+                </Button>
+                
+                <Button 
+                  onClick={() => setShowCreateDialog(true)}
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Instant Session
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-muted-foreground">
+              <Video className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No video appointments scheduled for today</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Instant Session Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Instant Video Session</DialogTitle>
+              <DialogDescription>
+                Start an immediate video consultation with a patient
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Select Patient *</Label>
+                <ScrollArea className="h-[200px] rounded-md border">
+                  <div className="p-2 space-y-2">
+                    {patients?.map((patient: any) => {
+                      const isSelected = selectedPatientId === patient.id;
+                      return (
+                        <button
+                          key={patient.id}
+                          onClick={() => setSelectedPatientId(patient.id)}
+                          className={`w-full text-left p-3 rounded-lg border-2 transition-all hover:border-primary/50 ${
+                            isSelected 
+                              ? 'border-primary bg-primary/10' 
+                              : 'border-border bg-background hover:bg-accent/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                isSelected ? 'bg-primary/20' : 'bg-muted'
+                              }`}>
+                                <User className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                              </div>
+                              <div>
+                                <div className="font-medium">
+                                  {patient.profiles?.name || 'Unknown Patient'}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {patient.profiles?.email}
+                                </div>
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <Check className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {(!patients || patients.length === 0) && (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        No patients found
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Select Provider *</Label>
+                <ScrollArea className="h-[150px] rounded-md border">
+                  <div className="p-2 space-y-2">
+                    {providers?.map((provider: any) => {
+                      const isSelected = selectedProviderId === provider.id;
+                      const providerName = provider.full_name || 'Unknown Provider';
+                      
+                      return (
+                        <button
+                          key={provider.id}
+                          onClick={() => setSelectedProviderId(provider.id)}
+                          className={`w-full text-left p-3 rounded-lg border-2 transition-all hover:border-primary/50 ${
+                            isSelected 
+                              ? 'border-primary bg-primary/10' 
+                              : 'border-border bg-background hover:bg-accent/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                isSelected ? 'bg-primary/20' : 'bg-muted'
+                              }`}>
+                                <User className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                              </div>
+                              <div>
+                                <div className="font-medium">{providerName}</div>
+                                {provider.email && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {provider.email}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <Check className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {(!providers || providers.length === 0) && (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        No providers found
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateDialog(false);
+                  setSelectedPatientId("");
+                  setSelectedProviderId("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateInstantSession}
+                disabled={!selectedPatientId || !selectedProviderId || creatingSession}
+                className="gap-2"
+              >
+                {creatingSession ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Video className="h-4 w-4" />
+                    Start Session
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Schedule Video Appointment Dialog */}
+        <CreateAppointmentDialog
+          open={showScheduleDialog}
+          onOpenChange={setShowScheduleDialog}
+          practiceId={practiceId}
+          providers={providers?.map(p => ({
+            id: p.id,
+            full_name: p.full_name,
+            first_name: p.first_name,
+            last_name: p.last_name,
+          })) || []}
+          rooms={[]}
+          defaultVisitType="video"
+        />
+      </>
     );
   }
 
