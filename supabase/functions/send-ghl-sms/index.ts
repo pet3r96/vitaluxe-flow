@@ -40,35 +40,6 @@ serve(async (req) => {
 
     const { phoneNumber, purpose = 'verification' } = await req.json();
 
-    // DEDUPLICATION: Check for recent attempts by this user (within last 10 seconds)
-    const tenSecondsAgo = new Date(Date.now() - 10 * 1000).toISOString();
-    const { data: recentUserAttempts, error: dedupeError } = await supabase
-      .from('sms_verification_attempts')
-      .select('attempt_id, created_at')
-      .gte('created_at', tenSecondsAgo)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (dedupeError) {
-      console.error('[GHL] Deduplication check failed:', dedupeError);
-    } else if (recentUserAttempts && recentUserAttempts.length > 0) {
-      const recentAttempt = recentUserAttempts[0];
-      const timeSinceLastAttempt = Date.now() - new Date(recentAttempt.created_at).getTime();
-      
-      console.log('[GHL] DUPLICATE PREVENTED | User:', user.id, '| Recent attempt:', recentAttempt.attempt_id, '| Age:', timeSinceLastAttempt, 'ms');
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          attemptId: recentAttempt.attempt_id,
-          message: 'Using recent verification attempt',
-          expiresIn: 300,
-          deduplicated: true
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     if (!phoneNumber) {
       return new Response(
         JSON.stringify({ success: false, error: 'Phone number is required' }),
@@ -111,17 +82,64 @@ serve(async (req) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const codeHash = await hashCode(code);
     
-    // Store ONLY: attempt_id, code_hash, expiration (NO PII)
+    // IDEMPOTENCY: Compute window_key (10s buckets) to prevent duplicate SMS sends
+    const windowBucket = Math.floor(Date.now() / 10000);
+    const rawKey = `${user.id}:${windowBucket}`;
+    const windowKey = await hashCode(rawKey);
+    
+    // Store ONLY: attempt_id, code_hash, expiration, window_key (NO PII)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     
     const { data: attemptData, error: insertError } = await supabase
       .from('sms_verification_attempts')
       .insert({
         code_hash: codeHash,
-        expires_at: expiresAt
+        expires_at: expiresAt,
+        window_key: windowKey
       })
       .select('attempt_id')
       .single();
+
+    // Handle idempotent duplicate (unique constraint violation on window_key)
+    if (insertError?.code === '23505') {
+      console.log('[GHL] Idempotent duplicate detected | User:', user.id, '| Window:', windowBucket);
+      
+      // Fetch the existing attempt for this window
+      const { data: existingAttempt, error: fetchError } = await supabase
+        .from('sms_verification_attempts')
+        .select('attempt_id')
+        .eq('window_key', windowKey)
+        .single();
+
+      if (fetchError || !existingAttempt) {
+        console.error('[GHL] Failed to fetch existing attempt:', fetchError);
+        throw new Error('Failed to retrieve verification attempt');
+      }
+
+      // Log the duplicate block
+      await supabase.from('two_fa_audit_log').insert({
+        attempt_id: existingAttempt.attempt_id,
+        event_type: 'duplicate_blocked',
+        code_verified: false,
+        metadata: { 
+          purpose,
+          reason: 'idempotent_window_key'
+        }
+      });
+
+      console.log('[GHL] Idempotent duplicate blocked | Attempt:', existingAttempt.attempt_id);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          attemptId: existingAttempt.attempt_id,
+          message: 'Using recent verification attempt',
+          expiresIn: 300,
+          deduplicated: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (insertError || !attemptData) {
       console.error('[GHL] Attempt insert failed:', insertError);
