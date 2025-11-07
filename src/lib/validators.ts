@@ -106,3 +106,23 @@ export function formatPhoneNumber(phone: string | null | undefined): string {
   // Format as (XXX) XXX-XXXX
   return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
 }
+
+/**
+ * Format phone number for Twilio
+ * Adds +1 country code if not present
+ */
+export function formatPhoneForTwilio(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  
+  // If already has +, return as-is
+  if (phone.startsWith('+')) return phone;
+  
+  // Remove all non-digit characters
+  const cleaned = phone.replace(/\D/g, "");
+  
+  // Return null if not 10 digits
+  if (cleaned.length !== 10) return null;
+  
+  // Add +1 country code
+  return `+1${cleaned}`;
+}

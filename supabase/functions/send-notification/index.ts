@@ -292,6 +292,11 @@ serve(async (req) => {
           // Create Basic Auth header for Twilio API
           const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
           
+          // Format phone number for Twilio (add +1 if not present)
+          const formattedPhone = profile.phone.startsWith('+') 
+            ? profile.phone 
+            : `+1${profile.phone.replace(/\D/g, '')}`;
+          
           // Send SMS via Twilio REST API with StatusCallback
           const twilioResponse = await fetch(
             `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
@@ -302,7 +307,7 @@ serve(async (req) => {
                 "Content-Type": "application/x-www-form-urlencoded",
               },
               body: new URLSearchParams({
-                To: profile.phone,
+                To: formattedPhone,
                 From: TWILIO_PHONE_NUMBER,
                 Body: smsText,
                 StatusCallback: `${SUPABASE_URL}/functions/v1/twilio-status-callback`
