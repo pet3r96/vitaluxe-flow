@@ -137,9 +137,6 @@ serve(async (req) => {
       signupData.role = "doctor";
     }
 
-    // Extract has_prescriber from roleData (default true for backward compatibility)
-    const hasPrescriber = signupData.roleData.hasPrescriber ?? true;
-
     // Validate phone numbers, NPI, and DEA
     if (signupData.roleData.phone) {
       const phoneResult = validatePhone(signupData.roleData.phone);
@@ -152,8 +149,8 @@ serve(async (req) => {
       }
     }
 
-    // Only validate NPI if practice has prescriber
-    if (hasPrescriber && signupData.roleData.npi) {
+    // NPI validation for practices - now always required
+    if (signupData.role === 'doctor' && signupData.roleData.npi) {
       const npiResult = validateNPI(signupData.roleData.npi);
       if (!npiResult.valid) {
         console.error('NPI validation failed:', npiResult.error);

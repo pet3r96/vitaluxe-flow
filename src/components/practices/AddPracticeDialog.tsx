@@ -64,8 +64,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     address_city: "",
     address_state: "",
     address_zip: "",
-    selectedRepId: "",
-    hasPrescriber: true, // Default to yes
+    selectedRepId: ""
   });
 
   // Track latest NPI value to guard against stale callback updates
@@ -132,7 +131,14 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
     e.preventDefault();
     
     // NPI verification only required if practice has prescriber
-    if (formData.hasPrescriber && npiVerificationStatus !== "verified") {
+    // Validate required fields - NPI is now always required
+    if (!formData.name || !formData.email || !formData.licenseNumber || !formData.npi) {
+      toast.error("Please fill in all required fields (Name, Email, License Number, NPI)");
+      return;
+    }
+
+    // NPI must always be verified
+    if (npiVerificationStatus !== "verified") {
       if (npiVerificationStatus === "verifying") {
         toast.error("Please wait for NPI verification to complete");
       } else {
@@ -141,33 +147,19 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
       return;
     }
     
-    // Validate fields only if has prescriber
-    if (formData.hasPrescriber) {
-      const phoneResult = validatePhone(formData.phone);
-      const npiResult = validateNPI(formData.npi);
-      const deaResult = formData.dea ? validateDEA(formData.dea) : { valid: true };
+    // Validate all fields
+    const phoneResult = validatePhone(formData.phone);
+    const npiResult = validateNPI(formData.npi);
+    const deaResult = formData.dea ? validateDEA(formData.dea) : { valid: true };
 
-      if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
-        setValidationErrors({
-          phone: phoneResult.error || "",
-          npi: npiResult.error || "",
-          dea: deaResult.error || "",
-        });
-        toast.error("Please fix validation errors before submitting");
-        return;
-      }
-    } else {
-      // For non-prescriber practices, only validate phone
-      const phoneResult = validatePhone(formData.phone);
-      if (!phoneResult.valid) {
-        setValidationErrors({
-          phone: phoneResult.error || "",
-          npi: "",
-          dea: "",
-        });
-        toast.error("Please fix validation errors before submitting");
-        return;
-      }
+    if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
+      setValidationErrors({
+        phone: phoneResult.error || "",
+        npi: npiResult.error || "",
+        dea: deaResult.error || "",
+      });
+      toast.error("Please fix validation errors before submitting");
+      return;
     }
     
     setLoading(true);
@@ -213,10 +205,9 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
           role: "doctor", // Practice account role in database
           csrfToken, // Include in body as fallback
           roleData: {
-            hasPrescriber: formData.hasPrescriber,
-            npi: formData.hasPrescriber ? formData.npi : null,
-            licenseNumber: formData.hasPrescriber ? formData.licenseNumber : null,
-            dea: formData.hasPrescriber ? (formData.dea || null) : null,
+            npi: formData.npi,
+            licenseNumber: formData.licenseNumber,
+            dea: formData.dea || null,
             phone: formData.phone,
             address_street: formData.address_street,
             address_city: formData.address_city,
@@ -267,8 +258,7 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
       address_city: "",
       address_state: "",
       address_zip: "",
-      selectedRepId: "",
-      hasPrescriber: true,
+      selectedRepId: ""
     });
     setValidationErrors({
       phone: "",
@@ -361,10 +351,9 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
               </div>
             )}
 
-            {formData.hasPrescriber && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="npi">Practice NPI # *</Label>
+            {/* NPI - Now always required */}
+            <div className="space-y-2">
+              <Label htmlFor="npi">Practice NPI # *</Label>
               <Input
                 id="npi"
                 value={formData.npi}
@@ -458,11 +447,9 @@ verifyNPIDebounced(value, (result) => {
                 className={validationErrors.dea ? "border-destructive" : ""}
               />
               {validationErrors.dea && (
-                <p className="text-sm text-destructive">{validationErrors.dea}</p>
-              )}
+                  <p className="text-sm text-destructive">{validationErrors.dea}</p>
+                )}
             </div>
-              </>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="phone">Phone *</Label>
@@ -597,7 +584,7 @@ verifyNPIDebounced(value, (result) => {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || (formData.hasPrescriber && npiVerificationStatus !== "verified")}>
+            <Button type="submit" disabled={loading || npiVerificationStatus !== "verified"}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading ? "Creating..." : "Create Practice"}
             </Button>

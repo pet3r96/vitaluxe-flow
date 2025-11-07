@@ -4076,7 +4076,7 @@ export type Database = {
           has_prescriber: boolean
           id: string
           license_number: string | null
-          npi: string | null
+          npi: string
           phone: string
           practice_name: string
           prescriber_dea: string | null
@@ -4113,7 +4113,7 @@ export type Database = {
           has_prescriber?: boolean
           id?: string
           license_number?: string | null
-          npi?: string | null
+          npi: string
           phone: string
           practice_name: string
           prescriber_dea?: string | null
@@ -4150,7 +4150,7 @@ export type Database = {
           has_prescriber?: boolean
           id?: string
           license_number?: string | null
-          npi?: string | null
+          npi?: string
           phone?: string
           practice_name?: string
           prescriber_dea?: string | null

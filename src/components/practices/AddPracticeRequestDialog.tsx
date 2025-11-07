@@ -39,118 +39,27 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
     address_street: "",
     address_city: "",
     address_state: "",
+  const [formData, setFormData] = useState({
+    practice_name: "",
+    email: "",
+    npi: "",
+    license_number: "",
+    dea: "",
+    phone: "",
+    address_street: "",
+    address_city: "",
+    address_state: "",
     address_zip: "",
     address_formatted: "",
-    address_verification_status: "unverified",
-    address_verified_at: undefined as string | undefined,
+    address_verification_status: "unverified" as const,
+    address_verified_at: undefined as Date | undefined,
     address_verification_source: "",
-    hasPrescriber: true, // Default to yes
   });
 
-  const currentNpiRef = useRef(formData.npi);
-
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // NPI verification only required if practice has prescriber
-    if (formData.hasPrescriber && npiVerificationStatus !== "verified") {
-      if (npiVerificationStatus === "verifying") {
-        toast.error("Please wait for NPI verification to complete");
-      } else {
-        toast.error("NPI must be verified before submitting request");
-      }
-      return;
-    }
-    
-    // Validate fields based on prescriber status
-    if (formData.hasPrescriber) {
-      const phoneResult = validatePhone(formData.phone);
-      const npiResult = validateNPI(formData.npi);
-      const deaResult = formData.dea ? validateDEA(formData.dea) : { valid: true };
-      
-      if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
-        setValidationErrors({
-          phone: phoneResult.error || "",
-          npi: npiResult.error || "",
-          dea: deaResult.error || "",
-        });
-        toast.error("Please fix validation errors before submitting");
-        return;
-      }
-    } else {
-      // For non-prescriber practices, only validate phone
-      const phoneResult = validatePhone(formData.phone);
-      if (!phoneResult.valid) {
-        setValidationErrors({
-          phone: phoneResult.error || "",
-          npi: "",
-          dea: "",
-        });
-        toast.error("Please fix validation errors before submitting");
-        return;
-      }
-    }
-    
-    setLoading(true);
-
-    try {
-      if (!effectiveUserId) {
-        throw new Error("User not authenticated");
-      }
-
-      const { error } = await supabase
-        .from("pending_practices")
-        .insert([{
-          created_by_user_id: effectiveUserId,
-          created_by_role: effectiveRole as any,
-          assigned_rep_user_id: effectiveUserId,
-          practice_name: formData.practice_name,
-          email: formData.email,
-          has_prescriber: formData.hasPrescriber,
-          npi: formData.hasPrescriber ? formData.npi : null,
-          license_number: formData.hasPrescriber ? formData.license_number : null,
-          dea: formData.hasPrescriber ? (formData.dea || null) : null,
-          company: "",
-          phone: formData.phone,
-          address_street: formData.address_street,
-          address_city: formData.address_city,
-          address_state: formData.address_state,
-          address_zip: formData.address_zip,
-          address_formatted: formData.address_formatted || null,
-          address_verification_status: formData.address_verification_status || 'unverified',
-          address_verified_at: formData.address_verified_at || null,
-          address_verification_source: formData.address_verification_source || null,
-          prescriber_full_name: "",
-          prescriber_name: "",
-          prescriber_npi: "",
-          prescriber_dea: null,
-          prescriber_license: "",
-          prescriber_phone: null,
-        }]);
-
-      if (error) throw error;
-
-      toast.success("Practice request submitted for admin approval");
-      onSuccess?.();
-      onOpenChange(false);
-      setNpiVerificationStatus(null);
-      setFormData({
-        practice_name: "",
-        email: "",
-        npi: "",
-        license_number: "",
-        dea: "",
-        phone: "",
-        address_street: "",
-        address_city: "",
-        address_state: "",
-        address_zip: "",
-        address_formatted: "",
+  // Track latest NPI value
         address_verification_status: "unverified",
         address_verified_at: undefined,
-        address_verification_source: "",
-        hasPrescriber: true,
+        address_verification_source: ""
       });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
@@ -266,11 +175,10 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
 
             </div>
 
-            {formData.hasPrescriber && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="npi">NPI *</Label>
+            {/* NPI - Now always required */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="npi">NPI *</Label>
                 <Input
                   id="npi"
                   value={formData.npi}
@@ -366,9 +274,7 @@ verifyNPIDebounced(value, (result) => {
                   <p className="text-sm text-destructive">{validationErrors.dea}</p>
                 )}
               </div>
-                </div>
-              </>
-            )}
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -399,7 +305,7 @@ verifyNPIDebounced(value, (result) => {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || (formData.hasPrescriber && npiVerificationStatus !== "verified")}>
+            <Button type="submit" disabled={loading || npiVerificationStatus !== "verified"}>
               {loading ? "Submitting..." : "Submit Request"}
             </Button>
           </DialogFooter>

@@ -114,9 +114,6 @@ serve(async (req) => {
         ...(updatedData || {})
       };
 
-      // Read has_prescriber from pending request (default true for backward compatibility)
-      const hasPrescriber = practiceData.has_prescriber ?? true;
-
       // Validate data before creating account
       if (practiceData.phone) {
         const phoneResult = validatePhone(practiceData.phone);
@@ -125,8 +122,8 @@ serve(async (req) => {
         }
       }
 
-      // Only validate NPI if practice has prescriber
-      if (hasPrescriber && practiceData.npi) {
+      // NPI validation - now always required for practices
+      if (practiceData.npi) {
         const npiResult = validateNPI(practiceData.npi);
         if (!npiResult.valid) {
           throw new Error(`NPI validation: ${npiResult.error}`);
@@ -238,10 +235,10 @@ serve(async (req) => {
           email: practiceData.email,
           phone: practiceData.phone,
           company: practiceData.company,
-          has_prescriber: hasPrescriber,
-          npi: hasPrescriber ? practiceData.npi : null,
-          license_number: hasPrescriber ? practiceData.license_number : null,
-          dea: hasPrescriber ? practiceData.dea : null,
+          has_prescriber: true,
+          npi: practiceData.npi,
+          license_number: practiceData.license_number,
+          dea: practiceData.dea,
           address_street: practiceData.address_street,
           address_city: practiceData.address_city,
           address_state: practiceData.address_state,
