@@ -57,6 +57,7 @@ Deno.serve(async (req) => {
         start_time: scheduledTime.toISOString(),
         end_time: endTime.toISOString(),
         visit_type: 'video',
+        appointment_type: 'consultation',
         status: 'confirmed',
         reason_for_visit: 'Instant Video Consultation',
         notes: 'Created instantly by provider/staff',
