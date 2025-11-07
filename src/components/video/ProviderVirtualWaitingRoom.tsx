@@ -1,12 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Video, User, Clock, Circle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Video, User, Clock, Circle, Plus, Loader2 } from "lucide-react";
 import { format, isToday } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
@@ -19,6 +23,11 @@ export const ProviderVirtualWaitingRoom = ({
 }: ProviderVirtualWaitingRoomProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
+  const [creatingSession, setCreatingSession] = useState(false);
 
   const { data: videoSessions, isLoading } = useQuery({
     queryKey: ['provider-video-sessions', practiceId],
@@ -41,6 +50,36 @@ export const ProviderVirtualWaitingRoom = ({
       return data;
     },
     refetchInterval: 5000 // Refresh every 5 seconds
+  });
+
+  // Fetch patients for instant session creation
+  const { data: patients } = useQuery({
+    queryKey: ['practice-patients', practiceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('patient_accounts')
+        .select('id, user_id, profiles!patient_accounts_user_id_fkey(name, email)')
+        .eq('practice_id', practiceId);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: showCreateDialog
+  });
+
+  // Fetch providers for instant session creation
+  const { data: providers } = useQuery({
+    queryKey: ['practice-providers', practiceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('providers')
+        .select('id, first_name, last_name, profiles!providers_user_id_fkey(name, email)')
+        .eq('practice_id', practiceId);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: showCreateDialog
   });
 
   const handleStartSession = async (sessionId: string) => {
@@ -69,6 +108,55 @@ export const ProviderVirtualWaitingRoom = ({
 
   const handleJoinSession = (sessionId: string) => {
     navigate(`/practice/video/${sessionId}`);
+  };
+
+  const handleCreateInstantSession = async () => {
+    if (!selectedPatientId || !selectedProviderId) {
+      toast({
+        title: "Error",
+        description: "Please select both a patient and provider",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setCreatingSession(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-instant-video-session', {
+        body: {
+          patientId: selectedPatientId,
+          providerId: selectedProviderId,
+          practiceId
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Session Created",
+        description: "Instant video session started successfully"
+      });
+
+      // Refresh the sessions list
+      queryClient.invalidateQueries({ queryKey: ['provider-video-sessions', practiceId] });
+
+      // Navigate to the video room
+      navigate(`/practice/video/${data.sessionId}`);
+
+      // Close dialog and reset
+      setShowCreateDialog(false);
+      setSelectedPatientId("");
+      setSelectedProviderId("");
+    } catch (error: any) {
+      console.error('Error creating instant session:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create instant video session",
+        variant: "destructive"
+      });
+    } finally {
+      setCreatingSession(false);
+    }
   };
 
   if (isLoading) {
@@ -103,13 +191,98 @@ export const ProviderVirtualWaitingRoom = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Video className="h-5 w-5 text-primary" />
-          Virtual Waiting Room
-          <span className="ml-auto text-sm font-normal text-muted-foreground">
-            {videoSessions.length} {videoSessions.length === 1 ? 'appointment' : 'appointments'}
-          </span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Video className="h-5 w-5 text-primary" />
+            Virtual Waiting Room
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              {videoSessions.length} {videoSessions.length === 1 ? 'appointment' : 'appointments'}
+            </span>
+          </CardTitle>
+
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create Instant Session
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Instant Video Session</DialogTitle>
+                <DialogDescription>
+                  Start an immediate video consultation with a patient
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="patient">Select Patient *</Label>
+                  <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
+                    <SelectTrigger id="patient">
+                      <SelectValue placeholder="Choose a patient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {patients?.map((patient: any) => (
+                        <SelectItem key={patient.id} value={patient.id}>
+                          {patient.profiles?.name || patient.profiles?.email || 'Unknown Patient'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="provider">Select Provider *</Label>
+                  <Select value={selectedProviderId} onValueChange={setSelectedProviderId}>
+                    <SelectTrigger id="provider">
+                      <SelectValue placeholder="Choose a provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {providers?.map((provider: any) => (
+                        <SelectItem key={provider.id} value={provider.id}>
+                          {provider.first_name && provider.last_name
+                            ? `${provider.first_name} ${provider.last_name}`
+                            : provider.profiles?.name || provider.profiles?.email || 'Unknown Provider'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateDialog(false);
+                    setSelectedPatientId("");
+                    setSelectedProviderId("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateInstantSession}
+                  disabled={!selectedPatientId || !selectedProviderId || creatingSession}
+                  className="gap-2"
+                >
+                  {creatingSession ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Video className="h-4 w-4" />
+                      Start Session
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {videoSessions.map((session) => {

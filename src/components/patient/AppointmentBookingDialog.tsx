@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown } from "lucide-react";
+import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown, Video as VideoIcon, Phone } from "lucide-react";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 
 interface AppointmentBookingDialogProps {
@@ -31,6 +31,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
   const [practiceSubscription, setPracticeSubscription] = useState<any>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [debugOpen, setDebugOpen] = useState(false);
+  const [visitType, setVisitType] = useState<'in_person' | 'video' | 'phone'>('in_person');
 
   // Fetch patient's assigned practice
   const { data: patientAccount } = useQuery({
@@ -250,7 +251,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
           clientDateTimeIso,
           timezoneOffsetMinutes,
           reasonForVisit: formData.get("reason"),
-          visitType: 'in_person',
+          visitType: visitType,
           notes: formData.get("notes"),
         },
       });
@@ -326,13 +327,57 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
                         : ''}
                   </p>
                 </div>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Building className="h-3 w-3" />
-                  In-Person
-                </Badge>
               </div>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="visit_type">Visit Type *</Label>
+            <Select name="visit_type" value={visitType} onValueChange={(value: any) => setVisitType(value)}>
+              <SelectTrigger id="visit_type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in_person">
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    <span>In-Person Visit</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="video">
+                  <div className="flex items-center gap-2">
+                    <VideoIcon className="h-4 w-4" />
+                    <span>Video Consultation</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="phone">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    <span>Phone Consultation</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {visitType === 'video' && (
+              <p className="text-xs text-muted-foreground">
+                You'll receive a link to join 15 minutes before your appointment
+              </p>
+            )}
+            {visitType === 'phone' && (
+              <p className="text-xs text-muted-foreground">
+                Provider will call you at your registered phone number
+              </p>
+            )}
+            {visitType === 'in_person' && patientAccount && (
+              <p className="text-xs text-muted-foreground">
+                {Array.isArray(patientAccount.practice) 
+                  ? `${patientAccount.practice[0]?.address_city}, ${patientAccount.practice[0]?.address_state}` 
+                  : patientAccount.practice 
+                    ? `${patientAccount.practice.address_city}, ${patientAccount.practice.address_state}`
+                    : ''}
+              </p>
+            )}
+          </div>
 
           {providers && providers.length > 0 && (
             <div className="space-y-2">
