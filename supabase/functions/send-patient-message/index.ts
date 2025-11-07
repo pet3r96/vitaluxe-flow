@@ -368,6 +368,46 @@ Deno.serve(async (req) => {
     }
 
     console.log('[send-patient-message] Patient message sent successfully');
+    
+    // Notify all admins of new support message from patient
+    try {
+      const { data: adminRoles } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+      
+      if (adminRoles && adminRoles.length > 0) {
+        // Get patient name
+        const { data: patientInfo } = await supabaseAdmin
+          .from('patient_accounts')
+          .select('name, email')
+          .eq('id', patientAccount.id)
+          .maybeSingle();
+        
+        const adminNotifications = adminRoles.map(role => ({
+          user_id: role.user_id,
+          title: 'New Support Message',
+          message: `${patientInfo?.name || patientInfo?.email || 'Patient'}: ${subject || 'New message'}`,
+          notification_type: 'support_message',
+          severity: 'info',
+          entity_type: 'patient_messages',
+          entity_id: insertedMessage?.id,
+          action_url: '/messages',
+          metadata: {
+            user_name: patientInfo?.name || patientInfo?.email,
+            patient_id: patientAccount.id,
+            subject: subject || 'Patient Message'
+          },
+          read: false,
+        }));
+        
+        await supabaseAdmin.from('notifications').insert(adminNotifications);
+        console.log(`[send-patient-message] Sent notification to ${adminRoles.length} admins`);
+      }
+    } catch (notifError) {
+      console.error('[send-patient-message] Failed to send admin notifications:', notifError);
+    }
+    
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

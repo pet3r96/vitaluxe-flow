@@ -8,13 +8,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotificationPreferencesDialog } from "./NotificationPreferencesDialog";
 
 export function NotificationPanel() {
-  const { notifications, loading, markAllAsRead, unreadCount, markAsRead, deleteNotification } = useNotifications();
+  const { notifications, loading, isAdmin, markAllAsRead, unreadCount, markAsRead, deleteNotification } = useNotifications();
   const [showPreferences, setShowPreferences] = useState(false);
   const [filterType, setFilterType] = useState<string | null>(null);
 
-  const filteredNotifications = filterType 
+  // Admin notification types
+  const adminNotificationTypes = ['new_signup', 'system_error', 'support_message', 'security_alert', 'admin_action_required'];
+  
+  const filteredNotifications = filterType === 'admin'
+    ? notifications.filter(n => adminNotificationTypes.includes(n.notification_type))
+    : filterType 
     ? notifications.filter(n => n.notification_type === filterType)
     : notifications;
+    
+  // Count admin notifications
+  const adminNotificationCount = notifications.filter(n => 
+    adminNotificationTypes.includes(n.notification_type) && !n.read
+  ).length;
 
   const unreadNotifications = filteredNotifications.filter((n) => !n.read);
   const readNotifications = filteredNotifications.filter((n) => n.read);
@@ -65,8 +75,18 @@ export function NotificationPanel() {
         </div>
 
         <Tabs defaultValue="all" className="mb-2" onValueChange={(v) => setFilterType(v === 'all' ? null : v)}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="admin" className="text-xs relative">
+                Admin
+                {adminNotificationCount > 0 && (
+                  <span className="ml-1 bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 text-[10px]">
+                    {adminNotificationCount > 9 ? "9+" : adminNotificationCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger value="patient_message_received" className="text-xs">Messages</TabsTrigger>
             <TabsTrigger value="appointment_booked" className="text-xs">Appointments</TabsTrigger>
             <TabsTrigger value="form_completed" className="text-xs">Forms</TabsTrigger>

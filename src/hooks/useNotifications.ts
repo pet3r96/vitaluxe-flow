@@ -25,8 +25,28 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check if current user is an admin
+  const checkIsAdmin = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      
+      return !error && !!data;
+    } catch (error) {
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error checking admin status", error);
+      });
+      return false;
+    }
+  };
 
   // Fetch notifications with optional type filter
   const fetchNotifications = async (typeFilter?: string) => {
@@ -39,10 +59,18 @@ export function useNotifications() {
         return;
       }
 
+      // Check admin status and cache it
+      const adminStatus = await checkIsAdmin(user.id);
+      setIsAdmin(adminStatus);
+
       let query = supabase
         .from("notifications")
-        .select("*")
-        .eq("user_id", user.id);
+        .select("*");
+
+      // Admin users see ALL notifications, regular users only see their own
+      if (!adminStatus) {
+        query = query.eq("user_id", user.id);
+      }
 
       if (typeFilter) {
         query = query.eq("notification_type", typeFilter as any);
@@ -229,6 +257,7 @@ export function useNotifications() {
     notifications,
     unreadCount,
     loading,
+    isAdmin,
     markAsRead,
     markAllAsRead,
     deleteNotification,

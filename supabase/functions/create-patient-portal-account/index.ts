@@ -569,6 +569,38 @@ Deno.serve(async (req) => {
     }
 
     console.log('[create-patient-portal-account] Successfully created account:', patientAccount.id);
+    
+    // Notify all admins of new signup
+    try {
+      const { data: adminRoles } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+      
+      if (adminRoles && adminRoles.length > 0) {
+        const adminNotifications = adminRoles.map(role => ({
+          user_id: role.user_id,
+          title: 'New Patient Account Created',
+          message: `${patient.name || patient.email} has been invited to the patient portal`,
+          notification_type: 'new_signup',
+          severity: 'info',
+          entity_type: 'patient_accounts',
+          entity_id: patient.id,
+          action_url: `/patients/${patient.id}`,
+          metadata: {
+            user_name: patient.name || patient.email,
+            patient_id: patient.id,
+            email: patient.email
+          },
+          read: false,
+        }));
+        
+        await supabaseAdmin.from('notifications').insert(adminNotifications);
+        console.log(`[create-patient-portal-account] Sent notification to ${adminRoles.length} admins`);
+      }
+    } catch (notifError) {
+      console.error('[create-patient-portal-account] Failed to send admin notifications:', notifError);
+    }
 
     return new Response(
       JSON.stringify({ 

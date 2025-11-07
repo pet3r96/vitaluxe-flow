@@ -85,6 +85,45 @@ serve(async (req) => {
       console.error("Failed to insert error log:", insertError);
       throw insertError;
     }
+    
+    // Notify all admins of critical errors
+    if (action_type === 'error' || details.severity === 'error') {
+      try {
+        const adminClient = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+        
+        const { data: adminRoles } = await adminClient
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin');
+        
+        if (adminRoles && adminRoles.length > 0) {
+          const adminNotifications = adminRoles.map(role => ({
+            user_id: role.user_id,
+            title: 'System Error Detected',
+            message: `${details.error_message || 'An error occurred in the system'}`,
+            notification_type: 'system_error',
+            severity: 'error',
+            entity_type: 'audit_logs',
+            entity_id: details.entity_id,
+            action_url: '/admin/logs',
+            metadata: {
+              error_type: entity_type,
+              user_email: user?.email,
+              stack_trace: details.stack_trace
+            },
+            read: false,
+          }));
+          
+          await adminClient.from('notifications').insert(adminNotifications);
+          console.log(`[log-error] Sent error notification to ${adminRoles.length} admins`);
+        }
+      } catch (notifError) {
+        console.error('[log-error] Failed to send admin notifications:', notifError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

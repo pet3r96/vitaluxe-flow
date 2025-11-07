@@ -37,6 +37,10 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
 
   const config = severityConfig[notification.severity];
   const Icon = config.icon;
+  
+  // Check if this is an admin notification
+  const adminNotificationTypes = ['new_signup', 'system_error', 'support_message', 'security_alert', 'admin_action_required'];
+  const isAdminNotification = adminNotificationTypes.includes(notification.notification_type);
 
   const handleClick = () => {
     if (!notification.read) {
@@ -118,10 +122,22 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
             )}
           </div>
 
-          {/* Type badge */}
-          <Badge variant="outline" className="mt-2 text-xs">
-            {notification.notification_type.replace("_", " ")}
-          </Badge>
+          {/* Type badge with admin indicator */}
+          <div className="flex gap-2 mt-2">
+            <Badge variant="outline" className="text-xs">
+              {notification.notification_type.replace(/_/g, " ")}
+            </Badge>
+            {isAdminNotification && (
+              <Badge variant="secondary" className="text-xs">
+                Admin
+              </Badge>
+            )}
+            {notification.metadata?.user_name && (
+              <span className="text-xs text-muted-foreground">
+                • {notification.metadata.user_name}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

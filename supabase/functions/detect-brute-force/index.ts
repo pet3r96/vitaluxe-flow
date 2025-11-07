@@ -83,7 +83,40 @@ serve(async (req) => {
         lockout_reason: "brute_force_detected",
         locked_until: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min
       });
-      console.log(`Account locked for ${email} until ${new Date(Date.now() + 30 * 60 * 1000).toISOString()}`);
+    console.log(`Account locked for ${email} until ${new Date(Date.now() + 30 * 60 * 1000).toISOString()}`);
+      
+      // Notify all admins of security alert
+      try {
+        const { data: adminRoles } = await supabaseClient
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin');
+        
+        if (adminRoles && adminRoles.length > 0) {
+          const adminNotifications = adminRoles.map(role => ({
+            user_id: role.user_id,
+            title: 'Security Alert: Brute Force Detected',
+            message: `${attempt_count} failed login attempts for ${email} from IP ${ip_address}. Account locked for 30 minutes.`,
+            notification_type: 'security_alert',
+            severity: 'error',
+            entity_type: 'security_events',
+            entity_id: user.id,
+            action_url: '/admin/security',
+            metadata: {
+              email,
+              ip_address,
+              attempt_count,
+              locked_until: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+            },
+            read: false,
+          }));
+          
+          await supabaseClient.from('notifications').insert(adminNotifications);
+          console.log(`[detect-brute-force] Sent security alert to ${adminRoles.length} admins`);
+        }
+      } catch (notifError) {
+        console.error('[detect-brute-force] Failed to send admin notifications:', notifError);
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {

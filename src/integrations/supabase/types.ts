@@ -8852,6 +8852,11 @@ export type Database = {
         | "appointment_rescheduled"
         | "appointment_cancelled"
         | "document_assigned"
+        | "new_signup"
+        | "system_error"
+        | "support_message"
+        | "security_alert"
+        | "admin_action_required"
       order_status:
         | "pending"
         | "filled"
@@ -9061,6 +9066,11 @@ export const Constants = {
         "appointment_rescheduled",
         "appointment_cancelled",
         "document_assigned",
+        "new_signup",
+        "system_error",
+        "support_message",
+        "security_alert",
+        "admin_action_required",
       ],
       order_status: [
         "pending",
