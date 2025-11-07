@@ -25,6 +25,7 @@ import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { SignedAgreementSection } from "./SignedAgreementSection";
+import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 
 const providerFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required").max(100),
@@ -527,6 +528,8 @@ verifyNPIDebounced(value, (result) => {
         </Button>
       </CardContent>
     </Card>
+    
+    <NotificationPreferencesSection />
     
     <SignedAgreementSection userId={effectiveUserId} />
     </div>

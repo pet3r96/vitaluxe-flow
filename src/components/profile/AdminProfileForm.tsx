@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { validatePasswordStrength } from "@/lib/passwordStrength";
 import { SignedAgreementSection } from "./SignedAgreementSection";
+import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function AdminProfileForm() {
@@ -296,6 +297,8 @@ export function AdminProfileForm() {
         </CardContent>
       </Card>
 
+      <NotificationPreferencesSection />
+      
       <SignedAgreementSection userId={effectiveUserId} />
     </div>
   );

@@ -22,6 +22,7 @@ import { Loader2, Save, KeyRound } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { phoneSchema } from "@/lib/validators";
 import { SignedAgreementSection } from "./SignedAgreementSection";
+import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 
 const staffFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -272,6 +273,8 @@ export const StaffProfileForm = () => {
           </Button>
         </CardContent>
       </Card>
+
+      <NotificationPreferencesSection />
 
       <SignedAgreementSection userId={effectiveUserId} />
     </div>

@@ -14,6 +14,7 @@ import { Loader2, KeyRound } from "lucide-react";
 import { phoneSchema } from "@/lib/validators";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { SignedAgreementSection } from "./SignedAgreementSection";
+import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 
 const repFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -239,6 +240,8 @@ export function RepProfileForm() {
           </Button>
         </CardContent>
       </Card>
+      
+      <NotificationPreferencesSection />
       
       <SignedAgreementSection userId={effectiveUserId} />
     </div>
