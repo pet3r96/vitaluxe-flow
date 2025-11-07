@@ -36,6 +36,17 @@ Deno.serve(async (req) => {
     // Create appointment scheduled ~1 minute from now
     const now = new Date();
     const scheduledTime = new Date(now.getTime() + 60_000);
+    const endTime = new Date(scheduledTime.getTime() + 30 * 60_000); // +30 mins default
+
+    console.log('[create-instant-video-session] Creating appointment with payload', {
+      patient_id: patientId,
+      provider_id: providerId,
+      practice_id: practiceId,
+      start_time: scheduledTime.toISOString(),
+      end_time: endTime.toISOString(),
+      visit_type: 'video',
+      status: 'confirmed',
+    });
 
     const { data: appointment, error: appointmentError } = await supabase
       .from('patient_appointments')
@@ -44,6 +55,7 @@ Deno.serve(async (req) => {
         provider_id: providerId,
         practice_id: practiceId,
         start_time: scheduledTime.toISOString(),
+        end_time: endTime.toISOString(),
         visit_type: 'video',
         status: 'confirmed',
         reason_for_visit: 'Instant Video Consultation',
@@ -51,6 +63,10 @@ Deno.serve(async (req) => {
       })
       .select()
       .single();
+
+    if (appointmentError) {
+      console.error('[create-instant-video-session] Insert error:', appointmentError.message);
+    }
 
     if (appointmentError || !appointment) {
       return new Response(
