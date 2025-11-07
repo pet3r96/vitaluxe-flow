@@ -178,8 +178,8 @@ export function useNotifications() {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
       
-      // Refresh count for robustness
-      fetchUnreadCount();
+      // Refresh both count and notifications to ensure sync with database
+      await Promise.all([fetchUnreadCount(), fetchNotifications()]);
     } catch (error) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error deleting notification", error);

@@ -6,9 +6,10 @@ import { CheckCheck, Loader2, Bell, Settings, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotificationPreferencesDialog } from "./NotificationPreferencesDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 export function NotificationPanel() {
-  const { notifications, loading, isAdmin, markAllAsRead, unreadCount, markAsRead, deleteNotification } = useNotifications();
+  const { notifications, loading, isAdmin, markAllAsRead, unreadCount, markAsRead, deleteNotification, refetch } = useNotifications();
   const [showPreferences, setShowPreferences] = useState(false);
   const [filterType, setFilterType] = useState<string | null>(null);
 
@@ -31,7 +32,16 @@ export function NotificationPanel() {
 
   const handleDeleteAllUnread = async () => {
     const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
-    await Promise.all(unreadIds.map(id => deleteNotification(id)));
+    
+    // Delete all notifications in parallel
+    const deletePromises = unreadIds.map(id => 
+      supabase.from("notifications").delete().eq("id", id)
+    );
+    
+    await Promise.all(deletePromises);
+    
+    // Refetch to sync UI with database state
+    await refetch();
   };
 
   if (loading) {
