@@ -7706,6 +7706,7 @@ export type Database = {
           id: string
           is_enrolled: boolean
           last_ghl_verification: string | null
+          last_twilio_verification: string | null
           last_verified_at: string | null
           phone_number: string | null
           phone_number_encrypted: string | null
@@ -7713,6 +7714,8 @@ export type Database = {
           phone_verified_at: string | null
           reset_at: string | null
           reset_requested_by: string | null
+          twilio_enabled: boolean | null
+          twilio_phone_verified: boolean | null
           updated_at: string
           user_id: string
         }
@@ -7724,6 +7727,7 @@ export type Database = {
           id?: string
           is_enrolled?: boolean
           last_ghl_verification?: string | null
+          last_twilio_verification?: string | null
           last_verified_at?: string | null
           phone_number?: string | null
           phone_number_encrypted?: string | null
@@ -7731,6 +7735,8 @@ export type Database = {
           phone_verified_at?: string | null
           reset_at?: string | null
           reset_requested_by?: string | null
+          twilio_enabled?: boolean | null
+          twilio_phone_verified?: boolean | null
           updated_at?: string
           user_id: string
         }
@@ -7742,6 +7748,7 @@ export type Database = {
           id?: string
           is_enrolled?: boolean
           last_ghl_verification?: string | null
+          last_twilio_verification?: string | null
           last_verified_at?: string | null
           phone_number?: string | null
           phone_number_encrypted?: string | null
@@ -7749,6 +7756,8 @@ export type Database = {
           phone_verified_at?: string | null
           reset_at?: string | null
           reset_requested_by?: string | null
+          twilio_enabled?: boolean | null
+          twilio_phone_verified?: boolean | null
           updated_at?: string
           user_id?: string
         }

@@ -89,7 +89,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
         throw new Error('No active session');
       }
 
-      const { data, error } = await supabase.functions.invoke('send-ghl-sms', {
+      const { data, error } = await supabase.functions.invoke('send-2fa-sms', {
         body: { phoneNumber: cleanedPhone, purpose: 'enrollment' }
       });
 
@@ -167,7 +167,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
 
       console.log('[GHLSmsSetupDialog] Calling verify-ghl-sms with attemptId:', attemptId);
 
-      const { data, error } = await supabase.functions.invoke('verify-ghl-sms', {
+      const { data, error } = await supabase.functions.invoke('verify-2fa-sms', {
         body: { code: codeToVerify, attemptId, phoneNumber: phone }, // Send attemptId, code, and phoneNumber
         headers: {
           Authorization: `Bearer ${session.access_token}`
