@@ -124,16 +124,16 @@ Deno.serve(async (req) => {
             .from('profiles')
             .select('id, name, full_name')
             .eq('id', effectiveUserId)
-            .single();
+            .maybeSingle();
 
           if (providerProfile) {
-            const displayName = providerProfile.full_name || providerProfile.name || 'Unknown Provider';
+            const displayName = providerProfile.full_name || providerProfile.name || 'Provider';
             const nameParts = displayName.trim().split(' ');
             return [{
               id: providerRecord.id,
               user_id: effectiveUserId,
               active: true,
-              first_name: nameParts[0] || '',
+              first_name: nameParts[0] || 'Provider',
               last_name: nameParts.slice(1).join(' ') || '',
               full_name: displayName,
               specialty: null
@@ -141,22 +141,29 @@ Deno.serve(async (req) => {
           }
           return [];
         } else {
-          // Fetch providers with their profiles in a single query using join
-          const { data: providerRecords } = await supabaseClient
+          // Fetch providers with their profiles - use left join to ensure providers show even without profile
+          const { data: providerRecords, error: providerError } = await supabaseClient
             .from('providers')
             .select(`
               id,
               user_id,
               active,
-              profiles!providers_user_id_fkey(id, name, full_name)
+              profiles:user_id(id, name, full_name)
             `)
             .eq('practice_id', practiceId)
             .eq('active', true);
           
+          if (providerError) {
+            console.error('[get-calendar-data] Error fetching providers:', providerError);
+            return [];
+          }
+          
           if (providerRecords && providerRecords.length > 0) {
             console.log('[get-calendar-data] Raw provider records:', JSON.stringify(providerRecords, null, 2));
+            
             return providerRecords.map((p: any) => {
-              const profile = p.profiles;
+              const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+              
               console.log('[get-calendar-data] Processing provider:', {
                 provider_id: p.id,
                 user_id: p.user_id,
@@ -164,17 +171,26 @@ Deno.serve(async (req) => {
                 profile_name: profile?.name,
                 profile_full_name: profile?.full_name
               });
-              const displayName = profile?.full_name || profile?.name || 'Unknown Provider';
+              
+              // Build display name with better fallbacks
+              let displayName = 'Provider';
+              if (profile?.full_name) {
+                displayName = profile.full_name;
+              } else if (profile?.name) {
+                displayName = profile.name;
+              }
+              
               const nameParts = displayName.trim().split(' ');
               const result = {
                 id: p.id,
                 user_id: p.user_id,
                 active: p.active,
-                first_name: nameParts[0] || '',
+                first_name: nameParts[0] || 'Provider',
                 last_name: nameParts.slice(1).join(' ') || '',
                 full_name: displayName,
                 specialty: null
               };
+              
               console.log('[get-calendar-data] Transformed provider:', result);
               return result;
             });
