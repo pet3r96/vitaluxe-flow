@@ -194,7 +194,28 @@ export function useNotifications() {
       await ensureValidSession();
       
       console.log('[useNotifications] Deleting notification:', notificationId);
+      
+      // Verify ownership before deleting
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to delete notifications",
+          variant: "destructive"
+        });
+        throw new Error("Not authenticated");
+      }
+      
       const notification = notifications.find((n) => n.id === notificationId);
+      if (notification && notification.user_id !== user.id) {
+        console.warn('[useNotifications] Attempted to delete non-owned notification');
+        toast({
+          title: "Permission denied",
+          description: "You can only delete your own notifications",
+          variant: "destructive"
+        });
+        throw new Error("Permission denied: not owner");
+      }
       
       const { error } = await supabase
         .from("notifications")
@@ -203,6 +224,11 @@ export function useNotifications() {
 
       if (error) {
         console.error('[useNotifications] Delete failed:', error);
+        toast({
+          title: "Delete failed",
+          description: error.message || "Failed to delete notification",
+          variant: "destructive"
+        });
         throw error;
       }
 

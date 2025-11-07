@@ -46,7 +46,7 @@ export function NotificationPanel() {
     try {
       setDeletingAll(true);
       
-      // Verify session first
+      // Verify session and get current user
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
         toast({
@@ -57,7 +57,12 @@ export function NotificationPanel() {
         return;
       }
       
-      const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+      const currentUserId = session.user.id;
+      
+      // Only delete notifications owned by current user to avoid RLS errors
+      const unreadIds = notifications
+        .filter(n => !n.read && n.user_id === currentUserId)
+        .map(n => n.id);
       
       if (unreadIds.length === 0) {
         toast({

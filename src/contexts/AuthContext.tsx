@@ -298,6 +298,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         localStorage.setItem(getSessionExpKey(user.id), String(cappedExpireAt));
         
+        // Sync 2FA verification expiry with session expiry
+        if (is2FAVerifiedThisSession) {
+          const twoFaKey = `vitaluxe_2fa_verified_until_${user.id}`;
+          localStorage.setItem(twoFaKey, String(cappedExpireAt));
+          console.log('[Session] 2FA verification expiry synced with session extension');
+        }
+        
         // Clear and reset timeout
         if (hardTimerRef.current) {
           clearTimeout(hardTimerRef.current);
@@ -401,6 +408,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
           localStorage.setItem(getSessionStartKey(session.user.id), String(sessionStart));
           lastActivityRef.current = Date.now();
+          
+          // Initialize 2FA verification expiry with session expiry
+          if (is2FAVerifiedThisSession) {
+            const twoFaKey = `vitaluxe_2fa_verified_until_${session.user.id}`;
+            localStorage.setItem(twoFaKey, String(expireAt));
+            console.log('[Session] Initial 2FA verification expiry set');
+          }
           
           // Schedule primary hard timeout
           hardTimerRef.current = window.setTimeout(() => {
