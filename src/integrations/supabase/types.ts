@@ -8587,6 +8587,14 @@ export type Database = {
           npi: string
         }[]
       }
+      get_default_notification_settings: {
+        Args: { user_role: Database["public"]["Enums"]["app_role"] }
+        Returns: {
+          email_enabled: boolean
+          in_app_enabled: boolean
+          sms_enabled: boolean
+        }[]
+      }
       get_discount_code_stats: {
         Args: { p_code: string }
         Returns: {

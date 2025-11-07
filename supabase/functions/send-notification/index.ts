@@ -65,11 +65,15 @@ serve(async (req) => {
     // Get user details and preferences
     const { data: user } = await supabase.auth.admin.getUserById(notification.user_id);
     
+    // Get notification preferences for this specific event type
     const { data: preferences } = await supabase
       .from("notification_preferences")
       .select("*")
       .eq("user_id", notification.user_id)
+      .eq("event_type", notification.notification_type)
       .single();
+    
+    console.log("Notification preferences for event type:", notification.notification_type, preferences);
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -108,7 +112,7 @@ serve(async (req) => {
     };
 
     // Send Email via Postmark (replaced AWS SES on 2025-10-22)
-    if (send_email && preferences?.email_notifications && profile?.email) {
+    if (send_email && preferences?.email_enabled && profile?.email) {
       try {
         const POSTMARK_API_KEY = Deno.env.get("POSTMARK_API_KEY");
         const POSTMARK_FROM_EMAIL = Deno.env.get("POSTMARK_FROM_EMAIL") || "info@vitaluxeservices.com";
@@ -187,7 +191,7 @@ serve(async (req) => {
     }
 
     // Send SMS via GHL webhook
-    if (send_sms && preferences?.sms_notifications && profile?.phone) {
+    if (send_sms && preferences?.sms_enabled && profile?.phone) {
       try {
         const ghlWebhookUrl = Deno.env.get("GHL_WEBHOOK_URL");
 
