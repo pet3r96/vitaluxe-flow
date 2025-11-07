@@ -230,6 +230,8 @@ export const ProductsGrid = () => {
 
   const filteredProducts = useMemo(() => 
     products?.filter((product) => {
+      if (!product) return false;
+      
       const matchesSearch =
         product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.dosage?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -243,7 +245,7 @@ export const ProductsGrid = () => {
         (prescriptionFilter === "no" && product.requires_prescription === false);
       
       // Filter out RX products if practice cannot order them (unless admin viewing)
-      const canSeeProduct = viewingAsAdmin || !product.requires_prescription || canOrderRx;
+      const canSeeProduct = viewingAsAdmin || !product?.requires_prescription || canOrderRx;
       
       return matchesSearch && matchesType && matchesPrescription && canSeeProduct;
     }), 
