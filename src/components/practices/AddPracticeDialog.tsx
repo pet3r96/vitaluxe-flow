@@ -308,49 +308,6 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
               />
             </div>
 
-            <div className="space-y-3 col-span-2">
-              <Label>Prescriber Status *</Label>
-              <RadioGroup 
-                value={formData.hasPrescriber ? "yes" : "no"} 
-                onValueChange={(value) => {
-                  const hasPrescriber = value === "yes";
-                  setFormData({ 
-                    ...formData, 
-                    hasPrescriber,
-                    npi: hasPrescriber ? formData.npi : "",
-                    licenseNumber: hasPrescriber ? formData.licenseNumber : "",
-                    dea: hasPrescriber ? formData.dea : ""
-                  });
-                  if (!hasPrescriber) {
-                    setNpiVerificationStatus(null);
-                    setValidationErrors({ ...validationErrors, npi: "", dea: "" });
-                  }
-                }}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="prescriber-yes" />
-                  <Label htmlFor="prescriber-yes" className="font-normal cursor-pointer">
-                    This practice has a prescriber (NPI required)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="prescriber-no" />
-                  <Label htmlFor="prescriber-no" className="font-normal cursor-pointer">
-                    No prescriber - non-Rx products only
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {!formData.hasPrescriber && (
-              <div className="col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-800">
-                  ℹ️ This practice will only have access to non-prescription products. 
-                  You can add a provider with prescribing privileges later.
-                </p>
-              </div>
-            )}
-
             {/* NPI - Now always required */}
             <div className="space-y-2">
               <Label htmlFor="npi">Practice NPI # *</Label>

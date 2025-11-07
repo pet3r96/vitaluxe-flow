@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface AddPracticeRequestDialogProps {
   open: boolean;
@@ -39,27 +38,105 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
     address_street: "",
     address_city: "",
     address_state: "",
-  const [formData, setFormData] = useState({
-    practice_name: "",
-    email: "",
-    npi: "",
-    license_number: "",
-    dea: "",
-    phone: "",
-    address_street: "",
-    address_city: "",
-    address_state: "",
     address_zip: "",
     address_formatted: "",
-    address_verification_status: "unverified" as const,
+    address_verification_status: "unverified",
     address_verified_at: undefined as Date | undefined,
     address_verification_source: "",
   });
 
-  // Track latest NPI value
+  // Track latest NPI value to guard against stale callback updates
+  const currentNpiRef = useRef(formData.npi);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate required fields - NPI is now always required
+    if (!formData.practice_name || !formData.email || !formData.phone || !formData.npi || !formData.license_number) {
+      toast.error("Please fill in all required fields (Practice Name, Email, Phone, NPI, License Number)");
+      return;
+    }
+
+    // NPI must always be verified
+    if (npiVerificationStatus !== "verified") {
+      if (npiVerificationStatus === "verifying") {
+        toast.error("Please wait for NPI verification to complete");
+      } else {
+        toast.error("NPI must be verified before submitting");
+      }
+      return;
+    }
+
+    // Validate all fields
+    const phoneResult = validatePhone(formData.phone);
+    const npiResult = validateNPI(formData.npi);
+    const deaResult = formData.dea ? validateDEA(formData.dea) : { valid: true };
+    
+    if (!phoneResult.valid || !npiResult.valid || !deaResult.valid) {
+      setValidationErrors({
+        phone: phoneResult.error || "",
+        npi: npiResult.error || "",
+        dea: deaResult.error || "",
+      });
+      toast.error("Please fix validation errors before submitting");
+      return;
+    }
+    
+    setLoading(true);
+
+    try {
+      if (!effectiveUserId) {
+        throw new Error("User not authenticated");
+      }
+
+      const { error } = await supabase
+        .from("pending_practices")
+        .insert([{
+          created_by_user_id: effectiveUserId,
+          has_prescriber: true, // Always true now
+          practice_name: formData.practice_name,
+          email: formData.email,
+          phone: formData.phone || null,
+          npi: formData.npi,
+          license_number: formData.license_number,
+          dea: formData.dea || null,
+          address_street: formData.address_street || null,
+          address_city: formData.address_city || null,
+          address_state: formData.address_state || null,
+          address_zip: formData.address_zip || null,
+          address_formatted: formData.address_formatted || null,
+          assigned_rep_user_id: null,
+          company: formData.practice_name,
+          created_by_role: (effectiveRole === 'admin' || effectiveRole === 'doctor' || effectiveRole === 'topline' || effectiveRole === 'downline') ? effectiveRole : 'admin',
+          prescriber_full_name: "",
+          prescriber_name: "",
+          prescriber_npi: "",
+          prescriber_dea: null,
+          prescriber_license: "",
+          prescriber_phone: null
+        }]);
+
+      if (error) throw error;
+
+      toast.success("Practice request submitted for admin approval");
+      onSuccess?.();
+      onOpenChange(false);
+      setNpiVerificationStatus(null);
+      setFormData({
+        practice_name: "",
+        email: "",
+        npi: "",
+        license_number: "",
+        dea: "",
+        phone: "",
+        address_street: "",
+        address_city: "",
+        address_state: "",
+        address_zip: "",
+        address_formatted: "",
         address_verification_status: "unverified",
         address_verified_at: undefined,
-        address_verification_source: ""
+        address_verification_source: "",
       });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
@@ -112,51 +189,8 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                   required
                 />
               </div>
-
-              <div className="space-y-3 col-span-2">
-                <Label>Prescriber Status *</Label>
-                <RadioGroup 
-                  value={formData.hasPrescriber ? "yes" : "no"} 
-                  onValueChange={(value) => {
-                    const hasPrescriber = value === "yes";
-                    setFormData({ 
-                      ...formData, 
-                      hasPrescriber,
-                      npi: hasPrescriber ? formData.npi : "",
-                      license_number: hasPrescriber ? formData.license_number : "",
-                      dea: hasPrescriber ? formData.dea : ""
-                    });
-                    if (!hasPrescriber) {
-                      setNpiVerificationStatus(null);
-                      setValidationErrors({ ...validationErrors, npi: "", dea: "" });
-                    }
-                  }}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="yes" id="prescriber-yes-req" />
-                    <Label htmlFor="prescriber-yes-req" className="font-normal cursor-pointer">
-                      This practice has a prescriber (NPI required)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="no" id="prescriber-no-req" />
-                    <Label htmlFor="prescriber-no-req" className="font-normal cursor-pointer">
-                      No prescriber - non-Rx products only
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {!formData.hasPrescriber && (
-                <div className="col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800">
-                    ℹ️ This practice will only have access to non-prescription products. 
-                    A provider with prescribing privileges can be added later.
-                  </p>
-                </div>
-              )}
               
-              <div className="space-y-2">
+              <div className="space-y-2 col-span-2">
                 <Label htmlFor="phone">Phone *</Label>
                 <PhoneInput
                   id="phone"
@@ -182,7 +216,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
                 <Input
                   id="npi"
                   value={formData.npi}
-onChange={(e) => {
+                  onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
                     setFormData({ ...formData, npi: value });
                     currentNpiRef.current = value;
@@ -195,31 +229,31 @@ onChange={(e) => {
                       setNpiVerificationStatus("verifying");
                     }
                     
-                // Real-time NPI verification
-                if (value && value.length === 10) {
-                  const expectedNpi = value; // Capture current value
-verifyNPIDebounced(value, (result) => {
-                    // Only apply if this result matches the latest input value
-                    if (currentNpiRef.current === expectedNpi) {
-                      if (result.valid && !result.error) {
-                        setNpiVerificationStatus("verified");
-                        setValidationErrors(prev => ({ ...prev, npi: "" }));
-                        if (result.providerName) {
-                          toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
-                        } else {
-                          toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
+                    // Real-time NPI verification
+                    if (value && value.length === 10) {
+                      const expectedNpi = value; // Capture current value
+                      verifyNPIDebounced(value, (result) => {
+                        // Only apply if this result matches the latest input value
+                        if (currentNpiRef.current === expectedNpi) {
+                          if (result.valid && !result.error) {
+                            setNpiVerificationStatus("verified");
+                            setValidationErrors(prev => ({ ...prev, npi: "" }));
+                            if (result.providerName) {
+                              toast.success(`NPI Verified: ${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`);
+                            } else {
+                              toast.success(`NPI ${result.npi} verified successfully${result.type ? ` (${result.type})` : ''}`);
+                            }
+                          } else {
+                            // Failed or has error
+                            setNpiVerificationStatus("failed");
+                            setValidationErrors(prev => ({ 
+                              ...prev, 
+                              npi: result.error || "NPI verification failed" 
+                            }));
+                          }
                         }
-                      } else {
-                        // Failed or has error
-                        setNpiVerificationStatus("failed");
-                        setValidationErrors(prev => ({ 
-                          ...prev, 
-                          npi: result.error || "NPI verification failed" 
-                        }));
-                      }
+                      });
                     }
-                  });
-                }
                   }}
                   onBlur={() => {
                     const result = validateNPI(formData.npi);
@@ -230,19 +264,20 @@ verifyNPIDebounced(value, (result) => {
                   required
                   className={validationErrors.npi ? "border-destructive" : ""}
                 />
-                {validationErrors.npi && (
-                  <p className="text-sm text-destructive">{validationErrors.npi}</p>
-                )}
                 {npiVerificationStatus === "verifying" && (
                   <p className="text-sm text-muted-foreground">🔄 Verifying NPI...</p>
                 )}
                 {npiVerificationStatus === "verified" && (
-                  <p className="text-sm text-green-600">✅ NPI Verified</p>
+                  <p className="text-sm text-green-600">✓ NPI Verified</p>
                 )}
-                {!npiVerificationStatus && formData.npi.length === 0 && (
+                {npiVerificationStatus === "verified" && (
                   <p className="text-xs text-muted-foreground">Verified against NPPES registry</p>
                 )}
+                {validationErrors.npi && (
+                  <p className="text-sm text-destructive">{validationErrors.npi}</p>
+                )}
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="license_number">License Number *</Label>
                 <Input
@@ -252,8 +287,9 @@ verifyNPIDebounced(value, (result) => {
                   required
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="dea">DEA</Label>
+                <Label htmlFor="dea">DEA # (Optional)</Label>
                 <Input
                   id="dea"
                   value={formData.dea}
@@ -293,8 +329,8 @@ verifyNPIDebounced(value, (result) => {
                 address_state: addr.state || "",
                 address_zip: addr.zip || "",
                 address_formatted: addr.formatted || "",
-                address_verification_status: addr.status || 'unverified',
-                address_verified_at: addr.verified_at,
+                address_verification_status: addr.status === 'verified' || addr.status === 'manual' || addr.status === 'unverified' ? addr.status : 'unverified',
+                address_verified_at: addr.verified_at ? new Date(addr.verified_at) : undefined,
                 address_verification_source: addr.source || "",
               })}
               required
