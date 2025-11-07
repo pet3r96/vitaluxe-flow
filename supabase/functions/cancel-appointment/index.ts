@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
       appointmentId,
       found: !!appointment,
       currentStatus: appointment?.status,
-      belongsToPatient: appointment?.patient_id === patientAccount.id,
+      belongsToPatient: patientAccount ? appointment?.patient_id === patientAccount.id : false,
       fetchError: fetchError?.message 
     });
 

@@ -51,9 +51,18 @@ Deno.serve(async (req) => {
     // Fetch provider to check authorization
     const { data: provider, error: providerError } = await supabase
       .from('providers')
-      .select('user_id, first_name, last_name')
+      .select('user_id, practice_id')
       .eq('id', session.provider_id)
       .single();
+
+    // Fetch provider profile for display name (optional)
+    const { data: providerProfile } = await supabase
+      .from('profiles')
+      .select('full_name, name')
+      .eq('id', provider?.user_id)
+      .maybeSingle();
+
+    const providerName = providerProfile?.full_name || providerProfile?.name || 'Provider';
 
     if (providerError || !provider) {
       console.error('[start-video-session] Provider not found:', providerError?.message);
@@ -63,10 +72,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify provider authorization - check against provider's user_id
-    if (provider.user_id !== user.id) {
-      console.error('[start-video-session] Authorization failed:', { provider_user_id: provider.user_id, auth_user_id: user.id });
-      return new Response(JSON.stringify({ error: 'Only the assigned provider can start the session' }), {
+    // Determine effective user (handle impersonation)
+    let effectiveUserId = user.id;
+    try {
+      const { data: imp } = await supabase
+        .from('active_impersonation_sessions')
+        .select('impersonated_user_id, revoked, expires_at')
+        .eq('admin_user_id', user.id)
+        .eq('revoked', false)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+      if (imp?.impersonated_user_id) {
+        effectiveUserId = imp.impersonated_user_id;
+      }
+    } catch (_) {}
+
+    // Authorization: assigned provider, practice account, or provider/staff in same practice
+    let authorized = provider.user_id === effectiveUserId || session.practice_id === effectiveUserId;
+    if (!authorized) {
+      const { data: myProvider } = await supabase
+        .from('providers')
+        .select('practice_id')
+        .eq('user_id', effectiveUserId)
+        .maybeSingle();
+      const { data: myStaff } = await supabase
+        .from('practice_staff')
+        .select('practice_id')
+        .eq('user_id', effectiveUserId)
+        .maybeSingle();
+      authorized = (myProvider?.practice_id === session.practice_id) || (myStaff?.practice_id === session.practice_id);
+    }
+
+    if (!authorized) {
+      console.error('[start-video-session] Authorization failed:', { provider_user_id: provider.user_id, auth_user_id: user.id, effectiveUserId });
+      return new Response(JSON.stringify({ error: 'Not authorized to start this session' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -90,9 +129,9 @@ Deno.serve(async (req) => {
     // Fetch patient profile
     const { data: patientProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('first_name, last_name, phone')
+      .select('phone')
       .eq('id', session.patient_id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('[start-video-session] Patient profile not found:', profileError?.message);
@@ -133,7 +172,7 @@ Deno.serve(async (req) => {
     // Send SMS to patient (if phone available)
     const patientPhone = patientProfile?.phone;
     if (patientPhone) {
-      const providerName = `Dr. ${provider.first_name} ${provider.last_name}`;
+      const providerDisplayName = providerName;
       const portalUrl = `${Deno.env.get('SITE_URL') || 'https://vitaluxe.lovable.app'}/patient/video/${sessionId}`;
       
       // Generate guest link automatically
