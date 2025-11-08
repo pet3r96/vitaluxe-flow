@@ -190,21 +190,35 @@ export const ProviderVirtualWaitingRoom = ({
   const handleCancelAppointment = async (appointmentId: string) => {
     setCancellingSession(appointmentId);
     try {
+      console.log('🔥 [UI] Cancelling appointment:', appointmentId);
+      
       const { error } = await supabase.functions.invoke('cancel-appointment', {
         body: { appointmentId }
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Appointment Cancelled",
-        description: "The video appointment has been cancelled"
+      console.log('✅ [UI] Appointment cancelled, invalidating and refetching queries');
+
+      // Force immediate refetch of the sessions list
+      await queryClient.invalidateQueries({ 
+        queryKey: ['provider-video-sessions', practiceId],
+        refetchType: 'active'
+      });
+      
+      // Also refetch to ensure immediate UI update
+      await queryClient.refetchQueries({
+        queryKey: ['provider-video-sessions', practiceId]
       });
 
-      // Refresh the sessions list
-      queryClient.invalidateQueries({ queryKey: ['provider-video-sessions', practiceId] });
+      toast({
+        title: "✓ Appointment Cancelled",
+        description: "The video appointment has been successfully cancelled"
+      });
+
+      console.log('✅ [UI] Queries refreshed, appointment should be removed from list');
     } catch (error: any) {
-      console.error('Error cancelling appointment:', error);
+      console.error('❌ [UI] Error cancelling appointment:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to cancel appointment",
