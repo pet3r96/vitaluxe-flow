@@ -8667,6 +8667,10 @@ export type Database = {
         Args: { _downline_user_id: string; _practice_id: string }
         Returns: boolean
       }
+      can_manage_video_session: {
+        Args: { _session_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_topline_view_practice: {
         Args: { _practice_id: string; _topline_user_id: string }
         Returns: boolean

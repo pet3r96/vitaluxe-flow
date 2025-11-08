@@ -40,6 +40,9 @@ export const ProviderVirtualWaitingRoom = ({
   const [cancellingSession, setCancellingSession] = useState<string | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [sessionToCancel, setSessionToCancel] = useState<string | null>(null);
+  const [completingAppointment, setCompletingAppointment] = useState<string | null>(null);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [appointmentToComplete, setAppointmentToComplete] = useState<string | null>(null);
 
   // Subscribe to realtime updates for instant UI updates
   useEffect(() => {
@@ -251,6 +254,72 @@ export const ProviderVirtualWaitingRoom = ({
       setSessionToCancel(null);
     }
   };
+
+  const handleCompleteAppointment = async (appointmentId: string) => {
+    setCompletingAppointment(appointmentId);
+    try {
+      console.log('🎉 [UI] Completing appointment:', appointmentId);
+
+      const { error } = await supabase.functions.invoke('complete-video-appointment', {
+        body: { appointmentId }
+      });
+
+      if (error) throw error;
+
+      // Optimistically remove the completed appointment from cache
+      queryClient.setQueryData<any[]>(['provider-video-sessions', practiceId], (old) => {
+        if (!old) return old;
+        const next = old.filter((s) => s.appointment_id !== appointmentId);
+        console.log('🧹 [UI] Optimistically removed completed appointment', appointmentId, { before: old.length, after: next.length });
+        return next;
+      });
+
+      // Wait briefly for backend confirmation
+      const waitForCompletion = async () => {
+        for (let i = 0; i < 10; i++) {
+          const { data } = await supabase
+            .from('patient_appointments')
+            .select('id, status')
+            .eq('id', appointmentId)
+            .maybeSingle();
+          if (!data || data.status === 'completed') return true;
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        return false;
+      };
+
+      const confirmed = await waitForCompletion();
+      console.log('⏱️ [UI] Backend confirmation that appointment completed:', confirmed);
+
+      console.log('✅ [UI] Appointment completed, invalidating and refetching queries');
+
+      // Force immediate refetch
+      await queryClient.invalidateQueries({ 
+        queryKey: ['provider-video-sessions', practiceId],
+        refetchType: 'active'
+      });
+      await queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
+
+      toast({
+        title: "✓ Appointment Completed",
+        description: "The video appointment has been marked as completed"
+      });
+
+      console.log('✅ [UI] Queries refreshed, appointment should be removed from list');
+    } catch (error: any) {
+      console.error('❌ [UI] Error completing appointment:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to complete appointment",
+        variant: "destructive"
+      });
+    } finally {
+      setCompletingAppointment(null);
+      setShowCompleteDialog(false);
+      setAppointmentToComplete(null);
+    }
+  };
+
   const handleCreateInstantSession = async () => {
     if (!selectedPatientId || !selectedProviderId) {
       toast({
@@ -813,15 +882,52 @@ export const ProviderVirtualWaitingRoom = ({
                 )}
 
                 {session.status === 'active' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => handleJoinSession(session.id)}
-                  >
-                    <Video className="h-4 w-4" />
-                    Rejoin
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 border-green-500 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950"
+                      onClick={() => {
+                        setAppointmentToComplete(session.appointment_id);
+                        setShowCompleteDialog(true);
+                      }}
+                      disabled={completingAppointment === session.appointment_id}
+                      title="Mark appointment as completed"
+                    >
+                      {completingAppointment === session.appointment_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                      Complete
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => handleJoinSession(session.id)}
+                    >
+                      <Video className="h-4 w-4" />
+                      Rejoin
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSessionToCancel(session.appointment_id);
+                        setShowCancelDialog(true);
+                      }}
+                      disabled={cancellingSession === session.appointment_id}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      title="Cancel appointment"
+                    >
+                      {cancellingSession === session.appointment_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -870,6 +976,27 @@ export const ProviderVirtualWaitingRoom = ({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Cancel Appointment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Complete Confirmation Dialog */}
+      <AlertDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Appointment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Mark this video appointment as completed? The appointment will be removed from your waiting room and archived.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not Yet</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => appointmentToComplete && handleCompleteAppointment(appointmentToComplete)}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              Complete Appointment
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
