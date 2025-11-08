@@ -375,7 +375,6 @@ export function CreateAppointmentDialog({
               <SelectContent>
                 <SelectItem value="in_person">In-Person</SelectItem>
                 <SelectItem value="video">Video Call</SelectItem>
-                <SelectItem value="phone">Phone Call</SelectItem>
               </SelectContent>
             </Select>
           </div>
