@@ -35,6 +35,7 @@ export const useVideoChat = ({
   const [isConnected, setIsConnected] = useState(false);
   const clientRef = useRef<any>(null);
   const channelRef = useRef<any>(null);
+  const currentTokenRef = useRef<string>(rtmToken);
 
   useEffect(() => {
     const initRTM = async () => {
@@ -127,6 +128,18 @@ export const useVideoChat = ({
     };
   }, [appId, rtmToken, rtmUid, channelName, sessionId, userName, userType]);
 
+  const renewRtmToken = async (newToken: string) => {
+    if (!clientRef.current) return;
+    
+    try {
+      await clientRef.current.renewToken(newToken);
+      currentTokenRef.current = newToken;
+      console.log("✅ RTM token renewed successfully");
+    } catch (error) {
+      console.error("❌ RTM token renewal failed:", error);
+    }
+  };
+
   const sendMessage = async (text: string) => {
     if (!channelRef.current || !text.trim()) return;
 
@@ -160,5 +173,5 @@ export const useVideoChat = ({
     }
   };
 
-  return { messages, sendMessage, isConnected };
+  return { messages, sendMessage, isConnected, renewRtmToken };
 };

@@ -25,6 +25,7 @@ import { NetworkQualityIndicator } from "./NetworkQualityIndicator";
 import { useVideoChat } from "@/hooks/useVideoChat";
 import { VideoChatPanel } from "./VideoChatPanel";
 import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
+import { useTokenAutoRefresh } from "@/hooks/useTokenAutoRefresh";
 
 interface AgoraVideoRoomProps {
   channelName: string;
@@ -150,7 +151,16 @@ export const AgoraVideoRoom = ({
     sessionId,
     userName,
     userType: isProvider ? "provider" : "patient",
-  }) : { messages: [], sendMessage: async () => {}, isConnected: false };
+  }) : { messages: [], sendMessage: async () => {}, isConnected: false, renewRtmToken: async () => {} };
+
+  // Auto-refresh tokens to prevent session interruptions
+  useTokenAutoRefresh({
+    client,
+    sessionId,
+    channelName,
+    onRtmTokenRefresh: chat.renewRtmToken,
+    enabled: !!client,
+  });
 
   useEffect(() => {
     let cancelled = false;
