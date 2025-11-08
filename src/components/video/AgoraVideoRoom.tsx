@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import AgoraUIKit, { PropsInterface } from "agora-react-uikit";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Loader2, AlertCircle } from "lucide-react";
 
 interface AgoraVideoRoomProps {
   channelName: string;
@@ -28,10 +29,36 @@ export function AgoraVideoRoom({
   const [videoCall, setVideoCall] = useState(true);
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+
+  // Request camera and microphone permissions
+  useEffect(() => {
+    const requestPermissions = async () => {
+      try {
+        console.log("🎤 Requesting camera/microphone permissions...");
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        
+        // Stop the test stream
+        stream.getTracks().forEach(track => track.stop());
+        
+        console.log("✅ Permissions granted");
+        setPermissionsGranted(true);
+      } catch (err) {
+        console.error("❌ Permission denied:", err);
+        setPermissionError("Camera and microphone access is required for video calls. Please allow access and try again.");
+      }
+    };
+
+    requestPermissions();
+  }, []);
 
   // Auto-start recording when provider joins and remote user is present
   useEffect(() => {
-    if (!isProvider) return;
+    if (!isProvider || !permissionsGranted) return;
 
     const startRecordingTimer = setTimeout(async () => {
       try {
@@ -52,7 +79,7 @@ export function AgoraVideoRoom({
     }, 2000); // Wait 2s for both parties to join
 
     return () => clearTimeout(startRecordingTimer);
-  }, [isProvider, sessionId, channelName]);
+  }, [isProvider, sessionId, channelName, permissionsGranted]);
 
   const handleEndSession = async () => {
     try {
@@ -81,13 +108,24 @@ export function AgoraVideoRoom({
     }
   };
 
+  const parsedUid = parseInt(uid.replace(/[^0-9]/g, '').slice(0, 10)) || 0;
+  
   const rtcProps: PropsInterface['rtcProps'] = {
     appId: appId,
     channel: channelName,
     token: token,
-    uid: parseInt(uid.replace(/[^0-9]/g, '').slice(0, 10)) || 0,
+    uid: parsedUid,
     role: 'host',
   };
+
+  // Debug logging
+  console.log("🎥 Initializing Agora UIKit with:", {
+    appId: appId ? "✓ present" : "✗ missing",
+    channel: channelName,
+    token: token ? "✓ present" : "✗ missing",
+    uid: parsedUid,
+    role: 'host'
+  });
 
   const callbacks: PropsInterface['callbacks'] = {
     EndCall: () => {
@@ -107,6 +145,44 @@ export function AgoraVideoRoom({
     },
     theme: '#1a1a1a',
   };
+
+  // Show loading while requesting permissions
+  if (!permissionsGranted && !permissionError) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-foreground">Requesting camera and microphone access...</p>
+          <p className="text-sm text-muted-foreground">Please allow access when prompted</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if permissions denied
+  if (permissionError) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
+        <Card className="p-8 max-w-md">
+          <div className="text-center space-y-4">
+            <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <AlertCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">Permission Required</h2>
+            <p className="text-muted-foreground">{permissionError}</p>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+              <Button variant="outline" onClick={onLeave}>
+                Go Back
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (!videoCall) {
     return null;
