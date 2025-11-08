@@ -16,6 +16,7 @@ import {
   MonitorUp,
   Circle,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +61,7 @@ export const AgoraVideoRoom = ({
   const [screenTrack, setScreenTrack] = useState<ILocalVideoTrack | null>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [recordingStatus, setRecordingStatus] = useState<'not_started' | 'starting' | 'active' | 'stopping' | 'stopped'>('not_started');
 
   const quality = useNetworkQuality(client, sessionId);
   
@@ -186,6 +188,66 @@ export const AgoraVideoRoom = ({
       client?.leave();
     };
   }, [channelName, token, uid, appId]);
+
+  // Auto-start recording when both parties join
+  useEffect(() => {
+    const startRecording = async () => {
+      if (remoteUsers.length > 0 && recordingStatus === 'not_started' && isProvider) {
+        console.log("🎥 Both parties joined, starting recording...");
+        setRecordingStatus('starting');
+        
+        try {
+          const { data, error } = await supabase.functions.invoke('start-video-recording', {
+            body: { sessionId }
+          });
+
+          if (error) throw error;
+
+          setRecordingStatus('active');
+          toast({
+            title: "Recording Started",
+            description: "This session is now being recorded"
+          });
+        } catch (error) {
+          console.error("Failed to start recording:", error);
+          setRecordingStatus('not_started');
+          toast({
+            title: "Recording Failed",
+            description: "Could not start recording. Please try manually.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+
+    startRecording();
+  }, [remoteUsers.length, recordingStatus, isProvider, sessionId]);
+
+  const stopRecording = async () => {
+    setRecordingStatus('stopping');
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('stop-video-recording', {
+        body: { sessionId }
+      });
+
+      if (error) throw error;
+
+      setRecordingStatus('stopped');
+      toast({
+        title: "Recording Stopped",
+        description: "The recording has been saved"
+      });
+    } catch (error) {
+      console.error("Failed to stop recording:", error);
+      toast({
+        title: "Stop Recording Failed",
+        description: "Could not stop recording",
+        variant: "destructive"
+      });
+      setRecordingStatus('active');
+    }
+  };
 
   const toggleMute = () => {
     if (localAudioTrack) {
@@ -330,10 +392,18 @@ export const AgoraVideoRoom = ({
       {/* Header */}
       <div className="h-16 border-b bg-card px-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-destructive">
-            <Circle className="h-3 w-3 fill-current animate-pulse" />
-            <span className="text-sm font-medium">RECORDING</span>
-          </div>
+          {recordingStatus === 'active' && (
+            <div className="flex items-center gap-2 text-destructive">
+              <Circle className="h-3 w-3 fill-current animate-pulse" />
+              <span className="text-sm font-medium">RECORDING</span>
+            </div>
+          )}
+          {remoteUsers.length === 0 && recordingStatus !== 'active' && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Circle className="h-3 w-3" />
+              <span className="text-sm font-medium">Waiting for participants...</span>
+            </div>
+          )}
           <div className="text-sm text-muted-foreground">
             Duration: {formatDuration(sessionDuration)}
           </div>
@@ -345,15 +415,38 @@ export const AgoraVideoRoom = ({
         </div>
         
         {isProvider && (
-          <Button
-            size="lg"
-            variant="destructive"
-            onClick={handleLeave}
-            className="gap-2"
-          >
-            <PhoneOff className="h-5 w-5" />
-            End Session
-          </Button>
+          <div className="flex items-center gap-2">
+            {(recordingStatus === 'active' || recordingStatus === 'stopping') && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={stopRecording}
+                disabled={recordingStatus === 'stopping'}
+                className="gap-2"
+              >
+                {recordingStatus === 'stopping' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Stopping...
+                  </>
+                ) : (
+                  <>
+                    <Circle className="h-4 w-4" />
+                    Stop Recording
+                  </>
+                )}
+              </Button>
+            )}
+            <Button
+              size="lg"
+              variant="destructive"
+              onClick={handleLeave}
+              className="gap-2"
+            >
+              <PhoneOff className="h-5 w-5" />
+              End Session
+            </Button>
+          </div>
         )}
       </div>
 

@@ -17,7 +17,7 @@ export default function VideoConsultationRoom() {
   const [showDeviceTest, setShowDeviceTest] = useState(false);
 
   useEffect(() => {
-    const joinSession = async () => {
+    const joinSession = async (retryCount = 0) => {
       if (!sessionId) {
         setError("Session ID is required");
         setLoading(false);
@@ -25,8 +25,10 @@ export default function VideoConsultationRoom() {
       }
 
       try {
+        console.log(`🔗 [Attempt ${retryCount + 1}] Joining video session:`, sessionId);
+        
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 12000)
+          setTimeout(() => reject(new Error('timeout')), 15000)
         );
 
         const invokePromise = supabase.functions.invoke('join-video-session', {
@@ -35,33 +37,64 @@ export default function VideoConsultationRoom() {
 
         const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
 
+        console.log("📡 Join session response:", { data, error });
+
         if (error) {
-          console.error("Join session error:", error);
-          throw new Error(error.message || "Failed to connect to video session");
+          console.error("❌ Join session error:", error);
+          
+          // Map specific errors to user-friendly messages
+          let friendlyMessage = "Failed to connect to video session";
+          if (error.message?.includes("not found")) {
+            friendlyMessage = "This video session no longer exists";
+          } else if (error.message?.includes("token")) {
+            friendlyMessage = "Unable to generate video credentials";
+          } else if (error.message?.includes("unauthorized")) {
+            friendlyMessage = "You don't have permission to join this session";
+          }
+          
+          throw new Error(friendlyMessage);
         }
 
         if (!data) {
-          throw new Error("No session data received");
+          throw new Error("No session data received from server");
         }
 
         if (!data.token || !data.channelName || !data.appId) {
-          throw new Error("Invalid session data received");
+          console.error("❌ Invalid session data:", data);
+          throw new Error("Invalid session configuration received");
         }
 
+        console.log("✅ Session joined successfully");
         setSessionData(data);
         setShowDeviceTest(true);
       } catch (err: any) {
-        console.error("Error joining video session:", err);
+        console.error("❌ Error joining video session:", err);
+        
+        // Retry logic with exponential backoff
+        if (retryCount < 2 && err.message !== 'timeout') {
+          const delay = retryCount === 0 ? 2000 : 5000;
+          console.log(`🔄 Retrying in ${delay}ms...`);
+          
+          toast({
+            title: "Still connecting...",
+            description: `Retry attempt ${retryCount + 2} of 3`,
+          });
+          
+          setTimeout(() => joinSession(retryCount + 1), delay);
+          return;
+        }
+        
+        // Final failure
         const errorMessage = err.message === 'timeout'
-          ? "Connection is taking longer than expected. Please try again."
+          ? "Connection timeout. Please check your internet and try again."
           : (err.message || "Failed to join video session");
+        
         setError(errorMessage);
         toast({
-          title: err.message === 'timeout' ? "Still connecting" : "Connection Error",
+          title: "Connection Failed",
           description: errorMessage,
-          variant: err.message === 'timeout' ? undefined : "destructive"
+          variant: "destructive"
         });
-      } finally {
         setLoading(false);
       }
     };

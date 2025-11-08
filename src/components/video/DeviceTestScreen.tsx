@@ -90,18 +90,37 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
   // Helper to pick the preferred microphone intelligently
   const pickPreferredMic = (mics: MediaDevice[], defaultId: string) => {
+    console.log("🎤 pickPreferredMic input:", { 
+      micCount: mics.length, 
+      defaultId,
+      allMics: mics.map(m => m.label)
+    });
+    
     const hasDefaultId = defaultId && mics.find(d => d.deviceId === defaultId)?.deviceId;
-    if (hasDefaultId) return defaultId;
+    if (hasDefaultId) {
+      console.log("✅ Using browser default device:", mics.find(d => d.deviceId === defaultId)?.label);
+      return defaultId;
+    }
 
     const preferDefaultLabel = mics.find(d => d.label?.toLowerCase().startsWith("default -"));
-    if (preferDefaultLabel) return preferDefaultLabel.deviceId;
+    if (preferDefaultLabel) {
+      console.log("✅ Using 'Default -' labeled device:", preferDefaultLabel.label);
+      return preferDefaultLabel.deviceId;
+    }
 
-    const preferBuiltIn = mics.find(d => /built[- ]?in|macbook/i.test(d.label));
-    if (preferBuiltIn) return preferBuiltIn.deviceId;
+    const preferBuiltIn = mics.find(d => /built[- ]?in|macbook|internal/i.test(d.label));
+    if (preferBuiltIn) {
+      console.log("✅ Using built-in device:", preferBuiltIn.label);
+      return preferBuiltIn.deviceId;
+    }
 
-    const deprioritized = ["iphone", "ipad", "airpods", "bluetooth"];
+    // Explicitly exclude continuity and bluetooth devices
+    const deprioritized = ["iphone", "ipad", "airpods", "bluetooth", "continuity"];
     const nonContinuity = mics.find(d => !deprioritized.some(x => d.label.toLowerCase().includes(x)));
-    return (nonContinuity || mics[0]).deviceId;
+    
+    const chosen = nonContinuity || mics[0];
+    console.log("⚠️ Fallback to device:", chosen.label);
+    return chosen.deviceId;
   };
 
   // Helper to persist device preferences
@@ -209,6 +228,10 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       if (micDevices.length > 0) {
         const defaultMicId = await getDefaultDeviceId("audioinput");
         const chosenMicId = pickPreferredMic(micDevices, defaultMicId);
+        console.log("🎤 All microphones:", micDevices.map(m => ({ id: m.deviceId, label: m.label })));
+        console.log("🎤 Default mic ID from browser:", defaultMicId);
+        console.log("🎤 Chosen mic ID:", chosenMicId);
+        console.log("🎤 Selected microphone label:", micDevices.find(m => m.deviceId === chosenMicId)?.label);
         setSelectedMicrophone(chosenMicId);
         persistPrefs(undefined, chosenMicId, undefined);
         await testMicrophone(chosenMicId);
@@ -604,6 +627,11 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
             onClick={() => {
               // Persist current selections before continuing
               persistPrefs(selectedCamera, selectedMicrophone, selectedSpeaker);
+              console.log("✅ Final device preferences saved:", {
+                camera: cameras.find(c => c.deviceId === selectedCamera)?.label,
+                microphone: microphones.find(m => m.deviceId === selectedMicrophone)?.label,
+                speaker: speakers.find(s => s.deviceId === selectedSpeaker)?.label,
+              });
               onComplete();
             }}
             disabled={!canContinue}
