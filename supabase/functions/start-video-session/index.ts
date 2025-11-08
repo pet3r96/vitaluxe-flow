@@ -72,6 +72,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check if user is an admin
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    const isAdmin = userRole?.role === 'admin';
+
     // Determine effective user (handle impersonation)
     let effectiveUserId = user.id;
     try {
@@ -87,9 +96,11 @@ Deno.serve(async (req) => {
       }
     } catch (_) {}
 
-    // Authorization: assigned provider, practice account, or provider/staff in same practice
-    let authorized = provider.user_id === effectiveUserId || session.practice_id === effectiveUserId;
+    // Authorization: admin, assigned provider, or provider/staff in same practice
+    let authorized = isAdmin || provider.user_id === effectiveUserId;
+    
     if (!authorized) {
+      // Check if user is a provider or staff in the same practice
       const { data: myProvider } = await supabase
         .from('providers')
         .select('practice_id')
