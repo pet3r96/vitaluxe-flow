@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 const ALLOWED_EMAILS = [
   'sporn.dylan@gmail.com',
-  'info@vitaluxeservices'
+  'info@vitaluxeservices.com'
 ];
 
 export const DeveloperRoute = ({ children }: { children: React.ReactNode }) => {
