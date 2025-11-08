@@ -214,20 +214,56 @@ Deno.serve(async (req) => {
       } catch (linkGenError) {
         console.warn('⚠️ Failed to generate guest link:', linkGenError);
       }
+
+      // Fetch practice name for template
+      const { data: practiceProfile } = await supabase
+        .from('profiles')
+        .select('full_name, name, practice_name')
+        .eq('id', session.practice_id)
+        .maybeSingle();
+
+      const practiceName = practiceProfile?.practice_name || practiceProfile?.full_name || practiceProfile?.name || 'VitaLuxe Healthcare';
+
+      // Fetch patient name for template
+      const { data: patientAccount } = await supabase
+        .from('patient_accounts')
+        .select('first_name, last_name')
+        .eq('id', session.patient_id)
+        .maybeSingle();
+
+      const patientName = patientAccount 
+        ? `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim() || 'there'
+        : 'there';
       
       // Send SMS (best-effort, non-blocking)
       try {
-        let smsMessage = `Your video appointment with ${providerName} is ready!\n\n`;
-        
-        if (guestLinkUrl) {
-          smsMessage += `Option 1 - Portal Login: ${portalUrl}\n`;
-          smsMessage += `Option 2 - Guest Access: ${guestLinkUrl}\n\n`;
-          smsMessage += `Guest link expires in 24 hours.\n\n`;
-        } else {
-          smsMessage += `Join now: ${portalUrl}\n\n`;
+        // Fetch custom SMS template or use default
+        const { data: templateData } = await supabase
+          .from('practice_sms_templates')
+          .select('message_template')
+          .eq('practice_id', session.practice_id)
+          .eq('template_type', 'session_ready')
+          .eq('is_active', true)
+          .maybeSingle();
+
+        let smsMessage = templateData?.message_template;
+
+        // Fallback to default template if none found
+        if (!smsMessage) {
+          if (guestLinkUrl) {
+            smsMessage = `Your video appointment with {{provider_name}} is ready!\n\nPortal Login: {{portal_link}}\nGuest Access: {{guest_link}}\n\nGuest link expires in 24 hours.\n\n{{practice_name}}`;
+          } else {
+            smsMessage = `Your video appointment with {{provider_name}} is ready!\n\nJoin now: {{portal_link}}\n\n{{practice_name}}`;
+          }
         }
-        
-        smsMessage += `VitaLuxe Healthcare`;
+
+        // Replace tokens with actual values
+        smsMessage = smsMessage
+          .replace(/\{\{provider_name\}\}/g, providerDisplayName)
+          .replace(/\{\{patient_name\}\}/g, patientName)
+          .replace(/\{\{portal_link\}\}/g, portalUrl)
+          .replace(/\{\{guest_link\}\}/g, guestLinkUrl)
+          .replace(/\{\{practice_name\}\}/g, practiceName);
 
         await supabase.functions.invoke('send-ghl-sms', {
           body: {

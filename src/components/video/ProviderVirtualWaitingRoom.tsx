@@ -6,11 +6,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar, Link2, X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar, Link2, X, Zap } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, isToday } from "date-fns";
+import { format, isToday, differenceInMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
+import { AppointmentCountdown } from "./AppointmentCountdown";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
@@ -45,6 +47,7 @@ export const ProviderVirtualWaitingRoom = ({
   const [completingAppointment, setCompletingAppointment] = useState<string | null>(null);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [appointmentToComplete, setAppointmentToComplete] = useState<string | null>(null);
+  const [preparingSession, setPreparingSession] = useState<string | null>(null);
 
   // Helper function to display patient names consistently
   const getPatientDisplay = (p: { first_name?: string; last_name?: string; email?: string; id: string }) => {
@@ -230,6 +233,43 @@ export const ProviderVirtualWaitingRoom = ({
 
   // Helper function to check if a session is synthetic (not yet created in DB)
   const isSyntheticSession = (sessionId: string) => sessionId.startsWith('apt-');
+
+  // Handler for "Prepare Session Now" button
+  const handlePrepareSession = async (sessionId: string) => {
+    setPreparingSession(sessionId);
+    
+    try {
+      const appointmentId = sessionId.replace('apt-', '');
+      console.log('[ProviderVirtualWaitingRoom] Preparing session for appointment:', appointmentId);
+      
+      const { data: ensureData, error: ensureError } = await supabase.functions.invoke('ensure-video-session', {
+        body: { appointmentId }
+      });
+      
+      if (ensureError || !ensureData?.sessionId) {
+        throw new Error('Failed to prepare video session');
+      }
+      
+      console.log('[ProviderVirtualWaitingRoom] ✅ Session prepared:', ensureData.sessionId);
+      
+      toast({
+        title: "Session Prepared",
+        description: "Video session is now ready. You can start it anytime."
+      });
+      
+      // Trigger immediate refetch to update UI
+      queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
+    } catch (error: any) {
+      console.error('Error preparing session:', error);
+      toast({
+        title: "Preparation Failed",
+        description: error.message || "Failed to prepare video session",
+        variant: "destructive"
+      });
+    } finally {
+      setPreparingSession(null);
+    }
+  };
 
   // Detect synthetic sessions and ensure refetch is active
   useEffect(() => {
@@ -1013,6 +1053,7 @@ export const ProviderVirtualWaitingRoom = ({
                   <div className="text-sm text-muted-foreground flex items-center gap-2">
                     <Clock className="h-3 w-3" />
                     {appointmentTime}
+                    <AppointmentCountdown scheduledStartTime={session.scheduled_start_time} />
                     {isPatientWaiting && (
                       <span className="text-green-600 dark:text-green-400 font-medium">
                         • Patient waiting
@@ -1024,6 +1065,34 @@ export const ProviderVirtualWaitingRoom = ({
 
               <div className="flex items-center gap-2">
                 <VideoSessionStatus status={session.status as any} />
+                
+                {/* Prepare Session Now button - only for synthetic sessions 10+ min before start */}
+                {isSyntheticSession(session.id) && 
+                 differenceInMinutes(new Date(session.scheduled_start_time), new Date()) >= 10 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePrepareSession(session.id)}
+                          disabled={preparingSession === session.id}
+                          className="gap-2 border-primary/50 text-primary hover:bg-primary/10"
+                        >
+                          {preparingSession === session.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Zap className="h-3 w-3" />
+                          )}
+                          Prepare Now
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Create session early to enable guest links and ready the room</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 
                 <Button
                   variant="outline"

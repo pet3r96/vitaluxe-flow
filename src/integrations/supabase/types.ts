@@ -5278,6 +5278,54 @@ export type Database = {
           },
         ]
       }
+      practice_sms_templates: {
+        Row: {
+          available_tokens: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          message_template: string
+          practice_id: string
+          template_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          available_tokens?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message_template: string
+          practice_id: string
+          template_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          available_tokens?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message_template?: string
+          practice_id?: string
+          template_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_sms_templates_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_sms_templates_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_staff: {
         Row: {
           active: boolean
