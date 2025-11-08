@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AgoraUIKit, { PropsInterface } from "agora-react-uikit";
-import AgoraRTC from "agora-rtc-sdk-ng";
+import "agora-react-uikit/dist/index.css";
+import AgoraRTC, { IAgoraRTCClient, IMicrophoneAudioTrack, ICameraVideoTrack, IAgoraRTCRemoteUser } from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Video, Mic } from "lucide-react";
 
 interface AgoraVideoRoomProps {
   channelName: string;
@@ -28,6 +31,14 @@ export function AgoraVideoRoom({
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
   const [agoraError, setAgoraError] = useState<string | null>(null);
+  const [preJoin, setPreJoin] = useState(true);
+  const [debugMode, setDebugMode] = useState(false);
+  const [joined, setJoined] = useState(false);
+  const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
+  
+  const clientRef = useRef<IAgoraRTCClient | null>(null);
+  const localVideoRef = useRef<HTMLDivElement>(null);
+  const localTracksRef = useRef<[IMicrophoneAudioTrack, ICameraVideoTrack] | null>(null);
 
   // Enable Agora SDK debug logging
   useEffect(() => {
@@ -69,43 +80,99 @@ export function AgoraVideoRoom({
     };
   }, []);
 
-  // Auto-start recording when provider joins and remote user is present
-  useEffect(() => {
-    if (!isProvider) return;
+  // Temporarily disabled auto-start recording to debug video UI
+  // useEffect(() => {
+  //   if (!isProvider) return;
+  //   const startRecordingTimer = setTimeout(async () => {
+  //     try {
+  //       setLoading(true);
+  //       const { error } = await supabase.functions.invoke('start-video-recording', {
+  //         body: { sessionId, channelName }
+  //       });
+  //       if (!error) {
+  //         setRecording(true);
+  //         console.log("✅ Recording started automatically");
+  //       }
+  //     } catch (err) {
+  //       console.error("Failed to start recording:", err);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }, 2000);
+  //   return () => clearTimeout(startRecordingTimer);
+  // }, [isProvider, sessionId, channelName]);
 
-    const startRecordingTimer = setTimeout(async () => {
-      try {
-        setLoading(true);
-        const { error } = await supabase.functions.invoke('start-video-recording', {
-          body: { sessionId, channelName }
-        });
+  const handleJoinWithGesture = async () => {
+    setPreJoin(false);
+    
+    if (debugMode) {
+      await joinWithRawSDK();
+    }
+  };
+
+  const joinWithRawSDK = async () => {
+    try {
+      console.log("🔧 [DEBUG MODE] Starting raw SDK join...");
+      
+      const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+      clientRef.current = client;
+
+      client.on("user-published", async (user, mediaType) => {
+        await client.subscribe(user, mediaType);
+        console.log("👥 Remote user published:", user.uid, mediaType);
         
-        if (!error) {
-          setRecording(true);
-          console.log("✅ Recording started automatically");
+        if (mediaType === "video") {
+          setRemoteUsers((prev) => [...prev.filter(u => u.uid !== user.uid), user]);
         }
-      } catch (err) {
-        console.error("Failed to start recording:", err);
-      } finally {
-        setLoading(false);
-      }
-    }, 2000); // Wait 2s for both parties to join
+        if (mediaType === "audio") {
+          user.audioTrack?.play();
+        }
+      });
 
-    return () => clearTimeout(startRecordingTimer);
-  }, [isProvider, sessionId, channelName]);
+      client.on("user-unpublished", (user) => {
+        console.log("👥 Remote user unpublished:", user.uid);
+        setRemoteUsers((prev) => prev.filter(u => u.uid !== user.uid));
+      });
+
+      await client.join(appId, channelName, token, uid);
+      console.log("✅ [DEBUG MODE] Joined channel");
+
+      const tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
+      localTracksRef.current = tracks;
+      console.log("✅ [DEBUG MODE] Created local tracks");
+
+      if (localVideoRef.current) {
+        tracks[1].play(localVideoRef.current);
+      }
+
+      await client.publish(tracks);
+      console.log("✅ [DEBUG MODE] Published local tracks");
+      
+      setJoined(true);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error("❌ [DEBUG MODE] Join failed:", errorMsg);
+      setAgoraError(`Raw SDK join failed: ${errorMsg}`);
+    }
+  };
 
   const handleEndSession = async () => {
     try {
       setLoading(true);
       
-      // Stop recording if active
+      // Cleanup raw SDK if in debug mode
+      if (debugMode && clientRef.current) {
+        localTracksRef.current?.[0].close();
+        localTracksRef.current?.[1].close();
+        await clientRef.current.leave();
+      }
+      
       if (recording) {
         await supabase.functions.invoke('stop-video-recording', {
           body: { sessionId }
         });
       }
 
-      // End session
       await supabase.functions.invoke('end-video-session', {
         body: { sessionId }
       });
@@ -179,6 +246,56 @@ export function AgoraVideoRoom({
     return null;
   }
 
+  // Show pre-join screen
+  if (preJoin && hasRequiredFields) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
+        <div className="bg-card border border-border rounded-lg p-8 max-w-md w-full text-center space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Video className="w-8 h-8 text-primary" />
+              <Mic className="w-8 h-8 text-primary" />
+            </div>
+            <h2 className="text-2xl font-semibold">Ready to Join?</h2>
+            <p className="text-muted-foreground">
+              Click below to join with camera & microphone. You may see a permissions prompt.
+            </p>
+          </div>
+          
+          {isProvider && (
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                id="debug-mode"
+                checked={debugMode}
+                onChange={(e) => setDebugMode(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="debug-mode" className="text-muted-foreground cursor-pointer">
+                Debug Mode (raw SDK)
+              </label>
+            </div>
+          )}
+          
+          <Button
+            onClick={handleJoinWithGesture}
+            size="lg"
+            className="w-full"
+          >
+            Join with Camera & Mic
+          </Button>
+          
+          <button
+            onClick={onLeave}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Show Agora runtime error if captured
   if (agoraError) {
     return (
@@ -244,6 +361,45 @@ export function AgoraVideoRoom({
     );
   }
 
+  // Debug mode: render raw SDK view
+  if (debugMode && joined) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <div className="absolute top-4 right-4 z-10 space-x-2">
+          <Button onClick={handleEndSession} variant="destructive">
+            End Call
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 p-4 h-full">
+          <div className="relative bg-gray-900 rounded-lg overflow-hidden">
+            <div ref={localVideoRef} className="w-full h-full" />
+            <div className="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-2 py-1 rounded">
+              You (Local)
+            </div>
+          </div>
+          
+          {remoteUsers.map((user) => (
+            <div key={user.uid} className="relative bg-gray-900 rounded-lg overflow-hidden">
+              <div
+                ref={(el) => {
+                  if (el && user.videoTrack) {
+                    user.videoTrack.play(el);
+                  }
+                }}
+                className="w-full h-full"
+              />
+              <div className="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-2 py-1 rounded">
+                Remote User {user.uid}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Normal mode: render UIKit
   return (
     <div className="fixed inset-0 z-50 bg-black">
       <AgoraUIKit
