@@ -92,6 +92,14 @@ export const ProvidersDataTable = () => {
     }
   }, [providers, selectedProvider?.id]);
 
+  // Refetch when dialog closes to ensure fresh data on next open
+  useEffect(() => {
+    if (!detailsDialogOpen) {
+      console.log('[ProvidersDataTable] Dialog closed, refetching providers...');
+      refetch();
+    }
+  }, [detailsDialogOpen, refetch]);
+
   // No longer need decryption - credentials stored in profiles table
 
   const toggleStatus = async (providerId: string, currentStatus: boolean) => {

@@ -266,7 +266,7 @@ export function CreateAppointmentDialog({
                         {providers && providers.length > 0 ? (
                           providers.map((provider) => (
                             <SelectItem key={provider.id} value={provider.id}>
-                              {getProviderDisplayName(provider)}
+                              {(provider as any).display_name || getProviderDisplayName(provider)}
                             </SelectItem>
                           ))
                         ) : (

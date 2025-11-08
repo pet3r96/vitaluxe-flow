@@ -254,23 +254,42 @@ export const ProviderDetailsDialog = ({
         throw providerError;
       }
 
-      // CRITICAL: Invalidate ALL caches and force immediate refetch for instant UI sync
+      // CRITICAL: Optimistically update ALL provider caches immediately for instant UI feedback
+      console.log('🔄 [ProviderDetailsDialog] Optimistically updating provider caches...');
+      
+      // Update all active 'providers' queries with the new data
+      queryClient.setQueriesData({ queryKey: ['providers'] }, (oldData: any) => {
+        if (!oldData) return oldData;
+        
+        // Handle both array and object responses
+        const providersList = Array.isArray(oldData) ? oldData : oldData.providers || [];
+        
+        const updatedList = providersList.map((p: any) => {
+          if (p.id === provider.id || p.user_id === provider.user_id) {
+            return {
+              ...p,
+              profiles: {
+                ...p.profiles,
+                ...profileUpdateData
+              }
+            };
+          }
+          return p;
+        });
+        
+        return Array.isArray(oldData) ? updatedList : { ...oldData, providers: updatedList };
+      });
+      
+      // Then invalidate caches and refetch in background
       console.log('🔄 [ProviderDetailsDialog] Invalidating caches for practice:', effectivePracticeId);
       
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges'] }),
-        queryClient.invalidateQueries({ queryKey: ['providers'] }), // All provider queries
+        queryClient.invalidateQueries({ queryKey: ['providers'] }),
         queryClient.invalidateQueries({ queryKey: ['calendar-data'] }),
         queryClient.invalidateQueries({ queryKey: ['patient_appointments'] }),
         queryClient.invalidateQueries({ queryKey: ['video-sessions'] })
       ]);
-      
-      // Force immediate refetch of ALL provider queries
-      console.log('🔄 [ProviderDetailsDialog] Force refetching all provider queries...');
-      await queryClient.refetchQueries({ 
-        queryKey: ['providers'],
-        type: 'active'
-      });
       
       toast.success("Provider updated successfully!", {
         description: `${formData.fullName} - NPI: ${formData.npi}`

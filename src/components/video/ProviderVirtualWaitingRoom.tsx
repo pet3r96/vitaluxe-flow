@@ -90,7 +90,7 @@ export const ProviderVirtualWaitingRoom = ({
         .select('id, patient_id, provider_id, start_time, status')
         .eq('practice_id', practiceId)
         .eq('visit_type', 'video')
-        .in('status', ['scheduled', 'confirmed', 'checked_in'])
+        .not('status', 'in', '("cancelled","completed")') // Exclude only terminal statuses
         .gte('start_time', yesterday.toISOString())
         .lt('start_time', dayAfterTomorrow.toISOString())
         .order('start_time', { ascending: true });
@@ -1075,6 +1075,7 @@ export const ProviderVirtualWaitingRoom = ({
         practiceId={practiceId}
         providers={providers?.map(p => ({
           id: p.id,
+          display_name: getProviderDisplayName(p),
           full_name: getProviderDisplayName(p),
           first_name: p.first_name || '',
           last_name: p.last_name || '',
