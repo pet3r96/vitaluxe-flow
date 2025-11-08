@@ -20,6 +20,7 @@ import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { GlobalIntakeDialog } from "./components/patient/GlobalIntakeDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
 import { PracticeOnlyRoute } from "./components/subscription/PracticeOnlyRoute";
+import { DeveloperRoute } from "./components/DeveloperRoute";
 import { SessionTimer } from "./components/auth/SessionTimer";
 import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";
@@ -273,7 +274,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/practice/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
                                        <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
                                        <Route path="/video-consultations" element={<SubscriptionProtectedRoute><VideoConsultations /></SubscriptionProtectedRoute>} />
-                                       <Route path="/video-test" element={<SubscriptionProtectedRoute><VideoTestRoom /></SubscriptionProtectedRoute>} />
+                                       <Route path="/video-test" element={<DeveloperRoute><VideoTestRoom /></DeveloperRoute>} />
                                        <Route path="/practice/video/:sessionId" element={<SubscriptionProtectedRoute><VideoConsultationRoom /></SubscriptionProtectedRoute>} />
                                        <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                       <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
