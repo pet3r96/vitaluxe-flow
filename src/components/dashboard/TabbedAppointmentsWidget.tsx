@@ -156,7 +156,7 @@ export function TabbedAppointmentsWidget() {
       const userIds = filtered.map((p: any) => p.user_id);
       const { data: profiles, error: profErr } = await supabase
         .from("profiles")
-        .select("id, full_name, name")
+        .select("id, full_name, name, prescriber_name, email")
         .in("id", userIds);
 
       if (profErr) throw profErr;
@@ -164,7 +164,22 @@ export function TabbedAppointmentsWidget() {
       const byId = new Map((profiles || []).map((pr: any) => [pr.id, pr]));
       return filtered.map((p: any) => {
         const prof = byId.get(p.user_id);
-        const display = prof?.full_name || prof?.name || "Unknown Provider";
+        
+        // Priority: prescriber_name > full_name > name (if not email) > derive from email
+        let display = "Provider";
+        if (prof?.prescriber_name) {
+          display = prof.prescriber_name;
+        } else if (prof?.full_name) {
+          display = prof.full_name;
+        } else if (prof?.name && !prof.name.includes('@')) {
+          display = prof.name;
+        } else if (prof?.email) {
+          const localPart = prof.email.split('@')[0];
+          display = localPart.split(/[._-]/).map((word: string) => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
+        }
+        
         const parts = display.trim().split(" ");
         return {
           id: p.id,

@@ -94,6 +94,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (appointmentError || !appointment) {
+      console.error('❌ [complete-video-appointment] Appointment not found:', appointmentError);
       return new Response(
         JSON.stringify({ error: 'Appointment not found' }),
         {
@@ -103,19 +104,46 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify user has permission
+    // Verify user has permission: provider, practice owner, or staff
+    let isAuthorized = false;
+
+    // Check if user is the provider
     const { data: provider } = await supabaseClient
       .from('providers')
-      .select('practice_id')
+      .select('id, practice_id')
       .eq('user_id', effectiveUserId)
-      .single();
+      .maybeSingle();
 
+    const isProvider = provider && appointment.provider_id === provider.id;
+    
+    // Check if user is practice owner
     const isPracticeOwner = appointment.practice_id === effectiveUserId;
-    const isProvider = provider && provider.practice_id === appointment.practice_id;
+    
+    // Check if user is staff member
+    const { data: staffMember } = await supabaseClient
+      .from('practice_staff')
+      .select('id')
+      .eq('user_id', effectiveUserId)
+      .eq('practice_id', appointment.practice_id)
+      .eq('active', true)
+      .maybeSingle();
+    
+    const isStaff = !!staffMember;
 
-    if (!isPracticeOwner && !isProvider) {
+    isAuthorized = isProvider || isPracticeOwner || isStaff;
+
+    console.log('🔐 [complete-video-appointment] Authorization:', {
+      isProvider,
+      isPracticeOwner,
+      isStaff,
+      isAuthorized,
+      appointmentPracticeId: appointment.practice_id,
+      effectiveUserId,
+    });
+
+    if (!isAuthorized) {
       return new Response(
-        JSON.stringify({ error: 'Not authorized to complete this appointment' }),
+        JSON.stringify({ error: 'Not authorized to complete this appointment. Only the provider, practice owner, or practice staff can complete appointments.' }),
         {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

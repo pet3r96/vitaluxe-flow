@@ -173,7 +173,14 @@ Deno.serve(async (req) => {
     const patientPhone = patientProfile?.phone;
     if (patientPhone) {
       const providerDisplayName = providerName;
-      const portalUrl = `${Deno.env.get('SITE_URL') || 'https://vitaluxe.lovable.app'}/patient/video/${sessionId}`;
+      
+      // Build URLs using origin header or environment variable
+      const origin = req.headers.get('origin') || 
+                     req.headers.get('referer')?.split('/').slice(0, 3).join('/') || 
+                     Deno.env.get('SITE_URL') || 
+                     'https://vitaluxeservices-app.lovable.app';
+      
+      const portalUrl = `${origin}/patient/video/${sessionId}`;
       
       // Generate guest link automatically
       let guestLinkUrl = '';
@@ -192,7 +199,7 @@ Deno.serve(async (req) => {
           });
 
         if (!linkError) {
-          guestLinkUrl = `${Deno.env.get('SITE_URL') || 'https://vitaluxe.lovable.app'}/video-guest/${token}`;
+          guestLinkUrl = `${origin}/video-guest/${token}`;
           
           // Log guest link generation
           await supabase.from('video_session_logs').insert({

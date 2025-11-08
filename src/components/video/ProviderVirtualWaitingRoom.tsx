@@ -105,16 +105,32 @@ export const ProviderVirtualWaitingRoom = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('providers')
-        .select('id, user_id, profiles:user_id(name, full_name, email)')
+        .select('id, user_id, profiles:user_id(name, full_name, email, prescriber_name)')
         .eq('practice_id', practiceId)
         .eq('active', true);
       
       if (error) throw error;
       
-      // Transform to match expected format
+      // Transform to match expected format with robust name fallback
       return (data as any[])?.map((p: any) => {
         const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
-        const fullName = profile?.full_name || profile?.name || 'Unknown Provider';
+        
+        // Priority: prescriber_name > full_name > name (if not email) > derive from email
+        let fullName = 'Provider';
+        if (profile?.prescriber_name) {
+          fullName = profile.prescriber_name;
+        } else if (profile?.full_name) {
+          fullName = profile.full_name;
+        } else if (profile?.name && !profile.name.includes('@')) {
+          fullName = profile.name;
+        } else if (profile?.email) {
+          // Derive from email local part
+          const localPart = profile.email.split('@')[0];
+          fullName = localPart.split(/[._-]/).map((word: string) => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
+        }
+        
         const nameParts = fullName.split(' ');
         
         return {
@@ -124,6 +140,7 @@ export const ProviderVirtualWaitingRoom = ({
           last_name: nameParts.slice(1).join(' ') || '',
           full_name: fullName,
           email: profile?.email,
+          prescriber_name: profile?.prescriber_name,
           profiles: profile
         };
       }) || [];
@@ -264,7 +281,27 @@ export const ProviderVirtualWaitingRoom = ({
         body: { appointmentId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [UI] Complete appointment error:', error);
+        let errorDescription = "Failed to complete appointment";
+        
+        // Parse error response for better messaging
+        if (typeof error === 'object' && error !== null) {
+          const errorObj = error as any;
+          if (errorObj.message) {
+            errorDescription = errorObj.message;
+          } else if (errorObj.error) {
+            errorDescription = errorObj.error;
+          }
+        }
+        
+        toast({
+          title: "Completion Failed",
+          description: errorDescription,
+          variant: "destructive"
+        });
+        return;
+      }
 
       // Optimistically remove the completed appointment from cache
       queryClient.setQueryData<any[]>(['provider-video-sessions', practiceId], (old) => {
@@ -340,13 +377,54 @@ export const ProviderVirtualWaitingRoom = ({
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating instant session:', error);
+        let errorDescription = "Failed to create instant session";
+        
+        // Parse error response for better messaging
+        if (typeof error === 'object' && error !== null) {
+          const errorObj = error as any;
+          if (errorObj.message) {
+            errorDescription = errorObj.message;
+          } else if (errorObj.error) {
+            errorDescription = errorObj.error;
+          }
+        }
+        
+        toast({
+          title: "Creation Failed",
+          description: errorDescription,
+          variant: "destructive"
+        });
+        return;
+      }
 
       // Start the session so patient gets notified immediately
       const { error: startError } = await supabase.functions.invoke('start-video-session', {
         body: { sessionId: (data as any).sessionId }
       });
-      if (startError) throw startError;
+      
+      if (startError) {
+        console.error('Error starting session:', startError);
+        let errorDescription = "Failed to start the video session";
+        
+        // Parse error response for better messaging
+        if (typeof startError === 'object' && startError !== null) {
+          const errorObj = startError as any;
+          if (errorObj.message) {
+            errorDescription = errorObj.message;
+          } else if (errorObj.error) {
+            errorDescription = errorObj.error;
+          }
+        }
+        
+        toast({
+          title: "Start Failed",
+          description: errorDescription,
+          variant: "destructive"
+        });
+        return;
+      }
 
       toast({
         title: "Session Started",
@@ -487,9 +565,9 @@ export const ProviderVirtualWaitingRoom = ({
                 <Label>Select Provider *</Label>
                 <ScrollArea className="h-[150px] rounded-md border">
                   <div className="p-2 space-y-2">
-                    {providers?.map((provider: any) => {
+                     {providers?.map((provider: any) => {
                       const isSelected = selectedProviderId === provider.id;
-                      const providerName = provider.full_name || 'Unknown Provider';
+                      const providerName = provider.full_name;
                       
                       return (
                         <button
@@ -675,9 +753,7 @@ export const ProviderVirtualWaitingRoom = ({
                     <div className="p-2 space-y-2">
                       {providers?.map((provider: any) => {
                         const isSelected = selectedProviderId === provider.id;
-                        const providerName = provider.first_name && provider.last_name
-                          ? `${provider.first_name} ${provider.last_name}`
-                          : provider.profiles?.name || provider.profiles?.email || 'Unknown Provider';
+                        const providerName = provider.full_name;
                         
                         return (
                           <button

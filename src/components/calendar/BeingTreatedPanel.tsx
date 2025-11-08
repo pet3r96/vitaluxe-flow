@@ -85,8 +85,20 @@ export function BeingTreatedPanel({
   }, [practiceId, refetch]);
 
   const getProviderName = (appointment: any) => {
-    // Prioritize prescriber_name, fallback to full_name
-    return appointment.provider?.user?.prescriber_name || appointment.provider?.user?.full_name || "Unknown Provider";
+    const user = appointment.provider?.user;
+    if (!user) return "Provider";
+    
+    // Priority: prescriber_name > full_name > name (if not email) > derive from email
+    if (user.prescriber_name) return user.prescriber_name;
+    if (user.full_name) return user.full_name;
+    if (user.name && !user.name.includes('@')) return user.name;
+    if (user.email) {
+      const localPart = user.email.split('@')[0];
+      return localPart.split(/[._-]/).map((word: string) => 
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ');
+    }
+    return "Provider";
   };
 
   const getTreatmentDuration = (startedAt: string) => {

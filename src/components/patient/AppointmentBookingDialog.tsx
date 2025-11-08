@@ -92,15 +92,32 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         .eq("practice_id", patientAccount.practice_id);
       if (error) throw error;
       
-      // Format provider display name
-      return (data || []).map((provider: any) => ({
-        ...provider,
-        displayName: provider.first_name && provider.last_name 
-          ? `${provider.first_name} ${provider.last_name}`
-          : provider.profiles?.name && provider.profiles.name !== provider.profiles?.email
-            ? provider.profiles.name
-            : provider.profiles?.email || 'Unknown Provider'
-      }));
+      // Format provider display name with robust fallback
+      return (data || []).map((provider: any) => {
+        const profile = provider.profiles;
+        let displayName = "Provider";
+        
+        // Priority: first+last name > prescriber_name > full_name > name (if not email) > derive from email
+        if (provider.first_name && provider.last_name) {
+          displayName = `${provider.first_name} ${provider.last_name}`;
+        } else if (profile?.prescriber_name) {
+          displayName = profile.prescriber_name;
+        } else if (profile?.full_name) {
+          displayName = profile.full_name;
+        } else if (profile?.name && !profile.name.includes('@')) {
+          displayName = profile.name;
+        } else if (profile?.email) {
+          const localPart = profile.email.split('@')[0];
+          displayName = localPart.split(/[._-]/).map((word: string) => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
+        }
+        
+        return {
+          ...provider,
+          displayName
+        };
+      });
     },
     enabled: !!patientAccount?.practice_id,
   });

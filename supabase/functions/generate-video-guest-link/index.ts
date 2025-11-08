@@ -141,10 +141,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate guest URL
-    const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 
-                   `${req.headers.get('origin') || 'https://app.lovable.app'}`;
-    const guestUrl = `${baseUrl}/video-guest/${token}`;
+    // Build guest URL using origin header or environment variable
+    const origin = req.headers.get('origin') || 
+                   req.headers.get('referer')?.split('/').slice(0, 3).join('/') || 
+                   Deno.env.get('SITE_URL') || 
+                   'https://vitaluxeservices-app.lovable.app';
+    const guestUrl = `${origin}/video-guest/${token}`;
+
+    console.log('🔗 [generate-video-guest-link] Generated URL:', { origin, guestUrl });
 
     console.log('✅ Guest link generated successfully:', guestUrl);
 

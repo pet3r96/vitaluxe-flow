@@ -160,7 +160,12 @@ export const ProvidersDataTable = () => {
             {filteredProviders && filteredProviders.length > 0 ? (
               paginatedProviders?.map((provider) => (
                 <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.profiles?.full_name || (provider.profiles?.name?.includes('@') ? '' : provider.profiles?.name) || provider.profiles?.email || 'Unknown Provider'}</TableCell>
+                  <TableCell className="font-medium">
+                    {provider.profiles?.prescriber_name || 
+                     provider.profiles?.full_name || 
+                     (provider.profiles?.name && !provider.profiles.name.includes('@') ? provider.profiles.name : '') || 
+                     (provider.profiles?.email ? provider.profiles.email.split('@')[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : 'Provider')}
+                  </TableCell>
                   <TableCell>{provider.profiles?.prescriber_name || 'Not Set'}</TableCell>
                   <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
                   <TableCell>{provider.profiles?.email || 'N/A'}</TableCell>
