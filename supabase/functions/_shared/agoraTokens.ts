@@ -1,6 +1,6 @@
-// Deno-compatible Agora token generation using official Deno builders
-import { RtcTokenBuilder as RtcTokenBuilder2, RtcRole } from 'https://raw.githubusercontent.com/AgoraIO/Tools/main/DynamicKey/AgoraDynamicKey/deno/src/RtcTokenBuilder2.ts';
-import { RtmTokenBuilder, RtmRole } from 'https://raw.githubusercontent.com/AgoraIO/Tools/main/DynamicKey/AgoraDynamicKey/deno/src/RtmTokenBuilder.ts';
+// Local Agora token builders - no external dependencies
+import { RtcTokenBuilder2, RtcRole } from './agora/RtcTokenBuilder2.ts';
+import { RtmTokenBuilder, RtmRole } from './agora/RtmTokenBuilder.ts';
 
 const HEX_32_REGEX = /^[a-f0-9]{32}$/i;
 
@@ -49,27 +49,24 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
   const expiresInSeconds = options.expiresInSeconds ?? 3600;
   const privilegeExpiredTs = Math.floor(Date.now() / 1000) + expiresInSeconds;
 
-  // Use official Deno builders (compatible with Edge runtime)
-  const rtcToken = await Promise.resolve(
-    RtcTokenBuilder2.buildTokenWithUserAccount(
-      appId,
-      appCertificate,
-      options.channelName,
-      options.uid,
-      rtcRole,
-      privilegeExpiredTs,
-      privilegeExpiredTs
-    )
+  // Build RTC token with user account
+  const rtcToken = RtcTokenBuilder2.buildTokenWithUserAccount(
+    appId,
+    appCertificate,
+    options.channelName,
+    options.uid,
+    rtcRole,
+    privilegeExpiredTs,
+    privilegeExpiredTs
   );
 
-  const rtmToken = await Promise.resolve(
-    RtmTokenBuilder.buildToken(
-      appId,
-      appCertificate,
-      options.uid,
-      RtmRole.Rtm_User,
-      privilegeExpiredTs
-    )
+  // Build RTM token
+  const rtmToken = RtmTokenBuilder.buildToken(
+    appId,
+    appCertificate,
+    options.uid,
+    RtmRole.Rtm_User,
+    privilegeExpiredTs
   );
 
   return {
