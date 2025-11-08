@@ -46,10 +46,18 @@ export const ProviderVirtualWaitingRoom = ({
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [appointmentToComplete, setAppointmentToComplete] = useState<string | null>(null);
 
+  // Helper function to display patient names consistently
+  const getPatientDisplay = (p: { first_name?: string; last_name?: string; email?: string; id: string }) => {
+    const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
+    const base = name || 'Unknown Patient';
+    return p.email ? `${base} (${p.email})` : base;
+  };
+
   // Subscribe to realtime updates for instant UI updates
   useEffect(() => {
     realtimeManager.subscribe('patient_appointments');
     realtimeManager.subscribe('video_sessions');
+    realtimeManager.subscribe('patient_accounts'); // Keep patient list fresh
 
     return () => {
       // Subscriptions are managed globally, no need to unsubscribe
@@ -155,7 +163,7 @@ export const ProviderVirtualWaitingRoom = ({
   });
 
   // Fetch patients for instant session creation and scheduling
-  const { data: patients } = useQuery({
+  const { data: patients, isLoading: patientsLoading, isError: patientsError } = useQuery({
     queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -168,13 +176,33 @@ export const ProviderVirtualWaitingRoom = ({
       
       console.log('[ProviderVirtualWaitingRoom] ✅ Patients loaded:', {
         count: data?.length || 0,
-        sampleNames: data?.slice(0, 3).map(p => `${p.first_name} ${p.last_name}`)
+        sampleDisplay: data?.slice(0, 3).map(p => getPatientDisplay(p))
       });
       
       return data || [];
     },
-    enabled: showCreateDialog || showScheduleDialog
+    enabled: showCreateDialog || showScheduleDialog,
+    staleTime: 60_000, // Keep data fresh for 1 minute
+    refetchOnWindowFocus: false // Prevent flicker on quick open/close
   });
+
+  // Prefetch patients when opening dialog
+  useEffect(() => {
+    if (showCreateDialog && practiceId) {
+      queryClient.prefetchQuery({
+        queryKey: ['practice-patients', practiceId],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from('patient_accounts')
+            .select('id, first_name, last_name, email')
+            .eq('practice_id', practiceId)
+            .order('last_name');
+          if (error) throw error;
+          return data || [];
+        }
+      });
+    }
+  }, [showCreateDialog, practiceId, queryClient]);
 
   // Fetch providers using unified list-providers function
   const { data: providers } = useQuery({
@@ -609,16 +637,23 @@ export const ProviderVirtualWaitingRoom = ({
                     <SelectValue placeholder="Select patient" />
                   </SelectTrigger>
                   <SelectContent>
-                    {patients && patients.length > 0 ? (
-                      patients.map((patient: any) => {
-                        const displayName = patient.profiles?.name || 'Unknown Patient';
-                        const email = patient.profiles?.email || '';
-                        return (
-                          <SelectItem key={patient.id} value={patient.id}>
-                            {displayName} {email ? `(${email})` : ''}
-                          </SelectItem>
-                        );
-                      })
+                    {patientsLoading ? (
+                      <SelectItem value="loading" disabled>
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Loading patients...
+                        </div>
+                      </SelectItem>
+                    ) : patientsError ? (
+                      <SelectItem value="error" disabled>
+                        Failed to load patients. Try again.
+                      </SelectItem>
+                    ) : patients && patients.length > 0 ? (
+                      patients.map((patient: any) => (
+                        <SelectItem key={patient.id} value={patient.id}>
+                          {getPatientDisplay(patient)}
+                        </SelectItem>
+                      ))
                     ) : (
                       <SelectItem value="no-patients-available" disabled>
                         No patients found - please add patients first
@@ -748,10 +783,21 @@ export const ProviderVirtualWaitingRoom = ({
                       <SelectValue placeholder="Select patient" />
                     </SelectTrigger>
                     <SelectContent>
-                      {patients && patients.length > 0 ? (
+                      {patientsLoading ? (
+                        <SelectItem value="loading" disabled>
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Loading patients...
+                          </div>
+                        </SelectItem>
+                      ) : patientsError ? (
+                        <SelectItem value="error" disabled>
+                          Failed to load patients. Try again.
+                        </SelectItem>
+                      ) : patients && patients.length > 0 ? (
                         patients.map((patient: any) => (
                           <SelectItem key={patient.id} value={patient.id}>
-                            {patient.first_name} {patient.last_name} ({patient.email})
+                            {getPatientDisplay(patient)}
                           </SelectItem>
                         ))
                       ) : (
