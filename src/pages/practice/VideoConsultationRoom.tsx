@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
+import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -13,6 +14,7 @@ export default function VideoConsultationRoom() {
   const [loading, setLoading] = useState(true);
   const [sessionData, setSessionData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showDeviceTest, setShowDeviceTest] = useState(false);
 
   useEffect(() => {
     const joinSession = async () => {
@@ -30,6 +32,7 @@ export default function VideoConsultationRoom() {
         if (error) throw error;
 
         setSessionData(data);
+        setShowDeviceTest(true);
       } catch (err: any) {
         console.error("Error joining video session:", err);
         setError(err.message || "Failed to join video session");
@@ -88,6 +91,15 @@ export default function VideoConsultationRoom() {
           </div>
         </Card>
       </div>
+    );
+  }
+
+  if (showDeviceTest) {
+    return (
+      <DeviceTestScreen
+        appId={sessionData.appId}
+        onComplete={() => setShowDeviceTest(false)}
+      />
     );
   }
 

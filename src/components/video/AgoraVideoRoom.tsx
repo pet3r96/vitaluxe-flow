@@ -180,6 +180,15 @@ export const AgoraVideoRoom = ({
 
   const startScreenShare = async () => {
     try {
+      if (!client) {
+        toast({
+          title: "Not Connected",
+          description: "Client not initialized",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const screenVideoTrack = await AgoraRTC.createScreenVideoTrack(
         {
           encoderConfig: "1080p_1",
@@ -188,10 +197,13 @@ export const AgoraVideoRoom = ({
         "auto"
       );
 
-      await localVideoTrack?.setEnabled(false);
-      await client?.unpublish([localVideoTrack!]);
-      await client?.publish([screenVideoTrack as ILocalVideoTrack]);
-
+      // Only unpublish if video track exists
+      if (localVideoTrack) {
+        await localVideoTrack.setEnabled(false);
+        await client.unpublish([localVideoTrack]);
+      }
+      
+      await client.publish([screenVideoTrack as ILocalVideoTrack]);
       setScreenTrack(screenVideoTrack as ILocalVideoTrack);
       setIsScreenSharing(true);
 
@@ -213,30 +225,60 @@ export const AgoraVideoRoom = ({
         title: "Screen Sharing",
         description: "You are now sharing your screen",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Screen share error:", error);
-      toast({
-        title: "Screen share failed",
-        variant: "destructive",
-      });
+      setIsScreenSharing(false);
+      
+      if (error.message?.includes("Permission denied") || error.message?.includes("denied")) {
+        toast({
+          title: "Permission Denied",
+          description: "Screen sharing permission was denied",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Screen Share Failed",
+          description: "Failed to start screen sharing",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const stopScreenShare = async () => {
-    if (screenTrack) {
-      screenTrack.close();
-      await client?.unpublish([screenTrack]);
+    try {
+      if (!client) return;
+
+      if (screenTrack) {
+        screenTrack.close();
+        await client.unpublish([screenTrack]);
+      }
+      
+      if (localVideoTrack) {
+        await localVideoTrack.setEnabled(true);
+        await client.publish([localVideoTrack]);
+      }
+
       setScreenTrack(null);
       setIsScreenSharing(false);
-
-      await localVideoTrack?.setEnabled(true);
-      await client?.publish([localVideoTrack!]);
 
       await supabase.from("video_session_logs").insert({
         session_id: sessionId,
         event_type: "screen_share_stopped",
         user_type: isProvider ? "provider" : "patient",
         event_data: { stopped_at: new Date().toISOString() },
+      });
+
+      toast({
+        title: "Screen Sharing Stopped",
+        description: "You are no longer sharing your screen",
+      });
+    } catch (error) {
+      console.error("Stop screen share failed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to stop screen sharing",
+        variant: "destructive",
       });
     }
   };
@@ -353,15 +395,19 @@ export const AgoraVideoRoom = ({
           {isVideoOff ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
         </Button>
 
-        <Button
-          size="lg"
-          variant={isScreenSharing ? "destructive" : "outline"}
-          className="h-14 w-14 rounded-full p-0"
-          onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-          title={isScreenSharing ? "Stop screen share" : "Share screen"}
-        >
-          <MonitorUp className="h-6 w-6" />
-        </Button>
+        <div className="flex flex-col items-center gap-1">
+          <Button
+            size="lg"
+            variant={isScreenSharing ? "default" : "outline"}
+            className="h-14 w-14 rounded-full p-0"
+            onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+          >
+            <MonitorUp className="h-6 w-6" />
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {isScreenSharing ? "Stop Sharing" : "Share Screen"}
+          </span>
+        </div>
 
         {rtmToken && (
           <Button

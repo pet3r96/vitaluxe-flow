@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
+import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +17,7 @@ export default function VideoGuestJoin() {
     type: string;
     message: string;
   } | null>(null);
+  const [showDeviceTest, setShowDeviceTest] = useState(false);
 
   useEffect(() => {
     const validateAndJoin = async () => {
@@ -45,6 +47,7 @@ export default function VideoGuestJoin() {
           });
         } else {
           setSessionData(data.sessionData);
+          setShowDeviceTest(true);
         }
       } catch (err: any) {
         console.error('Error validating guest link:', err);
@@ -145,6 +148,15 @@ export default function VideoGuestJoin() {
           </div>
         </Card>
       </div>
+    );
+  }
+
+  if (showDeviceTest) {
+    return (
+      <DeviceTestScreen
+        appId={sessionData.appId}
+        onComplete={() => setShowDeviceTest(false)}
+      />
     );
   }
 
