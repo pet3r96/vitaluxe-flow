@@ -12,7 +12,22 @@ const roleLabels: Record<string, string> = {
 };
 
 export function ImpersonationBanner() {
-  const { isImpersonating, impersonatedRole, impersonatedUserName, clearImpersonation } = useAuth();
+  // Safety check: gracefully handle if auth context not available
+  let isImpersonating = false;
+  let impersonatedRole = null;
+  let impersonatedUserName = null;
+  let clearImpersonation = () => {};
+
+  try {
+    const auth = useAuth();
+    isImpersonating = auth.isImpersonating || false;
+    impersonatedRole = auth.impersonatedRole;
+    impersonatedUserName = auth.impersonatedUserName;
+    clearImpersonation = auth.clearImpersonation;
+  } catch (error) {
+    // Auth context not available - this is OK, just don't render banner
+    return null;
+  }
 
   if (!isImpersonating || !impersonatedRole) return null;
 

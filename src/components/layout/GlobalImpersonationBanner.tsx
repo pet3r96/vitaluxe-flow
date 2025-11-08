@@ -19,7 +19,15 @@ interface GlobalImpersonationBannerProps {
 }
 
 export function GlobalImpersonationBanner({ children }: GlobalImpersonationBannerProps) {
-  const { isImpersonating } = useAuth();
+  // Safety check: try to use auth context, but gracefully handle if not available
+  let isImpersonating = false;
+  try {
+    const auth = useAuth();
+    isImpersonating = auth.isImpersonating || false;
+  } catch (error) {
+    // Auth context not available yet - this is OK during initial render
+    console.warn('Auth context not available in GlobalImpersonationBanner');
+  }
   
   return (
     <>
