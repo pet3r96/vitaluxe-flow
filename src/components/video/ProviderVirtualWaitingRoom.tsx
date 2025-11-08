@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { VideoGuestLinkDialog } from "./VideoGuestLinkDialog";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { getProviderDisplayName } from "@/utils/providerNameUtils";
 
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
@@ -57,21 +58,36 @@ export const ProviderVirtualWaitingRoom = ({
   const { data: videoSessions, isLoading } = useQuery({
     queryKey: ['provider-video-sessions', practiceId],
     queryFn: async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      // Fix timezone issue: widen date range to capture appointments across timezones
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      
+      const dayAfterTomorrow = new Date();
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+      dayAfterTomorrow.setHours(23, 59, 59, 999);
+
+      console.log('[ProviderVirtualWaitingRoom] Fetching video sessions with date range:', {
+        from: yesterday.toISOString(),
+        to: dayAfterTomorrow.toISOString()
+      });
 
       const { data, error } = await supabase
         .from('video_sessions')
         .select('*, patient_accounts!video_sessions_patient_id_fkey(id, first_name, last_name)')
         .eq('practice_id', practiceId)
-        .gte('scheduled_start_time', today.toISOString())
-        .lt('scheduled_start_time', tomorrow.toISOString())
+        .gte('scheduled_start_time', yesterday.toISOString())
+        .lt('scheduled_start_time', dayAfterTomorrow.toISOString())
         .in('status', ['scheduled', 'waiting', 'active'])
         .order('scheduled_start_time', { ascending: true });
 
       if (error) throw error;
+      
+      console.log('[ProviderVirtualWaitingRoom] ✅ Video sessions fetched:', {
+        count: data?.length || 0,
+        sessions: data?.map(s => ({ id: s.id, status: s.status, scheduled_start_time: s.scheduled_start_time }))
+      });
+      
       return data;
     },
     refetchInterval: 2000, // Refresh every 2 seconds for instant updates
@@ -90,13 +106,21 @@ export const ProviderVirtualWaitingRoom = ({
         .order('last_name');
       
       if (error) throw error;
-      return (data as any[])?.map((p: any) => ({
+      
+      const mappedPatients = (data as any[])?.map((p: any) => ({
         ...p,
         profiles: {
-          name: `${p.first_name} ${p.last_name}`,
+          name: [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || 'Unknown Patient',
           email: p.email
         }
       })) || [];
+      
+      console.log('[ProviderVirtualWaitingRoom] ✅ Patients loaded:', {
+        count: mappedPatients.length,
+        sampleNames: mappedPatients.slice(0, 3).map(p => p.profiles.name)
+      });
+      
+      return mappedPatients;
     },
     enabled: showCreateDialog || showScheduleDialog
   });
@@ -542,10 +566,10 @@ export const ProviderVirtualWaitingRoom = ({
               <div className="space-y-2">
                 <Label>Select Provider *</Label>
                 <ScrollArea className="h-[150px] rounded-md border">
-                  <div className="p-2 space-y-2">
+                   <div className="p-2 space-y-2">
                      {providers?.map((provider: any) => {
                       const isSelected = selectedProviderId === provider.id;
-                      const providerName = provider.full_name;
+                      const providerName = getProviderDisplayName(provider);
                       
                       return (
                         <button
@@ -629,9 +653,9 @@ export const ProviderVirtualWaitingRoom = ({
           practiceId={practiceId}
           providers={providers?.map(p => ({
             id: p.id,
-            full_name: p.full_name,
-            first_name: p.first_name,
-            last_name: p.last_name,
+            full_name: getProviderDisplayName(p),
+            first_name: p.first_name || '',
+            last_name: p.last_name || '',
           })) || []}
           rooms={[]}
           defaultVisitType="video"
@@ -731,7 +755,7 @@ export const ProviderVirtualWaitingRoom = ({
                     <div className="p-2 space-y-2">
                       {providers?.map((provider: any) => {
                         const isSelected = selectedProviderId === provider.id;
-                        const providerName = provider.full_name;
+                        const providerName = getProviderDisplayName(provider);
                         
                         return (
                           <button
