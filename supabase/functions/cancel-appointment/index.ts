@@ -11,6 +11,12 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
+    // Service role client for operations that need to bypass RLS
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -169,7 +175,8 @@ Deno.serve(async (req) => {
 
     // ALWAYS check and update video session status (even if appointment was already cancelled)
     // This ensures video sessions are synchronized with their appointments
-    const { data: videoSession } = await supabaseClient
+    // Use admin client to bypass RLS since impersonation affects RLS policies
+    const { data: videoSession } = await supabaseAdmin
       .from('video_sessions')
       .select('id, status')
       .eq('appointment_id', appointmentId)
@@ -178,7 +185,7 @@ Deno.serve(async (req) => {
     let videoSessionUpdated = false;
     if (videoSession && videoSession.status !== 'ended') {
       console.log('🎥 [cancel-appointment] Updating video session to ended:', videoSession.id);
-      const { error: vsError } = await supabaseClient
+      const { error: vsError } = await supabaseAdmin
         .from('video_sessions')
         .update({
           status: 'ended'
@@ -189,8 +196,8 @@ Deno.serve(async (req) => {
         console.error('❌ [cancel-appointment] Video session update error:', vsError);
         throw new Error('Video session update failed: ' + vsError.message);
       }
-      // Log the cancellation
-      await supabaseClient.from('video_session_logs').insert({
+      // Log the cancellation (use admin client to ensure it persists)
+      await supabaseAdmin.from('video_session_logs').insert({
         session_id: videoSession.id,
         event_type: 'session_cancelled',
         user_id: user.id,
