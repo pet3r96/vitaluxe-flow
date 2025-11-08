@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import AgoraUIKit, { PropsInterface } from "agora-react-uikit";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface AgoraVideoRoomProps {
   channelName: string;
@@ -29,36 +28,10 @@ export function AgoraVideoRoom({
   const [videoCall, setVideoCall] = useState(true);
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [permissionsGranted, setPermissionsGranted] = useState(false);
-  const [permissionError, setPermissionError] = useState<string | null>(null);
-
-  // Request camera and microphone permissions
-  useEffect(() => {
-    const requestPermissions = async () => {
-      try {
-        console.log("🎤 Requesting camera/microphone permissions...");
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
-        
-        // Stop the test stream
-        stream.getTracks().forEach(track => track.stop());
-        
-        console.log("✅ Permissions granted");
-        setPermissionsGranted(true);
-      } catch (err) {
-        console.error("❌ Permission denied:", err);
-        setPermissionError("Camera and microphone access is required for video calls. Please allow access and try again.");
-      }
-    };
-
-    requestPermissions();
-  }, []);
 
   // Auto-start recording when provider joins and remote user is present
   useEffect(() => {
-    if (!isProvider || !permissionsGranted) return;
+    if (!isProvider) return;
 
     const startRecordingTimer = setTimeout(async () => {
       try {
@@ -79,7 +52,7 @@ export function AgoraVideoRoom({
     }, 2000); // Wait 2s for both parties to join
 
     return () => clearTimeout(startRecordingTimer);
-  }, [isProvider, sessionId, channelName, permissionsGranted]);
+  }, [isProvider, sessionId, channelName]);
 
   const handleEndSession = async () => {
     try {
@@ -146,52 +119,21 @@ export function AgoraVideoRoom({
     theme: '#1a1a1a',
   };
 
-  // Show loading while requesting permissions
-  if (!permissionsGranted && !permissionError) {
-    return (
-      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-foreground">Requesting camera and microphone access...</p>
-          <p className="text-sm text-muted-foreground">Please allow access when prompted</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error if permissions denied
-  if (permissionError) {
-    return (
-      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
-        <Card className="p-8 max-w-md">
-          <div className="text-center space-y-4">
-            <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-              <AlertCircle className="h-6 w-6 text-destructive" />
-            </div>
-            <h2 className="text-xl font-semibold text-foreground">Permission Required</h2>
-            <p className="text-muted-foreground">{permissionError}</p>
-            <div className="flex gap-2 justify-center">
-              <Button onClick={() => window.location.reload()}>
-                Try Again
-              </Button>
-              <Button variant="outline" onClick={onLeave}>
-                Go Back
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   if (!videoCall) {
     return null;
   }
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
+      {/* Info Banner */}
+      <div className="absolute top-0 left-0 right-0 z-10 bg-blue-500/10 border-b border-blue-500/20 px-4 py-2 text-center">
+        <p className="text-sm text-blue-600 dark:text-blue-400">
+          💡 Allow camera and microphone access when prompted by your browser
+        </p>
+      </div>
+
       {/* Session Info Bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
+      <div className="absolute top-12 left-0 right-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-sm font-medium">Video Session Active</span>
@@ -222,7 +164,7 @@ export function AgoraVideoRoom({
       </div>
 
       {/* Agora UIKit */}
-      <div className="w-full h-full pt-16">
+      <div className="w-full h-full pt-24">
         <AgoraUIKit
           rtcProps={rtcProps}
           callbacks={callbacks}
