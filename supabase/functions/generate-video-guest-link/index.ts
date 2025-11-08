@@ -11,20 +11,18 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    const authHeader = req.headers.get('Authorization')!;
+    
+    // Use anon client for auth check
+    const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
     const {
       data: { user },
       error: authError,
-    } = await supabaseClient.auth.getUser();
+    } = await supabaseAuth.auth.getUser(authHeader.replace('Bearer ', ''));
 
     if (authError || !user) {
       return new Response(
@@ -32,6 +30,12 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Use service role client for database operations (bypass RLS)
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     const { sessionId, expirationHours = 24 } = await req.json();
 
@@ -119,22 +123,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Generate guest URL
+    const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 
+                   `${req.headers.get('origin') || 'https://app.lovable.app'}`;
+    const guestUrl = `${baseUrl}/video-guest/${token}`;
+
+    console.log('Guest link generated successfully:', guestUrl);
+
     // Log audit event
     await supabaseClient.from('video_session_logs').insert({
       session_id: sessionId,
       event_type: 'guest_link_generated',
-      details: {
+      user_type: 'provider',
+      event_data: {
         token_id: guestLink.id,
         expires_at: expiresAt.toISOString(),
         created_by: effectiveUserId,
       },
     });
-
-    console.log('Guest link generated successfully:', guestUrl);
-
-    const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 
-                   `${req.headers.get('origin') || 'https://app.lovable.app'}`;
-    const guestUrl = `${baseUrl}/video-guest/${token}`;
 
     return new Response(
       JSON.stringify({
