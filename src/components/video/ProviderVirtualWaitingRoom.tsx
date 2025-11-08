@@ -67,28 +67,76 @@ export const ProviderVirtualWaitingRoom = ({
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       dayAfterTomorrow.setHours(23, 59, 59, 999);
 
-      console.log('[ProviderVirtualWaitingRoom] Fetching video sessions with date range:', {
+      console.log('[ProviderVirtualWaitingRoom] Fetching video data with date range:', {
         from: yesterday.toISOString(),
         to: dayAfterTomorrow.toISOString()
       });
 
-      const { data, error } = await supabase
+      // Query 1: Get existing video_sessions
+      const { data: sessionsData, error: sessionsError } = await supabase
         .from('video_sessions')
         .select('*, patient_accounts!video_sessions_patient_id_fkey(id, first_name, last_name)')
         .eq('practice_id', practiceId)
         .gte('scheduled_start_time', yesterday.toISOString())
         .lt('scheduled_start_time', dayAfterTomorrow.toISOString())
-        .in('status', ['scheduled', 'waiting', 'active'])
+        .in('status', ['created', 'scheduled', 'waiting', 'active'])
         .order('scheduled_start_time', { ascending: true });
 
-      if (error) throw error;
+      if (sessionsError) throw sessionsError;
+
+      // Query 2: Get scheduled video appointments that might not have sessions yet
+      const { data: appointmentsData, error: appointmentsError } = await supabase
+        .from('patient_appointments')
+        .select('id, patient_id, provider_id, start_time, status')
+        .eq('practice_id', practiceId)
+        .eq('visit_type', 'video')
+        .in('status', ['scheduled', 'checked_in'])
+        .gte('start_time', yesterday.toISOString())
+        .lt('start_time', dayAfterTomorrow.toISOString())
+        .order('start_time', { ascending: true });
+
+      if (appointmentsError) throw appointmentsError;
+
+      // Merge both sources - prefer video_sessions if they exist
+      const sessionsByAppointmentId = new Map(
+        (sessionsData || []).map(s => [s.appointment_id, s])
+      );
+
+      // Add appointments that don't have sessions yet
+      const merged = [...(sessionsData || [])];
+      (appointmentsData || []).forEach(apt => {
+        if (!sessionsByAppointmentId.has(apt.id)) {
+          // Create a session-like object from appointment
+          merged.push({
+            id: `apt-${apt.id}`,
+            appointment_id: apt.id,
+            patient_id: apt.patient_id,
+            provider_id: apt.provider_id,
+            scheduled_start_time: apt.start_time,
+            status: apt.status === 'checked_in' ? 'waiting' : 'scheduled',
+            patient_accounts: null, // Will be filled from patients query
+          } as any);
+        }
+      });
+
+      // Sort by scheduled time
+      merged.sort((a, b) => 
+        new Date(a.scheduled_start_time).getTime() - new Date(b.scheduled_start_time).getTime()
+      );
       
-      console.log('[ProviderVirtualWaitingRoom] ✅ Video sessions fetched:', {
-        count: data?.length || 0,
-        sessions: data?.map(s => ({ id: s.id, status: s.status, scheduled_start_time: s.scheduled_start_time }))
+      console.log('[ProviderVirtualWaitingRoom] ✅ Video data merged:', {
+        sessions: sessionsData?.length || 0,
+        appointments: appointmentsData?.length || 0,
+        merged: merged.length,
+        sample: merged.slice(0, 3).map(s => ({ 
+          id: s.id, 
+          status: s.status, 
+          scheduled_start_time: s.scheduled_start_time,
+          source: s.id.toString().startsWith('apt-') ? 'appointment' : 'session'
+        }))
       });
       
-      return data;
+      return merged;
     },
     refetchInterval: 2000, // Refresh every 2 seconds for instant updates
     refetchOnMount: 'always', // Force fresh data when component mounts
@@ -107,13 +155,16 @@ export const ProviderVirtualWaitingRoom = ({
       
       if (error) throw error;
       
-      const mappedPatients = (data as any[])?.map((p: any) => ({
-        ...p,
-        profiles: {
-          name: [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || 'Unknown Patient',
-          email: p.email
-        }
-      })) || [];
+      const mappedPatients = (data as any[])?.map((p: any) => {
+        const fullName = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
+        return {
+          ...p,
+          profiles: {
+            name: fullName || p.profiles?.name || 'Unknown Patient',
+            email: p.email
+          }
+        };
+      }) || [];
       
       console.log('[ProviderVirtualWaitingRoom] ✅ Patients loaded:', {
         count: mappedPatients.length,

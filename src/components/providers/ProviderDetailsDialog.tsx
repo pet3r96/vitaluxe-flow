@@ -265,10 +265,10 @@ export const ProviderDetailsDialog = ({
         queryClient.invalidateQueries({ queryKey: ['video-sessions'] })
       ]);
       
-      // Force immediate refetch of providers to update dropdowns NOW
-      console.log('🔄 [ProviderDetailsDialog] Force refetching providers...');
+      // Force immediate refetch of ALL provider queries
+      console.log('🔄 [ProviderDetailsDialog] Force refetching all provider queries...');
       await queryClient.refetchQueries({ 
-        queryKey: ['providers', effectivePracticeId],
+        queryKey: ['providers'],
         type: 'active'
       });
       

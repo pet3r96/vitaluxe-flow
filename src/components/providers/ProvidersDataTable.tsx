@@ -82,6 +82,16 @@ export const ProvidersDataTable = () => {
     enabled: !!(effectiveUserId || effectivePracticeId)
   });
 
+  // Sync selectedProvider with fresh data after refetch
+  useEffect(() => {
+    if (!selectedProvider || !providers) return;
+    const updated = providers.find((p: any) => p.id === selectedProvider.id);
+    if (updated && JSON.stringify(updated) !== JSON.stringify(selectedProvider)) {
+      console.log('[ProvidersDataTable] Syncing selectedProvider with fresh data');
+      setSelectedProvider(updated);
+    }
+  }, [providers, selectedProvider?.id]);
+
   // No longer need decryption - credentials stored in profiles table
 
   const toggleStatus = async (providerId: string, currentStatus: boolean) => {
