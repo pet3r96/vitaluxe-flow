@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
               id,
               user_id,
               active,
-              profiles:user_id(id, name, full_name)
+              profiles:user_id(id, name, full_name, prescriber_name, email)
             `)
             .eq('practice_id', practiceId)
             .eq('active', true);
@@ -168,16 +168,26 @@ Deno.serve(async (req) => {
                 provider_id: p.id,
                 user_id: p.user_id,
                 profile_exists: !!profile,
+                profile_prescriber_name: profile?.prescriber_name,
                 profile_name: profile?.name,
-                profile_full_name: profile?.full_name
+                profile_full_name: profile?.full_name,
+                profile_email: profile?.email
               });
               
-              // Build display name with better fallbacks
+              // Build display name with comprehensive fallbacks (Priority: prescriber_name > full_name > name > email-derived)
               let displayName = 'Provider';
-              if (profile?.full_name) {
-                displayName = profile.full_name;
-              } else if (profile?.name) {
-                displayName = profile.name;
+              if (profile?.prescriber_name?.trim()) {
+                displayName = profile.prescriber_name.trim();
+              } else if (profile?.full_name?.trim()) {
+                displayName = profile.full_name.trim();
+              } else if (profile?.name?.trim() && !profile.name.includes('@')) {
+                displayName = profile.name.trim();
+              } else if (profile?.email) {
+                // Derive from email local part (convert to Title Case)
+                const localPart = profile.email.split('@')[0];
+                displayName = localPart.split(/[._-]/).map((word: string) => 
+                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                ).join(' ');
               }
               
               const nameParts = displayName.trim().split(' ');

@@ -39,7 +39,8 @@ export const usePracticeRxPrivileges = () => {
       };
     },
     enabled: shouldCheck && !!effectivePracticeId,
-    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+    staleTime: 30 * 1000, // Cache for 30 seconds (reduced for faster updates)
+    refetchOnWindowFocus: true, // Refetch when user returns to window
   });
   
   return {

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Edit2, Save, X, Loader2 } from "lucide-react";
 import { sanitizeEncrypted } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -27,6 +28,7 @@ export const ProviderDetailsDialog = ({
   onSuccess 
 }: ProviderDetailsDialogProps) => {
   const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [originalNpi, setOriginalNpi] = useState("");
@@ -222,6 +224,9 @@ export const ProviderDetailsDialog = ({
         throw providerError;
       }
 
+      // Invalidate RX privileges cache so UI updates immediately
+      queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges'] });
+      
       toast.success("Provider credentials updated successfully!");
       setIsEditing(false);
       onSuccess();

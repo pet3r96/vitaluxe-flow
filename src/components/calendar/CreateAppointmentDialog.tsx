@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
+import { getProviderDisplayName } from "@/utils/providerNameUtils";
 
 interface CreateAppointmentDialogProps {
   open: boolean;
@@ -265,7 +266,7 @@ export function CreateAppointmentDialog({
                         {providers && providers.length > 0 ? (
                           providers.map((provider) => (
                             <SelectItem key={provider.id} value={provider.id}>
-                              {provider.full_name || `${provider.first_name} ${provider.last_name}`}
+                              {getProviderDisplayName(provider)}
                             </SelectItem>
                           ))
                         ) : (

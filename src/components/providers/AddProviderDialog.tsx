@@ -8,7 +8,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { getCurrentCSRFToken } from "@/lib/csrf";
@@ -23,6 +23,7 @@ interface AddProviderDialogProps {
 
 export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }: AddProviderDialogProps) => {
   const { effectiveUserId, effectiveRole } = useAuth();
+  const queryClient = useQueryClient();
   const { isSubscribed, status, trialEndsAt, currentPeriodEnd } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [selectedPractice, setSelectedPractice] = useState(practiceId || "");
@@ -219,6 +220,9 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
         throw new Error((data as any)?.error || error.message);
       }
 
+      // Invalidate RX privileges cache so UI updates immediately
+      queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges'] });
+      
       toast.success(`Provider added! Welcome email with login credentials sent to ${formData.email}`);
       resetForm();
       onSuccess();
