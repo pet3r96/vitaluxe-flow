@@ -140,45 +140,44 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If already cancelled, return success (idempotent)
+    // Track if appointment was already cancelled for idempotent response
+    let appointmentWasAlreadyCancelled = false;
+    
+    // Update appointment status if not already cancelled
     if (appointment.status === 'cancelled') {
-      console.log('ℹ️ [cancel-appointment] Appointment already cancelled');
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Appointment already cancelled',
-        idempotent: true 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      appointmentWasAlreadyCancelled = true;
+      console.log('ℹ️ [cancel-appointment] Appointment already cancelled, will check video session');
+    } else {
+      // Perform the cancellation
+      console.log('✅ [cancel-appointment] Updating appointment status to cancelled');
+      const { error } = await supabaseClient
+        .from('patient_appointments')
+        .update({ 
+          status: 'cancelled', 
+          updated_at: new Date().toISOString(), 
+          cancelled_at: new Date().toISOString() 
+        })
+        .eq('id', appointmentId);
+
+      if (error) {
+        console.error('❌ [cancel-appointment] Update error:', error);
+        throw error;
+      }
+
+      console.log('✅ [cancel-appointment] Appointment cancelled successfully');
     }
 
-    // Perform the cancellation
-    console.log('✅ [cancel-appointment] Updating appointment status to cancelled');
-    const { error } = await supabaseClient
-      .from('patient_appointments')
-      .update({ 
-        status: 'cancelled', 
-        updated_at: new Date().toISOString(), 
-        cancelled_at: new Date().toISOString() 
-      })
-      .eq('id', appointmentId);
-
-    if (error) {
-      console.error('❌ [cancel-appointment] Update error:', error);
-      throw error;
-    }
-
-    console.log('✅ [cancel-appointment] Appointment cancelled successfully');
-
-    // If this is a video appointment, also update the video_session status
+    // ALWAYS check and update video session status (even if appointment was already cancelled)
+    // This ensures video sessions are synchronized with their appointments
     const { data: videoSession } = await supabaseClient
       .from('video_sessions')
       .select('id, status')
       .eq('appointment_id', appointmentId)
       .maybeSingle();
 
+    let videoSessionUpdated = false;
     if (videoSession && videoSession.status !== 'ended') {
-      console.log('🎥 [cancel-appointment] Also cancelling associated video session:', videoSession.id);
+      console.log('🎥 [cancel-appointment] Updating video session to ended:', videoSession.id);
       
       await supabaseClient
         .from('video_sessions')
@@ -197,10 +196,17 @@ Deno.serve(async (req) => {
         event_data: { reason: 'appointment_cancelled' }
       });
       
+      videoSessionUpdated = true;
       console.log('✅ [cancel-appointment] Video session also cancelled');
+    } else if (videoSession) {
+      console.log('ℹ️ [cancel-appointment] Video session already ended');
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ 
+      success: true,
+      idempotent: appointmentWasAlreadyCancelled,
+      videoSessionUpdated
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
