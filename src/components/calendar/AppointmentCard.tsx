@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
 import { ProviderAvatar } from "./ProviderAvatar";
+import { getProviderDisplayName } from "@/utils/providerNameUtils";
 import {
   Tooltip,
   TooltipContent,
@@ -46,7 +47,7 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
 
   const patientName = `${appointment.patient_accounts?.first_name} ${appointment.patient_accounts?.last_name}`;
   const providerName = appointment.providers 
-    ? `${appointment.providers.first_name} ${appointment.providers.last_name}`
+    ? getProviderDisplayName(appointment.providers)
     : null;
   const appointmentTime = format(new Date(appointment.start_time), 'h:mm a');
 
