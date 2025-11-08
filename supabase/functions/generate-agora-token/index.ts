@@ -48,9 +48,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify user authorization
-    const isProvider = session.provider_id === user.id;
-    const isPatient = session.patient_id === user.id;
+    // Verify user authorization - properly resolve user_ids
+    // Fetch provider to get user_id
+    const { data: provider } = await supabase
+      .from('providers')
+      .select('user_id')
+      .eq('id', session.provider_id)
+      .maybeSingle();
+
+    // Fetch patient account to get user_id  
+    const { data: patientAccount } = await supabase
+      .from('patient_accounts')
+      .select('user_id')
+      .eq('id', session.patient_id)
+      .maybeSingle();
+
+    const isProvider = provider?.user_id === user.id;
+    const isPatient = patientAccount?.user_id === user.id;
     
     if (!isProvider && !isPatient) {
       return new Response(JSON.stringify({ error: 'Not authorized for this session' }), {

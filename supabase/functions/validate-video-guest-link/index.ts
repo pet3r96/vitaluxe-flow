@@ -166,12 +166,22 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Get provider name
+    // Get provider name - properly traverse the relationship
+    // First get the provider record to get user_id
     const { data: provider } = await supabaseAdmin
-      .from('profiles')
-      .select('name')
+      .from('providers')
+      .select('user_id')
       .eq('id', session.provider_id)
-      .single();
+      .maybeSingle();
+
+    // Then get the profile using the user_id
+    const { data: providerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name, name')
+      .eq('id', provider?.user_id)
+      .maybeSingle();
+
+    const providerName = providerProfile?.full_name || providerProfile?.name || 'Provider';
 
     return new Response(
       JSON.stringify({
@@ -184,7 +194,7 @@ Deno.serve(async (req) => {
           rtmToken,
           rtmUid,
           sessionId: session.id,
-          providerName: provider?.name || 'Provider',
+          providerName,
           scheduledTime: session.scheduled_start_time,
         },
       }),
