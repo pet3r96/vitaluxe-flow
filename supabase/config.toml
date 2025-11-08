@@ -150,6 +150,9 @@ verify_jwt = true
 [functions.log-error]
 verify_jwt = true
 
+[functions.log-video-error]
+verify_jwt = true
+
 [functions.send-patient-message]
 verify_jwt = true
 

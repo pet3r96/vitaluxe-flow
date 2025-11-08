@@ -24,6 +24,7 @@ import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 import { NetworkQualityIndicator } from "./NetworkQualityIndicator";
 import { useVideoChat } from "@/hooks/useVideoChat";
 import { VideoChatPanel } from "./VideoChatPanel";
+import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
 
 interface AgoraVideoRoomProps {
   channelName: string;
@@ -64,6 +65,7 @@ export const AgoraVideoRoom = ({
   const [recordingStatus, setRecordingStatus] = useState<'not_started' | 'starting' | 'active' | 'stopping' | 'stopped'>('not_started');
 
   const quality = useNetworkQuality(client, sessionId);
+  const { logVideoError } = useVideoErrorLogger();
   
   const chat = rtmToken && rtmUid ? useVideoChat({
     appId,
@@ -164,11 +166,53 @@ export const AgoraVideoRoom = ({
           description: "You have joined the video consultation"
         });
 
-      } catch (error) {
-        console.error("Error initializing Agora:", error);
+      } catch (error: any) {
+        // Enhanced error logging
+        console.group("🔴 AGORA JOIN FAILURE");
+        console.error("Error Object:", error);
+        console.log("Error Code:", error.code);
+        console.log("Error Message:", error.message);
+        console.log("Error Name:", error.name);
+        console.log("Join Parameters:", {
+          appIdSample: appId.substring(0, 8) + "...",
+          channelName,
+          uid,
+          tokenPreview: token.substring(0, 20) + "..."
+        });
+        console.groupEnd();
+
+        // Log to backend
+        await logVideoError({
+          sessionId,
+          errorCode: error.code,
+          errorMessage: error.message || String(error),
+          errorName: error.name,
+          joinParams: {
+            appIdSample: appId.substring(0, 8) + "...",
+            channelName,
+            uid,
+            tokenPreview: token.substring(0, 20) + "...",
+            isProvider,
+          }
+        });
+
+        // User-friendly error message based on error code
+        let errorTitle = "Connection Error";
+        let errorDescription = "Failed to join video session";
+
+        if (error.code === "INVALID_VENDOR_KEY") {
+          errorDescription = "Invalid App ID. Please contact support.";
+        } else if (error.code === "INVALID_TOKEN" || error.code === "TOKEN_EXPIRED") {
+          errorDescription = "Session token is invalid or expired. Please rejoin.";
+        } else if (error.code === "CAN_NOT_GET_GATEWAY_SERVER") {
+          errorDescription = "Cannot connect to video server. Check your internet connection.";
+        } else if (error.message?.includes("Permission denied")) {
+          errorDescription = "Camera/microphone permission denied. Please allow access.";
+        }
+
         toast({
-          title: "Connection Error",
-          description: "Failed to join video session",
+          title: errorTitle,
+          description: errorDescription,
           variant: "destructive"
         });
       }
