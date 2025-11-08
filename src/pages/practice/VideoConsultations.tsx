@@ -1,4 +1,5 @@
 import { ProviderVirtualWaitingRoom } from "@/components/video/ProviderVirtualWaitingRoom";
+import { VideoSystemHealth } from "@/components/debug/VideoSystemHealth";
 import { useAuth } from "@/contexts/AuthContext";
 
 const VideoConsultations = () => {
@@ -13,6 +14,8 @@ const VideoConsultations = () => {
           Manage your video appointments, start sessions, and create instant consultations with patients.
         </p>
       </div>
+      
+      <VideoSystemHealth practiceId={practiceId} />
       
       <ProviderVirtualWaitingRoom practiceId={practiceId} />
     </div>

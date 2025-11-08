@@ -74,7 +74,9 @@ export const ProviderVirtualWaitingRoom = ({
       if (error) throw error;
       return data;
     },
-    refetchInterval: 10000 // Refresh every 10 seconds as backup
+    refetchInterval: 2000, // Refresh every 2 seconds for instant updates
+    refetchOnMount: 'always', // Force fresh data when component mounts
+    refetchOnWindowFocus: true // Refresh when tab regains focus
   });
 
   // Fetch patients for instant session creation and scheduling
@@ -431,8 +433,9 @@ export const ProviderVirtualWaitingRoom = ({
         description: "Instant video session started and patient notified"
       });
 
-      // Refresh the sessions list
-      queryClient.invalidateQueries({ queryKey: ['provider-video-sessions', practiceId] });
+      // Refresh the sessions list with immediate refetch
+      await queryClient.invalidateQueries({ queryKey: ['provider-video-sessions', practiceId] });
+      await queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
 
       // Navigate to the video room
       navigate(`/practice/video/${(data as any).sessionId}`);

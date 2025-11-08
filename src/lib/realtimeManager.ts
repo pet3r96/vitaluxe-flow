@@ -13,7 +13,7 @@ class RealtimeManager {
   private channels = new Map<string, any>();
   private queryClient: QueryClient | null = null;
   private pendingInvalidations = new Map<string, NodeJS.Timeout>();
-  private readonly DEBOUNCE_MS = 10; // Ultra-fast updates for instant sync
+  private readonly DEBOUNCE_MS = 0; // NO debounce - instant updates for medical appointments
   
   // Cross-table dependencies - when table A changes, also invalidate queries for B, C
   private tableDependencies: Record<string, string[]> = {
@@ -144,7 +144,7 @@ class RealtimeManager {
         // Invalidate the main table
         this.queryClient.invalidateQueries({ 
           queryKey: [table],
-          refetchType: 'active' // Only refetch active queries
+          refetchType: 'all' // Refetch ALL queries for instant updates
         });
         
         // Invalidate dependent queries for cross-component updates
@@ -153,7 +153,7 @@ class RealtimeManager {
           logger.info(`Invalidating dependent query: ${depKey}`);
           this.queryClient.invalidateQueries({
             queryKey: [depKey],
-            refetchType: 'active'
+            refetchType: 'all' // Refetch ALL queries for instant updates
           });
         });
       }
