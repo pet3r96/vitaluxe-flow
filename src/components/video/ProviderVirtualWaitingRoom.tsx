@@ -75,7 +75,7 @@ export const ProviderVirtualWaitingRoom = ({
       // Query 1: Get existing video_sessions
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('video_sessions')
-        .select('*, patient_accounts!video_sessions_patient_id_fkey(id, first_name, last_name)')
+        .select('*, patient_accounts!video_sessions_patient_id_fkey(id, first_name, last_name, name)')
         .eq('practice_id', practiceId)
         .gte('scheduled_start_time', yesterday.toISOString())
         .lt('scheduled_start_time', dayAfterTomorrow.toISOString())
@@ -90,7 +90,7 @@ export const ProviderVirtualWaitingRoom = ({
         .select('id, patient_id, provider_id, start_time, status')
         .eq('practice_id', practiceId)
         .eq('visit_type', 'video')
-        .in('status', ['scheduled', 'checked_in'])
+        .in('status', ['scheduled', 'confirmed', 'checked_in'])
         .gte('start_time', yesterday.toISOString())
         .lt('start_time', dayAfterTomorrow.toISOString())
         .order('start_time', { ascending: true });
@@ -149,7 +149,7 @@ export const ProviderVirtualWaitingRoom = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patient_accounts')
-        .select('id, user_id, first_name, last_name, email')
+        .select('id, user_id, first_name, last_name, name, email')
         .eq('practice_id', practiceId)
         .order('last_name');
       
@@ -157,10 +157,11 @@ export const ProviderVirtualWaitingRoom = ({
       
       const mappedPatients = (data as any[])?.map((p: any) => {
         const fullName = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
+        const displayName = fullName || p.name || p.email || 'Unknown Patient';
         return {
           ...p,
           profiles: {
-            name: fullName || p.profiles?.name || 'Unknown Patient',
+            name: displayName,
             email: p.email
           }
         };
@@ -890,8 +891,11 @@ export const ProviderVirtualWaitingRoom = ({
           const patientAccount = Array.isArray(session.patient_accounts) 
             ? session.patient_accounts[0] 
             : session.patient_accounts;
+          const fullName = patientAccount 
+            ? `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim() 
+            : '';
           const patientName = patientAccount 
-            ? `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim() || 'Patient'
+            ? (patientAccount.name || fullName || 'Patient')
             : 'Patient';
           
           const appointmentTime = format(
@@ -1071,9 +1075,9 @@ export const ProviderVirtualWaitingRoom = ({
         practiceId={practiceId}
         providers={providers?.map(p => ({
           id: p.id,
-          full_name: p.full_name,
-          first_name: p.first_name,
-          last_name: p.last_name,
+          full_name: getProviderDisplayName(p),
+          first_name: p.first_name || '',
+          last_name: p.last_name || '',
         })) || []}
         rooms={[]}
         defaultVisitType="video"
