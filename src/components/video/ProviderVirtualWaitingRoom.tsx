@@ -102,10 +102,18 @@ export const ProviderVirtualWaitingRoom = ({
         (sessionsData || []).map(s => [s.appointment_id, s])
       );
 
-      // Add appointments that don't have sessions yet
+      console.log('[ProviderVirtualWaitingRoom] Sessions by appointment:', {
+        mapSize: sessionsByAppointmentId.size,
+        keys: Array.from(sessionsByAppointmentId.keys())
+      });
+
+      // Start with real video_sessions
       const merged = [...(sessionsData || [])];
+      
+      // Add appointments that don't have sessions yet
       (appointmentsData || []).forEach(apt => {
         if (!sessionsByAppointmentId.has(apt.id)) {
+          console.log('[ProviderVirtualWaitingRoom] Creating synthetic session for appointment:', apt.id);
           // Create a session-like object from appointment
           merged.push({
             id: `apt-${apt.id}`,
@@ -116,6 +124,8 @@ export const ProviderVirtualWaitingRoom = ({
             status: apt.status === 'checked_in' ? 'waiting' : 'scheduled',
             patient_accounts: null, // Will be filled from patients query
           } as any);
+        } else {
+          console.log('[ProviderVirtualWaitingRoom] Real session exists for appointment:', apt.id);
         }
       });
 
@@ -189,7 +199,28 @@ export const ProviderVirtualWaitingRoom = ({
     enabled: showCreateDialog || showScheduleDialog || practiceId !== '' // Always fetch for practice
   });
 
+  // Helper function to check if a session is synthetic (not yet created in DB)
+  const isSyntheticSession = (sessionId: string) => sessionId.startsWith('apt-');
+
+  // Detect synthetic sessions and ensure refetch is active
+  useEffect(() => {
+    const hasSyntheticSessions = videoSessions?.some(s => isSyntheticSession(s.id));
+    if (hasSyntheticSessions) {
+      console.log('[ProviderVirtualWaitingRoom] Synthetic sessions detected, refetch active');
+    }
+  }, [videoSessions]);
+
   const handleStartSession = async (sessionId: string) => {
+    // Prevent starting synthetic sessions
+    if (isSyntheticSession(sessionId)) {
+      toast({
+        title: "Session Not Ready",
+        description: "Video session is being created. Please wait a moment and try again.",
+        variant: "destructive"
+      });
+      await queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
+      return;
+    }
     try {
       const { error } = await supabase.functions.invoke('start-video-session', {
         body: { sessionId }
@@ -218,6 +249,17 @@ export const ProviderVirtualWaitingRoom = ({
   };
 
   const handleGenerateGuestLink = async (sessionId: string) => {
+    // Prevent generating links for synthetic sessions
+    if (isSyntheticSession(sessionId)) {
+      toast({
+        title: "Session Not Ready",
+        description: "Cannot generate guest link yet. Video session is being created.",
+        variant: "destructive"
+      });
+      await queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
+      return;
+    }
+    
     setGeneratingLink(sessionId);
     try {
       const { data, error } = await supabase.functions.invoke('generate-video-guest-link', {
@@ -811,7 +853,14 @@ export const ProviderVirtualWaitingRoom = ({
                 </div>
                 
                 <div>
-                  <div className="font-medium">{patientName}</div>
+                  <div className="font-medium flex items-center gap-2">
+                    {patientName}
+                    {isSyntheticSession(session.id) && (
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                        Initializing...
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground flex items-center gap-2">
                     <Clock className="h-3 w-3" />
                     {appointmentTime}
@@ -831,11 +880,11 @@ export const ProviderVirtualWaitingRoom = ({
                   variant="outline"
                   size="sm"
                   onClick={() => handleGenerateGuestLink(session.id)}
-                  disabled={generatingLink === session.id}
+                  disabled={generatingLink === session.id || isSyntheticSession(session.id)}
                   className="gap-2"
-                  title="Generate guest access link"
+                  title={isSyntheticSession(session.id) ? "Session is being created..." : "Generate guest access link"}
                 >
-                  {generatingLink === session.id ? (
+                  {generatingLink === session.id || isSyntheticSession(session.id) ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
                     <Link2 className="h-3 w-3" />
@@ -849,8 +898,14 @@ export const ProviderVirtualWaitingRoom = ({
                       onClick={() => handleStartSession(session.id)}
                       size="sm"
                       className="gap-2"
+                      disabled={isSyntheticSession(session.id)}
+                      title={isSyntheticSession(session.id) ? "Session is being created..." : "Start the video session"}
                     >
-                      <Video className="h-4 w-4" />
+                      {isSyntheticSession(session.id) ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Video className="h-4 w-4" />
+                      )}
                       Start Session
                     </Button>
                     <Button
@@ -884,6 +939,26 @@ export const ProviderVirtualWaitingRoom = ({
                       <Video className="h-4 w-4" />
                       Join Now
                     </Button>
+                    {!isSyntheticSession(session.id) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 border-green-500 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950"
+                        onClick={() => {
+                          setAppointmentToComplete(session.appointment_id);
+                          setShowCompleteDialog(true);
+                        }}
+                        disabled={completingAppointment === session.appointment_id}
+                        title="Mark appointment as completed"
+                      >
+                        {completingAppointment === session.appointment_id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                        Complete
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -904,7 +979,7 @@ export const ProviderVirtualWaitingRoom = ({
                   </>
                 )}
 
-                {session.status === 'active' && (
+                {session.status === 'active' && !isSyntheticSession(session.id) && (
                   <>
                     <Button
                       variant="outline"
