@@ -67,6 +67,8 @@ export default function VideoConsultationRoom() {
         console.log("✅ Session joined successfully");
         setSessionData(data);
         setShowDeviceTest(true);
+        setLoading(false);
+        console.log("✅ UI ready: Device test screen should render now");
       } catch (err: any) {
         console.error("❌ Error joining video session:", err);
         
@@ -101,6 +103,13 @@ export default function VideoConsultationRoom() {
 
     joinSession();
   }, [sessionId, toast]);
+
+  // Safety guard: ensure loading is false when sessionData is set
+  useEffect(() => {
+    if (sessionData && loading) {
+      setLoading(false);
+    }
+  }, [sessionData, loading]);
 
   const handleLeave = async () => {
     if (sessionId) {
