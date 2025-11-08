@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Camera, Mic, Volume2, CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Camera, Mic, Volume2, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { toast } from "sonner";
 
@@ -23,6 +23,8 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
   const [speakerStatus, setSpeakerStatus] = useState<"testing" | "success" | "error">("testing");
   const [audioLevel, setAudioLevel] = useState(0);
   const [isTestingAudio, setIsTestingAudio] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSwitchingDevice, setIsSwitchingDevice] = useState(false);
   
   const [cameras, setCameras] = useState<MediaDevice[]>([]);
   const [microphones, setMicrophones] = useState<MediaDevice[]>([]);
@@ -36,7 +38,9 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
   const localVideoTrackRef = useRef<any>(null);
   const localAudioTrackRef = useRef<any>(null);
   const audioIntervalRef = useRef<any>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const refreshTimeoutRef = useRef<any>(null);
+  const deviceSwitchTimeoutRef = useRef<any>(null);
+  const retryCountRef = useRef({ camera: 0, mic: 0 });
 
   useEffect(() => {
     enumerateDevices();
@@ -57,26 +61,54 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
     }
   }, [selectedMicrophone]);
 
-  const cleanup = () => {
-    if (localVideoTrackRef.current) {
-      localVideoTrackRef.current.stop();
-      localVideoTrackRef.current.close();
+  const cleanup = useCallback(async () => {
+    console.log("🧹 Cleaning up device test resources...");
+    
+    try {
+      if (localVideoTrackRef.current) {
+        localVideoTrackRef.current.stop();
+        localVideoTrackRef.current.close();
+        localVideoTrackRef.current = null;
+      }
+      if (localAudioTrackRef.current) {
+        localAudioTrackRef.current.stop();
+        localAudioTrackRef.current.close();
+        localAudioTrackRef.current = null;
+      }
+      if (audioIntervalRef.current) {
+        clearInterval(audioIntervalRef.current);
+        audioIntervalRef.current = null;
+      }
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      if (deviceSwitchTimeoutRef.current) {
+        clearTimeout(deviceSwitchTimeoutRef.current);
+      }
+      
+      setAudioLevel(0);
+      console.log("✅ Cleanup complete");
+    } catch (error) {
+      console.error("Error during cleanup:", error);
     }
-    if (localAudioTrackRef.current) {
-      localAudioTrackRef.current.stop();
-      localAudioTrackRef.current.close();
-    }
-    if (audioIntervalRef.current) {
-      clearInterval(audioIntervalRef.current);
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
-  };
+  }, []);
 
-  const enumerateDevices = async () => {
+  const enumerateDevices = useCallback(async () => {
+    console.log("🔍 Enumerating devices...");
+    setIsRefreshing(true);
+    
+    // Cleanup existing tracks first
+    await cleanup();
+    
+    // Reset all statuses
+    setCameraStatus("testing");
+    setMicStatus("testing");
+    setSpeakerStatus("testing");
+    retryCountRef.current = { camera: 0, mic: 0 };
+    
     try {
       const devices = await AgoraRTC.getDevices();
+      console.log("📱 Found devices:", devices.length);
       
       const cameraDevices = devices
         .filter(device => device.kind === 'videoinput')
@@ -102,6 +134,8 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
           kind: device.kind
         }));
       
+      console.log(`📹 Cameras: ${cameraDevices.length}, 🎤 Mics: ${micDevices.length}, 🔊 Speakers: ${speakerDevices.length}`);
+      
       setCameras(cameraDevices);
       setMicrophones(micDevices);
       setSpeakers(speakerDevices);
@@ -109,53 +143,108 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       // Auto-select first devices and start testing
       if (cameraDevices.length > 0) {
         setSelectedCamera(cameraDevices[0].deviceId);
-        testCamera(cameraDevices[0].deviceId);
+        await testCamera(cameraDevices[0].deviceId);
+      } else {
+        setCameraStatus("error");
+        toast.error("No camera found");
       }
+      
       if (micDevices.length > 0) {
         setSelectedMicrophone(micDevices[0].deviceId);
-        testMicrophone(micDevices[0].deviceId);
+        await testMicrophone(micDevices[0].deviceId);
+      } else {
+        setMicStatus("error");
+        toast.error("No microphone found");
       }
+      
       if (speakerDevices.length > 0) {
         setSelectedSpeaker(speakerDevices[0].deviceId);
         setSpeakerStatus("success");
       }
     } catch (error) {
-      console.error("Error enumerating devices:", error);
+      console.error("❌ Error enumerating devices:", error);
       toast.error("Failed to enumerate devices. Please check permissions.");
+    } finally {
+      setIsRefreshing(false);
     }
-  };
+  }, [cleanup]);
 
-  const testCamera = async (deviceId?: string) => {
+  const testCamera = async (deviceId?: string, isRetry = false) => {
     try {
+      console.log(`📹 Testing camera${deviceId ? ` (${deviceId})` : ''}...`);
       setCameraStatus("testing");
+      
       const videoTrack = await AgoraRTC.createCameraVideoTrack(
         deviceId ? { cameraId: deviceId } : undefined
       );
+      
       localVideoTrackRef.current = videoTrack;
+      console.log("✅ Video track created");
+      
+      // Wait for DOM to be ready and add retry logic
       if (videoRef.current) {
-        videoTrack.play(videoRef.current);
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for DOM
+        
+        try {
+          videoTrack.play(videoRef.current);
+          console.log("✅ Video playing in DOM");
+          
+          // Verify video is actually rendering
+          await new Promise(resolve => setTimeout(resolve, 200));
+          setCameraStatus("success");
+          retryCountRef.current.camera = 0;
+          toast.success("Camera ready", { duration: 1000 });
+        } catch (playError) {
+          console.warn("⚠️ First play attempt failed, retrying...", playError);
+          
+          // Retry once
+          if (!isRetry && retryCountRef.current.camera < 1) {
+            retryCountRef.current.camera++;
+            await new Promise(resolve => setTimeout(resolve, 500));
+            videoTrack.play(videoRef.current);
+            setCameraStatus("success");
+            console.log("✅ Video playing after retry");
+          } else {
+            throw playError;
+          }
+        }
+      } else {
+        throw new Error("Video container ref not available");
       }
-      setCameraStatus("success");
     } catch (error) {
-      console.error("Camera test failed:", error);
+      console.error("❌ Camera test failed:", error);
       setCameraStatus("error");
-      toast.error("Camera access denied. Please allow camera permissions.");
+      
+      if (retryCountRef.current.camera < 1 && !isRetry) {
+        retryCountRef.current.camera++;
+        console.log("🔄 Retrying camera test...");
+        setTimeout(() => testCamera(deviceId, true), 1000);
+      } else {
+        toast.error("Camera access denied. Please allow camera permissions.");
+      }
     }
   };
 
-  const testMicrophone = async (deviceId?: string) => {
+  const testMicrophone = async (deviceId?: string, isRetry = false) => {
     try {
+      console.log(`🎤 Testing microphone${deviceId ? ` (${deviceId})` : ''}...`);
       setMicStatus("testing");
+      
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
         deviceId ? { microphoneId: deviceId } : undefined
       );
+      
       localAudioTrackRef.current = audioTrack;
+      console.log("✅ Audio track created");
       setMicStatus("success");
+      retryCountRef.current.mic = 0;
+      toast.success("Microphone ready", { duration: 1000 });
 
       // Monitor audio levels
       if (audioIntervalRef.current) {
         clearInterval(audioIntervalRef.current);
       }
+      
       audioIntervalRef.current = setInterval(() => {
         if (localAudioTrackRef.current) {
           const level = localAudioTrackRef.current.getVolumeLevel();
@@ -163,42 +252,80 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
         }
       }, 100);
     } catch (error) {
-      console.error("Microphone test failed:", error);
+      console.error("❌ Microphone test failed:", error);
       setMicStatus("error");
-      toast.error("Microphone access denied. Please allow microphone permissions.");
+      
+      if (retryCountRef.current.mic < 1 && !isRetry) {
+        retryCountRef.current.mic++;
+        console.log("🔄 Retrying microphone test...");
+        setTimeout(() => testMicrophone(deviceId, true), 1000);
+      } else {
+        toast.error("Microphone access denied. Please allow microphone permissions.");
+      }
     }
   };
 
-  const switchCamera = async (deviceId: string) => {
-    if (localVideoTrackRef.current) {
-      localVideoTrackRef.current.stop();
-      localVideoTrackRef.current.close();
+  const switchCamera = useCallback(async (deviceId: string) => {
+    if (deviceSwitchTimeoutRef.current) {
+      clearTimeout(deviceSwitchTimeoutRef.current);
     }
-    await testCamera(deviceId);
-  };
+    
+    deviceSwitchTimeoutRef.current = setTimeout(async () => {
+      console.log("🔄 Switching camera...");
+      setIsSwitchingDevice(true);
+      
+      try {
+        if (localVideoTrackRef.current) {
+          localVideoTrackRef.current.stop();
+          localVideoTrackRef.current.close();
+          localVideoTrackRef.current = null;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await testCamera(deviceId);
+      } finally {
+        setIsSwitchingDevice(false);
+      }
+    }, 300); // Debounce 300ms
+  }, []);
 
-  const switchMicrophone = async (deviceId: string) => {
-    if (localAudioTrackRef.current) {
-      localAudioTrackRef.current.stop();
-      localAudioTrackRef.current.close();
+  const switchMicrophone = useCallback(async (deviceId: string) => {
+    if (deviceSwitchTimeoutRef.current) {
+      clearTimeout(deviceSwitchTimeoutRef.current);
     }
-    if (audioIntervalRef.current) {
-      clearInterval(audioIntervalRef.current);
-    }
-    await testMicrophone(deviceId);
-  };
+    
+    deviceSwitchTimeoutRef.current = setTimeout(async () => {
+      console.log("🔄 Switching microphone...");
+      setIsSwitchingDevice(true);
+      
+      try {
+        if (localAudioTrackRef.current) {
+          localAudioTrackRef.current.stop();
+          localAudioTrackRef.current.close();
+          localAudioTrackRef.current = null;
+        }
+        if (audioIntervalRef.current) {
+          clearInterval(audioIntervalRef.current);
+          audioIntervalRef.current = null;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await testMicrophone(deviceId);
+      } finally {
+        setIsSwitchingDevice(false);
+      }
+    }, 300); // Debounce 300ms
+  }, []);
 
-  const testSpeakers = async () => {
+  const testSpeakers = useCallback(async () => {
     try {
+      console.log("🔊 Testing speakers...");
       setIsTestingAudio(true);
       
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
+      // Create fresh AudioContext each time for reliability
+      const audioContext = new AudioContext();
       
-      const audioContext = audioContextRef.current;
-      
-      // Resume AudioContext if suspended (browser autoplay policy)
+      // Handle suspended state (browser autoplay policy)
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
       }
@@ -213,19 +340,24 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       gainNode.gain.value = 0.3;
       
       oscillator.start();
-      setTimeout(() => {
-        oscillator.stop();
-        setIsTestingAudio(false);
-      }, 500);
       
+      // Play for 500ms then cleanup
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      oscillator.stop();
+      audioContext.close();
+      
+      setIsTestingAudio(false);
       setSpeakerStatus("success");
+      toast.success("Speaker test complete - did you hear it?", { duration: 2000 });
+      console.log("✅ Speaker test complete");
     } catch (error) {
-      console.error("Error testing speakers:", error);
+      console.error("❌ Error testing speakers:", error);
       setSpeakerStatus("error");
       setIsTestingAudio(false);
-      toast.error("Failed to test speakers");
+      toast.error("Failed to test speakers. Check browser permissions.");
     }
-  };
+  }, []);
 
   const getStatusIcon = (status: "testing" | "success" | "error") => {
     switch (status) {
@@ -238,6 +370,16 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
     }
   };
 
+  const handleRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    
+    refreshTimeoutRef.current = setTimeout(() => {
+      enumerateDevices();
+    }, 500); // Debounce 500ms
+  }, [enumerateDevices]);
+
   const canContinue = cameraStatus === "success" && micStatus === "success";
 
   return (
@@ -247,28 +389,45 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
           <div>
             <h2 className="text-2xl font-bold text-foreground">Device Check</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Please allow camera and microphone access to join the video session
+              {canContinue 
+                ? "✓ Ready to join! Click continue below." 
+                : "Please allow camera and microphone access to join the video session"}
             </p>
           </div>
           <Button
-            onClick={enumerateDevices}
+            onClick={handleRefresh}
             variant="ghost"
             size="sm"
+            disabled={isRefreshing}
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
 
         {/* Video Preview */}
-        <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
-          <div ref={videoRef} className="w-full h-full" />
+        <div className="relative bg-black rounded-lg overflow-hidden aspect-video min-h-[320px]">
+          <div ref={videoRef} className="w-full h-full" style={{ minHeight: '320px' }} />
+          {cameraStatus === "testing" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+              <div className="text-center text-white">
+                <Loader2 className="h-12 w-12 mx-auto mb-2 animate-spin" />
+                <p className="text-sm">Starting camera...</p>
+              </div>
+            </div>
+          )}
           {cameraStatus === "error" && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
               <div className="text-center text-white">
                 <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Camera not available</p>
+                <p className="text-xs mt-1 opacity-70">Check browser permissions</p>
               </div>
+            </div>
+          )}
+          {isSwitchingDevice && cameraStatus === "success" && (
+            <div className="absolute top-4 right-4 bg-black/60 px-3 py-1 rounded-full">
+              <Loader2 className="h-4 w-4 text-white animate-spin" />
             </div>
           )}
         </div>
@@ -284,7 +443,11 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
               {getStatusIcon(cameraStatus)}
             </div>
             {cameras.length > 0 && (
-              <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+              <Select 
+                value={selectedCamera} 
+                onValueChange={setSelectedCamera}
+                disabled={isSwitchingDevice || isRefreshing}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select camera" />
                 </SelectTrigger>
@@ -318,7 +481,11 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
               {getStatusIcon(micStatus)}
             </div>
             {microphones.length > 0 && (
-              <Select value={selectedMicrophone} onValueChange={setSelectedMicrophone}>
+              <Select 
+                value={selectedMicrophone} 
+                onValueChange={setSelectedMicrophone}
+                disabled={isSwitchingDevice || isRefreshing}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select microphone" />
                 </SelectTrigger>
@@ -350,7 +517,11 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
               {getStatusIcon(speakerStatus)}
             </div>
             {speakers.length > 0 && (
-              <Select value={selectedSpeaker} onValueChange={setSelectedSpeaker}>
+              <Select 
+                value={selectedSpeaker} 
+                onValueChange={setSelectedSpeaker}
+                disabled={isRefreshing}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select speaker" />
                 </SelectTrigger>
