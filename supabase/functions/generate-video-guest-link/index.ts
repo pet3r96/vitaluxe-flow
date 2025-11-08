@@ -21,6 +21,8 @@ Deno.serve(async (req) => {
       );
     }
 
+    const jwt = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : authHeader;
+
     // Use anon client for auth check with Authorization header
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -35,7 +37,7 @@ Deno.serve(async (req) => {
     const {
       data: { user },
       error: authError,
-    } = await supabaseAuth.auth.getUser();
+    } = await supabaseAuth.auth.getUser(jwt);
 
     if (authError || !user) {
       console.error('❌ [generate-video-guest-link] Auth failed:', authError);

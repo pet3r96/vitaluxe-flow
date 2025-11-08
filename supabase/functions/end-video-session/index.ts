@@ -21,6 +21,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    const jwt = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : authHeader;
+
     // Use anon client for auth check with Authorization header
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
@@ -28,7 +30,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
     
     if (authError || !user) {
       console.error('❌ [end-video-session] Auth failed:', authError);
