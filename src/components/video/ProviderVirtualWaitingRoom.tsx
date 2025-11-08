@@ -38,6 +38,7 @@ export const ProviderVirtualWaitingRoom = ({
   const [guestLinkData, setGuestLinkData] = useState<{ url: string; expiresAt: string } | null>(null);
   const [showGuestLinkDialog, setShowGuestLinkDialog] = useState(false);
   const [generatingLink, setGeneratingLink] = useState<string | null>(null);
+  const [startingSession, setStartingSession] = useState<string | null>(null);
   const [cancellingSession, setCancellingSession] = useState<string | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [sessionToCancel, setSessionToCancel] = useState<string | null>(null);
@@ -221,6 +222,8 @@ export const ProviderVirtualWaitingRoom = ({
       await queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
       return;
     }
+    
+    setStartingSession(sessionId);
     try {
       const { error } = await supabase.functions.invoke('start-video-session', {
         body: { sessionId }
@@ -241,6 +244,8 @@ export const ProviderVirtualWaitingRoom = ({
         description: "Failed to start video session",
         variant: "destructive"
       });
+    } finally {
+      setStartingSession(null);
     }
   };
 
@@ -898,10 +903,10 @@ export const ProviderVirtualWaitingRoom = ({
                       onClick={() => handleStartSession(session.id)}
                       size="sm"
                       className="gap-2"
-                      disabled={isSyntheticSession(session.id)}
+                      disabled={startingSession === session.id || isSyntheticSession(session.id)}
                       title={isSyntheticSession(session.id) ? "Session is being created..." : "Start the video session"}
                     >
-                      {isSyntheticSession(session.id) ? (
+                      {startingSession === session.id || isSyntheticSession(session.id) ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Video className="h-4 w-4" />
