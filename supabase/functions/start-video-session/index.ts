@@ -202,6 +202,7 @@ Deno.serve(async (req) => {
             token,
             expires_at: expiresAt.toISOString(),
             created_by: user.id,
+            max_uses: 999, // Allow reconnections
           });
 
         if (!linkError) {

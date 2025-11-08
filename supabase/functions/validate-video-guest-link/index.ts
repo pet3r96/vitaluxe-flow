@@ -51,22 +51,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check expiration
-    if (new Date(guestLink.expires_at) < new Date()) {
-      await supabaseAdmin.from('audit_logs').insert({
-        action_type: 'video_guest_link_expired',
-        entity_type: 'video_session_guest_links',
-        entity_id: guestLink.id,
-        details: { token, ip_address: clientIp, expires_at: guestLink.expires_at },
-      });
-
-      return new Response(
-        JSON.stringify({ error: 'expired', message: 'This guest link has expired' }),
-        { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check if revoked
+    // Check if revoked first
     if (guestLink.is_revoked) {
       return new Response(
         JSON.stringify({ error: 'revoked', message: 'This guest link has been revoked' }),
@@ -74,16 +59,59 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check max uses
-    if (guestLink.access_count >= guestLink.max_uses) {
+    // Check session status - block if consultation is complete
+    const session = guestLink.video_sessions;
+    if (['ended', 'failed'].includes(session.status)) {
       return new Response(
-        JSON.stringify({ error: 'already_used', message: 'This guest link has already been used' }),
+        JSON.stringify({ 
+          error: 'session_completed', 
+          message: 'This video session has ended. Please contact your provider if you need assistance.' 
+        }),
         { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check session status
-    const session = guestLink.video_sessions;
+    // Smart expiration: Check if link expired, but allow within 1 hour of appointment
+    if (new Date(guestLink.expires_at) < new Date()) {
+      const appointmentTime = new Date(session.scheduled_start_time);
+      const oneHourAfterAppointment = new Date(appointmentTime.getTime() + 60 * 60 * 1000);
+      const now = new Date();
+      
+      // Block if more than 1 hour past appointment time
+      if (now > oneHourAfterAppointment) {
+        await supabaseAdmin.from('audit_logs').insert({
+          action_type: 'video_guest_link_expired',
+          entity_type: 'video_session_guest_links',
+          entity_id: guestLink.id,
+          details: { 
+            token, 
+            ip_address: clientIp, 
+            expires_at: guestLink.expires_at,
+            appointment_time: session.scheduled_start_time,
+            reason: '1 hour past appointment time'
+          },
+        });
+
+        return new Response(
+          JSON.stringify({ 
+            error: 'expired', 
+            message: 'This guest link has expired. It was valid until 1 hour after your scheduled appointment time.' 
+          }),
+          { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // Otherwise continue - within appointment window even though expires_at passed
+    }
+
+    // Check max uses only if explicitly set low (allow reconnections for default 999)
+    if (guestLink.max_uses && guestLink.max_uses < 999 && guestLink.access_count >= guestLink.max_uses) {
+      return new Response(
+        JSON.stringify({ error: 'max_uses_exceeded', message: 'This guest link has reached its usage limit' }),
+        { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Allow if session is waiting or active
     if (!['waiting', 'active'].includes(session.status)) {
       return new Response(
         JSON.stringify({ 

@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expirationHours);
 
-    // Insert guest link
+    // Insert guest link with unlimited reconnections
     const { data: guestLink, error: insertError } = await supabaseClient
       .from('video_session_guest_links')
       .insert({
@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
         token,
         expires_at: expiresAt.toISOString(),
         created_by: user.id,
+        max_uses: 999, // Allow reconnections
       })
       .select()
       .single();
