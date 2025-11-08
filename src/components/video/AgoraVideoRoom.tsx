@@ -111,9 +111,32 @@ export const AgoraVideoRoom = ({
         // Join channel
         await agoraClient.join(appId, channelName, token, uid);
 
-        // Create and publish local tracks
-        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        // Read device preferences from localStorage
+        const prefs = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
+        console.log("📱 Using device preferences:", prefs);
+
+        // Create and publish local tracks with preferred devices
+        let audioTrack: IMicrophoneAudioTrack;
+        try {
+          audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
+            prefs?.micId ? { microphoneId: prefs.micId } : undefined
+          );
+          console.log("✅ Audio track created with preferred device");
+        } catch (e) {
+          console.warn("⚠️ Mic create failed with chosen device, falling back:", e);
+          audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        }
+
+        let videoTrack: ICameraVideoTrack;
+        try {
+          videoTrack = await AgoraRTC.createCameraVideoTrack(
+            prefs?.cameraId ? { cameraId: prefs.cameraId } : undefined
+          );
+          console.log("✅ Video track created with preferred device");
+        } catch (e) {
+          console.warn("⚠️ Camera create failed with chosen device, falling back:", e);
+          videoTrack = await AgoraRTC.createCameraVideoTrack();
+        }
         
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);

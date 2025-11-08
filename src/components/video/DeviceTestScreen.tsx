@@ -44,22 +44,75 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
   useEffect(() => {
     enumerateDevices();
+    
+    // Listen for device changes (plugging/unplugging headsets)
+    const handleDeviceChange = () => {
+      console.log("🔄 Device change detected");
+      enumerateDevices();
+    };
+    
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+    
     return () => {
       cleanup();
+      navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
     };
   }, []);
 
   useEffect(() => {
     if (selectedCamera && cameraStatus === "success") {
+      persistPrefs(selectedCamera, undefined, undefined);
       switchCamera(selectedCamera);
     }
   }, [selectedCamera]);
 
   useEffect(() => {
     if (selectedMicrophone && micStatus === "success") {
+      persistPrefs(undefined, selectedMicrophone, undefined);
       switchMicrophone(selectedMicrophone);
     }
   }, [selectedMicrophone]);
+
+  // Helper to get the browser's true default device
+  const getDefaultDeviceId = async (kind: "audioinput" | "videoinput") => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(
+        kind === "audioinput" ? { audio: true } : { video: true }
+      );
+      const track = kind === "audioinput" ? stream.getAudioTracks()[0] : stream.getVideoTracks()[0];
+      const id = track?.getSettings()?.deviceId || "";
+      stream.getTracks().forEach(t => t.stop());
+      return id;
+    } catch {
+      return "";
+    }
+  };
+
+  // Helper to pick the preferred microphone intelligently
+  const pickPreferredMic = (mics: MediaDevice[], defaultId: string) => {
+    const hasDefaultId = defaultId && mics.find(d => d.deviceId === defaultId)?.deviceId;
+    if (hasDefaultId) return defaultId;
+
+    const preferDefaultLabel = mics.find(d => d.label?.toLowerCase().startsWith("default -"));
+    if (preferDefaultLabel) return preferDefaultLabel.deviceId;
+
+    const preferBuiltIn = mics.find(d => /built[- ]?in|macbook/i.test(d.label));
+    if (preferBuiltIn) return preferBuiltIn.deviceId;
+
+    const deprioritized = ["iphone", "ipad", "airpods", "bluetooth"];
+    const nonContinuity = mics.find(d => !deprioritized.some(x => d.label.toLowerCase().includes(x)));
+    return (nonContinuity || mics[0]).deviceId;
+  };
+
+  // Helper to persist device preferences
+  const persistPrefs = (cameraId?: string, micId?: string, speakerId?: string) => {
+    const prev = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
+    localStorage.setItem("video.devicePrefs", JSON.stringify({
+      cameraId: cameraId ?? prev.cameraId,
+      micId: micId ?? prev.micId,
+      speakerId: speakerId ?? prev.speakerId,
+    }));
+  };
 
   const cleanup = useCallback(async () => {
     console.log("🧹 Cleaning up device test resources...");
@@ -140,18 +193,25 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       setMicrophones(micDevices);
       setSpeakers(speakerDevices);
       
-      // Auto-select first devices and start testing
+      // Auto-select devices with intelligent defaults and start testing
       if (cameraDevices.length > 0) {
-        setSelectedCamera(cameraDevices[0].deviceId);
-        await testCamera(cameraDevices[0].deviceId);
+        const defaultCamId = await getDefaultDeviceId("videoinput");
+        const chosenCamId = defaultCamId && cameraDevices.find(d => d.deviceId === defaultCamId)?.deviceId 
+          || cameraDevices[0].deviceId;
+        setSelectedCamera(chosenCamId);
+        persistPrefs(chosenCamId, undefined, undefined);
+        await testCamera(chosenCamId);
       } else {
         setCameraStatus("error");
         toast.error("No camera found");
       }
       
       if (micDevices.length > 0) {
-        setSelectedMicrophone(micDevices[0].deviceId);
-        await testMicrophone(micDevices[0].deviceId);
+        const defaultMicId = await getDefaultDeviceId("audioinput");
+        const chosenMicId = pickPreferredMic(micDevices, defaultMicId);
+        setSelectedMicrophone(chosenMicId);
+        persistPrefs(undefined, chosenMicId, undefined);
+        await testMicrophone(chosenMicId);
       } else {
         setMicStatus("error");
         toast.error("No microphone found");
@@ -159,6 +219,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       
       if (speakerDevices.length > 0) {
         setSelectedSpeaker(speakerDevices[0].deviceId);
+        persistPrefs(undefined, undefined, speakerDevices[0].deviceId);
         setSpeakerStatus("success");
       }
     } catch (error) {
@@ -540,7 +601,11 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
         {/* Actions */}
         <div className="flex gap-3 pt-4">
           <Button
-            onClick={onComplete}
+            onClick={() => {
+              // Persist current selections before continuing
+              persistPrefs(selectedCamera, selectedMicrophone, selectedSpeaker);
+              onComplete();
+            }}
             disabled={!canContinue}
             className="flex-1"
             size="lg"
