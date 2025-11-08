@@ -40,9 +40,14 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
       
-      // Check for active impersonation session
-      const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-      const effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+      // Check for active impersonation session with graceful fallback
+      let effectiveUserId = user.id;
+      try {
+        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
+        effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
+      } catch (e) {
+        console.warn('[AppointmentBooking] get-active-impersonation failed, using real user id');
+      }
       
       console.log("👤 [AppointmentBooking] Effective user ID:", effectiveUserId);
       
