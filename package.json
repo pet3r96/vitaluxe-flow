@@ -57,6 +57,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/zxcvbn": "^4.4.5",
     "@vitest/ui": "^3.2.4",
+    "agora-react-uikit": "^1.2.0",
     "agora-rtc-react": "^2.5.0",
     "agora-rtc-sdk-ng": "^4.24.0",
     "agora-rtm-sdk": "^1.5.1",
