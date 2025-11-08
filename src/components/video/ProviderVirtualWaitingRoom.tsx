@@ -149,30 +149,18 @@ export const ProviderVirtualWaitingRoom = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patient_accounts')
-        .select('id, user_id, first_name, last_name, name, email')
+        .select('id, first_name, last_name, email')
         .eq('practice_id', practiceId)
         .order('last_name');
       
       if (error) throw error;
       
-      const mappedPatients = (data as any[])?.map((p: any) => {
-        const fullName = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
-        const displayName = fullName || p.name || p.email || 'Unknown Patient';
-        return {
-          ...p,
-          profiles: {
-            name: displayName,
-            email: p.email
-          }
-        };
-      }) || [];
-      
       console.log('[ProviderVirtualWaitingRoom] ✅ Patients loaded:', {
-        count: mappedPatients.length,
-        sampleNames: mappedPatients.slice(0, 3).map(p => p.profiles.name)
+        count: data?.length || 0,
+        sampleNames: data?.slice(0, 3).map(p => `${p.first_name} ${p.last_name}`)
       });
       
-      return mappedPatients;
+      return data || [];
     },
     enabled: showCreateDialog || showScheduleDialog
   });
@@ -714,15 +702,11 @@ export const ProviderVirtualWaitingRoom = ({
                     </SelectTrigger>
                     <SelectContent>
                       {patients && patients.length > 0 ? (
-                        patients.map((patient: any) => {
-                          const displayName = patient.profiles?.name || 'Unknown Patient';
-                          const email = patient.profiles?.email || '';
-                          return (
-                            <SelectItem key={patient.id} value={patient.id}>
-                              {displayName} {email ? `(${email})` : ''}
-                            </SelectItem>
-                          );
-                        })
+                        patients.map((patient: any) => (
+                          <SelectItem key={patient.id} value={patient.id}>
+                            {patient.first_name} {patient.last_name} ({patient.email})
+                          </SelectItem>
+                        ))
                       ) : (
                         <SelectItem value="no-patients-available" disabled>
                           No patients found - please add patients first
