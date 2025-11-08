@@ -341,21 +341,21 @@ Deno.serve(async (req) => {
       privilegeExpiredTs
     });
 
-    // Generate RTC/RTM tokens using official Agora library
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+    // Generate RTC token with numeric UID
+    const rtcToken = await generateRtcToken(
       appId,
       appCertificate,
       channelName,
       uid,
-      RtcRole.PUBLISHER,
+      userRole,
       privilegeExpiredTs
     );
 
-    const rtmToken = RtmTokenBuilder.buildToken(
+    // Generate RTM token with numeric UID
+    const rtmToken = await generateRtmToken(
       appId,
       appCertificate,
-      uid.toString(),
-      RtmRole.Rtm_User,
+      uid,
       privilegeExpiredTs
     );
 
