@@ -191,12 +191,20 @@ export const ProviderVirtualWaitingRoom = ({
     setCancellingSession(appointmentId);
     try {
       console.log('🔥 [UI] Cancelling appointment:', appointmentId);
-      
+
       const { error } = await supabase.functions.invoke('cancel-appointment', {
         body: { appointmentId }
       });
 
       if (error) throw error;
+
+      // Optimistically remove the session tied to this appointment from cache
+      queryClient.setQueryData<any[]>(['provider-video-sessions', practiceId], (old) => {
+        if (!old) return old;
+        const next = old.filter((s) => s.appointment_id !== appointmentId);
+        console.log('🧹 [UI] Optimistically removed session(s) for appointment', appointmentId, { before: old.length, after: next.length });
+        return next;
+      });
 
       console.log('✅ [UI] Appointment cancelled, invalidating and refetching queries');
 
@@ -205,11 +213,7 @@ export const ProviderVirtualWaitingRoom = ({
         queryKey: ['provider-video-sessions', practiceId],
         refetchType: 'active'
       });
-      
-      // Also refetch to ensure immediate UI update
-      await queryClient.refetchQueries({
-        queryKey: ['provider-video-sessions', practiceId]
-      });
+      await queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
 
       toast({
         title: "✓ Appointment Cancelled",

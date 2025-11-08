@@ -178,15 +178,17 @@ Deno.serve(async (req) => {
     let videoSessionUpdated = false;
     if (videoSession && videoSession.status !== 'ended') {
       console.log('🎥 [cancel-appointment] Updating video session to ended:', videoSession.id);
-      
-      await supabaseClient
+      const { error: vsError } = await supabaseClient
         .from('video_sessions')
         .update({
-          status: 'ended',
-          actual_end_time: new Date().toISOString()
+          status: 'ended'
         })
         .eq('id', videoSession.id);
 
+      if (vsError) {
+        console.error('❌ [cancel-appointment] Video session update error:', vsError);
+        throw new Error('Video session update failed: ' + vsError.message);
+      }
       // Log the cancellation
       await supabaseClient.from('video_session_logs').insert({
         session_id: videoSession.id,
