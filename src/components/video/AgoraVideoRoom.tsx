@@ -191,41 +191,47 @@ export function AgoraVideoRoom({
   // Validate required fields
   const hasRequiredFields = appId && channelName && token && uid;
   
+  // Sanitize credentials to avoid hidden whitespace/newlines
+  const safeAppId = (appId || '').trim();
+  const safeToken = (token || '').trim();
+  
   const rtcProps: PropsInterface['rtcProps'] = {
-    appId: appId,
+    appId: safeAppId,
     channel: channelName,
-    token: token,
+    token: safeToken,
     uid: uid,
   };
-
+  
   // Debug logging
   console.log("🎥 Initializing Agora UIKit with:", {
-    appId: appId ? "✓ present" : "✗ missing",
+    appId: safeAppId ? "✓ present" : "✗ missing",
+    appIdLength: safeAppId.length,
     channel: channelName,
-    token: token ? "✓ present" : "✗ missing",
+    token: safeToken ? "✓ present" : "✗ missing",
+    tokenLength: safeToken.length,
     uid: uid,
     uidType: typeof uid
   });
-
+  
   console.log('🎥 [FULL AGORA DEBUG]', {
-    appId,
-    appIdLength: appId?.length,
-    appIdValid: appId && /^[0-9a-f]{32}$/i.test(appId),
-    appIdSample: appId ? appId.substring(0, 8) + '...' : 'MISSING',
+    appId: safeAppId,
+    appIdLength: safeAppId?.length,
+    appIdValid: safeAppId && /^[0-9a-f]{32}$/i.test(safeAppId),
+    appIdSample: safeAppId ? safeAppId.substring(0, 8) + '...' : 'MISSING',
     channelName,
     channelNameLength: channelName?.length,
     channelNameValid: channelName && channelName.length > 0,
-    token,
-    tokenLength: token?.length,
-    tokenValid: token && token.length > 20,
-    tokenPreview: token ? token.substring(0, 20) + '...' : 'MISSING',
+    token: safeToken,
+    tokenLength: safeToken?.length,
+    tokenValid: safeToken && safeToken.length > 20,
+    tokenPreview: safeToken ? safeToken.substring(0, 20) + '...' : 'MISSING',
     uid,
     uidType: typeof uid,
     uidValue: uid,
     uidValid: uid !== null && uid !== undefined && !isNaN(uid),
-    hasAppId: !!appId,
+    hasAppId: !!safeAppId,
     hasChannel: !!channelName,
-    hasToken: !!token,
+    hasToken: !!safeToken,
     hasUid: uid !== null && uid !== undefined,
     isProvider,
     userName

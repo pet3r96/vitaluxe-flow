@@ -1,4 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts';
+import { RtcTokenBuilder, RtmTokenBuilder, RtcRole, RtmRole } from 'https://esm.sh/agora-access-token@2.0.4';
 
 // This is a PUBLIC diagnostic function for testing Agora configuration
 // It validates credentials and generates test tokens without requiring authentication
@@ -193,18 +194,20 @@ Deno.serve(async (req) => {
 
     console.log('🎫 Generating test tokens...', { testChannel, testUid });
 
-    const rtcToken = await generateTestRtcToken(
+    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
       appId,
       appCertificate,
       testChannel,
       testUid,
+      RtcRole.PUBLISHER,
       privilegeExpiredTs
     );
 
-    const rtmToken = await generateTestRtmToken(
+    const rtmToken = RtmTokenBuilder.buildToken(
       appId,
       appCertificate,
-      testUid,
+      testUid.toString(),
+      RtmRole.Rtm_User,
       privilegeExpiredTs
     );
 
