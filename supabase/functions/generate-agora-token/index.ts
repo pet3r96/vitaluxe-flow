@@ -34,6 +34,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log('🔍 [generate-agora-token] Request:', { sessionId, authUserId: user.id });
+
+    // Check for active impersonation session
+    let effectiveUserId = user.id;
+    const { data: impersonationSession, error: impersonationError } = await supabase
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .eq('revoked', false)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (impersonationError) {
+      console.warn('⚠️ [generate-agora-token] Impersonation check failed (continuing as normal user):', impersonationError.message);
+    } else if (impersonationSession?.impersonated_user_id) {
+      effectiveUserId = impersonationSession.impersonated_user_id;
+      console.log('👥 [generate-agora-token] Impersonation detected:', { 
+        adminUserId: user.id, 
+        effectiveUserId 
+      });
+    }
+
+    console.log('✅ [generate-agora-token] Using effective user ID:', effectiveUserId);
+
     // Fetch session details
     const { data: session, error: sessionError } = await supabase
       .from('video_sessions')
@@ -63,15 +87,27 @@ Deno.serve(async (req) => {
       .eq('id', session.patient_id)
       .maybeSingle();
 
-    const isProvider = provider?.user_id === user.id;
-    const isPatient = patientAccount?.user_id === user.id;
+    const isProvider = provider?.user_id === effectiveUserId;
+    const isPatient = patientAccount?.user_id === effectiveUserId;
+    const isPracticeAdmin = session.practice_id === effectiveUserId;
     
-    if (!isProvider && !isPatient) {
+    console.log('👤 [generate-agora-token] User role check:', { 
+      effectiveUserId,
+      isProvider,
+      isPatient,
+      isPracticeAdmin,
+      sessionPracticeId: session.practice_id
+    });
+    
+    if (!isProvider && !isPatient && !isPracticeAdmin) {
+      console.error('❌ [generate-agora-token] Not authorized:', { effectiveUserId, sessionId });
       return new Response(JSON.stringify({ error: 'Not authorized for this session' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    console.log('✅ [generate-agora-token] Authorization successful');
 
     // Get Agora credentials from environment
     const appId = Deno.env.get('AGORA_APP_ID')!;
@@ -86,7 +122,7 @@ Deno.serve(async (req) => {
     }
 
     const channelName = session.channel_name;
-    const uid = user.id.replace(/-/g, '').substring(0, 32); // Convert UUID to numeric string
+    const uid = effectiveUserId.replace(/-/g, '').substring(0, 32); // Convert UUID to numeric string
     const userRole = role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
     const expirationTimeInSeconds = 86400; // 24 hours
     const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -116,8 +152,12 @@ Deno.serve(async (req) => {
       session_id: sessionId,
       event_type: 'token_generated',
       user_id: user.id,
-      user_type: isProvider ? 'provider' : 'patient',
-      event_data: { role, expires_at: new Date(privilegeExpiredTs * 1000).toISOString() }
+      user_type: (isProvider || isPracticeAdmin) ? 'provider' : 'patient',
+      event_data: { 
+        role, 
+        expires_at: new Date(privilegeExpiredTs * 1000).toISOString(),
+        impersonated: effectiveUserId !== user.id
+      }
     });
 
     return new Response(JSON.stringify({
