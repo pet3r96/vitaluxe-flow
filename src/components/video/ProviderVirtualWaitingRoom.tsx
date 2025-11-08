@@ -61,7 +61,7 @@ export const ProviderVirtualWaitingRoom = ({
 
       const { data, error } = await supabase
         .from('video_sessions')
-        .select('*')
+        .select('*, patient_accounts!video_sessions_patient_id_fkey(id, first_name, last_name)')
         .eq('practice_id', practiceId)
         .gte('scheduled_start_time', today.toISOString())
         .lt('scheduled_start_time', tomorrow.toISOString())
@@ -689,7 +689,12 @@ export const ProviderVirtualWaitingRoom = ({
       </CardHeader>
       <CardContent className="space-y-3">
         {videoSessions.map((session) => {
-          const patientName = 'Patient';
+          const patientAccount = Array.isArray(session.patient_accounts) 
+            ? session.patient_accounts[0] 
+            : session.patient_accounts;
+          const patientName = patientAccount 
+            ? `${patientAccount.first_name || ''} ${patientAccount.last_name || ''}`.trim() || 'Patient'
+            : 'Patient';
           
           const appointmentTime = format(
             new Date(session.scheduled_start_time),
