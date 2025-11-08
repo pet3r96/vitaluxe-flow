@@ -65,6 +65,24 @@ function base64Encode(data: Uint8Array): string {
   return btoa(binString);
 }
 
+// Base64 decode
+function base64Decode(str: string): Uint8Array {
+  const binString = atob(str);
+  return Uint8Array.from(binString, (m) => m.codePointAt(0)!);
+}
+
+// Decode App ID from 007 token (first 32 bytes after version)
+function decode007TokenAppId(token: string): string {
+  try {
+    if (!token.startsWith('007')) return 'invalid_version';
+    const content = base64Decode(token.slice(3));
+    const appIdBytes = content.slice(0, 32);
+    return Array.from(appIdBytes, byte => String.fromCharCode(byte)).join('');
+  } catch {
+    return 'decode_error';
+  }
+}
+
 // Generate HMAC-SHA256 signature using Web Crypto API
 async function hmacSha256(key: string, message: Uint8Array): Promise<Uint8Array> {
   const cryptoKey = await crypto.subtle.importKey(
@@ -272,9 +290,9 @@ Deno.serve(async (req) => {
 
     console.log('✅ [generate-agora-token] Authorization successful');
 
-    // Get Agora credentials from environment
-    const appId = Deno.env.get('AGORA_APP_ID')!;
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')!;
+    // Get Agora credentials from environment and trim whitespace
+    const appId = Deno.env.get('AGORA_APP_ID')?.trim()!;
+    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')?.trim()!;
     
     if (!appId || !appCertificate) {
       console.error('❌ Missing Agora credentials');
@@ -359,11 +377,38 @@ Deno.serve(async (req) => {
       privilegeExpiredTs
     );
 
+    // Validate App ID in token matches environment
+    const appIdFromToken = decode007TokenAppId(rtcToken);
+    const appIdFromEnvSample = appId.substring(0, 8) + '...';
+    const appIdFromTokenSample = appIdFromToken.substring(0, 8) + '...';
+    const appIdsMatch = appId === appIdFromToken;
+
+    console.log('🔍 [TOKEN VALIDATION]', {
+      appIdFromEnvSample,
+      appIdFromTokenSample,
+      appIdsMatch,
+      rtcTokenLength: rtcToken.length
+    });
+
+    if (!appIdsMatch) {
+      console.error('❌ App ID mismatch between environment and generated token!');
+      return new Response(JSON.stringify({
+        error: 'App ID mismatch',
+        details: 'The App ID embedded in the token does not match the environment variable',
+        appIdFromEnvSample,
+        appIdFromTokenSample
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     console.log('✅ [generate-agora-token] Tokens generated successfully', {
       rtcTokenLength: rtcToken.length,
       rtcTokenPreview: rtcToken.substring(0, 20) + '...',
       rtmTokenLength: rtmToken.length,
-      rtmTokenPreview: rtmToken.substring(0, 20) + '...'
+      rtmTokenPreview: rtmToken.substring(0, 20) + '...',
+      appIdValidation: 'passed'
     });
 
     // Log token generation

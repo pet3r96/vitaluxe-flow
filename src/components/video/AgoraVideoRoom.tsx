@@ -188,12 +188,29 @@ export function AgoraVideoRoom({
     }
   };
 
+  // Helper to decode App ID from 007 token
+  const decode007TokenAppId = (tokenStr: string): string => {
+    try {
+      if (!tokenStr.startsWith('007')) return 'invalid_version';
+      const content = atob(tokenStr.slice(3));
+      const appIdBytes = content.slice(0, 32);
+      return appIdBytes;
+    } catch {
+      return 'decode_error';
+    }
+  };
+
   // Validate required fields
   const hasRequiredFields = appId && channelName && token && uid;
   
   // Sanitize credentials to avoid hidden whitespace/newlines
   const safeAppId = (appId || '').trim();
   const safeToken = (token || '').trim();
+  
+  // Validate App ID matches token
+  const appIdFromToken = safeToken ? decode007TokenAppId(safeToken) : 'no_token';
+  const appIdSampleFromProp = safeAppId ? safeAppId.substring(0, 8) + '...' : 'none';
+  const appIdSampleFromToken = appIdFromToken.length >= 8 ? appIdFromToken.substring(0, 8) + '...' : appIdFromToken;
   
   const rtcProps: PropsInterface['rtcProps'] = {
     appId: safeAppId,
@@ -217,7 +234,9 @@ export function AgoraVideoRoom({
     appId: safeAppId,
     appIdLength: safeAppId?.length,
     appIdValid: safeAppId && /^[0-9a-f]{32}$/i.test(safeAppId),
-    appIdSample: safeAppId ? safeAppId.substring(0, 8) + '...' : 'MISSING',
+    appIdSampleFromProp,
+    appIdSampleFromToken,
+    appIdsMatch: appIdSampleFromProp === appIdSampleFromToken,
     channelName,
     channelNameLength: channelName?.length,
     channelNameValid: channelName && channelName.length > 0,

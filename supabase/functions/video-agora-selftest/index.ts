@@ -44,6 +44,24 @@ function base64Encode(data: Uint8Array): string {
   return btoa(binString);
 }
 
+// Base64 decode
+function base64Decode(str: string): Uint8Array {
+  const binString = atob(str);
+  return Uint8Array.from(binString, (m) => m.codePointAt(0)!);
+}
+
+// Decode App ID from 007 token
+function decode007TokenAppId(token: string): string {
+  try {
+    if (!token.startsWith('007')) return 'invalid_version';
+    const content = base64Decode(token.slice(3));
+    const appIdBytes = content.slice(0, 32);
+    return Array.from(appIdBytes, byte => String.fromCharCode(byte)).join('');
+  } catch {
+    return 'decode_error';
+  }
+}
+
 // Generate HMAC-SHA256 signature
 async function hmacSha256(key: string, message: Uint8Array): Promise<Uint8Array> {
   const cryptoKey = await crypto.subtle.importKey(
@@ -141,9 +159,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get Agora credentials
-    const appId = Deno.env.get('AGORA_APP_ID');
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
+    // Get Agora credentials and trim whitespace
+    const appId = Deno.env.get('AGORA_APP_ID')?.trim();
+    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')?.trim();
     
     if (!appId || !appCertificate) {
       console.error('❌ Missing Agora credentials');
@@ -208,7 +226,17 @@ Deno.serve(async (req) => {
       privilegeExpiredTs
     );
 
-    console.log('✅ Test tokens generated successfully');
+    // Validate App ID in token
+    const appIdFromToken = decode007TokenAppId(rtcToken);
+    const appIdFromEnvSample = appId.substring(0, 8) + '...';
+    const appIdFromTokenSample = appIdFromToken.substring(0, 8) + '...';
+    const appIdsMatch = appId === appIdFromToken;
+
+    console.log('✅ Test tokens generated successfully', {
+      appIdValidation: appIdsMatch ? 'passed' : 'FAILED',
+      appIdFromEnvSample,
+      appIdFromTokenSample
+    });
 
     return new Response(JSON.stringify({
       success: true,
@@ -219,6 +247,11 @@ Deno.serve(async (req) => {
         appIdValid,
         certLength: appCertificate.length,
         certValid
+      },
+      validation: {
+        appIdFromEnvSample,
+        appIdFromTokenSample,
+        appIdsMatch
       },
       testTokens: {
         channelName: testChannel,
