@@ -211,6 +211,17 @@ export function CreateAppointmentDialog({
       toast.error("Please provide a service description");
       return;
     }
+    
+    // Prevent creating scheduled appointments in the past
+    if (!isWalkIn) {
+      const startDateTime = new Date(`${values.appointmentDate}T${values.startTime}`);
+      const now = new Date();
+      if (startDateTime < now) {
+        toast.error("Appointment start time can't be in the past");
+        return;
+      }
+    }
+    
     createMutation.mutate(values);
   };
 

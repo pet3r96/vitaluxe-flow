@@ -356,3 +356,6 @@ verify_jwt = true
 
 [functions.cleanup-expired-video-recordings]
 verify_jwt = false
+
+[functions.generate-video-guest-link]
+verify_jwt = true

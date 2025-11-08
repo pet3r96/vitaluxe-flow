@@ -11,10 +11,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const startTime = Date.now();
     const authHeader = req.headers.get('Authorization');
     
     if (!authHeader) {
-      console.error('❌ [generate-video-guest-link] No auth header');
+      console.error('❌ [generate-video-guest-link] No auth header. Duration:', Date.now() - startTime, 'ms');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: missing auth header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -150,7 +151,8 @@ Deno.serve(async (req) => {
 
     console.log('🔗 [generate-video-guest-link] Generated URL:', { origin, guestUrl });
 
-    console.log('✅ Guest link generated successfully:', guestUrl);
+    const duration = Date.now() - startTime;
+    console.log('✅ Guest link generated successfully in', duration, 'ms:', guestUrl);
 
     // Log audit event
     await supabaseClient.from('video_session_logs').insert({

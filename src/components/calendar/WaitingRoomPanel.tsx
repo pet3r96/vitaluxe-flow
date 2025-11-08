@@ -379,10 +379,18 @@ export function WaitingRoomPanel({
   };
 
   const handleStartVideoSession = async (sessionId: string) => {
+    console.time(`[WaitingRoomPanel] start-video-session-${sessionId}`);
     try {
-      const { data, error } = await supabase.functions.invoke('start-video-session', {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 12000)
+      );
+      
+      const invokePromise = supabase.functions.invoke('start-video-session', {
         body: { sessionId }
       });
+
+      const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
+      console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
 
       if (error) throw error;
 
@@ -392,9 +400,19 @@ export function WaitingRoomPanel({
 
       refetchVideo();
     } catch (error: any) {
-      toast.error("Error", {
-        description: error.message || "Failed to start video session",
-      });
+      console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
+      
+      if (error.message === 'timeout') {
+        toast.info("Still Processing", {
+          description: "Starting the session... We'll update the list automatically.",
+        });
+        // Trigger refetch to show any changes
+        setTimeout(() => refetchVideo(), 2000);
+      } else {
+        toast.error("Error", {
+          description: error.message || "Failed to start video session",
+        });
+      }
     }
   };
 
@@ -714,11 +732,17 @@ export function WaitingRoomPanel({
                             </Button>
                           )}
                           {(session.status === 'waiting' || session.status === 'active') && !session.isSynthetic && (
-                            <Button
+                           <Button
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(`/video/${session.id}`, '_blank');
+                                if (!session?.id) {
+                                  toast.error("Invalid session", {
+                                    description: "Unable to join this session"
+                                  });
+                                  return;
+                                }
+                                window.open(`/practice/video/${session.id}`, '_blank');
                               }}
                               className="bg-green-600 hover:bg-green-700 text-white"
                             >

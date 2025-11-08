@@ -252,10 +252,18 @@ export const ProviderVirtualWaitingRoom = ({
     }
     
     setStartingSession(sessionId);
+    console.time(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
     try {
-      const { error } = await supabase.functions.invoke('start-video-session', {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 12000)
+      );
+      
+      const invokePromise = supabase.functions.invoke('start-video-session', {
         body: { sessionId }
       });
+
+      const { error } = await Promise.race([invokePromise, timeoutPromise]) as any;
+      console.timeEnd(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
 
       if (error) throw error;
 
@@ -265,13 +273,26 @@ export const ProviderVirtualWaitingRoom = ({
       });
 
       onStartSession?.(sessionId);
-    } catch (error) {
+    } catch (error: any) {
+      console.timeEnd(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
       console.error('Error starting session:', error);
-      toast({
-        title: "Error",
-        description: "Failed to start video session",
-        variant: "destructive"
-      });
+      
+      if (error.message === 'timeout') {
+        toast({
+          title: "Still Processing",
+          description: "Starting the session... We'll update automatically shortly."
+        });
+        // Trigger immediate refetch to pull in any updates
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
+        }, 2000);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to start video session",
+          variant: "destructive"
+        });
+      }
     } finally {
       setStartingSession(null);
     }
@@ -294,10 +315,18 @@ export const ProviderVirtualWaitingRoom = ({
     }
     
     setGeneratingLink(sessionId);
+    console.time(`[ProviderVirtualWaitingRoom] generate-guest-link-${sessionId}`);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-video-guest-link', {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 12000)
+      );
+      
+      const invokePromise = supabase.functions.invoke('generate-video-guest-link', {
         body: { sessionId }
       });
+
+      const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
+      console.timeEnd(`[ProviderVirtualWaitingRoom] generate-guest-link-${sessionId}`);
 
       if (error) throw error;
 
@@ -312,12 +341,25 @@ export const ProviderVirtualWaitingRoom = ({
         description: "Share this link with your patient via SMS"
       });
     } catch (error: any) {
+      console.timeEnd(`[ProviderVirtualWaitingRoom] generate-guest-link-${sessionId}`);
       console.error('Error generating guest link:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate guest link",
-        variant: "destructive"
-      });
+      
+      if (error.message === 'timeout') {
+        toast({
+          title: "Still Processing",
+          description: "Generating link... This may take a moment."
+        });
+        // Trigger refetch in case it completes
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
+        }, 2000);
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to generate guest link",
+          variant: "destructive"
+        });
+      }
     } finally {
       setGeneratingLink(null);
     }

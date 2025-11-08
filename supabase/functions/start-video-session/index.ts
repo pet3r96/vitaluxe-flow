@@ -182,63 +182,77 @@ Deno.serve(async (req) => {
       
       const portalUrl = `${origin}/patient/video/${sessionId}`;
       
-      // Generate guest link automatically
-      let guestLinkUrl = '';
-      try {
-        const token = crypto.randomUUID();
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + 24);
+      // Generate guest link and send SMS (fire-and-forget, non-blocking)
+      (async () => {
+        let guestLinkUrl = '';
+        try {
+          const token = crypto.randomUUID();
+          const expiresAt = new Date();
+          expiresAt.setHours(expiresAt.getHours() + 24);
 
-        const { error: linkError } = await supabase
-          .from('video_session_guest_links')
-          .insert({
-            session_id: sessionId,
-            token,
-            expires_at: expiresAt.toISOString(),
-            created_by: user.id,
-          });
-
-        if (!linkError) {
-          guestLinkUrl = `${origin}/video-guest/${token}`;
+          const guestLinkPromise = supabase
+            .from('video_session_guest_links')
+            .insert({
+              session_id: sessionId,
+              token,
+              expires_at: expiresAt.toISOString(),
+              created_by: user.id,
+            });
           
-          // Log guest link generation
-          await supabase.from('video_session_logs').insert({
-            session_id: sessionId,
-            event_type: 'guest_link_auto_generated',
-            user_id: user.id,
-            user_type: 'provider',
-            event_data: { token_id: token, expires_at: expiresAt.toISOString() }
-          });
-        }
-      } catch (linkGenError) {
-        console.error('Failed to generate guest link:', linkGenError);
-        // Continue without guest link if generation fails
-      }
-      
-      try {
-        // Build SMS message with both options
-        let smsMessage = `Your video appointment with ${providerName} is ready!\n\n`;
-        
-        if (guestLinkUrl) {
-          smsMessage += `Option 1 - Portal Login: ${portalUrl}\n`;
-          smsMessage += `Option 2 - Guest Access: ${guestLinkUrl}\n\n`;
-          smsMessage += `Guest link expires in 24 hours.\n\n`;
-        } else {
-          smsMessage += `Join now: ${portalUrl}\n\n`;
-        }
-        
-        smsMessage += `VitaLuxe Healthcare`;
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Guest link timeout')), 2000)
+          );
 
-        await supabase.functions.invoke('send-ghl-sms', {
-          body: {
-            to: patientPhone,
-            message: smsMessage
+          const { error: linkError } = await Promise.race([guestLinkPromise, timeoutPromise]) as any;
+
+          if (!linkError) {
+            guestLinkUrl = `${origin}/video-guest/${token}`;
+            
+            // Log guest link generation
+            await supabase.from('video_session_logs').insert({
+              session_id: sessionId,
+              event_type: 'guest_link_auto_generated',
+              user_id: user.id,
+              user_type: 'provider',
+              event_data: { token_id: token, expires_at: expiresAt.toISOString() }
+            });
+            console.log('✅ Guest link created for SMS:', guestLinkUrl);
           }
-        });
-      } catch (smsError) {
-        console.error('Failed to send SMS:', smsError);
-        // Don't fail the whole request if SMS fails
-      }
+        } catch (linkGenError) {
+          console.warn('⚠️ Failed to generate guest link (non-blocking):', linkGenError);
+        }
+        
+        // Send SMS with timeout
+        try {
+          let smsMessage = `Your video appointment with ${providerName} is ready!\n\n`;
+          
+          if (guestLinkUrl) {
+            smsMessage += `Option 1 - Portal Login: ${portalUrl}\n`;
+            smsMessage += `Option 2 - Guest Access: ${guestLinkUrl}\n\n`;
+            smsMessage += `Guest link expires in 24 hours.\n\n`;
+          } else {
+            smsMessage += `Join now: ${portalUrl}\n\n`;
+          }
+          
+          smsMessage += `VitaLuxe Healthcare`;
+
+          const smsPromise = supabase.functions.invoke('send-ghl-sms', {
+            body: {
+              to: patientPhone,
+              message: smsMessage
+            }
+          });
+          
+          const smsTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('SMS timeout')), 3000)
+          );
+          
+          await Promise.race([smsPromise, smsTimeoutPromise]);
+          console.log('✅ SMS sent to patient');
+        } catch (smsError) {
+          console.warn('⚠️ Failed to send SMS (non-blocking):', smsError);
+        }
+      })();
     }
 
     return new Response(JSON.stringify({
