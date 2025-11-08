@@ -25,9 +25,15 @@ export default function VideoConsultationRoom() {
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke('join-video-session', {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 12000)
+        );
+
+        const invokePromise = supabase.functions.invoke('join-video-session', {
           body: { sessionId }
         });
+
+        const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
 
         if (error) {
           console.error("Join session error:", error);
@@ -46,12 +52,14 @@ export default function VideoConsultationRoom() {
         setShowDeviceTest(true);
       } catch (err: any) {
         console.error("Error joining video session:", err);
-        const errorMessage = err.message || "Failed to join video session";
+        const errorMessage = err.message === 'timeout'
+          ? "Connection is taking longer than expected. Please try again."
+          : (err.message || "Failed to join video session");
         setError(errorMessage);
         toast({
-          title: "Connection Error",
+          title: err.message === 'timeout' ? "Still connecting" : "Connection Error",
           description: errorMessage,
-          variant: "destructive"
+          variant: err.message === 'timeout' ? undefined : "destructive"
         });
       } finally {
         setLoading(false);
@@ -94,12 +102,20 @@ export default function VideoConsultationRoom() {
           <div className="text-center space-y-4">
             <h2 className="text-xl font-semibold text-destructive">Connection Failed</h2>
             <p className="text-muted-foreground">{error || "Unable to join video session"}</p>
-            <button
-              onClick={() => navigate('/practice-calendar')}
-              className="btn btn-primary w-full"
-            >
-              Return to Calendar
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="btn btn-outline w-full"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => navigate('/practice-calendar')}
+                className="btn btn-primary w-full"
+              >
+                Return to Calendar
+              </button>
+            </div>
           </div>
         </Card>
       </div>

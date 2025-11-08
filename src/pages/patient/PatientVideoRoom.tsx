@@ -26,14 +26,20 @@ export default function PatientVideoRoom() {
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke('join-video-session', {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 12000)
+        );
+
+        const invokePromise = supabase.functions.invoke('join-video-session', {
           body: { sessionId }
         });
 
+        const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
+
         if (error) throw error;
 
-        // Check if provider has joined
-        if (data.session_status === 'waiting') {
+        const sessionStatus = data.session?.status || data.session_status;
+        if (sessionStatus === 'waiting') {
           setWaitingForProvider(true);
         } else {
           setShowDeviceTest(true);
@@ -42,11 +48,14 @@ export default function PatientVideoRoom() {
         setSessionData(data);
       } catch (err: any) {
         console.error("Error joining video session:", err);
-        setError(err.message || "Failed to join video session");
+        const message = err.message === 'timeout'
+          ? 'Connection is taking longer than expected. Please try again.'
+          : (err.message || 'Failed to join video session');
+        setError(message);
         toast({
-          title: "Connection Error",
-          description: err.message || "Failed to join video session",
-          variant: "destructive"
+          title: err.message === 'timeout' ? 'Still connecting' : 'Connection Error',
+          description: message,
+          variant: err.message === 'timeout' ? undefined : 'destructive'
         });
       } finally {
         setLoading(false);
@@ -108,12 +117,20 @@ export default function PatientVideoRoom() {
           <div className="text-center space-y-4">
             <h2 className="text-xl font-semibold text-destructive">Connection Failed</h2>
             <p className="text-muted-foreground">{error || "Unable to join video session"}</p>
-            <button
-              onClick={() => navigate('/appointments')}
-              className="btn btn-primary w-full"
-            >
-              Return to Appointments
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="btn btn-outline w-full"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => navigate('/appointments')}
+                className="btn btn-primary w-full"
+              >
+                Return to Appointments
+              </button>
+            </div>
           </div>
         </Card>
       </div>

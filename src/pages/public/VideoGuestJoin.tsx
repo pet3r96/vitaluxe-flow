@@ -31,12 +31,18 @@ export default function VideoGuestJoin() {
       }
 
       try {
-        const { data, error: validateError } = await supabase.functions.invoke(
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 12000)
+        );
+
+        const invokePromise = supabase.functions.invoke(
           'validate-video-guest-link',
           {
             body: { token },
           }
         );
+
+        const { data, error: validateError } = await Promise.race([invokePromise, timeoutPromise]) as any;
 
         if (validateError) throw validateError;
 
@@ -52,8 +58,8 @@ export default function VideoGuestJoin() {
       } catch (err: any) {
         console.error('Error validating guest link:', err);
         setError({
-          type: 'error',
-          message: err.message || 'Failed to validate access link',
+          type: err.message === 'timeout' ? 'timeout' : 'error',
+          message: err.message === 'timeout' ? 'Validation is taking longer than expected. Please try again.' : (err.message || 'Failed to validate access link'),
         });
       } finally {
         setLoading(false);
