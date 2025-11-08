@@ -29,16 +29,28 @@ export default function VideoConsultationRoom() {
           body: { sessionId }
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Join session error:", error);
+          throw new Error(error.message || "Failed to connect to video session");
+        }
+
+        if (!data) {
+          throw new Error("No session data received");
+        }
+
+        if (!data.token || !data.channelName || !data.appId) {
+          throw new Error("Invalid session data received");
+        }
 
         setSessionData(data);
         setShowDeviceTest(true);
       } catch (err: any) {
         console.error("Error joining video session:", err);
-        setError(err.message || "Failed to join video session");
+        const errorMessage = err.message || "Failed to join video session";
+        setError(errorMessage);
         toast({
           title: "Connection Error",
-          description: err.message || "Failed to join video session",
+          description: errorMessage,
           variant: "destructive"
         });
       } finally {

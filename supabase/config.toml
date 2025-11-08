@@ -351,5 +351,8 @@ verify_jwt = true
 [functions.end-video-session]
 verify_jwt = true
 
+[functions.complete-video-appointment]
+verify_jwt = true
+
 [functions.cleanup-expired-video-recordings]
 verify_jwt = false

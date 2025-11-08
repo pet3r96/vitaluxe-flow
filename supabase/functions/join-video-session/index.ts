@@ -64,12 +64,28 @@ Deno.serve(async (req) => {
       .eq('id', sessionId)
       .single();
 
-    if (sessionError || !session) {
-      return new Response(JSON.stringify({ error: 'Session not found' }), {
+    if (sessionError) {
+      console.error('❌ [join-video-session] Session query error:', sessionError);
+      return new Response(JSON.stringify({ 
+        error: 'Unable to find session',
+        details: sessionError.message 
+      }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    if (!session) {
+      console.error('❌ [join-video-session] Session not found:', sessionId);
+      return new Response(JSON.stringify({ 
+        error: 'Video session not found. It may have been ended or does not exist.' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('✅ [join-video-session] Session found:', { sessionId, status: session.status });
 
     // Verify user authorization - properly resolve user_ids
     // Fetch provider to get user_id
@@ -158,6 +174,7 @@ Deno.serve(async (req) => {
     console.log('✅ [join-video-session] Session joined successfully:', { sessionId, role: (isProvider || isPracticeAdmin) ? 'provider' : 'patient' });
 
     // Generate Agora token for this user
+    console.log('🎫 [join-video-session] Generating Agora token...');
     const { data: tokenData, error: tokenError } = await supabase.functions.invoke('generate-agora-token', {
       body: {
         sessionId,
@@ -169,8 +186,16 @@ Deno.serve(async (req) => {
     });
 
     if (tokenError) {
-      throw new Error('Failed to generate token');
+      console.error('❌ [join-video-session] Token generation failed:', tokenError);
+      throw new Error(`Failed to generate video token: ${tokenError.message}`);
     }
+
+    if (!tokenData) {
+      console.error('❌ [join-video-session] No token data received');
+      throw new Error('Failed to generate video token: No data received');
+    }
+
+    console.log('✅ [join-video-session] Token generated successfully');
 
     return new Response(JSON.stringify({
       success: true,
@@ -186,8 +211,11 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error joining video session:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('❌ [join-video-session] Unexpected error:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message || 'Failed to join video session',
+      details: 'An unexpected error occurred while joining the session'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
