@@ -33,6 +33,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log('🔍 [join-video-session] Request:', { sessionId, authUserId: user.id });
+
+    // Check for active impersonation session
+    let effectiveUserId = user.id;
+    const { data: impersonationSession, error: impersonationError } = await supabase
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .eq('revoked', false)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (impersonationError) {
+      console.warn('⚠️ [join-video-session] Impersonation check failed (continuing as normal user):', impersonationError.message);
+    } else if (impersonationSession?.impersonated_user_id) {
+      effectiveUserId = impersonationSession.impersonated_user_id;
+      console.log('👥 [join-video-session] Impersonation detected:', { 
+        adminUserId: user.id, 
+        effectiveUserId 
+      });
+    }
+
+    console.log('✅ [join-video-session] Using effective user ID:', effectiveUserId);
+
     // Fetch session details
     const { data: session, error: sessionError } = await supabase
       .from('video_sessions')
@@ -62,15 +86,27 @@ Deno.serve(async (req) => {
       .eq('id', session.patient_id)
       .maybeSingle();
 
-    const isProvider = provider?.user_id === user.id;
-    const isPatient = patientAccount?.user_id === user.id;
+    const isProvider = provider?.user_id === effectiveUserId;
+    const isPatient = patientAccount?.user_id === effectiveUserId;
+    const isPracticeAdmin = session.practice_id === effectiveUserId;
     
-    if (!isProvider && !isPatient) {
+    console.log('👤 [join-video-session] User role check:', { 
+      effectiveUserId,
+      isProvider,
+      isPatient,
+      isPracticeAdmin,
+      sessionPracticeId: session.practice_id
+    });
+
+    if (!isProvider && !isPatient && !isPracticeAdmin) {
+      console.error('❌ [join-video-session] Not authorized:', { effectiveUserId, sessionId });
       return new Response(JSON.stringify({ error: 'Not authorized for this session' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    console.log('✅ [join-video-session] Authorization successful');
 
     // Check session status
     if (!['waiting', 'active'].includes(session.status)) {
@@ -84,7 +120,8 @@ Deno.serve(async (req) => {
 
     // Update participant join timestamp
     const updateFields: any = {};
-    if (isProvider) {
+    // Practice admins join as providers
+    if (isProvider || isPracticeAdmin) {
       updateFields.provider_joined_at = new Date().toISOString();
       // Provider joining makes session active
       if (session.status === 'waiting') {
@@ -110,12 +147,15 @@ Deno.serve(async (req) => {
       session_id: sessionId,
       event_type: 'join',
       user_id: user.id,
-      user_type: isProvider ? 'provider' : 'patient',
+      user_type: (isProvider || isPracticeAdmin) ? 'provider' : 'patient',
       event_data: { 
         joined_at: new Date().toISOString(),
-        new_status: updateFields.status || session.status
+        new_status: updateFields.status || session.status,
+        impersonated: effectiveUserId !== user.id
       }
     });
+
+    console.log('✅ [join-video-session] Session joined successfully:', { sessionId, role: (isProvider || isPracticeAdmin) ? 'provider' : 'patient' });
 
     // Generate Agora token for this user
     const { data: tokenData, error: tokenError } = await supabase.functions.invoke('generate-agora-token', {
