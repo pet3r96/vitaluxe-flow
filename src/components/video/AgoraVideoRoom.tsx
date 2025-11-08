@@ -79,13 +79,12 @@ export function AgoraVideoRoom({
     }
   };
 
-  const parsedUid = parseInt(uid.replace(/[^0-9]/g, '').slice(0, 10)) || 0;
-  
-  const rtcProps: PropsInterface['rtcProps'] = {
+  // Use string UID directly as returned from server (matches token generation)
+  const rtcProps = {
     appId: appId,
     channel: channelName,
     token: token,
-    uid: parsedUid,
+    uid: uid, // Pass string userAccount directly
     role: 'host',
   };
 
@@ -94,9 +93,14 @@ export function AgoraVideoRoom({
     appId: appId ? "✓ present" : "✗ missing",
     channel: channelName,
     token: token ? "✓ present" : "✗ missing",
-    uid: parsedUid,
+    uid: uid, // Show actual string UID
     role: 'host'
   });
+  
+  // Log if using string userAccount
+  if (/[a-f]/i.test(uid)) {
+    console.log("ℹ️ Using string userAccount UID (matches token generation)");
+  }
 
   const callbacks: PropsInterface['callbacks'] = {
     EndCall: () => {
@@ -116,7 +120,7 @@ export function AgoraVideoRoom({
   return (
     <div className="fixed inset-0 z-50 bg-black">
       <AgoraUIKit
-        rtcProps={rtcProps}
+        rtcProps={rtcProps as any}
         callbacks={callbacks}
       />
     </div>
