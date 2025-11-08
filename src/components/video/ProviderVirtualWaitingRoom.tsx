@@ -101,53 +101,28 @@ export const ProviderVirtualWaitingRoom = ({
     enabled: showCreateDialog || showScheduleDialog
   });
 
-  // Fetch providers for instant session creation and scheduling
+  // Fetch providers using unified list-providers function
   const { data: providers } = useQuery({
-    queryKey: ['practice-providers', practiceId],
+    queryKey: ['providers', practiceId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('providers')
-        .select('id, user_id, profiles:user_id(name, full_name, email, prescriber_name)')
-        .eq('practice_id', practiceId)
-        .eq('active', true);
+      console.info('[ProviderVirtualWaitingRoom] Fetching providers via list-providers');
+      const { data, error } = await supabase.functions.invoke('list-providers', {
+        body: { practice_id: practiceId }
+      });
       
       if (error) throw error;
       
-      // Transform to match expected format with robust name fallback
-      return (data as any[])?.map((p: any) => {
-        const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
-        
-        // Priority: prescriber_name > full_name > name (if not email) > derive from email
-        let fullName = 'Provider';
-        if (profile?.prescriber_name) {
-          fullName = profile.prescriber_name;
-        } else if (profile?.full_name) {
-          fullName = profile.full_name;
-        } else if (profile?.name && !profile.name.includes('@')) {
-          fullName = profile.name;
-        } else if (profile?.email) {
-          // Derive from email local part
-          const localPart = profile.email.split('@')[0];
-          fullName = localPart.split(/[._-]/).map((word: string) => 
-            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-          ).join(' ');
-        }
-        
-        const nameParts = fullName.split(' ');
-        
-        return {
-          id: p.id,
-          user_id: p.user_id,
-          first_name: nameParts[0] || 'Provider',
-          last_name: nameParts.slice(1).join(' ') || '',
-          full_name: fullName,
-          email: profile?.email,
-          prescriber_name: profile?.prescriber_name,
-          profiles: profile
-        };
-      }) || [];
+      const providersList = data?.providers || [];
+      console.info('[ProviderVirtualWaitingRoom] ✅ Providers loaded:', {
+        count: providersList.length,
+        sampleNames: providersList.slice(0, 2).map((p: any) => 
+          p.profiles?.prescriber_name || p.profiles?.full_name || 'Unknown'
+        )
+      });
+      
+      return providersList;
     },
-    enabled: showCreateDialog || showScheduleDialog
+    enabled: showCreateDialog || showScheduleDialog || practiceId !== '' // Always fetch for practice
   });
 
   const handleStartSession = async (sessionId: string) => {

@@ -38,7 +38,7 @@ export function WaitingRoomPanel({
   const queryClient = useQueryClient();
 
   // Fetch video appointments
-  const { data: videoAppointments = [], refetch: refetchVideo } = useQuery({
+  const { data: rawVideoAppointments = [], refetch: refetchVideo } = useQuery({
     queryKey: ["video-appointments", practiceId, currentDate.toISOString()],
     queryFn: async () => {
       const startOfDay = new Date(currentDate);
@@ -53,10 +53,7 @@ export function WaitingRoomPanel({
           patient_appointments!inner(
             *,
             patient:patient_accounts(*),
-            provider:providers!patient_appointments_provider_id_fkey(
-              id,
-              user:profiles!providers_user_id_fkey(full_name)
-            )
+            provider_id
           )
         `)
         .eq("practice_id", practiceId)
@@ -72,8 +69,26 @@ export function WaitingRoomPanel({
     refetchInterval: 5000, // Poll every 5 seconds for real-time updates
   });
 
+  // Merge provider data client-side using the providers prop
+  const videoAppointments = rawVideoAppointments.map((session: any) => {
+    const appointment = session.patient_appointments;
+    const provider = providers.find((p: any) => p.id === appointment.provider_id);
+    return {
+      ...session,
+      patient_appointments: {
+        ...appointment,
+        provider: provider ? {
+          id: provider.id,
+          user: {
+            full_name: provider.profiles?.prescriber_name || provider.profiles?.full_name || 'Unassigned'
+          }
+        } : null
+      }
+    };
+  });
+
   // Fetch overdue appointments (>15 minutes past scheduled time)
-  const { data: overdueAppointments = [], refetch: refetchOverdue } = useQuery({
+  const { data: rawOverdueAppointments = [], refetch: refetchOverdue } = useQuery({
     queryKey: ["overdue-appointments", practiceId, currentDate.toISOString()],
     queryFn: async () => {
       const startOfDay = new Date(currentDate);
@@ -88,10 +103,7 @@ export function WaitingRoomPanel({
         .select(`
           *,
           patient:patient_accounts(*),
-          provider:providers!patient_appointments_provider_id_fkey(
-            id,
-            user:profiles!providers_user_id_fkey(full_name)
-          )
+          provider_id
         `)
         .eq("practice_id", practiceId)
         .in("status", ["scheduled", "confirmed"])
@@ -107,8 +119,22 @@ export function WaitingRoomPanel({
     refetchInterval: 5000, // Poll every 5 seconds for real-time updates
   });
 
+  // Merge provider data client-side
+  const overdueAppointments = rawOverdueAppointments.map((apt: any) => {
+    const provider = providers.find((p: any) => p.id === apt.provider_id);
+    return {
+      ...apt,
+      provider: provider ? {
+        id: provider.id,
+        user: {
+          full_name: provider.profiles?.prescriber_name || provider.profiles?.full_name || 'Unassigned'
+        }
+      } : null
+    };
+  });
+
   // Fetch checked-in appointments
-  const { data: waitingPatients = [], refetch } = useQuery({
+  const { data: rawWaitingPatients = [], refetch } = useQuery({
     queryKey: ["waiting-room", practiceId, currentDate.toISOString()],
     queryFn: async () => {
       const startOfDay = new Date(currentDate);
@@ -121,10 +147,7 @@ export function WaitingRoomPanel({
         .select(`
           *,
           patient:patient_accounts(*),
-          provider:providers!patient_appointments_provider_id_fkey(
-            id,
-            user:profiles!providers_user_id_fkey(full_name)
-          )
+          provider_id
         `)
         .eq("practice_id", practiceId)
         .eq("status", "checked_in")
@@ -136,6 +159,20 @@ export function WaitingRoomPanel({
       return data || [];
     },
     enabled: !!practiceId,
+  });
+
+  // Merge provider data client-side
+  const waitingPatients = rawWaitingPatients.map((apt: any) => {
+    const provider = providers.find((p: any) => p.id === apt.provider_id);
+    return {
+      ...apt,
+      provider: provider ? {
+        id: provider.id,
+        user: {
+          full_name: provider.profiles?.prescriber_name || provider.profiles?.full_name || 'Unassigned'
+        }
+      } : null
+    };
   });
 
   // Real-time subscription for in-person appointments
