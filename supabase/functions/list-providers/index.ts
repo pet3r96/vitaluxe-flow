@@ -244,7 +244,11 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ providers }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        'X-Function-Version': '2.0-unified'
+      },
     });
 
   } catch (error) {

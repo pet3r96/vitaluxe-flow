@@ -119,6 +119,34 @@ export default function PracticeCalendar() {
     }
   );
 
+  // Fetch providers separately using list-providers (unified source)
+  const { data: providersData } = useRealtimeQuery(
+    ['providers', practiceId],
+    async () => {
+      console.info('[PracticeCalendar] Fetching providers via list-providers');
+      const { data, error } = await supabase.functions.invoke('list-providers', {
+        body: { practice_id: practiceId }
+      });
+      
+      if (error) throw error;
+      
+      const providersList = data?.providers || [];
+      console.info('[PracticeCalendar] ✅ Providers loaded:', {
+        count: providersList.length,
+        sampleNames: providersList.slice(0, 2).map((p: any) => 
+          p.profiles?.prescriber_name || p.profiles?.full_name || 'Unknown'
+        )
+      });
+      
+      return providersList;
+    },
+    {
+      enabled: !!practiceId,
+      staleTime: 60 * 1000, // 1 minute - providers change less frequently
+      refetchOnWindowFocus: true,
+    }
+  );
+
   const appointments = calendarData?.appointments || [];
   const blockedTime = calendarData?.blockedTime || [];
   const pendingAppointments = appointments.filter((apt: any) => 
@@ -130,7 +158,7 @@ export default function PracticeCalendar() {
     end_hour: 20,
     working_days: [1, 2, 3, 4, 5],
   };
-  const providers = calendarData?.providers || [];
+  const providers = providersData || [];
   const rooms = calendarData?.rooms || [];
 
   // Initialize selected providers with all provider IDs on first load

@@ -13,7 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
+    // Use anon client for auth verification
+    const supabaseAnon = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -29,13 +30,24 @@ serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
     if (userError || !user) {
       throw new Error('Unauthorized');
     }
+    
+    // Create service-role client for NPI checks (bypasses RLS)
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
 
     const { practice_id, product_id } = await req.json();
 
@@ -113,7 +125,11 @@ serve(async (req) => {
     console.log('[validate-rx-order] ✅ RX order validated successfully');
     return new Response(
       JSON.stringify({ allowed: true }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        'X-Function-Version': '2.0-service-role'
+      } }
     );
 
   } catch (error) {

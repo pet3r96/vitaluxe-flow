@@ -185,7 +185,9 @@ export const ProviderDetailsDialog = ({
         profileUpdateData.phone = formData.phone || null;
       } else if (isPractice || isAdmin) {
         // Practices and admins can update everything
+        // CRITICAL: Update BOTH full_name and prescriber_name to ensure consistency across all displays
         profileUpdateData.full_name = formData.fullName;
+        profileUpdateData.prescriber_name = formData.fullName; // Keep prescriber_name in sync
         profileUpdateData.npi = formData.npi;
         profileUpdateData.dea = formData.dea || null; // Explicit null if empty
         profileUpdateData.license_number = formData.licenseNumber || null; // Explicit null if empty
@@ -193,10 +195,12 @@ export const ProviderDetailsDialog = ({
       }
 
       if (Object.keys(profileUpdateData).length > 0) {
-        console.log('💾 Saving provider credentials to profiles table', {
+        console.info('💾 [ProviderDetailsDialog] Saving provider credentials', {
           providerId: provider.id,
           userId: provider.user_id,
-          updateFields: Object.keys(profileUpdateData)
+          updateFields: Object.keys(profileUpdateData),
+          newName: profileUpdateData.full_name,
+          newNPI: profileUpdateData.npi
         });
 
         const { data: updateData, error: profileError } = await supabase
@@ -206,11 +210,14 @@ export const ProviderDetailsDialog = ({
           .select();
 
         if (profileError) {
-          console.error('❌ Profile update failed:', profileError);
+          console.error('❌ [ProviderDetailsDialog] Profile update failed:', profileError);
           throw profileError;
         }
 
-        console.log('✅ Profile updated successfully', { rowsAffected: updateData?.length });
+        console.info('✅ [ProviderDetailsDialog] Profile updated successfully', { 
+          rowsAffected: updateData?.length,
+          updatedProvider: updateData?.[0]?.id
+        });
       }
 
       // Update providers table timestamp
@@ -224,8 +231,16 @@ export const ProviderDetailsDialog = ({
         throw providerError;
       }
 
-      // Invalidate RX privileges cache so UI updates immediately
-      queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges'] });
+      // Invalidate ALL relevant caches for instant UI updates
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges', effectivePracticeId] }),
+        queryClient.invalidateQueries({ queryKey: ['providers', effectivePracticeId] }),
+        queryClient.invalidateQueries({ queryKey: ['calendar-data'] }),
+        queryClient.invalidateQueries({ queryKey: ['patient_appointments'] })
+      ]);
+      
+      // Immediately refetch providers to update all dropdowns
+      await queryClient.refetchQueries({ queryKey: ['providers', effectivePracticeId] });
       
       toast.success("Provider credentials updated successfully!");
       setIsEditing(false);
@@ -271,10 +286,15 @@ export const ProviderDetailsDialog = ({
             <div className="space-y-2">
               <Label>Full Name</Label>
               {isEditing && (isPractice || isAdmin) ? (
-                <Input
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                />
+                <div className="space-y-1">
+                  <Input
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Displayed on calendars, appointments, and documents
+                  </p>
+                </div>
               ) : (
                 <div className="p-2 bg-muted rounded-md">
                   {provider.profiles?.full_name || 

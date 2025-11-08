@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { sanitizeEncrypted } from "@/lib/utils";
+import { getProviderDisplayName } from "@/utils/providerNameUtils";
 
 export const ProvidersDataTable = () => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
@@ -98,11 +99,12 @@ export const ProvidersDataTable = () => {
     refetch();
   };
 
-  const filteredProviders = providers?.filter((provider) =>
-    provider.profiles?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    provider.profiles?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    provider.practice?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProviders = providers?.filter((provider) => {
+    const displayName = getProviderDisplayName(provider);
+    return displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      provider.profiles?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      provider.practice?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const {
     currentPage,
@@ -158,17 +160,24 @@ export const ProvidersDataTable = () => {
           </TableHeader>
           <TableBody>
             {filteredProviders && filteredProviders.length > 0 ? (
-              paginatedProviders?.map((provider) => (
-                <TableRow key={provider.id}>
-                  <TableCell className="font-medium">
-                    {provider.profiles?.prescriber_name || 
-                     provider.profiles?.full_name || 
-                     (provider.profiles?.name && !provider.profiles.name.includes('@') ? provider.profiles.name : '') || 
-                     (provider.profiles?.email ? provider.profiles.email.split('@')[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : 'Provider')}
-                  </TableCell>
-                  <TableCell>{provider.profiles?.prescriber_name || 'Not Set'}</TableCell>
-                  <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
-                  <TableCell>{provider.profiles?.email || 'N/A'}</TableCell>
+              paginatedProviders?.map((provider) => {
+                const displayName = getProviderDisplayName(provider);
+                // Check for duplicates to add email suffix for clarity
+                const hasDuplicate = paginatedProviders.filter(
+                  (p) => getProviderDisplayName(p) === displayName
+                ).length > 1;
+                const nameWithSuffix = hasDuplicate && provider.profiles?.email
+                  ? `${displayName} (${provider.profiles.email.split('@')[0]})`
+                  : displayName;
+                
+                return (
+                  <TableRow key={provider.id}>
+                    <TableCell className="font-medium">
+                      {nameWithSuffix}
+                    </TableCell>
+                    <TableCell>{provider.profiles?.prescriber_name || 'Not Set'}</TableCell>
+                    <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
+                    <TableCell>{provider.profiles?.email || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={provider.active ? "default" : "secondary"}>
                       {provider.active ? "Active" : "Inactive"}
@@ -193,7 +202,8 @@ export const ProvidersDataTable = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground">

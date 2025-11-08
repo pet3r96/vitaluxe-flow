@@ -93,6 +93,22 @@ export function getProviderDisplayName(provider: any): string {
 }
 
 /**
+ * Gets display name with email suffix for disambiguation in tables
+ * Used when multiple providers have the same display name
+ */
+export function getProviderDisplayNameWithEmailSuffix(provider: any): string {
+  const displayName = getProviderDisplayName(provider);
+  const email = provider.profiles?.email || provider.email;
+  
+  if (email && email.includes('@')) {
+    const emailPrefix = email.split('@')[0];
+    return `${displayName} (${emailPrefix})`;
+  }
+  
+  return displayName;
+}
+
+/**
  * Gets first and last name from provider data
  * Returns [firstName, lastName]
  */

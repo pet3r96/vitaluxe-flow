@@ -17,24 +17,31 @@ export const usePracticeRxPrivileges = () => {
     queryFn: async () => {
       if (!effectivePracticeId) return { canOrderRx: false, hasProviders: false };
       
-      // Check if practice has at least one active provider with an NPI
-      const { data: providers, error } = await supabase
-        .from('providers')
-        .select('id, user_id, profiles!providers_user_id_fkey(npi)')
-        .eq('practice_id', effectivePracticeId)
-        .eq('active', true);
+      console.info('[usePracticeRxPrivileges] Checking RX eligibility for practice:', effectivePracticeId);
+      
+      // Use list-providers function to get accurate provider data (bypasses RLS issues)
+      const { data, error } = await supabase.functions.invoke('list-providers', {
+        body: { practice_id: effectivePracticeId }
+      });
       
       if (error) {
-        console.error('Error fetching provider NPI status:', error);
+        console.error('[usePracticeRxPrivileges] Error fetching providers:', error);
         return { canOrderRx: false, hasProviders: false };
       }
       
-      const providersWithNpi = providers?.filter(p => p.profiles?.npi) || [];
+      const providers = data?.providers || [];
+      const providersWithNpi = providers.filter((p: any) => p.profiles?.npi) || [];
+      
+      console.info('[usePracticeRxPrivileges] Provider counts:', {
+        total: providers.length,
+        withNPI: providersWithNpi.length,
+        canOrderRx: providersWithNpi.length > 0
+      });
       
       return {
         canOrderRx: providersWithNpi.length > 0,
-        hasProviders: (providers?.length || 0) > 0,
-        providerCount: providers?.length || 0,
+        hasProviders: providers.length > 0,
+        providerCount: providers.length,
         providersWithNpiCount: providersWithNpi.length
       };
     },

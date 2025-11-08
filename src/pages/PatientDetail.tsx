@@ -140,23 +140,26 @@ export default function PatientDetail() {
     };
   }, [actualPatientId, queryClient]);
 
-  // Fetch providers for appointment dialog
+  // Fetch providers for appointment dialog - use list-providers for consistency
   const { data: providers = [] } = useQuery({
     queryKey: ["providers", practiceId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("providers")
-        .select("id, user_id, profiles!providers_user_id_fkey(full_name, prescriber_name)")
-        .eq("practice_id", practiceId);
+      console.info('[PatientDetail] Fetching providers via list-providers');
+      const { data, error } = await supabase.functions.invoke('list-providers', {
+        body: { practice_id: practiceId }
+      });
       
       if (error) throw error;
       
-      // Sort locally to avoid database ordering issues
-      return (data || []).sort((a: any, b: any) => {
-        const nameA = a.profiles?.prescriber_name || a.profiles?.full_name || 'Unknown';
-        const nameB = b.profiles?.prescriber_name || b.profiles?.full_name || 'Unknown';
-        return nameA.localeCompare(nameB);
+      const providersList = data?.providers || [];
+      console.info('[PatientDetail] ✅ Providers loaded:', {
+        count: providersList.length,
+        sampleNames: providersList.slice(0, 2).map((p: any) => 
+          p.profiles?.prescriber_name || p.profiles?.full_name || 'Unknown'
+        )
       });
+      
+      return providersList;
     },
     enabled: !!practiceId,
   });
