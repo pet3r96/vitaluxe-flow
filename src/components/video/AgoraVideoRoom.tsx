@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface AgoraVideoRoomProps {
   channelName: string;
   token: string;
-  uid: string;
+  uid: number;
   appId: string;
   onLeave: () => void;
   isProvider: boolean;
@@ -79,13 +79,14 @@ export function AgoraVideoRoom({
     }
   };
 
-  // Use string UID directly as returned from server (matches token generation)
-  const rtcProps = {
+  // Validate required fields
+  const hasRequiredFields = appId && channelName && token && uid;
+  
+  const rtcProps: PropsInterface['rtcProps'] = {
     appId: appId,
     channel: channelName,
     token: token,
-    uid: uid, // Pass string userAccount directly
-    role: 'host',
+    uid: uid,
   };
 
   // Debug logging
@@ -93,14 +94,9 @@ export function AgoraVideoRoom({
     appId: appId ? "✓ present" : "✗ missing",
     channel: channelName,
     token: token ? "✓ present" : "✗ missing",
-    uid: uid, // Show actual string UID
-    role: 'host'
+    uid: uid,
+    uidType: typeof uid
   });
-  
-  // Log if using string userAccount
-  if (/[a-f]/i.test(uid)) {
-    console.log("ℹ️ Using string userAccount UID (matches token generation)");
-  }
 
   const callbacks: PropsInterface['callbacks'] = {
     EndCall: () => {
@@ -117,10 +113,39 @@ export function AgoraVideoRoom({
     return null;
   }
 
+  // Safety net: show error UI if required fields are missing
+  if (!hasRequiredFields) {
+    console.error("❌ Missing required Agora fields:", { appId: !!appId, channelName: !!channelName, token: !!token, uid: !!uid });
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
+        <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full text-center space-y-4">
+          <h2 className="text-xl font-semibold text-destructive">Connection Failed</h2>
+          <p className="text-muted-foreground">
+            Unable to initialize video session. Missing required connection details.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={onLeave}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"
+            >
+              Leave
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black">
       <AgoraUIKit
-        rtcProps={rtcProps as any}
+        rtcProps={rtcProps}
         callbacks={callbacks}
       />
     </div>

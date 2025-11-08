@@ -190,7 +190,11 @@ Deno.serve(async (req) => {
     });
 
     if (tokenError) {
-      console.error('❌ [join-video-session] Token generation failed:', tokenError);
+      console.error('❌ [join-video-session] Token generation failed:', {
+        error: tokenError,
+        message: tokenError.message,
+        details: JSON.stringify(tokenError)
+      });
       throw new Error(`Failed to generate video token: ${tokenError.message}`);
     }
 
@@ -198,6 +202,14 @@ Deno.serve(async (req) => {
       console.error('❌ [join-video-session] No token data received');
       throw new Error('Failed to generate video token: No data received');
     }
+
+    console.log('✅ [join-video-session] Token data received:', {
+      hasToken: !!tokenData.token,
+      hasChannelName: !!tokenData.channelName,
+      hasUid: !!tokenData.uid,
+      hasAppId: !!tokenData.appId,
+      uid: tokenData.uid
+    });
 
     console.log('✅ [join-video-session] Token generated successfully');
 
