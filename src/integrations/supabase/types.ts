@@ -8072,10 +8072,12 @@ export type Database = {
           provider_left_at: string | null
           recording_enabled: boolean | null
           recording_expires_at: string | null
+          recording_file_size_bytes: number | null
           recording_resource_id: string | null
           recording_sid: string | null
           recording_started_at: string | null
           recording_stopped_at: string | null
+          recording_storage_cost: number | null
           recording_url: string | null
           scheduled_start_time: string
           status: string | null
@@ -8101,10 +8103,12 @@ export type Database = {
           provider_left_at?: string | null
           recording_enabled?: boolean | null
           recording_expires_at?: string | null
+          recording_file_size_bytes?: number | null
           recording_resource_id?: string | null
           recording_sid?: string | null
           recording_started_at?: string | null
           recording_stopped_at?: string | null
+          recording_storage_cost?: number | null
           recording_url?: string | null
           scheduled_start_time: string
           status?: string | null
@@ -8130,10 +8134,12 @@ export type Database = {
           provider_left_at?: string | null
           recording_enabled?: boolean | null
           recording_expires_at?: string | null
+          recording_file_size_bytes?: number | null
           recording_resource_id?: string | null
           recording_sid?: string | null
           recording_started_at?: string | null
           recording_stopped_at?: string | null
+          recording_storage_cost?: number | null
           recording_url?: string | null
           scheduled_start_time?: string
           status?: string | null
@@ -8183,6 +8189,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      video_usage_pricing: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          effective_from: string
+          id: string
+          included_minutes_per_month: number | null
+          notes: string | null
+          rate_per_minute: number
+          storage_rate_per_gb_per_month: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          included_minutes_per_month?: number | null
+          notes?: string | null
+          rate_per_minute?: number
+          storage_rate_per_gb_per_month?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          included_minutes_per_month?: number | null
+          notes?: string | null
+          rate_per_minute?: number
+          storage_rate_per_gb_per_month?: number | null
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -8695,9 +8734,43 @@ export type Database = {
           },
         ]
       }
+      video_usage_by_practice: {
+        Row: {
+          billing_month: string | null
+          first_session_date: string | null
+          last_session_date: string | null
+          practice_email: string | null
+          practice_id: string | null
+          practice_name: string | null
+          sessions_with_recordings: number | null
+          total_minutes: number | null
+          total_seconds: number | null
+          total_sessions: number | null
+          unique_patients_served: number | null
+          unique_providers_used: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       archive_old_audit_logs: { Args: never; Returns: number }
+      calculate_practice_video_bill: {
+        Args: {
+          p_end_date: string
+          p_practice_id: string
+          p_start_date: string
+        }
+        Returns: {
+          billable_minutes: number
+          included_minutes: number
+          minute_rate: number
+          minutes_cost: number
+          storage_cost: number
+          storage_gb: number
+          total_cost: number
+          total_minutes: number
+        }[]
+      }
       can_access_practice_messages: {
         Args: { _actor: string; _practice_id: string }
         Returns: boolean
@@ -9129,6 +9202,7 @@ export type Database = {
       }
       refresh_rep_productivity_summary: { Args: never; Returns: undefined }
       refresh_security_events_summary: { Args: never; Returns: undefined }
+      refresh_video_usage_by_practice: { Args: never; Returns: undefined }
       sync_practice_address_to_providers: {
         Args: { p_practice_id: string }
         Returns: undefined
