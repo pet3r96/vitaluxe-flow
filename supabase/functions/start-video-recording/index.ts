@@ -62,10 +62,21 @@ Deno.serve(async (req) => {
 
     const customerId = Deno.env.get('AGORA_CUSTOMER_ID');
     const customerSecret = Deno.env.get('AGORA_CUSTOMER_SECRET');
-    const appId = Deno.env.get('AGORA_APP_ID');
+    const rawAppId = Deno.env.get('AGORA_APP_ID');
 
-    if (!customerId || !customerSecret || !appId) {
+    if (!customerId || !customerSecret || !rawAppId) {
       console.error('Missing Agora Cloud Recording credentials');
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const appId = rawAppId.trim();
+    if (!/^[a-f0-9]{32}$/i.test(appId)) {
+      console.error('Invalid Agora App ID format for recording', {
+        appIdSample: appId.substring(0, 6) + '...'
+      });
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

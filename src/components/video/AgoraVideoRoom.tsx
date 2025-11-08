@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AgoraRTC, {
   IAgoraRTCClient,
   ICameraVideoTrack,
@@ -67,6 +67,81 @@ export const AgoraVideoRoom = ({
   const quality = useNetworkQuality(client, sessionId);
   const { logVideoError } = useVideoErrorLogger();
   
+  const clientRef = useRef<IAgoraRTCClient | null>(null);
+  const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null);
+  const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
+  const screenTrackRef = useRef<ILocalVideoTrack | null>(null);
+  const isComponentMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isComponentMountedRef.current = false;
+    };
+  }, []);
+
+  const resetSessionState = () => {
+    if (!isComponentMountedRef.current) {
+      return;
+    }
+
+    setRemoteUsers([]);
+    setSessionDuration(0);
+    setRecordingStatus('not_started');
+    setIsScreenSharing(false);
+    setIsMuted(false);
+    setIsVideoOff(false);
+    setShowChat(false);
+
+    if (localVideoTrackRef.current) {
+      try {
+        localVideoTrackRef.current.stop();
+      } catch (err) {
+        console.warn("Failed to stop local video track during reset:", err);
+      }
+      localVideoTrackRef.current.close();
+      localVideoTrackRef.current = null;
+    }
+    setLocalVideoTrack(null);
+
+    if (localAudioTrackRef.current) {
+      try {
+        localAudioTrackRef.current.stop();
+      } catch (err) {
+        console.warn("Failed to stop local audio track during reset:", err);
+      }
+      localAudioTrackRef.current.close();
+      localAudioTrackRef.current = null;
+    }
+    setLocalAudioTrack(null);
+
+    if (screenTrackRef.current) {
+      try {
+        screenTrackRef.current.stop?.();
+      } catch (err) {
+        console.warn("Failed to stop screen track during reset:", err);
+      }
+      screenTrackRef.current.close();
+      screenTrackRef.current = null;
+    }
+    setScreenTrack(null);
+  };
+
+  const cleanupClientConnections = async () => {
+    const existingClient = clientRef.current;
+    if (!existingClient) return;
+
+    existingClient.removeAllListeners();
+    try {
+      await existingClient.leave();
+    } catch (err) {
+      console.warn("Failed to leave existing Agora client:", err);
+    }
+    clientRef.current = null;
+    if (isComponentMountedRef.current) {
+      setClient(null);
+    }
+  };
+
   const chat = rtmToken && rtmUid ? useVideoChat({
     appId,
     rtmToken,
@@ -78,15 +153,22 @@ export const AgoraVideoRoom = ({
   }) : { messages: [], sendMessage: async () => {}, isConnected: false };
 
   useEffect(() => {
+    let cancelled = false;
+
     const initClient = async () => {
+      await cleanupClientConnections();
+      if (cancelled) return;
+
+      resetSessionState();
+
       try {
         const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        clientRef.current = agoraClient;
         setClient(agoraClient);
 
-        // Event handlers
         agoraClient.on("user-published", async (user, mediaType) => {
           await agoraClient.subscribe(user, mediaType);
-          
+
           if (mediaType === "video") {
             setRemoteUsers(prev => {
               const existing = prev.find(u => u.uid === user.uid);
@@ -96,7 +178,7 @@ export const AgoraVideoRoom = ({
               return [...prev, user];
             });
           }
-          
+
           if (mediaType === "audio") {
             user.audioTrack?.play();
           }
@@ -112,14 +194,11 @@ export const AgoraVideoRoom = ({
           setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
         });
 
-        // Join channel
         await agoraClient.join(appId, channelName, token, uid);
 
-        // Read device preferences from localStorage
         const prefs = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
         console.log("📱 Using device preferences:", prefs);
 
-        // Create and publish local tracks with preferred devices
         let audioTrack: IMicrophoneAudioTrack;
         try {
           audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
@@ -141,16 +220,16 @@ export const AgoraVideoRoom = ({
           console.warn("⚠️ Camera create failed with chosen device, falling back:", e);
           videoTrack = await AgoraRTC.createCameraVideoTrack();
         }
-        
+
+        localAudioTrackRef.current = audioTrack;
+        localVideoTrackRef.current = videoTrack;
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
 
         await agoraClient.publish([audioTrack, videoTrack]);
 
-        // Play local video
         videoTrack.play("local-player");
 
-        // Adaptive bitrate based on network quality
         if (quality.downlinkQuality >= 3 && quality.downlinkQuality <= 6) {
           videoTrack.setEncoderConfiguration({
             width: 640,
@@ -165,9 +244,7 @@ export const AgoraVideoRoom = ({
           title: "Connected",
           description: "You have joined the video consultation"
         });
-
       } catch (error: any) {
-        // Enhanced error logging
         console.group("🔴 AGORA JOIN FAILURE");
         console.error("Error Object:", error);
         console.log("Error Code:", error.code);
@@ -181,7 +258,6 @@ export const AgoraVideoRoom = ({
         });
         console.groupEnd();
 
-        // Log to backend
         await logVideoError({
           sessionId,
           errorCode: error.code,
@@ -196,7 +272,6 @@ export const AgoraVideoRoom = ({
           }
         });
 
-        // User-friendly error message based on error code
         let errorTitle = "Connection Error";
         let errorDescription = "Failed to join video session";
 
@@ -215,21 +290,59 @@ export const AgoraVideoRoom = ({
           description: errorDescription,
           variant: "destructive"
         });
+
+        await cleanupClientConnections();
       }
     };
 
     initClient();
 
-    // Session timer
     const timer = setInterval(() => {
       setSessionDuration(prev => prev + 1);
     }, 1000);
 
     return () => {
+      cancelled = true;
       clearInterval(timer);
-      localVideoTrack?.close();
-      localAudioTrack?.close();
-      client?.leave();
+
+      if (screenTrackRef.current) {
+        try {
+          screenTrackRef.current.stop?.();
+        } catch (err) {
+          console.warn("Failed to stop screen track during cleanup:", err);
+        }
+        screenTrackRef.current.close();
+        screenTrackRef.current = null;
+      }
+
+      if (localVideoTrackRef.current) {
+        try {
+          localVideoTrackRef.current.stop();
+        } catch (err) {
+          console.warn("Failed to stop local video track during cleanup:", err);
+        }
+        localVideoTrackRef.current.close();
+        localVideoTrackRef.current = null;
+      }
+
+      if (localAudioTrackRef.current) {
+        try {
+          localAudioTrackRef.current.stop();
+        } catch (err) {
+          console.warn("Failed to stop local audio track during cleanup:", err);
+        }
+        localAudioTrackRef.current.close();
+        localAudioTrackRef.current = null;
+      }
+
+      const existingClient = clientRef.current;
+      if (existingClient) {
+        existingClient.removeAllListeners();
+        existingClient.leave().catch((err) => {
+          console.warn("Failed to leave Agora client during cleanup:", err);
+        });
+        clientRef.current = null;
+      }
     };
   }, [channelName, token, uid, appId]);
 
@@ -333,7 +446,9 @@ export const AgoraVideoRoom = ({
       }
       
       await client.publish([screenVideoTrack as ILocalVideoTrack]);
-      setScreenTrack(screenVideoTrack as ILocalVideoTrack);
+      const castedTrack = screenVideoTrack as ILocalVideoTrack;
+      screenTrackRef.current = castedTrack;
+      setScreenTrack(castedTrack);
       setIsScreenSharing(true);
 
       (screenVideoTrack as ILocalVideoTrack).on("track-ended", () => {
@@ -380,6 +495,7 @@ export const AgoraVideoRoom = ({
 
       if (screenTrack) {
         screenTrack.close();
+        screenTrackRef.current = null;
         await client.unpublish([screenTrack]);
       }
       
@@ -413,10 +529,8 @@ export const AgoraVideoRoom = ({
   };
 
   const handleLeave = async () => {
-    localVideoTrack?.close();
-    localAudioTrack?.close();
-    screenTrack?.close();
-    await client?.leave();
+    resetSessionState();
+    await cleanupClientConnections();
     onLeave();
   };
 

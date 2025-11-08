@@ -34,8 +34,11 @@ Deno.serve(async (req) => {
     console.log('[agora-healthcheck] Running health check');
 
     // Validate environment variables
-    const appId = Deno.env.get('AGORA_APP_ID');
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
+    const rawAppId = Deno.env.get('AGORA_APP_ID');
+    const rawAppCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
+
+    const appId = rawAppId?.trim();
+    const appCertificate = rawAppCertificate?.trim();
 
     if (!appId || !appCertificate) {
       console.error('[agora-healthcheck] ❌ Missing Agora credentials');
@@ -43,6 +46,8 @@ Deno.serve(async (req) => {
         healthy: false,
         error: 'Missing Agora credentials',
         details: {
+          rawAppIdPresent: rawAppId !== undefined && rawAppId !== null,
+          rawCertificatePresent: rawAppCertificate !== undefined && rawAppCertificate !== null,
           hasAppId: !!appId,
           hasCertificate: !!appCertificate
         }
@@ -79,7 +84,15 @@ Deno.serve(async (req) => {
       validation: {
         appIdLength: appId.length,
         certificateLength: appCertificate.length,
-        formatsValid: true
+        formatsValid: true,
+        trimmed: {
+          appIdTrimmed: rawAppId !== appId,
+          certificateTrimmed: rawAppCertificate !== appCertificate
+        }
+      },
+      samples: {
+        appIdSample: appId.substring(0, 6) + '...',
+        certificateSample: appCertificate.substring(0, 6) + '...'
       },
       timestamp: new Date().toISOString()
     }), {

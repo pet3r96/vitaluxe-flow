@@ -1,129 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { generateAgoraTokens } from '../_shared/agoraTokens.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// Deno-compatible token generation helpers
-function stringToUint8Array(str: string): Uint8Array {
-  return new TextEncoder().encode(str);
-}
-
-function packUint32(num: number): Uint8Array {
-  const buffer = new Uint8Array(4);
-  buffer[0] = (num >> 24) & 0xff;
-  buffer[1] = (num >> 16) & 0xff;
-  buffer[2] = (num >> 8) & 0xff;
-  buffer[3] = num & 0xff;
-  return buffer;
-}
-
-function packUint16(num: number): Uint8Array {
-  const buffer = new Uint8Array(2);
-  buffer[0] = (num >> 8) & 0xff;
-  buffer[1] = num & 0xff;
-  return buffer;
-}
-
-function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
-  const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const arr of arrays) {
-    result.set(arr, offset);
-    offset += arr.length;
-  }
-  return result;
-}
-
-function base64Encode(data: Uint8Array): string {
-  const binString = Array.from(data, (byte) => String.fromCodePoint(byte)).join("");
-  return btoa(binString);
-}
-
-async function hmacSha256(key: string, message: Uint8Array): Promise<Uint8Array> {
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    stringToUint8Array(key),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, message);
-  return new Uint8Array(signature);
-}
-
-async function generateRtcToken(
-  appId: string,
-  appCertificate: string,
-  channelName: string,
-  uid: string,
-  role: number,
-  privilegeExpiredTs: number
-): Promise<string> {
-  const version = '007';
-  const randomInt = Math.floor(Math.random() * 0xFFFFFFFF);
-  
-  const message = concatUint8Arrays(
-    stringToUint8Array(appId),
-    stringToUint8Array(channelName),
-    stringToUint8Array(uid),
-    packUint32(randomInt),
-    packUint32(privilegeExpiredTs),
-    packUint32(privilegeExpiredTs),
-    packUint16(role)
-  );
-  
-  const signature = await hmacSha256(appCertificate, message);
-  
-  const content = concatUint8Arrays(
-    stringToUint8Array(appId),
-    packUint32(randomInt),
-    packUint32(privilegeExpiredTs),
-    packUint16(signature.length),
-    signature,
-    packUint32(privilegeExpiredTs),
-    packUint16(channelName.length),
-    stringToUint8Array(channelName),
-    packUint16(uid.length),
-    stringToUint8Array(uid)
-  );
-  
-  return version + base64Encode(content);
-}
-
-async function generateRtmToken(
-  appId: string,
-  appCertificate: string,
-  userId: string,
-  privilegeExpiredTs: number
-): Promise<string> {
-  const version = '007';
-  const randomInt = Math.floor(Math.random() * 0xFFFFFFFF);
-  
-  const message = concatUint8Arrays(
-    stringToUint8Array(appId),
-    stringToUint8Array(userId),
-    packUint32(randomInt),
-    packUint32(privilegeExpiredTs),
-    packUint32(privilegeExpiredTs)
-  );
-  
-  const signature = await hmacSha256(appCertificate, message);
-  
-  const content = concatUint8Arrays(
-    stringToUint8Array(appId),
-    packUint32(randomInt),
-    packUint32(privilegeExpiredTs),
-    packUint16(signature.length),
-    signature,
-    packUint16(userId.length),
-    stringToUint8Array(userId)
-  );
-  
-  return version + base64Encode(content);
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -241,38 +122,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate Agora tokens
-    const appId = Deno.env.get('AGORA_APP_ID');
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
-
-    if (!appId || !appCertificate) {
-      throw new Error('Agora credentials not configured');
-    }
-
     const channelName = session.channel_name;
-    const uid = Math.floor(Math.random() * 1000000);
-    const expirationTimeInSeconds = 3600;
-    const currentTimestamp = Math.floor(Date.now() / 1000);
-    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+    const guestUid = `guest_${guestLink.id}`;
 
-    // Generate RTC token (role 1 = PUBLISHER)
-    const rtcToken = await generateRtcToken(
-      appId,
-      appCertificate,
+    const tokens = generateAgoraTokens({
       channelName,
-      uid.toString(),
-      1,
-      privilegeExpiredTs
-    );
-
-    // Generate RTM token
-    const rtmUid = `guest_${uid}`;
-    const rtmToken = await generateRtmToken(
-      appId,
-      appCertificate,
-      rtmUid,
-      privilegeExpiredTs
-    );
+      uid: guestUid,
+      role: 'publisher',
+      expiresInSeconds: 3600,
+    });
+    const appId = tokens.appId;
 
     // Update access count and timestamps
     const updateData: any = {
@@ -333,11 +192,11 @@ Deno.serve(async (req) => {
         success: true,
         sessionData: {
           channelName,
-          token: rtcToken,
-          uid,
+          token: tokens.rtcToken,
+          uid: tokens.rtmUid,
           appId,
-          rtmToken,
-          rtmUid,
+          rtmToken: tokens.rtmToken,
+          rtmUid: tokens.rtmUid,
           sessionId: session.id,
           providerName,
           scheduledTime: session.scheduled_start_time,

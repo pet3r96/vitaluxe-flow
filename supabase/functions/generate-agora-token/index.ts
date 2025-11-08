@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { RtcTokenBuilder, RtcRole, RtmTokenBuilder, RtmRole } from 'https://esm.sh/agora-access-token@2.0.4';
+import { generateAgoraTokens } from '../_shared/agoraTokens.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -113,45 +113,19 @@ Deno.serve(async (req) => {
 
     console.log('✅ [generate-agora-token] Authorization successful');
 
-    // Get Agora credentials from environment
-    const appId = Deno.env.get('AGORA_APP_ID')!;
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')!;
-    
-    if (!appId || !appCertificate) {
-      console.error('Missing Agora credentials');
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
     const channelName = session.channel_name;
-    const uid = Math.floor(Math.random() * 1000000); // Generate random numeric UID
-    const userRole = role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
-    const expirationTimeInSeconds = 3600; // 1 hour
-    const currentTimestamp = Math.floor(Date.now() / 1000);
-    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+    const uid = effectiveUserId;
+    const tokenRole = role === 'publisher' ? 'publisher' : 'subscriber';
 
-    console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role: userRole });
+    console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role: tokenRole });
 
-    // Generate RTC token using official Agora SDK
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
-      appId,
-      appCertificate,
+    const tokens = generateAgoraTokens({
       channelName,
-      uid,
-      userRole,
-      privilegeExpiredTs
-    );
-
-    // Generate RTM token using official Agora SDK
-    const rtmToken = RtmTokenBuilder.buildToken(
-      appId,
-      appCertificate,
-      String(uid),
-      RtmRole.Rtm_User,
-      privilegeExpiredTs
-    );
+      uid: String(uid),
+      role: tokenRole,
+      expiresInSeconds: 3600,
+    });
+    const appId = tokens.appId;
 
     console.log('✅ [generate-agora-token] Tokens generated successfully');
 
@@ -163,19 +137,19 @@ Deno.serve(async (req) => {
       user_type: (isProvider || isPracticeAdmin) ? 'provider' : 'patient',
       event_data: { 
         role, 
-        expires_at: new Date(privilegeExpiredTs * 1000).toISOString(),
+        expires_at: new Date(tokens.expiresAt * 1000).toISOString(),
         impersonated: effectiveUserId !== user.id
       }
     });
 
     return new Response(JSON.stringify({
-      token: rtcToken,
+      token: tokens.rtcToken,
       channelName,
-      uid,
+      uid: tokens.rtmUid,
       appId,
-      expiresAt: privilegeExpiredTs,
-      rtmToken,
-      rtmUid: uid
+      expiresAt: tokens.expiresAt,
+      rtmToken: tokens.rtmToken,
+      rtmUid: tokens.rtmUid
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
