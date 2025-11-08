@@ -2,7 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -10,43 +11,102 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const authHeader = req.headers.get('Authorization');
     
-    // Authenticate user
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (!authHeader) {
+      console.error('❌ [end-video-session] No auth header');
+      return new Response(JSON.stringify({ error: 'Unauthorized: missing auth header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Use anon client for auth check with Authorization header
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
     if (authError || !user) {
+      console.error('❌ [end-video-session] Auth failed:', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
+    console.log('✅ [end-video-session] Authenticated user:', user.id);
+
+    // Use service role client for database operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const { sessionId } = await req.json();
 
-    // Fetch session
+    // Check for active impersonation
+    const { data: impersonation } = await supabase
+      .from('impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('impersonator_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    const effectiveUserId = impersonation?.impersonated_user_id || user.id;
+    console.log('🔍 [end-video-session] Effective user ID:', effectiveUserId);
+
+    // Fetch session with practice relationships
     const { data: session, error: sessionError } = await supabase
       .from('video_sessions')
-      .select('*, patient_appointments!inner(*)')
+      .select(`
+        *,
+        patient_appointments!inner(
+          *,
+          practices!inner(owner_id)
+        ),
+        provider:user_profiles!video_sessions_provider_id_fkey(practice_id)
+      `)
       .eq('id', sessionId)
       .single();
 
     if (sessionError || !session) {
+      console.error('❌ [end-video-session] Session not found:', sessionError);
       return new Response(JSON.stringify({ error: 'Session not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Verify provider authorization
-    if (session.provider_id !== user.id) {
-      return new Response(JSON.stringify({ error: 'Only the provider can end the session' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    // Authorization check
+    const appointment = session.patient_appointments;
+    const practice = appointment?.practices;
+    
+    // Check if user is the provider or practice owner
+    const isProvider = session.provider_id === effectiveUserId;
+    const isPracticeOwner = practice?.owner_id === effectiveUserId;
+
+    if (!isProvider && !isPracticeOwner) {
+      // Check if user is staff in the same practice
+      const { data: staffProfile } = await supabase
+        .from('user_profiles')
+        .select('practice_id, is_staff')
+        .eq('user_id', effectiveUserId)
+        .eq('is_staff', true)
+        .maybeSingle();
+
+      const isStaffInPractice = staffProfile?.practice_id === session.provider?.practice_id;
+
+      if (!isStaffInPractice) {
+        console.error('❌ [end-video-session] Authorization failed - not provider, owner, or staff');
+        return new Response(JSON.stringify({ error: 'Only the provider, practice owner, or staff can end the session' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
     }
+
+    console.log('✅ [end-video-session] Authorization passed');
 
     // Stop recording if active
     if (session.recording_started_at && !session.recording_stopped_at) {
