@@ -206,6 +206,23 @@ export const ProviderVirtualWaitingRoom = ({
         return next;
       });
 
+      // Wait briefly until backend marks the related video session as ended to avoid flicker
+      const waitForVideoSessionEnd = async () => {
+        for (let i = 0; i < 10; i++) { // ~2s max
+          const { data } = await supabase
+            .from('video_sessions')
+            .select('id, status')
+            .eq('appointment_id', appointmentId)
+            .maybeSingle();
+          if (!data || data.status === 'ended') return true;
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        return false;
+      };
+
+      const confirmed = await waitForVideoSessionEnd();
+      console.log('⏱️ [UI] Backend confirmation that session ended:', confirmed);
+
       console.log('✅ [UI] Appointment cancelled, invalidating and refetching queries');
 
       // Force immediate refetch of the sessions list
@@ -234,7 +251,6 @@ export const ProviderVirtualWaitingRoom = ({
       setSessionToCancel(null);
     }
   };
-
   const handleCreateInstantSession = async () => {
     if (!selectedPatientId || !selectedProviderId) {
       toast({
