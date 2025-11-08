@@ -10,23 +10,18 @@ const RTC_ROLE = {
   SUBSCRIBER: 2
 };
 
-// Generate a deterministic numeric UID from user ID and session ID
-function generateNumericUid(userId: string, sessionId: string): number {
-  // Create a simple hash by combining user and session IDs
-  const combined = userId + sessionId;
-  let hash = 0;
-  for (let i = 0; i < combined.length; i++) {
-    const char = combined.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  // Return absolute value to ensure positive number, keep it reasonable size (max 10 digits)
-  return Math.abs(hash) % 2147483647; // Max 32-bit signed int
-}
-
 // Helper function to convert string to Uint8Array
 function stringToUint8Array(str: string): Uint8Array {
   return new TextEncoder().encode(str);
+}
+
+// Helper function to convert hex string to Uint8Array
+function hexToUint8Array(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
 }
 
 // Helper function to pack uint32 in big-endian
@@ -65,24 +60,6 @@ function base64Encode(data: Uint8Array): string {
   return btoa(binString);
 }
 
-// Base64 decode
-function base64Decode(str: string): Uint8Array {
-  const binString = atob(str);
-  return Uint8Array.from(binString, (m) => m.codePointAt(0)!);
-}
-
-// Decode App ID from 007 token (first 32 bytes after version)
-function decode007TokenAppId(token: string): string {
-  try {
-    if (!token.startsWith('007')) return 'invalid_version';
-    const content = base64Decode(token.slice(3));
-    const appIdBytes = content.slice(0, 32);
-    return Array.from(appIdBytes, byte => String.fromCharCode(byte)).join('');
-  } catch {
-    return 'decode_error';
-  }
-}
-
 // Generate HMAC-SHA256 signature using Web Crypto API
 async function hmacSha256(key: string, message: Uint8Array): Promise<Uint8Array> {
   const cryptoKey = await crypto.subtle.importKey(
@@ -97,26 +74,23 @@ async function hmacSha256(key: string, message: Uint8Array): Promise<Uint8Array>
   return new Uint8Array(signature);
 }
 
-// Generate RTC Token with numeric UID
+// Generate RTC Token
 async function generateRtcToken(
   appId: string,
   appCertificate: string,
   channelName: string,
-  uid: number,
+  uid: string,
   role: number,
   privilegeExpiredTs: number
 ): Promise<string> {
   const version = '007';
   const randomInt = Math.floor(Math.random() * 0xFFFFFFFF);
   
-  // Convert numeric UID to string for token generation
-  const uidStr = uid.toString();
-  
   // Pack message
   const message = concatUint8Arrays(
     stringToUint8Array(appId),
     stringToUint8Array(channelName),
-    stringToUint8Array(uidStr),
+    stringToUint8Array(uid),
     packUint32(randomInt),
     packUint32(privilegeExpiredTs),
     packUint32(privilegeExpiredTs), // Join channel privilege
@@ -133,32 +107,31 @@ async function generateRtcToken(
     packUint32(privilegeExpiredTs),
     packUint16(signature.length),
     signature,
-    packUint32(privilegeExpiredTs),
+    packUint32(privilegeExpiredTs), // crc_channel_name + crc_uid
     packUint16(channelName.length),
     stringToUint8Array(channelName),
-    packUint16(uidStr.length),
-    stringToUint8Array(uidStr)
+    packUint16(uid.length),
+    stringToUint8Array(uid)
   );
   
   const token = version + base64Encode(content);
   return token;
 }
 
-// Generate RTM Token with numeric UID
+// Generate RTM Token
 async function generateRtmToken(
   appId: string,
   appCertificate: string,
-  uid: number,
+  userId: string,
   privilegeExpiredTs: number
 ): Promise<string> {
   const version = '007';
   const randomInt = Math.floor(Math.random() * 0xFFFFFFFF);
-  const uidStr = uid.toString();
   
   // Pack message
   const message = concatUint8Arrays(
     stringToUint8Array(appId),
-    stringToUint8Array(uidStr),
+    stringToUint8Array(userId),
     packUint32(randomInt),
     packUint32(privilegeExpiredTs),
     packUint32(privilegeExpiredTs) // Login privilege
@@ -174,8 +147,8 @@ async function generateRtmToken(
     packUint32(privilegeExpiredTs),
     packUint16(signature.length),
     signature,
-    packUint16(uidStr.length),
-    stringToUint8Array(uidStr)
+    packUint16(userId.length),
+    stringToUint8Array(userId)
   );
   
   const token = version + base64Encode(content);
@@ -290,76 +263,28 @@ Deno.serve(async (req) => {
 
     console.log('✅ [generate-agora-token] Authorization successful');
 
-    // Get Agora credentials from environment and trim whitespace
-    const appId = Deno.env.get('AGORA_APP_ID')?.trim()!;
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')?.trim()!;
+    // Get Agora credentials from environment
+    const appId = Deno.env.get('AGORA_APP_ID')!;
+    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')!;
     
     if (!appId || !appCertificate) {
-      console.error('❌ Missing Agora credentials');
+      console.error('Missing Agora credentials');
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Validate Agora credentials format (must be 32 hex characters)
-    if (!/^[0-9a-f]{32}$/i.test(appId)) {
-      console.error('❌ Invalid AGORA_APP_ID format:', { 
-        length: appId.length, 
-        sample: appId.substring(0, 8) + '...'
-      });
-      return new Response(JSON.stringify({ error: 'Invalid Agora configuration' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    if (!/^[0-9a-f]{32}$/i.test(appCertificate)) {
-      console.error('❌ Invalid AGORA_APP_CERTIFICATE format:', { 
-        length: appCertificate.length 
-      });
-      return new Response(JSON.stringify({ error: 'Invalid Agora configuration' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log('✅ Agora credentials validated:', {
-      appIdLength: appId.length,
-      appIdSample: appId.substring(0, 8) + '...',
-      certLength: appCertificate.length
-    });
-
     const channelName = session.channel_name;
-    const uid = generateNumericUid(effectiveUserId, sessionId);
-    const userRole = RTC_ROLE.PUBLISHER; // Both provider and patient can publish
-    const expirationTimeInSeconds = 7200; // 2 hours
+    const uid = effectiveUserId.replace(/-/g, '').substring(0, 32); // Convert UUID to string
+    const userRole = role === 'publisher' ? RTC_ROLE.PUBLISHER : RTC_ROLE.SUBSCRIBER;
+    const expirationTimeInSeconds = 86400; // 24 hours
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-    console.log('🎫 [generate-agora-token] Generating tokens...', { 
-      channelName, 
-      uid,
-      uidType: typeof uid,
-      role: userRole,
-      effectiveUserId: effectiveUserId.substring(0, 8) + '...'
-    });
+    console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role: userRole });
 
-    console.log('🔍 [FULL TOKEN DEBUG]', {
-      effectiveUserId: effectiveUserId.substring(0, 8) + '...',
-      sessionId,
-      channelName,
-      channelNameLength: channelName.length,
-      uid,
-      uidType: typeof uid,
-      uidValue: uid,
-      uidLength: uid.toString().length,
-      appIdLength: appId.length,
-      appCertLength: appCertificate.length,
-      expirationTime: expirationTimeInSeconds,
-      privilegeExpiredTs
-    });
-
-    // Generate RTC token with numeric UID
+    // Generate RTC token
     const rtcToken = await generateRtcToken(
       appId,
       appCertificate,
@@ -369,7 +294,7 @@ Deno.serve(async (req) => {
       privilegeExpiredTs
     );
 
-    // Generate RTM token with numeric UID
+    // Generate RTM token
     const rtmToken = await generateRtmToken(
       appId,
       appCertificate,
@@ -377,39 +302,7 @@ Deno.serve(async (req) => {
       privilegeExpiredTs
     );
 
-    // Validate App ID in token matches environment
-    const appIdFromToken = decode007TokenAppId(rtcToken);
-    const appIdFromEnvSample = appId.substring(0, 8) + '...';
-    const appIdFromTokenSample = appIdFromToken.substring(0, 8) + '...';
-    const appIdsMatch = appId === appIdFromToken;
-
-    console.log('🔍 [TOKEN VALIDATION]', {
-      appIdFromEnvSample,
-      appIdFromTokenSample,
-      appIdsMatch,
-      rtcTokenLength: rtcToken.length
-    });
-
-    if (!appIdsMatch) {
-      console.error('❌ App ID mismatch between environment and generated token!');
-      return new Response(JSON.stringify({
-        error: 'App ID mismatch',
-        details: 'The App ID embedded in the token does not match the environment variable',
-        appIdFromEnvSample,
-        appIdFromTokenSample
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log('✅ [generate-agora-token] Tokens generated successfully', {
-      rtcTokenLength: rtcToken.length,
-      rtcTokenPreview: rtcToken.substring(0, 20) + '...',
-      rtmTokenLength: rtmToken.length,
-      rtmTokenPreview: rtmToken.substring(0, 20) + '...',
-      appIdValidation: 'passed'
-    });
+    console.log('✅ [generate-agora-token] Tokens generated successfully');
 
     // Log token generation
     await supabase.from('video_session_logs').insert({
@@ -427,20 +320,18 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       token: rtcToken,
       channelName,
-      uid, // Return numeric UID
+      uid,
       appId,
       expiresAt: privilegeExpiredTs,
       rtmToken,
-      rtmUid: uid.toString() // RTM needs string UID
+      rtmUid: uid
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('❌ [generate-agora-token] Error:', error);
-    return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : String(error) 
-    }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

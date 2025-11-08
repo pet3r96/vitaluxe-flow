@@ -91,14 +91,6 @@ Deno.serve(async (req) => {
 
     console.log('✅ [join-video-session] Session found:', { sessionId, status: session.status });
 
-    console.log('📺 [CHANNEL DEBUG]', {
-      channelName: session.channel_name,
-      channelNameLength: session.channel_name?.length,
-      channelNameType: typeof session.channel_name,
-      channelNameBytes: session.channel_name ? new TextEncoder().encode(session.channel_name).length : 0,
-      sessionStatus: session.status
-    });
-
     // Verify user authorization - properly resolve user_ids
     // Fetch provider to get user_id
     const { data: provider } = await supabase
@@ -198,11 +190,7 @@ Deno.serve(async (req) => {
     });
 
     if (tokenError) {
-      console.error('❌ [join-video-session] Token generation failed:', {
-        error: tokenError,
-        message: tokenError.message,
-        details: JSON.stringify(tokenError)
-      });
+      console.error('❌ [join-video-session] Token generation failed:', tokenError);
       throw new Error(`Failed to generate video token: ${tokenError.message}`);
     }
 
@@ -210,14 +198,6 @@ Deno.serve(async (req) => {
       console.error('❌ [join-video-session] No token data received');
       throw new Error('Failed to generate video token: No data received');
     }
-
-    console.log('✅ [join-video-session] Token data received:', {
-      hasToken: !!tokenData.token,
-      hasChannelName: !!tokenData.channelName,
-      hasUid: !!tokenData.uid,
-      hasAppId: !!tokenData.appId,
-      uid: tokenData.uid
-    });
 
     console.log('✅ [join-video-session] Token generated successfully');
 
@@ -237,7 +217,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('❌ [join-video-session] Unexpected error:', error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Failed to join video session',
+      error: error.message || 'Failed to join video session',
       details: 'An unexpected error occurred while joining the session'
     }), {
       status: 500,

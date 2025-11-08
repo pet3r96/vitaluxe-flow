@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
+import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Loader2, Video } from "lucide-react";
@@ -14,6 +15,7 @@ export default function PatientVideoRoom() {
   const [sessionData, setSessionData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [waitingForProvider, setWaitingForProvider] = useState(false);
+  const [showDeviceTest, setShowDeviceTest] = useState(false);
 
   useEffect(() => {
     const joinSession = async () => {
@@ -39,6 +41,8 @@ export default function PatientVideoRoom() {
         const sessionStatus = data.session?.status || data.session_status;
         if (sessionStatus === 'waiting') {
           setWaitingForProvider(true);
+        } else {
+          setShowDeviceTest(true);
         }
 
         setSessionData(data);
@@ -78,6 +82,7 @@ export default function PatientVideoRoom() {
         (payload) => {
           if (payload.new.status === 'active') {
             setWaitingForProvider(false);
+            setShowDeviceTest(true);
           }
         }
       )
@@ -154,16 +159,27 @@ export default function PatientVideoRoom() {
     );
   }
 
-  return (
-      <AgoraVideoRoom
-        channelName={sessionData.channelName}
-        token={sessionData.token}
-        uid={sessionData.uid}
+  if (showDeviceTest) {
+    return (
+      <DeviceTestScreen
         appId={sessionData.appId}
-        onLeave={handleLeave}
-        isProvider={false}
-        sessionId={sessionId!}
-        userName="Patient"
+        onComplete={() => setShowDeviceTest(false)}
       />
+    );
+  }
+
+  return (
+    <AgoraVideoRoom
+      channelName={sessionData.channelName}
+      token={sessionData.token}
+      uid={sessionData.uid}
+      appId={sessionData.appId}
+      onLeave={handleLeave}
+      isProvider={false}
+      sessionId={sessionId!}
+      rtmToken={sessionData.rtmToken}
+      rtmUid={sessionData.rtmUid}
+      userName="Patient"
+    />
   );
 }

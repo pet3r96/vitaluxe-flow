@@ -12,13 +12,11 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Video } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
 import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
-import { VideoUsageManager } from "@/components/admin/VideoUsageManager";
-import { VideoUsagePricingSettings } from "@/components/admin/VideoUsagePricingSettings";
 
 const AdminSettings = () => {
   return (
@@ -80,10 +78,7 @@ const AdminSettings = () => {
             <DollarSign className="h-4 w-4" />
             Price Overrides
           </TabsTrigger>
-          <TabsTrigger value="video-usage" className="gap-2">
-            <Video className="h-4 w-4" />
-            Video Usage & Billing
-          </TabsTrigger>
+          
           <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
             <AlertTriangle className="h-4 w-4" />
             Danger Zone
@@ -239,11 +234,6 @@ const AdminSettings = () => {
               <PriceOverrideManager />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="video-usage" className="space-y-4">
-          <VideoUsageManager />
-          <VideoUsagePricingSettings />
         </TabsContent>
 
         <TabsContent value="danger-zone" className="space-y-4">

@@ -368,9 +368,3 @@ verify_jwt = true
 
 [functions.agora-healthcheck]
 verify_jwt = true
-
-[functions.video-agora-selftest]
-verify_jwt = false
-
-[functions.video-session-audit]
-verify_jwt = false
