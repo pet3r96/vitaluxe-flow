@@ -11,27 +11,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization') || '';
-    const jwt = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : '';
-    console.log('🔐 [generate-video-guest-link] Auth header present:', !!authHeader);
-
-    if (!jwt) {
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!authHeader) {
+      console.error('❌ [generate-video-guest-link] No auth header');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: missing auth token' }),
+        JSON.stringify({ error: 'Unauthorized: missing auth header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Use anon client for auth check (token passed explicitly)
+    // Use anon client for auth check with Authorization header
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
     );
 
     const {
       data: { user },
       error: authError,
-    } = await supabaseAuth.auth.getUser(jwt);
+    } = await supabaseAuth.auth.getUser();
 
     if (authError || !user) {
       console.error('❌ [generate-video-guest-link] Auth failed:', authError);
@@ -40,6 +44,8 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('✅ [generate-video-guest-link] Authenticated user:', user.id);
 
     // Use service role client for database operations (bypass RLS)
     const supabaseClient = createClient(

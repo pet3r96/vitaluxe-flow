@@ -11,27 +11,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization') || '';
-    const jwt = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : '';
-    console.log('🔐 [complete-video-appointment] Auth header present:', !!authHeader);
-
-    if (!jwt) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: missing auth token' }), {
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!authHeader) {
+      console.error('❌ [complete-video-appointment] No auth header');
+      return new Response(JSON.stringify({ error: 'Unauthorized: missing auth header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Use anon client for auth check (token passed explicitly)
+    // Use anon client for auth check with Authorization header
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
     );
 
     const {
       data: { user },
       error: userError,
-    } = await supabaseAuth.auth.getUser(jwt);
+    } = await supabaseAuth.auth.getUser();
 
     if (userError || !user) {
       console.error('❌ [complete-video-appointment] Auth failed:', userError);
@@ -41,18 +45,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log('✅ [complete-video-appointment] Authenticated user:', user.id);
+
     // Use service role client for database operations (bypass RLS)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const { appointmentId } = await req.json();
 
