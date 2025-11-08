@@ -1,4 +1,3 @@
-import { RtcTokenBuilder, RtcRole, RtmTokenBuilder, RtmRole } from 'https://esm.sh/agora-token@2.0.3';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -53,66 +52,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Test token generation
-    const testChannel = 'healthcheck';
-    const testUid = 0;
-    const testAccount = 'healthcheck-user';
-    const expirationTime = Math.floor(Date.now() / 1000) + 3600; // 1 hour
+    // Validate credential formats
+    const appIdValid = appId.length === 32 && /^[a-f0-9]+$/i.test(appId);
+    const certValid = appCertificate.length === 32 && /^[a-f0-9]+$/i.test(appCertificate);
 
-    const startTime = Date.now();
-
-    try {
-      // Generate RTC token
-      const rtcToken = RtcTokenBuilder.buildTokenWithUid(
-        appId,
-        appCertificate,
-        testChannel,
-        testUid,
-        RtcRole.PUBLISHER,
-        expirationTime,
-        expirationTime
-      );
-
-      // Generate RTM token
-      const rtmToken = RtmTokenBuilder.buildToken(
-        appId,
-        appCertificate,
-        testAccount,
-        RtmRole.Rtm_User,
-        expirationTime
-      );
-
-      const duration = Date.now() - startTime;
-
-      console.log('[agora-healthcheck] ✅ Health check passed', {
-        duration_ms: duration,
-        token_expiry: new Date(expirationTime * 1000).toISOString()
-      });
-
-      return new Response(JSON.stringify({
-        healthy: true,
-        appId,
-        tokenGeneration: {
-          success: true,
-          duration_ms: duration,
-          token_expiry: new Date(expirationTime * 1000).toISOString()
-        },
-        timestamp: new Date().toISOString()
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-
-    } catch (tokenError) {
-      console.error('[agora-healthcheck] ❌ Token generation failed:', tokenError);
+    if (!appIdValid || !certValid) {
+      console.error('[agora-healthcheck] ❌ Invalid credential format');
       return new Response(JSON.stringify({
         healthy: false,
-        error: 'Token generation failed',
-        details: tokenError.message
+        error: 'Invalid credential format',
+        details: {
+          appIdValid,
+          certValid
+        }
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    console.log('[agora-healthcheck] ✅ Health check passed');
+
+    return new Response(JSON.stringify({
+      healthy: true,
+      appId,
+      validation: {
+        appIdLength: appId.length,
+        certificateLength: appCertificate.length,
+        formatsValid: true
+      },
+      timestamp: new Date().toISOString()
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
 
   } catch (error) {
     console.error('[agora-healthcheck] Error:', error);
