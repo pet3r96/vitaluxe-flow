@@ -5,11 +5,15 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
+  console.log('🚀 [join-video-session] Request received', req.method);
+  
   if (req.method === 'OPTIONS') {
+    console.log('✅ [join-video-session] OPTIONS handled');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('🔄 [join-video-session] Processing request...');
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Authenticate user

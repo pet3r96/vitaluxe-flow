@@ -125,11 +125,12 @@ Deno.serve(async (req) => {
               }
             },
             storageConfig: {
-              vendor: 1, // Agora default storage
-              region: 0,
-              bucket: 'agora-recordings',
-              accessKey: customerId,
-              secretKey: customerSecret
+              vendor: 2, // AWS S3
+              region: 0, // us-east-1
+              bucket: Deno.env.get('AGORA_RECORDING_BUCKET') || 'vitaluxepro-recordings',
+              accessKey: Deno.env.get('AWS_ACCESS_KEY_ID'),
+              secretKey: Deno.env.get('AWS_SECRET_ACCESS_KEY'),
+              fileNamePrefix: ['recordings', session.channel_name]
             }
           }
         })

@@ -94,7 +94,10 @@ Deno.serve(async (req) => {
       const queryData = await queryResponse.json();
       // Extract recording file URL from response
       if (queryData.serverResponse?.fileList?.length > 0) {
-        recordingUrl = queryData.serverResponse.fileList[0].fileName;
+        const fileName = queryData.serverResponse.fileList[0].fileName;
+        const bucket = Deno.env.get('AGORA_RECORDING_BUCKET') || 'vitaluxepro-recordings';
+        const region = Deno.env.get('AWS_REGION') || 'us-east-1';
+        recordingUrl = `https://${bucket}.s3.${region}.amazonaws.com/recordings/${session.channel_name}/${fileName}`;
       }
     }
 

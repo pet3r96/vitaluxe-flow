@@ -156,11 +156,15 @@ async function generateRtmToken(
 }
 
 Deno.serve(async (req) => {
+  console.log('🚀 [generate-agora-token] Request received', req.method);
+  
   if (req.method === 'OPTIONS') {
+    console.log('✅ [generate-agora-token] OPTIONS handled');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('🔄 [generate-agora-token] Processing request...');
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Authenticate user
