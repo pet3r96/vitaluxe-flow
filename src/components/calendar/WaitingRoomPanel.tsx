@@ -37,16 +37,16 @@ export function WaitingRoomPanel({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch video appointments
-  const { data: rawVideoAppointments = [], refetch: refetchVideo } = useQuery({
-    queryKey: ["video-appointments", practiceId, currentDate.toISOString()],
+  // Fetch video sessions (real sessions with video_sessions records)
+  const { data: rawVideoSessions = [], refetch: refetchVideo } = useQuery({
+    queryKey: ["video-sessions", practiceId, currentDate.toISOString()],
     queryFn: async () => {
       const startOfDay = new Date(currentDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(currentDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      console.log('[WaitingRoomPanel] Fetching video appointments:', {
+      console.log('[WaitingRoomPanel] Fetching video sessions:', {
         practiceId,
         dateRange: {
           start: startOfDay.toISOString(),
@@ -72,9 +72,9 @@ export function WaitingRoomPanel({
 
       if (error) throw error;
       
-      console.log('[WaitingRoomPanel] ✅ Video appointments loaded:', {
+      console.log('[WaitingRoomPanel] ✅ Video sessions loaded:', {
         count: data?.length || 0,
-        appointments: data?.map(s => ({
+        sessions: data?.map(s => ({
           id: s.id,
           status: s.status,
           scheduled: s.scheduled_start_time,
@@ -85,22 +85,76 @@ export function WaitingRoomPanel({
       return data || [];
     },
     enabled: !!practiceId,
+    staleTime: 60_000, // Keep data fresh for 60 seconds
+    refetchOnWindowFocus: false, // Prevent refetch on tab switching
     refetchInterval: 5000, // Poll every 5 seconds for real-time updates
   });
 
-  // Merge provider data client-side using the providers prop
-  const videoAppointments = rawVideoAppointments.map((session: any) => {
+  // Fetch video appointments (base appointments for synthetic sessions)
+  const { data: rawVideoAppointments = [] } = useQuery({
+    queryKey: ["video-appointments-base", practiceId, currentDate.toISOString()],
+    queryFn: async () => {
+      const startOfDay = new Date(currentDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(currentDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      console.log('[WaitingRoomPanel] Fetching video appointments (base):', {
+        practiceId,
+        dateRange: {
+          start: startOfDay.toISOString(),
+          end: endOfDay.toISOString()
+        }
+      });
+
+      const { data, error } = await supabase
+        .from("patient_appointments")
+        .select(`
+          id, patient_id, provider_id, start_time, status, practice_id,
+          patient:patient_accounts(id, first_name, last_name, email)
+        `)
+        .eq("practice_id", practiceId)
+        .eq("visit_type", "video")
+        .not("status", "in", "(cancelled,completed)")
+        .gte("start_time", startOfDay.toISOString())
+        .lte("start_time", endOfDay.toISOString())
+        .order("start_time", { ascending: true });
+        
+      if (error) throw error;
+      
+      console.log('[WaitingRoomPanel] ✅ Video appointments (base) loaded:', {
+        count: data?.length || 0,
+        appointments: data?.map(a => ({
+          id: a.id,
+          status: a.status,
+          start: a.start_time,
+          patient: a.patient?.first_name
+        }))
+      });
+      
+      return data || [];
+    },
+    enabled: !!practiceId,
+    staleTime: 60_000, // Keep data fresh for 60 seconds
+    refetchOnWindowFocus: false, // Prevent refetch on tab switching
+    refetchInterval: 5000,
+  });
+
+  // Merge real sessions with synthetic appointments
+  // Build a map of sessions by appointment_id
+  const sessionsByAppointment = new Map(
+    rawVideoSessions.map(s => [s.appointment_id, s])
+  );
+  
+  // Merge: real sessions + synthetic appointments
+  const mergedVideoAppointments: any[] = [];
+  
+  // Add all real sessions with provider data
+  rawVideoSessions.forEach(session => {
     const appointment = session.patient_appointments;
     const provider = providers.find((p: any) => p.id === appointment.provider_id);
     
-    console.log('[WaitingRoomPanel] Merging provider for video session:', {
-      sessionId: session.id,
-      providerId: appointment.provider_id,
-      providerFound: !!provider,
-      providerName: provider?.profiles?.prescriber_name || provider?.profiles?.full_name
-    });
-    
-    return {
+    mergedVideoAppointments.push({
       ...session,
       patient_appointments: {
         ...appointment,
@@ -111,7 +165,57 @@ export function WaitingRoomPanel({
           }
         } : null
       }
-    };
+    });
+  });
+  
+  // Add synthetic sessions for video appointments without a session record
+  rawVideoAppointments.forEach(apt => {
+    if (!sessionsByAppointment.has(apt.id)) {
+      const provider = providers.find((p: any) => p.id === apt.provider_id);
+      
+      mergedVideoAppointments.push({
+        id: `apt-${apt.id}`,
+        appointment_id: apt.id,
+        patient_id: apt.patient_id,
+        provider_id: apt.provider_id,
+        scheduled_start_time: apt.start_time,
+        status: apt.status === 'checked_in' ? 'waiting' : 'scheduled',
+        isSynthetic: true,
+        patient_appointments: {
+          id: apt.id,
+          patient_id: apt.patient_id,
+          provider_id: apt.provider_id,
+          start_time: apt.start_time,
+          status: apt.status,
+          patient: apt.patient,
+          provider: provider ? {
+            id: provider.id,
+            user: {
+              full_name: provider.profiles?.prescriber_name || provider.profiles?.full_name || 'Unassigned'
+            }
+          } : null
+        }
+      });
+    }
+  });
+  
+  // Sort by scheduled time
+  mergedVideoAppointments.sort((a, b) => 
+    new Date(a.scheduled_start_time).getTime() - new Date(b.scheduled_start_time).getTime()
+  );
+  
+  const videoAppointments = mergedVideoAppointments;
+
+  console.log('[WaitingRoomPanel] 🔄 Merged video data:', {
+    realSessions: rawVideoSessions.length,
+    appointments: rawVideoAppointments.length,
+    synthetic: mergedVideoAppointments.filter(s => s.isSynthetic).length,
+    total: mergedVideoAppointments.length,
+    firstTwo: mergedVideoAppointments.slice(0, 2).map(s => ({
+      id: s.id,
+      isSynthetic: s.isSynthetic,
+      provider: s.patient_appointments?.provider?.user?.full_name
+    }))
   });
 
   // Fetch overdue appointments (>15 minutes past scheduled time)
@@ -207,12 +311,18 @@ export function WaitingRoomPanel({
     realtimeManager.subscribe('patient_appointments', () => {
       refetch();
       refetchOverdue();
+      refetchVideo(); // Also refetch video when appointments change
+    });
+
+    // Also subscribe to patient_accounts for name/profile updates
+    realtimeManager.subscribe('patient_accounts', () => {
+      refetchVideo();
     });
 
     return () => {
       // Manager handles cleanup
     };
-  }, [practiceId, refetch, refetchOverdue]);
+  }, [practiceId, refetch, refetchOverdue, refetchVideo]);
 
   // Real-time subscription for video sessions
   useEffect(() => {
@@ -566,7 +676,14 @@ export function WaitingRoomPanel({
                           {format(new Date(session.scheduled_start_time), "h:mm a")}
                         </TableCell>
                         <TableCell>
-                          <VideoSessionStatus status={session.status} />
+                          <div className="flex items-center gap-2">
+                            <VideoSessionStatus status={session.status} />
+                            {session.isSynthetic && (
+                              <Badge variant="outline" className="text-xs">
+                                Initializing...
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="font-semibold text-sm">
                           {timeUntil}
@@ -575,21 +692,28 @@ export function WaitingRoomPanel({
                           {session.status === 'scheduled' && (
                             <Button
                               size="sm"
-                              disabled={!canStart}
+                              disabled={!canStart || session.isSynthetic}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleStartVideoSession(session.id);
+                                if (!session.isSynthetic) {
+                                  handleStartVideoSession(session.id);
+                                }
                               }}
                               className={cn(
-                                canStart 
+                                canStart && !session.isSynthetic
                                   ? "bg-blue-600 hover:bg-blue-700 text-white" 
                                   : "opacity-50"
                               )}
+                              title={session.isSynthetic ? "Session is initializing. Try again momentarily." : undefined}
                             >
-                              {canStart ? "Start Session" : `Wait ${timeUntil}`}
+                              {session.isSynthetic 
+                                ? "Initializing..." 
+                                : canStart 
+                                  ? "Start Session" 
+                                  : `Wait ${timeUntil}`}
                             </Button>
                           )}
-                          {(session.status === 'waiting' || session.status === 'active') && (
+                          {(session.status === 'waiting' || session.status === 'active') && !session.isSynthetic && (
                             <Button
                               size="sm"
                               onClick={(e) => {
