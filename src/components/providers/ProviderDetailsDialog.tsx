@@ -377,10 +377,7 @@ export const ProviderDetailsDialog = ({
                 </div>
               ) : (
                 <div className="p-2 bg-muted rounded-md">
-                  {provider.profiles?.full_name || 
-                   provider.prescriber_name ||
-                   (provider.profiles?.name && !provider.profiles.name.includes('@') ? provider.profiles.name : '') || 
-                   'Not Set'}
+                  {formData.fullName || 'Not Set'}
                 </div>
               )}
             </div>
@@ -453,7 +450,7 @@ export const ProviderDetailsDialog = ({
                     </div>
                   ) : (
                     <div className="p-2 bg-muted rounded-md">
-                      {sanitizeEncrypted(provider.profiles?.npi) || "Not set"}
+                      {formData.npi || "Not set"}
                     </div>
                   )}
                 </div>
@@ -483,7 +480,7 @@ export const ProviderDetailsDialog = ({
                     </div>
                   ) : (
                     <div className="p-2 bg-muted rounded-md">
-                      {sanitizeEncrypted(provider.profiles?.dea) || "Not set"}
+                      {formData.dea || "Not set"}
                     </div>
                   )}
                 </div>
@@ -501,7 +498,7 @@ export const ProviderDetailsDialog = ({
                   </div>
                 ) : (
                   <div className="p-2 bg-muted rounded-md">
-                    {sanitizeEncrypted(provider.profiles?.license_number) || "Not set"}
+                    {formData.licenseNumber || "Not set"}
                   </div>
                 )}
               </div>
@@ -517,7 +514,7 @@ export const ProviderDetailsDialog = ({
                 placeholder="(555) 123-4567"
               />
             ) : (
-              <div className="p-2 bg-muted rounded-md">{formatPhoneNumber(provider.profiles?.phone)}</div>
+              <div className="p-2 bg-muted rounded-md">{formatPhoneNumber(formData.phone)}</div>
             )}
           </div>
 
