@@ -196,8 +196,8 @@ export function AppSidebar() {
                               )}
                             >
                               <Icon className="h-5 w-5 shrink-0" />
-                              {!isCollapsed && <span className="flex-1">{item.label}</span>}
-                              {!isCollapsed && <Lock className="h-3 w-3" />}
+                              {!isCollapsed && <span>{item.label}</span>}
+                              {!isCollapsed && <Lock className="h-3 w-3 ml-2 opacity-70" />}
                             </button>
                           ) : (
                             <SidebarMenuButton asChild>
@@ -308,8 +308,8 @@ export function AppSidebar() {
                                 )}
                               >
                                 <Icon className="h-5 w-5 shrink-0" />
-                                <span className="flex-1">{item.label}</span>
-                                <Lock className="h-3 w-3" />
+                                <span>{item.label}</span>
+                                <Lock className="h-3 w-3 ml-2 opacity-70" />
                               </button>
                             ) : (
                               <SidebarMenuButton asChild>

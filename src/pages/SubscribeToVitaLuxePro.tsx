@@ -65,14 +65,22 @@ export default function SubscribeToVitaLuxePro() {
 
   // Redirect if already subscribed
   useEffect(() => {
+    console.log('[SubscribeToVitaLuxePro] Subscription check:', {
+      loading: subscriptionLoading,
+      isSubscribed,
+      status,
+      effectiveRole
+    });
+
     if (!subscriptionLoading && isSubscribed) {
+      console.log('[SubscribeToVitaLuxePro] Redirecting subscribed user to dashboard');
       toast({
         title: "Already Subscribed",
         description: `You already have an ${status} VitaLuxePro subscription.`,
       });
       navigate('/dashboard');
     }
-  }, [isSubscribed, subscriptionLoading, status, navigate, toast]);
+  }, [isSubscribed, subscriptionLoading, status, navigate, toast, effectiveRole]);
 
   useEffect(() => {
     const fetchTerms = async () => {
