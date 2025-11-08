@@ -45,16 +45,27 @@ export const ProviderDetailsDialog = ({
   });
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
 
-  // Load decrypted credentials when provider changes
+  // Load decrypted credentials when provider changes - RESET state completely
   useEffect(() => {
     const loadDecryptedCredentials = async () => {
-      if (!provider.user_id) return;
+      if (!provider?.user_id) {
+        console.warn('[ProviderDetailsDialog] No provider.user_id, skipping load');
+        return;
+      }
       
+      // CRITICAL: Reset editing state immediately to prevent stale data
+      setIsEditing(false);
+      setNpiVerificationStatus(null);
       setIsLoadingCredentials(true);
+      
       try {
-        console.log('[ProviderDetailsDialog] Loading credentials for user:', provider.user_id);
+        console.log('[ProviderDetailsDialog] 🔄 Loading credentials for provider:', {
+          providerId: provider.id,
+          userId: provider.user_id,
+          currentName: provider.profiles?.full_name || provider.prescriber_name
+        });
         
-        // Try RPC first
+        // Try RPC first for decrypted credentials
         const { data: rpcData, error: rpcError } = await supabase.rpc('get_decrypted_profile_credentials', {
           p_user_id: provider.user_id
         });
@@ -64,12 +75,13 @@ export const ProviderDetailsDialog = ({
         }
 
         const decryptedData = rpcData?.[0];
-        console.log('[ProviderDetailsDialog] RPC returned:', !!decryptedData);
         
-        // Helper to get display name: full_name > prescriber_name > name (if not email) > empty
+        // Helper to get display name with clear priority
         const getDisplayName = () => {
+          // Priority: decrypted full_name > profile full_name > prescriber_name > name (non-email)
           if (decryptedData?.full_name) return decryptedData.full_name;
           if (provider.profiles?.full_name) return provider.profiles.full_name;
+          if (provider.profiles?.prescriber_name) return provider.profiles.prescriber_name;
           if (provider.prescriber_name) return provider.prescriber_name;
           if (provider.profiles?.name && !provider.profiles.name.includes('@')) {
             return provider.profiles.name;
@@ -77,28 +89,36 @@ export const ProviderDetailsDialog = ({
           return "";
         };
         
-        // Get NPI value with fallback
+        const displayName = getDisplayName();
         const npiValue = decryptedData?.npi || provider.profiles?.npi || "";
         
-        // Use decrypted data if available, otherwise fall back to plaintext from profiles
-        setFormData({
-          fullName: getDisplayName(),
-          prescriberName: getDisplayName(),
+        // CRITICAL: Set formData atomically - both fullName and prescriberName must match
+        const newFormData = {
+          fullName: displayName,
+          prescriberName: displayName, // Always sync with fullName
           npi: npiValue,
           dea: decryptedData?.dea || provider.profiles?.dea || "",
           licenseNumber: decryptedData?.license_number || provider.profiles?.license_number || "",
           phone: (decryptedData?.phone || provider.profiles?.phone || "").replace(/\D/g, ''),
+        };
+        
+        console.log('[ProviderDetailsDialog] ✅ Loaded credentials:', {
+          displayName,
+          hasNPI: !!npiValue,
+          hasDEA: !!newFormData.dea,
+          source: decryptedData ? 'decrypted' : 'plaintext'
         });
+        
+        setFormData(newFormData);
         setOriginalNpi(npiValue);
         
-        if (!decryptedData && !rpcError) {
-          console.log('[ProviderDetailsDialog] No RPC data, used plaintext fallback');
-        }
       } catch (error) {
-        console.error('[ProviderDetailsDialog] Failed to load credentials:', error);
+        console.error('[ProviderDetailsDialog] ❌ Failed to load credentials:', error);
+        
         // Ultimate fallback
         const getDisplayName = () => {
           if (provider.profiles?.full_name) return provider.profiles.full_name;
+          if (provider.profiles?.prescriber_name) return provider.profiles.prescriber_name;
           if (provider.prescriber_name) return provider.prescriber_name;
           if (provider.profiles?.name && !provider.profiles.name.includes('@')) {
             return provider.profiles.name;
@@ -106,10 +126,12 @@ export const ProviderDetailsDialog = ({
           return "";
         };
         
+        const displayName = getDisplayName();
         const npiValue = provider.profiles?.npi || "";
+        
         setFormData({
-          fullName: getDisplayName(),
-          prescriberName: getDisplayName(),
+          fullName: displayName,
+          prescriberName: displayName,
           npi: npiValue,
           dea: provider.profiles?.dea || "",
           licenseNumber: provider.profiles?.license_number || "",
@@ -122,9 +144,7 @@ export const ProviderDetailsDialog = ({
     };
 
     loadDecryptedCredentials();
-    setNpiVerificationStatus(null);
-    setIsEditing(false);
-  }, [provider]);
+  }, [provider?.id, provider?.user_id]); // Depend on IDs to ensure reload on provider change
 
   const isPractice = effectiveRole === "doctor" && (effectiveUserId === provider.practice_id || effectivePracticeId === provider.practice_id);
   const isOwnProvider = effectiveRole === "provider" && effectiveUserId === provider.user_id;
@@ -177,7 +197,7 @@ export const ProviderDetailsDialog = ({
         }
       }
 
-      // Update profiles table (where most provider data lives)
+      // CRITICAL: Build update payload - OVERWRITE existing values, don't merge
       const profileUpdateData: any = {};
 
       if (isOwnProvider) {
@@ -185,38 +205,41 @@ export const ProviderDetailsDialog = ({
         profileUpdateData.phone = formData.phone || null;
       } else if (isPractice || isAdmin) {
         // Practices and admins can update everything
-        // CRITICAL: Update BOTH full_name and prescriber_name to ensure consistency across all displays
-        profileUpdateData.full_name = formData.fullName;
-        profileUpdateData.prescriber_name = formData.fullName; // Keep prescriber_name in sync
-        profileUpdateData.npi = formData.npi;
-        profileUpdateData.dea = formData.dea || null; // Explicit null if empty
-        profileUpdateData.license_number = formData.licenseNumber || null; // Explicit null if empty
-        profileUpdateData.phone = formData.phone || null;
+        // CRITICAL: Update BOTH full_name AND prescriber_name atomically to prevent display inconsistencies
+        profileUpdateData.full_name = formData.fullName.trim();
+        profileUpdateData.prescriber_name = formData.fullName.trim(); // Must match full_name exactly
+        profileUpdateData.npi = formData.npi.trim();
+        profileUpdateData.dea = formData.dea?.trim() || null; // Explicit null if empty
+        profileUpdateData.license_number = formData.licenseNumber?.trim() || null; // Explicit null if empty
+        profileUpdateData.phone = formData.phone?.trim() || null;
       }
 
       if (Object.keys(profileUpdateData).length > 0) {
-        console.info('💾 [ProviderDetailsDialog] Saving provider credentials', {
+        console.info('💾 [ProviderDetailsDialog] Saving provider - OVERWRITING existing data', {
           providerId: provider.id,
           userId: provider.user_id,
           updateFields: Object.keys(profileUpdateData),
-          newName: profileUpdateData.full_name,
-          newNPI: profileUpdateData.npi
+          beforeName: provider.profiles?.full_name || provider.prescriber_name,
+          afterName: profileUpdateData.full_name,
+          beforeNPI: provider.profiles?.npi,
+          afterNPI: profileUpdateData.npi
         });
 
+        // ATOMIC UPDATE: Single query to overwrite all fields at once
         const { data: updateData, error: profileError } = await supabase
           .from("profiles")
           .update(profileUpdateData)
           .eq("id", provider.user_id)
-          .select();
+          .select('id, full_name, prescriber_name, npi, dea, license_number, phone');
 
         if (profileError) {
           console.error('❌ [ProviderDetailsDialog] Profile update failed:', profileError);
           throw profileError;
         }
 
-        console.info('✅ [ProviderDetailsDialog] Profile updated successfully', { 
+        console.info('✅ [ProviderDetailsDialog] Profile updated - verify changes:', { 
           rowsAffected: updateData?.length,
-          updatedProvider: updateData?.[0]?.id
+          updatedData: updateData?.[0]
         });
       }
 
@@ -231,18 +254,29 @@ export const ProviderDetailsDialog = ({
         throw providerError;
       }
 
-      // Invalidate ALL relevant caches for instant UI updates
+      // CRITICAL: Invalidate ALL caches and force immediate refetch for instant UI sync
+      console.log('🔄 [ProviderDetailsDialog] Invalidating caches for practice:', effectivePracticeId);
+      
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges', effectivePracticeId] }),
-        queryClient.invalidateQueries({ queryKey: ['providers', effectivePracticeId] }),
+        queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges'] }),
+        queryClient.invalidateQueries({ queryKey: ['providers'] }), // All provider queries
         queryClient.invalidateQueries({ queryKey: ['calendar-data'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient_appointments'] })
+        queryClient.invalidateQueries({ queryKey: ['patient_appointments'] }),
+        queryClient.invalidateQueries({ queryKey: ['video-sessions'] })
       ]);
       
-      // Immediately refetch providers to update all dropdowns
-      await queryClient.refetchQueries({ queryKey: ['providers', effectivePracticeId] });
+      // Force immediate refetch of providers to update dropdowns NOW
+      console.log('🔄 [ProviderDetailsDialog] Force refetching providers...');
+      await queryClient.refetchQueries({ 
+        queryKey: ['providers', effectivePracticeId],
+        type: 'active'
+      });
       
-      toast.success("Provider credentials updated successfully!");
+      toast.success("Provider updated successfully!", {
+        description: `${formData.fullName} - NPI: ${formData.npi}`
+      });
+      
+      console.log('✅ [ProviderDetailsDialog] Save complete, cache refreshed');
       setIsEditing(false);
       onSuccess();
     } catch (error: any) {
