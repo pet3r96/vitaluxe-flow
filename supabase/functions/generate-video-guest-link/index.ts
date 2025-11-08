@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
                    `${req.headers.get('origin') || 'https://app.lovable.app'}`;
     const guestUrl = `${baseUrl}/video-guest/${token}`;
 
-    console.log('Guest link generated successfully:', guestUrl);
+    console.log('✅ Guest link generated successfully:', guestUrl);
 
     // Log audit event
     await supabaseClient.from('video_session_logs').insert({
@@ -139,6 +139,7 @@ Deno.serve(async (req) => {
         token_id: guestLink.id,
         expires_at: expiresAt.toISOString(),
         created_by: effectiveUserId,
+        guest_url: guestUrl,
       },
     });
 
