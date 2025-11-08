@@ -11,6 +11,7 @@ import { AppointmentSearchInput } from "./AppointmentSearchInput";
 import { AppointmentSearchResults } from "./AppointmentSearchResults";
 import { useAppointmentSearch } from "@/hooks/useAppointmentSearch";
 import { cn } from "@/lib/utils";
+import { getProviderDisplayName } from "@/utils/providerNameUtils";
 
 interface CalendarSidebarProps {
   currentDate: Date;
@@ -211,7 +212,7 @@ export function CalendarSidebar({
                         <ProviderAvatar provider={provider} size="sm" />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate">
-                            {provider.first_name} {provider.last_name}
+                            {getProviderDisplayName(provider)}
                           </div>
                           {provider.specialty && (
                             <div className="text-xs text-muted-foreground truncate">

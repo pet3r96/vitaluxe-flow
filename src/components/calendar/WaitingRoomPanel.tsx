@@ -46,6 +46,14 @@ export function WaitingRoomPanel({
       const endOfDay = new Date(currentDate);
       endOfDay.setHours(23, 59, 59, 999);
 
+      console.log('[WaitingRoomPanel] Fetching video appointments:', {
+        practiceId,
+        dateRange: {
+          start: startOfDay.toISOString(),
+          end: endOfDay.toISOString()
+        }
+      });
+
       const { data, error } = await supabase
         .from("video_sessions")
         .select(`
@@ -63,6 +71,17 @@ export function WaitingRoomPanel({
         .order("scheduled_start_time", { ascending: true });
 
       if (error) throw error;
+      
+      console.log('[WaitingRoomPanel] ✅ Video appointments loaded:', {
+        count: data?.length || 0,
+        appointments: data?.map(s => ({
+          id: s.id,
+          status: s.status,
+          scheduled: s.scheduled_start_time,
+          patient: s.patient_appointments?.patient?.first_name
+        }))
+      });
+      
       return data || [];
     },
     enabled: !!practiceId,
@@ -73,6 +92,14 @@ export function WaitingRoomPanel({
   const videoAppointments = rawVideoAppointments.map((session: any) => {
     const appointment = session.patient_appointments;
     const provider = providers.find((p: any) => p.id === appointment.provider_id);
+    
+    console.log('[WaitingRoomPanel] Merging provider for video session:', {
+      sessionId: session.id,
+      providerId: appointment.provider_id,
+      providerFound: !!provider,
+      providerName: provider?.profiles?.prescriber_name || provider?.profiles?.full_name
+    });
+    
     return {
       ...session,
       patient_appointments: {
