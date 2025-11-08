@@ -215,6 +215,10 @@ const App = () => <QueryClientProvider client={queryClient}>
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
                   <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />
                   <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
+                  
+                  {/* Video Routes - Full Screen (No Layout) */}
+                  <Route path="/patient/video/:sessionId" element={<ProtectedRoute><PatientVideoRoom /></ProtectedRoute>} />
+                  <Route path="/practice/video/:sessionId" element={<ProtectedRoute><SubscriptionProtectedRoute><VideoConsultationRoom /></SubscriptionProtectedRoute></ProtectedRoute>} />
                    <Route path="/*" element={<ProtectedRoute>
                         <SidebarLayout>
                           <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
@@ -265,14 +269,12 @@ const App = () => <QueryClientProvider client={queryClient}>
                                       <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                       <Route path="/shipping" element={<PharmacyShipping />} />
                                        <Route path="/appointments" element={<PatientAppointments />} />
-                                       <Route path="/patient/video/:sessionId" element={<PatientVideoRoom />} />
                                        <Route path="/medical-vault" element={<PatientMedicalVault />} />
                                        <Route path="/documents" element={<PatientDocuments />} />
                                        <Route path="/patient-messages" element={<PatientMessages />} />
                                        <Route path="/practice/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
                                        <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
                                        <Route path="/video-consultations" element={<SubscriptionProtectedRoute><VideoConsultations /></SubscriptionProtectedRoute>} />
-                                       <Route path="/practice/video/:sessionId" element={<SubscriptionProtectedRoute><VideoConsultationRoom /></SubscriptionProtectedRoute>} />
                                        <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                       <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
                                       <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />

@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import AgoraUIKit, { PropsInterface } from "agora-react-uikit";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 
 interface AgoraVideoRoomProps {
   channelName: string;
@@ -111,66 +109,16 @@ export function AgoraVideoRoom({
     },
   };
 
-  const styleProps: PropsInterface['styleProps'] = {
-    localBtnContainer: {
-      backgroundColor: 'transparent',
-      bottom: '20px',
-    },
-    theme: '#1a1a1a',
-  };
-
   if (!videoCall) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
-      {/* Info Banner */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-blue-500/10 border-b border-blue-500/20 px-4 py-2 text-center">
-        <p className="text-sm text-blue-600 dark:text-blue-400">
-          💡 Allow camera and microphone access when prompted by your browser
-        </p>
-      </div>
-
-      {/* Session Info Bar */}
-      <div className="absolute top-12 left-0 right-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-sm font-medium">Video Session Active</span>
-          {recording && (
-            <span className="text-xs bg-red-500/10 text-red-500 px-2 py-1 rounded">
-              ● Recording
-            </span>
-          )}
-        </div>
-        
-        {isProvider && (
-          <Button
-            onClick={handleEndSession}
-            disabled={loading}
-            variant="destructive"
-            size="sm"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Ending...
-              </>
-            ) : (
-              'End Session'
-            )}
-          </Button>
-        )}
-      </div>
-
-      {/* Agora UIKit */}
-      <div className="w-full h-full pt-24">
-        <AgoraUIKit
-          rtcProps={rtcProps}
-          callbacks={callbacks}
-          styleProps={styleProps}
-        />
-      </div>
+    <div className="fixed inset-0 z-50 bg-black">
+      <AgoraUIKit
+        rtcProps={rtcProps}
+        callbacks={callbacks}
+      />
     </div>
   );
 }

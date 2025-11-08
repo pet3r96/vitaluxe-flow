@@ -155,24 +155,15 @@ export default function VideoGuestJoin() {
   }
 
   return (
-    <div className="relative">
-      <div className="absolute top-4 left-4 z-10">
-        <Card className="px-3 py-2 bg-amber-500/10 border-amber-500/20">
-          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
-            Guest Access
-          </p>
-        </Card>
-      </div>
-      <AgoraVideoRoom
-        channelName={sessionData.channelName}
-        token={sessionData.token}
-        uid={sessionData.uid}
-        appId={sessionData.appId}
-        onLeave={handleLeave}
-        isProvider={false}
-        sessionId={sessionData.sessionId}
-        userName="Guest"
-      />
-    </div>
+    <AgoraVideoRoom
+      channelName={sessionData.channelName}
+      token={sessionData.token}
+      uid={sessionData.uid}
+      appId={sessionData.appId}
+      onLeave={handleLeave}
+      isProvider={false}
+      sessionId={sessionData.sessionId}
+      userName="Guest"
+    />
   );
 }
