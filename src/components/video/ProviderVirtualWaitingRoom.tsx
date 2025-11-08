@@ -1024,7 +1024,7 @@ export const ProviderVirtualWaitingRoom = ({
             'h:mm a'
           );
 
-          const isPatientWaiting = session.patient_joined_at !== null;
+          const isPatientWaiting = session.patient_joined_at !== null && session.provider_joined_at === null;
 
           return (
             <div
