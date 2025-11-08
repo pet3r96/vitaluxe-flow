@@ -11,18 +11,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')!;
-    
     // Use anon client for auth check
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
     );
 
     const {
       data: { user },
       error: userError,
-    } = await supabaseAuth.auth.getUser(authHeader.replace('Bearer ', ''));
+    } = await supabaseAuth.auth.getUser();
 
     // Use service role client for database operations (bypass RLS)
     const supabaseClient = createClient(
