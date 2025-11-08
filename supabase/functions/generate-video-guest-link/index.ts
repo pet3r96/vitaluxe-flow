@@ -42,6 +42,19 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check for active impersonation session
+    const { data: impersonationData } = await supabaseClient
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .eq('revoked', false)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    const effectiveUserId = impersonationData?.impersonated_user_id || user.id;
+
+    console.log('Generating guest link for session:', sessionId, 'by user:', effectiveUserId);
+
     // Verify user has access to this session
     const { data: session, error: sessionError } = await supabaseClient
       .from('video_sessions')
@@ -60,11 +73,19 @@ Deno.serve(async (req) => {
     const { data: provider } = await supabaseClient
       .from('providers')
       .select('practice_id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .single();
 
-    const isPracticeOwner = session.practice_id === user.id;
+    const isPracticeOwner = session.practice_id === effectiveUserId;
     const isProvider = provider && provider.practice_id === session.practice_id;
+
+    console.log('Authorization check:', {
+      effectiveUserId,
+      isPracticeOwner,
+      isProvider,
+      sessionPracticeId: session.practice_id,
+      providerPracticeId: provider?.practice_id
+    });
 
     if (!isPracticeOwner && !isProvider) {
       return new Response(
@@ -105,9 +126,11 @@ Deno.serve(async (req) => {
       details: {
         token_id: guestLink.id,
         expires_at: expiresAt.toISOString(),
-        created_by: user.id,
+        created_by: effectiveUserId,
       },
     });
+
+    console.log('Guest link generated successfully:', guestUrl);
 
     const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 
                    `${req.headers.get('origin') || 'https://app.lovable.app'}`;
