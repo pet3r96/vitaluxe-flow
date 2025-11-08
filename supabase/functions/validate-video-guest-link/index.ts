@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
     const channelName = session.channel_name;
     const guestUid = `guest_${guestLink.id}`;
 
-    const tokens = generateAgoraTokens({
+    const tokens = await generateAgoraTokens({
       channelName,
       uid: guestUid,
       role: 'publisher',

@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
 
     console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role: tokenRole });
 
-    const tokens = generateAgoraTokens({
+    const tokens = await generateAgoraTokens({
       channelName,
       uid: String(uid),
       role: tokenRole,
