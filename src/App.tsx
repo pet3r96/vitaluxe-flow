@@ -141,6 +141,7 @@ const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
+const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -272,6 +273,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/practice/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
                                        <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
                                        <Route path="/video-consultations" element={<SubscriptionProtectedRoute><VideoConsultations /></SubscriptionProtectedRoute>} />
+                                       <Route path="/video-test" element={<SubscriptionProtectedRoute><VideoTestRoom /></SubscriptionProtectedRoute>} />
                                        <Route path="/practice/video/:sessionId" element={<SubscriptionProtectedRoute><VideoConsultationRoom /></SubscriptionProtectedRoute>} />
                                        <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                       <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
