@@ -1098,11 +1098,11 @@ export const ProviderVirtualWaitingRoom = ({
                   variant="outline"
                   size="sm"
                   onClick={() => handleGenerateGuestLink(session.id)}
-                  disabled={generatingLink === session.id || isSyntheticSession(session.id)}
+                  disabled={generatingLink === session.id}
                   className="gap-2"
-                  title={isSyntheticSession(session.id) ? "Session is being created..." : "Generate guest access link"}
+                  title="Generate guest access link"
                 >
-                  {generatingLink === session.id || isSyntheticSession(session.id) ? (
+                  {generatingLink === session.id ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
                     <Link2 className="h-3 w-3" />
@@ -1116,10 +1116,10 @@ export const ProviderVirtualWaitingRoom = ({
                       onClick={() => handleStartSession(session.id)}
                       size="sm"
                       className="gap-2"
-                      disabled={startingSession === session.id || isSyntheticSession(session.id)}
-                      title={isSyntheticSession(session.id) ? "Session is being created..." : "Start the video session"}
+                      disabled={startingSession === session.id}
+                      title="Start the video session"
                     >
-                      {startingSession === session.id || isSyntheticSession(session.id) ? (
+                      {startingSession === session.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Video className="h-4 w-4" />
