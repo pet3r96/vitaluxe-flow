@@ -11,23 +11,30 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Use anon client for auth check
+    const authHeader = req.headers.get('Authorization') || '';
+    const jwt = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : '';
+    console.log('🔐 [generate-video-guest-link] Auth header present:', !!authHeader);
+
+    if (!jwt) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: missing auth token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use anon client for auth check (token passed explicitly)
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
     const {
       data: { user },
       error: authError,
-    } = await supabaseAuth.auth.getUser();
+    } = await supabaseAuth.auth.getUser(jwt);
 
     if (authError || !user) {
+      console.error('❌ [generate-video-guest-link] Auth failed:', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

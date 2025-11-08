@@ -11,21 +11,35 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Use anon client for auth check
+    const authHeader = req.headers.get('Authorization') || '';
+    const jwt = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : '';
+    console.log('🔐 [complete-video-appointment] Auth header present:', !!authHeader);
+
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: missing auth token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Use anon client for auth check (token passed explicitly)
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
     const {
       data: { user },
       error: userError,
-    } = await supabaseAuth.auth.getUser();
+    } = await supabaseAuth.auth.getUser(jwt);
+
+    if (userError || !user) {
+      console.error('❌ [complete-video-appointment] Auth failed:', userError);
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Use service role client for database operations (bypass RLS)
     const supabaseClient = createClient(
