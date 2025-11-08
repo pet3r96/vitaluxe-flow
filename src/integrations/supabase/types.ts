@@ -8100,6 +8100,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "video_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "video_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "video_sessions_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false

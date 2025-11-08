@@ -71,7 +71,7 @@ export const ProviderVirtualWaitingRoom = ({
       if (error) throw error;
       return data;
     },
-    refetchInterval: 5000 // Refresh every 5 seconds as backup
+    refetchInterval: 10000 // Refresh every 10 seconds as backup
   });
 
   // Fetch patients for instant session creation and scheduling
