@@ -1,9 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { RtcTokenBuilder, RtcRole, RtmTokenBuilder, RtmRole } from 'https://esm.sh/agora-access-token@2.0.4';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// Agora role constants
+const RTC_ROLE = {
+  PUBLISHER: 1,
+  SUBSCRIBER: 2
+};
 
 // Generate a deterministic numeric UID from user ID and session ID
 function generateNumericUid(userId: string, sessionId: string): number {
@@ -15,8 +20,148 @@ function generateNumericUid(userId: string, sessionId: string): number {
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Convert to 32bit integer
   }
-  // Return absolute value to ensure positive number, keep it reasonable size
-  return Math.abs(hash) % 999999999;
+  // Return absolute value to ensure positive number, keep it reasonable size (max 10 digits)
+  return Math.abs(hash) % 2147483647; // Max 32-bit signed int
+}
+
+// Helper function to convert string to Uint8Array
+function stringToUint8Array(str: string): Uint8Array {
+  return new TextEncoder().encode(str);
+}
+
+// Helper function to pack uint32 in big-endian
+function packUint32(num: number): Uint8Array {
+  const buffer = new Uint8Array(4);
+  buffer[0] = (num >> 24) & 0xff;
+  buffer[1] = (num >> 16) & 0xff;
+  buffer[2] = (num >> 8) & 0xff;
+  buffer[3] = num & 0xff;
+  return buffer;
+}
+
+// Helper function to pack uint16 in big-endian
+function packUint16(num: number): Uint8Array {
+  const buffer = new Uint8Array(2);
+  buffer[0] = (num >> 8) & 0xff;
+  buffer[1] = num & 0xff;
+  return buffer;
+}
+
+// Helper function to concatenate Uint8Arrays
+function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
+  const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const arr of arrays) {
+    result.set(arr, offset);
+    offset += arr.length;
+  }
+  return result;
+}
+
+// Base64 encode using standard base64 (not URL-safe)
+function base64Encode(data: Uint8Array): string {
+  const binString = Array.from(data, (byte) => String.fromCodePoint(byte)).join("");
+  return btoa(binString);
+}
+
+// Generate HMAC-SHA256 signature using Web Crypto API
+async function hmacSha256(key: string, message: Uint8Array): Promise<Uint8Array> {
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    stringToUint8Array(key),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, message);
+  return new Uint8Array(signature);
+}
+
+// Generate RTC Token with numeric UID
+async function generateRtcToken(
+  appId: string,
+  appCertificate: string,
+  channelName: string,
+  uid: number,
+  role: number,
+  privilegeExpiredTs: number
+): Promise<string> {
+  const version = '007';
+  const randomInt = Math.floor(Math.random() * 0xFFFFFFFF);
+  
+  // Convert numeric UID to string for token generation
+  const uidStr = uid.toString();
+  
+  // Pack message
+  const message = concatUint8Arrays(
+    stringToUint8Array(appId),
+    stringToUint8Array(channelName),
+    stringToUint8Array(uidStr),
+    packUint32(randomInt),
+    packUint32(privilegeExpiredTs),
+    packUint32(privilegeExpiredTs), // Join channel privilege
+    packUint16(role)
+  );
+  
+  // Generate signature
+  const signature = await hmacSha256(appCertificate, message);
+  
+  // Pack token content
+  const content = concatUint8Arrays(
+    stringToUint8Array(appId),
+    packUint32(randomInt),
+    packUint32(privilegeExpiredTs),
+    packUint16(signature.length),
+    signature,
+    packUint32(privilegeExpiredTs),
+    packUint16(channelName.length),
+    stringToUint8Array(channelName),
+    packUint16(uidStr.length),
+    stringToUint8Array(uidStr)
+  );
+  
+  const token = version + base64Encode(content);
+  return token;
+}
+
+// Generate RTM Token with numeric UID
+async function generateRtmToken(
+  appId: string,
+  appCertificate: string,
+  uid: number,
+  privilegeExpiredTs: number
+): Promise<string> {
+  const version = '007';
+  const randomInt = Math.floor(Math.random() * 0xFFFFFFFF);
+  const uidStr = uid.toString();
+  
+  // Pack message
+  const message = concatUint8Arrays(
+    stringToUint8Array(appId),
+    stringToUint8Array(uidStr),
+    packUint32(randomInt),
+    packUint32(privilegeExpiredTs),
+    packUint32(privilegeExpiredTs) // Login privilege
+  );
+  
+  // Generate signature
+  const signature = await hmacSha256(appCertificate, message);
+  
+  // Pack token content
+  const content = concatUint8Arrays(
+    stringToUint8Array(appId),
+    packUint32(randomInt),
+    packUint32(privilegeExpiredTs),
+    packUint16(signature.length),
+    signature,
+    packUint16(uidStr.length),
+    stringToUint8Array(uidStr)
+  );
+  
+  const token = version + base64Encode(content);
+  return token;
 }
 
 Deno.serve(async (req) => {
@@ -141,34 +286,34 @@ Deno.serve(async (req) => {
 
     const channelName = session.channel_name;
     const uid = generateNumericUid(effectiveUserId, sessionId);
+    const userRole = RTC_ROLE.PUBLISHER; // Both provider and patient can publish
     const expirationTimeInSeconds = 7200; // 2 hours
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
     console.log('🎫 [generate-agora-token] Generating tokens...', { 
       channelName, 
-      uid, 
-      role,
+      uid,
+      uidType: typeof uid,
+      role: userRole,
       effectiveUserId: effectiveUserId.substring(0, 8) + '...'
     });
 
-    // Generate RTC token using official Agora library
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+    // Generate RTC token with numeric UID
+    const rtcToken = await generateRtcToken(
       appId,
       appCertificate,
       channelName,
       uid,
-      RtcRole.PUBLISHER,
-      privilegeExpiredTs,
+      userRole,
       privilegeExpiredTs
     );
 
-    // Generate RTM token using official Agora library
-    const rtmToken = RtmTokenBuilder.buildToken(
+    // Generate RTM token with numeric UID
+    const rtmToken = await generateRtmToken(
       appId,
       appCertificate,
-      String(uid),
-      RtmRole.Rtm_User,
+      uid,
       privilegeExpiredTs
     );
 
@@ -190,11 +335,11 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       token: rtcToken,
       channelName,
-      uid,
+      uid, // Return numeric UID
       appId,
       expiresAt: privilegeExpiredTs,
       rtmToken,
-      rtmUid: uid
+      rtmUid: uid.toString() // RTM needs string UID
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
