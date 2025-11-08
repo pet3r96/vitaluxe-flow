@@ -60,8 +60,8 @@ export function VideoGuestLinkDialog({
             Guest Access Link Generated
           </DialogTitle>
           <DialogDescription>
-            Share this one-time link with your patient to join the video session
-            without logging in
+            Share this secure link with your patient to join the video session
+            without logging in. Link can be used multiple times if needed.
           </DialogDescription>
         </DialogHeader>
 
@@ -73,7 +73,7 @@ export function VideoGuestLinkDialog({
               {format(new Date(expiresAt), "MMM d, yyyy 'at' h:mm a")}
               <br />
               <span className="text-muted-foreground text-sm">
-                This link can be used once and expires in 24 hours
+                Link can be used unlimited times and expires 1 hour after your scheduled appointment time
               </span>
             </AlertDescription>
           </Alert>
@@ -122,14 +122,13 @@ export function VideoGuestLinkDialog({
               Join as guest: {guestUrl}
               <br />
               <br />
-              Link expires in 24 hours and can be used once.
+              Link expires 1 hour after your appointment time. You can rejoin if disconnected.
             </div>
           </div>
 
           <Alert variant="default" className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
             <AlertDescription className="text-sm">
-              <strong>Security Note:</strong> This link provides one-time guest
-              access. All access is logged for HIPAA compliance.
+              <strong>Security Note:</strong> This link allows unlimited access until the session ends or expires. All access is logged for HIPAA compliance.
             </AlertDescription>
           </Alert>
 
