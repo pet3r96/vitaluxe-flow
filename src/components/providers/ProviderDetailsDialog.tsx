@@ -45,9 +45,9 @@ export const ProviderDetailsDialog = ({
   });
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
 
-  // Load decrypted credentials when provider changes - RESET state completely
+  // Load credentials with plaintext-first approach - only decrypt if field is "[ENCRYPTED]"
   useEffect(() => {
-    const loadDecryptedCredentials = async () => {
+    const loadCredentialsPlaintextFirst = async () => {
       if (!provider?.user_id) {
         console.warn('[ProviderDetailsDialog] No provider.user_id, skipping load');
         return;
@@ -59,91 +59,105 @@ export const ProviderDetailsDialog = ({
       setIsLoadingCredentials(true);
       
       try {
-        console.log('[ProviderDetailsDialog] 🔄 Loading credentials for provider:', {
+        console.log('[ProviderDetailsDialog] 🔄 Loading credentials (plaintext-first) for provider:', {
           providerId: provider.id,
           userId: provider.user_id,
           currentName: provider.profiles?.full_name || provider.prescriber_name
         });
         
-        // Try RPC first for decrypted credentials
-        const { data: rpcData, error: rpcError } = await supabase.rpc('get_decrypted_profile_credentials', {
-          p_user_id: provider.user_id
-        });
-
-        if (rpcError) {
-          console.error('[ProviderDetailsDialog] RPC error, falling back to plaintext:', rpcError);
-        }
-
-        const decryptedData = rpcData?.[0];
+        // STEP 1: Read plaintext values from profiles first
+        const profiles = provider.profiles || {};
+        const plaintextName = profiles.full_name || profiles.prescriber_name || provider.prescriber_name || "";
+        const plaintextNpi = profiles.npi || "";
+        const plaintextDea = profiles.dea || "";
+        const plaintextLicense = profiles.license_number || "";
+        const plaintextPhone = (profiles.phone || "").replace(/\D/g, '');
         
-        // Helper to get display name with clear priority
-        const getDisplayName = () => {
-          // Priority: decrypted full_name > profile full_name > prescriber_name > name (non-email)
-          if (decryptedData?.full_name) return decryptedData.full_name;
-          if (provider.profiles?.full_name) return provider.profiles.full_name;
-          if (provider.profiles?.prescriber_name) return provider.profiles.prescriber_name;
-          if (provider.prescriber_name) return provider.prescriber_name;
-          if (provider.profiles?.name && !provider.profiles.name.includes('@')) {
-            return provider.profiles.name;
+        // STEP 2: Check if any credential fields are "[ENCRYPTED]" - only decrypt those
+        const needsDecryption = 
+          plaintextNpi === "[ENCRYPTED]" || 
+          plaintextDea === "[ENCRYPTED]" || 
+          plaintextLicense === "[ENCRYPTED]" ||
+          plaintextPhone === "[ENCRYPTED]";
+        
+        let decryptedData: any = null;
+        
+        if (needsDecryption) {
+          console.log('[ProviderDetailsDialog] 🔐 Some fields are [ENCRYPTED], decrypting...');
+          const { data: rpcData, error: rpcError } = await supabase.rpc('get_decrypted_profile_credentials', {
+            p_user_id: provider.user_id
+          });
+          
+          if (rpcError) {
+            console.error('[ProviderDetailsDialog] RPC error during decryption:', rpcError);
+          } else {
+            decryptedData = rpcData?.[0];
           }
-          return "";
-        };
+        }
         
-        const displayName = getDisplayName();
-        const npiValue = decryptedData?.npi || provider.profiles?.npi || "";
+        // STEP 3: Build final form data - use plaintext unless it's "[ENCRYPTED]", then use decrypted
+        const finalName = plaintextName && plaintextName !== "[ENCRYPTED]" 
+          ? plaintextName 
+          : (decryptedData?.full_name || "");
         
-        // CRITICAL: Set formData atomically - both fullName and prescriberName must match
+        const finalNpi = plaintextNpi && plaintextNpi !== "[ENCRYPTED]" 
+          ? plaintextNpi 
+          : (decryptedData?.npi || "");
+        
+        const finalDea = plaintextDea && plaintextDea !== "[ENCRYPTED]" 
+          ? plaintextDea 
+          : (decryptedData?.dea || "");
+        
+        const finalLicense = plaintextLicense && plaintextLicense !== "[ENCRYPTED]" 
+          ? plaintextLicense 
+          : (decryptedData?.license_number || "");
+        
+        const finalPhone = plaintextPhone && plaintextPhone !== "[ENCRYPTED]" 
+          ? plaintextPhone 
+          : ((decryptedData?.phone || "").replace(/\D/g, ''));
+        
         const newFormData = {
-          fullName: displayName,
-          prescriberName: displayName, // Always sync with fullName
-          npi: npiValue,
-          dea: decryptedData?.dea || provider.profiles?.dea || "",
-          licenseNumber: decryptedData?.license_number || provider.profiles?.license_number || "",
-          phone: (decryptedData?.phone || provider.profiles?.phone || "").replace(/\D/g, ''),
+          fullName: finalName,
+          prescriberName: finalName, // Always sync with fullName
+          npi: finalNpi,
+          dea: finalDea,
+          licenseNumber: finalLicense,
+          phone: finalPhone,
         };
         
-        console.log('[ProviderDetailsDialog] ✅ Loaded credentials:', {
-          displayName,
-          hasNPI: !!npiValue,
-          hasDEA: !!newFormData.dea,
-          source: decryptedData ? 'decrypted' : 'plaintext'
+        console.log('[ProviderDetailsDialog] ✅ Loaded credentials (plaintext-first):', {
+          name: finalName,
+          hasNPI: !!finalNpi,
+          hasDEA: !!finalDea,
+          decryptedFields: needsDecryption ? 'some' : 'none'
         });
         
         setFormData(newFormData);
-        setOriginalNpi(npiValue);
+        setOriginalNpi(finalNpi);
         
       } catch (error) {
         console.error('[ProviderDetailsDialog] ❌ Failed to load credentials:', error);
         
-        // Ultimate fallback
-        const getDisplayName = () => {
-          if (provider.profiles?.full_name) return provider.profiles.full_name;
-          if (provider.profiles?.prescriber_name) return provider.profiles.prescriber_name;
-          if (provider.prescriber_name) return provider.prescriber_name;
-          if (provider.profiles?.name && !provider.profiles.name.includes('@')) {
-            return provider.profiles.name;
-          }
-          return "";
-        };
-        
-        const displayName = getDisplayName();
-        const npiValue = provider.profiles?.npi || "";
+        // Ultimate fallback - use only plaintext, no decryption
+        const profiles = provider.profiles || {};
+        const fallbackName = profiles.full_name || profiles.prescriber_name || provider.prescriber_name || "";
+        const fallbackNpi = profiles.npi === "[ENCRYPTED]" ? "" : (profiles.npi || "");
         
         setFormData({
-          fullName: displayName,
-          prescriberName: displayName,
-          npi: npiValue,
-          dea: provider.profiles?.dea || "",
-          licenseNumber: provider.profiles?.license_number || "",
-          phone: (provider.profiles?.phone || "").replace(/\D/g, ''),
+          fullName: fallbackName,
+          prescriberName: fallbackName,
+          npi: fallbackNpi,
+          dea: profiles.dea === "[ENCRYPTED]" ? "" : (profiles.dea || ""),
+          licenseNumber: profiles.license_number === "[ENCRYPTED]" ? "" : (profiles.license_number || ""),
+          phone: (profiles.phone === "[ENCRYPTED]" ? "" : (profiles.phone || "")).replace(/\D/g, ''),
         });
-        setOriginalNpi(npiValue);
+        setOriginalNpi(fallbackNpi);
       } finally {
         setIsLoadingCredentials(false);
       }
     };
 
-    loadDecryptedCredentials();
+    loadCredentialsPlaintextFirst();
   }, [provider?.id, provider?.user_id]); // Depend on IDs to ensure reload on provider change
 
   const isPractice = effectiveRole === "doctor" && (effectiveUserId === provider.practice_id || effectivePracticeId === provider.practice_id);
@@ -254,6 +268,19 @@ export const ProviderDetailsDialog = ({
         throw providerError;
       }
 
+      // CRITICAL: Update local state immediately to prevent reversion on next render
+      console.log('🔄 [ProviderDetailsDialog] Updating local state with saved values...');
+      setFormData({
+        ...formData,
+        fullName: profileUpdateData.full_name || formData.fullName,
+        prescriberName: profileUpdateData.prescriber_name || formData.prescriberName,
+        npi: profileUpdateData.npi || formData.npi,
+        dea: profileUpdateData.dea || formData.dea || "",
+        licenseNumber: profileUpdateData.license_number || formData.licenseNumber || "",
+        phone: profileUpdateData.phone || formData.phone || "",
+      });
+      setOriginalNpi(profileUpdateData.npi || formData.npi);
+      
       // CRITICAL: Optimistically update ALL provider caches immediately for instant UI feedback
       console.log('🔄 [ProviderDetailsDialog] Optimistically updating provider caches...');
       
@@ -500,31 +527,65 @@ export const ProviderDetailsDialog = ({
                 variant="outline"
                 onClick={async () => {
                   setIsEditing(false);
-                  // Reload decrypted credentials on cancel
+                  // Reload credentials on cancel using plaintext-first approach
                   if (!provider.user_id) return;
                   
                   try {
-                    const { data, error } = await supabase.rpc('get_decrypted_profile_credentials', {
-                      p_user_id: provider.user_id
-                    });
-
-                    if (error) throw error;
-
-                    if (data && data.length > 0) {
-                      const creds = data[0];
-                      const fullNameValue = creds.full_name || (provider.profiles?.name?.includes('@') ? "" : provider.profiles?.name) || "";
-                      const npiValue = creds.npi || "";
-                      
-                      setFormData({
-                        fullName: fullNameValue,
-                        prescriberName: creds.full_name || "",
-                        npi: npiValue,
-                        dea: creds.dea || "",
-                        licenseNumber: creds.license_number || "",
-                        phone: creds.phone ? creds.phone.replace(/\D/g, '') : "",
+                    // STEP 1: Read plaintext values from profiles first
+                    const profiles = provider.profiles || {};
+                    const plaintextName = profiles.full_name || profiles.prescriber_name || provider.prescriber_name || "";
+                    const plaintextNpi = profiles.npi || "";
+                    const plaintextDea = profiles.dea || "";
+                    const plaintextLicense = profiles.license_number || "";
+                    const plaintextPhone = (profiles.phone || "").replace(/\D/g, '');
+                    
+                    // STEP 2: Check if any credential fields are "[ENCRYPTED]" - only decrypt those
+                    const needsDecryption = 
+                      plaintextNpi === "[ENCRYPTED]" || 
+                      plaintextDea === "[ENCRYPTED]" || 
+                      plaintextLicense === "[ENCRYPTED]" ||
+                      plaintextPhone === "[ENCRYPTED]";
+                    
+                    let decryptedData: any = null;
+                    
+                    if (needsDecryption) {
+                      const { data, error } = await supabase.rpc('get_decrypted_profile_credentials', {
+                        p_user_id: provider.user_id
                       });
-                      setOriginalNpi(npiValue);
+                      if (error) throw error;
+                      decryptedData = data?.[0];
                     }
+                    
+                    // STEP 3: Build final form data - use plaintext unless it's "[ENCRYPTED]", then use decrypted
+                    const finalName = plaintextName && plaintextName !== "[ENCRYPTED]" 
+                      ? plaintextName 
+                      : (decryptedData?.full_name || "");
+                    
+                    const finalNpi = plaintextNpi && plaintextNpi !== "[ENCRYPTED]" 
+                      ? plaintextNpi 
+                      : (decryptedData?.npi || "");
+                    
+                    const finalDea = plaintextDea && plaintextDea !== "[ENCRYPTED]" 
+                      ? plaintextDea 
+                      : (decryptedData?.dea || "");
+                    
+                    const finalLicense = plaintextLicense && plaintextLicense !== "[ENCRYPTED]" 
+                      ? plaintextLicense 
+                      : (decryptedData?.license_number || "");
+                    
+                    const finalPhone = plaintextPhone && plaintextPhone !== "[ENCRYPTED]" 
+                      ? plaintextPhone 
+                      : ((decryptedData?.phone || "").replace(/\D/g, ''));
+                    
+                    setFormData({
+                      fullName: finalName,
+                      prescriberName: finalName,
+                      npi: finalNpi,
+                      dea: finalDea,
+                      licenseNumber: finalLicense,
+                      phone: finalPhone,
+                    });
+                    setOriginalNpi(finalNpi);
                   } catch (error) {
                     console.error('Error reloading credentials:', error);
                   }
