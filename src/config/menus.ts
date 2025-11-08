@@ -15,6 +15,7 @@ import {
   TrendingUp,
   TrendingDown,
   Calendar,
+  CalendarCheck,
   ClipboardList,
   FileCheck,
   Inbox,
@@ -104,6 +105,15 @@ export const menus: MenuConfig = {
       ],
     },
     {
+      title: "Appointments",
+      isParent: true,
+      icon: CalendarCheck,
+      items: [
+        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
+        { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
+      ],
+    },
+    {
       title: "User Management",
       isParent: true,
       icon: Users,
@@ -111,7 +121,6 @@ export const menus: MenuConfig = {
         { label: "Providers", href: "/providers", icon: UserRoundCog, hideForProvider: true },
         { label: "Patients", href: "/patients", icon: Users },
         { label: "Staff", href: "/staff", icon: Users, isPro: true, hideForStaff: true },
-        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
       ],
     },
     {
@@ -132,7 +141,6 @@ export const menus: MenuConfig = {
       items: [
         { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare, isPro: true },
-        { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
         { label: "Document Center", href: "/document-center", icon: FileCheck, isPro: true },
       ],
     },
@@ -155,6 +163,15 @@ export const menus: MenuConfig = {
       ],
     },
     {
+      title: "Appointments",
+      isParent: true,
+      icon: CalendarCheck,
+      items: [
+        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
+        { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
+      ],
+    },
+    {
       title: "User Management",
       isParent: true,
       icon: Users,
@@ -162,7 +179,6 @@ export const menus: MenuConfig = {
         { label: "Providers", href: "/providers", icon: UserRoundCog, hideForProvider: true },
         { label: "Patients", href: "/patients", icon: Users },
         { label: "Staff", href: "/staff", icon: Users, isPro: true, hideForProvider: true },
-        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
       ],
     },
     {
@@ -183,7 +199,6 @@ export const menus: MenuConfig = {
       items: [
         { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare, isPro: true },
-        { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
         { label: "Document Center", href: "/document-center", icon: FileCheck, isPro: true },
       ],
     },
@@ -260,6 +275,15 @@ export const menus: MenuConfig = {
       ],
     },
     {
+      title: "Appointments",
+      isParent: true,
+      icon: CalendarCheck,
+      items: [
+        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar },
+        { label: "Video Consultations", href: "/video-consultations", icon: Video },
+      ],
+    },
+    {
       title: "User Management",
       isParent: true,
       icon: Users,
@@ -267,7 +291,6 @@ export const menus: MenuConfig = {
         { label: "Providers", href: "/providers", icon: UserRoundCog, hideForProvider: true },
         { label: "Patients", href: "/patients", icon: Users },
         { label: "Staff", href: "/staff", icon: Users, isPro: true, hideForProvider: true, hideForStaff: true },
-        { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar },
       ],
     },
     {
@@ -287,7 +310,6 @@ export const menus: MenuConfig = {
       items: [
         { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
         { label: "Chat System", href: "/internal-chat", icon: MessageSquare },
-        { label: "Video Consultations", href: "/video-consultations", icon: Video },
         { label: "Document Center", href: "/document-center", icon: FileCheck },
       ],
     },
