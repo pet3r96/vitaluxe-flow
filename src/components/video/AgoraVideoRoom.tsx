@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import AgoraUIKit, { PropsInterface } from "agora-react-uikit";
+import AgoraRTC from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AgoraVideoRoomProps {
@@ -26,6 +27,47 @@ export function AgoraVideoRoom({
   const [videoCall, setVideoCall] = useState(true);
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [agoraError, setAgoraError] = useState<string | null>(null);
+
+  // Enable Agora SDK debug logging
+  useEffect(() => {
+    console.log('🎥 [AGORA] Initializing Agora SDK debug mode');
+    
+    // Enable maximum Agora SDK logging
+    AgoraRTC.setLogLevel(0); // 0 = DEBUG, most verbose
+    
+    // Listen for SDK errors
+    AgoraRTC.onAutoplayFailed = () => {
+      console.error('❌ [AGORA] Autoplay failed - user interaction may be required');
+    };
+    
+    AgoraRTC.onMicrophoneChanged = (info) => {
+      console.log('🎤 [AGORA] Microphone changed:', info);
+    };
+    
+    AgoraRTC.onCameraChanged = (info) => {
+      console.log('📹 [AGORA] Camera changed:', info);
+    };
+
+    // Capture runtime errors
+    const errorHandler = (event: ErrorEvent) => {
+      if (event.message?.toLowerCase().includes('agora')) {
+        console.error('❌ [AGORA RUNTIME ERROR]', {
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          error: event.error
+        });
+        setAgoraError(event.message || 'Agora initialization failed');
+      }
+    };
+    
+    window.addEventListener('error', errorHandler);
+    return () => {
+      window.removeEventListener('error', errorHandler);
+    };
+  }, []);
 
   // Auto-start recording when provider joins and remote user is present
   useEffect(() => {
@@ -98,6 +140,30 @@ export function AgoraVideoRoom({
     uidType: typeof uid
   });
 
+  console.log('🎥 [FULL AGORA DEBUG]', {
+    appId,
+    appIdLength: appId?.length,
+    appIdValid: appId && /^[0-9a-f]{32}$/i.test(appId),
+    appIdSample: appId ? appId.substring(0, 8) + '...' : 'MISSING',
+    channelName,
+    channelNameLength: channelName?.length,
+    channelNameValid: channelName && channelName.length > 0,
+    token,
+    tokenLength: token?.length,
+    tokenValid: token && token.length > 20,
+    tokenPreview: token ? token.substring(0, 20) + '...' : 'MISSING',
+    uid,
+    uidType: typeof uid,
+    uidValue: uid,
+    uidValid: uid !== null && uid !== undefined && !isNaN(uid),
+    hasAppId: !!appId,
+    hasChannel: !!channelName,
+    hasToken: !!token,
+    hasUid: uid !== null && uid !== undefined,
+    isProvider,
+    userName
+  });
+
   const callbacks: PropsInterface['callbacks'] = {
     EndCall: () => {
       setVideoCall(false);
@@ -111,6 +177,42 @@ export function AgoraVideoRoom({
 
   if (!videoCall) {
     return null;
+  }
+
+  // Show Agora runtime error if captured
+  if (agoraError) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
+        <div className="bg-card border border-destructive rounded-lg p-6 max-w-md w-full">
+          <h2 className="text-xl font-semibold text-destructive mb-4">Agora SDK Error</h2>
+          <p className="text-sm text-muted-foreground mb-4">{agoraError}</p>
+          <pre className="bg-muted p-3 rounded text-xs overflow-auto mb-4 max-h-48">
+            {JSON.stringify({ 
+              appId: appId ? appId.substring(0, 8) + '...' : 'MISSING',
+              channelName, 
+              uid,
+              uidType: typeof uid,
+              hasToken: !!token,
+              tokenLength: token?.length 
+            }, null, 2)}
+          </pre>
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Reload & Retry
+            </button>
+            <button
+              onClick={onLeave}
+              className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"
+            >
+              Leave
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Safety net: show error UI if required fields are missing

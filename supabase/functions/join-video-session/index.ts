@@ -91,6 +91,14 @@ Deno.serve(async (req) => {
 
     console.log('✅ [join-video-session] Session found:', { sessionId, status: session.status });
 
+    console.log('📺 [CHANNEL DEBUG]', {
+      channelName: session.channel_name,
+      channelNameLength: session.channel_name?.length,
+      channelNameType: typeof session.channel_name,
+      channelNameBytes: session.channel_name ? new TextEncoder().encode(session.channel_name).length : 0,
+      sessionStatus: session.status
+    });
+
     // Verify user authorization - properly resolve user_ids
     // Fetch provider to get user_id
     const { data: provider } = await supabase

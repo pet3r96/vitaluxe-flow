@@ -277,12 +277,39 @@ Deno.serve(async (req) => {
     const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')!;
     
     if (!appId || !appCertificate) {
-      console.error('Missing Agora credentials');
+      console.error('❌ Missing Agora credentials');
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    // Validate Agora credentials format (must be 32 hex characters)
+    if (!/^[0-9a-f]{32}$/i.test(appId)) {
+      console.error('❌ Invalid AGORA_APP_ID format:', { 
+        length: appId.length, 
+        sample: appId.substring(0, 8) + '...'
+      });
+      return new Response(JSON.stringify({ error: 'Invalid Agora configuration' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    if (!/^[0-9a-f]{32}$/i.test(appCertificate)) {
+      console.error('❌ Invalid AGORA_APP_CERTIFICATE format:', { 
+        length: appCertificate.length 
+      });
+      return new Response(JSON.stringify({ error: 'Invalid Agora configuration' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('✅ Agora credentials validated:', {
+      appIdLength: appId.length,
+      appIdSample: appId.substring(0, 8) + '...',
+      certLength: appCertificate.length
+    });
 
     const channelName = session.channel_name;
     const uid = generateNumericUid(effectiveUserId, sessionId);
@@ -297,6 +324,21 @@ Deno.serve(async (req) => {
       uidType: typeof uid,
       role: userRole,
       effectiveUserId: effectiveUserId.substring(0, 8) + '...'
+    });
+
+    console.log('🔍 [FULL TOKEN DEBUG]', {
+      effectiveUserId: effectiveUserId.substring(0, 8) + '...',
+      sessionId,
+      channelName,
+      channelNameLength: channelName.length,
+      uid,
+      uidType: typeof uid,
+      uidValue: uid,
+      uidLength: uid.toString().length,
+      appIdLength: appId.length,
+      appCertLength: appCertificate.length,
+      expirationTime: expirationTimeInSeconds,
+      privilegeExpiredTs
     });
 
     // Generate RTC token with numeric UID
@@ -317,7 +359,12 @@ Deno.serve(async (req) => {
       privilegeExpiredTs
     );
 
-    console.log('✅ [generate-agora-token] Tokens generated successfully');
+    console.log('✅ [generate-agora-token] Tokens generated successfully', {
+      rtcTokenLength: rtcToken.length,
+      rtcTokenPreview: rtcToken.substring(0, 20) + '...',
+      rtmTokenLength: rtmToken.length,
+      rtmTokenPreview: rtmToken.substring(0, 20) + '...'
+    });
 
     // Log token generation
     await supabase.from('video_session_logs').insert({
