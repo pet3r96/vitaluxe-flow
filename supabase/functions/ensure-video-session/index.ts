@@ -117,7 +117,10 @@ Deno.serve(async (req) => {
     }
 
     // Create video session
-    const channelName = `apt_${appointmentId.replace(/-/g, '_')}`;
+    // Channel name format: session_<appointmentId>
+    // This format is Agora-safe: uses allowed characters (letters, numbers, underscores, dashes)
+    // and stays well under the 64-character limit
+    const channelName = `session_${appointmentId}`;
     
     const { data: newSession, error: createError } = await supabase
       .from('video_sessions')
@@ -155,7 +158,9 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('[ensure-video-session] Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error instanceof Error ? error.message : String(error) 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
