@@ -359,3 +359,12 @@ verify_jwt = false
 
 [functions.generate-video-guest-link]
 verify_jwt = true
+
+[functions.validate-video-guest-link]
+verify_jwt = false
+
+[functions.ensure-video-session]
+verify_jwt = true
+
+[functions.agora-healthcheck]
+verify_jwt = true

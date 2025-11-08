@@ -240,26 +240,38 @@ export const ProviderVirtualWaitingRoom = ({
   }, [videoSessions]);
 
   const handleStartSession = async (sessionId: string) => {
-    // Prevent starting synthetic sessions
-    if (isSyntheticSession(sessionId)) {
-      toast({
-        title: "Session Not Ready",
-        description: "Video session is being created. Please wait a moment and try again.",
-        variant: "destructive"
-      });
-      await queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
-      return;
-    }
-    
     setStartingSession(sessionId);
     console.time(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
+    
     try {
+      let realSessionId = sessionId;
+      
+      // If synthetic session, create it first
+      if (isSyntheticSession(sessionId)) {
+        const appointmentId = sessionId.replace('apt-', '');
+        console.log('[ProviderVirtualWaitingRoom] Creating session for appointment:', appointmentId);
+        
+        const { data: ensureData, error: ensureError } = await supabase.functions.invoke('ensure-video-session', {
+          body: { appointmentId }
+        });
+        
+        if (ensureError || !ensureData?.sessionId) {
+          throw new Error('Failed to create video session');
+        }
+        
+        realSessionId = ensureData.sessionId;
+        console.log('[ProviderVirtualWaitingRoom] ✅ Session created:', realSessionId);
+        
+        // Trigger immediate refetch to update UI
+        queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
+      }
+      
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('timeout')), 12000)
       );
       
       const invokePromise = supabase.functions.invoke('start-video-session', {
-        body: { sessionId }
+        body: { sessionId: realSessionId }
       });
 
       const { error } = await Promise.race([invokePromise, timeoutPromise]) as any;
@@ -272,7 +284,7 @@ export const ProviderVirtualWaitingRoom = ({
         description: "Patient has been notified via SMS"
       });
 
-      onStartSession?.(sessionId);
+      onStartSession?.(realSessionId);
     } catch (error: any) {
       console.timeEnd(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
       console.error('Error starting session:', error);
@@ -282,14 +294,13 @@ export const ProviderVirtualWaitingRoom = ({
           title: "Still Processing",
           description: "Starting the session... We'll update automatically shortly."
         });
-        // Trigger immediate refetch to pull in any updates
         setTimeout(() => {
           queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
         }, 2000);
       } else {
         toast({
           title: "Error",
-          description: "Failed to start video session",
+          description: error.message || "Failed to start video session",
           variant: "destructive"
         });
       }
@@ -298,31 +309,77 @@ export const ProviderVirtualWaitingRoom = ({
     }
   };
 
-  const handleJoinSession = (sessionId: string) => {
-    navigate(`/practice/video/${sessionId}`);
+  const handleJoinSession = async (sessionId: string) => {
+    let realSessionId = sessionId;
+    
+    // If synthetic session, create it first
+    if (isSyntheticSession(sessionId)) {
+      const appointmentId = sessionId.replace('apt-', '');
+      console.log('[ProviderVirtualWaitingRoom] Creating session before joining:', appointmentId);
+      
+      try {
+        const { data: ensureData, error: ensureError } = await supabase.functions.invoke('ensure-video-session', {
+          body: { appointmentId }
+        });
+        
+        if (ensureError || !ensureData?.sessionId) {
+          toast({
+            title: "Error",
+            description: "Failed to create video session",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        realSessionId = ensureData.sessionId;
+        console.log('[ProviderVirtualWaitingRoom] ✅ Session created:', realSessionId);
+      } catch (error) {
+        console.error('Error ensuring session:', error);
+        toast({
+          title: "Error",
+          description: "Failed to prepare video session",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
+    navigate(`/practice/video/${realSessionId}`);
   };
 
   const handleGenerateGuestLink = async (sessionId: string) => {
-    // Prevent generating links for synthetic sessions
-    if (isSyntheticSession(sessionId)) {
-      toast({
-        title: "Session Not Ready",
-        description: "Cannot generate guest link yet. Video session is being created.",
-        variant: "destructive"
-      });
-      await queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
-      return;
-    }
-    
     setGeneratingLink(sessionId);
     console.time(`[ProviderVirtualWaitingRoom] generate-guest-link-${sessionId}`);
+    
     try {
+      let realSessionId = sessionId;
+      
+      // If synthetic session, create it first
+      if (isSyntheticSession(sessionId)) {
+        const appointmentId = sessionId.replace('apt-', '');
+        console.log('[ProviderVirtualWaitingRoom] Creating session for guest link:', appointmentId);
+        
+        const { data: ensureData, error: ensureError } = await supabase.functions.invoke('ensure-video-session', {
+          body: { appointmentId }
+        });
+        
+        if (ensureError || !ensureData?.sessionId) {
+          throw new Error('Failed to create video session');
+        }
+        
+        realSessionId = ensureData.sessionId;
+        console.log('[ProviderVirtualWaitingRoom] ✅ Session created:', realSessionId);
+        
+        // Trigger immediate refetch to update UI
+        queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
+      }
+      
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('timeout')), 12000)
       );
       
       const invokePromise = supabase.functions.invoke('generate-video-guest-link', {
-        body: { sessionId }
+        body: { sessionId: realSessionId }
       });
 
       const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
@@ -349,7 +406,6 @@ export const ProviderVirtualWaitingRoom = ({
           title: "Still Processing",
           description: "Generating link... This may take a moment."
         });
-        // Trigger refetch in case it completes
         setTimeout(() => {
           queryClient.refetchQueries({ queryKey: ['provider-video-sessions', practiceId] });
         }, 2000);

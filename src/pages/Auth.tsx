@@ -77,13 +77,14 @@ const Auth = () => {
 
   // Removed aggressive loading timeout - loading state is now properly managed by auth flow
 
-  // Redirect to dashboard after successful login and 2FA completion
+  // Redirect to dashboard or returnTo path after successful login and 2FA completion
   // Only redirect when 2FA check is complete AND no 2FA is required
   useEffect(() => {
     if (user && twoFAStatusChecked && !requires2FASetup && !requires2FAVerify) {
-      navigate("/dashboard");
+      const returnTo = searchParams.get('returnTo');
+      navigate(returnTo || "/dashboard");
     }
-  }, [user, twoFAStatusChecked, requires2FASetup, requires2FAVerify, navigate]);
+  }, [user, twoFAStatusChecked, requires2FASetup, requires2FAVerify, navigate, searchParams]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
