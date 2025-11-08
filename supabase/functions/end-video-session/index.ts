@@ -182,6 +182,19 @@ Deno.serve(async (req) => {
       }
     });
 
+    // Log usage for billing
+    const durationMinutes = Math.ceil(durationSeconds / 60);
+    await supabase.from('usage_logs').insert({
+      practice_id: session.practice_id,
+      session_id: sessionId,
+      provider_id: session.provider_id,
+      patient_id: session.patient_id,
+      duration_minutes: durationMinutes,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      session_type: 'video'
+    });
+
     // Send completion notification to patient (optional)
     try {
       await supabase.functions.invoke('send-notification', {

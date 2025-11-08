@@ -107,6 +107,25 @@ Deno.serve(async (req) => {
 
     if (appointmentsError) throw appointmentsError;
 
+    // Transform appointments to include provider first_name and last_name
+    const transformedAppointments = appointments?.map((apt: any) => {
+      if (apt.providers && apt.providers.profiles) {
+        const profile = Array.isArray(apt.providers.profiles) ? apt.providers.profiles[0] : apt.providers.profiles;
+        const displayName = profile?.full_name || profile?.name || 'Provider';
+        const nameParts = displayName.trim().split(' ');
+        
+        return {
+          ...apt,
+          providers: {
+            ...apt.providers,
+            first_name: nameParts[0] || 'Provider',
+            last_name: nameParts.slice(1).join(' ') || ''
+          }
+        };
+      }
+      return apt;
+    });
+
     // Parallel fetch for better performance
     const [settingsResult, providersData, roomsResult, blockedTimeResult] = await Promise.all([
       // Get practice settings
@@ -232,7 +251,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        appointments: appointments || [],
+        appointments: transformedAppointments || [],
         settings: settings || {
           slot_duration: 15,
           start_hour: 7,
