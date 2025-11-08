@@ -169,9 +169,15 @@ Deno.serve(async (req) => {
       event_data: { status: 'waiting' }
     });
 
-    // Send SMS to patient (if phone available)
+    // Send SMS to patient only if they haven't joined yet and phone is available
     const patientPhone = patientProfile?.phone;
-    if (patientPhone) {
+    const patientAlreadyJoined = session.patient_joined_at !== null;
+    
+    if (patientAlreadyJoined) {
+      console.log('ℹ️ Patient already joined - skipping SMS notification');
+    }
+
+    if (patientPhone && !patientAlreadyJoined) {
       const providerDisplayName = providerName;
       
       // Build URLs using origin header or environment variable

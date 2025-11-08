@@ -324,7 +324,8 @@ export const ProviderVirtualWaitingRoom = ({
         description: "Patient has been notified via SMS"
       });
 
-      onStartSession?.(realSessionId);
+      // Auto-join the provider to the video room after starting session
+      navigate(`/practice/video/${realSessionId}`);
     } catch (error: any) {
       console.timeEnd(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
       console.error('Error starting session:', error);
