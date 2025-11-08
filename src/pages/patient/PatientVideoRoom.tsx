@@ -26,6 +26,25 @@ export default function PatientVideoRoom() {
       }
 
       try {
+        // Pre-flight healthcheck
+        console.log('🏥 Running Agora healthcheck...');
+        const { data: healthData, error: healthError } = await supabase.functions.invoke('agora-healthcheck');
+        
+        if (healthError || !healthData?.healthy) {
+          const errorMsg = healthData?.error || healthError?.message || 'Agora credentials invalid';
+          console.error('❌ Healthcheck failed:', errorMsg);
+          setError(`Video system configuration error: ${errorMsg}. Please contact support.`);
+          setLoading(false);
+          toast({
+            title: "Configuration Error",
+            description: "Invalid Agora credentials. Please contact support.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        console.log('✅ Healthcheck passed:', healthData);
+        
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('timeout')), 12000)
         );
@@ -36,7 +55,12 @@ export default function PatientVideoRoom() {
 
         const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
 
-        if (error) throw error;
+        if (error) {
+          // Extract detailed error info
+          const errorDetails = error.context?.details || error.details || '';
+          console.error("❌ Join error with details:", { error, errorDetails });
+          throw error;
+        }
 
         const sessionStatus = data.session?.status || data.session_status;
         if (sessionStatus === 'waiting') {

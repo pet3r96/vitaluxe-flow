@@ -25,6 +25,24 @@ export default function VideoConsultationRoom() {
       }
 
       try {
+        // Pre-flight healthcheck
+        console.log('🏥 Running Agora healthcheck...');
+        const { data: healthData, error: healthError } = await supabase.functions.invoke('agora-healthcheck');
+        
+        if (healthError || !healthData?.healthy) {
+          const errorMsg = healthData?.error || healthError?.message || 'Agora credentials invalid';
+          console.error('❌ Healthcheck failed:', errorMsg);
+          setError(`Video system configuration error: ${errorMsg}. Please contact support.`);
+          setLoading(false);
+          toast({
+            title: "Configuration Error",
+            description: "Invalid Agora credentials detected. Please contact support.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        console.log('✅ Healthcheck passed:', healthData);
         console.log(`🔗 [Attempt ${retryCount + 1}] Joining video session:`, sessionId);
         
         const timeoutPromise = new Promise((_, reject) =>
@@ -42,14 +60,19 @@ export default function VideoConsultationRoom() {
         if (error) {
           console.error("❌ Join session error:", error);
           
+          // Extract detailed error info if available
+          const errorDetails = error.context?.details || error.details || '';
+          
           // Map specific errors to user-friendly messages
           let friendlyMessage = "Failed to connect to video session";
           if (error.message?.includes("not found")) {
             friendlyMessage = "This video session no longer exists";
-          } else if (error.message?.includes("token")) {
-            friendlyMessage = "Unable to generate video credentials";
+          } else if (error.message?.includes("token") || error.message?.includes("INVALID_VENDOR_KEY")) {
+            friendlyMessage = `Unable to generate video credentials${errorDetails ? ': ' + errorDetails : ''}`;
           } else if (error.message?.includes("unauthorized")) {
             friendlyMessage = "You don't have permission to join this session";
+          } else if (errorDetails) {
+            friendlyMessage = `${error.message || 'Connection failed'}: ${errorDetails}`;
           }
           
           throw new Error(friendlyMessage);

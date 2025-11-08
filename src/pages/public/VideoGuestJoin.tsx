@@ -31,6 +31,23 @@ export default function VideoGuestJoin() {
       }
 
       try {
+        // Pre-flight healthcheck (guest links don't require auth for healthcheck)
+        console.log('🏥 Running Agora healthcheck...');
+        const { data: healthData, error: healthError } = await supabase.functions.invoke('agora-healthcheck');
+        
+        if (healthError || !healthData?.healthy) {
+          const errorMsg = healthData?.error || healthError?.message || 'Agora credentials invalid';
+          console.error('❌ Healthcheck failed:', errorMsg);
+          setError({
+            type: 'error',
+            message: `Video system configuration error: ${errorMsg}. Please contact your provider.`,
+          });
+          setLoading(false);
+          return;
+        }
+        
+        console.log('✅ Healthcheck passed:', healthData);
+        
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('timeout')), 12000)
         );

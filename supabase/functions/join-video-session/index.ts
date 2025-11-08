@@ -191,12 +191,27 @@ Deno.serve(async (req) => {
 
     if (tokenError) {
       console.error('❌ [join-video-session] Token generation failed:', tokenError);
-      throw new Error(`Failed to generate video token: ${tokenError.message}`);
+      const errorDetails = tokenError.context || tokenError.details || tokenError.message;
+      return new Response(JSON.stringify({ 
+        error: 'Failed to generate video token',
+        details: errorDetails,
+        message: `Token generation error: ${tokenError.message}`
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     if (!tokenData) {
       console.error('❌ [join-video-session] No token data received');
-      throw new Error('Failed to generate video token: No data received');
+      return new Response(JSON.stringify({ 
+        error: 'Failed to generate video token',
+        details: 'No data received from token generation service',
+        message: 'Token generation returned empty response'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log('✅ [join-video-session] Token generated successfully');

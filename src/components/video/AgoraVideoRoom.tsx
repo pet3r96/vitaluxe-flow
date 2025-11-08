@@ -162,6 +162,16 @@ export const AgoraVideoRoom = ({
       resetSessionState();
 
       try {
+        // Set detailed logging for diagnostics
+        AgoraRTC.setLogLevel(4);
+        console.log('🎬 [AgoraVideoRoom] Initializing with params:', {
+          appIdSample: appId.substring(0, 8) + '...',
+          channelName,
+          uid,
+          tokenPreview: token.substring(0, 20) + '...',
+          isProvider,
+        });
+        
         const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         clientRef.current = agoraClient;
         setClient(agoraClient);
@@ -276,13 +286,20 @@ export const AgoraVideoRoom = ({
         let errorDescription = "Failed to join video session";
 
         if (error.code === "INVALID_VENDOR_KEY") {
-          errorDescription = "Invalid App ID. Please contact support.";
+          errorTitle = "Invalid Agora Credentials";
+          errorDescription = "The Agora App ID is invalid or missing. Please update your Agora credentials in the backend configuration.";
         } else if (error.code === "INVALID_TOKEN" || error.code === "TOKEN_EXPIRED") {
-          errorDescription = "Session token is invalid or expired. Please rejoin.";
+          errorTitle = "Invalid Session Token";
+          errorDescription = "Session token is invalid or expired. Please rejoin the session.";
         } else if (error.code === "CAN_NOT_GET_GATEWAY_SERVER") {
-          errorDescription = "Cannot connect to video server. Check your internet connection.";
+          errorTitle = "Gateway Connection Failed";
+          errorDescription = "Cannot connect to Agora gateway. This often indicates invalid App ID or Certificate. Please verify your Agora credentials.";
         } else if (error.message?.includes("Permission denied")) {
-          errorDescription = "Camera/microphone permission denied. Please allow access.";
+          errorTitle = "Permission Denied";
+          errorDescription = "Camera/microphone permission denied. Please allow access in your browser.";
+        } else if (error.message?.includes("network")) {
+          errorTitle = "Network Error";
+          errorDescription = "Network connection issue. Please check your internet connection.";
         }
 
         toast({
