@@ -216,6 +216,15 @@ Deno.serve(async (req) => {
 
     console.log('✅ [join-video-session] Token generated successfully');
 
+    // Final debug output before returning to frontend
+    console.log("=== EDGE AGORA DEBUG ===");
+    console.log("AppID:", tokenData.appId);
+    console.log("Cert8:", tokenData.appId.slice(0, 8));
+    console.log("Channel:", tokenData.channelName);
+    console.log("UID:", tokenData.uid);
+    console.log("Token10:", tokenData.token.slice(0, 10));
+    console.log("========================");
+
     return new Response(JSON.stringify({
       success: true,
       session: updatedSession,

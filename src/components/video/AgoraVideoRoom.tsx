@@ -175,14 +175,12 @@ export const AgoraVideoRoom = ({
         // Set detailed logging for diagnostics
         AgoraRTC.setLogLevel(4);
         
-        console.group('🎬 FRONTEND AGORA JOIN ATTEMPT');
-        console.log('FE App ID (FULL):', appId);
-        console.log('FE Channel:', channelName);
-        console.log('FE UID:', uid);
-        console.log('FE Token prefix (30 chars):', token.substring(0, 30));
-        console.log('FE isProvider:', isProvider);
-        console.log('⚠️ CRITICAL: Compare FE App ID above with EDGE AppID from backend logs');
-        console.groupEnd();
+        console.log("=== FE AGORA DEBUG ===");
+        console.log("AppID:", appId);
+        console.log("Channel:", channelName);
+        console.log("UID:", uid);
+        console.log("Token10:", token.slice(0, 10));
+        console.log("=======================");
         
         const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         clientRef.current = agoraClient;
@@ -216,7 +214,11 @@ export const AgoraVideoRoom = ({
           setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
         });
 
-        await agoraClient.join(appId, channelName, token, uid);
+        // Join the channel with the token from backend
+        // CRITICAL: Ensure UID is a string to match token generation
+        const joinUid = String(uid);
+        console.log('🔗 [AgoraVideoRoom] Attempting to join channel with UID:', joinUid);
+        await agoraClient.join(appId, channelName, token, joinUid);
 
         const prefs = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
         console.log("📱 Using device preferences:", prefs);
@@ -577,17 +579,19 @@ export const AgoraVideoRoom = ({
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
-      {/* Debug Panel - Shows App ID mismatch diagnostics */}
-      <div className="absolute top-20 left-4 z-50 bg-black/90 text-white p-4 rounded-lg text-xs font-mono space-y-1 max-w-md">
-        <div className="font-bold text-yellow-400 mb-2">🔍 DEBUG INFO</div>
-        <div><span className="text-gray-400">FE App ID:</span> {appId}</div>
-        <div><span className="text-gray-400">Channel:</span> {channelName}</div>
-        <div><span className="text-gray-400">UID:</span> {uid}</div>
-        <div><span className="text-gray-400">Token Prefix:</span> {token.substring(0, 30)}...</div>
-        <div className="text-xs text-gray-500 mt-2">
-          Compare FE App ID with backend logs in console
+      {/* Debug Panel - Shows App ID mismatch diagnostics (DEV only) */}
+      {import.meta.env.DEV && (
+        <div className="absolute top-20 left-4 z-50 bg-black/90 text-white p-4 rounded-lg text-xs font-mono space-y-1 max-w-md">
+          <div className="font-bold text-yellow-400 mb-2">🔍 DEBUG INFO</div>
+          <div><span className="text-gray-400">FE App ID:</span> {appId}</div>
+          <div><span className="text-gray-400">Channel:</span> {channelName}</div>
+          <div><span className="text-gray-400">UID:</span> {String(uid)}</div>
+          <div><span className="text-gray-400">Token Prefix:</span> {token.substring(0, 30)}...</div>
+          <div className="text-xs text-gray-500 mt-2">
+            Compare FE App ID with backend logs in console
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Header */}
       <div className="h-16 border-b bg-card px-4 flex items-center justify-between">

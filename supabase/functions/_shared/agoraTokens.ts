@@ -64,7 +64,7 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
     appId,
     appCertificate,
     options.channelName,
-    options.uid,
+    String(options.uid), // Explicitly convert to string for consistency
     rtcRole,
     privilegeExpiredTs,
     privilegeExpiredTs
