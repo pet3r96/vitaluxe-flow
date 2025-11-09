@@ -85,7 +85,8 @@ export const PharmacyShippingRatesDialog = ({
         description: "Pharmacy shipping rates have been saved successfully."
       });
       queryClient.invalidateQueries({ queryKey: ['pharmacies'] });
-      queryClient.invalidateQueries({ queryKey: ['pharmacy-shipping-rates'] });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-shipping-rates', pharmacy.id] });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-enabled-rates', pharmacy.id] });
       onOpenChange(false);
     },
     onError: (error) => {
