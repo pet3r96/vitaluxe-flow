@@ -72,14 +72,14 @@ export function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
   return result;
 }
 
-// Compress data using deflate (zlib) - standard deflate, not raw
+// Compress data using deflate-raw (no zlib headers) per Agora spec
 export async function compress(data: Uint8Array): Promise<Uint8Array> {
   const compressedStream = new ReadableStream({
     start(controller) {
       controller.enqueue(data);
       controller.close();
     }
-  }).pipeThrough(new CompressionStream("deflate"));
+  }).pipeThrough(new CompressionStream("deflate-raw"));
   
   const chunks: Uint8Array[] = [];
   const reader = compressedStream.getReader();
