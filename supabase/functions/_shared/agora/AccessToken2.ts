@@ -1,6 +1,6 @@
 // Official AccessToken2 implementation for Agora - Deno version
 // Based on AgoraIO/Tools official Node.js implementation
-import { createHmacSha256, base64Encode, crc32, packUint16, packUint32, concatUint8Arrays, compress } from './crypto.ts';
+import { createHmacSha256, hexToBytes, base64Encode, crc32, packUint16, packUint32, concatUint8Arrays, compress } from './crypto.ts';
 
 const VERSION = '007';
 const VERSION_LENGTH = 3;
@@ -33,12 +33,14 @@ export class AccessToken2 {
   }
 
   private async buildSigningKey(): Promise<Uint8Array> {
-    // Step 1: HMAC(issueTs, appCertificate) - official spec
-    let signing = await createHmacSha256(this.appCertificate, packUint32(this.issueTs));
-    // Step 2: HMAC(salt, result_from_step1)
-    const signingHex = uint8ArrayToHex(signing);
-    signing = await createHmacSha256(signingHex, packUint32(this.salt));
-    return signing;
+    // Step 1: HMAC(appCertificate_bytes, issueTs) - Agora specification
+    const k1 = await createHmacSha256(
+      hexToBytes(this.appCertificate),
+      packUint32(this.issueTs)
+    );
+    // Step 2: HMAC(k1, salt) - chained HMAC with raw bytes
+    const signingKey = await createHmacSha256(k1, packUint32(this.salt));
+    return signingKey;
   }
 
   private buildSigningInfo(): Uint8Array {
@@ -72,26 +74,21 @@ export class AccessToken2 {
   }
 
   async build(): Promise<string> {
-    // Build the signing key according to official spec
+    // Build the signing key according to Agora specification
     const signingKey = await this.buildSigningKey();
     const signingInfo = this.buildSigningInfo();
     
-    // Sign the signing info with the derived signing key
-    const signingKeyHex = uint8ArrayToHex(signingKey);
-    const signature = await createHmacSha256(signingKeyHex, signingInfo);
-    const signatureHex = uint8ArrayToHex(signature);
-
-    // Build content: signature (as hex string with length prefix) + signing info
-    const encoder = new TextEncoder();
-    const signatureHexBytes = encoder.encode(signatureHex);
+    // Sign the signing info with the derived signing key - signature is raw 32 bytes
+    const signature = await createHmacSha256(signingKey, signingInfo);
     
+    // Build content: [signature length (uint16)][signature (32 raw bytes)][signing info]
     const content = concatUint8Arrays(
-      packUint16(signatureHexBytes.length),
-      signatureHexBytes,
+      packUint16(signature.length),
+      signature,
       signingInfo
     );
 
-    // Compress using deflate-raw (zlib) and encode to base64
+    // Compress using deflate (zlib) and encode to base64
     const compressed = await compress(content);
     const encoded = base64Encode(compressed);
     

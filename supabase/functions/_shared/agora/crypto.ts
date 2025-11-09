@@ -1,14 +1,21 @@
 // Official Agora token generation crypto utilities - based on AgoraIO/Tools implementation
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
-export async function createHmacSha256(key: string, data: Uint8Array): Promise<Uint8Array> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(key);
-  
+// Convert hex string to bytes
+export function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
+// HMAC-SHA256 with Uint8Array key (raw bytes)
+export async function createHmacSha256(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
   // Use Web Crypto API for HMAC-SHA256 (works in edge functions)
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    keyData,
+    key,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -65,14 +72,14 @@ export function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
   return result;
 }
 
-// Compress data using deflate (zlib)
+// Compress data using deflate (zlib) - standard deflate, not raw
 export async function compress(data: Uint8Array): Promise<Uint8Array> {
   const compressedStream = new ReadableStream({
     start(controller) {
       controller.enqueue(data);
       controller.close();
     }
-  }).pipeThrough(new CompressionStream("deflate-raw"));
+  }).pipeThrough(new CompressionStream("deflate"));
   
   const chunks: Uint8Array[] = [];
   const reader = compressedStream.getReader();
