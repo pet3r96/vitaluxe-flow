@@ -55,10 +55,15 @@ export default function VideoConsultationRoom() {
 
         const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
 
-        console.log("📡 Join session response:", { data, error });
-        console.log("🔍 Response appId:", data?.appId);
-        console.log("🔍 Response token:", data?.token?.substring(0, 20) + "...");
-        console.log("🔍 Response channelName:", data?.channelName);
+        console.group("📡 BACKEND JOIN-VIDEO-SESSION RESPONSE");
+        console.log("Response data:", data);
+        console.log("EDGE App ID (FULL):", data?.appId);
+        console.log("EDGE Channel:", data?.channelName);
+        console.log("EDGE UID:", data?.uid);
+        console.log("EDGE Token prefix (30 chars):", data?.token?.substring(0, 30));
+        console.log("EDGE RTM Token prefix:", data?.rtmToken?.substring(0, 30));
+        console.log("⚠️ CRITICAL: Compare EDGE App ID above with FE App ID in next logs");
+        console.groupEnd();
 
         if (error) {
           console.error("❌ Join session error:", error);

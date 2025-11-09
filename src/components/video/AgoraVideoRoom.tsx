@@ -174,13 +174,15 @@ export const AgoraVideoRoom = ({
       try {
         // Set detailed logging for diagnostics
         AgoraRTC.setLogLevel(4);
-        console.log('🎬 [AgoraVideoRoom] Initializing with params:', {
-          appIdSample: appId.substring(0, 8) + '...',
-          channelName,
-          uid,
-          tokenPreview: token.substring(0, 20) + '...',
-          isProvider,
-        });
+        
+        console.group('🎬 FRONTEND AGORA JOIN ATTEMPT');
+        console.log('FE App ID (FULL):', appId);
+        console.log('FE Channel:', channelName);
+        console.log('FE UID:', uid);
+        console.log('FE Token prefix (30 chars):', token.substring(0, 30));
+        console.log('FE isProvider:', isProvider);
+        console.log('⚠️ CRITICAL: Compare FE App ID above with EDGE AppID from backend logs');
+        console.groupEnd();
         
         const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         clientRef.current = agoraClient;
@@ -270,12 +272,13 @@ export const AgoraVideoRoom = ({
         console.log("Error Code:", error.code);
         console.log("Error Message:", error.message);
         console.log("Error Name:", error.name);
-        console.log("Join Parameters:", {
-          appIdSample: appId.substring(0, 8) + "...",
-          channelName,
-          uid,
-          tokenPreview: token.substring(0, 20) + "..."
-        });
+        console.log("Join Parameters Used:");
+        console.log("  - FE App ID (FULL):", appId);
+        console.log("  - FE Channel:", channelName);
+        console.log("  - FE UID:", uid);
+        console.log("  - FE Token prefix:", token.substring(0, 30));
+        console.log("⚠️ MISMATCH CHECK: Look for 'EDGE AppID' in backend logs above");
+        console.log("⚠️ They MUST match exactly or you get CAN_NOT_GET_GATEWAY_SERVER");
         console.groupEnd();
 
         await logVideoError({
@@ -303,7 +306,7 @@ export const AgoraVideoRoom = ({
           errorDescription = "Session token is invalid or expired. Please rejoin the session.";
         } else if (error.code === "CAN_NOT_GET_GATEWAY_SERVER") {
           errorTitle = "Gateway Connection Failed";
-          errorDescription = "Cannot connect to Agora gateway. This often indicates invalid App ID or Certificate. Please verify your Agora credentials.";
+          errorDescription = "App ID mismatch detected! Check the debug panel (top-left) and console logs. Frontend and backend App IDs must match exactly. Try /video-test with a console-generated token to isolate the issue.";
         } else if (error.message?.includes("Permission denied")) {
           errorTitle = "Permission Denied";
           errorDescription = "Camera/microphone permission denied. Please allow access in your browser.";
@@ -574,6 +577,18 @@ export const AgoraVideoRoom = ({
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
+      {/* Debug Panel - Shows App ID mismatch diagnostics */}
+      <div className="absolute top-20 left-4 z-50 bg-black/90 text-white p-4 rounded-lg text-xs font-mono space-y-1 max-w-md">
+        <div className="font-bold text-yellow-400 mb-2">🔍 DEBUG INFO</div>
+        <div><span className="text-gray-400">FE App ID:</span> {appId}</div>
+        <div><span className="text-gray-400">Channel:</span> {channelName}</div>
+        <div><span className="text-gray-400">UID:</span> {uid}</div>
+        <div><span className="text-gray-400">Token Prefix:</span> {token.substring(0, 30)}...</div>
+        <div className="text-xs text-gray-500 mt-2">
+          Compare FE App ID with backend logs in console
+        </div>
+      </div>
+      
       {/* Header */}
       <div className="h-16 border-b bg-card px-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
