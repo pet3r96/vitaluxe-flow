@@ -128,18 +128,66 @@ Deno.serve(async (req) => {
     const appId = tokens.appId;
 
     console.log('✅ [generate-agora-token] Tokens generated successfully');
-    console.log('🔑 [generate-agora-token] RTC Token Details:');
+    
+    // Detailed diagnostic logging for token comparison
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('🔍 DETAILED TOKEN DIAGNOSTICS FOR COMPARISON');
+    console.log('═══════════════════════════════════════════════════════════');
+    
+    console.log('\n📋 Request Parameters:');
+    console.log('   - Channel Name:', channelName);
+    console.log('   - UID (string):', String(uid));
+    console.log('   - Role:', tokenRole);
+    console.log('   - Expires In:', '3600 seconds (1 hour)');
+    
+    console.log('\n🔑 RTC Token Analysis:');
     console.log('   - Full Token:', tokens.rtcToken);
-    console.log('   - Token Length:', tokens.rtcToken.length);
-    console.log('   - First 50 chars:', tokens.rtcToken.substring(0, 50));
-    console.log('   - Starts with 007:', tokens.rtcToken.startsWith('007'));
-    console.log('   - AppId used:', tokens.appId);
-    console.log('   - Channel:', channelName);
-    console.log('   - UID:', String(uid));
-    console.log('🔑 [generate-agora-token] RTM Token Details:');
+    console.log('   - Token Length:', tokens.rtcToken.length, 'characters');
+    console.log('   - Token Version:', tokens.rtcToken.startsWith('007') ? 'AccessToken2 (007)' : 'Unknown');
+    console.log('   - First 100 chars:', tokens.rtcToken.substring(0, 100) + '...');
+    console.log('   - Last 50 chars:', '...' + tokens.rtcToken.substring(tokens.rtcToken.length - 50));
+    
+    console.log('\n🔑 RTM Token Analysis:');
     console.log('   - Full Token:', tokens.rtmToken);
-    console.log('   - Token Length:', tokens.rtmToken.length);
-    console.log('   - First 50 chars:', tokens.rtmToken.substring(0, 50));
+    console.log('   - Token Length:', tokens.rtmToken.length, 'characters');
+    console.log('   - Token Version:', tokens.rtmToken.startsWith('007') ? 'AccessToken2 (007)' : 'Unknown');
+    console.log('   - First 100 chars:', tokens.rtmToken.substring(0, 100) + '...');
+    console.log('   - Last 50 chars:', '...' + tokens.rtmToken.substring(tokens.rtmToken.length - 50));
+    
+    console.log('\n⏰ Expiry Information:');
+    const expiryDate = new Date(tokens.expiresAt * 1000);
+    const nowDate = new Date();
+    console.log('   - Current Time:', nowDate.toISOString(), '(' + Math.floor(nowDate.getTime() / 1000) + ')');
+    console.log('   - Expires At (Unix):', tokens.expiresAt);
+    console.log('   - Expires At (ISO):', expiryDate.toISOString());
+    console.log('   - Time Until Expiry:', Math.floor((tokens.expiresAt * 1000 - nowDate.getTime()) / 1000), 'seconds');
+    console.log('   - Calculated From:', 'Math.floor(Date.now() / 1000) + 3600');
+    
+    console.log('\n🔐 Credentials Used:');
+    console.log('   - App ID:', tokens.appId);
+    console.log('   - App ID Length:', tokens.appId.length);
+    console.log('   - App ID Format:', /^[a-f0-9]{32}$/i.test(tokens.appId) ? 'Valid (32 hex chars)' : 'Invalid format');
+    console.log('   - App Certificate:', '[REDACTED - First 8 chars: ' + Deno.env.get('AGORA_APP_CERTIFICATE')?.substring(0, 8) + '...]');
+    
+    console.log('\n📊 Token Structure Comparison Guide:');
+    console.log('   Compare these values with working Agora Console token:');
+    console.log('   1. Both tokens should start with "007" (AccessToken2 version)');
+    console.log('   2. Token lengths should be similar (typically 300-500 chars)');
+    console.log('   3. App ID must match exactly');
+    console.log('   4. Channel name must match exactly (case-sensitive)');
+    console.log('   5. UID format must be consistent (string)');
+    console.log('   6. Expiry timestamp must be in the future');
+    
+    console.log('\n🧪 Quick Test Values:');
+    console.log('   - Token starts with 007?', tokens.rtcToken.startsWith('007') ? '✅ YES' : '❌ NO');
+    console.log('   - Token length reasonable?', (tokens.rtcToken.length > 200 && tokens.rtcToken.length < 1000) ? '✅ YES' : '❌ NO');
+    console.log('   - Expiry in future?', tokens.expiresAt > Math.floor(Date.now() / 1000) ? '✅ YES' : '❌ NO');
+    console.log('   - Channel name set?', channelName && channelName.length > 0 ? '✅ YES' : '❌ NO');
+    console.log('   - UID is string?', typeof String(uid) === 'string' ? '✅ YES' : '❌ NO');
+    
+    console.log('\n═══════════════════════════════════════════════════════════');
+    console.log('END TOKEN DIAGNOSTICS');
+    console.log('═══════════════════════════════════════════════════════════\n');
 
     // Log token generation
     await supabase.from('video_session_logs').insert({
