@@ -15,6 +15,7 @@ import { useMerchantFee } from "@/hooks/useMerchantFee";
 import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePharmacyShippingRates } from "@/hooks/usePharmacyShippingRates";
 
 // Wrapper component to fetch enabled options for a pharmacy
 const ShippingSpeedSelectorWithOptions = ({ 
@@ -87,6 +88,7 @@ export default function Cart() {
         .select(`
         *,
         product:products(name, dosage, image_url),
+        pharmacy:pharmacies(name),
         provider:providers(
           id,
           user_id,
@@ -204,23 +206,24 @@ export default function Cart() {
     }
   });
 
-  // Group cart lines by patient - practice orders grouped together
+  // Group cart lines by patient AND pharmacy - critical for multi-pharmacy orders
   const patientGroups = useMemo(() => {
     if (!cart?.lines) return [];
     
     const groups: Record<string, any> = {};
     
     cart.lines.forEach((line: any) => {
-      // All practice orders share the same key to group them together
+      // Group by BOTH patient AND pharmacy to handle multiple pharmacies per patient
       const patientKey = line.patient_name === "Practice Order" 
-        ? "practice_order" 
-        : (line.patient_id || `unknown_${line.id}`);
+        ? `practice_order_${line.assigned_pharmacy_id}` 
+        : `${line.patient_id || `unknown_${line.id}`}_${line.assigned_pharmacy_id}`;
       
       if (!groups[patientKey]) {
         groups[patientKey] = {
           patient_name: line.patient_name || 'Practice Order',
           patient_id: line.patient_id,
           pharmacy_id: line.assigned_pharmacy_id,
+          pharmacy_name: line.pharmacy?.name || 'Unknown Pharmacy',
           lines: [],
           shipping_speed: line.shipping_speed || 'ground'
         };
@@ -231,6 +234,27 @@ export default function Cart() {
     
     return Object.values(groups);
   }, [cart]);
+
+  // Get unique pharmacy IDs from cart
+  const uniquePharmacyIds = useMemo(() => {
+    return [...new Set(patientGroups.map(g => g.pharmacy_id).filter(Boolean))];
+  }, [patientGroups]);
+
+  // Fetch rates for all pharmacies in cart
+  const pharmacyRatesQueries = uniquePharmacyIds.map(pharmacyId => 
+    usePharmacyShippingRates(pharmacyId)
+  );
+
+  // Build pharmacy rates map: { pharmacyId: { ground: 15.00, 2day: 25.00, ... } }
+  const pharmacyRatesMap = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    uniquePharmacyIds.forEach((pharmacyId, index) => {
+      if (pharmacyRatesQueries[index]?.data) {
+        map[pharmacyId] = pharmacyRatesQueries[index].data;
+      }
+    });
+    return map;
+  }, [uniquePharmacyIds, pharmacyRatesQueries]);
 
   const cartLines = cart?.lines || [];
   const isEmpty = cartLines.length === 0;
@@ -250,16 +274,13 @@ export default function Cart() {
     return calculateSubtotal() - calculateDiscountAmount();
   }, [calculateSubtotal, calculateDiscountAmount]);
 
-  const getShippingRate = useCallback((speed: string) => {
-    const rates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
-    return rates[speed as keyof typeof rates] || 9.99;
-  }, []);
-
   const shippingPreview = useMemo(() => {
     return patientGroups.reduce((total, group) => {
-      return total + getShippingRate(group.shipping_speed);
+      const pharmacyRates = pharmacyRatesMap[group.pharmacy_id];
+      const rate = pharmacyRates?.[group.shipping_speed] || 0;
+      return total + rate;
     }, 0);
-  }, [patientGroups, getShippingRate]);
+  }, [patientGroups, pharmacyRatesMap]);
 
   const merchantFee = useMemo(() => {
     return calculateMerchantFee(calculateTotal(), shippingPreview);
@@ -334,9 +355,17 @@ export default function Cart() {
           {patientGroups.map((group: any, groupIndex: number) => (
             <Card key={`group-${group.patient_id || groupIndex}`} className="patient-card overflow-hidden">
               <CardHeader className="bg-muted/50 p-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  {group.patient_name}
+                <CardTitle className="text-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    <span>{group.patient_name}</span>
+                    {group.pharmacy_name && group.pharmacy_name !== 'Unknown Pharmacy' && (
+                      <>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-muted-foreground text-sm">{group.pharmacy_name}</span>
+                      </>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
@@ -428,7 +457,7 @@ export default function Cart() {
                 />
                 
                 <div className="text-sm text-muted-foreground pt-1">
-                  Estimated shipping: ${getShippingRate(group.shipping_speed).toFixed(2)}
+                  Estimated shipping: ${(pharmacyRatesMap[group.pharmacy_id]?.[group.shipping_speed] || 0).toFixed(2)}
                 </div>
               </CardContent>
             </Card>
