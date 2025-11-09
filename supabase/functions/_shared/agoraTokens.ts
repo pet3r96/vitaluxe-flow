@@ -1,6 +1,5 @@
 // Local Agora token builders - no external dependencies
 import { RtcTokenBuilder2, RtcRole } from './agora/RtcTokenBuilder2.ts';
-import { RtmTokenBuilder, RtmRole } from './agora/RtmTokenBuilder.ts';
 
 const HEX_32_REGEX = /^[a-f0-9]{32}$/i;
 
@@ -36,7 +35,7 @@ export interface TokenOptions {
 
 export interface AgoraTokenResult {
   rtcToken: string;
-  rtmToken: string;
+  rtmToken: string; // Same as rtcToken for new Signaling system
   rtmUid: string;
   expiresAt: number;
   appId: string;
@@ -60,6 +59,7 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
   });
 
   // Build RTC token with user account
+  // NOTE: In new Agora Signaling system, the SAME token is used for both RTC and Signaling/RTM
   const rtcToken = await RtcTokenBuilder2.buildTokenWithUserAccount(
     appId,
     appCertificate,
@@ -70,30 +70,23 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
     privilegeExpiredTs
   );
 
-  console.log('[Agora Token Generation] RTC Token:', rtcToken);
+  console.log('[Agora Token Generation] RTC Token (also used for Signaling/RTM):', rtcToken);
 
-  // Build RTM token
-  const rtmToken = await RtmTokenBuilder.buildToken(
-    appId,
-    appCertificate,
-    options.uid,
-    RtmRole.Rtm_User,
-    privilegeExpiredTs
-  );
-
-  console.log('[Agora Token Generation] RTM Token:', rtmToken);
+  // For new Signaling system: Use the SAME token for both RTC and RTM
+  // The old separate RTM token builder is deprecated
+  const rtmToken = rtcToken;
 
   const result = {
     rtcToken,
-    rtmToken,
+    rtmToken, // Same as rtcToken for new Signaling system
     rtmUid: options.uid,
     expiresAt: privilegeExpiredTs,
     appId,
   };
 
-  console.log('[Agora Token Generation] Complete. Token lengths:', {
-    rtcTokenLength: rtcToken.length,
-    rtmTokenLength: rtmToken.length,
+  console.log('[Agora Token Generation] Complete. Token length:', {
+    tokenLength: rtcToken.length,
+    note: 'Same token used for RTC and Signaling/RTM',
   });
 
   return result;
