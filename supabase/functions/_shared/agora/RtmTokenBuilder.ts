@@ -26,14 +26,14 @@ class ServiceRtm extends Service {
   pack(): Uint8Array {
     const parts: Uint8Array[] = [];
     
-    // CRITICAL: Pack service type FIRST (uint16) - matches Agora spec
+    // Pack service type first (uint16)
     parts.push(packUint16(ServiceRtm.kServiceType));
     
-    // Then pack privileges map
-    parts.push(this.packMapUint32(this.privileges));
-    
-    // Finally pack userId string
+    // Pack userId string next
     parts.push(this.packString(this.userId));
+    
+    // Pack privileges map last
+    parts.push(this.packMapUint32(this.privileges));
     
     return this.concatBytes(...parts);
   }

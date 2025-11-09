@@ -30,31 +30,26 @@ class ServiceRtc extends Service {
   }
 
   pack(): Uint8Array {
-    const encoder = new TextEncoder();
     const parts: Uint8Array[] = [];
-    
+    const encoder = new TextEncoder();
+
     // Pack service type first (uint16)
     parts.push(packUint16(ServiceRtc.kServiceType));
-    
-    // Pack privileges (tree map format)
+
+    // Pack channel name (string with length prefix)
+    parts.push(this.packString(this.channelName));
+
+    // Pack UID (string with length prefix)
+    parts.push(this.packString(this.uid));
+
+    // Pack privileges (tree map format) LAST
     const privilegeKeys = Object.keys(this.privileges).map(k => parseInt(k)).sort((a, b) => a - b);
     parts.push(packUint16(privilegeKeys.length));
-    
     for (const key of privilegeKeys) {
       parts.push(packUint16(key));
       parts.push(packUint32(this.privileges[key]));
     }
-    
-    // Pack channel name (string with length prefix)
-    const channelBytes = encoder.encode(this.channelName);
-    parts.push(packUint16(channelBytes.length));
-    parts.push(channelBytes);
-    
-    // Pack UID (string with length prefix)
-    const uidBytes = encoder.encode(this.uid);
-    parts.push(packUint16(uidBytes.length));
-    parts.push(uidBytes);
-    
+
     return concatUint8Arrays(...parts);
   }
 }
