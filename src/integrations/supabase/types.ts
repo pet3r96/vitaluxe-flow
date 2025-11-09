@@ -133,6 +133,59 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          pharmacy_id: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          pharmacy_id?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          pharmacy_id?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_alerts_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_ip_banlist: {
         Row: {
           banned: boolean
@@ -4664,12 +4717,15 @@ export type Database = {
           created_at: string | null
           error_message: string | null
           id: string
+          manually_retried: boolean | null
           order_id: string
           order_line_id: string | null
           pharmacy_id: string
           request_payload: Json
           response_body: Json | null
           response_status: number | null
+          retried_at: string | null
+          retried_by: string | null
           retry_count: number | null
           success: boolean | null
           transmission_type: string
@@ -4680,12 +4736,15 @@ export type Database = {
           created_at?: string | null
           error_message?: string | null
           id?: string
+          manually_retried?: boolean | null
           order_id: string
           order_line_id?: string | null
           pharmacy_id: string
           request_payload: Json
           response_body?: Json | null
           response_status?: number | null
+          retried_at?: string | null
+          retried_by?: string | null
           retry_count?: number | null
           success?: boolean | null
           transmission_type: string
@@ -4696,12 +4755,15 @@ export type Database = {
           created_at?: string | null
           error_message?: string | null
           id?: string
+          manually_retried?: boolean | null
           order_id?: string
           order_line_id?: string | null
           pharmacy_id?: string
           request_payload?: Json
           response_body?: Json | null
           response_status?: number | null
+          retried_at?: string | null
+          retried_by?: string | null
           retry_count?: number | null
           success?: boolean | null
           transmission_type?: string

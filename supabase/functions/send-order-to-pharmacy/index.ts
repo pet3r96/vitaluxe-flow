@@ -174,6 +174,23 @@ serve(async (req) => {
             retry_count: attempt,
           });
 
+          // Check for alerts after successful transmission
+          try {
+            await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/check-pharmacy-alerts`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify({
+                pharmacy_id: pharmacy.id,
+                check_types: ['consecutive_failures']
+              })
+            });
+          } catch (alertError) {
+            console.error('Error checking alerts:', alertError);
+          }
+
           return new Response(
             JSON.stringify({ success: true, response: responseBody }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -216,6 +233,23 @@ serve(async (req) => {
       error_message: lastError,
       retry_count: maxRetries,
     });
+
+    // Check for alerts after failures
+    try {
+      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/check-pharmacy-alerts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+        },
+        body: JSON.stringify({
+          pharmacy_id: pharmacy.id,
+          check_types: ['consecutive_failures', 'high_failure_rate']
+        })
+      });
+    } catch (alertError) {
+      console.error('Error checking alerts:', alertError);
+    }
 
     return new Response(
       JSON.stringify({ 

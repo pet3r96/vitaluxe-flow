@@ -172,6 +172,75 @@ serve(async (req) => {
       }
     }
 
+    // Check for missing tracking updates (24+ hours since shipped)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: staleOrders } = await supabaseAdmin
+      .from('order_lines')
+      .select('id, order_id, assigned_pharmacy_id, shipped_at')
+      .eq('status', 'shipped')
+      .not('shipped_at', 'is', null)
+      .lt('shipped_at', twentyFourHoursAgo);
+
+    if (staleOrders && staleOrders.length > 0) {
+      // Group by pharmacy
+      const staleByPharmacy = new Map<string, any[]>();
+      
+      for (const orderLine of staleOrders) {
+        if (!orderLine.assigned_pharmacy_id) continue;
+        
+        // Check if tracking update received in last 24 hours
+        const { data: recentUpdates } = await supabaseAdmin
+          .from('pharmacy_tracking_updates')
+          .select('id')
+          .eq('order_line_id', orderLine.id)
+          .gte('received_at', twentyFourHoursAgo)
+          .limit(1);
+
+        if (!recentUpdates || recentUpdates.length === 0) {
+          if (!staleByPharmacy.has(orderLine.assigned_pharmacy_id)) {
+            staleByPharmacy.set(orderLine.assigned_pharmacy_id, []);
+          }
+          staleByPharmacy.get(orderLine.assigned_pharmacy_id)!.push(orderLine);
+        }
+      }
+
+      // Create alerts for pharmacies with stale tracking
+      for (const [pharmacyId, orders] of staleByPharmacy.entries()) {
+        const { data: existingAlert } = await supabaseAdmin
+          .from('admin_alerts')
+          .select('id')
+          .eq('pharmacy_id', pharmacyId)
+          .eq('alert_type', 'missing_tracking_updates')
+          .eq('resolved', false)
+          .single();
+
+        if (!existingAlert && orders.length > 0) {
+          const { data: pharmacy } = await supabaseAdmin
+            .from('pharmacies')
+            .select('name')
+            .eq('id', pharmacyId)
+            .single();
+          
+          await supabaseAdmin
+            .from('admin_alerts')
+            .insert({
+              alert_type: 'missing_tracking_updates',
+              severity: 'warning',
+              pharmacy_id: pharmacyId,
+              title: `Missing Tracking Updates: ${pharmacy?.name || 'Unknown'}`,
+              message: `${orders.length} order${orders.length > 1 ? 's' : ''} shipped 24+ hours ago ${orders.length > 1 ? 'have' : 'has'} not received tracking updates from ${pharmacy?.name || 'this pharmacy'}.`,
+              metadata: {
+                affected_order_count: orders.length,
+                order_line_ids: orders.map(o => o.id),
+                oldest_shipped_at: orders.sort((a, b) => 
+                  new Date(a.shipped_at).getTime() - new Date(b.shipped_at).getTime()
+                )[0].shipped_at
+              }
+            });
+        }
+      }
+    }
+
     console.log("Pharmacy tracking poll complete");
 
     return new Response(
