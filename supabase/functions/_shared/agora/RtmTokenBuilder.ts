@@ -1,5 +1,6 @@
 // RTM Token Builder for Agora - Deno implementation
 import { AccessToken2, Service } from './AccessToken2.ts';
+import { packUint16 } from './crypto.ts';
 
 export enum RtmRole {
   Rtm_User = 1,
@@ -25,10 +26,13 @@ class ServiceRtm extends Service {
   pack(): Uint8Array {
     const parts: Uint8Array[] = [];
     
-    // Pack privileges map first
+    // CRITICAL: Pack service type FIRST (uint16) - matches Agora spec
+    parts.push(packUint16(ServiceRtm.kServiceType));
+    
+    // Then pack privileges map
     parts.push(this.packMapUint32(this.privileges));
     
-    // Then pack userId string
+    // Finally pack userId string
     parts.push(this.packString(this.userId));
     
     return this.concatBytes(...parts);
