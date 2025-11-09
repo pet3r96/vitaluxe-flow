@@ -1,15 +1,21 @@
 // Official Agora token generation crypto utilities - based on AgoraIO/Tools implementation
-import { createHmac } from "https://deno.land/std@0.224.0/crypto/mod.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 export async function createHmacSha256(key: string, data: Uint8Array): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(key);
   
-  const hmac = createHmac("sha256", keyData);
-  hmac.update(data);
+  // Use Web Crypto API for HMAC-SHA256
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
   
-  return new Uint8Array(hmac.digest());
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, data);
+  return new Uint8Array(signature);
 }
 
 export function base64Encode(data: Uint8Array): string {
