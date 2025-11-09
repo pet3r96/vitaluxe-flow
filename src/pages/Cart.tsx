@@ -220,7 +220,7 @@ export default function Cart() {
         groups[patientKey] = {
           patient_name: line.patient_name || 'Practice Order',
           patient_id: line.patient_id,
-          pharmacy_id: line.pharmacy_id,
+          pharmacy_id: line.assigned_pharmacy_id,
           lines: [],
           shipping_speed: line.shipping_speed || 'ground'
         };
