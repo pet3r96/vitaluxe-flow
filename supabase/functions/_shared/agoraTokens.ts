@@ -1,5 +1,5 @@
-// Official Agora token builder using esm.sh CDN (Deno-compatible)
-import { RtcTokenBuilder, RtcRole } from "https://esm.sh/agora-token@2.0.5";
+// Official Agora token builder using npm: (Deno Node.js compatibility)
+import { RtcTokenBuilder, RtcRole } from "npm:agora-token@2.0.5";
 
 const HEX_32_REGEX = /^[a-f0-9]{32}$/i;
 
