@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const agoraAppCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
 
 Deno.serve(async (req) => {
   console.log('🚀 [join-video-session] Request received', req.method);
@@ -219,7 +220,7 @@ Deno.serve(async (req) => {
     // Final debug output before returning to frontend
     console.log("=== EDGE AGORA DEBUG ===");
     console.log("AppID:", tokenData.appId);
-    console.log("Cert8:", tokenData.appId.slice(0, 8));
+    console.log("Cert8:", agoraAppCertificate?.slice(0, 8) || 'not-set');
     console.log("Channel:", tokenData.channelName);
     console.log("UID:", tokenData.uid);
     console.log("Token10:", tokenData.token.slice(0, 10));
