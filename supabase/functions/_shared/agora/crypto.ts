@@ -1,5 +1,5 @@
 // Official Agora token generation crypto utilities - based on AgoraIO/Tools implementation
-import { createHmac } from "https://deno.land/std@0.224.0/crypto/mod.ts";
+import { createHmac } from "https://deno.land/std@0.224.0/node/crypto.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 export async function createHmacSha256(key: string, data: Uint8Array): Promise<Uint8Array> {
