@@ -16,6 +16,45 @@ import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Wrapper component to fetch enabled options for a pharmacy
+const ShippingSpeedSelectorWithOptions = ({ 
+  pharmacyId, 
+  value, 
+  onChange, 
+  patientName, 
+  disabled 
+}: { 
+  pharmacyId: string; 
+  value: 'ground' | '2day' | 'overnight';
+  onChange: (value: 'ground' | '2day' | 'overnight') => void;
+  patientName: string;
+  disabled?: boolean;
+}) => {
+  const { data: enabledRates, isLoading } = useQuery({
+    queryKey: ['pharmacy-enabled-rates', pharmacyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('pharmacy_shipping_rates')
+        .select('shipping_speed')
+        .eq('pharmacy_id', pharmacyId)
+        .eq('enabled', true);
+      return data?.map(r => r.shipping_speed as 'ground' | '2day' | 'overnight') || [];
+    },
+    enabled: !!pharmacyId
+  });
+  
+  return (
+    <ShippingSpeedSelector
+      value={value}
+      onChange={onChange}
+      patientName={patientName}
+      disabled={disabled}
+      enabledOptions={enabledRates}
+      isLoading={isLoading}
+    />
+  );
+};
+
 export default function Cart() {
   const { effectiveUserId, user } = useAuth();
   const { toast } = useToast();
@@ -181,6 +220,7 @@ export default function Cart() {
         groups[patientKey] = {
           patient_name: line.patient_name || 'Practice Order',
           patient_id: line.patient_id,
+          pharmacy_id: line.pharmacy_id,
           lines: [],
           shipping_speed: line.shipping_speed || 'ground'
         };
@@ -376,7 +416,8 @@ export default function Cart() {
                 
                 <Separator className="my-3" />
                 
-                <ShippingSpeedSelector
+                <ShippingSpeedSelectorWithOptions
+                  pharmacyId={group.pharmacy_id}
                   value={group.shipping_speed}
                   onChange={(speed) => {
                     const lineIds = group.lines.map((l: any) => l.id);

@@ -4655,6 +4655,7 @@ export type Database = {
       pharmacy_shipping_rates: {
         Row: {
           created_at: string | null
+          enabled: boolean
           id: string
           pharmacy_id: string
           rate: number
@@ -4663,6 +4664,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          enabled?: boolean
           id?: string
           pharmacy_id: string
           rate: number
@@ -4671,6 +4673,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          enabled?: boolean
           id?: string
           pharmacy_id?: string
           rate?: number

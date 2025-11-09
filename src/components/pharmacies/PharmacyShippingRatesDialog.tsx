@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Truck, Clock, Zap } from "lucide-react";
 
@@ -23,9 +24,9 @@ export const PharmacyShippingRatesDialog = ({
   const queryClient = useQueryClient();
   
   const [rates, setRates] = useState({
-    ground: '',
-    '2day': '',
-    overnight: ''
+    ground: { rate: '', enabled: true },
+    '2day': { rate: '', enabled: true },
+    overnight: { rate: '', enabled: true }
   });
 
   // Fetch existing rates
@@ -34,7 +35,7 @@ export const PharmacyShippingRatesDialog = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pharmacy_shipping_rates')
-        .select('shipping_speed, rate')
+        .select('shipping_speed, rate, enabled')
         .eq('pharmacy_id', pharmacy.id);
       
       if (error) throw error;
@@ -46,9 +47,12 @@ export const PharmacyShippingRatesDialog = ({
   useEffect(() => {
     if (existingRates) {
       const ratesMap = existingRates.reduce((acc, rate) => {
-        acc[rate.shipping_speed] = rate.rate.toString();
+        acc[rate.shipping_speed] = {
+          rate: rate.rate.toString(),
+          enabled: rate.enabled ?? true
+        };
         return acc;
-      }, { ground: '', '2day': '', overnight: '' });
+      }, { ground: { rate: '', enabled: true }, '2day': { rate: '', enabled: true }, overnight: { rate: '', enabled: true } });
       setRates(ratesMap);
     }
   }, [existingRates]);
@@ -57,12 +61,13 @@ export const PharmacyShippingRatesDialog = ({
     mutationFn: async () => {
       const updates = [];
       
-      for (const [speed, rate] of Object.entries(rates)) {
-        if (rate && parseFloat(rate) >= 0) {
+      for (const [speed, config] of Object.entries(rates)) {
+        if (config.rate && parseFloat(config.rate) >= 0) {
           updates.push({
             pharmacy_id: pharmacy.id,
             shipping_speed: speed,
-            rate: parseFloat(rate)
+            rate: parseFloat(config.rate),
+            enabled: config.enabled
           });
         }
       }
@@ -101,50 +106,92 @@ export const PharmacyShippingRatesDialog = ({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="ground" className="flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Ground Shipping (5-7 days)
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="ground" className="flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                Ground Shipping (5-7 days)
+              </Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={rates.ground.enabled}
+                  onCheckedChange={(checked) => 
+                    setRates({ ...rates, ground: { ...rates.ground, enabled: !!checked }})
+                  }
+                />
+                <span className="text-xs text-muted-foreground">
+                  {rates.ground.enabled ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+            </div>
             <Input
               id="ground"
               type="number"
               step="0.01"
               min="0"
               placeholder="9.99"
-              value={rates.ground}
-              onChange={(e) => setRates({ ...rates, ground: e.target.value })}
+              value={rates.ground.rate}
+              onChange={(e) => setRates({ ...rates, ground: { ...rates.ground, rate: e.target.value }})}
+              disabled={!rates.ground.enabled}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="2day" className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-blue-500" />
-              2-Day Shipping
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="2day" className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-500" />
+                2-Day Shipping
+              </Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={rates['2day'].enabled}
+                  onCheckedChange={(checked) => 
+                    setRates({ ...rates, '2day': { ...rates['2day'], enabled: !!checked }})
+                  }
+                />
+                <span className="text-xs text-muted-foreground">
+                  {rates['2day'].enabled ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+            </div>
             <Input
               id="2day"
               type="number"
               step="0.01"
               min="0"
               placeholder="19.99"
-              value={rates['2day']}
-              onChange={(e) => setRates({ ...rates, '2day': e.target.value })}
+              value={rates['2day'].rate}
+              onChange={(e) => setRates({ ...rates, '2day': { ...rates['2day'], rate: e.target.value }})}
+              disabled={!rates['2day'].enabled}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="overnight" className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-yellow-500" />
-              Overnight Shipping
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="overnight" className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-yellow-500" />
+                Overnight Shipping
+              </Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={rates.overnight.enabled}
+                  onCheckedChange={(checked) => 
+                    setRates({ ...rates, overnight: { ...rates.overnight, enabled: !!checked }})
+                  }
+                />
+                <span className="text-xs text-muted-foreground">
+                  {rates.overnight.enabled ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+            </div>
             <Input
               id="overnight"
               type="number"
               step="0.01"
               min="0"
               placeholder="29.99"
-              value={rates.overnight}
-              onChange={(e) => setRates({ ...rates, overnight: e.target.value })}
+              value={rates.overnight.rate}
+              onChange={(e) => setRates({ ...rates, overnight: { ...rates.overnight, rate: e.target.value }})}
+              disabled={!rates.overnight.enabled}
             />
           </div>
         </div>
