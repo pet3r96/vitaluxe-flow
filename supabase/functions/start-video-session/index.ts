@@ -100,18 +100,14 @@ Deno.serve(async (req) => {
     let authorized = isAdmin || provider.user_id === effectiveUserId;
     
     if (!authorized) {
-      // Check if user is a provider or staff in the same practice
-      const { data: myProvider } = await supabase
+      // Check if user is ANY personnel (provider/staff) in the same practice
+      const { data: myProviderOrStaff } = await supabase
         .from('providers')
-        .select('practice_id')
+        .select('practice_id, role_type')
         .eq('user_id', effectiveUserId)
         .maybeSingle();
-      const { data: myStaff } = await supabase
-        .from('practice_staff')
-        .select('practice_id')
-        .eq('user_id', effectiveUserId)
-        .maybeSingle();
-      authorized = (myProvider?.practice_id === session.practice_id) || (myStaff?.practice_id === session.practice_id);
+      
+      authorized = myProviderOrStaff?.practice_id === session.practice_id;
     }
 
     if (!authorized) {
