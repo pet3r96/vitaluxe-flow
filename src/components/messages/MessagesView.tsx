@@ -83,7 +83,7 @@ export const MessagesView = () => {
       // For staff members, get their practice_id first
       if (effectiveRole === "staff") {
         const { data: staffData } = await supabase
-          .from("practice_staff")
+          .from("providers")
           .select("practice_id")
           .eq("user_id", effectiveUserId)
           .eq("active", true)

@@ -19,7 +19,6 @@ class RealtimeManager {
   private tableDependencies: Record<string, string[]> = {
     'patient_appointments': ['calendar-data', 'waiting-room-dashboard', 'today-appointments', 'being-treated-appointments', 'provider-video-sessions'],
     'practice_rooms': ['calendar-data'],
-    'practice_staff': ['calendar-data'],
     'providers': ['calendar-data'],
     'practice_blocked_time': ['calendar-data'],
     'patient_notes': ['engagement-summary'],

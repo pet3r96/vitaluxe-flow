@@ -745,7 +745,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } else {
             // Check if this is a staff account
             const { data: staffData, error: staffError } = await supabase
-              .from('practice_staff')
+              .from('providers')
               .select('practice_id')
               .eq('user_id', effectiveUserId)
               .maybeSingle();
@@ -780,10 +780,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (error) logger.info('Auth: provider practice lookup', logger.sanitize({ error: error.message }));
           }
         } 
-        // If role is staff, fetch the practice_id from practice_staff table
+        // If role is staff, fetch the practice_id from providers table
         else if (effectiveRole === 'staff') {
           const { data, error } = await supabase
-            .from('practice_staff')
+            .from('providers')
             .select('practice_id')
             .eq('user_id', effectiveUserId)
             .maybeSingle();

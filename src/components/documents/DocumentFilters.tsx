@@ -48,11 +48,12 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       
-      // Get practice staff
+      // Get practice staff from unified providers table
       const { data: staffData, error: staffError } = await supabase
-        .from("practice_staff")
+        .from("providers")
         .select("user_id, profiles!inner(id, full_name)")
-        .eq("practice_id", effectivePracticeId);
+        .eq("practice_id", effectivePracticeId)
+        .neq("role_type", "provider");
       
       if (staffError) throw staffError;
 

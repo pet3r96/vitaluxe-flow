@@ -50,7 +50,7 @@ export default function SupportTickets() {
         const { data: { user } } = await supabase.auth.getUser();
         
         const { data: staffData, error: staffError } = await supabase
-          .from("practice_staff")
+          .from("providers")
           .select("practice_id")
           .eq("user_id", user?.id)
           .eq("active", true)

@@ -168,7 +168,7 @@ export function OrdersBreakdown() {
         // For staff members, get their practice_id
         if (effectiveRole === 'staff') {
           const { data: staffData } = await supabase
-            .from("practice_staff")
+            .from("providers")
             .select("practice_id")
             .eq("user_id", effectiveUserId)
             .eq("active", true)

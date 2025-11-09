@@ -19,11 +19,12 @@ export const StaffDiagnostics = () => {
         messageThreadCount: 0,
       };
       
-      // Check practice_staff membership
+      // Check providers membership (unified table)
       const { data: staffData } = await supabase
-        .from('practice_staff')
+        .from('providers')
         .select('*')
         .eq('user_id', effectiveUserId)
+        .neq('role_type', 'provider')
         .eq('active', true)
         .maybeSingle();
       

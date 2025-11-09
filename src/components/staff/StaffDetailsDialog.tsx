@@ -60,9 +60,9 @@ export const StaffDetailsDialog = ({
 
       if (profileError) throw profileError;
 
-      // Update practice_staff table timestamp
+      // Update providers table timestamp
       const { error: staffError } = await supabase
-        .from("practice_staff")
+        .from("providers")
         .update({ updated_at: new Date().toISOString() })
         .eq("id", staff.id);
 

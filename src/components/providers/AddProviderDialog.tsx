@@ -80,9 +80,10 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
     queryKey: ["staff-practice", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("practice_staff")
+        .from("providers")
         .select("practice_id")
         .eq("user_id", effectiveUserId)
+        .neq("role_type", "provider")
         .single();
       
       if (error) throw error;

@@ -11,9 +11,10 @@ export const useStaffOrderingPrivileges = () => {
       if (!isStaffAccount || !effectiveUserId) return true;
       
       const { data, error } = await supabase
-        .from('practice_staff')
+        .from('providers')
         .select('can_order')
         .eq('user_id', effectiveUserId)
+        .neq('role_type', 'provider')
         .single();
       
       if (error) {

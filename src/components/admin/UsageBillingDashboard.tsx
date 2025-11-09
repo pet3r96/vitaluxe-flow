@@ -30,7 +30,7 @@ export const UsageBillingDashboard = () => {
         if (!isAdmin) {
           // Check if user is staff
           const { data: staffRecord } = await supabase
-            .from('practice_staff')
+            .from('providers')
             .select('practice_id')
             .eq('user_id', user.id)
             .eq('active', true)

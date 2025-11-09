@@ -265,9 +265,9 @@ export const OrdersDataTable = () => {
 
       // Filter by staff practice if role is staff
       if (effectiveRole === "staff") {
-        // Get staff's practice_id from practice_staff table
+        // Get staff's practice_id from unified providers table
         const { data: staffData } = await supabase
-          .from("practice_staff")
+          .from("providers")
           .select("practice_id")
           .eq("user_id", effectiveUserId)
           .eq("active", true)

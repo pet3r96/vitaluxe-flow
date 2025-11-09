@@ -42,14 +42,15 @@ export const StaffProfileForm = () => {
   const { data: staffData, isLoading } = useQuery({
     queryKey: ["staff-profile", effectiveUserId],
     queryFn: async () => {
-      // Get staff data with practice relationship
+      // Get staff data with practice relationship from unified providers table
       const { data: practiceStaffData, error: staffError } = await supabase
-        .from("practice_staff")
+        .from("providers")
         .select(`
           *,
-          practice:profiles!practice_staff_practice_id_fkey(name)
+          practice:profiles!providers_practice_id_fkey(name)
         `)
         .eq("user_id", effectiveUserId)
+        .neq("role_type", "provider")
         .single();
 
       if (staffError) throw staffError;

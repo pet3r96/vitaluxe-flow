@@ -42,7 +42,7 @@ export default function PatientInbox() {
       if (providerData?.practice_id) return providerData.practice_id;
 
       const { data: staffData } = await supabase
-        .from("practice_staff")
+        .from("providers")
         .select("practice_id")
         .eq("user_id", user.id)
         .maybeSingle();
