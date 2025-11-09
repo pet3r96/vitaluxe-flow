@@ -145,6 +145,7 @@ const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
+const TestAgoraToken = lazy(() => import("./pages/admin/TestAgoraToken"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -266,6 +267,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
                                        <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
                                        <Route path="/admin/alerts" element={<AdminAlerts />} />
+                                       <Route path="/admin/test-agora-token" element={<DeveloperRoute><TestAgoraToken /></DeveloperRoute>} />
                                        <Route path="/rep-reports" element={<RepProfitReports />} />
                                       <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                       <Route path="/downline-performance" element={<DownlinePerformanceView />} />
