@@ -119,30 +119,53 @@ export default function PracticeCalendar() {
     }
   );
 
-  // Fetch providers separately using list-providers (unified source)
+  // Fetch providers and staff using unified hook
   const { data: providersData } = useRealtimeQuery(
-    ['providers', practiceId],
+    ['providers-and-staff', practiceId],
     async () => {
-      console.info('[PracticeCalendar] Fetching providers via list-providers');
-      const { data, error } = await supabase.functions.invoke('list-providers', {
+      if (!practiceId) return [];
+
+      console.info('[PracticeCalendar] Fetching providers and staff');
+
+      // Fetch providers via edge function
+      const { data: providersResponse, error: provError } = await supabase.functions.invoke('list-providers', {
         body: { practice_id: practiceId }
       });
-      
-      if (error) throw error;
-      
-      const providersList = data?.providers || [];
-      console.info('[PracticeCalendar] ✅ Providers loaded:', {
-        count: providersList.length,
-        sampleNames: providersList.slice(0, 2).map((p: any) => 
-          p.profiles?.prescriber_name || p.profiles?.full_name || 'Unknown'
-        )
+
+      if (provError) throw provError;
+      const providers = providersResponse?.providers || [];
+
+      // Fetch staff via edge function
+      const { data: staffResponse, error: staffError } = await supabase.functions.invoke('list-staff', {
+        body: { practice_id: practiceId }
       });
-      
-      return providersList;
+
+      if (staffError) throw staffError;
+      const staff = staffResponse?.staff || [];
+
+      // Combine and add type indicator
+      const combined = [
+        ...providers.map((p: any) => ({ ...p, type: 'provider' })),
+        ...staff.map((s: any) => ({
+          id: s.id,
+          user_id: s.user_id,
+          profiles: s.profiles,
+          type: 'staff',
+          full_name: s.profiles?.full_name || s.profiles?.name || 'Staff Member',
+        }))
+      ];
+
+      console.info('[PracticeCalendar] ✅ Providers and staff loaded:', {
+        providers: providers.length,
+        staff: staff.length,
+        total: combined.length
+      });
+
+      return combined;
     },
     {
       enabled: !!practiceId,
-      staleTime: 60 * 1000, // 1 minute - providers change less frequently
+      staleTime: 60 * 1000, // 1 minute
       refetchOnWindowFocus: true,
     }
   );

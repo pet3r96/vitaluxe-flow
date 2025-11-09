@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -207,28 +208,51 @@ export const ProviderVirtualWaitingRoom = ({
     }
   }, [showCreateDialog, practiceId, queryClient]);
 
-  // Fetch providers using unified list-providers function
+  // Fetch providers and staff using unified approach
   const { data: providers } = useQuery({
-    queryKey: ['providers', practiceId],
+    queryKey: ['providers-and-staff', practiceId],
     queryFn: async () => {
-      console.info('[ProviderVirtualWaitingRoom] Fetching providers via list-providers');
-      const { data, error } = await supabase.functions.invoke('list-providers', {
+      if (!practiceId) return [];
+
+      console.info('[ProviderVirtualWaitingRoom] Fetching providers and staff');
+
+      // Fetch providers via edge function
+      const { data: providersResponse, error: provError } = await supabase.functions.invoke('list-providers', {
         body: { practice_id: practiceId }
       });
-      
-      if (error) throw error;
-      
-      const providersList = data?.providers || [];
-      console.info('[ProviderVirtualWaitingRoom] ✅ Providers loaded:', {
-        count: providersList.length,
-        sampleNames: providersList.slice(0, 2).map((p: any) => 
-          p.profiles?.prescriber_name || p.profiles?.full_name || 'Unknown'
-        )
+
+      if (provError) throw provError;
+      const providersList = providersResponse?.providers || [];
+
+      // Fetch staff via edge function
+      const { data: staffResponse, error: staffError } = await supabase.functions.invoke('list-staff', {
+        body: { practice_id: practiceId }
       });
-      
-      return providersList;
+
+      if (staffError) throw staffError;
+      const staffList = staffResponse?.staff || [];
+
+      // Combine and add type indicator
+      const combined = [
+        ...providersList.map((p: any) => ({ ...p, type: 'provider' })),
+        ...staffList.map((s: any) => ({
+          id: s.id,
+          user_id: s.user_id,
+          profiles: s.profiles,
+          type: 'staff',
+          full_name: s.profiles?.full_name || s.profiles?.name || 'Staff Member',
+        }))
+      ];
+
+      console.info('[ProviderVirtualWaitingRoom] ✅ Providers and staff loaded:', {
+        providers: providersList.length,
+        staff: staffList.length,
+        total: combined.length
+      });
+
+      return combined;
     },
-    enabled: showCreateDialog || showScheduleDialog || practiceId !== '' // Always fetch for practice
+    enabled: showCreateDialog || showScheduleDialog || practiceId !== ''
   });
 
   // Helper function to check if a session is synthetic (not yet created in DB)
@@ -867,9 +891,10 @@ export const ProviderVirtualWaitingRoom = ({
           practiceId={practiceId}
           providers={providers?.map(p => ({
             id: p.id,
-            full_name: getProviderDisplayName(p),
+            full_name: p.full_name || getProviderDisplayName(p),
             first_name: p.first_name || '',
             last_name: p.last_name || '',
+            type: p.type,
           })) || []}
           rooms={[]}
           defaultVisitType="video"
@@ -960,13 +985,23 @@ export const ProviderVirtualWaitingRoom = ({
                           const displayName = getProviderDisplayName(provider);
                           return (
                             <SelectItem key={provider.id} value={provider.id}>
-                              {displayName}
+                              <div className="flex items-center justify-between w-full gap-2">
+                                <span>{displayName}</span>
+                                {provider.type && (
+                                  <Badge 
+                                    variant={provider.type === 'provider' ? 'default' : 'secondary'}
+                                    className="ml-2 text-[10px] px-1.5 py-0"
+                                  >
+                                    {provider.type === 'provider' ? 'Provider' : 'Staff'}
+                                  </Badge>
+                                )}
+                              </div>
                             </SelectItem>
                           );
                         })
                       ) : (
                         <SelectItem value="no-providers-available" disabled>
-                          No providers found
+                          No providers or staff found
                         </SelectItem>
                       )}
                     </SelectContent>

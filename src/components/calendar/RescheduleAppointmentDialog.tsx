@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -194,12 +195,22 @@ export function RescheduleAppointmentDialog({
                   {providers && providers.length > 0 ? (
                     providers.map((provider) => (
                       <SelectItem key={provider.id} value={provider.id}>
-                        {provider.full_name || `${provider.first_name} ${provider.last_name}`}
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <span>{provider.full_name || `${provider.first_name} ${provider.last_name}`}</span>
+                          {(provider as any).type && (
+                            <Badge 
+                              variant={(provider as any).type === 'provider' ? 'default' : 'secondary'}
+                              className="ml-2 text-[10px] px-1.5 py-0"
+                            >
+                              {(provider as any).type === 'provider' ? 'Provider' : 'Staff'}
+                            </Badge>
+                          )}
+                        </div>
                       </SelectItem>
                     ))
                   ) : (
                     <SelectItem value="no-providers-available" disabled>
-                      No providers available
+                      No providers or staff available
                     </SelectItem>
                   )}
                 </SelectContent>

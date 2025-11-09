@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { addWeeks, addMonths, format } from "date-fns";
 
@@ -518,7 +519,17 @@ export function CompleteAppointmentDialog({
                       <SelectContent>
                         {providers?.map((provider) => (
                           <SelectItem key={provider.id} value={provider.id}>
-                            {provider.full_name || "Unknown"}
+                            <div className="flex items-center justify-between w-full gap-2">
+                              <span>{provider.full_name || "Unknown"}</span>
+                              {provider.type && (
+                                <Badge 
+                                  variant={provider.type === 'provider' ? 'default' : 'secondary'}
+                                  className="ml-2 text-[10px] px-1.5 py-0"
+                                >
+                                  {provider.type === 'provider' ? 'Provider' : 'Staff'}
+                                </Badge>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
