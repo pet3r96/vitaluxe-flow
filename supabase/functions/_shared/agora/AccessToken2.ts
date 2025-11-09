@@ -43,8 +43,12 @@ export class AccessToken2 {
     // Add services count (uint16)
     parts.push(packUint16(this.services.length));
     
-    // Add each service
+    // Add each service WITH service type prefix as required by spec
     for (const service of this.services) {
+      // Service type
+      const type = typeof service.getServiceType === 'function' ? service.getServiceType() : 0;
+      parts.push(packUint16(type));
+
       const servicePacked = service.pack();
       parts.push(packUint16(servicePacked.length));
       parts.push(servicePacked);
