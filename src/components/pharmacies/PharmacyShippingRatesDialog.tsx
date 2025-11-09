@@ -59,20 +59,46 @@ export const PharmacyShippingRatesDialog = ({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const updates = [];
-      
-      for (const [speed, config] of Object.entries(rates)) {
-        if (config.rate && parseFloat(config.rate) >= 0) {
+      const updates: Array<{
+        pharmacy_id: string;
+        shipping_speed: 'ground' | '2day' | 'overnight';
+        rate: number;
+        enabled: boolean;
+      }> = [];
+
+      for (const [speedKey, config] of Object.entries(rates)) {
+        const speed = speedKey as 'ground' | '2day' | 'overnight';
+        const parsed = parseFloat(config.rate);
+        const hasValidNumber = Number.isFinite(parsed) && parsed >= 0;
+
+        if (config.enabled) {
+          if (!hasValidNumber) {
+            // Block save when an enabled option has no valid price
+            throw new Error(
+              `Please enter a valid price for ${
+                speed === 'ground' ? 'Ground' : speed === '2day' ? '2-Day' : 'Overnight'
+              } or disable it.`
+            );
+          }
+
           updates.push({
             pharmacy_id: pharmacy.id,
             shipping_speed: speed,
-            rate: parseFloat(config.rate),
-            enabled: config.enabled
+            rate: parsed,
+            enabled: true,
+          });
+        } else {
+          // Persist disabled options with rate = 0
+          updates.push({
+            pharmacy_id: pharmacy.id,
+            shipping_speed: speed,
+            rate: 0,
+            enabled: false,
           });
         }
       }
 
-      // Upsert rates
+      // Upsert rates for all speeds
       const { error } = await supabase
         .from('pharmacy_shipping_rates')
         .upsert(updates, { onConflict: 'pharmacy_id,shipping_speed' });
