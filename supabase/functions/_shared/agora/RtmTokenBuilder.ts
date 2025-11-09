@@ -15,22 +15,22 @@ class ServiceRtm extends Service {
     this.userId = userId;
   }
 
-  pack(): string {
+  pack(): Uint8Array {
     return this.packString(this.userId);
   }
 }
 
 export class RtmTokenBuilder {
-  static buildToken(
+  static async buildToken(
     appId: string,
     appCertificate: string,
     userId: string,
     role: RtmRole,
     expireTs: number
-  ): string {
+  ): Promise<string> {
     const token = new AccessToken2(appId, appCertificate, expireTs);
     const serviceRtm = new ServiceRtm(userId);
     token.addService(serviceRtm);
-    return token.build();
+    return await token.build();
   }
 }

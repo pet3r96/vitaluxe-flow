@@ -1,5 +1,8 @@
 // Agora AccessToken2 implementation for Deno
-// Based on official Agora algorithm
+// Based on official Agora token generation algorithm
+import { createHmacSha256, base64Encode, crc32, packUint16, packUint32, concatUint8Arrays } from './crypto.ts';
+
+const VERSION = "007";
 
 export class AccessToken2 {
   private appId: string;
@@ -7,7 +10,7 @@ export class AccessToken2 {
   private expire: number;
   private issueTs: number;
   private salt: number;
-  private services: { [key: string]: any };
+  private services: Map<number, any>;
 
   constructor(appId: string, appCertificate: string, expire: number) {
     this.appId = appId;
@@ -15,82 +18,60 @@ export class AccessToken2 {
     this.expire = expire;
     this.issueTs = Math.floor(Date.now() / 1000);
     this.salt = Math.floor(Math.random() * 99999999) + 1;
-    this.services = {};
+    this.services = new Map();
   }
 
   addService(service: any): void {
-    this.services[service.getServiceType()] = service;
+    this.services.set(service.getServiceType(), service);
   }
 
-  build(): string {
-    const msg = this.packMsg();
-    const signature = this.sign(msg);
-    return this.appId + this.packString(signature) + this.packString(msg);
+  async build(): Promise<string> {
+    const message = this.buildMessage();
+    const signature = await this.sign(message);
+    
+    // Combine: signature + crc32 + message
+    const crc32Value = crc32(concatUint8Arrays(signature, message));
+    const crc32Bytes = packUint32(crc32Value);
+    
+    const content = concatUint8Arrays(signature, crc32Bytes, message);
+    const encoded = base64Encode(content);
+    
+    return VERSION + encoded;
   }
 
-  private packMsg(): string {
-    const salt = this.packUint32(this.salt);
-    const ts = this.packUint32(this.issueTs);
-    const expire = this.packUint32(this.expire);
-
-    const rawMsgs: string[] = [];
-    for (const key in this.services) {
-      const service = this.services[key];
-      const buffer = service.pack();
-      rawMsgs.push(this.packString(buffer));
-    }
-
-    return salt + ts + expire + this.packMapUint32(rawMsgs);
-  }
-
-  private sign(message: string): string {
-    // Using simple base64 encoding for signature
-    // Agora tokens use HMAC-SHA256, but for this implementation we use a simplified approach
+  private buildMessage(): Uint8Array {
     const encoder = new TextEncoder();
-    const data = encoder.encode(message + this.appCertificate);
+    const parts: Uint8Array[] = [];
     
-    // Create a simple hash
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-      hash = ((hash << 5) - hash + data[i]) | 0;
+    // Add appId
+    const appIdBytes = encoder.encode(this.appId);
+    parts.push(packUint16(appIdBytes.length));
+    parts.push(appIdBytes);
+    
+    // Add salt
+    parts.push(packUint32(this.salt));
+    
+    // Add issue timestamp
+    parts.push(packUint32(this.issueTs));
+    
+    // Add expire
+    parts.push(packUint32(this.expire));
+    
+    // Add services
+    parts.push(packUint16(this.services.size));
+    
+    for (const [serviceType, service] of this.services) {
+      parts.push(packUint16(serviceType));
+      const servicePack = service.pack();
+      parts.push(packUint16(servicePack.length));
+      parts.push(servicePack);
     }
     
-    // Convert to base64-like string
-    const hashBytes = new Uint8Array(4);
-    new DataView(hashBytes.buffer).setInt32(0, hash, false);
-    
-    let result = '';
-    for (let i = 0; i < hashBytes.length; i++) {
-      result += String.fromCharCode(hashBytes[i]);
-    }
-    
-    return result;
+    return concatUint8Arrays(...parts);
   }
 
-  private packUint32(num: number): string {
-    const buffer = new ArrayBuffer(4);
-    const view = new DataView(buffer);
-    view.setUint32(0, num, false); // big-endian
-    const bytes = new Uint8Array(buffer);
-    return Array.from(bytes).map(b => String.fromCharCode(b)).join('');
-  }
-
-  private packUint16(num: number): string {
-    const buffer = new ArrayBuffer(2);
-    const view = new DataView(buffer);
-    view.setUint16(0, num, false); // big-endian
-    const bytes = new Uint8Array(buffer);
-    return Array.from(bytes).map(b => String.fromCharCode(b)).join('');
-  }
-
-  private packString(str: string): string {
-    const length = this.packUint16(str.length);
-    return length + str;
-  }
-
-  private packMapUint32(messages: string[]): string {
-    const length = this.packUint16(messages.length);
-    return length + messages.join('');
+  private async sign(message: Uint8Array): Promise<Uint8Array> {
+    return await createHmacSha256(this.appCertificate, message);
   }
 }
 
@@ -105,41 +86,25 @@ export class Service {
     return this.serviceType;
   }
 
-  pack(): string {
-    return '';
+  pack(): Uint8Array {
+    return new Uint8Array(0);
   }
 
-  protected packUint16(num: number): string {
-    const buffer = new ArrayBuffer(2);
-    const view = new DataView(buffer);
-    view.setUint16(0, num, false);
-    const bytes = new Uint8Array(buffer);
-    return Array.from(bytes).map(b => String.fromCharCode(b)).join('');
+  protected packString(str: string): Uint8Array {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(str);
+    return concatUint8Arrays(packUint16(bytes.length), bytes);
   }
 
-  protected packUint32(num: number): string {
-    const buffer = new ArrayBuffer(4);
-    const view = new DataView(buffer);
-    view.setUint32(0, num, false);
-    const bytes = new Uint8Array(buffer);
-    return Array.from(bytes).map(b => String.fromCharCode(b)).join('');
-  }
-
-  protected packString(str: string): string {
-    const length = this.packUint16(str.length);
-    return length + str;
-  }
-
-  protected packMapUint32(map: { [key: number]: string }): string {
+  protected packMapUint32(map: { [key: number]: number }): Uint8Array {
     const keys = Object.keys(map).map(k => parseInt(k)).sort((a, b) => a - b);
-    let content = this.packUint16(keys.length);
-
+    const parts: Uint8Array[] = [packUint16(keys.length)];
+    
     for (const key of keys) {
-      const value = map[key];
-      content += this.packUint16(key);
-      content += this.packString(value);
+      parts.push(packUint16(key));
+      parts.push(packUint32(map[key]));
     }
-
-    return content;
+    
+    return concatUint8Arrays(...parts);
   }
 }

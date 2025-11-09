@@ -50,7 +50,7 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
   const privilegeExpiredTs = Math.floor(Date.now() / 1000) + expiresInSeconds;
 
   // Build RTC token with user account
-  const rtcToken = RtcTokenBuilder2.buildTokenWithUserAccount(
+  const rtcToken = await RtcTokenBuilder2.buildTokenWithUserAccount(
     appId,
     appCertificate,
     options.channelName,
@@ -61,7 +61,7 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
   );
 
   // Build RTM token
-  const rtmToken = RtmTokenBuilder.buildToken(
+  const rtmToken = await RtmTokenBuilder.buildToken(
     appId,
     appCertificate,
     options.uid,

@@ -1,5 +1,6 @@
 // RTC Token Builder for Agora - Deno implementation
 import { AccessToken2, Service } from './AccessToken2.ts';
+import { packUint16, concatUint8Arrays } from './crypto.ts';
 
 export enum RtcRole {
   PUBLISHER = 1,
@@ -28,17 +29,24 @@ class ServiceRtc extends Service {
     this.privileges[privilege] = expireTs;
   }
 
-  pack(): string {
-    return (
-      this.packString(this.channelName) +
-      this.packString(this.uid) +
-      this.packMapUint32(this.privileges)
-    );
+  pack(): Uint8Array {
+    const parts: Uint8Array[] = [];
+    
+    // Pack channel name
+    parts.push(this.packString(this.channelName));
+    
+    // Pack uid
+    parts.push(this.packString(this.uid));
+    
+    // Pack privileges
+    parts.push(this.packMapUint32(this.privileges));
+    
+    return concatUint8Arrays(...parts);
   }
 }
 
 export class RtcTokenBuilder2 {
-  static buildTokenWithUserAccount(
+  static async buildTokenWithUserAccount(
     appId: string,
     appCertificate: string,
     channelName: string,
@@ -46,7 +54,7 @@ export class RtcTokenBuilder2 {
     role: RtcRole,
     tokenExpire: number,
     privilegeExpire: number
-  ): string {
+  ): Promise<string> {
     const token = new AccessToken2(appId, appCertificate, tokenExpire);
     const serviceRtc = new ServiceRtc(channelName, account);
 
@@ -59,10 +67,10 @@ export class RtcTokenBuilder2 {
     }
 
     token.addService(serviceRtc);
-    return token.build();
+    return await token.build();
   }
 
-  static buildTokenWithUid(
+  static async buildTokenWithUid(
     appId: string,
     appCertificate: string,
     channelName: string,
@@ -70,8 +78,8 @@ export class RtcTokenBuilder2 {
     role: RtcRole,
     tokenExpire: number,
     privilegeExpire: number
-  ): string {
-    return this.buildTokenWithUserAccount(
+  ): Promise<string> {
+    return await this.buildTokenWithUserAccount(
       appId,
       appCertificate,
       channelName,
