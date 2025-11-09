@@ -732,6 +732,31 @@ export default function Checkout() {
               authorizenet_response: paymentResult?.authorizenet_response || null,
             });
             failedOrders.push(order.id);
+          } else {
+            // Payment succeeded - send to pharmacy API if enabled
+            try {
+              const { data: orderLines } = await supabase
+                .from("order_lines")
+                .select("id, assigned_pharmacy_id")
+                .eq("order_id", order.id);
+
+              if (orderLines) {
+                for (const line of orderLines) {
+                  if (line.assigned_pharmacy_id) {
+                    await supabase.functions.invoke("send-order-to-pharmacy", {
+                      body: {
+                        order_id: order.id,
+                        order_line_id: line.id,
+                        pharmacy_id: line.assigned_pharmacy_id,
+                      }
+                    });
+                  }
+                }
+              }
+            } catch (apiError) {
+              console.error("Failed to send order to pharmacy API:", apiError);
+              // Non-fatal - order was already paid and created successfully
+            }
           }
         } catch (error: any) {
           // Payment exception - mark order as failed

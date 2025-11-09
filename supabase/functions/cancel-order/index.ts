@@ -144,6 +144,30 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Send cancellation notification to pharmacy if API enabled
+    try {
+      const { data: orderLines } = await supabase
+        .from('order_lines')
+        .select('assigned_pharmacy_id')
+        .eq('order_id', orderId)
+        .limit(1)
+        .single();
+
+      if (orderLines?.assigned_pharmacy_id) {
+        console.log(`Sending cancellation to pharmacy ${orderLines.assigned_pharmacy_id}`);
+        await supabase.functions.invoke('send-cancellation-to-pharmacy', {
+          body: {
+            order_id: orderId,
+            pharmacy_id: orderLines.assigned_pharmacy_id,
+            cancellation_reason: reason || 'Customer cancelled order',
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send pharmacy cancellation:', error);
+      // Non-fatal, continue with cancellation
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Search, Edit, UserPlus, AlertCircle } from "lucide-react";
 import { PharmacyDialog } from "./PharmacyDialog";
 import { PharmacyShippingRatesDialog } from "./PharmacyShippingRatesDialog";
+import { PharmacyApiConfigDialog } from "./PharmacyApiConfigDialog";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
@@ -28,6 +29,8 @@ export const PharmaciesDataTable = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [shippingRatesDialogOpen, setShippingRatesDialogOpen] = useState(false);
   const [selectedPharmacyForRates, setSelectedPharmacyForRates] = useState<any>(null);
+  const [apiConfigDialogOpen, setApiConfigDialogOpen] = useState(false);
+  const [selectedPharmacyForApi, setSelectedPharmacyForApi] = useState<any>(null);
   const [fixingPharmacyId, setFixingPharmacyId] = useState<string | null>(null);
 
   // Only real non-impersonating admins bypass visibility filtering
@@ -181,6 +184,7 @@ export const PharmaciesDataTable = () => {
               <TableHead>Contact Email</TableHead>
               <TableHead>Account Status</TableHead>
               <TableHead>Shipping Rates</TableHead>
+              <TableHead>API Config</TableHead>
               <TableHead>States Serviced</TableHead>
               <TableHead>Priority Map</TableHead>
               <TableHead>Active</TableHead>
@@ -190,13 +194,13 @@ export const PharmaciesDataTable = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">
+                <TableCell colSpan={9} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredPharmacies?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   No pharmacies found
                 </TableCell>
               </TableRow>
@@ -227,6 +231,21 @@ export const PharmaciesDataTable = () => {
                       }}
                     >
                       Configure Rates
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPharmacyForApi(pharmacy);
+                        setApiConfigDialogOpen(true);
+                      }}
+                    >
+                      {pharmacy.api_enabled ? (
+                        <Badge variant="success" className="mr-1">✓</Badge>
+                      ) : null}
+                      Configure API
                     </Button>
                   </TableCell>
                   <TableCell>
@@ -337,6 +356,15 @@ export const PharmaciesDataTable = () => {
           open={shippingRatesDialogOpen}
           onOpenChange={setShippingRatesDialogOpen}
           pharmacy={selectedPharmacyForRates}
+        />
+      )}
+
+      {selectedPharmacyForApi && (
+        <PharmacyApiConfigDialog
+          pharmacyId={selectedPharmacyForApi.id}
+          pharmacyName={selectedPharmacyForApi.name}
+          open={apiConfigDialogOpen}
+          onOpenChange={setApiConfigDialogOpen}
         />
       )}
     </div>

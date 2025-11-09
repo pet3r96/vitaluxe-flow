@@ -4513,6 +4513,12 @@ export type Database = {
           address_verification_status: string | null
           address_verified_at: string | null
           address_zip: string | null
+          api_auth_key_name: string | null
+          api_auth_type: string | null
+          api_enabled: boolean | null
+          api_endpoint_url: string | null
+          api_retry_count: number | null
+          api_timeout_seconds: number | null
           contact_email: string
           created_at: string | null
           id: string
@@ -4523,6 +4529,8 @@ export type Database = {
           states_serviced: string[] | null
           updated_at: string | null
           user_id: string | null
+          webhook_secret: string | null
+          webhook_url: string | null
         }
         Insert: {
           active?: boolean | null
@@ -4535,6 +4543,12 @@ export type Database = {
           address_verification_status?: string | null
           address_verified_at?: string | null
           address_zip?: string | null
+          api_auth_key_name?: string | null
+          api_auth_type?: string | null
+          api_enabled?: boolean | null
+          api_endpoint_url?: string | null
+          api_retry_count?: number | null
+          api_timeout_seconds?: number | null
           contact_email: string
           created_at?: string | null
           id?: string
@@ -4545,6 +4559,8 @@ export type Database = {
           states_serviced?: string[] | null
           updated_at?: string | null
           user_id?: string | null
+          webhook_secret?: string | null
+          webhook_url?: string | null
         }
         Update: {
           active?: boolean | null
@@ -4557,6 +4573,12 @@ export type Database = {
           address_verification_status?: string | null
           address_verified_at?: string | null
           address_zip?: string | null
+          api_auth_key_name?: string | null
+          api_auth_type?: string | null
+          api_enabled?: boolean | null
+          api_endpoint_url?: string | null
+          api_retry_count?: number | null
+          api_timeout_seconds?: number | null
           contact_email?: string
           created_at?: string | null
           id?: string
@@ -4567,6 +4589,8 @@ export type Database = {
           states_serviced?: string[] | null
           updated_at?: string | null
           user_id?: string | null
+          webhook_secret?: string | null
+          webhook_url?: string | null
         }
         Relationships: [
           {
@@ -4595,6 +4619,114 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_api_credentials: {
+        Row: {
+          created_at: string | null
+          credential_key: string
+          credential_type: string
+          id: string
+          pharmacy_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credential_key: string
+          credential_type: string
+          id?: string
+          pharmacy_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credential_key?: string
+          credential_type?: string
+          id?: string
+          pharmacy_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_api_credentials_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_order_transmissions: {
+        Row: {
+          api_endpoint: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          order_id: string
+          order_line_id: string | null
+          pharmacy_id: string
+          request_payload: Json
+          response_body: Json | null
+          response_status: number | null
+          retry_count: number | null
+          success: boolean | null
+          transmission_type: string
+          transmitted_at: string | null
+        }
+        Insert: {
+          api_endpoint: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          order_id: string
+          order_line_id?: string | null
+          pharmacy_id: string
+          request_payload: Json
+          response_body?: Json | null
+          response_status?: number | null
+          retry_count?: number | null
+          success?: boolean | null
+          transmission_type: string
+          transmitted_at?: string | null
+        }
+        Update: {
+          api_endpoint?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          order_id?: string
+          order_line_id?: string | null
+          pharmacy_id?: string
+          request_payload?: Json
+          response_body?: Json | null
+          response_status?: number | null
+          retry_count?: number | null
+          success?: boolean | null
+          transmission_type?: string
+          transmitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_order_transmissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_order_transmissions_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_order_transmissions_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
             referencedColumns: ["id"]
           },
         ]
@@ -4683,6 +4815,69 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pharmacy_shipping_rates_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_tracking_updates: {
+        Row: {
+          actual_delivery_date: string | null
+          carrier: string | null
+          created_at: string | null
+          estimated_delivery_date: string | null
+          id: string
+          location: string | null
+          order_line_id: string
+          pharmacy_id: string
+          raw_tracking_data: Json | null
+          received_at: string | null
+          status: string
+          status_details: string | null
+          tracking_number: string | null
+        }
+        Insert: {
+          actual_delivery_date?: string | null
+          carrier?: string | null
+          created_at?: string | null
+          estimated_delivery_date?: string | null
+          id?: string
+          location?: string | null
+          order_line_id: string
+          pharmacy_id: string
+          raw_tracking_data?: Json | null
+          received_at?: string | null
+          status: string
+          status_details?: string | null
+          tracking_number?: string | null
+        }
+        Update: {
+          actual_delivery_date?: string | null
+          carrier?: string | null
+          created_at?: string | null
+          estimated_delivery_date?: string | null
+          id?: string
+          location?: string | null
+          order_line_id?: string
+          pharmacy_id?: string
+          raw_tracking_data?: Json | null
+          received_at?: string | null
+          status?: string
+          status_details?: string | null
+          tracking_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_tracking_updates_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_tracking_updates_pharmacy_id_fkey"
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
