@@ -479,7 +479,6 @@ export default function PracticeCalendar() {
         providers={providers}
         rooms={rooms}
         isWalkIn={isWalkIn}
-        isProviderAccount={isProviderAccount}
       />
 
       <AppointmentDetailsDialog

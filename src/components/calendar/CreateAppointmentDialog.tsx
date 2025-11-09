@@ -143,13 +143,13 @@ export function CreateAppointmentDialog({
         .insert({
           patient_id: selectedPatientId,
           practice_id: practiceId,
-          provider_id: values.providerId,
+          provider_id: values.providerId || null,
           room_id: values.roomId && values.roomId !== 'none' ? values.roomId : null,
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString(),
           appointment_type: values.appointmentType,
           visit_type: values.visitType,
-          service_type: values.serviceType,
+          service_type: values.serviceType || null,
           service_description: values.serviceDescription,
           notes: values.notes,
           status: isWalkIn ? 'checked_in' : 'scheduled',
@@ -202,6 +202,10 @@ export function CreateAppointmentDialog({
   const onSubmit = (values: any) => {
     if (!selectedPatientId) {
       toast.error("Please select a patient");
+      return;
+    }
+    if (!values.providerId) {
+      toast.error("Please select a provider");
       return;
     }
     if (!values.serviceType) {
