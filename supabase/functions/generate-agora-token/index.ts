@@ -128,14 +128,18 @@ Deno.serve(async (req) => {
     const appId = tokens.appId;
 
     console.log('✅ [generate-agora-token] Tokens generated successfully');
-    console.log('🔑 [generate-agora-token] Token details:', {
-      rtcTokenPrefix: tokens.rtcToken.substring(0, 20),
-      rtcTokenLength: tokens.rtcToken.length,
-      rtmTokenPrefix: tokens.rtmToken.substring(0, 20),
-      rtmTokenLength: tokens.rtmToken.length,
-      appId: tokens.appId,
-      expiresAt: tokens.expiresAt
-    });
+    console.log('🔑 [generate-agora-token] RTC Token Details:');
+    console.log('   - Full Token:', tokens.rtcToken);
+    console.log('   - Token Length:', tokens.rtcToken.length);
+    console.log('   - First 50 chars:', tokens.rtcToken.substring(0, 50));
+    console.log('   - Starts with 007:', tokens.rtcToken.startsWith('007'));
+    console.log('   - AppId used:', tokens.appId);
+    console.log('   - Channel:', channelName);
+    console.log('   - UID:', String(uid));
+    console.log('🔑 [generate-agora-token] RTM Token Details:');
+    console.log('   - Full Token:', tokens.rtmToken);
+    console.log('   - Token Length:', tokens.rtmToken.length);
+    console.log('   - First 50 chars:', tokens.rtmToken.substring(0, 50));
 
     // Log token generation
     await supabase.from('video_session_logs').insert({
