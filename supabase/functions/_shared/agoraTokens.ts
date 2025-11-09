@@ -49,6 +49,16 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
   const expiresInSeconds = options.expiresInSeconds ?? 3600;
   const privilegeExpiredTs = Math.floor(Date.now() / 1000) + expiresInSeconds;
 
+  console.log('[Agora Token Generation] Input:', {
+    channelName: options.channelName,
+    uid: options.uid,
+    role: options.role,
+    rtcRole,
+    expiresInSeconds,
+    privilegeExpiredTs,
+    appId: appId.substring(0, 8) + '...',
+  });
+
   // Build RTC token with user account
   const rtcToken = await RtcTokenBuilder2.buildTokenWithUserAccount(
     appId,
@@ -60,6 +70,8 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
     privilegeExpiredTs
   );
 
+  console.log('[Agora Token Generation] RTC Token:', rtcToken);
+
   // Build RTM token
   const rtmToken = await RtmTokenBuilder.buildToken(
     appId,
@@ -69,11 +81,20 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
     privilegeExpiredTs
   );
 
-  return {
+  console.log('[Agora Token Generation] RTM Token:', rtmToken);
+
+  const result = {
     rtcToken,
     rtmToken,
     rtmUid: options.uid,
     expiresAt: privilegeExpiredTs,
     appId,
   };
+
+  console.log('[Agora Token Generation] Complete. Token lengths:', {
+    rtcTokenLength: rtcToken.length,
+    rtmTokenLength: rtmToken.length,
+  });
+
+  return result;
 }
