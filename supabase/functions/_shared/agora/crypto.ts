@@ -1,29 +1,22 @@
-// Crypto utilities for Agora token generation using Web Crypto API
+// Official Agora token generation crypto utilities - based on AgoraIO/Tools implementation
+import { createHmac } from "https://deno.land/std@0.224.0/crypto/mod.ts";
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 export async function createHmacSha256(key: string, data: Uint8Array): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(key);
   
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
+  const hmac = createHmac("sha256", keyData);
+  hmac.update(data);
   
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, data);
-  return new Uint8Array(signature);
+  return new Uint8Array(hmac.digest());
 }
 
 export function base64Encode(data: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < data.length; i++) {
-    binary += String.fromCharCode(data[i]);
-  }
-  return btoa(binary);
+  return encodeBase64(data);
 }
 
+// CRC32 using the standard polynomial (0xEDB88320) as per Agora specification
 export function crc32(data: Uint8Array): number {
   let crc = 0xFFFFFFFF;
   
@@ -37,6 +30,7 @@ export function crc32(data: Uint8Array): number {
   return (crc ^ 0xFFFFFFFF) >>> 0;
 }
 
+// Pack uint16 in big-endian format
 export function packUint16(value: number): Uint8Array {
   const buffer = new Uint8Array(2);
   buffer[0] = (value >> 8) & 0xFF;
@@ -44,6 +38,7 @@ export function packUint16(value: number): Uint8Array {
   return buffer;
 }
 
+// Pack uint32 in big-endian format
 export function packUint32(value: number): Uint8Array {
   const buffer = new Uint8Array(4);
   buffer[0] = (value >> 24) & 0xFF;
@@ -64,4 +59,25 @@ export function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
   }
   
   return result;
+}
+
+// Compress data using deflate (zlib)
+export async function compress(data: Uint8Array): Promise<Uint8Array> {
+  const compressedStream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(data);
+      controller.close();
+    }
+  }).pipeThrough(new CompressionStream("deflate-raw"));
+  
+  const chunks: Uint8Array[] = [];
+  const reader = compressedStream.getReader();
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  
+  return concatUint8Arrays(...chunks);
 }

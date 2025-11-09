@@ -128,6 +128,14 @@ Deno.serve(async (req) => {
     const appId = tokens.appId;
 
     console.log('✅ [generate-agora-token] Tokens generated successfully');
+    console.log('🔑 [generate-agora-token] Token details:', {
+      rtcTokenPrefix: tokens.rtcToken.substring(0, 20),
+      rtcTokenLength: tokens.rtcToken.length,
+      rtmTokenPrefix: tokens.rtmToken.substring(0, 20),
+      rtmTokenLength: tokens.rtmToken.length,
+      appId: tokens.appId,
+      expiresAt: tokens.expiresAt
+    });
 
     // Log token generation
     await supabase.from('video_session_logs').insert({
