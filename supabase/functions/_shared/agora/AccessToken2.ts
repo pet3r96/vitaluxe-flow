@@ -88,7 +88,7 @@ export class AccessToken2 {
       signingInfo
     );
 
-    // Compress using deflate (zlib) and encode to base64
+    // Compress using deflate-raw (no zlib headers) per Agora spec and encode to base64
     const compressed = await compress(content);
     const encoded = base64Encode(compressed);
     
