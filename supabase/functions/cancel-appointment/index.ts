@@ -45,22 +45,22 @@ Deno.serve(async (req) => {
 
     console.log('✅ [cancel-appointment] Using effective user ID:', effectiveUserId);
 
-    // Check if user is a patient
-    const { data: patientAccount } = await supabaseClient
+    // Check if user is a patient (use admin client to bypass RLS)
+    const { data: patientAccount } = await supabaseAdmin
       .from('patient_accounts')
       .select('id')
       .eq('user_id', effectiveUserId)
       .maybeSingle();
 
-    // Check if user is a provider
-    const { data: providerAccount } = await supabaseClient
+    // Check if user is a provider (use admin client to bypass RLS)
+    const { data: providerAccount } = await supabaseAdmin
       .from('providers')
       .select('id, practice_id')
       .eq('user_id', effectiveUserId)
       .maybeSingle();
 
-    // Check if user is staff
-    const { data: staffAccount } = await supabaseClient
+    // Check if user is staff (use admin client to bypass RLS)
+    const { data: staffAccount } = await supabaseAdmin
       .from('practice_staff')
       .select('id, practice_id')
       .eq('user_id', effectiveUserId)
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
 
     if (patientAccount) {
       // Patient cancelling their own appointment
-      const result = await supabaseClient
+      const result = await supabaseAdmin
         .from('patient_appointments')
         .select('id, patient_id, status, practice_id')
         .eq('id', appointmentId)
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       // Provider/staff cancelling any appointment in their practice
       const practiceId = providerAccount?.practice_id || staffAccount?.practice_id;
       
-      const result = await supabaseClient
+      const result = await supabaseAdmin
         .from('patient_appointments')
         .select('id, patient_id, status, practice_id')
         .eq('id', appointmentId)
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     } else {
       // Check if effectiveUserId is a practice itself (stored in profiles table)
       // Practice admins can cancel any appointment in their practice
-      const result = await supabaseClient
+      const result = await supabaseAdmin
         .from('patient_appointments')
         .select('id, patient_id, status, practice_id')
         .eq('id', appointmentId)
@@ -154,9 +154,9 @@ Deno.serve(async (req) => {
       appointmentWasAlreadyCancelled = true;
       console.log('ℹ️ [cancel-appointment] Appointment already cancelled, will check video session');
     } else {
-      // Perform the cancellation
+      // Perform the cancellation (use admin client to bypass RLS)
       console.log('✅ [cancel-appointment] Updating appointment status to cancelled');
-      const { error } = await supabaseClient
+      const { error } = await supabaseAdmin
         .from('patient_appointments')
         .update({ 
           status: 'cancelled', 
