@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const { sessionId } = await req.json();
 
     // Check for active impersonation
-    const { data: impersonationData } = await supabase
+    const { data: impersonationData, error: impersonationError } = await supabase
       .from('active_impersonation_sessions')
       .select('impersonated_user_id')
       .eq('admin_user_id', user.id)
@@ -56,12 +56,17 @@ Deno.serve(async (req) => {
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
+    if (impersonationError) {
+      console.warn('⚠️ [end-video-session] Impersonation check failed:', impersonationError.message);
+    }
+
     const effectiveUserId = impersonationData?.impersonated_user_id || user.id;
 
     console.log('👤 [end-video-session] User check:', {
       authUserId: user.id,
       effectiveUserId,
       isImpersonating: !!impersonationData,
+      impersonatedUserId: impersonationData?.impersonated_user_id,
     });
 
     // Get video session details
