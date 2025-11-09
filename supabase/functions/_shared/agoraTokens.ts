@@ -1,5 +1,5 @@
-// Local Agora token builders - no external dependencies
-import { RtcTokenBuilder2, RtcRole } from './agora/RtcTokenBuilder2.ts';
+// Official Agora token builder using esm.sh CDN (Deno-compatible)
+import { RtcTokenBuilder, RtcRole } from "https://esm.sh/agora-token@2.0.5";
 
 const HEX_32_REGEX = /^[a-f0-9]{32}$/i;
 
@@ -45,49 +45,49 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
   const { appId, appCertificate } = getAgoraCredentials();
 
   const rtcRole = options.role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
+  
+  // CRITICAL: Calculate expiry correctly (current timestamp + duration)
   const expiresInSeconds = options.expiresInSeconds ?? 3600;
-  const privilegeExpiredTs = Math.floor(Date.now() / 1000) + expiresInSeconds;
+  const currentTimestamp = Math.floor(Date.now() / 1000);
+  const privilegeExpire = currentTimestamp + expiresInSeconds;
 
-  console.log('[Agora Token Generation] Input:', {
+  console.log('[Official Agora Token Generation] Input:', {
+    appId: appId.substring(0, 8) + '...',
+    appCertificate: appCertificate.substring(0, 8) + '...',
     channelName: options.channelName,
     uid: options.uid,
     role: options.role,
     rtcRole,
+    currentTimestamp,
     expiresInSeconds,
-    privilegeExpiredTs,
-    appId: appId.substring(0, 8) + '...',
+    privilegeExpire,
   });
 
-  // Build RTC token with user account
-  // NOTE: In new Agora Signaling system, the SAME token is used for both RTC and Signaling/RTM
-  const rtcToken = await RtcTokenBuilder2.buildTokenWithUserAccount(
+  // Generate token using OFFICIAL Agora library (NOT custom implementation)
+  const rtcToken = RtcTokenBuilder.buildTokenWithUserAccount(
     appId,
     appCertificate,
     options.channelName,
-    String(options.uid), // Explicitly convert to string for consistency
+    options.uid,  // String UID
     rtcRole,
-    privilegeExpiredTs,
-    privilegeExpiredTs
+    privilegeExpire  // Single expiry parameter
   );
 
-  console.log('[Agora Token Generation] RTC Token (also used for Signaling/RTM):', rtcToken);
-
-  // For new Signaling system: Use the SAME token for both RTC and RTM
-  // The old separate RTM token builder is deprecated
-  const rtmToken = rtcToken;
-
-  const result = {
-    rtcToken,
-    rtmToken, // Same as rtcToken for new Signaling system
-    rtmUid: options.uid,
-    expiresAt: privilegeExpiredTs,
-    appId,
-  };
-
-  console.log('[Agora Token Generation] Complete. Token length:', {
+  console.log('[Official Agora Token Generated]:', {
     tokenLength: rtcToken.length,
-    note: 'Same token used for RTC and Signaling/RTM',
+    tokenPrefix: rtcToken.substring(0, 10),
+    tokenVersion: rtcToken.startsWith('007') ? 'AccessToken2 (007)' : 'Unknown',
+    channelName: options.channelName,
+    uid: options.uid,
+    expiresAt: privilegeExpire,
+    expiresAtISO: new Date(privilegeExpire * 1000).toISOString(),
   });
 
-  return result;
+  return {
+    rtcToken,
+    rtmToken: rtcToken, // Signaling uses the same token
+    rtmUid: options.uid,
+    expiresAt: privilegeExpire,
+    appId,
+  };
 }
