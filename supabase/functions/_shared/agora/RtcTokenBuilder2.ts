@@ -1,6 +1,6 @@
 // RTC Token Builder for Agora - Deno implementation
 import { AccessToken2, Service } from './AccessToken2.ts';
-import { packUint16, concatUint8Arrays } from './crypto.ts';
+import { packUint16, packUint32, concatUint8Arrays } from './crypto.ts';
 
 export enum RtcRole {
   PUBLISHER = 1,
@@ -30,16 +30,30 @@ class ServiceRtc extends Service {
   }
 
   pack(): Uint8Array {
+    const encoder = new TextEncoder();
     const parts: Uint8Array[] = [];
     
-    // Pack channel name
-    parts.push(this.packString(this.channelName));
+    // Pack service type first (uint16)
+    parts.push(packUint16(ServiceRtc.kServiceType));
     
-    // Pack uid
-    parts.push(this.packString(this.uid));
+    // Pack privileges (tree map format)
+    const privilegeKeys = Object.keys(this.privileges).map(k => parseInt(k)).sort((a, b) => a - b);
+    parts.push(packUint16(privilegeKeys.length));
     
-    // Pack privileges
-    parts.push(this.packMapUint32(this.privileges));
+    for (const key of privilegeKeys) {
+      parts.push(packUint16(key));
+      parts.push(packUint32(this.privileges[key]));
+    }
+    
+    // Pack channel name (string with length prefix)
+    const channelBytes = encoder.encode(this.channelName);
+    parts.push(packUint16(channelBytes.length));
+    parts.push(channelBytes);
+    
+    // Pack UID (string with length prefix)
+    const uidBytes = encoder.encode(this.uid);
+    parts.push(packUint16(uidBytes.length));
+    parts.push(uidBytes);
     
     return concatUint8Arrays(...parts);
   }

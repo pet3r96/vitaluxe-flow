@@ -6,17 +6,24 @@ const VERSION = '007';
 const VERSION_LENGTH = 3;
 const APP_ID_LENGTH = 32;
 
+// Convert Uint8Array to hex string  
+function uint8ArrayToHex(arr: Uint8Array): string {
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export class AccessToken2 {
   private appId: string;
   private appCertificate: string;
-  private ts: number;
+  private issueTs: number;
+  private expire: number;
   private salt: number;
   private services: any[];
 
   constructor(appId: string, appCertificate: string, expire: number) {
     this.appId = appId;
     this.appCertificate = appCertificate;
-    this.ts = expire; // Token expiration timestamp
+    this.issueTs = Math.floor(Date.now() / 1000);
+    this.expire = expire;
     this.salt = Math.floor(Math.random() * 99999999) + 1;
     this.services = [];
   }
@@ -25,7 +32,16 @@ export class AccessToken2 {
     this.services.push(service);
   }
 
-  private async buildMessage(): Promise<Uint8Array> {
+  private async buildSigningKey(): Promise<Uint8Array> {
+    // Step 1: HMAC(issueTs, appCertificate) - official spec
+    let signing = await createHmacSha256(this.appCertificate, packUint32(this.issueTs));
+    // Step 2: HMAC(salt, result_from_step1)
+    const signingHex = uint8ArrayToHex(signing);
+    signing = await createHmacSha256(signingHex, packUint32(this.salt));
+    return signing;
+  }
+
+  private buildSigningInfo(): Uint8Array {
     const encoder = new TextEncoder();
     const parts: Uint8Array[] = [];
 
@@ -34,66 +50,50 @@ export class AccessToken2 {
     parts.push(packUint16(appIdBytes.length));
     parts.push(appIdBytes);
 
+    // Add issueTs (uint32)
+    parts.push(packUint32(this.issueTs));
+
+    // Add expire (uint32)
+    parts.push(packUint32(this.expire));
+
     // Add salt (uint32)
     parts.push(packUint32(this.salt));
-
-    // Add ts (uint32)
-    parts.push(packUint32(this.ts));
 
     // Add services count (uint16)
     parts.push(packUint16(this.services.length));
     
-    // Add each service WITH service type prefix as required by spec
+    // Add each service pack
     for (const service of this.services) {
-      // Service type
-      const type = typeof service.getServiceType === 'function' ? service.getServiceType() : 0;
-      parts.push(packUint16(type));
-
       const servicePacked = service.pack();
-      parts.push(packUint16(servicePacked.length));
       parts.push(servicePacked);
     }
 
-    const message = concatUint8Arrays(...parts);
-    
-    // Compress the message using deflate (zlib)
-    return await compress(message);
-  }
-
-  private async sign(message: Uint8Array): Promise<Uint8Array> {
-    return await createHmacSha256(this.appCertificate, message);
+    return concatUint8Arrays(...parts);
   }
 
   async build(): Promise<string> {
-    const message = await this.buildMessage();
-    const signature = await this.sign(message);
-
-    // Build the packed content according to official spec:
-    // signature_len(2) + signature + crc32(4) + ts(4) + compressed_message
-    const parts: Uint8Array[] = [];
+    // Build the signing key according to official spec
+    const signingKey = await this.buildSigningKey();
+    const signingInfo = this.buildSigningInfo();
     
-    // Add signature with length prefix
-    parts.push(packUint16(signature.length));
-    parts.push(signature);
+    // Sign the signing info with the derived signing key
+    const signingKeyHex = uint8ArrayToHex(signingKey);
+    const signature = await createHmacSha256(signingKeyHex, signingInfo);
+    const signatureHex = uint8ArrayToHex(signature);
 
-    // Calculate and add CRC32 of the salt+ts+message
-    const crcContent = concatUint8Arrays(
-      packUint32(this.salt),
-      packUint32(this.ts), 
-      message
+    // Build content: signature (as hex string with length prefix) + signing info
+    const encoder = new TextEncoder();
+    const signatureHexBytes = encoder.encode(signatureHex);
+    
+    const content = concatUint8Arrays(
+      packUint16(signatureHexBytes.length),
+      signatureHexBytes,
+      signingInfo
     );
-    const crcValue = crc32(crcContent);
-    parts.push(packUint32(crcValue));
 
-    // Add timestamp
-    parts.push(packUint32(this.ts));
-
-    // Add compressed message
-    parts.push(message);
-
-    // Combine all parts and encode
-    const content = concatUint8Arrays(...parts);
-    const encoded = base64Encode(content);
+    // Compress using deflate-raw (zlib) and encode to base64
+    const compressed = await compress(content);
+    const encoded = base64Encode(compressed);
     
     return VERSION + encoded;
   }

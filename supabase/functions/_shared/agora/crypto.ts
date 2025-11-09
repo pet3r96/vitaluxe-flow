@@ -36,22 +36,20 @@ export function crc32(data: Uint8Array): number {
   return (crc ^ 0xFFFFFFFF) >>> 0;
 }
 
-// Pack uint16 in big-endian format
+// Pack uint16 in little-endian format (matching official Agora implementation)
 export function packUint16(value: number): Uint8Array {
-  const buffer = new Uint8Array(2);
-  buffer[0] = (value >> 8) & 0xFF;
-  buffer[1] = value & 0xFF;
-  return buffer;
+  const buffer = new ArrayBuffer(2);
+  const view = new DataView(buffer);
+  view.setUint16(0, value, true); // true = little-endian
+  return new Uint8Array(buffer);
 }
 
-// Pack uint32 in big-endian format
+// Pack uint32 in little-endian format (matching official Agora implementation)
 export function packUint32(value: number): Uint8Array {
-  const buffer = new Uint8Array(4);
-  buffer[0] = (value >> 24) & 0xFF;
-  buffer[1] = (value >> 16) & 0xFF;
-  buffer[2] = (value >> 8) & 0xFF;
-  buffer[3] = value & 0xFF;
-  return buffer;
+  const buffer = new ArrayBuffer(4);
+  const view = new DataView(buffer);
+  view.setUint32(0, value, true); // true = little-endian
+  return new Uint8Array(buffer);
 }
 
 export function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
