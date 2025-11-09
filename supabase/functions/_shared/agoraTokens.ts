@@ -73,15 +73,18 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
     privilegeExpire  // Single expiry parameter
   );
 
-  console.log('[Official Agora Token Generated]:', {
-    tokenLength: rtcToken.length,
-    tokenPrefix: rtcToken.substring(0, 10),
-    tokenVersion: rtcToken.startsWith('007') ? 'AccessToken2 (007)' : 'Unknown',
-    channelName: options.channelName,
-    uid: options.uid,
-    expiresAt: privilegeExpire,
-    expiresAtISO: new Date(privilegeExpire * 1000).toISOString(),
-  });
+  // Enhanced debug block - EXACTLY as requested
+  console.log("=== AGORA TOKEN VERIFICATION ===");
+  console.log("AppID:", appId);
+  console.log("Cert8:", appCertificate.slice(0, 8));
+  console.log("Channel:", options.channelName);
+  console.log("UID:", options.uid);
+  console.log("Token starts with 007:", rtcToken.startsWith("007"));
+  console.log("Token length:", rtcToken.length);
+  console.log("Token prefix:", rtcToken.slice(0, 15));
+  console.log("ExpiresAt:", privilegeExpire);
+  console.log("ExpiresAt ISO:", new Date(privilegeExpire * 1000).toISOString());
+  console.log("================================");
 
   return {
     rtcToken,

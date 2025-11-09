@@ -16,6 +16,14 @@ serve(async (req) => {
     const testChannelName = "test-channel-" + Date.now();
     const testUid = "test-user-" + Math.floor(Math.random() * 10000);
     
+    console.log("Triggering verification...");
+    console.log("[Test Endpoint] Parameters:", {
+      channelName: testChannelName,
+      uid: testUid,
+      role: 'publisher',
+      expiresInSeconds: 3600,
+    });
+    
     const tokens = await generateAgoraTokens({
       channelName: testChannelName,
       uid: testUid,
