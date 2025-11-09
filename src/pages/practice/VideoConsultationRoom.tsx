@@ -56,6 +56,9 @@ export default function VideoConsultationRoom() {
         const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
 
         console.log("📡 Join session response:", { data, error });
+        console.log("🔍 Response appId:", data?.appId);
+        console.log("🔍 Response token:", data?.token?.substring(0, 20) + "...");
+        console.log("🔍 Response channelName:", data?.channelName);
 
         if (error) {
           console.error("❌ Join session error:", error);
