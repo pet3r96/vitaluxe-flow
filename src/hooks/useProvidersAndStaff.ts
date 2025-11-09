@@ -19,51 +19,53 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
     queryFn: async () => {
       if (!practiceId) return [];
 
-      console.info('[useProvidersAndStaff] Fetching providers and staff for practice:', practiceId);
+      console.info('[useProvidersAndStaff] Fetching unified providers/staff for practice:', practiceId);
 
-      // Fetch providers via edge function
-      const { data: providersData, error: provError } = await supabase.functions.invoke('list-providers', {
-        body: { practice_id: practiceId }
-      });
+      // Fetch all personnel (providers + staff) from unified providers table
+      const { data, error } = await supabase
+        .from('providers')
+        .select(`
+          id,
+          user_id,
+          practice_id,
+          role_type,
+          can_order,
+          active,
+          profiles!providers_user_id_fkey(
+            id,
+            name,
+            full_name,
+            prescriber_name,
+            email,
+            phone,
+            npi
+          )
+        `)
+        .eq('practice_id', practiceId)
+        .eq('active', true);
 
-      if (provError) throw provError;
-      const providers = providersData?.providers || [];
+      if (error) throw error;
+      const personnel = data || [];
 
-      // Fetch staff via edge function
-      const { data: staffData, error: staffError } = await supabase.functions.invoke('list-staff', {
-        body: { practice_id: practiceId }
-      });
-
-      if (staffError) throw staffError;
-      const staff = staffData?.staff || [];
-
-      // Combine and standardize
-      const combined: ProviderOrStaff[] = [
-        ...providers.map((p: any) => ({
-          id: p.id,
-          user_id: p.user_id,
-          full_name: getProviderDisplayName(p),
-          type: 'provider' as const,
-          profiles: p.profiles,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          specialty: p.specialty,
-        })),
-        ...staff.map((s: any) => ({
-          id: s.id,
-          user_id: s.user_id,
-          full_name: s.profiles?.full_name || s.profiles?.name || s.name || 'Staff Member',
-          type: 'staff' as const,
-          profiles: s.profiles,
-        }))
-      ];
+      // Transform to standardized format
+      const combined: ProviderOrStaff[] = personnel.map((p: any) => ({
+        id: p.id,
+        user_id: p.user_id,
+        full_name: getProviderDisplayName(p),
+        type: p.role_type === 'provider' ? 'provider' as const : 'staff' as const,
+        profiles: p.profiles,
+        specialty: p.profiles?.npi ? 'Medical Provider' : undefined,
+      }));
 
       // Sort alphabetically by full_name
       combined.sort((a, b) => a.full_name.localeCompare(b.full_name));
 
+      const providerCount = combined.filter(p => p.type === 'provider').length;
+      const staffCount = combined.filter(p => p.type === 'staff').length;
+      
       console.info('[useProvidersAndStaff] ✅ Combined list loaded:', {
-        providers: providers.length,
-        staff: staff.length,
+        providers: providerCount,
+        staff: staffCount,
         total: combined.length,
         sample: combined.slice(0, 3).map(item => `${item.full_name} (${item.type})`)
       });

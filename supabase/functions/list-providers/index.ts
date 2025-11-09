@@ -104,6 +104,8 @@ Deno.serve(async (req) => {
           id,
           user_id,
           practice_id,
+          role_type,
+          can_order,
           active,
           created_at,
           profiles!providers_user_id_fkey!inner(
@@ -150,16 +152,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch providers - two-step query to avoid ambiguous relationship error
+    // Fetch providers only (role_type = 'provider')
     let providersQuery = supabase
       .from('providers')
       .select(`
         id,
         user_id,
         practice_id,
+        role_type,
+        can_order,
         active,
         created_at
       `)
+      .eq('role_type', 'provider')
       .order('created_at', { ascending: false });
 
     if (practiceId) {

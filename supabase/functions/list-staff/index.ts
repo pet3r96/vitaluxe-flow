@@ -98,9 +98,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch staff with practice info - two-step query because no FK from practice_staff.user_id to profiles.id
+    // Fetch staff from unified providers table (role_type != 'provider')
     let staffQuery = supabase
-      .from('practice_staff')
+      .from('providers')
       .select(`
         id,
         user_id,
@@ -108,13 +108,9 @@ Deno.serve(async (req) => {
         role_type,
         can_order,
         active,
-        created_at,
-        practice:profiles!practice_staff_practice_id_fkey(
-          id,
-          name,
-          company
-        )
+        created_at
       `)
+      .neq('role_type', 'provider')
       .order('created_at', { ascending: false });
 
     if (practiceId) {
@@ -149,12 +145,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 2: Fetch user profiles for all staff members
+    // Step 2: Fetch user profiles and practice profiles for all staff members
     const userIds = staffRows.map(s => s.user_id);
+    const practiceIds = [...new Set(staffRows.map(s => s.practice_id))];
+    
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, name, full_name, email, phone, address')
       .in('id', userIds);
+    
+    const { data: practiceProfiles } = await supabase
+      .from('profiles')
+      .select('id, name, company')
+      .in('id', practiceIds);
 
     if (profilesError) {
       console.error('[list-staff] Profiles query error:', profilesError);
@@ -166,9 +169,12 @@ Deno.serve(async (req) => {
 
     // Merge profiles onto staff rows
     const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+    const practiceProfilesMap = new Map(practiceProfiles?.map(p => [p.id, p]) || []);
+    
     const staff = staffRows.map(s => ({
       ...s,
       profiles: profilesMap.get(s.user_id) || null,
+      practice: practiceProfilesMap.get(s.practice_id) || null,
     }));
 
     console.log('[list-staff] Found', staff.length, 'staff members for practice', practiceId);

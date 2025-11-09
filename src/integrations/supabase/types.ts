@@ -6382,25 +6382,31 @@ export type Database = {
       providers: {
         Row: {
           active: boolean
+          can_order: boolean
           created_at: string
           id: string
           practice_id: string
+          role_type: string
           updated_at: string
           user_id: string
         }
         Insert: {
           active?: boolean
+          can_order?: boolean
           created_at?: string
           id?: string
           practice_id: string
+          role_type?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           active?: boolean
+          can_order?: boolean
           created_at?: string
           id?: string
           practice_id?: string
+          role_type?: string
           updated_at?: string
           user_id?: string
         }
