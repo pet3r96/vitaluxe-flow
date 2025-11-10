@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,30 +87,63 @@ export const PharmacyApiConfigDialog = ({
         .eq("pharmacy_id", pharmacyId);
 
       if (error) throw error;
-
-      // Load credentials into form state
-      if (data && data.length > 0) {
-        data.forEach((cred) => {
-          if (cred.credential_type === "baremeds_oauth") {
-            try {
-              const baremedsCreds = JSON.parse(cred.credential_key);
-              setBaremedEmail(baremedsCreds.email || "");
-              setBaremedPassword(baremedsCreds.password || "");
-              setBaremedSiteId(String(baremedsCreds.site_id || ""));
-              setBaremedBaseUrl(baremedsCreds.base_url || "https://staging-rxorders.baremeds.com");
-            } catch (e) {
-              console.error("Failed to parse BareMeds credentials:", e);
-            }
-          } else if (cred.credential_type === "api_key" || cred.credential_type === "bearer_token") {
-            setApiKey(cred.credential_key || "");
-          }
-        });
-      }
-
       return data;
     },
     enabled: open && !!pharmacyId,
   });
+
+  // Parse credentials with proper error handling
+  useEffect(() => {
+    if (!credentials || credentials.length === 0) return;
+
+    console.log("Loading credentials:", credentials);
+
+    credentials.forEach((cred) => {
+      if (cred.credential_type === "baremeds_oauth" && cred.credential_key) {
+        try {
+          let baremedsCreds;
+          
+          // Handle double-encoded JSON (common issue)
+          if (typeof cred.credential_key === 'string') {
+            try {
+              baremedsCreds = JSON.parse(cred.credential_key);
+              // Check if it's still a string (double-encoded)
+              if (typeof baremedsCreds === 'string') {
+                baremedsCreds = JSON.parse(baremedsCreds);
+              }
+            } catch {
+              // If parsing fails, treat it as a plain object
+              baremedsCreds = cred.credential_key;
+            }
+          } else {
+            baremedsCreds = cred.credential_key;
+          }
+
+          // Handle different field name variations
+          const email = baremedsCreds.email || baremedsCreds.username || "";
+          const password = baremedsCreds.password || "";
+          const siteId = baremedsCreds.site_id || baremedsCreds.siteId || baremedsCreds.siteid || "";
+          const baseUrl = baremedsCreds.base_url || baremedsCreds.baseUrl || "https://staging-rxorders.baremeds.com";
+
+          console.log("Parsed BareMeds credentials:", {
+            email,
+            hasPassword: !!password,
+            siteId,
+            baseUrl
+          });
+
+          setBaremedEmail(email);
+          setBaremedPassword(password);
+          setBaremedSiteId(String(siteId));
+          setBaremedBaseUrl(baseUrl);
+        } catch (e) {
+          console.error("Failed to parse BareMeds credentials:", e, cred.credential_key);
+        }
+      } else if (cred.credential_type === "api_key" || cred.credential_type === "bearer_token") {
+        setApiKey(cred.credential_key || "");
+      }
+    });
+  }, [credentials]);
 
   // Check if BareMeds credentials exist in database
   const hasBareMedsCreds = credentials?.some(
