@@ -10,6 +10,23 @@ serve(async (req) => {
   }
 
   try {
+    // Raw bytes check for secrets
+    const rawAppId = Deno.env.get("AGORA_APP_ID") || "";
+    const rawCert = Deno.env.get("AGORA_APP_CERTIFICATE") || "";
+    console.log("[Test Agora Token] AppID raw bytes:", Array.from(new TextEncoder().encode(rawAppId)));
+    console.log("[Test Agora Token] AppID length:", rawAppId.length);
+    console.log("[Test Agora Token] Cert raw bytes prefix:", Array.from(new TextEncoder().encode(rawCert)).slice(0, 16));
+
+    // Probe Agora public API (may return 403/404 depending on policy)
+    try {
+      const res = await fetch(`https://api.agora.io/v1/apps/${rawAppId}`);
+      const body = await res.text();
+      console.log("[Test Agora Token] Agora API status:", res.status);
+      console.log("[Test Agora Token] Agora API body prefix:", body.substring(0, 120));
+    } catch (probeErr) {
+      console.log("[Test Agora Token] Agora API fetch error:", (probeErr as any)?.message || String(probeErr));
+    }
+
     console.log("[Test Agora Token] Generating sample token...");
 
     // Generate test token with sample data
@@ -57,6 +74,10 @@ serve(async (req) => {
     if (!tokensAreDifferent) {
       console.error("[Test Agora Token] ERROR: RTC and RTM tokens are identical!");
     }
+    // Env diagnostics for hidden bytes
+    const appIdBytes = new TextEncoder().encode(Deno.env.get("AGORA_APP_ID") || "");
+    const certBytes = new TextEncoder().encode(Deno.env.get("AGORA_APP_CERTIFICATE") || "");
+    const appIdLastByte = appIdBytes.length ? appIdBytes[appIdBytes.length - 1] : null;
 
     return new Response(
       JSON.stringify({
@@ -86,6 +107,11 @@ serve(async (req) => {
           rtcPrefix: tokens.rtcToken.substring(0, 15),
           rtmPrefix: tokens.rtmToken.substring(0, 15),
           version: rtcStartsWith007 ? 'AccessToken2 (007)' : 'Unknown',
+        },
+        envDiagnostics: {
+          appIdLen: appIdBytes.length,
+          appIdLastByte,
+          certLen: certBytes.length,
         }
       }),
       {

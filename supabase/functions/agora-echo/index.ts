@@ -13,6 +13,23 @@ serve(async (req) => {
 
   try {
     const { appId, appCertificate } = getAgoraCredentials();
+
+    // Check raw bytes for hidden characters
+    const rawAppId = Deno.env.get("AGORA_APP_ID") || "";
+    const rawCert = Deno.env.get("AGORA_APP_CERTIFICATE") || "";
+    console.log("[agora-echo] AppID raw bytes:", Array.from(new TextEncoder().encode(rawAppId)));
+    console.log("[agora-echo] AppID length:", rawAppId.length);
+    console.log("[agora-echo] Cert raw bytes prefix:", Array.from(new TextEncoder().encode(rawCert)).slice(0, 16));
+
+    // Attempt Agora public API probe (may return 403/404 depending on policy)
+    try {
+      const res = await fetch(`https://api.agora.io/v1/apps/${appId}`);
+      const body = await res.text();
+      console.log("[agora-echo] Agora API status:", res.status);
+      console.log("[agora-echo] Agora API body prefix:", body.substring(0, 120));
+    } catch (probeErr) {
+      console.log("[agora-echo] Agora API fetch error:", (probeErr as any)?.message || String(probeErr));
+    }
     
     // Accept optional params from query string or body
     let channelName = 'test-channel';
