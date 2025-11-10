@@ -731,34 +731,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // If role is doctor (Practice account), practice ID is the user ID itself
         if (effectiveRole === 'doctor') {
           setEffectivePracticeId(effectiveUserId);
+          setIsProviderAccount(false); // Practice owners are NOT provider accounts
           
-          // Check if this doctor is also a provider account
-          const { data, error } = await supabase
-            .from('providers')
-            .select('id')
+          // Check if this is a staff account
+          const { data: staffData, error: staffError } = await supabase
+            .from('practice_staff')
+            .select('practice_id')
             .eq('user_id', effectiveUserId)
             .maybeSingle();
-          
-          if (!error && data !== null) {
-            setIsProviderAccount(true);
-            setIsStaffAccount(false);
-          } else {
-            // Check if this is a staff account
-            const { data: staffData, error: staffError } = await supabase
-              .from('providers')
-              .select('practice_id')
-              .eq('user_id', effectiveUserId)
-              .maybeSingle();
 
-            if (!staffError && staffData?.practice_id) {
-              setEffectivePracticeId(staffData.practice_id);
-              setIsStaffAccount(true);
-              setIsProviderAccount(false);
-              logger.info('Auth: doctor is staff member', logger.sanitize({ practiceId: staffData.practice_id }));
-            } else {
-              setIsProviderAccount(false);
-              setIsStaffAccount(false);
-            }
+          if (!staffError && staffData?.practice_id) {
+            setEffectivePracticeId(staffData.practice_id);
+            setIsStaffAccount(true);
+            logger.info('Auth: doctor is staff member', logger.sanitize({ practiceId: staffData.practice_id }));
+          } else {
+            setIsStaffAccount(false);
           }
         }
         // If role is provider, fetch the practice_id from providers table

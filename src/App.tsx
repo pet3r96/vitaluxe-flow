@@ -283,7 +283,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/video-test" element={<DeveloperRoute><VideoTestRoom /></DeveloperRoute>} />
                                        <Route path="/practice/video/:sessionId" element={<SubscriptionProtectedRoute><VideoConsultationRoom /></SubscriptionProtectedRoute>} />
                                        <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
-                                      <Route path="/my-subscription" element={<SubscriptionProtectedRoute><MySubscription /></SubscriptionProtectedRoute>} />
+                                      <Route path="/my-subscription" element={<MySubscription />} />
                                       <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
                                       <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
                                       {/* Patient Inbox removed - now integrated into Messages */}
