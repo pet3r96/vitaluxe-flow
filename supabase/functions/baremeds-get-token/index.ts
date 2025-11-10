@@ -66,14 +66,24 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
       body: JSON.stringify(loginPayload),
     });
 
+    // If BareMeds returns an error status, surface the text body for debugging
     if (!loginResponse.ok) {
       const errorText = await loginResponse.text();
       console.error(`BareMeds login failed: ${loginResponse.status} - ${errorText}`);
-      throw new Error(`BareMeds login failed: ${loginResponse.status} - ${errorText}`);
+      throw new Error(`BareMeds login failed: ${loginResponse.status} - ${loginResponse.statusText}. Body: ${errorText.slice(0, 500)}`);
+    }
+
+    // Guard against non-JSON (e.g., HTML error pages)
+    const contentType = (loginResponse.headers.get("content-type") || "").toLowerCase();
+    if (!contentType.includes("application/json")) {
+      const bodyText = await loginResponse.text();
+      console.error(`BareMeds login returned non-JSON (${loginResponse.status}): ${bodyText.substring(0, 500)}`);
+      throw new Error(`BareMeds login returned non-JSON (${loginResponse.status}). Body: ${bodyText.substring(0, 500)}`);
     }
 
     const loginData = await loginResponse.json();
