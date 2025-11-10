@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Send } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 interface PharmacyApiConfigDialogProps {
@@ -27,6 +27,7 @@ export const PharmacyApiConfigDialog = ({
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
   // Form state
   const [apiEnabled, setApiEnabled] = useState(false);
@@ -297,6 +298,37 @@ export const PharmacyApiConfigDialog = ({
     }
   };
 
+  const handleSendTestOrder = async () => {
+    setIsSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("test-pharmacy-api", {
+        body: {
+          pharmacy_id: pharmacyId
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Test order sent successfully",
+          description: `Test order ${data.test_order_id} was sent to the pharmacy API. ${data.pharmacy_order_id ? `Pharmacy returned ID: ${data.pharmacy_order_id}` : 'Check pharmacy system for TEST-ORD-* orders.'}`,
+        });
+      } else {
+        throw new Error(data?.error || "Failed to send test order");
+      }
+    } catch (error: any) {
+      console.error("Test order error:", error);
+      toast({
+        title: "Failed to send test order",
+        description: error.message || "An error occurred while sending the test order",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -476,14 +508,26 @@ export const PharmacyApiConfigDialog = ({
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-4 border-t">
                   <Button
                     onClick={handleTestConnection}
                     disabled={isTesting || (authType !== "baremeds" && !apiEndpointUrl) || (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId))}
                     variant="outline"
+                    className="flex-1"
                   >
                     {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Test Connection
+                  </Button>
+                  <Button
+                    onClick={handleSendTestOrder}
+                    disabled={isSendingTest || (authType !== "baremeds" && !apiEndpointUrl) || (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId))}
+                    variant="secondary"
+                    className="flex-1"
+                    title="Sends a complete test order to verify full integration"
+                  >
+                    {isSendingTest && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Test Order
                   </Button>
                 </div>
               </>
