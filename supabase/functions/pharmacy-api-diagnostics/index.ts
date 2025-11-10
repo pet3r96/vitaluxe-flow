@@ -278,7 +278,7 @@ serve(async (req) => {
               { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
             );
           }
-          const token = loginData.token || loginData.access_token;
+          const token = loginData.token || loginData.access_token || loginData.data?.token || loginData.data?.access_token;
 
           if (!token) {
             results.push({

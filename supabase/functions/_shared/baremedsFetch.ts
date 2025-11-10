@@ -104,7 +104,7 @@ export async function baremedsFetch(
     } catch (jsonError) {
       throw new Error(`BareMeds login response is not valid JSON. Response: ${responseText.substring(0, 200)}`);
     }
-    const token = loginData.token || loginData.access_token;
+    const token = loginData.token || loginData.access_token || loginData.data?.token || loginData.data?.access_token;
 
     if (!token) {
       throw new Error("BareMeds authentication response missing token");

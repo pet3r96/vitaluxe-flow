@@ -161,12 +161,13 @@ serve(async (req) => {
 
     const loginData = await loginResponse.json();
 
-    if (!loginData.token && !loginData.access_token) {
+    const token = loginData.token || loginData.access_token || loginData.data?.token || loginData.data?.access_token;
+
+    if (!token) {
       console.error("BareMeds response missing token:", loginData);
+      console.error("Response keys:", Object.keys(loginData));
       throw new Error("BareMeds authentication response missing token");
     }
-
-    const token = loginData.token || loginData.access_token;
 
     console.log(`Successfully authenticated with BareMeds, token: ${token.substring(0, 10)}...`);
 
