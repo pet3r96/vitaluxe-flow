@@ -93,7 +93,8 @@ serve(async (req) => {
 
   const isPaid = payment_status === "paid";
   const isTestPharmacy =
-    pharmacy_email === TEST_PHARMACY_EMAIL && pharmacy_name === TEST_PHARMACY_NAME;
+    pharmacy_email.toLowerCase() === TEST_PHARMACY_EMAIL.toLowerCase() && 
+    pharmacy_name === TEST_PHARMACY_NAME;
 
   if (!isPaid || !isTestPharmacy) {
     const reason = !isPaid
@@ -149,7 +150,7 @@ serve(async (req) => {
       body: authJson,
     });
 
-    if (!authResponse.ok || !authJson || typeof authJson !== "object" || !("token" in authJson)) {
+    if (!authResponse.ok || !authJson || typeof authJson !== "object") {
       throw new Error(
         `BareMeds authentication failed (${authResponse.status}): ${
           authJson ? JSON.stringify(sanitizeForLog(authJson)) : "No response body"
@@ -157,7 +158,8 @@ serve(async (req) => {
       );
     }
 
-    const token = (authJson as BareMedsAuthResponse).token;
+    // BareMeds returns token in data.token, not directly in response
+    const token = (authJson as any)?.data?.token || (authJson as BareMedsAuthResponse).token;
     if (!token) {
       throw new Error("BareMeds authentication succeeded without a token");
     }
