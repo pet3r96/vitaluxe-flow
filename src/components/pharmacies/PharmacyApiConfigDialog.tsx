@@ -38,6 +38,12 @@ export const PharmacyApiConfigDialog = ({
   const [webhookSecret, setWebhookSecret] = useState("");
   const [retryCount, setRetryCount] = useState("3");
   const [timeout, setTimeout] = useState("30");
+  
+  // BareMeds-specific fields
+  const [baremedEmail, setBaremedEmail] = useState("");
+  const [baremedPassword, setBaremedPassword] = useState("");
+  const [baremedSiteId, setBaremedSiteId] = useState("");
+  const [baremedBaseUrl, setBaremedBaseUrl] = useState("https://staging-rxorders.baremeds.com");
 
   // Fetch pharmacy config
   const { data: pharmacy, isLoading } = useQuery({
@@ -104,7 +110,27 @@ export const PharmacyApiConfigDialog = ({
       if (updateError) throw updateError;
 
       // Save API credentials if provided
-      if (apiKey && authType !== "none") {
+      if (authType === "baremeds" && baremedEmail && baremedPassword && baremedSiteId) {
+        // Store BareMeds credentials as JSON
+        const baremedsCreds = JSON.stringify({
+          email: baremedEmail,
+          password: baremedPassword,
+          site_id: parseInt(baremedSiteId),
+          base_url: baremedBaseUrl || "https://staging-rxorders.baremeds.com"
+        });
+
+        const { error: credError } = await supabase
+          .from("pharmacy_api_credentials")
+          .upsert({
+            pharmacy_id: pharmacyId,
+            credential_type: "baremeds_oauth",
+            credential_key: baremedsCreds,
+          }, {
+            onConflict: "pharmacy_id,credential_type",
+          });
+
+        if (credError) throw credError;
+      } else if (apiKey && authType !== "none" && authType !== "baremeds") {
         const credentialType = authType === "bearer" ? "bearer_token" : "api_key";
         
         const { error: credError } = await supabase
@@ -139,6 +165,52 @@ export const PharmacyApiConfigDialog = ({
   };
 
   const handleTestConnection = async () => {
+    if (authType === "baremeds") {
+      // Test BareMeds login
+      if (!baremedEmail || !baremedPassword || !baremedSiteId) {
+        toast({
+          title: "Missing BareMeds credentials",
+          description: "Please fill in all BareMeds fields",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsTesting(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("baremeds-get-token", {
+          body: {
+            credentials: {
+              email: baremedEmail,
+              password: baremedPassword,
+              site_id: parseInt(baremedSiteId),
+              base_url: baremedBaseUrl || "https://staging-rxorders.baremeds.com"
+            }
+          }
+        });
+
+        if (error) throw error;
+
+        if (data?.token) {
+          toast({
+            title: "BareMeds login successful",
+            description: `Token: ${data.token.substring(0, 10)}...${data.token.substring(data.token.length - 10)}`,
+          });
+        } else {
+          throw new Error("No token received from BareMeds");
+        }
+      } catch (error: any) {
+        toast({
+          title: "BareMeds login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsTesting(false);
+      }
+      return;
+    }
+
     if (!apiEndpointUrl) {
       toast({
         title: "Missing endpoint URL",
@@ -248,6 +320,7 @@ export const PharmacyApiConfigDialog = ({
                       <SelectItem value="bearer">Bearer Token</SelectItem>
                       <SelectItem value="api_key">API Key</SelectItem>
                       <SelectItem value="basic">Basic Auth</SelectItem>
+                      <SelectItem value="baremeds">BareMeds OAuth</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -264,7 +337,49 @@ export const PharmacyApiConfigDialog = ({
                   </div>
                 )}
 
-                {authType !== "none" && (
+                {authType === "baremeds" ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="baremeds-base-url">BareMeds Base URL</Label>
+                      <Input
+                        id="baremeds-base-url"
+                        placeholder="https://staging-rxorders.baremeds.com"
+                        value={baremedBaseUrl}
+                        onChange={(e) => setBaremedBaseUrl(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="baremeds-email">BareMeds Email</Label>
+                      <Input
+                        id="baremeds-email"
+                        type="email"
+                        placeholder="your-email@example.com"
+                        value={baremedEmail}
+                        onChange={(e) => setBaremedEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="baremeds-password">BareMeds Password</Label>
+                      <Input
+                        id="baremeds-password"
+                        type="password"
+                        placeholder="Enter BareMeds password"
+                        value={baremedPassword}
+                        onChange={(e) => setBaremedPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="baremeds-site-id">BareMeds Site ID</Label>
+                      <Input
+                        id="baremeds-site-id"
+                        type="number"
+                        placeholder="98923"
+                        value={baremedSiteId}
+                        onChange={(e) => setBaremedSiteId(e.target.value)}
+                      />
+                    </div>
+                  </>
+                ) : authType !== "none" && (
                   <div className="space-y-2">
                     <Label htmlFor="api-key">
                       {authType === "bearer" ? "Bearer Token" : "API Key"}

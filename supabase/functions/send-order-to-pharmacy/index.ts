@@ -112,7 +112,36 @@ serve(async (req) => {
       "Content-Type": "application/json",
     };
 
-    if (pharmacy.api_auth_type === "bearer" && credentials?.length) {
+    // Handle BareMeds OAuth separately
+    let baremedToken: string | null = null;
+    if (pharmacy.api_auth_type === "baremeds") {
+      console.log("Fetching BareMeds token...");
+      try {
+        const tokenResponse = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/baremeds-get-token`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({ pharmacy_id })
+          }
+        );
+
+        if (!tokenResponse.ok) {
+          throw new Error(`Failed to get BareMeds token: ${await tokenResponse.text()}`);
+        }
+
+        const tokenData = await tokenResponse.json();
+        baremedToken = tokenData.token;
+        headers["Authorization"] = `Bearer ${baremedToken}`;
+        console.log(`Got BareMeds token: ${baremedToken?.substring(0, 10)}...`);
+      } catch (error) {
+        console.error("BareMeds token fetch error:", error);
+        throw error;
+      }
+    } else if (pharmacy.api_auth_type === "bearer" && credentials?.length) {
       const token = credentials.find(c => c.credential_type === "bearer_token")?.credential_key;
       if (token) headers["Authorization"] = `Bearer ${token}`;
     } else if (pharmacy.api_auth_type === "api_key" && credentials?.length) {
