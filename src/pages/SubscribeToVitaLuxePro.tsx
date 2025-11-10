@@ -16,10 +16,12 @@ import ReactMarkdown from "react-markdown";
 import { useTheme } from "next-themes";
 import logoLight from "@/assets/vitaluxe-logo-light.png";
 import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
+import { TrialExpiredDialog } from "@/components/subscription/TrialExpiredDialog";
+import { PaymentWithTermsDialog } from "@/components/subscription/PaymentWithTermsDialog";
 
 export default function SubscribeToVitaLuxePro() {
   const { user, effectiveRole } = useAuth();
-  const { isSubscribed, loading: subscriptionLoading, status, refreshSubscription } = useSubscription();
+  const { isSubscribed, loading: subscriptionLoading, status, refreshSubscription, gracePeriodEndsAt } = useSubscription();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { theme } = useTheme();
@@ -29,6 +31,9 @@ export default function SubscribeToVitaLuxePro() {
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsContent, setTermsContent] = useState<string>("");
   const [loadingTerms, setLoadingTerms] = useState(false);
+  const [showTrialExpiredDialog, setShowTrialExpiredDialog] = useState(false);
+  const [showPaymentTermsDialog, setShowPaymentTermsDialog] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
 
   // Redirect pharmacy users immediately - subscriptions are only for practices
   useEffect(() => {
@@ -63,34 +68,27 @@ export default function SubscribeToVitaLuxePro() {
     }
   }, [effectiveRole, navigate, toast]);
 
-  // Redirect if already subscribed (but not if trial expired)
+  // Show trial expired modal when needed
   useEffect(() => {
-    console.log('[SubscribeToVitaLuxePro] Subscription check:', {
-      loading: subscriptionLoading,
-      isSubscribed,
-      status,
-      effectiveRole
-    });
-
-    // Only redirect if actively subscribed (not expired trial)
-    if (!subscriptionLoading && isSubscribed && status !== 'expired' && status !== 'suspended') {
-      console.log('[SubscribeToVitaLuxePro] Redirecting subscribed user to dashboard');
-      toast({
-        title: "Already Subscribed",
-        description: `You already have an ${status} VitaLuxePro subscription.`,
-      });
-      navigate('/dashboard');
+    if (!subscriptionLoading && status) {
+      // Show blocking modal for expired trial or suspended subscription
+      const shouldShowModal = 
+        (status === 'trial' && !isSubscribed) || 
+        status === 'suspended' || 
+        status === 'expired';
+      
+      setShowTrialExpiredDialog(shouldShowModal);
+      
+      // Redirect if actively subscribed
+      if (isSubscribed && status !== 'expired' && status !== 'suspended') {
+        toast({
+          title: "Already Subscribed",
+          description: `You already have an ${status} VitaLuxePro subscription.`,
+        });
+        navigate('/dashboard');
+      }
     }
-
-    // Show message for expired trial but don't redirect (let them add payment)
-    if (!subscriptionLoading && status === 'trial' && !isSubscribed) {
-      toast({
-        title: "Trial Ended",
-        description: "Your 14-day trial has ended. Add a payment method below to continue using VitaLuxePro.",
-        variant: "destructive"
-      });
-    }
-  }, [isSubscribed, subscriptionLoading, status, navigate, toast, effectiveRole]);
+  }, [isSubscribed, subscriptionLoading, status, navigate, toast]);
 
   useEffect(() => {
     const fetchTerms = async () => {
@@ -116,6 +114,46 @@ export default function SubscribeToVitaLuxePro() {
 
     fetchTerms();
   }, []);
+
+  const handleUpgrade = () => {
+    setShowTrialExpiredDialog(false);
+    setShowPaymentTermsDialog(true);
+  };
+
+  const handlePaymentTermsComplete = (termsAccepted: boolean) => {
+    setShowPaymentTermsDialog(false);
+    if (termsAccepted) {
+      // Navigate to profile to add payment method
+      navigate('/profile');
+    }
+  };
+
+  const handleDeclineSubscription = async () => {
+    setIsDeclining(true);
+    try {
+      const { error } = await supabase.functions.invoke('cancel-subscription');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Subscription Cancelled",
+        description: "Your subscription has been cancelled. You can restart your trial anytime.",
+      });
+      
+      await refreshSubscription();
+      setShowTrialExpiredDialog(false);
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Error cancelling subscription:', error);
+      toast({
+        title: "Cancellation Failed",
+        description: error.message || "Unable to cancel subscription. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeclining(false);
+    }
+  };
 
   const features = [
     "Patient appointment booking with automated scheduling",
@@ -387,18 +425,38 @@ export default function SubscribeToVitaLuxePro() {
                 </>
               )}
 
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/dashboard')}
-                disabled={isProcessing}
-                className="w-full"
-              >
-                Maybe Later
-              </Button>
+              {/* Only show Maybe Later if not expired/suspended */}
+              {!(!isSubscribed && status === 'trial') && status !== 'suspended' && (
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/dashboard')}
+                  disabled={isProcessing}
+                  className="w-full"
+                >
+                  Maybe Later
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Blocking Trial Expired Modal */}
+      <TrialExpiredDialog
+        open={showTrialExpiredDialog}
+        onUpgrade={handleUpgrade}
+        onDecline={handleDeclineSubscription}
+        status={status || 'trial'}
+        gracePeriodEndsAt={gracePeriodEndsAt}
+        declining={isDeclining}
+      />
+
+      {/* Payment Terms Dialog */}
+      <PaymentWithTermsDialog
+        open={showPaymentTermsDialog}
+        onOpenChange={setShowPaymentTermsDialog}
+        onComplete={handlePaymentTermsComplete}
+      />
 
       <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
         <DialogContent className="max-w-3xl max-h-[80vh]">

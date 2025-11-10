@@ -80,9 +80,9 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
     isSubscribed = new Date(subscription.current_period_end) > now;
   }
 
-  // Suspended subscriptions are in grace period - still "subscribed" until grace period ends
-  if (subscription.status === 'suspended' && subscription.grace_period_ends_at) {
-    isSubscribed = new Date(subscription.grace_period_ends_at) > now;
+  // Suspended subscriptions are NOT subscribed - force upgrade decision
+  if (subscription.status === 'suspended') {
+    isSubscribed = false;
   }
   
   return {

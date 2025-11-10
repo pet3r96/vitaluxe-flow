@@ -5654,6 +5654,8 @@ export type Database = {
           id: string
           last_payment_attempt_at: string | null
           monthly_price: number | null
+          paid_terms_accepted_at: string | null
+          paid_terms_version: string | null
           practice_id: string
           rep_commission_percentage: number | null
           status: string
@@ -5671,6 +5673,8 @@ export type Database = {
           id?: string
           last_payment_attempt_at?: string | null
           monthly_price?: number | null
+          paid_terms_accepted_at?: string | null
+          paid_terms_version?: string | null
           practice_id: string
           rep_commission_percentage?: number | null
           status?: string
@@ -5688,6 +5692,8 @@ export type Database = {
           id?: string
           last_payment_attempt_at?: string | null
           monthly_price?: number | null
+          paid_terms_accepted_at?: string | null
+          paid_terms_version?: string | null
           practice_id?: string
           rep_commission_percentage?: number | null
           status?: string
