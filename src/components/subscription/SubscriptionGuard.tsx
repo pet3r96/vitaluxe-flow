@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock, Sparkles } from "lucide-react";
@@ -18,13 +19,17 @@ export const SubscriptionGuard = ({
   upgradeMessage = "Upgrade to VitaLuxePro to access this feature"
 }: SubscriptionGuardProps) => {
   const { isSubscribed, loading } = useSubscription();
+  const { effectiveRole } = useAuth();
   const navigate = useNavigate();
+
+  console.log('[SubscriptionGuard] Guard check', { effectiveRole, isSubscribed, loading });
 
   if (loading) {
     return <Skeleton className="h-32 w-full" />;
   }
 
-  if (!isSubscribed) {
+  // Only show upgrade prompt for doctors (practice owners)
+  if (!isSubscribed && effectiveRole === 'doctor') {
     return (
       <Card className="p-6 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="flex items-start gap-4">

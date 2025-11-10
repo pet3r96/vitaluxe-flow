@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock, Sparkles } from "lucide-react";
@@ -12,12 +13,17 @@ interface ProGateProps {
 
 export function ProGate({ children }: ProGateProps) {
   const { isSubscribed, status } = useSubscription();
+  const { effectiveRole } = useAuth();
   const navigate = useNavigate();
+
+  console.log('[ProGate] Access check', { effectiveRole, isSubscribed, status });
 
   // Allow access during trial, active, or grace period
   const hasAccess = isSubscribed || ['trial', 'active'].includes(status || '');
 
-  if (!hasAccess) {
+  // Only show upgrade gate for doctors (practice owners)
+  // Staff, providers, patients, pharmacy inherit access or don't need subscriptions
+  if (!hasAccess && effectiveRole === 'doctor') {
     return (
       <div className="flex items-center justify-center min-h-[600px] p-6">
         <Card className="max-w-2xl w-full bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">

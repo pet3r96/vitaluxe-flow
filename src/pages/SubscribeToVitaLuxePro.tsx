@@ -68,15 +68,18 @@ export default function SubscribeToVitaLuxePro() {
     }
   }, [effectiveRole, navigate, toast]);
 
-  // Show trial expired modal when needed
+  // Show trial expired modal when needed - ONLY FOR DOCTORS
   useEffect(() => {
-    if (!subscriptionLoading && status) {
+    console.log('[SubscribeToVitaLuxePro] Trial modal check', { effectiveRole, status, isSubscribed, subscriptionLoading });
+    
+    if (!subscriptionLoading && status && effectiveRole === 'doctor') {
       // Show blocking modal for expired trial or suspended subscription
       const shouldShowModal = 
         (status === 'trial' && !isSubscribed) || 
         status === 'suspended' || 
         status === 'expired';
       
+      console.log('[SubscribeToVitaLuxePro] Should show modal?', shouldShowModal);
       setShowTrialExpiredDialog(shouldShowModal);
       
       // Redirect if actively subscribed

@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,12 +11,16 @@ interface SubscriptionProtectedRouteProps {
 
 export const SubscriptionProtectedRoute = ({ children }: SubscriptionProtectedRouteProps) => {
   const { isSubscribed, loading } = useSubscription();
+  const { effectiveRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // Only redirect once, when loading is complete and subscription is false
-    if (!loading && !isSubscribed) {
+    console.log('[SubscriptionProtectedRoute] Check', { effectiveRole, isSubscribed, loading, path: location.pathname });
+    
+    // Only redirect PRACTICE OWNERS (doctors) who are not subscribed
+    // Staff, providers, patients, pharmacy should never hit this route due to menu visibility
+    if (!loading && !isSubscribed && effectiveRole === 'doctor') {
       // Use a ref or local storage to prevent repeated toasts
       const toastKey = `subscription-redirect-${location.pathname}`;
       const lastToast = sessionStorage.getItem(toastKey);

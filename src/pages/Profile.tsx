@@ -9,14 +9,18 @@ import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSectio
 import PatientProfile from "@/pages/patient/PatientProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
+  const navigate = useNavigate();
   const [isProvider, setIsProvider] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   
   const isRep = effectiveRole === "topline" || effectiveRole === "downline";
+  const isDoctorNotProvider = effectiveRole === "doctor" && !isProvider;
   const allowedRoles = ["doctor", "topline", "downline", "provider", "patient", "pharmacy", "staff", "admin"];
 
   useEffect(() => {
@@ -70,18 +74,32 @@ const Profile = () => {
     <div className="patient-container">
       {effectiveRole !== "patient" && (
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">My Profile</h1>
-          <p className="text-muted-foreground mt-2">
-            {isRep 
-              ? "Your Contact Information & Account Settings"
-              : effectiveRole === "staff"
-                ? "Your Contact Information & Account Settings"
-                : effectiveRole === "pharmacy"
-                  ? "Manage your pharmacy information, licensed states, and account security"
-                  : isProvider 
-                    ? "Your Professional Credentials & Contact Information" 
-                    : "Manage your personal information and account settings"}
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold gold-text-gradient">My Profile</h1>
+              <p className="text-muted-foreground mt-2">
+                {isRep 
+                  ? "Your Contact Information & Account Settings"
+                  : effectiveRole === "staff"
+                    ? "Your Contact Information & Account Settings"
+                    : effectiveRole === "pharmacy"
+                      ? "Manage your pharmacy information, licensed states, and account security"
+                      : isProvider 
+                        ? "Your Professional Credentials & Contact Information" 
+                        : "Manage your personal information and account settings"}
+              </p>
+            </div>
+            {isDoctorNotProvider && (
+              <Button 
+                onClick={() => navigate('/my-subscription')}
+                variant="outline"
+                className="gap-2 whitespace-nowrap"
+              >
+                <CreditCard className="h-4 w-4" />
+                Manage Subscription
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

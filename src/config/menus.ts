@@ -150,7 +150,7 @@ export const menus: MenuConfig = {
       icon: Settings,
       items: [
         { label: "My Profile", href: "/profile", icon: UserSquare2 },
-        { label: "My Subscription", href: "/my-subscription", icon: CreditCard, isPro: true, hideForStaff: true, hideForProvider: true },
+        { label: "My Subscription", href: "/my-subscription", icon: CreditCard, hideForStaff: true, hideForProvider: true },
       ],
     },
   ],

@@ -18,48 +18,57 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     status: null,
     trialEndsAt: null,
     currentPeriodEnd: null,
-    trialDaysRemaining: null
+    trialDaysRemaining: null,
+    gracePeriodEndsAt: null
   });
   const [loading, setLoading] = useState(true);
 
   const refreshSubscription = async () => {
-    // Patients and Pharmacies always have access (operational accounts, not subscription customers)
-    if (effectiveRole === 'patient' || effectiveRole === 'pharmacy') {
+    console.log('[SubscriptionContext] refreshSubscription called', { effectiveRole, effectivePracticeId });
+    
+    // Patients, Pharmacies, and Providers always have access (operational accounts, not subscription customers)
+    // Providers inherit their parent practice's subscription
+    if (effectiveRole === 'patient' || effectiveRole === 'pharmacy' || effectiveRole === 'provider') {
+      console.log('[SubscriptionContext] Auto-granting access for', effectiveRole);
       setSubscriptionStatus({
         isSubscribed: true,
         status: 'active',
         trialEndsAt: null,
         currentPeriodEnd: null,
-        trialDaysRemaining: null
+        trialDaysRemaining: null,
+        gracePeriodEndsAt: null
       });
       setLoading(false);
       return;
     }
 
-    // Allow doctor, provider, and staff roles (staff inherit practice subscription via effectivePracticeId)
+    // Allow doctor and staff roles (staff inherit practice subscription via effectivePracticeId)
     if (!user?.id || !effectivePracticeId) {
+      console.log('[SubscriptionContext] No user or practice ID', { userId: user?.id, effectivePracticeId });
       setSubscriptionStatus({
         isSubscribed: false,
         status: null,
         trialEndsAt: null,
         currentPeriodEnd: null,
-        trialDaysRemaining: null
+        trialDaysRemaining: null,
+        gracePeriodEndsAt: null
       });
       setLoading(false);
       return;
     }
 
-    // For providers, check their parent practice's subscription
     // For doctors, check their own subscription (user.id === practice_id)
     const practiceIdToCheck = effectivePracticeId || user.id;
     
     if (!practiceIdToCheck) {
+      console.log('[SubscriptionContext] No practice ID to check');
       setSubscriptionStatus({
         isSubscribed: false,
         status: null,
         trialEndsAt: null,
         currentPeriodEnd: null,
-        trialDaysRemaining: null
+        trialDaysRemaining: null,
+        gracePeriodEndsAt: null
       });
       setLoading(false);
       return;
