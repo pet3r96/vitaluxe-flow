@@ -77,13 +77,7 @@ function concat(...arrays: Uint8Array[]): Uint8Array {
   return result;
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-  }
-  return bytes;
-}
+// hexToBytes removed - certificate should be used as UTF-8 bytes, not hex-decoded
 
 // ============================================================================
 // Privilege Constants
@@ -195,8 +189,8 @@ async function generateAccessToken2(
     servicesPack
   );
   
-  // CRITICAL: Hex-decode the certificate for HMAC key
-  const keyBytes = hexToBytes(appCertificate);
+  // CRITICAL FIX: Use certificate as UTF-8 bytes (not hex-decoded)
+  const keyBytes = new TextEncoder().encode(appCertificate);
   
   // Data to sign: utf8(appId) + message
   const appIdBytes = new TextEncoder().encode(appId);
@@ -221,7 +215,40 @@ async function generateAccessToken2(
   const base64Payload = btoa(String.fromCharCode(...payload));
   
   // Return token with "007" prefix
-  return "007" + base64Payload;
+  const token = "007" + base64Payload;
+
+  // Enhanced diagnostic logging
+  console.log("\n🔧 [AccessToken2 Builder]");
+  console.log("├─ AppID prefix:", appId.substring(0, 8));
+  console.log("├─ Cert prefix:", appCertificate.substring(0, 8));
+  console.log("├─ Service type:", serviceType);
+  console.log("├─ Channel:", channelName);
+  console.log("├─ UID:", uid);
+  console.log("├─ Role:", role);
+  console.log("├─ Salt:", salt);
+  console.log("├─ Timestamp:", ts);
+  console.log("├─ Expires at:", expiresAt, `(${new Date(expiresAt * 1000).toISOString()})`);
+  console.log("├─ Service count:", 1);
+  
+  if (serviceType === 'rtc') {
+    console.log("├─ RTC Privileges: JOIN_CHANNEL(1)");
+    if (role === 'publisher') {
+      console.log("│  ├─ PUBLISH_AUDIO(2)");
+      console.log("│  ├─ PUBLISH_VIDEO(3)");
+      console.log("│  └─ PUBLISH_DATA_STREAM(4)");
+    }
+  } else {
+    console.log("├─ RTM Privileges: LOGIN(1)");
+  }
+  
+  console.log("├─ Certificate UTF-8 byte count:", keyBytes.length);
+  console.log("├─ Message length:", message.length, "bytes");
+  console.log("├─ Signature length:", signature.length, "bytes");
+  console.log("├─ Token starts with 007:", token.startsWith("007"));
+  console.log("├─ Token length:", token.length);
+  console.log("└─ Token prefix:", token.substring(0, 20));
+
+  return token;
 }
 
 // ============================================================================

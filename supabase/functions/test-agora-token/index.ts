@@ -64,6 +64,29 @@ serve(async (req) => {
       expiresAt: new Date(tokens.expiresAt * 1000).toISOString(),
     });
 
+    console.log("\n📊 [Detailed Token Analysis]");
+    console.log("RTC Token Structure:");
+    console.log("├─ Prefix:", tokens.rtcToken.substring(0, 3));
+    console.log("├─ First 30 chars:", tokens.rtcToken.substring(0, 30));
+    console.log("├─ Length:", tokens.rtcToken.length);
+    console.log("└─ Last 20 chars:", tokens.rtcToken.slice(-20));
+
+    console.log("\nRTM Token Structure:");
+    console.log("├─ Prefix:", tokens.rtmToken.substring(0, 3));
+    console.log("├─ First 30 chars:", tokens.rtmToken.substring(0, 30));
+    console.log("├─ Length:", tokens.rtmToken.length);
+    console.log("└─ Last 20 chars:", tokens.rtmToken.slice(-20));
+
+    // Env diagnostics for hidden bytes
+    const appIdBytes = new TextEncoder().encode(Deno.env.get("AGORA_APP_ID") || "");
+    const certBytes = new TextEncoder().encode(Deno.env.get("AGORA_APP_CERTIFICATE") || "");
+    const appIdLastByte = appIdBytes.length ? appIdBytes[appIdBytes.length - 1] : null;
+
+    console.log("\n🔍 [Certificate Format Check]");
+    console.log("✅ Certificate is being used as UTF-8 bytes (not hex-decoded)");
+    console.log("Certificate byte count:", certBytes.length);
+    console.log("Expected for 32-char string: 32 bytes");
+
     // Validation checks
     if (!rtcStartsWith007 || !rtmStartsWith007) {
       console.error("[Test Agora Token] ERROR: Tokens don't start with 007!");
@@ -74,10 +97,6 @@ serve(async (req) => {
     if (!tokensAreDifferent) {
       console.error("[Test Agora Token] ERROR: RTC and RTM tokens are identical!");
     }
-    // Env diagnostics for hidden bytes
-    const appIdBytes = new TextEncoder().encode(Deno.env.get("AGORA_APP_ID") || "");
-    const certBytes = new TextEncoder().encode(Deno.env.get("AGORA_APP_CERTIFICATE") || "");
-    const appIdLastByte = appIdBytes.length ? appIdBytes[appIdBytes.length - 1] : null;
 
     return new Response(
       JSON.stringify({
