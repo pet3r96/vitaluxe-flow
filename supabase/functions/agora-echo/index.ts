@@ -13,14 +13,26 @@ serve(async (req) => {
 
   try {
     const { appId, appCertificate } = getAgoraCredentials();
+    
+    // Accept optional params from query string or body
+    let channelName = 'test-channel';
+    let uid = 'test-user';
+    
+    if (req.method === 'POST') {
+      const body = await req.json();
+      channelName = body.channelName || channelName;
+      uid = body.uid || uid;
+    }
 
-    console.log("[agora-echo] Returning backend credentials sample");
+    console.log("[agora-echo] Debug diagnostics");
 
     return new Response(
       JSON.stringify({
         appId,
         appIdSample: appId.substring(0, 8) + '...',
         cert8: appCertificate.substring(0, 8),
+        channelName,
+        uid,
         timestamp: new Date().toISOString(),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
