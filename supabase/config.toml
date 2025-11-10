@@ -385,3 +385,6 @@ verify_jwt = false
 
 [functions.send-pharmacy-order]
 verify_jwt = false
+
+[functions.test-baremeds-auth]
+verify_jwt = false
