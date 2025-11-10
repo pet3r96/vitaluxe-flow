@@ -23,7 +23,42 @@ serve(async (req) => {
 
     const { pharmacy_id }: TestOrderRequest = await req.json();
 
-    console.log(`Sending test order to pharmacy ${pharmacy_id}`);
+    console.log(`[test-pharmacy-api] Sending test order to pharmacy ${pharmacy_id}`);
+
+    // First, run diagnostics to ensure everything is properly configured
+    console.log(`[test-pharmacy-api] Running diagnostics first...`);
+    try {
+      const diagnosticsResponse = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/pharmacy-api-diagnostics`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ pharmacy_id }),
+        }
+      );
+
+      const diagnosticsData = await diagnosticsResponse.json();
+      
+      if (!diagnosticsData.success) {
+        console.error(`[test-pharmacy-api] Diagnostics failed:`, diagnosticsData);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Pre-flight diagnostics failed. Please resolve issues before sending test orders.",
+            diagnostics: diagnosticsData.results,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+      
+      console.log(`[test-pharmacy-api] Diagnostics passed, proceeding with test order`);
+    } catch (diagError) {
+      console.error(`[test-pharmacy-api] Failed to run diagnostics:`, diagError);
+      // Continue anyway if diagnostics endpoint fails
+    }
 
     // Fetch pharmacy API configuration
     const { data: pharmacy, error: pharmacyError } = await supabaseAdmin

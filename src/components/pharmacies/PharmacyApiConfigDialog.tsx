@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, Send, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Send, AlertCircle, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface PharmacyApiConfigDialogProps {
   pharmacyId: string;
@@ -28,6 +29,9 @@ export const PharmacyApiConfigDialog = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+  const [diagnosticsResults, setDiagnosticsResults] = useState<any>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   // Form state
   const [apiEnabled, setApiEnabled] = useState(false);
@@ -303,6 +307,46 @@ export const PharmacyApiConfigDialog = ({
     }
   };
 
+  const handleRunDiagnostics = async () => {
+    setIsRunningDiagnostics(true);
+    setDiagnosticsResults(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("pharmacy-api-diagnostics", {
+        body: {
+          pharmacy_id: pharmacyId
+        }
+      });
+
+      if (error) throw error;
+
+      setDiagnosticsResults(data);
+      setShowDiagnostics(true);
+
+      if (data?.success) {
+        toast({
+          title: "Diagnostics passed ✓",
+          description: "All checks passed. You can now send a test order.",
+        });
+      } else {
+        toast({
+          title: "Diagnostics found issues",
+          description: "Please review the results below and fix any errors.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Diagnostics error:", error);
+      toast({
+        title: "Failed to run diagnostics",
+        description: error.message || "An error occurred while running diagnostics",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRunningDiagnostics(false);
+    }
+  };
+
   const handleSendTestOrder = async () => {
     setIsSendingTest(true);
     try {
@@ -320,6 +364,11 @@ export const PharmacyApiConfigDialog = ({
           description: `Test order ${data.test_order_id} was sent to the pharmacy API. ${data.pharmacy_order_id ? `Pharmacy returned ID: ${data.pharmacy_order_id}` : 'Check pharmacy system for TEST-ORD-* orders.'}`,
         });
       } else {
+        // Show diagnostics if available
+        if (data?.diagnostics) {
+          setDiagnosticsResults({ success: false, results: data.diagnostics });
+          setShowDiagnostics(true);
+        }
         throw new Error(data?.error || "Failed to send test order");
       }
     } catch (error: any) {
@@ -333,6 +382,17 @@ export const PharmacyApiConfigDialog = ({
       setIsSendingTest(false);
     }
   };
+
+  // Validate Base URL for common typos
+  const validateBaseUrl = (url: string): string | null => {
+    if (!url) return null;
+    if (url.includes("norders.baremeds.com")) {
+      return "Did you mean 'rxorders.baremeds.com'? Common typo detected.";
+    }
+    return null;
+  };
+
+  const baseUrlWarning = validateBaseUrl(baremedBaseUrl);
 
   if (isLoading) {
     return (
@@ -525,37 +585,111 @@ export const PharmacyApiConfigDialog = ({
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-4 border-t">
+                {baseUrlWarning && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-amber-900 dark:text-amber-100">{baseUrlWarning}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3 pt-4 border-t">
                   <Button
-                    onClick={handleTestConnection}
-                    disabled={isTesting || (authType !== "baremeds" && !apiEndpointUrl) || (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId))}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Test Connection
-                  </Button>
-                  <Button
-                    onClick={handleSendTestOrder}
+                    onClick={handleRunDiagnostics}
                     disabled={
-                      isSendingTest || 
-                      !apiEnabled ||
-                      (authType === "baremeds" && !hasBareMedsCreds) ||
-                      (authType !== "baremeds" && authType !== "none" && !apiEndpointUrl)
+                      isRunningDiagnostics ||
+                      (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId || !baremedBaseUrl))
                     }
-                    variant="secondary"
-                    className="flex-1"
-                    title={
-                      !apiEnabled ? "Enable API integration first" :
-                      authType === "baremeds" && !hasBareMedsCreds ? "Save BareMeds credentials first" :
-                      authType !== "baremeds" && !apiEndpointUrl ? "Configure API endpoint first" :
-                      "Sends a complete test order to verify full integration"
-                    }
+                    variant="outline"
+                    className="w-full"
                   >
-                    {isSendingTest && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Test Order
+                    {isRunningDiagnostics && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Activity className="mr-2 h-4 w-4" />
+                    Run Diagnostics
                   </Button>
+
+                  {diagnosticsResults && (
+                    <Collapsible open={showDiagnostics} onOpenChange={setShowDiagnostics}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-between">
+                          <span className="flex items-center gap-2">
+                            {diagnosticsResults.success ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            )}
+                            Diagnostics Results
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {showDiagnostics ? "Hide" : "Show"}
+                          </span>
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-2 mt-2">
+                        {diagnosticsResults.results?.map((result: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-3 border rounded-md text-sm space-y-1"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{result.step}</span>
+                              {result.status === "success" && (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              )}
+                              {result.status === "warning" && (
+                                <AlertCircle className="h-4 w-4 text-amber-500" />
+                              )}
+                              {result.status === "error" && (
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              )}
+                            </div>
+                            <p className="text-muted-foreground">{result.message}</p>
+                            {result.details && (
+                              <pre className="text-xs bg-muted p-2 rounded mt-1 overflow-x-auto">
+                                {JSON.stringify(result.details, null, 2)}
+                              </pre>
+                            )}
+                          </div>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleTestConnection}
+                      disabled={isTesting || (authType !== "baremeds" && !apiEndpointUrl) || (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId))}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Test Connection
+                    </Button>
+                    <Button
+                      onClick={handleSendTestOrder}
+                      disabled={
+                        isSendingTest || 
+                        !apiEnabled ||
+                        (authType === "baremeds" && !hasBareMedsCreds) ||
+                        (authType !== "baremeds" && authType !== "none" && !apiEndpointUrl) ||
+                        (diagnosticsResults && !diagnosticsResults.success)
+                      }
+                      variant="secondary"
+                      className="flex-1"
+                      title={
+                        !apiEnabled ? "Enable API integration first" :
+                        diagnosticsResults && !diagnosticsResults.success ? "Run diagnostics and fix all errors first" :
+                        authType === "baremeds" && !hasBareMedsCreds ? "Save BareMeds credentials first" :
+                        authType !== "baremeds" && !apiEndpointUrl ? "Configure API endpoint first" :
+                        "Sends a complete test order to verify full integration"
+                      }
+                    >
+                      {isSendingTest && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Test Order
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
