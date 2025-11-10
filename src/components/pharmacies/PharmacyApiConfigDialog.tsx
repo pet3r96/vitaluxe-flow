@@ -485,47 +485,92 @@ export const PharmacyApiConfigDialog = ({
           </TabsContent>
 
           <TabsContent value="logs" className="mt-4">
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
               {transmissions && transmissions.length > 0 ? (
                 transmissions.map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-3 border rounded-md space-y-1 text-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">
-                        {log.transmission_type.toUpperCase()}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {log.success ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-destructive" />
+                  <Collapsible key={log.id}>
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">
+                              {log.transmission_type.toUpperCase()}
+                            </span>
+                            {log.success ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(log.transmitted_at).toLocaleString()}
+                          </div>
+                        </div>
+                        {log.response_status && (
+                          <div className={`px-2 py-1 rounded text-xs font-medium ${
+                            log.success ? 'bg-green-100 text-green-700' : 'bg-destructive/10 text-destructive'
+                          }`}>
+                            {log.response_status}
+                          </div>
                         )}
-                        <span className="text-muted-foreground">
-                          {new Date(log.transmitted_at).toLocaleString()}
-                        </span>
                       </div>
+
+                      <div className="text-xs text-muted-foreground truncate">
+                        {log.api_endpoint}
+                      </div>
+
+                      {log.error_message && (
+                        <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-xs text-destructive">
+                          <span className="font-medium">Error:</span> {log.error_message}
+                        </div>
+                      )}
+
+                      {log.retry_count > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-amber-600">
+                          <AlertCircle className="h-3 w-3" />
+                          Retried {log.retry_count} time{log.retry_count > 1 ? 's' : ''}
+                        </div>
+                      )}
+
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-full justify-between h-8 mt-2">
+                          <span className="text-xs">View Details</span>
+                          <span className="text-xs text-muted-foreground">▼</span>
+                        </Button>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent className="space-y-3 pt-2">
+                        <div>
+                          <div className="text-xs font-medium mb-1 flex items-center gap-2">
+                            <span>Transmission ID:</span>
+                            <code className="text-xs bg-muted px-1 py-0.5 rounded">{log.id}</code>
+                          </div>
+                        </div>
+                        {log.order_line_id && (
+                          <div>
+                            <div className="text-xs font-medium mb-1">Order Line ID:</div>
+                            <code className="text-xs bg-muted px-2 py-1 rounded block">{log.order_line_id}</code>
+                          </div>
+                        )}
+                        {log.pharmacy_order_id && (
+                          <div>
+                            <div className="text-xs font-medium mb-1">Pharmacy Order ID:</div>
+                            <code className="text-xs bg-muted px-2 py-1 rounded block">{log.pharmacy_order_id}</code>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-xs font-medium mb-1">Full Endpoint:</div>
+                          <code className="text-xs bg-muted px-2 py-1 rounded block break-all">{log.api_endpoint}</code>
+                        </div>
+                        {log.manually_retried && (
+                          <div className="flex items-center gap-2 text-xs text-blue-600">
+                            <AlertCircle className="h-3 w-3" />
+                            This transmission was manually retried
+                          </div>
+                        )}
+                      </CollapsibleContent>
                     </div>
-                    <div className="text-muted-foreground">
-                      Endpoint: {log.api_endpoint}
-                    </div>
-                    {log.response_status && (
-                      <div className="text-muted-foreground">
-                        Status: {log.response_status}
-                      </div>
-                    )}
-                    {log.error_message && (
-                      <div className="text-destructive">
-                        Error: {log.error_message}
-                      </div>
-                    )}
-                    {log.retry_count > 0 && (
-                      <div className="text-muted-foreground">
-                        Retries: {log.retry_count}
-                      </div>
-                    )}
-                  </div>
+                  </Collapsible>
                 ))
               ) : (
                 <div className="text-center text-muted-foreground py-8">

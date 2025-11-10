@@ -210,11 +210,13 @@ serve(async (req) => {
       body: JSON.stringify(orderPayload),
     });
 
+    // Clone response before reading to allow fallback to text if JSON parsing fails
+    const orderResponseClone = orderResponse.clone();
     let orderJson: JsonLike | null = null;
     try {
       orderJson = (await orderResponse.json()) as JsonLike;
     } catch {
-      const text = await orderResponse.text();
+      const text = await orderResponseClone.text();
       orderJson = { message: text };
     }
 
