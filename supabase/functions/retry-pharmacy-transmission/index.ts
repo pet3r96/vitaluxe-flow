@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { isRetryableStatusCode, calculateBackoffDelay } from "../_shared/baremedsUtils.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -191,7 +192,7 @@ serve(async (req) => {
         request_body: transmission.request_body
       };
 
-      // Attempt transmission with retry logic
+      // Attempt transmission with SMART RETRY logic
       const maxRetries = pharmacy.retry_count || 3;
       const timeout = (pharmacy.timeout_seconds || 30) * 1000;
       let lastError = '';
@@ -203,6 +204,8 @@ serve(async (req) => {
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+          console.log(`[retry-pharmacy] Attempt ${attempt + 1}/${maxRetries} for transmission ${transmission.id}`);
 
           const response = await fetch(pharmacy.api_endpoint_url, {
             method: 'POST',
@@ -217,6 +220,7 @@ serve(async (req) => {
 
           if (response.ok) {
             success = true;
+            console.log(`[retry-pharmacy] ✅ Transmission successful on attempt ${attempt + 1}`);
             
             // Extract pharmacy order ID from response (for BareMeds)
             let pharmacyOrderId = null;
@@ -237,26 +241,38 @@ serve(async (req) => {
                     })
                     .eq('id', transmission.order_line_id);
                   
-                  console.log(`Stored pharmacy order ID: ${pharmacyOrderId} for order_line ${transmission.order_line_id}`);
+                  console.log(`[retry-pharmacy] Stored pharmacy order ID: ${pharmacyOrderId}`);
                 }
               }
             } catch (e) {
-              console.log('Could not parse response for pharmacy order ID extraction');
+              console.log('[retry-pharmacy] Could not parse response for pharmacy order ID');
             }
             
             break;
           } else {
             lastError = `HTTP ${response.status}: ${responseBody}`;
+            
+            // SMART RETRY: Check if status code is retryable
+            if (!isRetryableStatusCode(response.status)) {
+              console.warn(`[retry-pharmacy] ⚠️ Non-retryable status ${response.status} - stopping retries`);
+              break; // Don't retry 4xx errors (client errors)
+            }
+            
+            console.warn(`[retry-pharmacy] Retryable error (${response.status}) on attempt ${attempt + 1}`);
           }
         } catch (error: any) {
           lastError = error.message || 'Unknown error';
           if (error.name === 'AbortError') {
             lastError = `Request timeout after ${timeout}ms`;
           }
+          console.error(`[retry-pharmacy] Error on attempt ${attempt + 1}:`, lastError);
         }
 
+        // EXPONENTIAL BACKOFF: Wait before next retry
         if (attempt < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+          const backoffDelay = calculateBackoffDelay(attempt);
+          console.log(`[retry-pharmacy] Waiting ${backoffDelay}ms before retry ${attempt + 2}`);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
         }
       }
 

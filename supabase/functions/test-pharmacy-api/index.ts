@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { baremedsFetch } from "../_shared/baremedsFetch.ts";
 import { createTestOrderPayload } from "../_shared/baremedsPayloads.ts";
+import { extractSiteIdFromUrl } from "../_shared/baremedsUtils.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -104,17 +105,6 @@ serve(async (req) => {
     const testTimestamp = new Date().toISOString();
     const testOrderId = `TEST-ORD-${Date.now()}`;
     const testLineId = `TEST-LINE-${Date.now()}`;
-
-    // Helper function to extract site_id from URL path
-    const extractSiteIdFromUrl = (url: string): string | undefined => {
-      try {
-        const u = new URL(url);
-        const parts = u.pathname.split('/').filter(Boolean);
-        return parts[parts.length - 1];
-      } catch {
-        return undefined;
-      }
-    };
 
     // Build payload based on pharmacy type
     let payload: any;

@@ -4,6 +4,8 @@
  * Use baremeds-get-token function to obtain tokens
  */
 
+import { sanitizeBaremedsResponse } from "./baremedsUtils.ts";
+
 export interface BaremedsFetchOptions {
   method?: string;
   headers?: Record<string, string>;
@@ -88,6 +90,33 @@ export async function baremedsFetch(
       bodyPreview: responseText.substring(0, 500),
       bodySize: responseText.length,
     });
+
+    // MONITORING: Log non-2xx responses for alerting
+    if (!response.ok) {
+      let parsedBody: any;
+      try {
+        parsedBody = JSON.parse(responseText);
+      } catch {
+        parsedBody = { text: responseText.substring(0, 500) };
+      }
+      
+      console.warn(`[baremedsFetch] ⚠️ Non-2xx response from BareMeds`, {
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        responseBody: sanitizeBaremedsResponse(parsedBody),
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Log critical errors (5xx) as errors
+      if (response.status >= 500) {
+        console.error(`[baremedsFetch] 🚨 BareMeds server error`, {
+          endpoint,
+          status: response.status,
+          responseBody: sanitizeBaremedsResponse(parsedBody),
+        });
+      }
+    }
 
     return response;
 
