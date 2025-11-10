@@ -103,7 +103,6 @@ export const OrdersDataTable = () => {
         }));
 
       // For pharmacy users - fetch order_lines assigned to them
-      // OPTIMIZED: Simplified query to prevent timeouts
       if (effectiveRole === "pharmacy") {
         const { data: pharmacyData } = await supabase
           .from("pharmacies")
@@ -115,7 +114,7 @@ export const OrdersDataTable = () => {
           return []; // Pharmacy not found
         }
 
-        // Fetch order lines with minimal fields to prevent timeout
+        // Fetch order lines - order by created_at on the order_lines table itself
         const { data: orderLinesData, error: orderLinesError } = await supabase
           .from("order_lines")
           .select(`
@@ -123,6 +122,7 @@ export const OrdersDataTable = () => {
             order_id,
             status,
             tracking_number,
+            created_at,
             patient_name,
             patient_id,
             shipping_speed,
@@ -139,7 +139,7 @@ export const OrdersDataTable = () => {
           `)
           .eq("assigned_pharmacy_id", pharmacyData.id)
           .neq("orders.payment_status", "payment_failed")
-          .order("orders.created_at", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(200);
 
         if (orderLinesError) {
@@ -161,7 +161,10 @@ export const OrdersDataTable = () => {
           ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
         });
         
-        return Array.from(ordersMap.values());
+        // Sort orders by created_at descending
+        return Array.from(ordersMap.values()).sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       }
 
       // OPTIMIZED: Only fetch fields needed for table display

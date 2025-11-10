@@ -28,10 +28,11 @@ export function RecentActivityWidget({ className }: { className?: string }) {
           .from('order_lines')
           .select(`
             order_id,
+            updated_at,
             orders!inner(id, status, updated_at)
           `)
           .eq('assigned_pharmacy_id', pharmacyData.id)
-          .order('orders.updated_at', { ascending: false })
+          .order('updated_at', { ascending: false })
           .limit(10);
 
         const combined: any[] = [];
