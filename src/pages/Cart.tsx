@@ -15,7 +15,7 @@ import { useMerchantFee } from "@/hooks/useMerchantFee";
 import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePharmacyShippingRates } from "@/hooks/usePharmacyShippingRates";
+import { useMultiplePharmacyRates } from "@/hooks/useMultiplePharmacyRates";
 
 // Wrapper component to fetch enabled options for a pharmacy
 const ShippingSpeedSelectorWithOptions = ({ 
@@ -240,21 +240,8 @@ export default function Cart() {
     return [...new Set(patientGroups.map(g => g.pharmacy_id).filter(Boolean))];
   }, [patientGroups]);
 
-  // Fetch rates for all pharmacies in cart
-  const pharmacyRatesQueries = uniquePharmacyIds.map(pharmacyId => 
-    usePharmacyShippingRates(pharmacyId)
-  );
-
-  // Build pharmacy rates map: { pharmacyId: { ground: 15.00, 2day: 25.00, ... } }
-  const pharmacyRatesMap = useMemo(() => {
-    const map: Record<string, Record<string, number>> = {};
-    uniquePharmacyIds.forEach((pharmacyId, index) => {
-      if (pharmacyRatesQueries[index]?.data) {
-        map[pharmacyId] = pharmacyRatesQueries[index].data;
-      }
-    });
-    return map;
-  }, [uniquePharmacyIds, pharmacyRatesQueries]);
+  // Fetch rates for all pharmacies in cart using a single stable hook
+  const { data: pharmacyRatesMap = {} } = useMultiplePharmacyRates(uniquePharmacyIds);
 
   const cartLines = cart?.lines || [];
   const isEmpty = cartLines.length === 0;
