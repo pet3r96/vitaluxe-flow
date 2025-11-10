@@ -43,11 +43,50 @@ export const useVideoChat = ({
         const client = createRTMClient(appId);
         clientRef.current = client;
 
-        await client.login({ uid: rtmUid, token: rtmToken });
+        console.log('🔗 [RTM] Attempting to login:', {
+          appId,
+          rtmUid,
+          rtmTokenPrefix: rtmToken.substring(0, 15),
+          rtmTokenLength: rtmToken.length,
+        });
+
+        try {
+          await client.login({ uid: rtmUid, token: rtmToken });
+          console.log('✅ [RTM] Successfully logged in');
+        } catch (err: any) {
+          console.error("=== AGORA RTM LOGIN ERROR ===");
+          console.error("Error Code:", err.code);
+          console.error("Error Name:", err.name);
+          console.error("Error Message:", err.message);
+          console.error("Full Error Object:", err);
+          console.error("Error Stack:", err.stack);
+          console.error("Parameters Used:", {
+            appId,
+            rtmUid,
+            rtmTokenPrefix: rtmToken.substring(0, 20),
+            rtmTokenLength: rtmToken.length,
+          });
+          console.error("============================");
+          throw err;
+        }
+
         const channel = client.createChannel(channelName);
         channelRef.current = channel;
 
-        await channel.join();
+        console.log('🔗 [RTM] Attempting to join channel:', channelName);
+        try {
+          await channel.join();
+          console.log('✅ [RTM] Successfully joined channel');
+        } catch (err: any) {
+          console.error("=== AGORA RTM CHANNEL JOIN ERROR ===");
+          console.error("Error Code:", err.code);
+          console.error("Error Name:", err.name);
+          console.error("Error Message:", err.message);
+          console.error("Full Error Object:", err);
+          console.error("====================================");
+          throw err;
+        }
+        
         setIsConnected(true);
 
         // Add system message for user joined

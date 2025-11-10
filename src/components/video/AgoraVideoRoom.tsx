@@ -239,7 +239,34 @@ export const AgoraVideoRoom = ({
         // CRITICAL: Ensure UID is a string to match token generation
         const joinUid = String(uid);
         console.log('🔗 [AgoraVideoRoom] Attempting to join channel with UID:', joinUid);
-        await agoraClient.join(appId, channelName, token, joinUid);
+        console.log('🔗 [AgoraVideoRoom] Join parameters:', {
+          appId,
+          channelName,
+          uid: joinUid,
+          tokenPrefix: token.substring(0, 15),
+          tokenLength: token.length,
+        });
+        
+        try {
+          await agoraClient.join(appId, channelName, token, joinUid);
+          console.log('✅ [AgoraVideoRoom] Successfully joined RTC channel');
+        } catch (err: any) {
+          console.error("=== AGORA RTC JOIN ERROR ===");
+          console.error("Error Code:", err.code);
+          console.error("Error Name:", err.name);
+          console.error("Error Message:", err.message);
+          console.error("Full Error Object:", err);
+          console.error("Error Stack:", err.stack);
+          console.error("Parameters Used:", {
+            appId,
+            channelName,
+            uid: joinUid,
+            tokenPrefix: token.substring(0, 20),
+            tokenLength: token.length,
+          });
+          console.error("============================");
+          throw err;
+        }
 
         const prefs = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
         console.log("📱 Using device preferences:", prefs);

@@ -60,8 +60,34 @@ export default function VideoTestRoom() {
       });
 
       // Join channel
-      await agoraClient.join(appId, channelName, token, uid);
-      console.log("✅ Successfully joined channel!");
+      console.log('🔗 [VideoTestRoom] Attempting to join channel:', {
+        appId,
+        channelName,
+        uid,
+        tokenPrefix: token.substring(0, 15),
+        tokenLength: token.length,
+      });
+      
+      try {
+        await agoraClient.join(appId, channelName, token, uid);
+        console.log("✅ [VideoTestRoom] Successfully joined channel!");
+      } catch (err: any) {
+        console.error("=== AGORA RTC JOIN ERROR (Test Room) ===");
+        console.error("Error Code:", err.code);
+        console.error("Error Name:", err.name);
+        console.error("Error Message:", err.message);
+        console.error("Full Error Object:", err);
+        console.error("Error Stack:", err.stack);
+        console.error("Parameters Used:", {
+          appId,
+          channelName,
+          uid,
+          tokenPrefix: token.substring(0, 20),
+          tokenLength: token.length,
+        });
+        console.error("========================================");
+        throw err;
+      }
 
       // Create and publish local tracks
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
