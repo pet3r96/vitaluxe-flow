@@ -3,8 +3,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+import { CredentialValidator } from "@/components/video/CredentialValidator";
 
 export default function VideoTestRoom() {
   const { toast } = useToast();
@@ -15,6 +17,7 @@ export default function VideoTestRoom() {
   const [isJoining, setIsJoining] = useState(false);
   const [client, setClient] = useState<IAgoraRTCClient | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [skipRTM, setSkipRTM] = useState(false);
 
   const handleJoin = async () => {
     if (!appId.trim() || !token.trim()) {
@@ -169,7 +172,26 @@ export default function VideoTestRoom() {
                 disabled={isConnected}
               />
             </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="skip-rtm"
+                checked={skipRTM}
+                onCheckedChange={setSkipRTM}
+                disabled={isConnected}
+              />
+              <Label htmlFor="skip-rtm">
+                Skip RTM (Chat Off) - For testing RTC only
+              </Label>
+            </div>
           </div>
+
+          {appId && token && (
+            <CredentialValidator
+              appId={appId}
+              token={token}
+            />
+          )}
 
           <div className="flex gap-4">
             {!isConnected ? (

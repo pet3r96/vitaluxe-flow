@@ -38,6 +38,7 @@ interface AgoraVideoRoomProps {
   rtmToken?: string;
   rtmUid?: string;
   userName?: string;
+  skipRTM?: boolean;
 }
 
 export const AgoraVideoRoom = ({
@@ -51,6 +52,7 @@ export const AgoraVideoRoom = ({
   rtmToken,
   rtmUid,
   userName = "User",
+  skipRTM = false,
 }: AgoraVideoRoomProps) => {
   const { toast } = useToast();
   const [client, setClient] = useState<IAgoraRTCClient | null>(null);
@@ -161,7 +163,7 @@ export const AgoraVideoRoom = ({
     fetchBackendEcho();
   }, []);
 
-  const chat = rtmToken && rtmUid ? useVideoChat({
+  const chat = (rtmToken && rtmUid && !skipRTM) ? useVideoChat({
     appId,
     rtmToken,
     rtmUid,
@@ -198,6 +200,7 @@ export const AgoraVideoRoom = ({
         console.log("Channel:", channelName);
         console.log("UID:", uid);
         console.log("Token10:", token.slice(0, 10));
+        console.log("Skip RTM:", skipRTM);
         console.log("=======================");
         
         const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
@@ -293,6 +296,7 @@ export const AgoraVideoRoom = ({
         console.log("Error Code:", error.code);
         console.log("Error Message:", error.message);
         console.log("Error Name:", error.name);
+        console.log("Skip RTM:", skipRTM);
         console.log("Join Parameters Used:");
         console.log("  - FE App ID:", appId);
         console.log("  - FE Token prefix:", token.substring(0, 30));
@@ -363,20 +367,20 @@ export const AgoraVideoRoom = ({
         let errorDescription = "Failed to join video session";
 
         if (error.code === "INVALID_VENDOR_KEY") {
-          errorTitle = "Invalid Agora Credentials";
-          errorDescription = "The Agora App ID is invalid or missing. Please update your Agora credentials in the backend configuration.";
+          errorTitle = "Invalid Agora App ID";
+          errorDescription = "The Agora App ID is not recognized. Next steps: 1) Verify App ID in Agora Console matches backend secrets, 2) Ensure project is Active (not archived), 3) Try the Video Test Room with a Console-generated token.";
         } else if (error.code === "INVALID_TOKEN" || error.code === "TOKEN_EXPIRED") {
           errorTitle = "Invalid Session Token";
-          errorDescription = "Session token is invalid or expired. Please rejoin the session.";
+          errorDescription = "Token validation failed. Next steps: 1) Verify App Certificate matches (first 8 chars), 2) Check token format (should start with 007), 3) Ensure certificate hasn't been rotated recently.";
         } else if (error.code === "CAN_NOT_GET_GATEWAY_SERVER") {
           errorTitle = "Gateway Connection Failed";
-          errorDescription = "Gateway handshake failed. Retrying automatically... If this persists, try another network (e.g., hotspot) or the Video Test Room.";
+          errorDescription = "Cannot establish gateway connection. Retrying automatically... If this persists: 1) Try switching network (e.g., mobile hotspot), 2) Test in Video Test Room, 3) Check Credential Validator for mismatches.";
         } else if (error.message?.includes("Permission denied")) {
           errorTitle = "Permission Denied";
-          errorDescription = "Camera/microphone permission denied. Please allow access in your browser.";
+          errorDescription = "Camera/microphone access blocked. Next steps: 1) Click the camera icon in browser address bar to allow permissions, 2) Reload the page after granting access.";
         } else if (error.message?.includes("network")) {
           errorTitle = "Network Error";
-          errorDescription = "Network connection issue. Please check your internet connection.";
+          errorDescription = "Network connectivity issue detected. Next steps: 1) Check internet connection, 2) Try a different network, 3) Disable VPN if active.";
         }
 
         toast({
