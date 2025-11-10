@@ -430,7 +430,7 @@ export const PharmacyApiConfigDialog = ({
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="webhook-url">Webhook URL (for polling)</Label>
+                  <Label htmlFor="webhook-url">Webhook URL (optional - for polling)</Label>
                   <Input
                     id="webhook-url"
                     placeholder="https://pharmacy-api.example.com/tracking"
@@ -440,7 +440,7 @@ export const PharmacyApiConfigDialog = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="webhook-secret">Webhook Secret (for inbound webhooks)</Label>
+                  <Label htmlFor="webhook-secret">Webhook Secret (optional - for inbound webhooks)</Label>
                   <Input
                     id="webhook-secret"
                     type="password"
@@ -479,7 +479,7 @@ export const PharmacyApiConfigDialog = ({
                 <div className="flex gap-2">
                   <Button
                     onClick={handleTestConnection}
-                    disabled={isTesting || !apiEndpointUrl}
+                    disabled={isTesting || (authType !== "baremeds" && !apiEndpointUrl) || (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId))}
                     variant="outline"
                   >
                     {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
