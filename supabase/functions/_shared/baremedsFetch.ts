@@ -74,20 +74,36 @@ export async function baremedsFetch(
       site_id: normalized.siteId,
     };
 
+    console.log(`[baremedsFetch] Attempting login at: ${loginUrl}`);
+
     const loginResponse = await fetch(loginUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
       body: JSON.stringify(loginPayload),
     });
 
-    if (!loginResponse.ok) {
-      const errorText = await loginResponse.text();
-      throw new Error(`BareMeds login failed: ${loginResponse.status} - ${errorText}`);
+    const contentType = loginResponse.headers.get("content-type") || "";
+    const responseText = await loginResponse.text();
+    
+    console.log(`[baremedsFetch] Login response status: ${loginResponse.status}, Content-Type: ${contentType}`);
+
+    if (contentType.includes("text/html")) {
+      throw new Error(`BareMeds login endpoint returned HTML instead of JSON. The endpoint '/api/auth/login' might be incorrect for this server. Response preview: ${responseText.substring(0, 200)}`);
     }
 
-    const loginData = await loginResponse.json();
+    if (!loginResponse.ok) {
+      throw new Error(`BareMeds login failed: HTTP ${loginResponse.status} - ${responseText.substring(0, 200)}`);
+    }
+
+    let loginData;
+    try {
+      loginData = JSON.parse(responseText);
+    } catch (jsonError) {
+      throw new Error(`BareMeds login response is not valid JSON. Response: ${responseText.substring(0, 200)}`);
+    }
     const token = loginData.token || loginData.access_token;
 
     if (!token) {

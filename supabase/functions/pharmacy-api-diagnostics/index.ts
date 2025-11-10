@@ -198,6 +198,8 @@ serve(async (req) => {
         // Step 5: Test BareMeds login
         try {
           const loginUrl = new URL('/api/auth/login', normalized.baseUrl).toString();
+          console.log(`[Diagnostics] Testing BareMeds login at: ${loginUrl}`);
+          
           const loginPayload = {
             email: normalized.email,
             password: normalized.password,
@@ -206,21 +208,32 @@ serve(async (req) => {
 
           const loginResponse = await fetch(loginUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
             body: JSON.stringify(loginPayload),
             signal: AbortSignal.timeout(10000),
           });
 
-          if (!loginResponse.ok) {
-            const errorText = await loginResponse.text();
+          const contentType = loginResponse.headers.get("content-type") || "";
+          const isHtml = contentType.includes("text/html");
+          const responseText = await loginResponse.text();
+          
+          console.log(`[Diagnostics] Login response status: ${loginResponse.status}, Content-Type: ${contentType}`);
+          console.log(`[Diagnostics] Response preview: ${responseText.substring(0, 200)}`);
+
+          if (isHtml) {
             results.push({
               step: "BareMeds Login",
               status: "error",
-              message: `Login failed with HTTP ${loginResponse.status}`,
+              message: "Login endpoint returned HTML instead of JSON",
               details: { 
                 url: loginUrl,
                 status: loginResponse.status,
-                response: errorText.substring(0, 200),
+                contentType: contentType,
+                issue: "The login endpoint might be incorrect. Common BareMeds login endpoints: /api/auth/login, /auth/login, /api/login, or /login",
+                response_preview: responseText.substring(0, 300),
               },
             });
             return new Response(
@@ -229,7 +242,42 @@ serve(async (req) => {
             );
           }
 
-          const loginData = await loginResponse.json();
+          if (!loginResponse.ok) {
+            results.push({
+              step: "BareMeds Login",
+              status: "error",
+              message: `Login failed with HTTP ${loginResponse.status}`,
+              details: { 
+                url: loginUrl,
+                status: loginResponse.status,
+                response: responseText.substring(0, 200),
+              },
+            });
+            return new Response(
+              JSON.stringify({ success: false, results }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
+
+          let loginData;
+          try {
+            loginData = JSON.parse(responseText);
+          } catch (jsonError) {
+            results.push({
+              step: "BareMeds Login",
+              status: "error",
+              message: "Login response is not valid JSON",
+              details: { 
+                url: loginUrl,
+                response: responseText.substring(0, 200),
+                parseError: jsonError instanceof Error ? jsonError.message : String(jsonError),
+              },
+            });
+            return new Response(
+              JSON.stringify({ success: false, results }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
           const token = loginData.token || loginData.access_token;
 
           if (!token) {
