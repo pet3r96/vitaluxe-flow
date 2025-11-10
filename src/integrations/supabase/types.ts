@@ -9165,12 +9165,10 @@ export type Database = {
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       cleanup_expired_sms_attempts: { Args: never; Returns: undefined }
       cleanup_expired_sms_codes: { Args: never; Returns: undefined }
-      create_practice_subscription:
-        | {
-            Args: { p_practice_id: string; p_start_trial?: boolean }
-            Returns: string
-          }
-        | { Args: { practice_user_id: string }; Returns: string }
+      create_practice_subscription: {
+        Args: { p_practice_id: string; p_start_trial?: boolean }
+        Returns: string
+      }
       create_user_with_role:
         | {
             Args: {

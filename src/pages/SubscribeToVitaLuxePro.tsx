@@ -63,7 +63,7 @@ export default function SubscribeToVitaLuxePro() {
     }
   }, [effectiveRole, navigate, toast]);
 
-  // Redirect if already subscribed
+  // Redirect if already subscribed (but not if trial expired)
   useEffect(() => {
     console.log('[SubscribeToVitaLuxePro] Subscription check:', {
       loading: subscriptionLoading,
@@ -72,13 +72,23 @@ export default function SubscribeToVitaLuxePro() {
       effectiveRole
     });
 
-    if (!subscriptionLoading && isSubscribed) {
+    // Only redirect if actively subscribed (not expired trial)
+    if (!subscriptionLoading && isSubscribed && status !== 'expired' && status !== 'suspended') {
       console.log('[SubscribeToVitaLuxePro] Redirecting subscribed user to dashboard');
       toast({
         title: "Already Subscribed",
         description: `You already have an ${status} VitaLuxePro subscription.`,
       });
       navigate('/dashboard');
+    }
+
+    // Show message for expired trial but don't redirect (let them add payment)
+    if (!subscriptionLoading && status === 'trial' && !isSubscribed) {
+      toast({
+        title: "Trial Ended",
+        description: "Your 14-day trial has ended. Add a payment method below to continue using VitaLuxePro.",
+        variant: "destructive"
+      });
     }
   }, [isSubscribed, subscriptionLoading, status, navigate, toast, effectiveRole]);
 
@@ -295,57 +305,87 @@ export default function SubscribeToVitaLuxePro() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Start Your Free Trial</CardTitle>
+              <CardTitle className="text-base">
+                {!isSubscribed && status === 'trial' ? 'Trial Ended - Add Payment' : 'Start Your Free Trial'}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
-                <div className="flex items-start gap-2">
-                  <CreditCard className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-blue-900 dark:text-blue-100">
-                    You can add a payment method later in your Profile settings before the trial ends.
-                  </p>
+              {!isSubscribed && status === 'trial' ? (
+                // Trial has expired - need payment
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <CreditCard className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-red-900 dark:text-red-100">
+                      Your 14-day trial has ended. Please add a payment method in your Profile settings to continue using VitaLuxePro.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // New trial or reactivation
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <CreditCard className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-blue-900 dark:text-blue-100">
+                      You can add a payment method later in your Profile settings before the trial ends.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="terms"
-                  checked={agreedToTerms}
-                  onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                />
-                <label
-                  htmlFor="terms"
-                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              {!isSubscribed && status === 'trial' ? (
+                // Show link to profile/payment for expired trials
+                <Button
+                  onClick={() => navigate('/profile')}
+                  variant="gold"
+                  className="w-full font-semibold h-11 sm:h-12 text-sm sm:text-base"
                 >
-                  I agree to the{" "}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setShowTermsDialog(true);
-                    }}
-                    className="underline text-primary hover:text-primary/80"
-                  >
-                    VitaLuxePro Practice Development Terms
-                  </button>
-                </label>
-              </div>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Add Payment Method
+                </Button>
+              ) : (
+                // Show normal trial start for new users
+                <>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="terms"
+                      checked={agreedToTerms}
+                      onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="terms"
+                      className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowTermsDialog(true);
+                        }}
+                        className="underline text-primary hover:text-primary/80"
+                      >
+                        VitaLuxePro Practice Development Terms
+                      </button>
+                    </label>
+                  </div>
 
-              <Button
-                onClick={handleStartTrial}
-                disabled={!agreedToTerms || isProcessing}
-                variant="gold"
-                className="w-full font-semibold h-11 sm:h-12 text-sm sm:text-base"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Starting Trial...
-                  </>
-                ) : (
-                  'Start 14-Day Free Trial'
-                )}
-              </Button>
+                  <Button
+                    onClick={handleStartTrial}
+                    disabled={!agreedToTerms || isProcessing}
+                    variant="gold"
+                    className="w-full font-semibold h-11 sm:h-12 text-sm sm:text-base"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Starting Trial...
+                      </>
+                    ) : (
+                      'Start 14-Day Free Trial'
+                    )}
+                  </Button>
+                </>
+              )}
 
               <Button
                 variant="ghost"

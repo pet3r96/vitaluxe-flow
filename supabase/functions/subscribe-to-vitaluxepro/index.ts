@@ -177,19 +177,17 @@ serve(async (req) => {
     let subscription;
 
     if (existingSub) {
-      // Subscription exists - reactivate if cancelled or expired
+      // Subscription exists - reactivate ONLY if cancelled or expired (NO new trial)
       if (existingSub.status === 'cancelled' || existingSub.status === 'expired') {
-        console.log('[subscribe-to-vitaluxepro] Reactivating subscription', existingSub.id);
+        console.log('[subscribe-to-vitaluxepro] Reactivating subscription WITHOUT new trial', existingSub.id);
 
-        const trialEndsAt = new Date();
-        trialEndsAt.setDate(trialEndsAt.getDate() + 14);
-
+        // DO NOT give another trial - just reactivate as active (requires payment)
         const { data: updated, error: updateError } = await supabaseAdmin
           .from('practice_subscriptions')
           .update({
-            status: 'trial',
-            trial_ends_at: trialEndsAt.toISOString(),
+            status: 'suspended', // Set to suspended, requires payment to activate
             cancelled_at: null,
+            grace_period_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 day grace period
             updated_at: new Date().toISOString(),
           })
           .eq('id', existingSub.id)
