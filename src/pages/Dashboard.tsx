@@ -27,19 +27,6 @@ import { TabbedAppointmentsWidget } from "@/components/dashboard/TabbedAppointme
 import { TabbedCommunicationsWidget } from "@/components/dashboard/TabbedCommunicationsWidget";
 import { DayViewCalendar } from "@/components/dashboard/DayViewCalendar";
 
-const ErrorButton = () => (
-  <Button
-    variant="destructive"
-    onClick={() => {
-      const testError = new Error("This is your first error!");
-      Sentry.captureException(testError);
-      throw testError;
-    }}
-  >
-    Break the world
-  </Button>
-);
-
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
   const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount, effectivePracticeId } = useAuth();
@@ -257,9 +244,6 @@ const Dashboard = () => {
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
           Welcome back, {displayName}
         </p>
-        <div className="mt-4">
-          <ErrorButton />
-        </div>
         {status === 'trial' && trialDaysRemaining !== null && (
           <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
             <Sparkles className="h-4 w-4 text-primary" />
