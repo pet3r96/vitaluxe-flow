@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+import { baremedsFetch } from "../_shared/baremedsFetch.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -111,8 +111,6 @@ serve(async (req) => {
     if (pharmacy.api_auth_type === "baremeds") {
       console.log("Using baremedsFetch for BareMeds test order...");
       
-      // Import baremedsFetch
-      const { baremedsFetch } = await import("../_shared/baremedsFetch.ts");
       
       try {
         // Parse the endpoint URL to extract the path
@@ -123,7 +121,7 @@ serve(async (req) => {
         // Use baremedsFetch to make the authenticated call
         const response = await baremedsFetch(supabaseAdmin, pharmacy_id, endpointPath, {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: payload,
           headers: { 'Accept': 'application/json' }
         });
 
