@@ -55,7 +55,7 @@ export function BeingTreatedPanel({
           ),
           provider:providers!patient_appointments_provider_id_fkey(
             id,
-            user:profiles!providers_user_id_fkey(full_name, prescriber_name)
+            user:profiles!providers_user_id_fkey(full_name, prescriber_name, name, email)
           ),
           practice_rooms (
             id,
@@ -162,7 +162,7 @@ export function BeingTreatedPanel({
               <TableHeader>
                 <TableRow>
                   <TableHead>Patient</TableHead>
-                  <TableHead>Provider</TableHead>
+                  <TableHead>Staff</TableHead>
                   <TableHead>Room</TableHead>
                   <TableHead>Started</TableHead>
                   <TableHead>Duration</TableHead>
