@@ -31,12 +31,32 @@ serve(async (req) => {
       expiresInSeconds: 3600,
     });
 
+    // Assertions
+    const rtcStartsWith007 = tokens.rtcToken.startsWith('007');
+    const rtmStartsWith007 = tokens.rtmToken.startsWith('007');
+    const tokensAreDifferent = tokens.rtcToken !== tokens.rtmToken;
+    
     console.log("[Test Agora Token] Token generated successfully", {
       channelName: testChannelName,
       uid: testUid,
-      tokenLength: tokens.rtcToken.length,
+      rtcTokenLength: tokens.rtcToken.length,
+      rtmTokenLength: tokens.rtmToken.length,
+      rtcStartsWith007,
+      rtmStartsWith007,
+      tokensAreDifferent,
       expiresAt: new Date(tokens.expiresAt * 1000).toISOString(),
     });
+
+    // Validation checks
+    if (!rtcStartsWith007 || !rtmStartsWith007) {
+      console.error("[Test Agora Token] ERROR: Tokens don't start with 007!");
+      console.error("RTC token prefix:", tokens.rtcToken.substring(0, 20));
+      console.error("RTM token prefix:", tokens.rtmToken.substring(0, 20));
+    }
+    
+    if (!tokensAreDifferent) {
+      console.error("[Test Agora Token] ERROR: RTC and RTM tokens are identical!");
+    }
 
     return new Response(
       JSON.stringify({
@@ -55,10 +75,17 @@ serve(async (req) => {
           expiresAtISO: new Date(tokens.expiresAt * 1000).toISOString(),
           appId: tokens.appId,
         },
+        validation: {
+          rtcStartsWith007,
+          rtmStartsWith007,
+          tokensAreDifferent,
+          rtcTokenLength: tokens.rtcToken.length,
+          rtmTokenLength: tokens.rtmToken.length,
+        },
         tokenInfo: {
-          length: tokens.rtcToken.length,
-          prefix: tokens.rtcToken.substring(0, 20),
-          version: tokens.rtcToken.startsWith('007') ? 'AccessToken2 (007)' : 'Unknown',
+          rtcPrefix: tokens.rtcToken.substring(0, 15),
+          rtmPrefix: tokens.rtmToken.substring(0, 15),
+          version: rtcStartsWith007 ? 'AccessToken2 (007)' : 'Unknown',
         }
       }),
       {

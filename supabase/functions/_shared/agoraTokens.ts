@@ -1,25 +1,25 @@
 // Deno-native Agora AccessToken2 implementation using Web Crypto API
+// Implements service-based architecture with proper HMAC-SHA256 signing
 
-const HEX_32_REGEX = /^[a-f0-9]{32}$/i;
-
-export interface AgoraCredentials {
+interface AgoraCredentials {
   appId: string;
   appCertificate: string;
 }
 
-export function getAgoraCredentials(): AgoraCredentials {
-  const rawAppId = Deno.env.get('AGORA_APP_ID');
-  const rawAppCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
+function getAgoraCredentials(): AgoraCredentials {
+  const appId = Deno.env.get('AGORA_APP_ID');
+  const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
 
-  if (!rawAppId || !rawAppCertificate) {
-    throw new Error('Missing Agora credentials');
+  if (!appId || !appCertificate) {
+    throw new Error('Missing Agora credentials in environment');
   }
 
-  const appId = rawAppId.trim();
-  const appCertificate = rawAppCertificate.trim();
+  if (appId.length !== 32) {
+    throw new Error(`Invalid Agora App ID format: expected 32 chars, got ${appId.length}`);
+  }
 
-  if (!HEX_32_REGEX.test(appId) || !HEX_32_REGEX.test(appCertificate)) {
-    throw new Error('Invalid Agora credential format');
+  if (appCertificate.length !== 32) {
+    throw new Error(`Invalid Agora Certificate format: expected 32 chars, got ${appCertificate.length}`);
   }
 
   return { appId, appCertificate };
@@ -40,182 +40,249 @@ export interface AgoraTokenResult {
   appId: string;
 }
 
-// Privilege types for AccessToken2
+// ============================================================================
+// Byte Packing Utilities (Little-Endian)
+// ============================================================================
+
+function writeUint16LE(n: number): Uint8Array {
+  const buf = new Uint8Array(2);
+  buf[0] = n & 0xFF;
+  buf[1] = (n >> 8) & 0xFF;
+  return buf;
+}
+
+function writeUint32LE(n: number): Uint8Array {
+  const buf = new Uint8Array(4);
+  buf[0] = n & 0xFF;
+  buf[1] = (n >> 8) & 0xFF;
+  buf[2] = (n >> 16) & 0xFF;
+  buf[3] = (n >> 24) & 0xFF;
+  return buf;
+}
+
+function writeStringWithLen(s: string): Uint8Array {
+  const utf8 = new TextEncoder().encode(s);
+  const len = writeUint16LE(utf8.length);
+  return concat(len, utf8);
+}
+
+function concat(...arrays: Uint8Array[]): Uint8Array {
+  const totalLen = arrays.reduce((sum, arr) => sum + arr.length, 0);
+  const result = new Uint8Array(totalLen);
+  let offset = 0;
+  for (const arr of arrays) {
+    result.set(arr, offset);
+    offset += arr.length;
+  }
+  return result;
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
+// ============================================================================
+// Privilege Constants
+// ============================================================================
+
+// RTC Privileges (service type 1)
 const kJoinChannel = 1;
-const kPublishAudioStream = 2;
-const kPublishVideoStream = 3;
-const kPublishDataStream = 4;
+const kPublishAudio = 2;
+const kPublishVideo = 3;
+const kPublishData = 4;
+
+// RTM Privileges (service type 2)
+const kRtmLogin = 1;
+
+// ============================================================================
+// Service Packing Functions
+// ============================================================================
+
+function packPrivilegesMap(privileges: Map<number, number>): Uint8Array {
+  const count = writeUint16LE(privileges.size);
+  const entries: Uint8Array[] = [count];
+  
+  for (const [key, expire] of privileges.entries()) {
+    entries.push(writeUint16LE(key));
+    entries.push(writeUint32LE(expire));
+  }
+  
+  return concat(...entries);
+}
+
+function packServiceRtc(
+  channelName: string,
+  userAccount: string,
+  role: 'publisher' | 'subscriber',
+  expireTimestamp: number
+): Uint8Array {
+  // Service type = 1 (RTC)
+  const serviceType = writeUint16LE(1);
+  
+  // Channel and user
+  const channelBytes = writeStringWithLen(channelName);
+  const userBytes = writeStringWithLen(userAccount);
+  
+  // Privileges
+  const privileges = new Map<number, number>();
+  privileges.set(kJoinChannel, expireTimestamp);
+  
+  if (role === 'publisher') {
+    privileges.set(kPublishAudio, expireTimestamp);
+    privileges.set(kPublishVideo, expireTimestamp);
+    privileges.set(kPublishData, expireTimestamp);
+  }
+  
+  const privilegesBytes = packPrivilegesMap(privileges);
+  
+  return concat(serviceType, channelBytes, userBytes, privilegesBytes);
+}
+
+function packServiceRtm(userId: string, expireTimestamp: number): Uint8Array {
+  // Service type = 2 (RTM)
+  const serviceType = writeUint16LE(2);
+  
+  // User ID
+  const userBytes = writeStringWithLen(userId);
+  
+  // Privileges
+  const privileges = new Map<number, number>();
+  privileges.set(kRtmLogin, expireTimestamp);
+  
+  const privilegesBytes = packPrivilegesMap(privileges);
+  
+  return concat(serviceType, userBytes, privilegesBytes);
+}
+
+// ============================================================================
+// Token Generation
+// ============================================================================
 
 async function generateAccessToken2(
   appId: string,
   appCertificate: string,
+  serviceType: 'rtc' | 'rtm',
   channelName: string,
   uid: string,
-  expireTimestamp: number,
-  isPublisher: boolean
+  expiresAt: number,
+  role: 'publisher' | 'subscriber'
 ): Promise<string> {
+  // Generate random salt
   const salt = crypto.getRandomValues(new Uint32Array(1))[0];
   
-  // Build privileges
-  const privileges: Record<number, number> = {
-    [kJoinChannel]: expireTimestamp,
-  };
+  // Current timestamp
+  const ts = Math.floor(Date.now() / 1000);
   
-  if (isPublisher) {
-    privileges[kPublishAudioStream] = expireTimestamp;
-    privileges[kPublishVideoStream] = expireTimestamp;
-    privileges[kPublishDataStream] = expireTimestamp;
+  // Pack service
+  let servicePack: Uint8Array;
+  if (serviceType === 'rtc') {
+    servicePack = packServiceRtc(channelName, uid, role, expiresAt);
+  } else {
+    servicePack = packServiceRtm(uid, expiresAt);
   }
-
-  // Pack message
-  const message = packMessage(appId, channelName, uid, salt, expireTimestamp, privileges);
   
-  // Generate signature using HMAC-SHA256
-  const signature = await hmacSign(appCertificate, message);
+  // Services: serviceCount(uint16) + service pack
+  const servicesPack = concat(writeUint16LE(1), servicePack);
   
-  // Build final payload: signature + message
-  const payload = new Uint8Array(signature.length + message.length);
-  payload.set(signature, 0);
-  payload.set(message, signature.length);
+  // Build message: salt + ts + services
+  const message = concat(
+    writeUint32LE(salt),
+    writeUint32LE(ts),
+    servicesPack
+  );
   
-  // Encode to base64
-  const base64Payload = btoa(String.fromCharCode(...payload));
+  // CRITICAL: Hex-decode the certificate for HMAC key
+  const keyBytes = hexToBytes(appCertificate);
   
-  // Final token: "007" + base64(payload)
-  return "007" + base64Payload;
-}
-
-async function hmacSign(secret: string, message: Uint8Array): Promise<Uint8Array> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
+  // Data to sign: utf8(appId) + message
+  const appIdBytes = new TextEncoder().encode(appId);
+  const dataToSign = concat(appIdBytes, message);
   
+  // HMAC-SHA256 signature
   const key = await crypto.subtle.importKey(
     "raw",
-    keyData,
+    keyBytes,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
   
-  const signature = await crypto.subtle.sign("HMAC", key, message);
-  return new Uint8Array(signature);
+  const signatureBuffer = await crypto.subtle.sign("HMAC", key, dataToSign);
+  const signature = new Uint8Array(signatureBuffer);
+  
+  // Final payload: signature + message
+  const payload = concat(signature, message);
+  
+  // Encode to base64
+  const base64Payload = btoa(String.fromCharCode(...payload));
+  
+  // Return token with "007" prefix
+  return "007" + base64Payload;
 }
 
-function packMessage(
-  appId: string,
-  channelName: string,
-  uid: string,
-  salt: number,
-  expireTimestamp: number,
-  privileges: Record<number, number>
-): Uint8Array {
-  const encoder = new TextEncoder();
-  
-  // Calculate size
-  let size = 0;
-  size += 4; // salt (uint32)
-  size += 4; // expireTimestamp (uint32)
-  size += 4; // privilege count (uint32)
-  size += Object.keys(privileges).length * (2 + 4); // privilege entries (uint16 + uint32 each)
-  size += 2 + encoder.encode(appId).length; // appId (uint16 length + bytes)
-  size += 2 + encoder.encode(channelName).length; // channelName (uint16 length + bytes)
-  size += 2 + encoder.encode(uid).length; // uid (uint16 length + bytes)
-  
-  const buffer = new Uint8Array(size);
-  const view = new DataView(buffer.buffer);
-  let offset = 0;
-  
-  // Write salt
-  view.setUint32(offset, salt, true); // little-endian
-  offset += 4;
-  
-  // Write expireTimestamp
-  view.setUint32(offset, expireTimestamp, true);
-  offset += 4;
-  
-  // Write privileges
-  view.setUint32(offset, Object.keys(privileges).length, true);
-  offset += 4;
-  
-  for (const [privilegeKey, privilegeExpire] of Object.entries(privileges)) {
-    view.setUint16(offset, Number(privilegeKey), true);
-    offset += 2;
-    view.setUint32(offset, privilegeExpire, true);
-    offset += 4;
-  }
-  
-  // Write appId
-  const appIdBytes = encoder.encode(appId);
-  view.setUint16(offset, appIdBytes.length, true);
-  offset += 2;
-  buffer.set(appIdBytes, offset);
-  offset += appIdBytes.length;
-  
-  // Write channelName
-  const channelBytes = encoder.encode(channelName);
-  view.setUint16(offset, channelBytes.length, true);
-  offset += 2;
-  buffer.set(channelBytes, offset);
-  offset += channelBytes.length;
-  
-  // Write uid (as string)
-  const uidBytes = encoder.encode(uid);
-  view.setUint16(offset, uidBytes.length, true);
-  offset += 2;
-  buffer.set(uidBytes, offset);
-  offset += uidBytes.length;
-  
-  return buffer;
-}
+// ============================================================================
+// Public API
+// ============================================================================
 
 export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraTokenResult> {
   const { appId, appCertificate } = getAgoraCredentials();
-  
-  const expiresInSeconds = options.expiresInSeconds ?? 3600;
-  const currentTimestamp = Math.floor(Date.now() / 1000);
-  const privilegeExpire = currentTimestamp + expiresInSeconds;
-  
-  const isPublisher = options.role === 'publisher';
+  const expireTimestamp = Math.floor(Date.now() / 1000) + (options.expiresInSeconds ?? 3600);
 
-  console.log('[Deno-Native Agora Token Generation] Input:', {
-    appId: appId.substring(0, 8) + '...',
-    appCertificate: appCertificate.substring(0, 8) + '...',
-    channelName: options.channelName,
-    uid: options.uid,
-    role: options.role,
-    isPublisher,
-    currentTimestamp,
-    expiresInSeconds,
-    privilegeExpire,
-  });
+  console.log("\n=== AGORA TOKEN GENERATION START ===");
+  console.log("Channel:", options.channelName);
+  console.log("UID:", options.uid);
+  console.log("Role:", options.role);
+  console.log("Expires in:", options.expiresInSeconds ?? 3600, "seconds");
 
+  // Generate RTC token (ServiceRtc only)
   const rtcToken = await generateAccessToken2(
     appId,
     appCertificate,
+    'rtc',
     options.channelName,
     options.uid,
-    privilegeExpire,
-    isPublisher
+    expireTimestamp,
+    options.role
   );
 
-  // Verification
-  console.log("=== AGORA TOKEN VERIFICATION (Deno-Native) ===");
+  // Generate RTM token (ServiceRtm only)
+  const rtmToken = await generateAccessToken2(
+    appId,
+    appCertificate,
+    'rtm',
+    options.channelName,
+    options.uid,
+    expireTimestamp,
+    options.role
+  );
+
+  // Verification logging
+  console.log("\n=== AGORA TOKEN VERIFICATION ===");
   console.log("AppID:", appId);
-  console.log("Cert8:", appCertificate.slice(0, 8));
+  console.log("Cert8:", appCertificate.substring(0, 8));
   console.log("Channel:", options.channelName);
   console.log("UID:", options.uid);
   console.log("Token starts with 007:", rtcToken.startsWith("007"));
-  console.log("Token length:", rtcToken.length);
-  console.log("Token prefix (first 20 chars):", rtcToken.slice(0, 20));
-  console.log("ExpiresAt:", privilegeExpire);
-  console.log("ExpiresAt ISO:", new Date(privilegeExpire * 1000).toISOString());
-  console.log("===================================================");
+  console.log("RTC token prefix:", rtcToken.substring(0, 15));
+  console.log("RTC token length:", rtcToken.length);
+  console.log("RTM token prefix:", rtmToken.substring(0, 15));
+  console.log("RTM token length:", rtmToken.length);
+  console.log("Tokens are different:", rtcToken !== rtmToken);
+  console.log("ExpiresAt:", expireTimestamp);
+  console.log("ExpiresAt ISO:", new Date(expireTimestamp * 1000).toISOString());
+  console.log("================================\n");
 
   return {
     rtcToken,
-    rtmToken: rtcToken, // RTM/Signaling uses the same token
+    rtmToken,
     rtmUid: options.uid,
-    expiresAt: privilegeExpire,
+    expiresAt: expireTimestamp,
     appId,
   };
 }
+
+export { getAgoraCredentials };
