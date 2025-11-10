@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, Send, AlertCircle, Activity } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, AlertCircle, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -28,7 +28,6 @@ export const PharmacyApiConfigDialog = ({
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  const [isSendingTest, setIsSendingTest] = useState(false);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [diagnosticsResults, setDiagnosticsResults] = useState<any>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -44,11 +43,6 @@ export const PharmacyApiConfigDialog = ({
   const [retryCount, setRetryCount] = useState("3");
   const [timeoutSeconds, setTimeoutSeconds] = useState("30");
   
-  // BareMeds-specific fields
-  const [baremedEmail, setBaremedEmail] = useState("");
-  const [baremedPassword, setBaremedPassword] = useState("");
-  const [baremedSiteId, setBaremedSiteId] = useState("");
-  const [baremedBaseUrl, setBaremedBaseUrl] = useState("https://staging-rxorders.baremeds.com");
 
   // Fetch pharmacy config
   const { data: pharmacy, isLoading } = useQuery({
@@ -99,56 +93,11 @@ export const PharmacyApiConfigDialog = ({
     console.log("Loading credentials:", credentials);
 
     credentials.forEach((cred) => {
-      if (cred.credential_type === "baremeds_oauth" && cred.credential_key) {
-        try {
-          let baremedsCreds;
-          
-          // Handle double-encoded JSON (common issue)
-          if (typeof cred.credential_key === 'string') {
-            try {
-              baremedsCreds = JSON.parse(cred.credential_key);
-              // Check if it's still a string (double-encoded)
-              if (typeof baremedsCreds === 'string') {
-                baremedsCreds = JSON.parse(baremedsCreds);
-              }
-            } catch {
-              // If parsing fails, treat it as a plain object
-              baremedsCreds = cred.credential_key;
-            }
-          } else {
-            baremedsCreds = cred.credential_key;
-          }
-
-          // Handle different field name variations
-          const email = baremedsCreds.email || baremedsCreds.username || "";
-          const password = baremedsCreds.password || "";
-          const siteId = baremedsCreds.site_id || baremedsCreds.siteId || baremedsCreds.siteid || "";
-          const baseUrl = baremedsCreds.base_url || baremedsCreds.baseUrl || "https://staging-rxorders.baremeds.com";
-
-          console.log("Parsed BareMeds credentials:", {
-            email,
-            hasPassword: !!password,
-            siteId,
-            baseUrl
-          });
-
-          setBaremedEmail(email);
-          setBaremedPassword(password);
-          setBaremedSiteId(String(siteId));
-          setBaremedBaseUrl(baseUrl);
-        } catch (e) {
-          console.error("Failed to parse BareMeds credentials:", e, cred.credential_key);
-        }
-      } else if (cred.credential_type === "api_key" || cred.credential_type === "bearer_token") {
+      if (cred.credential_type === "api_key" || cred.credential_type === "bearer_token") {
         setApiKey(cred.credential_key || "");
       }
     });
   }, [credentials]);
-
-  // Check if BareMeds credentials exist in database
-  const hasBareMedsCreds = credentials?.some(
-    c => c.credential_type === "baremeds_oauth" && c.credential_key
-  );
 
   // Fetch transmission logs
   const { data: transmissions } = useQuery({
@@ -188,27 +137,7 @@ export const PharmacyApiConfigDialog = ({
       if (updateError) throw updateError;
 
       // Save API credentials if provided
-      if (authType === "baremeds" && baremedEmail && baremedPassword && baremedSiteId) {
-        // Store BareMeds credentials as JSON
-        const baremedsCreds = {
-          email: baremedEmail,
-          password: baremedPassword,
-          site_id: parseInt(baremedSiteId),
-          base_url: baremedBaseUrl || "https://staging-rxorders.baremeds.com"
-        };
-
-        const { error: credError } = await supabase
-          .from("pharmacy_api_credentials")
-          .upsert({
-            pharmacy_id: pharmacyId,
-            credential_type: "baremeds_oauth",
-            credential_key: JSON.stringify(baremedsCreds),
-          }, {
-            onConflict: "pharmacy_id,credential_type",
-          });
-
-        if (credError) throw credError;
-      } else if (apiKey && authType !== "none" && authType !== "baremeds") {
+      if (apiKey && authType !== "none") {
         const credentialType = authType === "bearer" ? "bearer_token" : "api_key";
         
         const { error: credError } = await supabase
@@ -243,52 +172,6 @@ export const PharmacyApiConfigDialog = ({
   };
 
   const handleTestConnection = async () => {
-    if (authType === "baremeds") {
-      // Test BareMeds login
-      if (!baremedEmail || !baremedPassword || !baremedSiteId) {
-        toast({
-          title: "Missing BareMeds credentials",
-          description: "Please fill in all BareMeds fields",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setIsTesting(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("baremeds-get-token", {
-          body: {
-            credentials: {
-              email: baremedEmail,
-              password: baremedPassword,
-              site_id: parseInt(baremedSiteId),
-              base_url: baremedBaseUrl || "https://staging-rxorders.baremeds.com"
-            }
-          }
-        });
-
-        if (error) throw error;
-
-        if (data?.token) {
-          toast({
-            title: "BareMeds login successful",
-            description: `Token: ${data.token.substring(0, 10)}...${data.token.substring(data.token.length - 10)}. When orders are sent, BareMeds will return an order ID that we'll capture and store.`,
-          });
-        } else {
-          throw new Error("No token received from BareMeds");
-        }
-      } catch (error: any) {
-        toast({
-          title: "BareMeds login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsTesting(false);
-      }
-      return;
-    }
-
     if (!apiEndpointUrl) {
       toast({
         title: "Missing endpoint URL",
@@ -380,53 +263,6 @@ export const PharmacyApiConfigDialog = ({
     }
   };
 
-  const handleSendTestOrder = async () => {
-    setIsSendingTest(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("test-pharmacy-api", {
-        body: {
-          pharmacy_id: pharmacyId
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast({
-          title: "Test order sent successfully",
-          description: `Test order ${data.test_order_id} was sent to the pharmacy API. ${data.pharmacy_order_id ? `Pharmacy returned ID: ${data.pharmacy_order_id}` : 'Check pharmacy system for TEST-ORD-* orders.'}`,
-        });
-      } else {
-        // Show diagnostics if available
-        if (data?.diagnostics) {
-          setDiagnosticsResults({ success: false, results: data.diagnostics });
-          setShowDiagnostics(true);
-        }
-        throw new Error(data?.error || "Failed to send test order");
-      }
-    } catch (error: any) {
-      console.error("Test order error:", error);
-      toast({
-        title: "Failed to send test order",
-        description: error.message || "An error occurred while sending the test order",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSendingTest(false);
-    }
-  };
-
-  // Validate Base URL for common typos
-  const validateBaseUrl = (url: string): string | null => {
-    if (!url) return null;
-    if (url.includes("norders.baremeds.com")) {
-      return "Did you mean 'rxorders.baremeds.com'? Common typo detected.";
-    }
-    return null;
-  };
-
-  const baseUrlWarning = validateBaseUrl(baremedBaseUrl);
-
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -485,7 +321,6 @@ export const PharmacyApiConfigDialog = ({
                       <SelectItem value="bearer">Bearer Token</SelectItem>
                       <SelectItem value="api_key">API Key</SelectItem>
                       <SelectItem value="basic">Basic Auth</SelectItem>
-                      <SelectItem value="baremeds">BareMeds OAuth</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -502,61 +337,7 @@ export const PharmacyApiConfigDialog = ({
                   </div>
                 )}
 
-                {authType === "baremeds" ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="baremeds-base-url">BareMeds Base URL</Label>
-                      <Input
-                        id="baremeds-base-url"
-                        placeholder="https://staging-rxorders.baremeds.com"
-                        value={baremedBaseUrl}
-                        onChange={(e) => setBaremedBaseUrl(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="baremeds-email">BareMeds Email</Label>
-                      <Input
-                        id="baremeds-email"
-                        type="email"
-                        placeholder="your-email@example.com"
-                        value={baremedEmail}
-                        onChange={(e) => setBaremedEmail(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="baremeds-password">BareMeds Password</Label>
-                      <Input
-                        id="baremeds-password"
-                        type="password"
-                        placeholder={hasBareMedsCreds ? "••••••••• (saved)" : "Enter BareMeds password"}
-                        value={baremedPassword}
-                        onChange={(e) => setBaremedPassword(e.target.value)}
-                      />
-                      {hasBareMedsCreds && (
-                        <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          BareMeds credentials saved
-                        </div>
-                      )}
-                      {!hasBareMedsCreds && baremedEmail && baremedPassword && baremedSiteId && (
-                        <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          Click "Save Configuration" to store credentials
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="baremeds-site-id">BareMeds Site ID</Label>
-                      <Input
-                        id="baremeds-site-id"
-                        type="number"
-                        placeholder="98923"
-                        value={baremedSiteId}
-                        onChange={(e) => setBaremedSiteId(e.target.value)}
-                      />
-                    </div>
-                  </>
-                ) : authType !== "none" && (
+                {authType !== "none" && (
                   <div className="space-y-2">
                     <Label htmlFor="api-key">
                       {authType === "bearer" ? "Bearer Token" : "API Key"}
@@ -618,22 +399,10 @@ export const PharmacyApiConfigDialog = ({
                   </div>
                 </div>
 
-                {baseUrlWarning && (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-amber-900 dark:text-amber-100">{baseUrlWarning}</p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="space-y-3 pt-4 border-t">
                   <Button
                     onClick={handleRunDiagnostics}
-                    disabled={
-                      isRunningDiagnostics ||
-                      (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId || !baremedBaseUrl))
-                    }
+                    disabled={isRunningDiagnostics}
                     variant="outline"
                     className="w-full"
                   >
@@ -692,35 +461,12 @@ export const PharmacyApiConfigDialog = ({
                   <div className="flex gap-2">
                     <Button
                       onClick={handleTestConnection}
-                      disabled={isTesting || (authType !== "baremeds" && !apiEndpointUrl) || (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId))}
+                      disabled={isTesting || !apiEndpointUrl}
                       variant="outline"
                       className="flex-1"
                     >
                       {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Test Connection
-                    </Button>
-                    <Button
-                      onClick={handleSendTestOrder}
-                      disabled={
-                        isSendingTest || 
-                        !apiEnabled ||
-                        (authType === "baremeds" && !hasBareMedsCreds) ||
-                        (authType !== "baremeds" && authType !== "none" && !apiEndpointUrl) ||
-                        (diagnosticsResults && !diagnosticsResults.success)
-                      }
-                      variant="secondary"
-                      className="flex-1"
-                      title={
-                        !apiEnabled ? "Enable API integration first" :
-                        diagnosticsResults && !diagnosticsResults.success ? "Run diagnostics and fix all errors first" :
-                        authType === "baremeds" && !hasBareMedsCreds ? "Save BareMeds credentials first" :
-                        authType !== "baremeds" && !apiEndpointUrl ? "Configure API endpoint first" :
-                        "Sends a complete test order to verify full integration"
-                      }
-                    >
-                      {isSendingTest && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Send className="mr-2 h-4 w-4" />
-                      Send Test Order
                     </Button>
                   </div>
                 </div>
