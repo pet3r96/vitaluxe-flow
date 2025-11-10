@@ -112,6 +112,7 @@ serve(async (req) => {
       }
     );
 
+    console.log("Payment response data:", paymentResponse.data);
     if (paymentResponse.error) {
       console.error("Payment processing error:", paymentResponse.error);
       throw new Error(`Payment failed: ${paymentResponse.error.message}`);

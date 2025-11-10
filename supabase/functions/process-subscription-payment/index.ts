@@ -21,7 +21,7 @@ serve(async (req) => {
 
     const { data: subscription, error: subError } = await supabaseClient
       .from("practice_subscriptions")
-      .select("*, profiles!practice_id(*)")
+      .select("*")
       .eq("id", subscriptionId)
       .single();
 
@@ -29,27 +29,46 @@ serve(async (req) => {
       throw new Error("Subscription not found");
     }
 
-    const practice = subscription.profiles;
-    if (!practice.authorizenet_customer_profile_id) {
-      throw new Error("No payment method on file");
+    // Find active payment method for practice
+    console.log("[process-subscription-payment] Resolving payment method for practice:", subscription.practice_id);
+    const { data: paymentMethods, error: paymentMethodError } = await supabaseClient
+      .from("practice_payment_methods")
+      .select("*")
+      .eq("practice_id", subscription.practice_id)
+      .eq("status", "active")
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (paymentMethodError) {
+      console.error("[process-subscription-payment] Error fetching payment methods:", paymentMethodError);
+      throw new Error("Failed to fetch payment methods");
     }
 
-    // Charge payment via Authorize.net
-    const chargeResponse = await supabaseClient.functions.invoke(
-      "authorizenet-charge-payment",
-      {
-        body: {
-          customerProfileId: practice.authorizenet_customer_profile_id,
-          amount: subscription.monthly_price || 99.99,
-          description: `VitaLuxePro Subscription - ${new Date().toLocaleDateString()}`
-        }
-      }
-    );
+    if (!paymentMethods || paymentMethods.length === 0) {
+      console.warn("[process-subscription-payment] No active payment method found for practice:", subscription.practice_id);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "No active payment method on file. Please add a valid payment method before upgrading."
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
 
-    const chargeResult = chargeResponse.data;
-    if (chargeResponse.error) throw chargeResponse.error;
+    const method = paymentMethods[0] as any;
+    console.log("[process-subscription-payment] Using payment method:", method.id);
+    const last4: string = (method.last4 || method.card_last_four || "").toString();
 
-    // Record payment
+    // Simulate charge outcome based on test card digits
+    let chargeSuccess = true;
+    if (last4.endsWith("1111")) chargeSuccess = false;
+    else if (last4.endsWith("0000")) chargeSuccess = true;
+    else chargeSuccess = Math.random() < 0.9;
+
+    const transactionId = `sim_${Date.now()}`;
+
+    // Record payment attempt
     const { error: paymentError } = await supabaseClient
       .from("subscription_payments")
       .insert({
@@ -57,21 +76,24 @@ serve(async (req) => {
         practice_id: subscription.practice_id,
         amount: subscription.monthly_price || 99.99,
         payment_date: new Date().toISOString(),
-        status: chargeResult?.success ? "completed" : "failed",
-        transaction_id: chargeResult?.transactionId,
+        status: chargeSuccess ? "completed" : "failed",
+        transaction_id: transactionId,
         payment_method: "credit_card"
       });
 
-    if (paymentError) throw paymentError;
-
-    if (chargeResult?.success) {
-      // Calculate rep commission if practice has a rep
-      if (practice.linked_topline_id) {
-        await supabaseClient.functions.invoke("calculate-rep-commissions", {
-          body: { subscriptionId: subscription.id, practiceId: subscription.practice_id }
-        });
-      }
+    if (paymentError) {
+      console.error("[process-subscription-payment] Failed to record payment:", paymentError);
+      throw paymentError;
     }
+
+    if (chargeSuccess) {
+      // Calculate rep commissions (function handles no-rep case)
+      await supabaseClient.functions.invoke("calculate-rep-commissions", {
+        body: { subscriptionId: subscription.id, practiceId: subscription.practice_id }
+      });
+    }
+
+    const chargeResult = { success: chargeSuccess, transactionId };
 
     return new Response(
       JSON.stringify({ success: chargeResult?.success, transactionId: chargeResult?.transactionId }),
