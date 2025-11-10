@@ -71,7 +71,7 @@ export async function baremedsFetch(
     const loginPayload = {
       email: normalized.email,
       password: normalized.password,
-      site_id: normalized.siteId,
+      site_id: String(normalized.siteId), // BareMeds API requires site_id as string
     };
 
     console.log(`[baremedsFetch] Attempting login at: ${loginUrl}`);

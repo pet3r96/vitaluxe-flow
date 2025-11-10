@@ -203,7 +203,7 @@ serve(async (req) => {
           const loginPayload = {
             email: normalized.email,
             password: normalized.password,
-            site_id: normalized.siteId,
+            site_id: String(normalized.siteId), // BareMeds API requires site_id as string
           };
 
           const loginResponse = await fetch(loginUrl, {
