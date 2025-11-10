@@ -19,9 +19,16 @@ serve(async (req) => {
     let uid = 'test-user';
     
     if (req.method === 'POST') {
-      const body = await req.json();
-      channelName = body.channelName || channelName;
-      uid = body.uid || uid;
+      try {
+        const text = await req.text();
+        if (text && text.trim()) {
+          const body = JSON.parse(text);
+          channelName = body.channelName || channelName;
+          uid = body.uid || uid;
+        }
+      } catch (jsonError) {
+        console.log("[agora-echo] No JSON body provided, using defaults");
+      }
     }
 
     console.log("[agora-echo] Debug diagnostics");
