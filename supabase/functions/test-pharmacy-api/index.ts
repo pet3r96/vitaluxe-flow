@@ -23,6 +23,14 @@ serve(async (req) => {
     );
 
     const { pharmacy_id }: TestOrderRequest = await req.json();
+    
+    // Check for dryRun query parameter
+    const url = new URL(req.url);
+    const dryRun = url.searchParams.get("dryRun") === "true";
+    
+    if (dryRun) {
+      console.log("[test-pharmacy-api] 🧪 DRY RUN MODE ENABLED - Requests will be logged but not sent");
+    }
 
     console.log(`[test-pharmacy-api] Sending test order to pharmacy ${pharmacy_id}`);
 
@@ -189,9 +197,10 @@ serve(async (req) => {
         const endpointPath = endpointUrl.pathname + endpointUrl.search;
         
         // Step 3: Make API call using simplified baremedsFetch
-        console.log("[test-pharmacy-api] Sending test order to BareMeds...");
+        console.log(`[test-pharmacy-api] ${dryRun ? '🧪 DRY RUN - Simulating' : 'Sending'} test order to BareMeds...`);
         const response = await baremedsFetch(endpointPath, payload, token, {
           method: 'POST',
+          dryRun,
         });
 
         // Step 4: Parse response
@@ -209,12 +218,13 @@ serve(async (req) => {
                                    responseBody.baremeds_order_id || 
                                    responseBody.id;
           
-          console.log(`✅ Test order sent successfully. Pharmacy order ID: ${pharmacyOrderId || 'Not provided'}`);
+          console.log(`✅ Test order ${dryRun ? 'validated (DRY RUN)' : 'sent successfully'}. Pharmacy order ID: ${pharmacyOrderId || 'Not provided'}`);
           
           return new Response(
             JSON.stringify({ 
               success: true,
-              message: "Test order sent successfully",
+              message: dryRun ? "DRY RUN: Test order validated (not sent)" : "Test order sent successfully",
+              dry_run: dryRun,
               test_order_id: testOrderId,
               pharmacy_order_id: pharmacyOrderId,
               response_status: response.status,
