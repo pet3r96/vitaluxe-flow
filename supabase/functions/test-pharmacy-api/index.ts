@@ -101,20 +101,40 @@ serve(async (req) => {
     
     if (pharmacy.api_auth_type === "baremeds") {
       // BareMeds requires nested structure
+      const endpointSiteId = (() => {
+        try {
+          const u = new URL(pharmacy.api_endpoint_url);
+          const parts = u.pathname.split('/').filter(Boolean);
+          return parts[parts.length - 1];
+        } catch {
+          return undefined;
+        }
+      })();
+
+      const testPatientId = `TEST-PAT-${Date.now()}`;
+
       payload = {
+        // Some BareMeds installations require site_id in body even if present in path
+        ...(endpointSiteId ? { site_id: String(endpointSiteId) } : {}),
         patient: {
-          patient_id: `TEST-PAT-${Date.now()}`,
+          // Primary expected field per BareMeds errors
+          patient_id: testPatientId,
+          // Compatibility shape some deployments expect
+          patient: { id: testPatientId },
           first_name: "Test",
           last_name: "Patient (Do Not Process)",
           date_of_birth: "1990-01-01",
+          dob: "1990-01-01",
           gender: "M",
           phone: "5550100",
           email: "test@example.com",
           address: {
             street: "123 Test Street",
+            line1: "123 Test Street",
             city: "Test City",
             state: "CA",
-            zip: "90001"
+            zip: "90001",
+            postal_code: "90001"
           }
         },
         prescriber: {
@@ -124,11 +144,14 @@ serve(async (req) => {
           dea: "AT1234567",
           address: {
             street: "456 Provider Ave",
+            line1: "456 Provider Ave",
             city: "Test City",
             state: "CA",
-            zip: "90001"
+            zip: "90001",
+            postal_code: "90001"
           }
         },
+        // Some versions expect 'prescription' vs 'medication' - include both
         medication: {
           name: "TEST PRODUCT - PLEASE IGNORE",
           strength: "1mg",
@@ -136,10 +159,37 @@ serve(async (req) => {
           directions: "Test instructions - DO NOT PROCESS THIS ORDER",
           refills: 0
         },
+        prescription: {
+          drug_name: "TEST PRODUCT - PLEASE IGNORE",
+          strength: "1mg",
+          quantity: 1,
+          directions: "Test instructions - DO NOT PROCESS THIS ORDER",
+          refills: 0
+        },
         shipping_method: "Ground",
+        shipping: {
+          method: "Ground",
+          address: {
+            street: "123 Test Street",
+            line1: "123 Test Street",
+            city: "Test City",
+            state: "CA",
+            zip: "90001",
+            postal_code: "90001"
+          }
+        },
         notes: "THIS IS A TEST ORDER - DO NOT FULFILL. Sent via API configuration test.",
         external_order_id: testOrderId
       };
+
+      console.log("[test-pharmacy-api] BareMeds payload debug:", {
+        has_patient: !!payload.patient,
+        has_patient_id: !!payload.patient?.patient_id,
+        has_nested_patient_id: !!payload.patient?.patient?.id,
+        has_prescriber: !!payload.prescriber,
+        has_medication: !!payload.medication,
+        site_id_in_body: payload.site_id ?? null
+      });
     } else {
       // Generic payload for other pharmacy types
       payload = {
