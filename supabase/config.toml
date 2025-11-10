@@ -383,3 +383,6 @@ verify_jwt = true
 
 [functions.baremeds-get-token]
 verify_jwt = true
+
+[functions.upgrade-trial-to-active]
+verify_jwt = true
