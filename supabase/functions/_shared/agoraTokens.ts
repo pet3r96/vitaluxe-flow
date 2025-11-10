@@ -108,15 +108,19 @@ function packPrivilegesMap(privileges: Map<number, number>): Uint8Array {
   return concat(...entries);
 }
 
-function packServiceRtc(
+// Pack service with explicit length field: type(uint16) + length(uint16) + body
+function packService(type: number, body: Uint8Array): Uint8Array {
+  const typeBytes = writeUint16LE(type);
+  const lenBytes = writeUint16LE(body.length);
+  return concat(typeBytes, lenBytes, body);
+}
+
+function packServiceRtcBody(
   channelName: string,
   userAccount: string,
   role: 'publisher' | 'subscriber',
   expireTimestamp: number
 ): Uint8Array {
-  // Service type = 1 (RTC)
-  const serviceType = writeUint16LE(1);
-  
   // Channel and user
   const channelBytes = writeStringWithLen(channelName);
   const userBytes = writeStringWithLen(userAccount);
@@ -133,13 +137,10 @@ function packServiceRtc(
   
   const privilegesBytes = packPrivilegesMap(privileges);
   
-  return concat(serviceType, channelBytes, userBytes, privilegesBytes);
+  return concat(channelBytes, userBytes, privilegesBytes);
 }
 
-function packServiceRtm(userId: string, expireTimestamp: number): Uint8Array {
-  // Service type = 2 (RTM)
-  const serviceType = writeUint16LE(2);
-  
+function packServiceRtmBody(userId: string, expireTimestamp: number): Uint8Array {
   // User ID
   const userBytes = writeStringWithLen(userId);
   
@@ -149,7 +150,7 @@ function packServiceRtm(userId: string, expireTimestamp: number): Uint8Array {
   
   const privilegesBytes = packPrivilegesMap(privileges);
   
-  return concat(serviceType, userBytes, privilegesBytes);
+  return concat(userBytes, privilegesBytes);
 }
 
 // ============================================================================
@@ -171,13 +172,20 @@ async function generateAccessToken2(
   // Current timestamp
   const ts = Math.floor(Date.now() / 1000);
   
-  // Pack service
-  let servicePack: Uint8Array;
+  // Build service body
+  let serviceBody: Uint8Array;
+  let serviceTypeNum: number;
+  
   if (serviceType === 'rtc') {
-    servicePack = packServiceRtc(channelName, uid, role, expiresAt);
+    serviceTypeNum = 1;
+    serviceBody = packServiceRtcBody(channelName, uid, role, expiresAt);
   } else {
-    servicePack = packServiceRtm(uid, expiresAt);
+    serviceTypeNum = 2;
+    serviceBody = packServiceRtmBody(uid, expiresAt);
   }
+  
+  // Pack service with type and length: type(uint16) + length(uint16) + body
+  const servicePack = packService(serviceTypeNum, serviceBody);
   
   // Services: serviceCount(uint16) + service pack
   const servicesPack = concat(writeUint16LE(1), servicePack);
@@ -221,7 +229,7 @@ async function generateAccessToken2(
   console.log("\n🔧 [AccessToken2 Builder]");
   console.log("├─ AppID prefix:", appId.substring(0, 8));
   console.log("├─ Cert prefix:", appCertificate.substring(0, 8));
-  console.log("├─ Service type:", serviceType);
+  console.log("├─ Service type:", serviceType, `(${serviceTypeNum})`);
   console.log("├─ Channel:", channelName);
   console.log("├─ UID:", uid);
   console.log("├─ Role:", role);
@@ -242,6 +250,9 @@ async function generateAccessToken2(
   }
   
   console.log("├─ Certificate UTF-8 byte count:", keyBytes.length);
+  console.log("├─ Service body length:", serviceBody.length, "bytes");
+  console.log("├─ Service pack length (with type+len):", servicePack.length, "bytes");
+  console.log("├─ Services pack length:", servicesPack.length, "bytes");
   console.log("├─ Message length:", message.length, "bytes");
   console.log("├─ Signature length:", signature.length, "bytes");
   console.log("├─ Token starts with 007:", token.startsWith("007"));
