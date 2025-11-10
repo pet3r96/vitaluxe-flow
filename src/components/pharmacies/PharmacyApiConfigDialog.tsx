@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, Send } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Send, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 interface PharmacyApiConfigDialogProps {
@@ -107,6 +107,11 @@ export const PharmacyApiConfigDialog = ({
     },
     enabled: open && !!pharmacyId,
   });
+
+  // Check if BareMeds credentials exist in database
+  const hasBareMedsCreds = credentials?.some(
+    c => c.credential_type === "baremeds_oauth" && c.credential_key
+  );
 
   // Fetch transmission logs
   const { data: transmissions } = useQuery({
@@ -430,10 +435,22 @@ export const PharmacyApiConfigDialog = ({
                       <Input
                         id="baremeds-password"
                         type="password"
-                        placeholder="Enter BareMeds password"
+                        placeholder={hasBareMedsCreds ? "••••••••• (saved)" : "Enter BareMeds password"}
                         value={baremedPassword}
                         onChange={(e) => setBaremedPassword(e.target.value)}
                       />
+                      {hasBareMedsCreds && (
+                        <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          BareMeds credentials saved
+                        </div>
+                      )}
+                      {!hasBareMedsCreds && baremedEmail && baremedPassword && baremedSiteId && (
+                        <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Click "Save Configuration" to store credentials
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="baremeds-site-id">BareMeds Site ID</Label>
@@ -520,10 +537,20 @@ export const PharmacyApiConfigDialog = ({
                   </Button>
                   <Button
                     onClick={handleSendTestOrder}
-                    disabled={isSendingTest || (authType !== "baremeds" && !apiEndpointUrl) || (authType === "baremeds" && (!baremedEmail || !baremedPassword || !baremedSiteId))}
+                    disabled={
+                      isSendingTest || 
+                      !apiEnabled ||
+                      (authType === "baremeds" && !hasBareMedsCreds) ||
+                      (authType !== "baremeds" && authType !== "none" && !apiEndpointUrl)
+                    }
                     variant="secondary"
                     className="flex-1"
-                    title="Sends a complete test order to verify full integration"
+                    title={
+                      !apiEnabled ? "Enable API integration first" :
+                      authType === "baremeds" && !hasBareMedsCreds ? "Save BareMeds credentials first" :
+                      authType !== "baremeds" && !apiEndpointUrl ? "Configure API endpoint first" :
+                      "Sends a complete test order to verify full integration"
+                    }
                   >
                     {isSendingTest && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Send className="mr-2 h-4 w-4" />
