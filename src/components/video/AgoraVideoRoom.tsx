@@ -68,6 +68,12 @@ export const AgoraVideoRoom = ({
   const [recordingStatus, setRecordingStatus] = useState<'not_started' | 'starting' | 'active' | 'stopping' | 'stopped'>('not_started');
   const [backendEcho, setBackendEcho] = useState<{appIdSample: string; cert8: string} | null>(null);
   const [joinAttempt, setJoinAttempt] = useState(0);
+  
+  // Agora SDK error capture
+  const [rtcErrorCode, setRtcErrorCode] = useState<string | number | null>(null);
+  const [rtcErrorMessage, setRtcErrorMessage] = useState<string | null>(null);
+  const [rtmErrorCode, setRtmErrorCode] = useState<string | number | null>(null);
+  const [rtmErrorMessage, setRtmErrorMessage] = useState<string | null>(null);
 
   const quality = useNetworkQuality(client, sessionId);
   const { logVideoError } = useVideoErrorLogger();
@@ -171,7 +177,7 @@ export const AgoraVideoRoom = ({
     sessionId,
     userName,
     userType: isProvider ? "provider" : "patient",
-  }) : { messages: [], sendMessage: async () => {}, isConnected: false, renewRtmToken: async () => {} };
+  }) : { messages: [], sendMessage: async () => {}, isConnected: false, renewRtmToken: async () => {}, rtmErrorCode: null, rtmErrorMessage: null };
 
   // Auto-refresh tokens to prevent session interruptions
   useTokenAutoRefresh({
@@ -250,8 +256,11 @@ export const AgoraVideoRoom = ({
         try {
           await agoraClient.join(appId, channelName, token, joinUid);
           console.log('✅ [AgoraVideoRoom] Successfully joined RTC channel');
+          // Clear any previous errors on successful join
+          setRtcErrorCode(null);
+          setRtcErrorMessage(null);
         } catch (err: any) {
-          console.error("=== AGORA RTC JOIN ERROR ===");
+          console.error("=== AGORA RTC JOIN ERROR ===", err);
           console.error("Error Code:", err.code);
           console.error("Error Name:", err.name);
           console.error("Error Message:", err.message);
@@ -265,6 +274,11 @@ export const AgoraVideoRoom = ({
             tokenLength: token.length,
           });
           console.error("============================");
+          
+          // Capture error for debug panel
+          setRtcErrorCode(err.code || null);
+          setRtcErrorMessage(err.message || String(err));
+          
           throw err;
         }
 
@@ -688,6 +702,29 @@ export const AgoraVideoRoom = ({
               <div><span className="text-gray-400">BE Cert8:</span> {backendEcho.cert8}</div>
             </>
           )}
+          
+          {/* RTC Error Display */}
+          {(rtcErrorCode || rtcErrorMessage) && (
+            <>
+              <div className="mt-2 border-t border-red-700 pt-2">
+                <div className="font-bold text-red-400 mb-1">🚨 RTC ERROR</div>
+              </div>
+              {rtcErrorCode && <div><span className="text-gray-400">RTC Error Code:</span> <span className="text-red-300">{rtcErrorCode}</span></div>}
+              {rtcErrorMessage && <div><span className="text-gray-400">RTC Error Message:</span> <span className="text-red-300">{rtcErrorMessage}</span></div>}
+            </>
+          )}
+          
+          {/* RTM Error Display */}
+          {(chat.rtmErrorCode || chat.rtmErrorMessage) && (
+            <>
+              <div className="mt-2 border-t border-red-700 pt-2">
+                <div className="font-bold text-red-400 mb-1">🚨 RTM ERROR</div>
+              </div>
+              {chat.rtmErrorCode && <div><span className="text-gray-400">RTM Error Code:</span> <span className="text-red-300">{chat.rtmErrorCode}</span></div>}
+              {chat.rtmErrorMessage && <div><span className="text-gray-400">RTM Error Message:</span> <span className="text-red-300">{chat.rtmErrorMessage}</span></div>}
+            </>
+          )}
+          
           <div className="text-xs text-gray-500 mt-2">
             FE & BE App IDs must match exactly
           </div>

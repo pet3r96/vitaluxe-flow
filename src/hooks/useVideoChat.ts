@@ -33,6 +33,8 @@ export const useVideoChat = ({
 }: UseVideoChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [rtmErrorCode, setRtmErrorCode] = useState<string | number | null>(null);
+  const [rtmErrorMessage, setRtmErrorMessage] = useState<string | null>(null);
   const clientRef = useRef<any>(null);
   const channelRef = useRef<any>(null);
   const currentTokenRef = useRef<string>(rtmToken);
@@ -53,8 +55,11 @@ export const useVideoChat = ({
         try {
           await client.login({ uid: rtmUid, token: rtmToken });
           console.log('✅ [RTM] Successfully logged in');
+          // Clear any previous errors on successful login
+          setRtmErrorCode(null);
+          setRtmErrorMessage(null);
         } catch (err: any) {
-          console.error("=== AGORA RTM LOGIN ERROR ===");
+          console.error("=== AGORA RTM LOGIN ERROR ===", err);
           console.error("Error Code:", err.code);
           console.error("Error Name:", err.name);
           console.error("Error Message:", err.message);
@@ -67,6 +72,11 @@ export const useVideoChat = ({
             rtmTokenLength: rtmToken.length,
           });
           console.error("============================");
+          
+          // Capture error for parent component
+          setRtmErrorCode(err.code || null);
+          setRtmErrorMessage(err.message || String(err));
+          
           throw err;
         }
 
@@ -212,5 +222,5 @@ export const useVideoChat = ({
     }
   };
 
-  return { messages, sendMessage, isConnected, renewRtmToken };
+  return { messages, sendMessage, isConnected, renewRtmToken, rtmErrorCode, rtmErrorMessage };
 };
