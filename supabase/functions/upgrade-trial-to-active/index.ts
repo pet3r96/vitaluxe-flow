@@ -72,7 +72,7 @@ serve(async (req) => {
           success: false, 
           error: "Subscription is not in trial status" 
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -96,7 +96,7 @@ serve(async (req) => {
           success: false, 
           error: "No active payment method on file. Please add a valid payment method before upgrading." 
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -124,9 +124,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Payment was declined. Please check your payment method and try again." 
+          error: paymentResult?.error ?? "Payment was declined. Please check your payment method and try again." 
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -181,7 +181,7 @@ serve(async (req) => {
         success: false, 
         error: error.message || "Failed to upgrade subscription"
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   }
 });

@@ -102,8 +102,8 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Subscription payment error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      JSON.stringify({ success: false, error: error.message }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   }
 });
