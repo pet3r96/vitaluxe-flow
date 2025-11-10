@@ -107,19 +107,26 @@ Deno.serve(async (req) => {
       .eq('id', session.patient_id)
       .maybeSingle();
 
+    // Check if user is a system admin
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', effectiveUserId)
+      .maybeSingle();
+
     const isProvider = provider?.user_id === effectiveUserId;
     const isPatient = patientAccount?.user_id === effectiveUserId;
-    const isPracticeAdmin = session.practice_id === effectiveUserId;
+    const isSystemAdmin = userRole?.role === 'admin';
     
     console.log('👤 [join-video-session] User role check:', { 
       effectiveUserId,
       isProvider,
       isPatient,
-      isPracticeAdmin,
+      isSystemAdmin,
       sessionPracticeId: session.practice_id
     });
 
-    if (!isProvider && !isPatient && !isPracticeAdmin) {
+    if (!isProvider && !isPatient && !isSystemAdmin) {
       console.error('❌ [join-video-session] Not authorized:', { effectiveUserId, sessionId });
       return new Response(JSON.stringify({ error: 'Not authorized for this session' }), {
         status: 403,
@@ -141,8 +148,8 @@ Deno.serve(async (req) => {
 
     // Update participant join timestamp
     const updateFields: any = {};
-    // Practice admins join as providers
-    if (isProvider || isPracticeAdmin) {
+    // System admins and providers join as providers
+    if (isProvider || isSystemAdmin) {
       updateFields.provider_joined_at = new Date().toISOString();
       // Provider joining makes session active
       if (session.status === 'waiting') {
@@ -168,7 +175,7 @@ Deno.serve(async (req) => {
       session_id: sessionId,
       event_type: 'join',
       user_id: user.id,
-      user_type: (isProvider || isPracticeAdmin) ? 'provider' : 'patient',
+      user_type: (isProvider || isSystemAdmin) ? 'provider' : 'patient',
       event_data: { 
         joined_at: new Date().toISOString(),
         new_status: updateFields.status || session.status,
@@ -176,7 +183,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log('✅ [join-video-session] Session joined successfully:', { sessionId, role: (isProvider || isPracticeAdmin) ? 'provider' : 'patient' });
+    console.log('✅ [join-video-session] Session joined successfully:', { sessionId, role: (isProvider || isSystemAdmin) ? 'provider' : 'patient' });
 
     // Generate Agora token for this user
     console.log('🎫 [join-video-session] Generating Agora token...');
