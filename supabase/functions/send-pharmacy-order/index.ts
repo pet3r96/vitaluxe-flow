@@ -19,7 +19,7 @@ type JsonLike = Record<string, unknown>;
 const TEST_PHARMACY_EMAIL = "dsporn00@yahoo.com";
 const TEST_PHARMACY_NAME = "Demo Pharmacy 1";
 const BAREMEDS_AUTH_URL = "https://staging-rxorders.baremeds.com/api/auth/login";
-const BAREMEDS_ORDERS_URL = "https://staging-rxorders.baremeds.com/api/orders";
+const BAREMEDS_ORDERS_URL = `https://staging-rxorders.baremeds.com/api/v1/rx-orders/${Deno.env.get("BAREMEDS_SITE_ID")}`;
 
 function sanitizeForLog(data: unknown): unknown {
   if (data === null || typeof data !== "object") {
