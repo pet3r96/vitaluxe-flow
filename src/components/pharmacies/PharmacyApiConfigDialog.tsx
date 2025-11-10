@@ -72,6 +72,41 @@ export const PharmacyApiConfigDialog = ({
     enabled: open,
   });
 
+  // Fetch pharmacy API credentials
+  const { data: credentials } = useQuery({
+    queryKey: ["pharmacy-api-credentials", pharmacyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pharmacy_api_credentials")
+        .select("*")
+        .eq("pharmacy_id", pharmacyId);
+
+      if (error) throw error;
+
+      // Load credentials into form state
+      if (data && data.length > 0) {
+        data.forEach((cred) => {
+          if (cred.credential_type === "baremeds_oauth") {
+            try {
+              const baremedsCreds = JSON.parse(cred.credential_key);
+              setBaremedEmail(baremedsCreds.email || "");
+              setBaremedPassword(baremedsCreds.password || "");
+              setBaremedSiteId(String(baremedsCreds.site_id || ""));
+              setBaremedBaseUrl(baremedsCreds.base_url || "https://staging-rxorders.baremeds.com");
+            } catch (e) {
+              console.error("Failed to parse BareMeds credentials:", e);
+            }
+          } else if (cred.credential_type === "api_key" || cred.credential_type === "bearer_token") {
+            setApiKey(cred.credential_key || "");
+          }
+        });
+      }
+
+      return data;
+    },
+    enabled: open && !!pharmacyId,
+  });
+
   // Fetch transmission logs
   const { data: transmissions } = useQuery({
     queryKey: ["pharmacy-transmissions", pharmacyId],
