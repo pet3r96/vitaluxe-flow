@@ -346,7 +346,7 @@ export default function PracticeCalendar() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-y-auto flex flex-col">
           {/* Calendar Section */}
           <div className="flex-1 p-4 lg:p-6 flex flex-col overflow-hidden">
             <CalendarHeader
