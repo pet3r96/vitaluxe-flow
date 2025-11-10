@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Card } from "@/components/ui/card";
