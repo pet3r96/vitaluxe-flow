@@ -46,10 +46,19 @@ serve(async (req) => {
       );
     }
 
-    // Fetch order data
+    // Fetch order data with practice info
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
-      .select("*, profiles!orders_doctor_id_fkey(name, email)")
+      .select(`
+        *, 
+        profiles!orders_doctor_id_fkey(
+          name, 
+          email,
+          address,
+          address_formatted,
+          shipping_address_formatted
+        )
+      `)
       .eq("id", order_id)
       .single();
 
@@ -57,7 +66,7 @@ serve(async (req) => {
       throw new Error(`Order not found: ${orderError?.message}`);
     }
 
-    // Fetch order line data
+    // Fetch order line data with provider credentials
     const { data: orderLine, error: lineError } = await supabaseAdmin
       .from("order_lines")
       .select(`
@@ -65,7 +74,13 @@ serve(async (req) => {
         products(name),
         providers!order_lines_provider_id_fkey(
           user_id,
-          profiles!providers_user_id_fkey(name)
+          profiles!providers_user_id_fkey(
+            name,
+            npi,
+            dea,
+            address,
+            address_formatted
+          )
         )
       `)
       .eq("id", order_line_id)
@@ -94,15 +109,29 @@ serve(async (req) => {
       .select("*")
       .eq("pharmacy_id", pharmacy_id);
 
+    // Determine shipping address based on ship_to field
+    const shipToPractice = orderLine.ship_to === "practice";
+    const shippingAddress = shipToPractice 
+      ? (order.profiles?.shipping_address_formatted || order.profiles?.address_formatted || order.profiles?.address || "[PRACTICE ADDRESS NOT SET]")
+      : (orderLine.shipping_address || orderLine.patient_address || "[ENCRYPTED]");
+
     // Build payload
     const payload = {
       order_id: order.id,
       order_line_id: orderLine.id,
       vitaluxe_order_number: order.order_number,
+      
+      // Patient info
       patient_name: orderLine.patient_name,
       patient_address: orderLine.patient_address || "[ENCRYPTED]",
       patient_phone: orderLine.patient_phone || "[ENCRYPTED]",
       patient_email: orderLine.patient_email || "[ENCRYPTED]",
+      
+      // Shipping info
+      ship_to: orderLine.ship_to || "patient",
+      shipping_address: shippingAddress,
+      
+      // Product info
       product: {
         name: orderLine.products?.name || "Unknown",
         quantity: orderLine.quantity,
@@ -113,10 +142,16 @@ serve(async (req) => {
       prescription_url: orderLine.prescription_url || null,
       shipping_speed: orderLine.shipping_speed,
       destination_state: orderLine.destination_state,
+      
+      // Provider credentials
       provider: {
         name: orderLine.providers?.profiles?.name || "Unknown",
+        npi: orderLine.providers?.profiles?.npi || null,
+        dea: orderLine.providers?.profiles?.dea || null,
+        address: orderLine.providers?.profiles?.address_formatted || orderLine.providers?.profiles?.address || null,
         practice: order.profiles?.name || "Unknown",
       },
+      
       created_at: order.created_at,
     };
 
