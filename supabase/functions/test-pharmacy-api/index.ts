@@ -96,46 +96,93 @@ serve(async (req) => {
     const testOrderId = `TEST-ORD-${Date.now()}`;
     const testLineId = `TEST-LINE-${Date.now()}`;
 
-    const payload = {
-      order_id: testOrderId,
-      order_line_id: testLineId,
-      vitaluxe_order_number: `TEST-${Date.now()}`,
-      
-      // Test patient info
-      patient_name: "Test Patient (Please Ignore)",
-      patient_address: "123 Test Street, Test City, CA 90001",
-      patient_phone: "555-0100",
-      patient_email: "test@example.com",
-      
-      // Shipping info
-      ship_to: "patient",
-      shipping_address: "123 Test Street, Test City, CA 90001",
-      
-      // Product info
-      product: {
-        name: "TEST PRODUCT - PLEASE IGNORE",
-        quantity: 1,
-        custom_sig: "Test instructions - do not process",
-        custom_dosage: "1 tablet",
-        notes: "THIS IS A TEST ORDER - DO NOT FULFILL",
-      },
-      prescription_url: null,
-      shipping_speed: "ground",
-      destination_state: "CA",
-      
-      // Provider credentials
-      provider: {
-        name: "Test Provider MD",
-        npi: "1234567890",
-        dea: "AT1234567",
-        address: "456 Provider Ave, Test City, CA 90001",
-        practice: "Test Practice",
-      },
-      
-      created_at: testTimestamp,
-      _test_order: true,
-      _test_note: "This is a test order sent via the API configuration dialog. Please do not fulfill.",
-    };
+    // Create BareMeds-specific payload if needed
+    let payload: any;
+    
+    if (pharmacy.api_auth_type === "baremeds") {
+      // BareMeds requires nested structure
+      payload = {
+        patient: {
+          patient_id: `TEST-PAT-${Date.now()}`,
+          first_name: "Test",
+          last_name: "Patient (Do Not Process)",
+          date_of_birth: "1990-01-01",
+          gender: "M",
+          phone: "5550100",
+          email: "test@example.com",
+          address: {
+            street: "123 Test Street",
+            city: "Test City",
+            state: "CA",
+            zip: "90001"
+          }
+        },
+        prescriber: {
+          npi: "1234567890",
+          first_name: "Test",
+          last_name: "Provider",
+          dea: "AT1234567",
+          address: {
+            street: "456 Provider Ave",
+            city: "Test City",
+            state: "CA",
+            zip: "90001"
+          }
+        },
+        medication: {
+          name: "TEST PRODUCT - PLEASE IGNORE",
+          strength: "1mg",
+          quantity: 1,
+          directions: "Test instructions - DO NOT PROCESS THIS ORDER",
+          refills: 0
+        },
+        shipping_method: "Ground",
+        notes: "THIS IS A TEST ORDER - DO NOT FULFILL. Sent via API configuration test.",
+        external_order_id: testOrderId
+      };
+    } else {
+      // Generic payload for other pharmacy types
+      payload = {
+        order_id: testOrderId,
+        order_line_id: testLineId,
+        vitaluxe_order_number: `TEST-${Date.now()}`,
+        
+        // Test patient info
+        patient_name: "Test Patient (Please Ignore)",
+        patient_address: "123 Test Street, Test City, CA 90001",
+        patient_phone: "555-0100",
+        patient_email: "test@example.com",
+        
+        // Shipping info
+        ship_to: "patient",
+        shipping_address: "123 Test Street, Test City, CA 90001",
+        
+        // Product info
+        product: {
+          name: "TEST PRODUCT - PLEASE IGNORE",
+          quantity: 1,
+          custom_sig: "Test instructions - do not process",
+          custom_dosage: "1 tablet",
+          notes: "THIS IS A TEST ORDER - DO NOT FULFILL",
+        },
+        prescription_url: null,
+        shipping_speed: "ground",
+        destination_state: "CA",
+        
+        // Provider credentials
+        provider: {
+          name: "Test Provider MD",
+          npi: "1234567890",
+          dea: "AT1234567",
+          address: "456 Provider Ave, Test City, CA 90001",
+          practice: "Test Practice",
+        },
+        
+        created_at: testTimestamp,
+        _test_order: true,
+        _test_note: "This is a test order sent via the API configuration dialog. Please do not fulfill.",
+      };
+    }
 
     // Build auth headers
     const headers: Record<string, string> = {
