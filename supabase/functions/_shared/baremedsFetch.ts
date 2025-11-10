@@ -28,32 +28,50 @@ export async function baremedsFetch(
       throw new Error(`BareMeds credentials not found for pharmacy ${pharmacyId}`);
     }
 
-    const baremedsCreds = JSON.parse(credData.credential_key);
+    // Parse credentials, handling double-encoded JSON
+    let baremedsCreds = JSON.parse(credData.credential_key);
+    
+    // Handle double-encoded credentials (stored as string)
+    if (typeof baremedsCreds === 'string') {
+      console.log("Detected double-encoded credentials, parsing again...");
+      baremedsCreds = JSON.parse(baremedsCreds);
+    }
 
-    // Normalize field names (handle base_url, baseUrl, api_base_url variations)
-    const baseUrl = baremedsCreds.base_url || baremedsCreds.baseUrl || baremedsCreds.api_base_url;
-    const email = baremedsCreds.email;
-    const password = baremedsCreds.password;
-    const siteId = baremedsCreds.site_id || baremedsCreds.siteId;
+    // Normalize field names (handle multiple naming conventions)
+    const normalized = {
+      baseUrl: baremedsCreds.base_url || baremedsCreds.baseUrl || baremedsCreds.url || baremedsCreds.base || baremedsCreds.api_base_url,
+      email: baremedsCreds.email || baremedsCreds.Email,
+      password: baremedsCreds.password || baremedsCreds.Password,
+      siteId: baremedsCreds.site_id || baremedsCreds.siteId || baremedsCreds.site,
+    };
 
     console.log("BareMeds credentials parsed:", {
-      hasBaseUrl: !!baseUrl,
-      baseUrl: baseUrl,
-      hasEmail: !!email,
-      hasSiteId: !!siteId,
-      credKeys: Object.keys(baremedsCreds)
+      rawLength: credData.credential_key.length,
+      wasDoubleEncoded: typeof JSON.parse(credData.credential_key) === 'string',
+      hasBaseUrl: !!normalized.baseUrl,
+      baseUrlOrigin: normalized.baseUrl ? new URL(normalized.baseUrl).origin : null,
+      hasEmail: !!normalized.email,
+      hasSiteId: !!normalized.siteId,
+      credKeys: Object.keys(baremedsCreds).slice(0, 10) // First 10 keys only
     });
 
-    if (!baseUrl || !email || !password || !siteId) {
-      throw new Error(`Missing required BareMeds credentials. Found: ${JSON.stringify(Object.keys(baremedsCreds))}`);
+    // Validate required fields
+    const missing = [];
+    if (!normalized.baseUrl) missing.push('base_url');
+    if (!normalized.email) missing.push('email');
+    if (!normalized.password) missing.push('password');
+    if (!normalized.siteId) missing.push('site_id');
+    
+    if (missing.length > 0) {
+      throw new Error(`Missing required BareMeds credentials: ${missing.join(', ')}. Available keys: ${Object.keys(baremedsCreds).slice(0, 20).join(', ')}`);
     }
 
     // Get authentication token
-    const loginUrl = `${baseUrl}/api/auth/login`;
+    const loginUrl = new URL('/api/auth/login', normalized.baseUrl).toString();
     const loginPayload = {
-      email: email,
-      password: password,
-      site_id: siteId,
+      email: normalized.email,
+      password: normalized.password,
+      site_id: normalized.siteId,
     };
 
     const loginResponse = await fetch(loginUrl, {
@@ -77,7 +95,9 @@ export async function baremedsFetch(
     }
 
     // Make the actual API call with the token
-    const apiUrl = `${baseUrl}${endpoint}`;
+    const apiUrl = new URL(endpoint, normalized.baseUrl).toString();
+    console.log(`Calling BareMeds API: ${apiUrl}`);
+    
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`,
