@@ -185,18 +185,17 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
   // Sign with HMAC-SHA256
   const signature = await hmacSign(appCertificate, message);
 
-  // Build final token: version + signature + salt + expireTimestamp + message
-  const version = new TextEncoder().encode('007');
-  const tokenData = concatArrays(
-    version,
+  // Build final token: '007' prefix + base64(signature + salt + expireTimestamp + message)
+  // CRITICAL: AccessToken2 requires literal '007' prefix, NOT base64-encoded version bytes
+  const payload = concatArrays(
     signature,
     packUint32(salt),
     packUint32(privilegeExpire),
     message
   );
 
-  // Base64 encode
-  const rtcToken = btoa(String.fromCharCode(...tokenData));
+  // Base64 encode payload and prepend '007'
+  const rtcToken = '007' + btoa(String.fromCharCode(...payload));
 
   // Enhanced debug block
   console.log("=== AGORA TOKEN VERIFICATION ===");
@@ -204,9 +203,9 @@ export async function generateAgoraTokens(options: TokenOptions): Promise<AgoraT
   console.log("Cert8:", appCertificate.slice(0, 8));
   console.log("Channel:", options.channelName);
   console.log("UID:", options.uid);
-  console.log("Token starts with 007:", rtcToken.startsWith("MDA3")); // "007" in base64
+  console.log("Token starts with 007:", rtcToken.startsWith("007")); // MUST be literal '007'
   console.log("Token length:", rtcToken.length);
-  console.log("Token prefix:", rtcToken.slice(0, 15));
+  console.log("Token prefix:", rtcToken.slice(0, 20));
   console.log("ExpiresAt:", privilegeExpire);
   console.log("ExpiresAt ISO:", new Date(privilegeExpire * 1000).toISOString());
   console.log("================================");
