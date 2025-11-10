@@ -1,0 +1,505 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "BareMeds API Documentation",
+    "description": "API for managing prescription orders",
+    "contact": {
+      "email": "leo@softbir.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://staging-rxorders.baremeds.com",
+      "description": "BareMeds API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/rx-orders/{site_id}": {
+      "post": {
+        "tags": [
+          "Prescriptions"
+        ],
+        "summary": "Create a new prescription order",
+        "operationId": "97952de643d42ac9ff6dbf850fc33fc8",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "description": "Site identifier",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2511"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Prescription order data with patient, doctor, and prescription details",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "patient",
+                  "prescription"
+                ],
+                "properties": {
+                  "patient": {
+                    "required": [
+                      "patientId",
+                      "firstName",
+                      "lastName",
+                      "dob",
+                      "gender",
+                      "address"
+                    ],
+                    "properties": {
+                      "patientId": {
+                        "type": "string",
+                        "example": "EXT-123457"
+                      },
+                      "firstName": {
+                        "type": "string",
+                        "example": "John"
+                      },
+                      "lastName": {
+                        "type": "string",
+                        "example": "Doe"
+                      },
+                      "dob": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "1980-01-01"
+                      },
+                      "gender": {
+                        "type": "string",
+                        "example": "M"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "example": "123-456-7890"
+                      },
+                      "address": {
+                        "required": [
+                          "line1",
+                          "city",
+                          "state",
+                          "zip"
+                        ],
+                        "properties": {
+                          "line1": {
+                            "type": "string",
+                            "example": "456 Elm Street"
+                          },
+                          "line2": {
+                            "type": "string",
+                            "example": "Apt 9B"
+                          },
+                          "city": {
+                            "type": "string",
+                            "example": "New York"
+                          },
+                          "state": {
+                            "type": "string",
+                            "example": "NY"
+                          },
+                          "zip": {
+                            "type": "string",
+                            "example": "10001"
+                          }
+                        },
+                        "type": "object"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "prescription": {
+                    "type": "array",
+                    "items": {
+                      "required": [
+                        "drug",
+                        "quantity",
+                        "refills"
+                      ],
+                      "properties": {
+                        "drug": {
+                          "required": [
+                            "name"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "Ozempic"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "example": "2"
+                        },
+                        "refills": {
+                          "type": "integer",
+                          "example": "1"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "example": "visit_123"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00.000000Z"
+                  },
+                  "company": {
+                    "type": "string",
+                    "example": "Pharmaneek Pharmacy Services"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Prescription order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "6681b116-7ad3-4aa2-b119-b0a2803c52d6"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "The patient.patientId field is required. (and 8 more errors)"
+                    },
+                    "errors": {
+                      "properties": {
+                        "patient.patientId": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.patientId field is required."
+                          }
+                        },
+                        "patient.firstName": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.firstName field is required."
+                          }
+                        },
+                        "patient.lastName": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.lastName field is required."
+                          }
+                        },
+                        "patient.dob": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.dob field is required."
+                          }
+                        },
+                        "patient.gender": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.gender field is required."
+                          }
+                        },
+                        "patient.phone": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.phone field is required."
+                          }
+                        },
+                        "patient.address.state": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.address.state field is required."
+                          }
+                        },
+                        "patient.address.city": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.address.city field is required."
+                          }
+                        },
+                        "patient.address.zip": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.address.zip field is required."
+                          }
+                        },
+                        "patient.address.line1": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The patient.address.line1 field is required."
+                          }
+                        },
+                        "prescription.0.drug.name": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The prescription.0.drug.name field is required."
+                          }
+                        },
+                        "prescription.0.quantity": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The prescription.0.quantity field is required."
+                          }
+                        },
+                        "prescription.0.refills": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "The prescription.0.refills field is required."
+                          }
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "sanctum": []
+          }
+        ]
+      }
+    },
+    "/api/v1/rx-orders/{site_id}/{order_number}": {
+      "get": {
+        "tags": [
+          "Prescriptions"
+        ],
+        "summary": "Get RX Orders by Order Number",
+        "description": "Retrieve all RX orders associated with a specific order number for a given site",
+        "operationId": "getRxOrdersByOrderNumber",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "description": "Site identifier",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2511"
+            }
+          },
+          {
+            "name": "order_number",
+            "in": "path",
+            "description": "Order number to search for",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "ORD123456"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Orders retrieved successfully"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 3
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "example": 1
+                          },
+                          "order_number": {
+                            "type": "string",
+                            "example": "ORD123456"
+                          },
+                          "patient_uuid": {
+                            "type": "string",
+                            "example": "uuid-123"
+                          },
+                          "doctor_uuid": {
+                            "type": "string",
+                            "example": "uuid-456"
+                          },
+                          "medication": {
+                            "type": "string",
+                            "example": "Medication Name"
+                          },
+                          "quantity": {
+                            "type": "string",
+                            "example": "30"
+                          },
+                          "days_supply": {
+                            "type": "integer",
+                            "example": 30
+                          },
+                          "prx_current_status": {
+                            "type": "string",
+                            "example": "Filled"
+                          },
+                          "tracking_number": {
+                            "type": "string",
+                            "example": "1Z123456789"
+                          },
+                          "sent_to_biosafe": {
+                            "type": "integer",
+                            "example": 1
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2023-01-01T00:00:00.000000Z"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2023-01-01T00:00:00.000000Z"
+                          },
+                          "patient": {
+                            "properties": {
+                              "patient_id": {
+                                "type": "string",
+                                "example": "uuid-123"
+                              },
+                              "first_name": {
+                                "type": "string",
+                                "example": "John"
+                              },
+                              "last_name": {
+                                "type": "string",
+                                "example": "Doe"
+                              },
+                              "external_mrn": {
+                                "type": "string",
+                                "example": "MRN123"
+                              },
+                              "date_of_birth": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "1990-01-01"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "doctor": {
+                            "properties": {
+                              "doctor_id": {
+                                "type": "string",
+                                "example": "uuid-456"
+                              },
+                              "first_name": {
+                                "type": "string",
+                                "example": "Dr. Jane"
+                              },
+                              "last_name": {
+                                "type": "string",
+                                "example": "Smith"
+                              },
+                              "npi": {
+                                "type": "string",
+                                "example": "1234567890"
+                              }
+                            },
+                            "type": "object"
+                          }
+                        },
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No orders found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "No orders found with the specified order number"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            }
+
