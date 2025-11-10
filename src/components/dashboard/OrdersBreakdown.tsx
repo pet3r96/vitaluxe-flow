@@ -14,9 +14,65 @@ export function OrdersBreakdown() {
     queryFn: async () => {
       if (!effectiveUserId) return null;
 
-      // Pharmacies don't pull orders via API - they receive via pharmacy API integration
       if (effectiveRole === 'pharmacy') {
-        return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
+        // For pharmacies, get pharmacy ID first, then get order lines
+        const { data: pharmacyData } = await supabase
+          .from('pharmacies')
+          .select('id')
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+
+        if (!pharmacyData) {
+          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
+        }
+
+        // Simplified query with limit to prevent timeout
+        const { data: orderLines, error: linesError } = await supabase
+          .from('order_lines')
+          .select(`
+            order_id,
+            status,
+            orders!inner(status, payment_status)
+          `)
+          .eq('assigned_pharmacy_id', pharmacyData.id)
+          .neq('orders.payment_status', 'payment_failed')
+          .neq('orders.status', 'cancelled')
+          .limit(500);
+
+        if (linesError) throw linesError;
+
+        if (!orderLines || orderLines.length === 0) {
+          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
+        }
+
+        // Group line statuses by unique order_id
+        const byOrder = new Map<string, string[]>();
+        for (const ol of orderLines as any[]) {
+          const arr = byOrder.get(ol.order_id) || [];
+          if (ol.status) arr.push(String(ol.status).toLowerCase());
+          byOrder.set(ol.order_id, arr);
+        }
+
+        // Determine final status per order
+        const counts = { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 } as any;
+        for (const [orderId, statuses] of byOrder) {
+          const has = (s: string) => statuses.includes(s);
+          if (has('denied')) {
+            counts.declined++;
+          } else if (has('delivered') || has('completed')) {
+            counts.completed++;
+          } else if (has('shipped')) {
+            counts.shipped++;
+          } else if (has('processing')) {
+            counts.processing++;
+          } else if (has('on_hold')) {
+            counts.on_hold++;
+          } else {
+            counts.pending++;
+          }
+        }
+
+        return counts;
       } else if (effectiveRole === 'provider') {
         // For providers: get only their prescribed order lines
         const { data: providerData } = await supabase
