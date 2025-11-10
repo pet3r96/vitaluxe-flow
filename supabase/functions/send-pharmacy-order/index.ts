@@ -102,24 +102,24 @@ Deno.serve(async (req) => {
       company: "Vitaluxe Services",
     };
 
-    // Get site ID (default to staging)
-    const siteId = Deno.env.get("BAREMEDS_SITE_ID") || "2511";
-    const apiToken = Deno.env.get("BAREMEDS_API_TOKEN_STAGING");
+    // Get site ID (default to live)
+    const siteId = Deno.env.get("BAREMEDS_SITE_ID") || "98923";
+    const apiToken = Deno.env.get("BAREMEDS_API_TOKEN");
 
     if (!apiToken) {
-      throw new Error("BAREMEDS_API_TOKEN_STAGING environment variable not set");
+      throw new Error("BAREMEDS_API_TOKEN environment variable not set");
     }
 
     console.log("🚀 Sending to BareMeds:", {
       siteId,
-      endpoint: `https://staging-rxorders.baremeds.com/api/v1/rx-orders/${siteId}`,
+      endpoint: `https://rxorders.baremeds.com/api/v1/rx-orders/${siteId}`,
       patientName: `${payload.patient.firstName} ${payload.patient.lastName}`,
       prescriptionCount: payload.prescription.length,
     });
 
     // Send to BareMeds API
     const response = await axios.post(
-      `https://staging-rxorders.baremeds.com/api/v1/rx-orders/${siteId}`,
+      `https://rxorders.baremeds.com/api/v1/rx-orders/${siteId}`,
       payload,
       {
         headers: {
