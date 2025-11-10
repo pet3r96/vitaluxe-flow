@@ -112,12 +112,12 @@ export const PharmacyApiConfigDialog = ({
       // Save API credentials if provided
       if (authType === "baremeds" && baremedEmail && baremedPassword && baremedSiteId) {
         // Store BareMeds credentials as JSON
-        const baremedsCreds = JSON.stringify({
+        const baremedsCreds = {
           email: baremedEmail,
           password: baremedPassword,
           site_id: parseInt(baremedSiteId),
           base_url: baremedBaseUrl || "https://staging-rxorders.baremeds.com"
-        });
+        };
 
         const { error: credError } = await supabase
           .from("pharmacy_api_credentials")
