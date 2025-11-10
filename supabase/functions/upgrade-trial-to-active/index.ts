@@ -57,7 +57,7 @@ serve(async (req) => {
     // Get the subscription
     const { data: subscription, error: subError } = await supabaseClient
       .from("practice_subscriptions")
-      .select("*, profiles!practice_id(*)")
+      .select("*")
       .eq("practice_id", practiceId)
       .single();
 
@@ -76,17 +76,31 @@ serve(async (req) => {
       );
     }
 
-    // Verify payment method exists
-    const practice = subscription.profiles;
-    if (!practice.authorizenet_customer_profile_id) {
+    // Check for active payment method
+    const { data: paymentMethods, error: paymentError } = await supabaseClient
+      .from("practice_payment_methods")
+      .select("*")
+      .eq("practice_id", practiceId)
+      .eq("status", "active")
+      .order("is_default", { ascending: false })
+      .limit(1);
+
+    if (paymentError) {
+      console.error("Error fetching payment methods:", paymentError);
+      throw new Error("Failed to fetch payment methods");
+    }
+
+    if (!paymentMethods || paymentMethods.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "No payment method on file. Please add a payment method before upgrading." 
+          error: "No active payment method on file. Please add a valid payment method before upgrading." 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
+
+    console.log(`Found active payment method: ${paymentMethods[0].id}`);
 
     console.log(`Processing payment for subscription: ${subscription.id}`);
 
