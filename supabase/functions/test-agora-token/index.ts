@@ -4,12 +4,149 @@ import { generateAgoraTokens } from "../_shared/agoraTokens.ts";
 
 console.log("Test Agora Token function started");
 
+// Token decoder and verifier
+function decodeToken(token: string, appId: string, appCertificate: string) {
+  try {
+    if (!token.startsWith('007')) {
+      return { error: 'Token does not start with 007' };
+    }
+
+    const base64Part = token.substring(3);
+    const binaryString = atob(base64Part);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    if (bytes.length < 32) {
+      return { error: 'Token too short' };
+    }
+
+    const signature = bytes.slice(0, 32);
+    const message = bytes.slice(32);
+
+    let offset = 0;
+    const readUint32LE = () => {
+      const v = message[offset] | (message[offset + 1] << 8) | (message[offset + 2] << 16) | (message[offset + 3] << 24);
+      offset += 4;
+      return v >>> 0;
+    };
+    const readUint16LE = () => {
+      const v = message[offset] | (message[offset + 1] << 8);
+      offset += 2;
+      return v & 0xFFFF;
+    };
+    const readString = () => {
+      const len = readUint16LE();
+      const str = new TextDecoder().decode(message.slice(offset, offset + len));
+      offset += len;
+      return str;
+    };
+
+    const salt = readUint32LE();
+    const ts = readUint32LE();
+    const serviceCount = readUint16LE();
+
+    const services: any[] = [];
+    for (let i = 0; i < serviceCount; i++) {
+      const serviceType = readUint16LE();
+      const serviceLen = readUint16LE();
+      const serviceStart = offset;
+
+      let serviceData: any = { type: serviceType, length: serviceLen };
+
+      if (serviceType === 1) {
+        // RTC
+        serviceData.channelName = readString();
+        serviceData.uid = readString();
+        const privCount = readUint16LE();
+        serviceData.privileges = [];
+        for (let j = 0; j < privCount; j++) {
+          const key = readUint16LE();
+          const expire = readUint32LE();
+          serviceData.privileges.push({ key, expire, expireISO: new Date(expire * 1000).toISOString() });
+        }
+      } else if (serviceType === 2) {
+        // RTM
+        serviceData.uid = readString();
+        const privCount = readUint16LE();
+        serviceData.privileges = [];
+        for (let j = 0; j < privCount; j++) {
+          const key = readUint16LE();
+          const expire = readUint32LE();
+          serviceData.privileges.push({ key, expire, expireISO: new Date(expire * 1000).toISOString() });
+        }
+      }
+
+      services.push(serviceData);
+      offset = serviceStart + serviceLen;
+    }
+
+    return {
+      signature: Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join(''),
+      message: {
+        salt,
+        timestamp: ts,
+        timestampISO: new Date(ts * 1000).toISOString(),
+        serviceCount,
+        services,
+      },
+    };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
+async function verifyTokenSignature(token: string, appId: string, appCertificate: string) {
+  try {
+    if (!token.startsWith('007')) return false;
+
+    const base64Part = token.substring(3);
+    const binaryString = atob(base64Part);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const signature = bytes.slice(0, 32);
+    const message = bytes.slice(32);
+
+    const keyBytes = new TextEncoder().encode(appCertificate);
+    const appIdBytes = new TextEncoder().encode(appId);
+    const dataToSign = new Uint8Array(appIdBytes.length + message.length);
+    dataToSign.set(appIdBytes, 0);
+    dataToSign.set(message, appIdBytes.length);
+
+    const key = await crypto.subtle.importKey(
+      "raw",
+      keyBytes,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const computedSigBuffer = await crypto.subtle.sign("HMAC", key, dataToSign);
+    const computedSig = new Uint8Array(computedSigBuffer);
+
+    if (signature.length !== computedSig.length) return false;
+    for (let i = 0; i < signature.length; i++) {
+      if (signature[i] !== computedSig[i]) return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Signature verification error:", err);
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const url = new URL(req.url);
+    const deterministic = url.searchParams.get('deterministic') === 'true';
     // Raw bytes check for secrets
     const rawAppId = Deno.env.get("AGORA_APP_ID") || "";
     const rawCert = Deno.env.get("AGORA_APP_CERTIFICATE") || "";
@@ -28,10 +165,11 @@ serve(async (req) => {
     }
 
     console.log("[Test Agora Token] Generating sample token...");
+    console.log("[Test Agora Token] Deterministic mode:", deterministic);
 
     // Generate test token with sample data
-    const testChannelName = "test-channel-" + Date.now();
-    const testUid = "test-user-" + Math.floor(Math.random() * 10000);
+    const testChannelName = deterministic ? "test-channel-fixed" : "test-channel-" + Date.now();
+    const testUid = deterministic ? "test-user-1000" : "test-user-" + Math.floor(Math.random() * 10000);
     
     console.log("Triggering verification...");
     console.log("[Test Endpoint] Parameters:", {
@@ -47,6 +185,24 @@ serve(async (req) => {
       role: 'publisher',
       expiresInSeconds: 3600,
     });
+
+    // Verify token signatures
+    const rtcSigValid = await verifyTokenSignature(tokens.rtcToken, rawAppId, rawCert);
+    const rtmSigValid = await verifyTokenSignature(tokens.rtmToken, rawAppId, rawCert);
+
+    console.log("\n🔐 [Signature Verification]");
+    console.log("RTC signature valid:", rtcSigValid);
+    console.log("RTM signature valid:", rtmSigValid);
+
+    // Decode tokens
+    const rtcDecoded = decodeToken(tokens.rtcToken, rawAppId, rawCert);
+    const rtmDecoded = decodeToken(tokens.rtmToken, rawAppId, rawCert);
+
+    console.log("\n📦 [RTC Token Structure]");
+    console.log(JSON.stringify(rtcDecoded, null, 2));
+
+    console.log("\n📦 [RTM Token Structure]");
+    console.log(JSON.stringify(rtmDecoded, null, 2));
 
     // Assertions
     const rtcStartsWith007 = tokens.rtcToken.startsWith('007');
@@ -106,6 +262,7 @@ serve(async (req) => {
           uid: testUid,
           role: 'publisher',
           expiresInSeconds: 3600,
+          deterministicMode: deterministic,
         },
         tokens: {
           rtcToken: tokens.rtcToken,
@@ -126,6 +283,14 @@ serve(async (req) => {
           rtcPrefix: tokens.rtcToken.substring(0, 15),
           rtmPrefix: tokens.rtmToken.substring(0, 15),
           version: rtcStartsWith007 ? 'AccessToken2 (007)' : 'Unknown',
+        },
+        signatureVerification: {
+          rtcSignatureValid: rtcSigValid,
+          rtmSignatureValid: rtmSigValid,
+        },
+        decodedTokens: {
+          rtc: rtcDecoded,
+          rtm: rtmDecoded,
         },
         envDiagnostics: {
           appIdLen: appIdBytes.length,

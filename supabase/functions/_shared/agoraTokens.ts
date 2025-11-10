@@ -45,18 +45,20 @@ export interface AgoraTokenResult {
 // ============================================================================
 
 function writeUint16LE(n: number): Uint8Array {
+  const v = (n >>> 0) & 0xFFFF;
   const buf = new Uint8Array(2);
-  buf[0] = n & 0xFF;
-  buf[1] = (n >> 8) & 0xFF;
+  buf[0] = v & 0xFF;
+  buf[1] = (v >>> 8) & 0xFF;
   return buf;
 }
 
 function writeUint32LE(n: number): Uint8Array {
+  const v = n >>> 0;
   const buf = new Uint8Array(4);
-  buf[0] = n & 0xFF;
-  buf[1] = (n >> 8) & 0xFF;
-  buf[2] = (n >> 16) & 0xFF;
-  buf[3] = (n >> 24) & 0xFF;
+  buf[0] = v & 0xFF;
+  buf[1] = (v >>> 8) & 0xFF;
+  buf[2] = (v >>> 16) & 0xFF;
+  buf[3] = (v >>> 24) & 0xFF;
   return buf;
 }
 
