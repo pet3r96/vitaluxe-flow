@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import axios from "https://esm.sh/axios@1.6.7";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const TEST_PHARMACY_EMAIL = "dsporn00@yahoo.com";
@@ -38,32 +37,26 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch order with patient, provider, and order lines
+    // Fetch order with order lines and patient/provider info
     const { data: order, error } = await supabase
       .from("orders")
       .select(`
         id,
         created_at,
-        patient:patient_accounts!orders_patient_id_fkey(
-          first_name,
-          last_name,
-          date_of_birth,
-          gender,
-          phone,
-          address_line1,
-          city,
-          state,
-          zip,
-          external_id
-        ),
-        provider:providers!orders_provider_id_fkey(
-          full_name,
-          npi
-        ),
+        doctor_id,
         order_lines(
-          medication_name,
+          id,
+          patient_id,
+          patient_name,
+          patient_email,
+          patient_phone,
+          patient_address,
+          provider_id,
+          product_id,
           quantity,
-          refills
+          custom_dosage,
+          custom_sig,
+          products(name)
         )
       `)
       .eq("id", order_id)
@@ -76,26 +69,47 @@ Deno.serve(async (req) => {
 
     console.log("✅ Order fetched successfully");
 
+    // Get patient info from first order line (assuming all lines have same patient)
+    const firstLine = order.order_lines[0];
+    if (!firstLine) {
+      throw new Error("No order lines found");
+    }
+
+    // Parse patient name (assuming format "FirstName LastName" or just a single name)
+    const nameParts = (firstLine.patient_name || "Unknown Patient").split(" ");
+    const firstName = nameParts[0] || "Unknown";
+    const lastName = nameParts.slice(1).join(" ") || "Patient";
+
+    // Parse patient address (assuming format "street, city, state zip")
+    const addressStr = firstLine.patient_address || "";
+    const addressParts = addressStr.split(",").map(p => p.trim());
+    const line1 = addressParts[0] || "";
+    const city = addressParts[1] || "";
+    const stateZip = addressParts[2] || "";
+    const stateZipParts = stateZip.split(" ");
+    const state = stateZipParts[0] || "";
+    const zip = stateZipParts[1] || "";
+
     // Build BareMeds payload
     const payload = {
       patient: {
-        patientId: order.patient.external_id || `EXT-${order.id}`,
-        firstName: order.patient.first_name,
-        lastName: order.patient.last_name,
-        dob: order.patient.date_of_birth,
-        gender: order.patient.gender || "U",
-        phone: order.patient.phone,
+        patientId: firstLine.patient_id || `EXT-${order.id}`,
+        firstName,
+        lastName,
+        dob: "2000-01-01", // BareMeds requires DOB, using placeholder for practice orders
+        gender: "U",
+        phone: firstLine.patient_phone || "",
         address: {
-          line1: order.patient.address_line1,
-          city: order.patient.city,
-          state: order.patient.state,
-          zip: order.patient.zip,
+          line1,
+          city,
+          state,
+          zip,
         },
       },
       prescription: order.order_lines.map((line: any) => ({
-        drug: { name: line.medication_name },
+        drug: { name: line.products?.name || "Unknown Medication" },
         quantity: line.quantity,
-        refills: line.refills || 0,
+        refills: 0, // BareMeds requires refills field
       })),
       requestId: order.id,
       timestamp: order.created_at,
@@ -118,24 +132,31 @@ Deno.serve(async (req) => {
     });
 
     // Send to BareMeds API
-    const response = await axios.post(
+    const response = await fetch(
       `https://rxorders.baremeds.com/api/v1/rx-orders/${siteId}`,
-      payload,
       {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${apiToken}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify(payload),
       }
     );
 
-    console.log("✅ BareMeds Response:", response.data);
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`BareMeds API error (${response.status}): ${errorData}`);
+    }
+
+    const responseData = await response.json();
+    console.log("✅ BareMeds Response:", responseData);
 
     return new Response(
       JSON.stringify({
         success: true,
         sent: true,
-        response: response.data,
+        response: responseData,
       }),
       {
         status: 200,
@@ -144,14 +165,13 @@ Deno.serve(async (req) => {
     );
   } catch (err: any) {
     console.error("❌ Error sending to BareMeds:", err.message);
-    console.error("Full error:", err.response?.data || err);
 
     return new Response(
       JSON.stringify({
         success: false,
         sent: false,
         error: err.message,
-        details: err.response?.data || null,
+        details: null,
       }),
       {
         status: 500,
