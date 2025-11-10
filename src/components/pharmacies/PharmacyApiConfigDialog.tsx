@@ -124,7 +124,7 @@ export const PharmacyApiConfigDialog = ({
           .upsert({
             pharmacy_id: pharmacyId,
             credential_type: "baremeds_oauth",
-            credential_key: baremedsCreds,
+            credential_key: JSON.stringify(baremedsCreds),
           }, {
             onConflict: "pharmacy_id,credential_type",
           });
